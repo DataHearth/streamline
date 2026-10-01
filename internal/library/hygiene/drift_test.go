@@ -15,7 +15,6 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
-	libmocks "github.com/datahearth/streamline/internal/library/mocks"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 )
 
@@ -25,7 +24,6 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		tmpDir string
 		store  *dbmocks.MockStore
 		meta   *metamocks.MockProvider
-		imp    *libmocks.MockImporter
 		svc    *Service
 	)
 
@@ -34,12 +32,10 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		tmpDir = GinkgoT().TempDir()
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
-		imp = libmocks.NewMockImporter(GinkgoT())
 		svc = New(
 			store,
 			meta,
 			metamocks.NewMockTVProvider(GinkgoT()),
-			imp,
 			&config.LibraryConfig{
 				MoviePath:       tmpDir,
 				DriftGraceTicks: 3,

@@ -16,7 +16,6 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	ffmpegmocks "github.com/datahearth/streamline/internal/ffmpeg/mocks"
-	libmocks "github.com/datahearth/streamline/internal/library/mocks"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -43,7 +42,6 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 			store,
 			metamocks.NewMockProvider(GinkgoT()),
 			metamocks.NewMockTVProvider(GinkgoT()),
-			libmocks.NewMockImporter(GinkgoT()),
 			nil,
 		)
 		svc.Probe = prober

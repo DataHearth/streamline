@@ -39,7 +39,6 @@ packages:
       Manager: {}
   github.com/datahearth/streamline/internal/library:
     interfaces:
-      Importer: {}
       Renamer: {}
   github.com/datahearth/streamline/internal/library/bulkimport:
     interfaces:

@@ -17,7 +17,6 @@ import (
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
-	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -31,7 +30,6 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		entClient *ent.Client
 		store     db.Store
 		meta      *metamocks.MockProvider
-		imp       *library.ImportService
 		svc       *Service
 	)
 
@@ -54,25 +52,24 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		events.Register(entClient)
 		store = db.New(entClient)
 		meta = metamocks.NewMockProvider(GinkgoT())
-		imp = library.NewImportService()
 		svc = New(
 			store,
 			meta,
 			metamocks.NewMockTVProvider(GinkgoT()),
-			imp,
 			&cfg.Library,
 		)
 	})
 
-	It("adopts an orphan into the library for a tracked movie", func() {
+	It("adopts an orphan where it lies for a tracked movie", func() {
+		// The orphan is already inside the library, so it is tracked at its own
+		// path. Transferring it under import_mode would hardlink a second name
+		// beside it, and deleting the movie later would remove only the tracked
+		// one.
 		srcDir := filepath.Join(tmpDir, "incoming")
 		Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
 		orphan := filepath.Join(srcDir, "Inception.2010.1080p.BluRay.mkv")
 		Expect(os.WriteFile(orphan, make([]byte, 60*1024*1024), 0o644)).To(Succeed())
 
-		// Auto-import only adopts files for already-tracked movies; brand-new
-		// matches are routed to the bulk-import wizard instead. Track the movie
-		// (no media file yet) so the orphan scan adopts the file into it.
 		_, err := store.CreateMovie(ctx, db.CreateMovieParams{
 			Title:         "Inception",
 			OriginalTitle: "Inception",
@@ -88,13 +85,20 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			}, nil).Once()
 
 		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
 
 		movie, err := store.FindMovieByTMDBID(ctx, 27205)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(movie).NotTo(BeNil())
 		Expect(string(movie.Status)).To(Equal("available"))
-		Expect(filepath.Join(tmpDir, "Inception (2010)", "Inception.mkv")).
-			To(BeAnExistingFile())
+		files, err := store.ListMediaFilesByMovieID(ctx, movie.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(files).To(HaveLen(1))
+		Expect(files[0].Path).To(Equal(orphan))
+		Expect(filepath.Join(tmpDir, "Inception (2010)")).NotTo(BeAnExistingFile())
+
+		_, total, err := store.ListImportScans(ctx, 0, 100)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(BeZero())
 	})
 
 	It(
@@ -127,55 +131,6 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			Expect(fileCount).To(Equal(uint32(2)), "both orphans in the one scan")
 		},
 	)
-
-	It("does not re-queue the hardlink source on a second scan", func() {
-		// Force hardlink mode so the auto-import leaves the source file in place,
-		// mirroring the deployed default.
-		cfg := configtest.Setup(map[string]any{
-			"library": map[string]any{
-				"movie_path":          tmpDir,
-				"movie_naming":        "{title} ({year})/{title}.{ext}",
-				"import_mode":         "hardlink",
-				"import_max_attempts": 3,
-				"drift_grace_ticks":   3,
-			},
-		})
-		imp = library.NewImportService()
-		svc = New(
-			store,
-			meta,
-			metamocks.NewMockTVProvider(GinkgoT()),
-			imp,
-			&cfg.Library,
-		)
-
-		srcDir := filepath.Join(tmpDir, "incoming")
-		Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
-		orphan := filepath.Join(srcDir, "Inception.2010.1080p.BluRay.mkv")
-		Expect(os.WriteFile(orphan, make([]byte, 60*1024*1024), 0o644)).To(Succeed())
-
-		_, err := store.CreateMovie(ctx, db.CreateMovieParams{
-			Title: "Inception", OriginalTitle: "Inception", Year: 2010,
-			TmdbID: 27205, Status: entmovie.StatusWanted,
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		meta.EXPECT().SearchMovie(mock.Anything, "Inception", uint16(2010)).
-			Return([]metadata.MovieResult{
-				{TMDBID: 27205, Title: "Inception", Year: 2010},
-			}, nil)
-
-		// First scan: auto-import (hardlink leaves the source in place).
-		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
-		// Second scan = a restart.
-		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
-
-		_, total, err := store.ListImportScans(ctx, 0, 100)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(
-			total,
-		).To(BeZero(), "leftover hardlink source was re-queued for review")
-	})
 
 	It("reverts a Movie when its file disappears past the grace window", func() {
 		path := filepath.Join(tmpDir, "movie.mkv")
@@ -391,7 +346,7 @@ var _ = Describe(
 			store = db.New(entClient)
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
 			svc = New(store, metamocks.NewMockProvider(GinkgoT()), tvmeta,
-				library.NewImportService(), &cfg.Library)
+				&cfg.Library)
 		})
 
 		placeShow := func(show, file string) {

@@ -201,7 +201,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		cfg.Library.MoviePath,
 		cfg.Library.SeriesPath,
 	)
-	hygieneSvc := hygiene.New(store, tmdb, tvdb, libSvc, &cfg.Library)
+	hygieneSvc := hygiene.New(store, tmdb, tvdb, &cfg.Library)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {
 		slog.WarnContext(
 			ctx,
