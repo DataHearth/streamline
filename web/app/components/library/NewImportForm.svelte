@@ -34,8 +34,8 @@
 	// get(goto) inside the onSuccess callback throws "derived() expects stores
 	// as input" — goto is a derived store and re-subscribing once the mutation
 	// callback runs lands on a falsy fragment. Snapshot the navigate fn instead.
-	// goto resolves route PATTERNS (`/library/imports/[id]`), not concrete
-	// paths — passing `/library/imports/7` fails with "could not travel to 7".
+	// goto resolves route PATTERNS (`/imports/[id]`), not concrete
+	// paths — passing `/imports/7` fails with "could not travel to 7".
 	let navigate: (path: string, params?: Record<string, string>) => void =
 		() => {};
 	onMount(() => goto.subscribe((fn) => (navigate = fn)));
@@ -47,7 +47,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok("Scan started");
 			onCreated?.();
-			navigate("/library/imports/[id]", { id: String(scan.id) });
+			navigate("/imports/[id]", { id: String(scan.id) });
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));

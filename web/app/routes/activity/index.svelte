@@ -39,7 +39,7 @@
 	import EventList from "@components/activity/EventList.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Torrents live on their own route (/activity/torrents); this page is the
+	// Torrents live on their own route (/torrents); this page is the
 	// queue/history/events trio the switch above the toolbar swaps between.
 	type View = "queue" | "history" | "events";
 

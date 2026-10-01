@@ -36,7 +36,7 @@
 </script>
 
 <a
-	href="/library/imports/{scan.id}"
+	href="/imports/{scan.id}"
 	class="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-5 py-3.5 transition hover:bg-bg-card md:px-6"
 >
 	<span

@@ -102,8 +102,16 @@ export type IsActiveFn = (
 	options?: { recursive?: boolean },
 ) => boolean;
 
-// Routify's isActive matches the whole chain, so "/activity" also reports
-// active on /activity/torrents. Non-recursive resolves to the index node
-// instead, pinning each link to its own route.
+// The routes the Activity group reaches. Torrents and transcoding are
+// top-level routes rather than children of /activity, so a recursive
+// isActive("/activity") no longer covers them — the group's own highlight has
+// to name all three.
+export const ACTIVITY_ROUTES = ["/activity", "/torrents", "/transcoding"];
+
+export const activityGroupActive = (isActive: IsActiveFn) =>
+	ACTIVITY_ROUTES.some((p) => isActive(p));
+
+// Non-recursive resolves to the index node, pinning each link to its own route
+// (`/activity?view=events` still counts as /activity).
 export const activityCurrent = (isActive: IsActiveFn, href: string) =>
 	isActive(href, {}, { recursive: false });

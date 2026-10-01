@@ -28,6 +28,7 @@
 		TORRENT_PILLS,
 		torrentCountsQuery,
 		activityCurrent,
+		activityGroupActive,
 		type IsActiveFn,
 	} from "@lib/activity-nav";
 	import { navCountsQuery } from "@lib/nav-counts";
@@ -63,8 +64,8 @@
 			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
 			...(auth.isAdmin
 				? [
-						{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
-						{ label: i18n.transcode_label(), href: "/activity/transcoding", icon: Replace },
+						{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet },
+						{ label: i18n.transcode_label(), href: "/transcoding", icon: Replace },
 					]
 				: []),
 		],
@@ -100,7 +101,7 @@
 	}
 
 	let libraryActive = $derived(["/movies", "/series"].some((p) => isActiveFn(p)));
-	let activityActive = $derived(isActiveFn("/activity"));
+	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let dashActive = $derived(isActiveFn("/", {}, { recursive: false }));
 
 	// Dot badges ride the icon: the rail has no room for a number, but it can
@@ -118,7 +119,7 @@
 			? [
 					{
 						label: i18n.imports_label(),
-						href: "/library/imports",
+						href: "/imports",
 						icon: FolderInput,
 						dot: counts.importsDot,
 					},
@@ -241,7 +242,7 @@
 									>
 										{counts.seriesTotal.toLocaleString()}
 									</span>
-								{:else if link.href === "/activity/torrents"}
+								{:else if link.href === "/torrents"}
 									<span
 										class="flex shrink-0 items-center gap-1.5 font-mono text-[10px] leading-none tabular-nums text-fg-subtle"
 									>

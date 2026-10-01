@@ -32,6 +32,7 @@
 		torrentCountsQuery,
 		transcodeCountsQuery,
 		activityCurrent,
+		activityGroupActive,
 		type IsActiveFn,
 	} from "@lib/activity-nav";
 	import { navCountsQuery, type NavDot } from "@lib/nav-counts";
@@ -131,13 +132,13 @@
 			? [
 					{
 						label: i18n.torrent_label(),
-						href: "/activity/torrents",
+						href: "/torrents",
 						icon: Magnet,
 						torrents: true,
 					},
 					{
 						label: i18n.transcode_label(),
-						href: "/activity/transcoding",
+						href: "/transcoding",
 						icon: Replace,
 						line: transcodeLine,
 						badge: transcodeCounts.counts.failed,
@@ -158,7 +159,7 @@
 			? [
 					{
 						label: i18n.imports_label(),
-						href: "/library/imports",
+						href: "/imports",
 						icon: FolderInput,
 						line: counts.importsLine,
 					},
@@ -186,12 +187,12 @@
 	const IN_MORE = [
 		"/calendar",
 		"/requests",
-		"/library/imports",
+		"/imports",
 		"/settings",
 		"/account",
 	];
 	let libraryActive = $derived(["/movies", "/series"].some((p) => isActiveFn(p)));
-	let activityActive = $derived(isActiveFn("/activity"));
+	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let moreActive = $derived(IN_MORE.some((p) => isActiveFn(p)));
 	let moreOn = $derived(moreActive || sheet === "More");
 

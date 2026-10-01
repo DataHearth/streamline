@@ -93,7 +93,7 @@
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin
-			? [{ label: i18n.imports_label(), href: "/library/imports", icon: FolderInput }]
+			? [{ label: i18n.imports_label(), href: "/imports", icon: FolderInput }]
 			: []),
 		{ label: i18n.common_calendar(), href: "/calendar", icon: CalendarDays },
 		{ label: i18n.requests_label(), href: "/requests", icon: Inbox },
@@ -107,10 +107,10 @@
 		{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
 		...(auth.isAdmin
 			? [
-					{ label: i18n.torrent_label(), href: "/activity/torrents", icon: Magnet },
+					{ label: i18n.torrent_label(), href: "/torrents", icon: Magnet },
 					{
 						label: i18n.transcode_label(),
-						href: "/activity/transcoding",
+						href: "/transcoding",
 						icon: Replace,
 					},
 				]
@@ -337,10 +337,10 @@
 							{/if}
 							{@render dotPills(queuePills)}
 						{/if}
-						{#if link.href === "/activity/torrents"}
+						{#if link.href === "/torrents"}
 							{@render dotPills(torrentPills)}
 						{/if}
-						{#if link.href === "/activity/transcoding"}
+						{#if link.href === "/transcoding"}
 							{@render dotPills(transcodePills)}
 						{/if}
 					</a>
@@ -356,7 +356,7 @@
 					>
 						<item.icon size={18} class="shrink-0" />
 						<span class="flex-1 truncate">{item.label}</span>
-						{#if item.href === "/library/imports"}
+						{#if item.href === "/imports"}
 							{@render dotPills(importPills)}
 						{/if}
 						{#if item.href === "/requests" && pendingRequests > 0}

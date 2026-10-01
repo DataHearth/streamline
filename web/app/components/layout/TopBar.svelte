@@ -43,9 +43,11 @@
 		{ prefix: "/movies", label: i18n.movies_label() },
 		{ prefix: "/series", label: i18n.settings_series() },
 		{ prefix: "/activity", label: i18n.nav_activity() },
+		{ prefix: "/torrents", label: i18n.torrent_label() },
+		{ prefix: "/transcoding", label: i18n.transcode_label() },
 		{ prefix: "/calendar", label: i18n.common_calendar() },
 		{ prefix: "/requests", label: i18n.requests_label() },
-		{ prefix: "/library/imports", label: i18n.imports_label() },
+		{ prefix: "/imports", label: i18n.imports_label() },
 		{ prefix: "/account", label: i18n.common_account() },
 		{ prefix: "/settings", label: i18n.nav_settings() },
 	];
@@ -235,7 +237,7 @@
 		if (item.id === "movie") openAddMovie();
 		else if (item.id === "series") openAddSeries();
 		else if (item.id === "import") {
-			window.location.href = "/library/imports";
+			window.location.href = "/imports";
 		}
 	}
 

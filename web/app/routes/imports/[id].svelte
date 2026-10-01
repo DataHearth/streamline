@@ -278,7 +278,7 @@
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok(i18n.imports_scan_discarded());
-			navigate("/library/imports");
+			navigate("/imports");
 		},
 		onError: (err) => toast.err(err.message),
 	}));
@@ -554,7 +554,7 @@
 
 <div class="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-7">
 	<a
-		href="/library/imports"
+		href="/imports"
 		class="touch-hit inline-flex items-center gap-1.5 text-xs text-fg-subtle transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 	>
 		<ArrowLeft size={14} aria-hidden="true" />

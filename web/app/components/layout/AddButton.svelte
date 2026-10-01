@@ -50,7 +50,7 @@
 	let route = $derived(pathname.replace(/\/+$/, "") || "/");
 	let onRoute = $derived(
 		OPEN_ROUTES.includes(route) ||
-			(route === "/library/imports" && auth.isAdmin) ||
+			(route === "/imports" && auth.isAdmin) ||
 			(route === "/requests" && !auth.isAdmin),
 	);
 	// A bulk selection owns the bottom of the screen; the pill would land on top
@@ -72,7 +72,7 @@
 		// Adopting files on disk is an admin operation, and not a request. On the
 		// imports list itself the row would only lead back to the page it was
 		// tapped from, and that page carries its own New scan button.
-		...(auth.canAddDirectly && auth.isAdmin && route !== "/library/imports"
+		...(auth.canAddDirectly && auth.isAdmin && route !== "/imports"
 			? [{ id: "import" as const, label: i18n.add_import_existing(), icon: FolderInput }]
 			: []),
 	]);
@@ -111,7 +111,7 @@
 		{#each fan as item, i (item.id)}
 			{#if item.id === "import"}
 				<a
-					href="/library/imports"
+					href="/imports"
 					onclick={() => (open = false)}
 					class="fan-item flex items-center gap-3"
 					class:on={open}

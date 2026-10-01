@@ -4,7 +4,7 @@
 //
 // The queue has no table, so there are no column headers to sort from — the
 // chips in the filter sheet below lg and the select in the header from lg both
-// write the same key here. See routes/activity/transcoding.svelte.
+// write the same key here. See routes/transcoding/index.svelte.
 
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { ApiError } from "./api";

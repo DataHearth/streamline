@@ -481,7 +481,7 @@
 				</button>
 				{#if scanStarted}
 					<a
-						href="/activity/transcoding"
+						href="/transcoding"
 						class="inline-flex items-center gap-1 text-xs text-accent-text hover:text-accent-hover"
 					>
 						{i18n.transcode_scan_started()}

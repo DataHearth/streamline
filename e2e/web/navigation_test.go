@@ -33,7 +33,7 @@ var _ = Describe("Shell navigation", Label("e2e"), func() {
 			{"/movies", "Movies"},
 			{"/series", "Series"},
 			{"/activity", "Queue & History"},
-			{"/activity/torrents", "Torrents"},
+			{"/torrents", "Torrents"},
 			{"/calendar", "Calendar"},
 			{"/requests", "Requests"},
 			{"/", "Dashboard"},

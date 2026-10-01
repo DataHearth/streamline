@@ -306,7 +306,7 @@
 						{/snippet}
 						{#if auth.isAdmin}
 							<a
-								href="/activity/transcoding"
+								href="/transcoding"
 								class="touch-hit inline-flex items-center gap-1.5 rounded font-mono text-status-succeeded transition-colors hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 							>
 								{@render transcodedText()}
