@@ -520,12 +520,24 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		})
 		Expect(err).NotTo(HaveOccurred())
 		connectToSeeder(engine, hash, seederPort)
+		// Polled tightly on purpose, to catch the first instant seeding is
+		// reported. Seeding used to be read off byte counts that include
+		// written-but-unhashed chunks, so it could arrive with pieces still
+		// queued for hash; closing then dropped their hash results, the store
+		// kept them incomplete, and the restored engine sat stalled with no
+		// peer to fetch them from.
 		Eventually(func() download.TorrentStatus {
 			t, terr := engine.GetTorrent(ctx, hash)
 			Expect(terr).NotTo(HaveOccurred())
 			return t.Status
-		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+		}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
 			Should(Equal(download.StatusSeeding))
+		lt, err := engine.torrent(hash)
+		Expect(err).NotTo(HaveOccurred())
+		for _, run := range lt.PieceStateRuns() {
+			Expect(run.Complete).To(BeTrue(),
+				"seeding reported with unverified pieces: %v", lt.PieceStateRuns())
+		}
 		// A ratio built only from anacrolix's counter restarts at zero with the
 		// process, so a seed_ratio limit could never be met. Stand in for a
 		// prior life's upload and require the restored engine to carry it.

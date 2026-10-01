@@ -37,3 +37,34 @@ func wantedCompleted(t *antorrent.Torrent) int64 {
 func wantedMissing(t *antorrent.Torrent) int64 {
 	return wantedBytes(t) - wantedCompleted(t)
 }
+
+// wantedVerified reports whether every piece a wanted file spans has passed
+// its hash check. wantedMissing reaching zero does not say that: anacrolix's
+// File.BytesCompleted counts dirty chunks — written, not yet hashed — as
+// completed (fileBytesLeft in file.go), so the last pieces can still be queued
+// for hash, mid-hash, or failing it. A piece only reads Complete once
+// MarkComplete has returned, which is also what persists it and promotes a
+// finished file off its .part name; a client closed before then drops the
+// hash result, and the next boot finds that piece still stored incomplete.
+func wantedVerified(t *antorrent.Torrent) bool {
+	type span struct{ begin, end int }
+	var wanted []span
+	for _, f := range t.Files() {
+		if f.Priority() != types.PiecePriorityNone {
+			wanted = append(wanted, span{f.BeginPieceIndex(), f.EndPieceIndex()})
+		}
+	}
+	begin := 0
+	for _, run := range t.PieceStateRuns() {
+		end := begin + run.Length
+		if !run.Complete {
+			for _, w := range wanted {
+				if w.begin < end && begin < w.end {
+					return false
+				}
+			}
+		}
+		begin = end
+	}
+	return true
+}
