@@ -266,6 +266,21 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
+/* Search input — strip the native clear (✕) WebKit/Blink draw once   */
+/* the field has a value. Every `type="search"` field draws its own   */
+/* themed clear button beside it, so the native one is a second ✕ —   */
+/* a full-size white glyph on Chrome Android. `type="search"` stays   */
+/* for the phone keyboard's Search key.                                */
+/* ------------------------------------------------------------------ */
+@layer base {
+	input[type="search"]::-webkit-search-cancel-button,
+	input[type="search"]::-webkit-search-decoration {
+		-webkit-appearance: none;
+		appearance: none;
+	}
+}
+
+/* ------------------------------------------------------------------ */
 /* Scrollbar (WebKit)                                                  */
 /* ------------------------------------------------------------------ */
 ::-webkit-scrollbar {

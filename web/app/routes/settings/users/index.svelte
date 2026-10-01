@@ -8,7 +8,7 @@
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
-	import { Users, Search, UserPlus, SlidersHorizontal } from "@lucide/svelte";
+	import { Users, Search, UserPlus, SlidersHorizontal, X } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
@@ -232,8 +232,18 @@
 						bind:value={q}
 						placeholder={i18n.field_email_or_name()}
 						autocomplete="off"
-						class="w-full rounded-md bg-transparent py-2 pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
+						class="w-full rounded-md bg-transparent py-2 pl-9 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none"
 					/>
+					{#if q}
+						<button
+							type="button"
+							onclick={() => (q = "")}
+							aria-label={i18n.common_clear_search()}
+							class="absolute right-1 grid h-7 w-7 place-items-center rounded-full text-fg-faint transition hover:text-fg active:bg-surface"
+						>
+							<X size={14} aria-hidden="true" />
+						</button>
+					{/if}
 				</span>
 			</label>
 			<button
