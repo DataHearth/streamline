@@ -26,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -35,12 +36,6 @@ import (
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/importer")
-
-type MediaServerDispatcher interface {
-	// kind is "movie" or "series" — Plex scopes its rescan to one section and
-	// keys them separately, so the path alone does not say which to poke.
-	RefreshAll(ctx context.Context, kind, libraryPath string) error
-}
 
 // Enqueuer is the consumer-facing queue surface. download_monitor accepts it
 // so it can be driven by a fake in tests without pulling in the full Worker.
@@ -55,7 +50,7 @@ type Deps struct {
 	DB          db.Store
 	Library     *library.ImportService
 	Download    download.Downloader
-	MediaServer MediaServerDispatcher
+	MediaServer mediaserver.Refresher
 	Prober      ffmpeg.Prober
 }
 
@@ -68,7 +63,7 @@ type Worker struct {
 	db    db.Store
 	lib   *library.ImportService
 	dl    download.Downloader
-	ms    MediaServerDispatcher
+	ms    mediaserver.Refresher
 	probe ffmpeg.Prober
 
 	ch   chan uint32

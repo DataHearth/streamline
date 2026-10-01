@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -64,6 +65,7 @@ type Service struct {
 	importSvc   *library.ImportService
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
+	ms          mediaserver.Refresher
 	moviePath   string
 	seriesPath  string
 }
@@ -76,6 +78,7 @@ func NewService(
 	importSvc *library.ImportService,
 	movieSvc *movie.Service,
 	seriesAdder SeriesAdder,
+	ms mediaserver.Refresher,
 	moviePath string,
 	seriesPath string,
 ) *Service {
@@ -86,6 +89,7 @@ func NewService(
 		importSvc:   importSvc,
 		movieSvc:    movieSvc,
 		seriesAdder: seriesAdder,
+		ms:          ms,
 		moviePath:   moviePath,
 		seriesPath:  seriesPath,
 	}

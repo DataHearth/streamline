@@ -259,7 +259,7 @@ After a fix, give it 10–20 minutes — peers have to find you through tracker 
 
 ## My media server doesn't notice new files
 
-Streamline pokes Plex/Jellyfin/Emby to rescan on import. If nothing happens:
+Streamline pokes Plex/Jellyfin/Emby to rescan whenever it changes your library: on import (including a bulk import of an existing folder), after a transcode, on rename, and when you delete a file or a title with its files. If nothing happens:
 
 - **Test the connection.** Settings → Media servers → Test.
 - **Check your media server can see the files.** Streamline importing successfully doesn't mean Plex has the path mounted. They're separate containers with separate mounts.
@@ -276,6 +276,8 @@ Check the log for the import itself too. A refresh that failed outright logs at 
 ```
 WARN media server refresh failed  name=plex  error=...
 ```
+
+**A deleted title still shows in Plex, marked unavailable.** The rescan ran; Plex only drops missing items from a library when **Settings → Library → Empty trash automatically after every scan** is on. With it off, empty the trash for that library by hand.
 
 Failing that, media servers have their own scan schedules and will find the files eventually.
 

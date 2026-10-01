@@ -45,7 +45,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 
 		meta = mockmeta.NewMockProvider(GinkgoT())
 		posters = mockposters.NewMockManager(GinkgoT())
-		svc = NewService(store, meta, posters, nil)
+		svc = NewService(store, meta, posters, nil, nil)
 		configtest.Setup(map[string]any{
 			"metadata": map[string]any{"tmdb_region": ""},
 			"quality_profiles": []map[string]any{{

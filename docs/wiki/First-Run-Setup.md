@@ -216,7 +216,7 @@ Full detail — including how 720p/1080p/2160p rank against each other — in [Q
 
 **Settings → Media servers → Add.** Optional, but it's what makes "Play on…" buttons appear and stops you waiting on Plex's own scan timer.
 
-Streamline supports Plex, Jellyfin and Emby. On import it pokes the server to rescan the affected library, and it can deep-link you straight into playback.
+Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it pokes the server to rescan the affected library, and it can deep-link you straight into playback.
 
 For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then click **Discover** and fill in the two section fields:
 

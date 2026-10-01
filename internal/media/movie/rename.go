@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -23,14 +24,20 @@ import (
 // on the singleton).
 type RenameService struct {
 	db          db.Store
+	ms          mediaserver.Refresher
 	libraryRoot string
 	naming      string
 }
 
 func NewRenameService(
-	store db.Store, libraryRoot, naming string,
+	store db.Store, ms mediaserver.Refresher, libraryRoot, naming string,
 ) *RenameService {
-	return &RenameService{db: store, libraryRoot: libraryRoot, naming: naming}
+	return &RenameService{
+		db:          store,
+		ms:          ms,
+		libraryRoot: libraryRoot,
+		naming:      naming,
+	}
 }
 
 // Preview returns the rename plan without applying it. Empty Operations means
@@ -63,6 +70,11 @@ func (r *RenameService) Apply(
 	plan, err := r.buildPlan(ctx, movieID)
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
+	}
+	// Deferred so a plan that fails halfway still rescans for the files it
+	// already moved.
+	if len(plan.Operations) > 0 {
+		defer mediaserver.RefreshInBackground(ctx, r.ms, "movie", r.libraryRoot)
 	}
 	for _, op := range plan.Operations {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {

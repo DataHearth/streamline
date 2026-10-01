@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -96,24 +97,17 @@ const deferRecheck = time.Hour
 // pollInterval is how often an idle worker looks for queued work.
 const pollInterval = 5 * time.Second // ponytail: DB poll, no wake plumbing; add an enqueue signal if latency ever matters
 
-// MediaServerRefresher asks the configured media servers to rescan a library
-// root — a transcode rewrites a file in place, so Plex/Jellyfin/Emby have to
-// re-read it or they keep serving the old stream details.
-type MediaServerRefresher interface {
-	RefreshAll(ctx context.Context, kind, libraryPath string) error
-}
-
 type Deps struct {
 	DB          db.Store
 	Prober      ffmpeg.Prober
-	MediaServer MediaServerRefresher
+	MediaServer mediaserver.Refresher
 	Download    download.Downloader
 }
 
 type Worker struct {
 	db     db.Store
 	prober ffmpeg.Prober
-	ms     MediaServerRefresher
+	ms     mediaserver.Refresher
 	dl     download.Downloader
 
 	// wake carries "a slot freed" so a finished job claims the next one

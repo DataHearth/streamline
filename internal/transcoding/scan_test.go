@@ -15,8 +15,8 @@ import (
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/transcoding/mocks"
 )
 
 var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
@@ -24,7 +24,7 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 		ctx       context.Context
 		client    *ent.Client
 		store     *db.DB
-		ms        *mocks.MockMediaServerRefresher
+		ms        *msmocks.MockRefresher
 		worker    *Worker
 		movieRoot string
 		bin       string
@@ -96,7 +96,7 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 		store = db.New(client)
 		tmdbSeq = 0
 
-		ms = mocks.NewMockMediaServerRefresher(GinkgoT())
+		ms = msmocks.NewMockRefresher(GinkgoT())
 		worker = NewWorker(Deps{
 			DB:          store,
 			Prober:      ffmpeg.NewCLI(bin),

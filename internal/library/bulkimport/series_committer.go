@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 )
 
 // runCommitSeries adopts every reviewed show in a series scan: creates (or
@@ -93,6 +94,9 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 	)
 	countCommit(ctx, "series", "success", int64(success))
 	countCommit(ctx, "series", "failed", int64(failed))
+	if success > 0 {
+		mediaserver.RefreshInBackground(ctx, s.ms, "series", s.seriesPath)
+	}
 }
 
 // commitShow adopts one show folder: resolve/create the show, then link each

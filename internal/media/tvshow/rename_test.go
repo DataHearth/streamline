@@ -11,6 +11,7 @@ import (
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/events"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,7 +34,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
 		storeMk = store.EXPECT()
-		svc = NewRenameService(store, "/library/tv", naming)
+		svc = NewRenameService(store, nil, "/library/tv", naming)
 	})
 
 	It("maps NotFound to ErrSeriesNotFound on preview", func() {
@@ -77,6 +78,7 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 	Describe("Apply's event recording", func() {
 		var (
 			client *ent.Client
+			msMk   *msmocks.MockRefresher_Expecter
 			tmp    string
 			showID uint32
 		)
@@ -87,7 +89,9 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 			events.Register(client)
 
 			tmp = GinkgoT().TempDir()
-			svc = NewRenameService(store, tmp, naming)
+			ms := msmocks.NewMockRefresher(GinkgoT())
+			msMk = ms.EXPECT()
+			svc = NewRenameService(store, ms, tmp, naming)
 
 			row := client.TVShow.Create().
 				SetTitle("The Wire").
@@ -133,10 +137,15 @@ var _ = Describe("RenameService", Label("unit", "series"), func() {
 				storeMk.UpdateMediaFilePath(
 					mock.Anything, uint32(20), mock.AnythingOfType("string"),
 				).Return(nil).Once()
+				refreshed := make(chan struct{})
+				msMk.RefreshAll(mock.Anything, "series", tmp).
+					Run(func(context.Context, string, string) { close(refreshed) }).
+					Return(nil).Once()
 
 				plan, err := svc.Apply(ctx, showID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(plan.Operations).To(HaveLen(2))
+				Eventually(refreshed).Should(BeClosed())
 
 				evs := client.MediaEvent.Query().
 					Where(

@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
@@ -78,6 +79,7 @@ type Service struct {
 	metadata metadata.TVProvider
 	posters  posters.Manager
 	download download.Downloader
+	ms       mediaserver.Refresher
 }
 
 func NewService(
@@ -85,8 +87,9 @@ func NewService(
 	meta metadata.TVProvider,
 	p posters.Manager,
 	dl download.Downloader,
+	ms mediaserver.Refresher,
 ) *Service {
-	return &Service{db: store, metadata: meta, posters: p, download: dl}
+	return &Service{db: store, metadata: meta, posters: p, download: dl, ms: ms}
 }
 
 var _ Manager = (*Service)(nil)
@@ -661,6 +664,9 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 			attribute.Int("files.requested", requested),
 			attribute.Int("files.kept", kept),
 		)
+		if requested > 0 {
+			mediaserver.RefreshInBackground(ctx, s.ms, "series", root)
+		}
 	}
 	if err := s.db.DeleteTVShow(ctx, id); err != nil {
 		if ent.IsNotFound(err) {
@@ -717,9 +723,8 @@ func (s *Service) DeleteEpisodeFile(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
-	if err := library.RemoveMediaFile(ctx,
-		mf.Path, config.Get().Library.SeriesPath,
-	); err != nil {
+	root := config.Get().Library.SeriesPath
+	if err := library.RemoveMediaFile(ctx, mf.Path, root); err != nil {
 		// See movie.DeleteFile: a file outside the root is refused, row kept.
 		if errors.Is(err, library.ErrOutsideRoot) {
 			return otelx.RecordSpanError(span, err)
@@ -727,6 +732,7 @@ func (s *Service) DeleteEpisodeFile(
 		slog.WarnContext(ctx, "delete episode file from disk failed",
 			"path", mf.Path, "error", err)
 	}
+	mediaserver.RefreshInBackground(ctx, s.ms, "series", root)
 	if err := s.db.DeleteMediaFileAndRevertEpisode(
 		ctx, mf.ID, episodeID,
 	); err != nil {

@@ -17,6 +17,7 @@ import (
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -33,6 +34,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk  *mockmeta.MockTVProvider_Expecter
 		postMk  *mockposters.MockManager_Expecter
 		dlMk    *mockdownload.MockDownloader_Expecter
+		msMk    *msmocks.MockRefresher_Expecter
 		svc     *Service
 	)
 
@@ -46,7 +48,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		postMk = post.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		dlMk = dl.EXPECT()
-		svc = NewService(store, meta, post, dl)
+		ms := msmocks.NewMockRefresher(GinkgoT())
+		msMk = ms.EXPECT()
+		svc = NewService(store, meta, post, dl, ms)
 		// Cast enrichment runs after every add and metadata update and is
 		// exercised on its own in people_test.go; here it is background noise
 		// with nothing to enrich.
@@ -55,6 +59,15 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		).Return(nil, nil).Maybe()
 		configtest.Setup(map[string]any{})
 	})
+
+	// See the movie suite: the refresh runs on its own goroutine.
+	expectRefresh := func(root string) chan struct{} {
+		done := make(chan struct{})
+		msMk.RefreshAll(mock.Anything, "series", root).
+			Run(func(context.Context, string, string) { close(done) }).
+			Return(nil).Once()
+		return done
+	}
 
 	It("fetches TVDB metadata and creates the show with a poster fetch", func() {
 		air := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -321,6 +334,25 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 	})
 
+	It("Delete rescans the media servers when it deletes the files", func() {
+		root := config.Get().Library.SeriesPath
+		show := &ent.TVShow{ID: 7}
+		show.Edges.Seasons = []*ent.Season{{Edges: ent.SeasonEdges{
+			Episodes: []*ent.Episode{{Edges: ent.EpisodeEdges{
+				MediaFiles: []*ent.MediaFile{
+					{ID: 1, Path: filepath.Join(root, "gone.mkv")},
+				},
+			}}},
+		}}}
+		storeMk.FindTVShowByID(mock.Anything, uint32(7)).Return(show, nil).Once()
+		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
+		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
+		refreshed := expectRefresh(root)
+
+		Expect(svc.Delete(ctx, 7, DeleteOptions{DeleteFiles: true})).To(Succeed())
+		Eventually(refreshed).Should(BeClosed())
+	})
+
 	It("RefreshOne re-pulls metadata and stamps refreshed_at", func() {
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
 			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
@@ -568,6 +600,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				dlMk.RemoveTorrent(mock.Anything, "qb", "H", false).
 					Return(nil).
 					Once()
+				refreshed := expectRefresh(config.Get().Library.SeriesPath)
 
 				err := svc.DeleteEpisodeFile(
 					ctx,
@@ -575,6 +608,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					DeleteFileOptions{RemoveTorrent: true},
 				)
 				Expect(err).NotTo(HaveOccurred())
+				Eventually(refreshed).Should(BeClosed())
 			},
 		)
 
@@ -585,6 +619,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			storeMk.DeleteMediaFileAndRevertEpisode(mock.Anything, uint32(4), uint32(9)).
 				Return(nil).
 				Once()
+			refreshed := expectRefresh(config.Get().Library.SeriesPath)
 
 			err := svc.DeleteEpisodeFile(
 				ctx,
@@ -592,6 +627,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				DeleteFileOptions{RemoveTorrent: false},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			Eventually(refreshed).Should(BeClosed())
 		})
 
 		It("errors when the episode has no media file", func() {

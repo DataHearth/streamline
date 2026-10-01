@@ -24,8 +24,8 @@ import (
 	dlmocks "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/transcoding/mocks"
 )
 
 // shortDurationProbe is the verification-failure fixture: the same shape as
@@ -44,7 +44,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		ctx       context.Context
 		client    *ent.Client
 		store     *db.DB
-		ms        *mocks.MockMediaServerRefresher
+		ms        *msmocks.MockRefresher
 		dl        *dlmocks.MockDownloader
 		worker    *Worker
 		root      string
@@ -142,7 +142,7 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		store = db.New(client)
 		tmdbSeq = 0
 
-		ms = mocks.NewMockMediaServerRefresher(GinkgoT())
+		ms = msmocks.NewMockRefresher(GinkgoT())
 		dl = dlmocks.NewMockDownloader(GinkgoT())
 		worker = NewWorker(Deps{
 			DB:          store,

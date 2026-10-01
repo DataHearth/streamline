@@ -16,8 +16,8 @@ import (
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/transcoding/mocks"
 )
 
 var _ = Describe(
@@ -28,7 +28,7 @@ var _ = Describe(
 			ctx       context.Context
 			client    *ent.Client
 			store     *db.DB
-			ms        *mocks.MockMediaServerRefresher
+			ms        *msmocks.MockRefresher
 			worker    *Worker
 			movieRoot string
 			srcPath   string
@@ -113,7 +113,7 @@ var _ = Describe(
 			DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 			store = db.New(client)
 
-			ms = mocks.NewMockMediaServerRefresher(GinkgoT())
+			ms = msmocks.NewMockRefresher(GinkgoT())
 			worker = NewWorker(Deps{
 				DB:          store,
 				Prober:      ffmpeg.NewCLI(""),

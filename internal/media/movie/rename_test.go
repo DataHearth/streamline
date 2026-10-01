@@ -12,6 +12,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 )
 
 var _ = Describe("RenameService", Label("unit", "movies"), func() {
@@ -31,7 +32,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("returns an empty plan when files already match the target", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		movie := &ent.Movie{ID: 1, Title: "The Matrix", Year: 1999, TmdbID: 603}
 		files := []*ent.MediaFile{{
 			ID:   10,
@@ -49,7 +50,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("plans a move for a misnamed file", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
 		src := filepath.Join(tmp, "Dune.2021.1080p.WEB-DL.x264-GROUP.mkv")
 		Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
@@ -71,7 +72,12 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("leaves out a file the template would put outside the library", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", "../escaped/{title}.{ext}")
+		svc := NewRenameService(
+			store,
+			nil,
+			"/library/movies",
+			"../escaped/{title}.{ext}",
+		)
 		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
 		files := []*ent.MediaFile{{ID: 10, Path: "/library/movies/Dune/Dune.mkv"}}
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
@@ -91,7 +97,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("recovers a quality the name lost, from the probe on the row", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", defaultNaming)
+		svc := NewRenameService(store, nil, "/library/movies", defaultNaming)
 		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
 		files := []*ent.MediaFile{{
 			ID: 10,
@@ -118,7 +124,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 	// being re-planned on every pass.
 	It("drops the empty brackets when nothing can supply a quality", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", defaultNaming)
+		svc := NewRenameService(store, nil, "/library/movies", defaultNaming)
 		movie := &ent.Movie{ID: 1, Title: "13 Hours", Year: 2016, TmdbID: 300671}
 		files := []*ent.MediaFile{{
 			ID: 10,
@@ -140,7 +146,8 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("applies the plan, moves files, and updates DB paths", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, tmp, naming)
+		ms := msmocks.NewMockRefresher(GinkgoT())
+		svc := NewRenameService(store, ms, tmp, naming)
 		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
 		src := filepath.Join(tmp, "Dune.misnamed.mkv")
 		Expect(os.WriteFile(src, []byte("x"), 0o644)).To(Succeed())
@@ -152,6 +159,10 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		store.EXPECT().UpdateMediaFilePath(
 			mock.Anything, uint32(10), mock.AnythingOfType("string"),
 		).Return(nil).Once()
+		refreshed := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, "movie", tmp).
+			Run(func(context.Context, string, string) { close(refreshed) }).
+			Return(nil).Once()
 
 		plan, err := svc.Apply(ctx, 1)
 		Expect(err).NotTo(HaveOccurred())
@@ -160,11 +171,12 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 		Expect(os.IsNotExist(statErr)).To(BeTrue())
 		_, statErr = os.Stat(plan.Operations[0].To)
 		Expect(statErr).NotTo(HaveOccurred())
+		Eventually(refreshed).Should(BeClosed())
 	})
 
 	It("prunes the directory the file left behind", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, tmp, naming)
+		svc := NewRenameService(store, nil, tmp, naming)
 		movie := &ent.Movie{ID: 1, Title: "Dune", Year: 2021, TmdbID: 438631}
 		// The old layout of the same movie: renaming out of it empties it, which
 		// is what a colon-collapsing re-rename does to every affected title.
@@ -188,7 +200,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("maps NotFound to ErrMovieNotFound on preview", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(99)).
 			Return(nil, &ent.NotFoundError{}).Once()
 
@@ -199,7 +211,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("maps NotFound to ErrMovieNotFound on apply", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(99)).
 			Return(nil, &ent.NotFoundError{}).Once()
 
@@ -210,7 +222,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("wraps generic lookup errors without the not-found sentinel", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		storeErr := errors.New("db down")
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
 			Return(nil, storeErr).Once()
@@ -223,7 +235,7 @@ var _ = Describe("RenameService", Label("unit", "movies"), func() {
 
 	It("keeps a media-file listing failure off the not-found path", func() {
 		store := dbmocks.NewMockStore(GinkgoT())
-		svc := NewRenameService(store, "/library/movies", naming)
+		svc := NewRenameService(store, nil, "/library/movies", naming)
 		storeErr := errors.New("listing blew up")
 		store.EXPECT().FindMovieByID(mock.Anything, uint32(1)).
 			Return(&ent.Movie{ID: 1, Title: "Dune", Year: 2021}, nil).Once()

@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
@@ -172,6 +173,7 @@ type Service struct {
 	metadata metadata.Provider
 	posters  posters.Manager
 	download download.Downloader
+	ms       mediaserver.Refresher
 }
 
 func NewService(
@@ -179,8 +181,15 @@ func NewService(
 	meta metadata.Provider,
 	posters posters.Manager,
 	dl download.Downloader,
+	ms mediaserver.Refresher,
 ) *Service {
-	return &Service{db: store, metadata: meta, posters: posters, download: dl}
+	return &Service{
+		db:       store,
+		metadata: meta,
+		posters:  posters,
+		download: dl,
+		ms:       ms,
+	}
 }
 
 func (s *Service) Add(
@@ -791,6 +800,9 @@ func (s *Service) Delete(
 			attribute.Int("files.requested", len(files)),
 			attribute.Int("files.kept", kept),
 		)
+		if len(files) > 0 {
+			mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
+		}
 		// Before DeleteMovie: the download_records edge cascades, so after the
 		// row goes there is nothing left to say which torrent produced this
 		// movie, and a still-seeding torrent comes back as an untracked
@@ -845,9 +857,8 @@ func (s *Service) DeleteFile(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("find media_file: %w", err))
 	}
-	if err := library.RemoveMediaFile(ctx,
-		mf.Path, config.Get().Library.MoviePath,
-	); err != nil {
+	root := config.Get().Library.MoviePath
+	if err := library.RemoveMediaFile(ctx, mf.Path, root); err != nil {
 		// Refused outright rather than logged and carried on: dropping the
 		// row would leave the file where it is with nothing tracking it, and
 		// the caller told the deletion happened.
@@ -857,6 +868,7 @@ func (s *Service) DeleteFile(
 		slog.WarnContext(ctx, "delete media file from disk failed",
 			"path", mf.Path, "error", err)
 	}
+	mediaserver.RefreshInBackground(ctx, s.ms, "movie", root)
 	if err := s.db.DeleteMediaFileAndRevertMovie(ctx, fileID, movieID); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("delete + revert: %w", err))
 	}

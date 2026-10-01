@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -155,6 +156,9 @@ func (s *Service) runCommit(ctx context.Context, scan *ent.ImportScan) {
 	)
 	countCommit(ctx, "movie", "success", int64(successCount))
 	countCommit(ctx, "movie", "failed", int64(failedCount))
+	if successCount > 0 {
+		mediaserver.RefreshInBackground(ctx, s.ms, "movie", s.moviePath)
+	}
 }
 
 func (s *Service) commitOne(

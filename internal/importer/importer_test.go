@@ -24,8 +24,8 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
-	mockimp "github.com/datahearth/streamline/internal/importer/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -61,7 +61,7 @@ func fixtureRecord(
 var _ = Describe("Worker", Label("unit", "importer"), func() {
 	var (
 		storeMk *mockdb.MockStore
-		msMk    *mockimp.MockMediaServerDispatcher
+		msMk    *msmocks.MockRefresher
 		libSvc  *library.ImportService
 		w       *Worker
 		tmp     string
@@ -86,7 +86,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		})
 
 		storeMk = mockdb.NewMockStore(GinkgoT())
-		msMk = mockimp.NewMockMediaServerDispatcher(GinkgoT())
+		msMk = msmocks.NewMockRefresher(GinkgoT())
 		libSvc = library.NewImportService()
 		w = NewWorker(Deps{DB: storeMk, Library: libSvc, MediaServer: msMk})
 	})

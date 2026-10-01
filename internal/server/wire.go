@@ -175,8 +175,9 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		builtinClient = torrentEngine
 	}
 	dlManager := download.New(store, builtinClient)
-	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager)
-	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager)
+	dispatcher := mediaserver.NewDispatcher()
+	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
+	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
 	// subfolders, so on a fresh install they'd first appear after an import that
@@ -198,6 +199,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		libSvc,
 		movieSvc,
 		tvSvc,
+		dispatcher,
 		cfg.Library.MoviePath,
 		cfg.Library.SeriesPath,
 	)
@@ -217,13 +219,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			n,
 		)
 	}
-	dispatcher := mediaserver.NewDispatcher()
 	deepLinker := mediaserver.NewDeepLinker(nil)
 	renamer := movie.NewRenameService(
-		store, cfg.Library.MoviePath, cfg.Library.MovieNaming,
+		store, dispatcher, cfg.Library.MoviePath, cfg.Library.MovieNaming,
 	)
 	seriesRenamer := tvshow.NewRenameService(
-		store, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
+		store, dispatcher, cfg.Library.SeriesPath, cfg.Library.SeriesNaming,
 	)
 	pathMigrations := pathmigrate.NewService(store)
 	pathMigrations.WarnOnDrift(ctx)

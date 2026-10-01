@@ -18,6 +18,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -31,6 +32,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		metaMock     *mockmeta.MockProvider_Expecter
 		fetchMock    *mockposters.MockManager_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
+		msMock       *msmocks.MockRefresher_Expecter
 		posters      *mockposters.MockManager
 		svc          *Service
 	)
@@ -45,7 +47,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		fetchMock = posters.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
-		svc = NewService(store, meta, posters, dl)
+		ms := msmocks.NewMockRefresher(GinkgoT())
+		msMock = ms.EXPECT()
+		svc = NewService(store, meta, posters, dl, ms)
 		// Cast enrichment runs after every add and metadata update and is
 		// exercised on its own in people_test.go; here it is background noise
 		// with nothing to enrich.
@@ -56,6 +60,16 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			"metadata": map[string]any{"tmdb_region": ""},
 		})
 	})
+
+	// The refresh runs on its own goroutine, so a spec waits on the returned
+	// channel rather than racing the mock's end-of-spec assertion.
+	expectRefresh := func(root string) chan struct{} {
+		done := make(chan struct{})
+		msMock.RefreshAll(mock.Anything, "movie", root).
+			Run(func(context.Context, string, string) { close(done) }).
+			Return(nil).Once()
+		return done
+	}
 
 	Describe("Add", func() {
 		Context("when no quality profile is configured", func() {
@@ -515,6 +529,23 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 		})
 
+		It("rescans the media servers when it deletes the files", func() {
+			root := config.Get().Library.MoviePath
+			storeMock.ListMediaFilesByMovieID(mock.Anything, uint32(7)).
+				Return([]*ent.MediaFile{{ID: 1, Path: filepath.Join(root, "gone.mkv")}}, nil).
+				Once()
+			storeMock.LatestImportedRecordForMovie(mock.Anything, uint32(7)).
+				Return(nil, &ent.NotFoundError{}).Once()
+			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
+			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
+			refreshed := expectRefresh(root)
+
+			Expect(
+				svc.Delete(ctx, 7, DeleteOptions{DeleteFiles: true}),
+			).To(Succeed())
+			Eventually(refreshed).Should(BeClosed())
+		})
+
 		It("maps NotFound to a domain not-found error", func() {
 			storeMock.DeleteMovie(mock.Anything, uint32(99)).
 				Return(&ent.NotFoundError{}).Once()
@@ -768,6 +799,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				downloadMock.RemoveTorrent(mock.Anything, "qb", "H", false).
 					Return(nil).
 					Once()
+				refreshed := expectRefresh(config.Get().Library.MoviePath)
 
 				err := svc.DeleteFile(
 					ctx,
@@ -776,6 +808,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					DeleteFileOptions{RemoveTorrent: true},
 				)
 				Expect(err).ToNot(HaveOccurred())
+				Eventually(refreshed).Should(BeClosed())
 			},
 		)
 
@@ -786,9 +819,11 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			storeMock.DeleteMediaFileAndRevertMovie(mock.Anything, uint32(7), uint32(3)).
 				Return(nil).
 				Once()
+			refreshed := expectRefresh(config.Get().Library.MoviePath)
 
 			err := svc.DeleteFile(ctx, 3, 7, DeleteFileOptions{RemoveTorrent: false})
 			Expect(err).ToNot(HaveOccurred())
+			Eventually(refreshed).Should(BeClosed())
 		})
 
 		It("returns a not-found error when the media file is absent", func() {

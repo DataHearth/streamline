@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -24,12 +25,20 @@ import (
 // depend on the singleton).
 type RenameService struct {
 	db          db.Store
+	ms          mediaserver.Refresher
 	libraryRoot string
 	naming      string
 }
 
-func NewRenameService(store db.Store, libraryRoot, naming string) *RenameService {
-	return &RenameService{db: store, libraryRoot: libraryRoot, naming: naming}
+func NewRenameService(
+	store db.Store, ms mediaserver.Refresher, libraryRoot, naming string,
+) *RenameService {
+	return &RenameService{
+		db:          store,
+		ms:          ms,
+		libraryRoot: libraryRoot,
+		naming:      naming,
+	}
 }
 
 // Preview returns the rename plan without applying it. Empty Operations means
@@ -62,6 +71,10 @@ func (r *RenameService) Apply(
 	plan, err := r.buildPlan(ctx, seriesID)
 	if err != nil {
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
+	}
+	// See the movie twin: deferred so a half-applied plan still rescans.
+	if len(plan.Operations) > 0 {
+		defer mediaserver.RefreshInBackground(ctx, r.ms, "series", r.libraryRoot)
 	}
 	for _, op := range plan.Operations {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {

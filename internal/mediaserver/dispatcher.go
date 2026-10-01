@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -41,12 +42,45 @@ func countRefresh(ctx context.Context, ms config.MediaServerEntry, outcome strin
 	))
 }
 
+// Refresher asks the media servers to rescan a library root. Anything that adds,
+// rewrites, moves or deletes a file under one holds it: until the rescan, Plex
+// and Jellyfin keep listing what was there before.
+type Refresher interface {
+	// kind is "movie" or "series" — Plex scopes its rescan to one section and
+	// keys them separately, so the path alone does not say which to poke.
+	RefreshAll(ctx context.Context, kind, libraryPath string) error
+}
+
 // Dispatcher fans RefreshLibrary across all enabled media servers, read live
 // from config per invocation.
 type Dispatcher struct{}
 
+var _ Refresher = (*Dispatcher)(nil)
+
 func NewDispatcher() *Dispatcher {
 	return &Dispatcher{}
+}
+
+// RefreshInBackground runs RefreshAll off the caller's path, for request
+// handlers: an unreachable server holds each call for otelx.HTTPClient's whole
+// timeout, once per Plex section when none is configured. The ctx is detached
+// from cancellation, since the request finishes long before the rescan does.
+func RefreshInBackground(
+	ctx context.Context,
+	r Refresher,
+	kind, libraryPath string,
+) {
+	if r == nil {
+		return
+	}
+	ctx = context.WithoutCancel(ctx)
+	go func() {
+		defer observability.RecoverPanic(ctx, "mediaserver.refresh", nil)
+		if err := r.RefreshAll(ctx, kind, libraryPath); err != nil {
+			slog.WarnContext(ctx, "media server refresh reported errors",
+				"media.kind", kind, "error", err)
+		}
+	}()
 }
 
 // RefreshAll fans a rescan across every enabled media server. kind is "movie"

@@ -43,7 +43,17 @@ var _ = Describe(
 			metaProv = metadatamocks.NewMockProvider(GinkgoT())
 			tmpDir = GinkgoT().TempDir()
 			libRoot = tmpDir
-			svc = NewService(store, metaProv, nil, nil, nil, nil, libRoot, libRoot)
+			svc = NewService(
+				store,
+				metaProv,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				libRoot,
+				libRoot,
+			)
 		})
 
 		It("rejects relative path", func() {
@@ -80,7 +90,7 @@ var _ = Describe(
 
 		It("distinguishes a missing library root from a bad source path", func() {
 			svc = NewService(
-				store, metaProv, nil, nil, nil, nil,
+				store, metaProv, nil, nil, nil, nil, nil,
 				"/nonexistent/library/root", "/nonexistent/library/root",
 			)
 			_, err := svc.StartScan(
@@ -94,7 +104,7 @@ var _ = Describe(
 		It("validates a series scan against series_path, not movie_path", func() {
 			seriesRoot := GinkgoT().TempDir()
 			svc = NewService(
-				store, metaProv, nil, nil, nil, nil,
+				store, metaProv, nil, nil, nil, nil, nil,
 				"/nonexistent/movie/root", seriesRoot,
 			)
 			store.EXPECT().

@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Service skeleton", Label("unit", "bulkimport"), func() {
 	It("constructs without panic", func() {
-		s := NewService(nil, nil, nil, nil, nil, nil, "/library", "/library-tv")
+		s := NewService(nil, nil, nil, nil, nil, nil, nil, "/library", "/library-tv")
 		Expect(s).ToNot(BeNil())
 	})
 })
@@ -32,7 +32,17 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/library", "/library-tv")
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/library",
+			"/library-tv",
+		)
 	})
 
 	Describe("UpdateFileDecision", func() {
@@ -156,7 +166,7 @@ var _ = Describe("Service.BulkDecide", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
 	})
 
 	It("applies a classification-filtered decision to a movie scan", func() {

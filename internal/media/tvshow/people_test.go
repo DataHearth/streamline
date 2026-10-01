@@ -31,7 +31,7 @@ var _ = Describe("Series cast enrichment", Label("unit", "series"), func() {
 		storeMock = store.EXPECT()
 		meta := mockmeta.NewMockTVProvider(GinkgoT())
 		metaMock = meta.EXPECT()
-		svc = NewService(store, meta, nil, nil)
+		svc = NewService(store, meta, nil, nil, nil)
 		saved = map[uint32]metadata.PersonDetails{}
 	})
 

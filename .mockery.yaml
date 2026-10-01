@@ -32,7 +32,6 @@ packages:
   github.com/datahearth/streamline/internal/importer:
     interfaces:
       Enqueuer: {}
-      MediaServerDispatcher: {}
   github.com/datahearth/streamline/internal/indexer:
     interfaces:
       Client: {}
@@ -53,6 +52,7 @@ packages:
   github.com/datahearth/streamline/internal/mediaserver:
     interfaces:
       Manager: {}
+      Refresher: {}
       Server: {}
   github.com/datahearth/streamline/internal/metadata:
     interfaces:
@@ -78,9 +78,6 @@ packages:
   github.com/datahearth/streamline/internal/scheduler:
     interfaces:
       Controller: {}
-  github.com/datahearth/streamline/internal/transcoding:
-    interfaces:
-      MediaServerRefresher: {}
   github.com/datahearth/streamline/internal/server/middleware:
     interfaces:
       Authenticator: {}

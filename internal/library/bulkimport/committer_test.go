@@ -18,6 +18,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/movie"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -33,7 +34,7 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
 	})
 
 	It("rejects when scan is not in awaiting_review status", func() {
@@ -73,6 +74,66 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 	})
 })
 
+var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
+	var (
+		ctx   context.Context
+		store *dbmocks.MockStore
+		ms    *msmocks.MockRefresher
+		svc   *Service
+		scan  *ent.ImportScan
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		ms = msmocks.NewMockRefresher(GinkgoT())
+		svc = NewService(store, nil, nil, nil, nil, nil, ms, "/lib", "/lib-tv")
+		scan = &ent.ImportScan{ID: 3, Mode: entimportscan.ModeInPlace}
+		store.EXPECT().
+			UpdateImportScanStatus(mock.Anything, uint32(3), entimportscan.StatusCompleted, mock.Anything).
+			Return(nil).
+			Once()
+	})
+
+	It("rescans the media servers once something committed", func() {
+		store.EXPECT().ListImportScanFilesForCommit(mock.Anything, uint32(3)).
+			Return([]*ent.ImportScanFile{{
+				ID:              1,
+				Classification:  entimportscanfile.ClassificationExisting,
+				ExistingMovieID: 5,
+				SourcePath:      "/lib/Movie (2020)/Movie.mkv",
+			}}, nil).
+			Once()
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(5)).
+			Return([]*ent.MediaFile{{Path: "/lib/Movie (2020)/Movie.mkv"}}, nil).
+			Once()
+		store.EXPECT().
+			UpdateImportScanFileOutcome(mock.Anything, uint32(1), entimportscanfile.OutcomeAttached, mock.Anything).
+			Return(nil).
+			Once()
+		refreshed := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, "movie", "/lib").
+			Run(func(context.Context, string, string) { close(refreshed) }).
+			Return(nil).Once()
+
+		svc.runCommit(ctx, scan)
+		Eventually(refreshed).Should(BeClosed())
+	})
+
+	It("leaves the media servers alone when nothing committed", func() {
+		store.EXPECT().ListImportScanFilesForCommit(mock.Anything, uint32(3)).
+			Return(nil, nil).
+			Once()
+		refreshed := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, mock.Anything, mock.Anything).
+			Run(func(context.Context, string, string) { close(refreshed) }).
+			Return(nil).Maybe()
+
+		svc.runCommit(ctx, scan)
+		Consistently(refreshed).ShouldNot(BeClosed())
+	})
+})
+
 var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	var (
 		ctx   context.Context
@@ -85,7 +146,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
 	})
 
 	It(
@@ -270,6 +331,7 @@ var _ = Describe(
 				library.NewImportService(),
 				nil,
 				nil,
+				nil,
 				libDir,
 				libDir,
 			)
@@ -339,8 +401,23 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 			mock.Anything, mock.Anything, mock.Anything,
 		).Return(nil, nil).Maybe()
 		meta = metamocks.NewMockProvider(GinkgoT())
-		svc = NewService(store, meta, nil, nil,
-			movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
+		svc = NewService(
+			store,
+			meta,
+			nil,
+			nil,
+			movie.NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				nil,
+			),
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+		)
 	})
 
 	It("returns the existing row when another scan added the movie first", func() {
@@ -399,8 +476,23 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				}},
 				"quality_default_profile": "hd",
 			})
-			svc = NewService(store, meta, nil, nil,
-				movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
+			svc = NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				movie.NewService(
+					store,
+					meta,
+					nil,
+					nil,
+					nil,
+				),
+				nil,
+				nil,
+				"/lib",
+				"/lib-tv",
+			)
 			f := &ent.ImportScanFile{
 				ID: 7, SourcePath: "/import/Movie.mkv", Size: 1_500_000_000,
 				ParsedQuality: "1080p", ParsedReleaseGroup: "X",
@@ -442,8 +534,23 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 			}},
 			"quality_default_profile": "hd",
 		})
-		svc = NewService(store, meta, nil, nil,
-			movie.NewService(store, meta, nil, nil), nil, "/lib", "/lib-tv")
+		svc = NewService(
+			store,
+			meta,
+			nil,
+			nil,
+			movie.NewService(
+				store,
+				meta,
+				nil,
+				nil,
+				nil,
+			),
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+		)
 		f := &ent.ImportScanFile{
 			ID: 8, SourcePath: "/import/Movie2.mkv", Size: 1_500_000_000,
 		}
@@ -523,7 +630,8 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			})
 			svc = NewService(
 				store, meta, nil, library.NewImportService(),
-				movie.NewService(store, meta, nil, nil), nil, libDir, libDir,
+				movie.NewService(store, meta, nil, nil, nil), nil, nil,
+				libDir, libDir,
 			)
 
 			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")

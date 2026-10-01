@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/tvshow"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -35,6 +36,7 @@ var _ = Describe(
 			client *ent.Client
 			store  db.Store
 			tvmeta *metamocks.MockTVProvider
+			ms     *msmocks.MockRefresher
 			svc    *Service
 		)
 
@@ -50,8 +52,9 @@ var _ = Describe(
 			store = db.New(client)
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
 			// SeriesAdder = real tvshow.Service backed by the mock TVDB provider.
-			tvSvc := tvshow.NewService(store, tvmeta, nil, nil)
-			svc = NewService(store, nil, tvmeta, nil, nil, tvSvc, tmpDir, tmpDir)
+			tvSvc := tvshow.NewService(store, tvmeta, nil, nil, nil)
+			ms = msmocks.NewMockRefresher(GinkgoT())
+			svc = NewService(store, nil, tvmeta, nil, nil, tvSvc, ms, tmpDir, tmpDir)
 		})
 
 		// placeEpisode writes a >MinMediaSize file in a season subfolder, exercising
@@ -71,6 +74,11 @@ var _ = Describe(
 		It(
 			"creates the show, links on-disk episodes, leaves missing ones wanted",
 			func() {
+				rescanned := make(chan struct{}, 2)
+				ms.EXPECT().RefreshAll(mock.Anything, "series", tmpDir).
+					Run(func(context.Context, string, string) { rescanned <- struct{}{} }).
+					Return(nil).Times(2)
+
 				const tvdbID = uint32(81189)
 				tvmeta.EXPECT().
 					GetSeries(mock.Anything, tvdbID).
@@ -151,6 +159,7 @@ var _ = Describe(
 				).To(Succeed())
 
 				svc.runCommitSeries(ctx, scan)
+				Eventually(rescanned).Should(Receive())
 
 				// Show created from TVDB.
 				show, err := store.FindTVShowByTVDBID(ctx, tvdbID)
@@ -245,6 +254,7 @@ var _ = Describe(
 				)).To(Succeed())
 
 				svc.runCommitSeries(ctx, scan2)
+				Eventually(rescanned).Should(Receive())
 
 				// E01 now tracks the repack; the old file is gone from disk.
 				// E02's file is re-scanned at its same path, so it is untouched.
@@ -296,7 +306,8 @@ var _ = Describe(
 				importSvc := library.NewImportService()
 				svc := NewService(
 					store, nil, tvmeta, importSvc, nil,
-					tvshow.NewService(store, tvmeta, nil, nil), libDir, libDir,
+					tvshow.NewService(store, tvmeta, nil, nil, nil), nil,
+					libDir, libDir,
 				)
 
 				const tvdbID = uint32(81189)
@@ -391,7 +402,7 @@ var _ = Describe(
 				DeferCleanup(client.Close)
 				store := db.New(client)
 				tvmeta := metamocks.NewMockTVProvider(GinkgoT())
-				tvSvc := tvshow.NewService(store, tvmeta, nil, nil)
+				tvSvc := tvshow.NewService(store, tvmeta, nil, nil, nil)
 				svc := NewService(
 					store,
 					nil,
@@ -399,6 +410,7 @@ var _ = Describe(
 					nil,
 					nil,
 					tvSvc,
+					nil,
 					tmpDir,
 					tmpDir,
 				)
