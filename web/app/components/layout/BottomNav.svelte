@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -376,12 +377,7 @@
 		};
 	}
 
-	let roleLabel = $derived.by(() => {
-		const r = auth.user?.role;
-		if (r === "admin") return "admin";
-		if (r === "request_only") return "request";
-		return "member";
-	});
+	let role = $derived(roleLabel(auth.user?.role ?? "member"));
 
 	const cellBase =
 		"relative flex flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-3 text-[10.5px] transition-colors";
@@ -619,7 +615,7 @@
 									{auth.user.display_name || auth.user.email}
 								</div>
 								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-faint">
-									{roleLabel}{version ? ` · ${version}` : ""}
+									{role}{version ? ` · ${version}` : ""}
 								</div>
 							</div>
 						</a>

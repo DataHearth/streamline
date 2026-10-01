@@ -206,16 +206,16 @@
 		const t = Date.parse(iso);
 		if (Number.isNaN(t)) return "—";
 		const s = Math.max(0, (Date.now() - t) / 1000);
-		if (s < 60) return "now";
+		if (s < 60) return i18n.age_now();
 		const m = s / 60;
-		if (m < 60) return `${Math.floor(m)}m`;
+		if (m < 60) return i18n.age_minutes({ n: Math.floor(m) });
 		const h = m / 60;
-		if (h < 24) return `${Math.floor(h)}h`;
+		if (h < 24) return i18n.age_hours({ n: Math.floor(h) });
 		const d = h / 24;
-		if (d < 30) return `${Math.floor(d)}d`;
+		if (d < 30) return i18n.age_days({ n: Math.floor(d) });
 		const mo = d / 30;
-		if (mo < 12) return `${Math.floor(mo)}mo`;
-		return `${Math.floor(d / 365)}y`;
+		if (mo < 12) return i18n.age_months({ n: Math.floor(mo) });
+		return i18n.age_years({ n: Math.floor(d / 365) });
 	}
 
 	function fmtDate(iso?: string): string {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import {
 		LayoutDashboard,
@@ -187,12 +188,7 @@
 		].filter((p) => p.count > 0),
 	);
 
-	let roleLabel = $derived.by(() => {
-		const r = auth.user?.role;
-		if (r === "admin") return "admin";
-		if (r === "request_only") return "request";
-		return "member";
-	});
+	let role = $derived(roleLabel(auth.user?.role ?? "member"));
 
 	async function signOut() {
 		try {
@@ -408,7 +404,7 @@
 							{auth.user.display_name || auth.user.email}
 						</div>
 						<div class="mt-px truncate font-mono text-[10px] text-fg-faint">
-							{roleLabel}{version ? ` · ${version}` : ""}
+							{role}{version ? ` · ${version}` : ""}
 						</div>
 					</div>
 				</a>

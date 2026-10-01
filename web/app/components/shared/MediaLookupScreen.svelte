@@ -369,9 +369,10 @@
 
 		{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
 			<p class="flex-none px-5 pt-3 pb-1 text-[11.5px] text-fg-faint">
-				{results.length}
-				{results.length === 1 ? "match" : "matches"}{heldCount > 0
-					? ` · ${heldCount} already in your library`
+				{(results.length === 1
+					? i18n.lookup_match_count_one
+					: i18n.lookup_match_count_other)({ count: results.length })}{heldCount > 0
+					? ` · ${i18n.lookup_held_in_library({ count: heldCount })}`
 					: ""}
 			</p>
 		{/if}
