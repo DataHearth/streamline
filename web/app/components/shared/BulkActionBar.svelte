@@ -47,7 +47,7 @@
 					onclick={onSelectAll}
 					class="whitespace-nowrap font-mono text-[11px] text-accent-text underline-offset-2 transition hover:underline"
 				>
-					select all {total}
+					{i18n.bulk_select_all_n_lc({ total })}
 				</button>
 			{/if}
 		</div>

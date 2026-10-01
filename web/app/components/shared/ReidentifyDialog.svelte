@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
@@ -50,19 +51,23 @@
 				// Not a failure, but the operator has files sitting outside the
 				// library now and nothing else will tell them.
 				toast.err(
-					`Now "${res.title}". ${unmatched} file${unmatched === 1 ? "" : "s"} had no matching episode and were left on disk.`,
+					(unmatched === 1
+						? i18n.reidentify_unmatched_one
+						: i18n.reidentify_unmatched_other)({ title: res.title, count: unmatched }),
 				);
 			} else {
 				toast.ok(
 					res.renamed > 0
-						? `Now "${res.title}" — ${res.renamed} file${res.renamed === 1 ? "" : "s"} renamed.`
-						: `Now "${res.title}".`,
+						? (res.renamed === 1
+								? i18n.reidentify_renamed_one
+								: i18n.reidentify_renamed_other)({ title: res.title, count: res.renamed })
+						: i18n.reidentify_done({ title: res.title }),
 				);
 			}
 			picked = null;
 			onClose();
 		},
-		onError: (e) => toast.err(errorText(e, "Could not change the match")),
+		onError: (e) => toast.err(errorText(e, i18n.reidentify_failed())),
 	}));
 
 	function onPickMovie(r: TMDBMovieResult) {
@@ -77,8 +82,8 @@
 	);
 	let confirmBody = $derived(
 		kind === "movie"
-			? `"${currentTitle}" keeps its files, history and requests — only its TMDB identity changes. Metadata is refreshed and the files are renamed into the new title's folder.`
-			: `"${currentTitle}" keeps its files and history. The season and episode list is replaced from TVDB, and each file is re-attached to the episode with the same season and episode number. Files with no counterpart in the new show are left on disk and reported.`,
+			? i18n.reidentify_body_movie({ title: currentTitle })
+			: i18n.reidentify_body_series({ title: currentTitle }),
 	);
 </script>
 
@@ -104,7 +109,7 @@
 
 <Dialog
 	open={open && picked !== null}
-	title="Change the match to “{pickedLabel}”?"
+	title={i18n.reidentify_title({ label: pickedLabel })}
 	body={confirmBody}
 	actions={[
 		{ label: "Back", variant: "ghost", onClick: () => (picked = null) },

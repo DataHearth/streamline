@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NOUN_FILE } from "@lib/nouns";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import {
 		ArrowUp,
@@ -124,7 +125,7 @@
 				<span aria-hidden="true" class="text-fg-faint">·</span>
 			{/if}
 			<span class="font-mono tabular-nums">
-				{show.file_count} file{show.file_count === 1 ? "" : "s"}
+				{NOUN_FILE.count(show.file_count)}
 			</span>
 		</p>
 		<span

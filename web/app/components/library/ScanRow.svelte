@@ -73,7 +73,7 @@
 			{#if scan.total_count > 0}
 				<span aria-hidden="true" class="text-fg-faint">·</span>
 				<span class="font-mono tabular-nums">
-					{scan.processed_count}/{scan.total_count} files
+					{i18n.imports_processed_files({ done: scan.processed_count, total: scan.total_count })}
 				</span>
 			{/if}
 		</span>

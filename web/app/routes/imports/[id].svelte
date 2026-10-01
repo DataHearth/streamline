@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NOUN_FILE, NOUN_SHOW } from "@lib/nouns";
 	import {
 		createMutation,
 		createQuery,
@@ -683,7 +684,7 @@
 				<DecisionStrip
 					pendingCount={stripPendingCount}
 					commitableCount={stripCommitableCount}
-					noun={isSeries ? "show" : "file"}
+					noun={isSeries ? NOUN_SHOW : NOUN_FILE}
 					commitNote={commitNote(scan.mode, scan.import_mode)}
 					skipBusy={isSeries ? skipAllShows.isPending : skipAll.isPending}
 					commitBusy={commit.isPending}
@@ -756,7 +757,7 @@
 						<p class="px-5 py-8 text-sm text-fg-subtle">{i18n.common_loading_shows()}</p>
 					{:else if showsQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {showsQuery.error?.message}
+							{i18n.common_failed_with({ error: showsQuery.error?.message ?? "" })}
 						</p>
 					{:else if showItems.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
@@ -855,7 +856,7 @@
 						</p>
 					{:else if filesQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							Failed: {filesQuery.error?.message}
+							{i18n.common_failed_with({ error: filesQuery.error?.message ?? "" })}
 						</p>
 					{:else if items.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">

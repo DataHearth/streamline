@@ -45,7 +45,7 @@
 			api<ImportScan>("/library/imports", { method: "POST", body }),
 		onSuccess: (scan) => {
 			qc.invalidateQueries({ queryKey: ["imports"] });
-			toast.ok("Scan started");
+			toast.ok(i18n.imports_scan_started());
 			onCreated?.();
 			navigate("/imports/[id]", { id: String(scan.id) });
 		},
@@ -103,9 +103,9 @@
 		{
 			v: "rename",
 			label: i18n.imports_import_rename(),
-			desc: `Files outside the library — copy/move into the configured ${
-				isSeries ? "series" : "movie"
-			} path.`,
+			desc: isSeries
+				? i18n.imports_rename_desc_series()
+				: i18n.imports_rename_desc_movie(),
 		},
 	]);
 

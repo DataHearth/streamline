@@ -33,6 +33,11 @@ export const NOUN_FILE: Noun = {
 	items: i18n.noun_file_items(),
 };
 
+export const NOUN_SHOW: Noun = {
+	count: counted(i18n.noun_show_one, i18n.noun_show_other),
+	items: i18n.noun_show_items(),
+};
+
 export const NOUN_EPISODE: Noun = {
 	count: counted(i18n.noun_episode_one, i18n.noun_episode_other),
 	items: i18n.noun_episode_items(),

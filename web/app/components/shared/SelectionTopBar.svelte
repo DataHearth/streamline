@@ -50,7 +50,7 @@
 			onclick={onSelectAll}
 			class="shrink-0 rounded-full px-3 py-2 text-[13px] font-medium text-accent-text transition active:bg-white/[0.06]"
 		>
-			Select all {total}
+			{i18n.bulk_select_all_n({ total })}
 		</button>
 	{:else}
 		<button

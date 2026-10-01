@@ -331,7 +331,7 @@
 	{@render packsHidden()}
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
 		<span class="tabular text-[11px] text-fg-faint">
-			{rows.length} of {data.length} releases
+			{i18n.releases_count_of({ visible: rows.length, total: data.length })}
 		</span>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if groups.length > 0}
@@ -340,7 +340,7 @@
 						value={groupFilter}
 						options={groupOptions}
 						onChange={(v) => (groupFilter = v)}
-						ariaLabel="Filter by release group"
+						ariaLabel={i18n.releases_filter_group()}
 					/>
 				</div>
 			{/if}
@@ -350,7 +350,7 @@
 						value={indexerFilter}
 						options={indexerOptions}
 						onChange={(v) => (indexerFilter = v)}
-						ariaLabel="Filter by indexer"
+						ariaLabel={i18n.releases_filter_indexer()}
 					/>
 				</div>
 			{/if}
@@ -467,7 +467,7 @@
 							{:else}
 								<Download size={13} aria-hidden="true" />
 							{/if}
-							Grab
+							{i18n.releases_grab()}
 						</button>
 					</div>
 				</li>
@@ -497,7 +497,7 @@
 								onclick={() => toggle("title")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Release
+								{i18n.common_release()}
 								{@render sortIcon("title")}
 							</button>
 						</th>
@@ -511,7 +511,7 @@
 								onclick={() => toggle("group")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Group
+								{i18n.file_group()}
 								{@render sortIcon("group")}
 							</button>
 						</th>
@@ -525,7 +525,7 @@
 								onclick={() => toggle("indexer")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Indexer
+								{i18n.common_indexer()}
 								{@render sortIcon("indexer")}
 							</button>
 						</th>
@@ -539,7 +539,7 @@
 								onclick={() => toggle("published")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Released
+								{i18n.releases_col_released()}
 								{@render sortIcon("published")}
 							</button>
 						</th>
@@ -570,7 +570,7 @@
 								onclick={() => toggle("size")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Size
+								{i18n.common_size()}
 								{@render sortIcon("size")}
 							</button>
 						</th>
@@ -584,7 +584,7 @@
 								onclick={() => toggle("seeders")}
 								class="touch-hit inline-flex min-w-11 items-center justify-center gap-1 uppercase tracking-[0.12em] transition hover:text-fg"
 							>
-								Seeders
+								{i18n.releases_col_seeders()}
 								{@render sortIcon("seeders")}
 							</button>
 						</th>
@@ -702,7 +702,7 @@
 									{:else}
 										<Download size={12} aria-hidden="true" />
 									{/if}
-									Grab
+									{i18n.releases_grab()}
 								</button>
 							</td>
 						</tr>

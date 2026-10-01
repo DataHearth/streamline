@@ -37,7 +37,6 @@
 		onOpen: (entry: TouchEntry) => void;
 	} = $props();
 
-	let noun = $derived(series ? "shows" : "files");
 	const DOT: Record<string, string> = {
 		confirmed: "available",
 		ambiguous: "wanted",
@@ -109,11 +108,17 @@
 	</div>
 
 	{#if pending}
-		<p class="px-4 py-8 text-sm text-fg-subtle">Loading {noun}…</p>
+		<p class="px-4 py-8 text-sm text-fg-subtle">
+			{series ? i18n.common_loading_shows() : i18n.common_loading_files()}
+		</p>
 	{:else if error}
-		<p class="px-4 py-8 text-sm text-status-failed">Failed: {error}</p>
+		<p class="px-4 py-8 text-sm text-status-failed">
+			{i18n.common_failed_with({ error })}
+		</p>
 	{:else if entries.length === 0}
-		<p class="px-4 py-8 text-sm text-fg-muted">No {noun} match this filter.</p>
+		<p class="px-4 py-8 text-sm text-fg-muted">
+			{series ? i18n.imports_no_match_shows() : i18n.imports_no_match_files()}
+		</p>
 	{:else}
 		<ul class="divide-y divide-border">
 			{#each entries as e (e.id)}
