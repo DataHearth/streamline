@@ -47,6 +47,12 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let tab = $state<RequestTab>("pending");
+	const NONE_RIGHT_NOW: Record<RequestTab, () => string> = {
+		pending: i18n.requests_none_pending,
+		approved: i18n.requests_none_approved,
+		rejected: i18n.requests_none_rejected,
+		all: i18n.requests_none_all,
+	};
 	// The two bands land on different states, so they cannot share one value. The
 	// lg tab bar opens on Pending because it can say so on screen; the touch list
 	// has no status control at all and opens on the whole list, sectioned.
@@ -338,7 +344,7 @@
 				<Inbox class="mb-3 h-10 w-10 text-fg-faint" aria-hidden="true" />
 				<p class="text-base font-semibold text-fg">{i18n.requests_inbox_zero()}</p>
 				<p class="mt-1 max-w-sm text-sm text-fg-subtle">
-					No {tab === "all" ? "" : tab} requests right now.
+					{NONE_RIGHT_NOW[tab]()}
 				</p>
 			</div>
 		{:else}

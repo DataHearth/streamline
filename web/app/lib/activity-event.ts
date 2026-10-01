@@ -62,7 +62,7 @@ export function eventSubject(event: ActivityEvent): EventSubject {
 			detail: seriesQualifier(event.payload),
 		};
 	}
-	return { title: "Unknown" };
+	return { title: i18n.common_unknown() };
 }
 
 /**

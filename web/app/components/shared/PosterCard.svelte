@@ -174,7 +174,7 @@
 		</div>
 		<Poster
 			src={cardPoster}
-			alt="{movie.title} poster"
+			alt={i18n.common_poster_alt({ title: movie.title })}
 			class="relative h-full w-full object-cover"
 		/>
 

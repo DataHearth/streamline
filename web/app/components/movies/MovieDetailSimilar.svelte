@@ -134,7 +134,7 @@
 						</div>
 						<Poster
 							src={rec.poster_url ?? ""}
-							alt="{rec.title} poster"
+							alt={i18n.common_poster_alt({ title: rec.title })}
 							class="relative h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 						/>
 						<div

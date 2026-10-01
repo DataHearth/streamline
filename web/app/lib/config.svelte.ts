@@ -1,9 +1,9 @@
 import { getContext, setContext } from "svelte";
 import { fetchAuthConfig } from "./auth_api";
+import { m as i18n } from "./paraglide/messages.js";
 
 // READONLY_HINT is the tooltip/title shown on locked mutation controls.
-export const READONLY_HINT =
-	"Read-only mode — configuration changes are disabled on this instance.";
+export const READONLY_HINT = i18n.config_readonly_hint();
 
 // ConfigStore holds deploy-level config flags surfaced to the SPA. read_only
 // comes from /auth/config (set when the instance runs with config.read_only);

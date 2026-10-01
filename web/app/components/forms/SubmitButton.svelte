@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { AnyFormApi } from "@tanstack/form-core";
 	import { readOnlyLock } from "@lib/config.svelte";
 
@@ -12,8 +13,8 @@
 
 	let {
 		form,
-		label = "Save",
-		pendingLabel = "Saving…",
+		label = i18n.common_save(),
+		pendingLabel = i18n.common_saving(),
 		disabled = false,
 		title,
 	}: Props = $props();

@@ -17,7 +17,7 @@ function detectBrowser(s: string): string {
 	if (s.includes("chromium")) return "Chromium";
 	if (s.includes("firefox/")) return "Firefox";
 	if (s.includes("safari/")) return "Safari";
-	return "Browser";
+	return i18n.common_browser();
 }
 
 function detectOS(s: string): string {
@@ -25,5 +25,5 @@ function detectOS(s: string): string {
 	if (s.includes("mac os x") || s.includes("macintosh")) return "macOS";
 	if (s.includes("linux")) return "Linux";
 	if (s.includes("cros")) return "ChromeOS";
-	return "Desktop";
+	return i18n.common_desktop();
 }

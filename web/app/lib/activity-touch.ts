@@ -105,7 +105,7 @@ export function holdFileCount(reasons: HoldReason[] | undefined): number {
 export function queueMeta(item: QueueEntry): MetaLine {
 	if (item.status === "error") {
 		return {
-			text: item.failure_reason || "Download failed",
+			text: item.failure_reason || i18n.queue_download_failed(),
 			color: "var(--status-failed)",
 		};
 	}
@@ -117,7 +117,7 @@ export function queueMeta(item: QueueEntry): MetaLine {
 	}
 	if (item.status === "importing") {
 		return {
-			text: joinDot(["importing", item.download_client]),
+			text: joinDot([i18n.lc_importing(), item.download_client]),
 			color: "var(--status-grabbing)",
 		};
 	}
@@ -128,8 +128,8 @@ export function queueMeta(item: QueueEntry): MetaLine {
 		const held = formatBytes(total * (item.progress ?? 0), "");
 		return {
 			text: joinDot([
-				`paused at ${pct(item.progress)}`,
-				held ? `${held} of ${formatBytes(total)}` : "",
+				i18n.queue_paused_at({ pct: pct(item.progress) }),
+				held ? i18n.queue_of_total({ done: held, total: formatBytes(total) }) : "",
 			]),
 		};
 	}
@@ -137,7 +137,7 @@ export function queueMeta(item: QueueEntry): MetaLine {
 	return {
 		text: joinDot([
 			formatSpeed(item.download_speed),
-			eta ? `${eta} left` : "",
+			eta ? i18n.queue_time_left({ eta }) : "",
 			item.selection_state === "unsupported"
 				? i18n.queue_selection_unsupported()
 				: item.download_client,
@@ -149,7 +149,7 @@ export function historyMeta(item: HistoryEntry): MetaLine {
 	const when = formatRelative(item.updated_at);
 	if (item.status === "failed") {
 		return {
-			text: joinDot([when, item.failure_reason || "failed", item.indexer]),
+			text: joinDot([when, item.failure_reason || i18n.lc_failed(), item.indexer]),
 			color: "var(--status-failed)",
 		};
 	}
@@ -158,22 +158,27 @@ export function historyMeta(item: HistoryEntry): MetaLine {
 	};
 }
 
+const peers = (count: number) =>
+	(count === 1 ? i18n.torrent_peers_count_one : i18n.torrent_peers_count_other)({
+		count: count.toLocaleString(),
+	});
+
 export function torrentMeta(t: Torrent): MetaLine {
-	const swarm = t.peer_count > 0 ? `${t.peer_count} peers` : "";
+	const swarm = t.peer_count > 0 ? peers(t.peer_count) : "";
 	if (t.status === "fetching") {
 		return {
-			text: joinDot(["waiting for metadata", swarm || "0 peers"]),
+			text: joinDot([i18n.torrent_meta_waiting_metadata(), swarm || peers(0)]),
 			color: "var(--fg-faint)",
 		};
 	}
 	if (t.status === "stalled") {
 		return {
-			text: joinDot(["stalled", swarm || "no peers"]),
+			text: joinDot([i18n.lc_stalled(), swarm || i18n.torrent_meta_no_peers()]),
 			color: "var(--status-stalled)",
 		};
 	}
 	if (t.status === "paused") {
-		return { text: joinDot([`paused at ${pct(t.progress)}`, formatBytes(t.size, "")]) };
+		return { text: joinDot([i18n.queue_paused_at({ pct: pct(t.progress) }), formatBytes(t.size, "")]) };
 	}
 	if (t.status === "seeding") {
 		const up = formatSpeed(t.upload_speed);
@@ -182,7 +187,7 @@ export function torrentMeta(t: Torrent): MetaLine {
 	if (t.status === "completed") {
 		return {
 			text: joinDot([
-				t.seeding_stopped ? "seeding stopped" : "complete",
+				t.seeding_stopped ? i18n.torrent_meta_seeding_stopped() : i18n.common_complete(),
 				formatRatio(t.ratio),
 				formatBytes(t.size, ""),
 			]),

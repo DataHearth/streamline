@@ -84,7 +84,7 @@
 			</div>
 			<Poster
 				src={backdropSrc}
-				alt="{movie.title} poster"
+				alt={i18n.common_poster_alt({ title: movie.title })}
 				loading="eager"
 				class="relative h-full w-full object-cover"
 			/>

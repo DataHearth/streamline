@@ -243,7 +243,7 @@
 	function pickAdd(item: AddItem) {
 		closeAdd();
 		if (item.soon) {
-			toast.info(`${item.label}: not yet implemented`);
+			toast.info(i18n.common_not_implemented({ label: item.label }));
 			return;
 		}
 		if (item.id === "movie") openAddMovie();
@@ -441,7 +441,7 @@
 					<span
 						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-faint"
 					>
-						soon
+						{i18n.common_soon()}
 					</span>
 				{/if}
 			</button>

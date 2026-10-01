@@ -527,7 +527,7 @@
 				</div>
 				<Poster
 					src={tvPosterUrl(show.id)}
-					alt="{show.title} poster"
+					alt={i18n.common_poster_alt({ title: show.title })}
 					loading="eager"
 					class="relative h-full w-full object-cover"
 				/>
