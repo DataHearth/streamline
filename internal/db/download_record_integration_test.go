@@ -1640,6 +1640,25 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(e.Status).To(Equal(episode.StatusWanted))
 			}
 		})
+
+		It("leaves a rejected upgrade's episode available", func() {
+			rec, epID := createEpisodeRec(9210)
+			Expect(client.Episode.UpdateOneID(epID).
+				SetStatus(episode.StatusAvailable).Exec(ctx)).To(Succeed())
+			_, err := client.MediaFile.Create().
+				SetPath("/lib/hold-s01e01.mkv").SetSize(10).
+				SetQuality("720p").SetFormat("mkv").
+				SetReleaseGroup("G").SetEpisodeID(epID).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.HoldDownloadRecord(ctx, rec.ID, reasons)).To(Succeed())
+
+			Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", true)).
+				To(Succeed())
+
+			e, err := client.Episode.Get(ctx, epID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(e.Status).To(Equal(episode.StatusAvailable))
+		})
 	})
 
 	Describe("ListPendingDownloadRecords / FindPendingDownloadRecordByID", func() {

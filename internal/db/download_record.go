@@ -562,7 +562,10 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 // FailHeldDownloadRecord finalizes a held record the user rejected. requeue
 // reverts the movie to wanted so a search finds a replacement; without it the
 // movie stays failed, the user having judged the release themselves. Episodes
-// revert to wanted either way, mirroring RecordImportFailure.
+// revert to wanted either way, mirroring RecordImportFailure — unless the
+// episode still holds a file: an upgrade grab anchors its record on an
+// episode it was replacing, and rejecting the replacement leaves that file in
+// place, so "wanted" would claim we have nothing.
 func (db *DB) FailHeldDownloadRecord(
 	ctx context.Context,
 	id uint32,
@@ -600,9 +603,13 @@ func (db *DB) FailHeldDownloadRecord(
 		}
 	}
 	if rec.Edges.Episode != nil {
-		if err := tx.Episode.UpdateOneID(rec.Edges.Episode.ID).
+		if _, err := tx.Episode.Update().
+			Where(
+				episode.ID(rec.Edges.Episode.ID),
+				episode.Not(episode.HasMediaFiles()),
+			).
 			SetStatus(episode.StatusWanted).
-			Exec(ctx); err != nil {
+			Save(ctx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("update episode: %w", err)
 		}
