@@ -103,7 +103,7 @@
 		mutationFn: (id) => api<null>(`/users/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("User deleted");
+			toast.ok(i18n.users_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -126,7 +126,7 @@
 		mutationFn: (body) => api<User>("/users", { method: "POST", body }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["users"] });
-			toast.ok("User created");
+			toast.ok(i18n.users_created());
 			closeCreate();
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -193,7 +193,7 @@
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_users()}</h1>
 			<p class="mt-0.5 text-sm text-fg-muted">
-				{total} total — admins, members, and request-only accounts.
+				{i18n.users_total_summary({ total })}
 			</p>
 		</div>
 	</div>
@@ -267,7 +267,7 @@
 				>{i18n.common_role()}</span
 			>
 			<Select
-				ariaLabel="Filter by role"
+				ariaLabel={i18n.users_filter_role()}
 				value={role}
 				options={[
 					{ value: "", label: i18n.role_all() },
@@ -485,8 +485,10 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete {deleting?.display_name || deleting?.email || ''}?"
-	body="This permanently erases every resource they own."
+	title={i18n.users_delete_title({
+		name: deleting?.display_name || deleting?.email || "",
+	})}
+	body={i18n.users_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

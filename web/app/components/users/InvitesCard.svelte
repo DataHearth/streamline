@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -24,8 +25,7 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	const REGISTRATION_OFF_HINT =
-		"Registration is disabled — an invite created now could not be redeemed.";
+	const REGISTRATION_OFF_HINT = i18n.invites_registration_off();
 
 	const qc = useQueryClient();
 
@@ -57,7 +57,7 @@
 			lastCreated = resp;
 			form.reset();
 			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
-			toast.ok("Invite created");
+			toast.ok(i18n.invites_created());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -67,7 +67,7 @@
 			api<null>(`/auth/invites/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["auth", "invites"] });
-			toast.ok("Invite revoked");
+			toast.ok(i18n.invites_revoked());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -95,9 +95,9 @@
 	async function copy(text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
-			toast.ok("Copied");
+			toast.ok(i18n.common_copied());
 		} catch {
-			toast.err("Clipboard unavailable");
+			toast.err(i18n.common_clipboard_unavailable());
 		}
 	}
 
@@ -112,9 +112,6 @@
 		}
 	}
 
-	function roleLabel(r: UserRole) {
-		return r === "request_only" ? "request only" : r;
-	}
 </script>
 
 <section class="rounded-lg border border-border bg-bg-elevated p-5">
@@ -183,7 +180,7 @@
 		<SubmitButton
 			{form}
 			label={i18n.invites_create()}
-			pendingLabel="Creating…"
+			pendingLabel={i18n.common_creating()}
 			disabled={registrationOff}
 			title={registrationOff ? REGISTRATION_OFF_HINT : undefined}
 		/>
@@ -195,8 +192,7 @@
 		>
 			<p class="mb-2 flex items-center gap-1.5 font-medium text-fg">
 				<Send size={12} aria-hidden="true" />
-				Invite for {lastCreated.email ?? "anyone"} — copy now, it won't
-				be shown again:
+				{i18n.invites_for_copy({ who: lastCreated.email ?? i18n.invites_anyone() })}
 			</p>
 			<div class="grid gap-2">
 				<div>
@@ -273,20 +269,21 @@
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										used
+										{i18n.invites_used()}
 									</span>
 								{:else if expired}
 									<span
 										class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 									>
-										expired
+										{i18n.invites_expired()}
 									</span>
 								{/if}
 							</div>
 							<p class="mt-0.5 text-xs text-fg-muted">
-								Created {formatDateTime(inv.created_at)} · expires {formatRelative(
-									inv.expires_at,
-								)}
+								{i18n.invites_created_expires({
+									created: formatDateTime(inv.created_at),
+									expires: formatRelative(inv.expires_at),
+								})}
 							</p>
 						</div>
 						{#if !used}
@@ -310,7 +307,7 @@
 <Dialog
 	open={revoking !== null}
 	title={i18n.invites_revoke_confirm()}
-	body="The invite link will stop working immediately."
+	body={i18n.invites_revoke_body()}
 	onClose={() => (revoking = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

@@ -20,7 +20,7 @@
 		onSuccess: (user) => {
 			auth.user = user;
 			qc.invalidateQueries({ queryKey: ["auth", "me"] });
-			toast.ok("Profile updated");
+			toast.ok(i18n.account_profile_updated());
 			open = false;
 		},
 		onError: (err) => toast.err(errorText(err)),

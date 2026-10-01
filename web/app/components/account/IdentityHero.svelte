@@ -27,7 +27,7 @@
 	});
 
 	let primary = $derived(
-		user?.display_name?.trim() || user?.email || "Unnamed",
+		user?.display_name?.trim() || user?.email || i18n.common_unnamed(),
 	);
 
 	let sessionCount = $derived(sessions.data?.length ?? 0);

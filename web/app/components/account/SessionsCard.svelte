@@ -26,7 +26,7 @@
 			api<null>(`/auth/me/sessions/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["auth", "me", "sessions"] });
-			toast.ok("Session revoked");
+			toast.ok(i18n.session_revoked());
 			pending = null;
 		},
 		onError: (err) => {
@@ -52,8 +52,9 @@
 		<div>
 			<h3 class="text-base font-semibold text-fg">{i18n.account_active_sessions()}</h3>
 			<p class="mt-0.5 text-xs text-fg-muted">
-				{items.length}
-				{items.length === 1 ? "device" : "devices"} signed in
+				{(items.length === 1
+					? i18n.sessions_devices_one
+					: i18n.sessions_devices_other)({ count: items.length })}
 			</p>
 		</div>
 	</header>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { roleLabel } from "@lib/roles";
 	import { ChevronRight, LockKeyhole } from "@lucide/svelte";
 	import Avatar from "@components/layout/Avatar.svelte";
 	import type { User } from "@lib/types";
@@ -72,7 +73,7 @@
 						u.role,
 					)}"
 				>
-					{u.role === "request_only" ? i18n.role_request_only() : u.role}
+					{roleLabel(u.role)}
 				</span>
 				<span class="shrink-0 font-mono text-[11px] text-fg-faint">
 					{u.auth_method}

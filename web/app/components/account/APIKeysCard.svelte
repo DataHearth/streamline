@@ -37,7 +37,7 @@
 			revealed = resp;
 			newName = "";
 			qc.invalidateQueries({ queryKey: ["auth", "me", "api-keys"] });
-			toast.ok("API key created");
+			toast.ok(i18n.apikey_created_toast());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -47,7 +47,7 @@
 			api<null>(`/auth/me/api-keys/${id}`, { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["auth", "me", "api-keys"] });
-			toast.ok("Key revoked");
+			toast.ok(i18n.apikey_revoked());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -56,9 +56,9 @@
 		if (!revealed) return;
 		try {
 			await navigator.clipboard.writeText(revealed.raw_token);
-			toast.ok("Copied");
+			toast.ok(i18n.common_copied());
 		} catch {
-			toast.err("Clipboard unavailable");
+			toast.err(i18n.common_clipboard_unavailable());
 		}
 	}
 
@@ -175,8 +175,8 @@
 
 <Dialog
 	open={revoking !== null}
-	title="Revoke '{revoking?.name ?? ''}'?"
-	body="Anything using this key will immediately lose access."
+	title={i18n.apikey_revoke_title({ name: revoking?.name ?? "" })}
+	body={i18n.apikey_revoke_body()}
 	onClose={() => (revoking = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

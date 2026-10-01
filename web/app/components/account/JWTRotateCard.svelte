@@ -6,12 +6,16 @@
 	import { toast } from "@lib/toast";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { parts } from "@lib/message-parts";
+
+	// "rotate" is the literal word to type, so it stays as is in every language.
+	const typeToConfirm = parts(i18n.jwt_type_to_confirm, ["word"]);
 
 	const rotate = createMutation<{ token: string }, Error, void>(() => ({
 		mutationFn: () =>
 			api<{ token: string }>("/auth/jwt/rotate", { method: "POST" }),
 		onSuccess: () => {
-			toast.ok("JWT secret rotated — signing out");
+			toast.ok(i18n.jwt_rotated_signing_out());
 			window.location.href = "/login";
 		},
 		onError: (err) => {
@@ -89,11 +93,9 @@
 		</p>
 		<label class="mt-4 block">
 			<span class="mb-1 block text-xs font-medium text-fg-muted">
-				{i18n.common_type()}
-				<code class="rounded bg-bg-deep px-1 py-0.5 font-mono text-fg">
-					rotate
-				</code>
-				to confirm
+				{#each typeToConfirm as p}{#if p.slot === "word"}<code
+							class="rounded bg-bg-deep px-1 py-0.5 font-mono text-fg">rotate</code
+						>{:else}{p.text}{/if}{/each}
 			</span>
 			<input
 				type="text"
