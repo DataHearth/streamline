@@ -5,7 +5,8 @@
 	import { parts } from "@lib/message-parts";
 	import { NOUN_FILE, type Noun } from "@lib/nouns";
 
-	const skipBody = parts(i18n.imports_skip_all_body, ["items", "skip"]);
+	const skipBodyOne = parts(i18n.imports_skip_all_body_one, ["items", "skip"]);
+	const skipBodyOther = parts(i18n.imports_skip_all_body_other, ["items", "skip"]);
 
 	let {
 		pendingCount,
@@ -93,6 +94,6 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{#each skipBody as p}{#if p.slot === "items"}{noun.count(pendingCount)}{:else if p.slot === "skip"}<span class="font-medium text-fg">{i18n.lc_skip()}</span>{:else}{p.text}{/if}{/each}
+		{#each pendingCount === 1 ? skipBodyOne : skipBodyOther as p}{#if p.slot === "items"}{noun.count(pendingCount)}{:else if p.slot === "skip"}<span class="font-medium text-fg">{i18n.lc_skip()}</span>{:else}{p.text}{/if}{/each}
 	</p>
 </Dialog>
