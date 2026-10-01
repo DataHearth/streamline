@@ -738,6 +738,19 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(candidates()).To(ConsistOf(uint16(1)))
 		})
+
+		// A pack that fills episode 2 and upgrades episode 1 anchors on the gap;
+		// the episode it replaces is in flight all the same, and a second
+		// upgrade grabbed for it on a later tick would race the first.
+		It("excludes an episode an in-flight pack covers past its anchor", func() {
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Status: downloadrecord.StatusDownloading,
+				EpisodeID:  eps[2].ID,
+				EpisodeIDs: []uint32{eps[1].ID},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(candidates()).To(BeEmpty())
+		})
 	})
 
 	Describe("UpgradeCandidateShow", func() {

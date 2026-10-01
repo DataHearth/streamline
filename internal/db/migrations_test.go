@@ -422,3 +422,121 @@ var _ = Describe("runMigrations against a table rebuild",
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+// downloadRecordEpisodesVersion links every download record to the episodes it
+// covers, from the anchor column and the wanted_episodes JSON that the next
+// migration drops — so a record the backfill misses loses its episodes for
+// good.
+const downloadRecordEpisodesVersion = 20261001222021
+
+var _ = Describe(
+	"download record episodes backfill",
+	Label("integration", "db"),
+	func() {
+		var sqlDB *sql.DB
+
+		BeforeEach(func() {
+			var err error
+			sqlDB, err = sql.Open(
+				"sqlite",
+				"file:"+filepath.Join(GinkgoT().TempDir(), "episodes.db"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+
+			src, err := iofs.New(migrationsFS, "migrations")
+			Expect(err).NotTo(HaveOccurred())
+			previous, err := src.Prev(downloadRecordEpisodesVersion)
+			Expect(err).NotTo(HaveOccurred())
+			drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+			Expect(err).NotTo(HaveOccurred())
+			m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Migrate(previous)).To(Succeed())
+
+			for id := 1; id <= 3; id++ {
+				_, err := sqlDB.Exec(
+					"INSERT INTO episodes (id, create_time, update_time, number,"+
+						" season_episodes) VALUES (?, datetime('now'),"+
+						" datetime('now'), ?, 1)",
+					id, id,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		seedRecord := func(id int, anchor, wanted any) {
+			GinkgoHelper()
+			_, err := sqlDB.Exec(
+				"INSERT INTO download_records (id, create_time, update_time,"+
+					" title, episode_download_records, wanted_episodes)"+
+					" VALUES (?, datetime('now'), datetime('now'), 't', ?, ?)",
+				id, anchor, wanted,
+			)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		links := func() []string {
+			GinkgoHelper()
+			rows, err := sqlDB.Query(
+				"SELECT download_record_id || '/' || episode_id" +
+					" FROM download_record_episodes ORDER BY 1",
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer rows.Close()
+			var out []string
+			for rows.Next() {
+				var s string
+				Expect(rows.Scan(&s)).To(Succeed())
+				out = append(out, s)
+			}
+			Expect(rows.Err()).NotTo(HaveOccurred())
+			return out
+		}
+
+		It("links each record's anchor and grab-time set", func() {
+			seedRecord(1, 1, `[1,2,3]`) // a season pack
+			seedRecord(2, 2, nil)       // a record that never wrote a set
+			seedRecord(3, 3, `[2]`)     // a set that omits its own anchor
+			seedRecord(4, nil, nil)     // a movie record
+
+			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+			Expect(links()).To(ConsistOf("1/1", "1/2", "1/3", "2/2", "3/2", "3/3"))
+		})
+
+		It("skips an id the set names for an episode since deleted", func() {
+			seedRecord(1, 1, `[1,99]`)
+
+			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+			Expect(links()).To(ConsistOf("1/1"))
+			var dangling int
+			Expect(sqlDB.QueryRow(
+				"SELECT count(*) FROM pragma_foreign_key_check('download_record_episodes')",
+			).Scan(&dangling)).To(Succeed())
+			Expect(dangling).To(BeZero())
+		})
+
+		It("carries the set back into wanted_episodes on the way down", func() {
+			seedRecord(1, 1, `[1,2]`)
+			Expect(runMigrations(context.Background(), sqlDB)).To(Succeed())
+
+			src, err := iofs.New(migrationsFS, "migrations")
+			Expect(err).NotTo(HaveOccurred())
+			drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+			Expect(err).NotTo(HaveOccurred())
+			m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Migrate(downloadRecordEpisodesVersion)).To(Succeed())
+
+			var wanted string
+			Expect(sqlDB.QueryRow(
+				"SELECT (SELECT json_group_array(value) FROM" +
+					" (SELECT value FROM json_each(wanted_episodes) ORDER BY value))" +
+					" FROM download_records WHERE id = 1",
+			).Scan(&wanted)).To(Succeed())
+			Expect(wanted).To(Equal("[1,2]"))
+		})
+	},
+)

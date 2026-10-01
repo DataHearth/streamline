@@ -1000,16 +1000,6 @@ func VerificationBypassedNEQ(v bool) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNEQ(FieldVerificationBypassed, v))
 }
 
-// WantedEpisodesIsNil applies the IsNil predicate on the "wanted_episodes" field.
-func WantedEpisodesIsNil() predicate.DownloadRecord {
-	return predicate.DownloadRecord(sql.FieldIsNull(FieldWantedEpisodes))
-}
-
-// WantedEpisodesNotNil applies the NotNil predicate on the "wanted_episodes" field.
-func WantedEpisodesNotNil() predicate.DownloadRecord {
-	return predicate.DownloadRecord(sql.FieldNotNull(FieldWantedEpisodes))
-}
-
 // SelectedFilesIsNil applies the IsNil predicate on the "selected_files" field.
 func SelectedFilesIsNil() predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldIsNull(FieldSelectedFiles))
@@ -1113,21 +1103,44 @@ func HasMovieWith(preds ...predicate.Movie) predicate.DownloadRecord {
 	})
 }
 
-// HasEpisode applies the HasEdge predicate on the "episode" edge.
-func HasEpisode() predicate.DownloadRecord {
+// HasAnchorEpisode applies the HasEdge predicate on the "anchor_episode" edge.
+func HasAnchorEpisode() predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, AnchorEpisodeTable, AnchorEpisodeColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasEpisodeWith applies the HasEdge predicate on the "episode" edge with a given conditions (other predicates).
-func HasEpisodeWith(preds ...predicate.Episode) predicate.DownloadRecord {
+// HasAnchorEpisodeWith applies the HasEdge predicate on the "anchor_episode" edge with a given conditions (other predicates).
+func HasAnchorEpisodeWith(preds ...predicate.Episode) predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
-		step := newEpisodeStep()
+		step := newAnchorEpisodeStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEpisodes applies the HasEdge predicate on the "episodes" edge.
+func HasEpisodes() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, EpisodesTable, EpisodesPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEpisodesWith applies the HasEdge predicate on the "episodes" edge with a given conditions (other predicates).
+func HasEpisodesWith(preds ...predicate.Episode) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newEpisodesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -266,10 +266,12 @@ type Store interface {
 	) error
 	// IdentifyDownloadRecord attaches the media an operator named to a
 	// proposal that matched nothing, and rewrites its reason. Exactly one of
-	// movieID/episodeID is non-zero.
+	// movieID/episodeID is non-zero; episodeIDs replaces the episodes the
+	// record covers, and the anchor episodeID is always among them.
 	IdentifyDownloadRecord(
 		ctx context.Context,
 		id, movieID, episodeID uint32,
+		episodeIDs []uint32,
 		reason string,
 	) error
 	// SetDownloadRecordReplaceMode sets how the importer treats episodes
@@ -288,9 +290,9 @@ type Store interface {
 		files []int,
 		selectedBytes int64,
 	) error
-	// SetDownloadRecordWantedEpisodes overwrites wanted_episodes with the
-	// given union.
-	SetDownloadRecordWantedEpisodes(
+	// AddDownloadRecordEpisodes links more episodes to a record; ids
+	// already linked are left as they are.
+	AddDownloadRecordEpisodes(
 		ctx context.Context,
 		id uint32,
 		eps []uint32,
@@ -367,9 +369,9 @@ type Store interface {
 		hash string,
 	) (*ent.DownloadRecord, error)
 	// FindSeedingDownloadRecord returns the newest completed record that
-	// carried a file for the movie, or for the episode — by its edge or
-	// through wanted_episodes — and still names a torrent hash and a
-	// download client. Nil when there is none.
+	// carried a file for the movie, or for the episode — any record whose
+	// episodes include it — and still names a torrent hash and a download
+	// client. Nil when there is none.
 	FindSeedingDownloadRecord(
 		ctx context.Context,
 		movieID, episodeID uint32,
@@ -419,7 +421,8 @@ type Store interface {
 	DeletePendingDownloadRecord(ctx context.Context, id uint32) (bool, error)
 	// LatestImportedRecordForMovie returns the newest hash-carrying record for
 	// a movie (file-delete uses it to remove the source torrent). NotFound when
-	// none. LatestImportedRecordForEpisode is the episode twin.
+	// none. LatestImportedRecordForEpisode is the episode twin, over every
+	// record covering the episode and completed imports only.
 	LatestImportedRecordForMovie(
 		ctx context.Context,
 		movieID uint32,

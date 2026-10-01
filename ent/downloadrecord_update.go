@@ -321,24 +321,6 @@ func (_u *DownloadRecordUpdate) SetNillableVerificationBypassed(v *bool) *Downlo
 	return _u
 }
 
-// SetWantedEpisodes sets the "wanted_episodes" field.
-func (_u *DownloadRecordUpdate) SetWantedEpisodes(v []uint32) *DownloadRecordUpdate {
-	_u.mutation.SetWantedEpisodes(v)
-	return _u
-}
-
-// AppendWantedEpisodes appends value to the "wanted_episodes" field.
-func (_u *DownloadRecordUpdate) AppendWantedEpisodes(v []uint32) *DownloadRecordUpdate {
-	_u.mutation.AppendWantedEpisodes(v)
-	return _u
-}
-
-// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
-func (_u *DownloadRecordUpdate) ClearWantedEpisodes() *DownloadRecordUpdate {
-	_u.mutation.ClearWantedEpisodes()
-	return _u
-}
-
 // SetSelectedFiles sets the "selected_files" field.
 func (_u *DownloadRecordUpdate) SetSelectedFiles(v []int) *DownloadRecordUpdate {
 	_u.mutation.SetSelectedFiles(v)
@@ -417,23 +399,38 @@ func (_u *DownloadRecordUpdate) SetMovie(v *Movie) *DownloadRecordUpdate {
 	return _u.SetMovieID(v.ID)
 }
 
-// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
-func (_u *DownloadRecordUpdate) SetEpisodeID(id uint32) *DownloadRecordUpdate {
-	_u.mutation.SetEpisodeID(id)
+// SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
+func (_u *DownloadRecordUpdate) SetAnchorEpisodeID(id uint32) *DownloadRecordUpdate {
+	_u.mutation.SetAnchorEpisodeID(id)
 	return _u
 }
 
-// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
-func (_u *DownloadRecordUpdate) SetNillableEpisodeID(id *uint32) *DownloadRecordUpdate {
+// SetNillableAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableAnchorEpisodeID(id *uint32) *DownloadRecordUpdate {
 	if id != nil {
-		_u = _u.SetEpisodeID(*id)
+		_u = _u.SetAnchorEpisodeID(*id)
 	}
 	return _u
 }
 
-// SetEpisode sets the "episode" edge to the Episode entity.
-func (_u *DownloadRecordUpdate) SetEpisode(v *Episode) *DownloadRecordUpdate {
-	return _u.SetEpisodeID(v.ID)
+// SetAnchorEpisode sets the "anchor_episode" edge to the Episode entity.
+func (_u *DownloadRecordUpdate) SetAnchorEpisode(v *Episode) *DownloadRecordUpdate {
+	return _u.SetAnchorEpisodeID(v.ID)
+}
+
+// AddEpisodeIDs adds the "episodes" edge to the Episode entity by IDs.
+func (_u *DownloadRecordUpdate) AddEpisodeIDs(ids ...uint32) *DownloadRecordUpdate {
+	_u.mutation.AddEpisodeIDs(ids...)
+	return _u
+}
+
+// AddEpisodes adds the "episodes" edges to the Episode entity.
+func (_u *DownloadRecordUpdate) AddEpisodes(v ...*Episode) *DownloadRecordUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEpisodeIDs(ids...)
 }
 
 // Mutation returns the DownloadRecordMutation object of the builder.
@@ -447,10 +444,31 @@ func (_u *DownloadRecordUpdate) ClearMovie() *DownloadRecordUpdate {
 	return _u
 }
 
-// ClearEpisode clears the "episode" edge to the Episode entity.
-func (_u *DownloadRecordUpdate) ClearEpisode() *DownloadRecordUpdate {
-	_u.mutation.ClearEpisode()
+// ClearAnchorEpisode clears the "anchor_episode" edge to the Episode entity.
+func (_u *DownloadRecordUpdate) ClearAnchorEpisode() *DownloadRecordUpdate {
+	_u.mutation.ClearAnchorEpisode()
 	return _u
+}
+
+// ClearEpisodes clears all "episodes" edges to the Episode entity.
+func (_u *DownloadRecordUpdate) ClearEpisodes() *DownloadRecordUpdate {
+	_u.mutation.ClearEpisodes()
+	return _u
+}
+
+// RemoveEpisodeIDs removes the "episodes" edge to Episode entities by IDs.
+func (_u *DownloadRecordUpdate) RemoveEpisodeIDs(ids ...uint32) *DownloadRecordUpdate {
+	_u.mutation.RemoveEpisodeIDs(ids...)
+	return _u
+}
+
+// RemoveEpisodes removes "episodes" edges to Episode entities.
+func (_u *DownloadRecordUpdate) RemoveEpisodes(v ...*Episode) *DownloadRecordUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEpisodeIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -621,17 +639,6 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if value, ok := _u.mutation.VerificationBypassed(); ok {
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.WantedEpisodes(); ok {
-		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedWantedEpisodes(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, downloadrecord.FieldWantedEpisodes, value)
-		})
-	}
-	if _u.mutation.WantedEpisodesCleared() {
-		_spec.ClearField(downloadrecord.FieldWantedEpisodes, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
 	}
@@ -684,12 +691,12 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.EpisodeCleared() {
+	if _u.mutation.AnchorEpisodeCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   downloadrecord.EpisodeTable,
-			Columns: []string{downloadrecord.EpisodeColumn},
+			Table:   downloadrecord.AnchorEpisodeTable,
+			Columns: []string{downloadrecord.AnchorEpisodeColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
@@ -697,12 +704,57 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.EpisodeIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.AnchorEpisodeIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   downloadrecord.EpisodeTable,
-			Columns: []string{downloadrecord.EpisodeColumn},
+			Table:   downloadrecord.AnchorEpisodeTable,
+			Columns: []string{downloadrecord.AnchorEpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EpisodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEpisodesIDs(); len(nodes) > 0 && !_u.mutation.EpisodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EpisodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
@@ -1023,24 +1075,6 @@ func (_u *DownloadRecordUpdateOne) SetNillableVerificationBypassed(v *bool) *Dow
 	return _u
 }
 
-// SetWantedEpisodes sets the "wanted_episodes" field.
-func (_u *DownloadRecordUpdateOne) SetWantedEpisodes(v []uint32) *DownloadRecordUpdateOne {
-	_u.mutation.SetWantedEpisodes(v)
-	return _u
-}
-
-// AppendWantedEpisodes appends value to the "wanted_episodes" field.
-func (_u *DownloadRecordUpdateOne) AppendWantedEpisodes(v []uint32) *DownloadRecordUpdateOne {
-	_u.mutation.AppendWantedEpisodes(v)
-	return _u
-}
-
-// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
-func (_u *DownloadRecordUpdateOne) ClearWantedEpisodes() *DownloadRecordUpdateOne {
-	_u.mutation.ClearWantedEpisodes()
-	return _u
-}
-
 // SetSelectedFiles sets the "selected_files" field.
 func (_u *DownloadRecordUpdateOne) SetSelectedFiles(v []int) *DownloadRecordUpdateOne {
 	_u.mutation.SetSelectedFiles(v)
@@ -1119,23 +1153,38 @@ func (_u *DownloadRecordUpdateOne) SetMovie(v *Movie) *DownloadRecordUpdateOne {
 	return _u.SetMovieID(v.ID)
 }
 
-// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
-func (_u *DownloadRecordUpdateOne) SetEpisodeID(id uint32) *DownloadRecordUpdateOne {
-	_u.mutation.SetEpisodeID(id)
+// SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
+func (_u *DownloadRecordUpdateOne) SetAnchorEpisodeID(id uint32) *DownloadRecordUpdateOne {
+	_u.mutation.SetAnchorEpisodeID(id)
 	return _u
 }
 
-// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
-func (_u *DownloadRecordUpdateOne) SetNillableEpisodeID(id *uint32) *DownloadRecordUpdateOne {
+// SetNillableAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableAnchorEpisodeID(id *uint32) *DownloadRecordUpdateOne {
 	if id != nil {
-		_u = _u.SetEpisodeID(*id)
+		_u = _u.SetAnchorEpisodeID(*id)
 	}
 	return _u
 }
 
-// SetEpisode sets the "episode" edge to the Episode entity.
-func (_u *DownloadRecordUpdateOne) SetEpisode(v *Episode) *DownloadRecordUpdateOne {
-	return _u.SetEpisodeID(v.ID)
+// SetAnchorEpisode sets the "anchor_episode" edge to the Episode entity.
+func (_u *DownloadRecordUpdateOne) SetAnchorEpisode(v *Episode) *DownloadRecordUpdateOne {
+	return _u.SetAnchorEpisodeID(v.ID)
+}
+
+// AddEpisodeIDs adds the "episodes" edge to the Episode entity by IDs.
+func (_u *DownloadRecordUpdateOne) AddEpisodeIDs(ids ...uint32) *DownloadRecordUpdateOne {
+	_u.mutation.AddEpisodeIDs(ids...)
+	return _u
+}
+
+// AddEpisodes adds the "episodes" edges to the Episode entity.
+func (_u *DownloadRecordUpdateOne) AddEpisodes(v ...*Episode) *DownloadRecordUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEpisodeIDs(ids...)
 }
 
 // Mutation returns the DownloadRecordMutation object of the builder.
@@ -1149,10 +1198,31 @@ func (_u *DownloadRecordUpdateOne) ClearMovie() *DownloadRecordUpdateOne {
 	return _u
 }
 
-// ClearEpisode clears the "episode" edge to the Episode entity.
-func (_u *DownloadRecordUpdateOne) ClearEpisode() *DownloadRecordUpdateOne {
-	_u.mutation.ClearEpisode()
+// ClearAnchorEpisode clears the "anchor_episode" edge to the Episode entity.
+func (_u *DownloadRecordUpdateOne) ClearAnchorEpisode() *DownloadRecordUpdateOne {
+	_u.mutation.ClearAnchorEpisode()
 	return _u
+}
+
+// ClearEpisodes clears all "episodes" edges to the Episode entity.
+func (_u *DownloadRecordUpdateOne) ClearEpisodes() *DownloadRecordUpdateOne {
+	_u.mutation.ClearEpisodes()
+	return _u
+}
+
+// RemoveEpisodeIDs removes the "episodes" edge to Episode entities by IDs.
+func (_u *DownloadRecordUpdateOne) RemoveEpisodeIDs(ids ...uint32) *DownloadRecordUpdateOne {
+	_u.mutation.RemoveEpisodeIDs(ids...)
+	return _u
+}
+
+// RemoveEpisodes removes "episodes" edges to Episode entities.
+func (_u *DownloadRecordUpdateOne) RemoveEpisodes(v ...*Episode) *DownloadRecordUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEpisodeIDs(ids...)
 }
 
 // Where appends a list predicates to the DownloadRecordUpdate builder.
@@ -1353,17 +1423,6 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 	if value, ok := _u.mutation.VerificationBypassed(); ok {
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.WantedEpisodes(); ok {
-		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedWantedEpisodes(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, downloadrecord.FieldWantedEpisodes, value)
-		})
-	}
-	if _u.mutation.WantedEpisodesCleared() {
-		_spec.ClearField(downloadrecord.FieldWantedEpisodes, field.TypeJSON)
-	}
 	if value, ok := _u.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
 	}
@@ -1416,12 +1475,12 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.EpisodeCleared() {
+	if _u.mutation.AnchorEpisodeCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   downloadrecord.EpisodeTable,
-			Columns: []string{downloadrecord.EpisodeColumn},
+			Table:   downloadrecord.AnchorEpisodeTable,
+			Columns: []string{downloadrecord.AnchorEpisodeColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
@@ -1429,12 +1488,57 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.EpisodeIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.AnchorEpisodeIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   downloadrecord.EpisodeTable,
-			Columns: []string{downloadrecord.EpisodeColumn},
+			Table:   downloadrecord.AnchorEpisodeTable,
+			Columns: []string{downloadrecord.AnchorEpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EpisodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEpisodesIDs(); len(nodes) > 0 && !_u.mutation.EpisodesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EpisodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),

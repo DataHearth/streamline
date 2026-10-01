@@ -55,8 +55,6 @@ type DownloadRecord struct {
 	HoldReasons []schema.HoldReason `json:"hold_reasons,omitempty"`
 	// VerificationBypassed holds the value of the "verification_bypassed" field.
 	VerificationBypassed bool `json:"verification_bypassed,omitempty"`
-	// WantedEpisodes holds the value of the "wanted_episodes" field.
-	WantedEpisodes []uint32 `json:"wanted_episodes,omitempty"`
 	// SelectedFiles holds the value of the "selected_files" field.
 	SelectedFiles []int `json:"selected_files,omitempty"`
 	// SelectedBytes holds the value of the "selected_bytes" field.
@@ -75,11 +73,13 @@ type DownloadRecord struct {
 type DownloadRecordEdges struct {
 	// Movie holds the value of the movie edge.
 	Movie *Movie `json:"movie,omitempty"`
-	// Episode holds the value of the episode edge.
-	Episode *Episode `json:"episode,omitempty"`
+	// AnchorEpisode holds the value of the anchor_episode edge.
+	AnchorEpisode *Episode `json:"anchor_episode,omitempty"`
+	// Episodes holds the value of the episodes edge.
+	Episodes []*Episode `json:"episodes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -93,15 +93,24 @@ func (e DownloadRecordEdges) MovieOrErr() (*Movie, error) {
 	return nil, &NotLoadedError{edge: "movie"}
 }
 
-// EpisodeOrErr returns the Episode value or an error if the edge
+// AnchorEpisodeOrErr returns the AnchorEpisode value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e DownloadRecordEdges) EpisodeOrErr() (*Episode, error) {
-	if e.Episode != nil {
-		return e.Episode, nil
+func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
+	if e.AnchorEpisode != nil {
+		return e.AnchorEpisode, nil
 	} else if e.loadedTypes[1] {
 		return nil, &NotFoundError{label: episode.Label}
 	}
-	return nil, &NotLoadedError{edge: "episode"}
+	return nil, &NotLoadedError{edge: "anchor_episode"}
+}
+
+// EpisodesOrErr returns the Episodes value or an error if the edge
+// was not loaded in eager-loading.
+func (e DownloadRecordEdges) EpisodesOrErr() ([]*Episode, error) {
+	if e.loadedTypes[2] {
+		return e.Episodes, nil
+	}
+	return nil, &NotLoadedError{edge: "episodes"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -109,7 +118,7 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case downloadrecord.FieldHoldReasons, downloadrecord.FieldWantedEpisodes, downloadrecord.FieldSelectedFiles:
+		case downloadrecord.FieldHoldReasons, downloadrecord.FieldSelectedFiles:
 			values[i] = new([]byte)
 		case downloadrecord.FieldVerificationBypassed:
 			values[i] = new(sql.NullBool)
@@ -249,14 +258,6 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.VerificationBypassed = value.Bool
 			}
-		case downloadrecord.FieldWantedEpisodes:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field wanted_episodes", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.WantedEpisodes); err != nil {
-					return fmt.Errorf("unmarshal field wanted_episodes: %w", err)
-				}
-			}
 		case downloadrecord.FieldSelectedFiles:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field selected_files", values[i])
@@ -309,9 +310,14 @@ func (_m *DownloadRecord) QueryMovie() *MovieQuery {
 	return NewDownloadRecordClient(_m.config).QueryMovie(_m)
 }
 
-// QueryEpisode queries the "episode" edge of the DownloadRecord entity.
-func (_m *DownloadRecord) QueryEpisode() *EpisodeQuery {
-	return NewDownloadRecordClient(_m.config).QueryEpisode(_m)
+// QueryAnchorEpisode queries the "anchor_episode" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryAnchorEpisode() *EpisodeQuery {
+	return NewDownloadRecordClient(_m.config).QueryAnchorEpisode(_m)
+}
+
+// QueryEpisodes queries the "episodes" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryEpisodes() *EpisodeQuery {
+	return NewDownloadRecordClient(_m.config).QueryEpisodes(_m)
 }
 
 // Update returns a builder for updating this DownloadRecord.
@@ -389,9 +395,6 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("verification_bypassed=")
 	builder.WriteString(fmt.Sprintf("%v", _m.VerificationBypassed))
-	builder.WriteString(", ")
-	builder.WriteString("wanted_episodes=")
-	builder.WriteString(fmt.Sprintf("%v", _m.WantedEpisodes))
 	builder.WriteString(", ")
 	builder.WriteString("selected_files=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SelectedFiles))

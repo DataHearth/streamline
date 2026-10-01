@@ -251,7 +251,7 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 	switch {
 	case rec.Edges.Movie != nil:
 		return w.importMovieRecord(ctx, span, rec, libCfg)
-	case rec.Edges.Episode != nil:
+	case rec.Edges.AnchorEpisode != nil:
 		return w.importEpisodeRecord(ctx, span, rec, libCfg)
 	default:
 		return otelx.RecordSpanError(
@@ -554,7 +554,7 @@ func (w *Worker) importEpisodeRecord(
 	rec *ent.DownloadRecord,
 	libCfg config.LibraryConfig,
 ) error {
-	ep := rec.Edges.Episode
+	ep := rec.Edges.AnchorEpisode
 	season := ep.Edges.Season
 	if season == nil || season.Edges.TvShow == nil {
 		return otelx.RecordSpanError(
@@ -940,8 +940,8 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	if rec.Edges.Movie != nil {
 		params.MovieID = rec.Edges.Movie.ID
 	}
-	if rec.Edges.Episode != nil {
-		params.EpisodeID = rec.Edges.Episode.ID
+	if rec.Edges.AnchorEpisode != nil {
+		params.EpisodeID = rec.Edges.AnchorEpisode.ID
 	}
 	if isTerminal {
 		params.Reason = strings.TrimSpace(runErr.Error())

@@ -298,7 +298,7 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		ep := client.Episode.Create().
 			SetNumber(2).SetSeasonID(season.ID).SaveX(ctx)
 		dl := client.DownloadRecord.Create().
-			SetEpisodeID(ep.ID).SetTitle("The.Bear.S01E02").SaveX(ctx)
+			SetAnchorEpisodeID(ep.ID).SetTitle("The.Bear.S01E02").SaveX(ctx)
 
 		client.DownloadRecord.UpdateOne(dl).
 			SetStatus(downloadrecord.StatusImporting).SaveX(ctx)

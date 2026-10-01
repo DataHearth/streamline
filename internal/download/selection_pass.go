@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -122,9 +123,9 @@ func (d *download) resolvePendingSelection(
 	for i, f := range clientFiles {
 		files[i] = metaFile{Index: f.Index, Path: f.Path, Size: f.Size}
 	}
+	wanted := db.RecordEpisodeIDs(rec)
 	keep, keptBytes, matched := computeKeepSet(
-		files, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
-		rec.WantedEpisodes,
+		files, show.Edges.Seasons, show.Type == tvshow.TypeAnime, wanted,
 	)
 
 	if matched == 0 {
@@ -150,14 +151,14 @@ func (d *download) resolvePendingSelection(
 		}
 		reason := fmt.Sprintf(
 			"no files in this release matched wanted episodes %s",
-			strings.Join(episodeLabels(show, rec.WantedEpisodes), ", "),
+			strings.Join(episodeLabels(show, wanted), ", "),
 		)
 		if err := d.db.FailDownloadRecord(ctx, rec.ID, reason); err != nil {
 			return otelx.RecordSpanError(
 				span, fmt.Errorf("fail download record: %w", err),
 			)
 		}
-		if anchor := rec.Edges.Episode; anchor != nil {
+		if anchor := rec.Edges.AnchorEpisode; anchor != nil {
 			if ierr := d.db.IncrementEpisodeGrabFailures(
 				ctx, anchor.ID,
 			); ierr != nil {
@@ -174,7 +175,7 @@ func (d *download) resolvePendingSelection(
 		countSelection(ctx, "dropped")
 		slog.WarnContext(ctx, "file selection: dropped zero-match magnet",
 			"record.id", rec.ID, "hash", rec.TorrentHash,
-			"wanted_episodes", rec.WantedEpisodes, "files", clientFiles)
+			"episodes", wanted, "files", clientFiles)
 		return nil
 	}
 
@@ -287,12 +288,12 @@ func episodeLabels(show *ent.TVShow, ids []uint32) []string {
 func (d *download) showForRecord(
 	ctx context.Context, rec *ent.DownloadRecord,
 ) (*ent.TVShow, error) {
-	if ep := rec.Edges.Episode; ep != nil &&
+	if ep := rec.Edges.AnchorEpisode; ep != nil &&
 		ep.Edges.Season != nil && ep.Edges.Season.Edges.TvShow != nil {
 		return ep.Edges.Season.Edges.TvShow, nil
 	}
-	if rec.Edges.Episode == nil {
+	if rec.Edges.AnchorEpisode == nil {
 		return nil, fmt.Errorf("download record %d has no episode", rec.ID)
 	}
-	return d.db.TVShowForEpisode(ctx, rec.Edges.Episode.ID)
+	return d.db.TVShowForEpisode(ctx, rec.Edges.AnchorEpisode.ID)
 }

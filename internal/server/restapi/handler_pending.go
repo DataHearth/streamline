@@ -71,7 +71,7 @@ func (s *Server) IdentifyPending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie != nil || rec.Edges.Episode != nil {
+	if rec.Edges.Movie != nil || rec.Edges.AnchorEpisode != nil {
 		return IdentifyPending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"this proposal is already matched to a title",
@@ -79,33 +79,27 @@ func (s *Server) IdentifyPending(
 		}, nil
 	}
 
-	var movieID, episodeID uint32
+	var (
+		movieID, episodeID uint32
+		episodeIDs         []uint32
+	)
 	switch request.Body.Kind {
 	case IdentifyPendingRequestKindSeries:
-		ep, resp := s.identifySeries(ctx, rec, request.Body.ProviderId)
+		ep, eps, resp := s.identifySeries(ctx, rec, request.Body.ProviderId)
 		if resp != nil {
 			return resp, nil
 		}
-		episodeID = ep
+		episodeID, episodeIDs = ep, eps
 	default:
 		m, resp := s.identifyMovie(ctx, request.Body.ProviderId)
 		if resp != nil {
 			return resp, nil
 		}
 		movieID = m
-		// A proposal re-identified from a series to a movie keeps its row, so
-		// an episode claim left behind would outlive the episodes it names.
-		if err := s.store.SetDownloadRecordWantedEpisodes(
-			ctx, request.Id, nil,
-		); err != nil {
-			return IdentifyPending500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}, nil
-		}
 	}
 
 	if err := s.store.IdentifyDownloadRecord(
-		ctx, request.Id, movieID, episodeID, reasonIdentified,
+		ctx, request.Id, movieID, episodeID, episodeIDs, reasonIdentified,
 	); err != nil {
 		return IdentifyPending500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
@@ -115,16 +109,16 @@ func (s *Server) IdentifyPending(
 }
 
 // identifySeries resolves tvdbID to a show — adding it when the library does
-// not have it — and returns the episode the record should anchor to. A non-nil
-// response is the caller's return value.
+// not have it — and returns the episode the record should anchor to and the
+// episodes its torrent covers. A non-nil response is the caller's return value.
 func (s *Server) identifySeries(
 	ctx context.Context, rec *ent.DownloadRecord, tvdbID uint32,
-) (uint32, IdentifyPendingResponseObject) {
+) (uint32, []uint32, IdentifyPendingResponseObject) {
 	// FindTVShowByTVDBID reports "not in the library" as a nil row with a nil
 	// error, so the row is what decides, not the error.
 	existing, err := s.store.FindTVShowByTVDBID(ctx, tvdbID)
 	if err != nil {
-		return 0, IdentifyPending500JSONResponse{
+		return 0, nil, IdentifyPending500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}
 	}
@@ -134,7 +128,7 @@ func (s *Server) identifySeries(
 	} else {
 		added, aerr := s.tvshows.Add(ctx, tvdbID, "")
 		if aerr != nil {
-			return 0, IdentifyPending422JSONResponse{
+			return 0, nil, IdentifyPending422JSONResponse{
 				UnprocessableEntityJSONResponse: errUnprocessable(
 					fmt.Sprintf("could not add that series: %v", aerr),
 				),
@@ -147,32 +141,21 @@ func (s *Server) identifySeries(
 	// the seasons the episode anchor is resolved against.
 	show, err := s.tvshows.Get(ctx, id)
 	if err != nil {
-		return 0, IdentifyPending500JSONResponse{
+		return 0, nil, IdentifyPending500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}
 	}
 	parsed := library.Parse(rec.Title)
 	ep := download.AdoptionEpisode(parsed, show)
 	if ep == nil {
-		return 0, IdentifyPending422JSONResponse{
+		return 0, nil, IdentifyPending422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(fmt.Sprintf(
 				"%s has no season %d to file this release against",
 				show.Title, parsed.Season,
 			)),
 		}
 	}
-	// The claim is re-resolved with the anchor, never carried over: the
-	// operator may have named a different show than the one adoption guessed,
-	// and episode ids from that show would send every record-scoped write to
-	// another series' rows.
-	if err := s.store.SetDownloadRecordWantedEpisodes(
-		ctx, rec.ID, download.AdoptionEpisodes(parsed, show),
-	); err != nil {
-		return 0, IdentifyPending500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
-		}
-	}
-	return ep.ID, nil
+	return ep.ID, download.AdoptionEpisodes(parsed, show), nil
 }
 
 func (s *Server) identifyMovie(
@@ -200,10 +183,10 @@ func (s *Server) identifyMovie(
 	return added.ID, nil
 }
 
-// PreviewPending answers what importing the proposal's torrent would do. A
-// pack proposal links exactly one episode — the anchor — which says nothing
-// about the other episodes in the torrent, so the operator was deciding blind
-// on anything wider than a single file.
+// PreviewPending answers what importing the proposal's torrent would do. The
+// episodes a proposal is filed under say nothing about which file lands where
+// or what each would replace, so the operator was deciding blind on anything
+// wider than a single file.
 func (s *Server) PreviewPending(
 	ctx context.Context,
 	request PreviewPendingRequestObject,
@@ -217,7 +200,7 @@ func (s *Server) PreviewPending(
 		}
 		return nil, err
 	}
-	ep := rec.Edges.Episode
+	ep := rec.Edges.AnchorEpisode
 	if ep == nil || ep.Edges.Season == nil ||
 		ep.Edges.Season.Edges.TvShow == nil {
 		return PreviewPending409JSONResponse{
@@ -226,7 +209,7 @@ func (s *Server) PreviewPending(
 			),
 		}, nil
 	}
-	// The record's own episode edge carries one season; the pack is matched
+	// The anchor carries one season; the pack is matched
 	// against the whole tree, exactly as the importer matches it.
 	show, err := s.store.FindTVShowByID(ctx, ep.Edges.Season.Edges.TvShow.ID)
 	if err != nil {
@@ -349,7 +332,7 @@ func (s *Server) ImportPending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie == nil && rec.Edges.Episode == nil {
+	if rec.Edges.Movie == nil && rec.Edges.AnchorEpisode == nil {
 		return ImportPending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"identify this proposal before importing it",
@@ -385,7 +368,7 @@ func (s *Server) ReplacePending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie == nil && rec.Edges.Episode == nil {
+	if rec.Edges.Movie == nil && rec.Edges.AnchorEpisode == nil {
 		return ReplacePending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"identify this proposal before replacing anything",
@@ -443,10 +426,10 @@ func (s *Server) removeOldTorrent(ctx context.Context, pending *ent.DownloadReco
 	switch {
 	case pending.Edges.Movie != nil:
 		old, err = s.store.LatestImportedRecordForMovie(ctx, pending.Edges.Movie.ID)
-	case pending.Edges.Episode != nil:
+	case pending.Edges.AnchorEpisode != nil:
 		old, err = s.store.LatestImportedRecordForEpisode(
 			ctx,
-			pending.Edges.Episode.ID,
+			pending.Edges.AnchorEpisode.ID,
 		)
 	default:
 		return

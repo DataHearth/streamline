@@ -53,13 +53,15 @@ type EpisodeEdges struct {
 	Season *Season `json:"season,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
+	// AnchoredDownloadRecords holds the value of the anchored_download_records edge.
+	AnchoredDownloadRecords []*DownloadRecord `json:"anchored_download_records,omitempty"`
 	// MediaFiles holds the value of the media_files edge.
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // SeasonOrErr returns the Season value or an error if the edge
@@ -82,10 +84,19 @@ func (e EpisodeEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 	return nil, &NotLoadedError{edge: "download_records"}
 }
 
+// AnchoredDownloadRecordsOrErr returns the AnchoredDownloadRecords value or an error if the edge
+// was not loaded in eager-loading.
+func (e EpisodeEdges) AnchoredDownloadRecordsOrErr() ([]*DownloadRecord, error) {
+	if e.loadedTypes[2] {
+		return e.AnchoredDownloadRecords, nil
+	}
+	return nil, &NotLoadedError{edge: "anchored_download_records"}
+}
+
 // MediaFilesOrErr returns the MediaFiles value or an error if the edge
 // was not loaded in eager-loading.
 func (e EpisodeEdges) MediaFilesOrErr() ([]*MediaFile, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.MediaFiles, nil
 	}
 	return nil, &NotLoadedError{edge: "media_files"}
@@ -94,7 +105,7 @@ func (e EpisodeEdges) MediaFilesOrErr() ([]*MediaFile, error) {
 // EventsOrErr returns the Events value or an error if the edge
 // was not loaded in eager-loading.
 func (e EpisodeEdges) EventsOrErr() ([]*MediaEvent, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.Events, nil
 	}
 	return nil, &NotLoadedError{edge: "events"}
@@ -231,6 +242,11 @@ func (_m *Episode) QuerySeason() *SeasonQuery {
 // QueryDownloadRecords queries the "download_records" edge of the Episode entity.
 func (_m *Episode) QueryDownloadRecords() *DownloadRecordQuery {
 	return NewEpisodeClient(_m.config).QueryDownloadRecords(_m)
+}
+
+// QueryAnchoredDownloadRecords queries the "anchored_download_records" edge of the Episode entity.
+func (_m *Episode) QueryAnchoredDownloadRecords() *DownloadRecordQuery {
+	return NewEpisodeClient(_m.config).QueryAnchoredDownloadRecords(_m)
 }
 
 // QueryMediaFiles queries the "media_files" edge of the Episode entity.

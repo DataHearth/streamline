@@ -242,6 +242,21 @@ func (_u *EpisodeUpdate) AddDownloadRecords(v ...*DownloadRecord) *EpisodeUpdate
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddAnchoredDownloadRecordIDs adds the "anchored_download_records" edge to the DownloadRecord entity by IDs.
+func (_u *EpisodeUpdate) AddAnchoredDownloadRecordIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.AddAnchoredDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddAnchoredDownloadRecords adds the "anchored_download_records" edges to the DownloadRecord entity.
+func (_u *EpisodeUpdate) AddAnchoredDownloadRecords(v ...*DownloadRecord) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnchoredDownloadRecordIDs(ids...)
+}
+
 // AddMediaFileIDs adds the "media_files" edge to the MediaFile entity by IDs.
 func (_u *EpisodeUpdate) AddMediaFileIDs(ids ...uint32) *EpisodeUpdate {
 	_u.mutation.AddMediaFileIDs(ids...)
@@ -302,6 +317,27 @@ func (_u *EpisodeUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *EpisodeUpd
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnchoredDownloadRecords clears all "anchored_download_records" edges to the DownloadRecord entity.
+func (_u *EpisodeUpdate) ClearAnchoredDownloadRecords() *EpisodeUpdate {
+	_u.mutation.ClearAnchoredDownloadRecords()
+	return _u
+}
+
+// RemoveAnchoredDownloadRecordIDs removes the "anchored_download_records" edge to DownloadRecord entities by IDs.
+func (_u *EpisodeUpdate) RemoveAnchoredDownloadRecordIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.RemoveAnchoredDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveAnchoredDownloadRecords removes "anchored_download_records" edges to DownloadRecord entities.
+func (_u *EpisodeUpdate) RemoveAnchoredDownloadRecords(v ...*DownloadRecord) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnchoredDownloadRecordIDs(ids...)
 }
 
 // ClearMediaFiles clears all "media_files" edges to the MediaFile entity.
@@ -498,10 +534,10 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -511,10 +547,10 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -527,10 +563,55 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnchoredDownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnchoredDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.AnchoredDownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnchoredDownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -862,6 +943,21 @@ func (_u *EpisodeUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *EpisodeUpd
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddAnchoredDownloadRecordIDs adds the "anchored_download_records" edge to the DownloadRecord entity by IDs.
+func (_u *EpisodeUpdateOne) AddAnchoredDownloadRecordIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.AddAnchoredDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddAnchoredDownloadRecords adds the "anchored_download_records" edges to the DownloadRecord entity.
+func (_u *EpisodeUpdateOne) AddAnchoredDownloadRecords(v ...*DownloadRecord) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnchoredDownloadRecordIDs(ids...)
+}
+
 // AddMediaFileIDs adds the "media_files" edge to the MediaFile entity by IDs.
 func (_u *EpisodeUpdateOne) AddMediaFileIDs(ids ...uint32) *EpisodeUpdateOne {
 	_u.mutation.AddMediaFileIDs(ids...)
@@ -922,6 +1018,27 @@ func (_u *EpisodeUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *Episode
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnchoredDownloadRecords clears all "anchored_download_records" edges to the DownloadRecord entity.
+func (_u *EpisodeUpdateOne) ClearAnchoredDownloadRecords() *EpisodeUpdateOne {
+	_u.mutation.ClearAnchoredDownloadRecords()
+	return _u
+}
+
+// RemoveAnchoredDownloadRecordIDs removes the "anchored_download_records" edge to DownloadRecord entities by IDs.
+func (_u *EpisodeUpdateOne) RemoveAnchoredDownloadRecordIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.RemoveAnchoredDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveAnchoredDownloadRecords removes "anchored_download_records" edges to DownloadRecord entities.
+func (_u *EpisodeUpdateOne) RemoveAnchoredDownloadRecords(v ...*DownloadRecord) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnchoredDownloadRecordIDs(ids...)
 }
 
 // ClearMediaFiles clears all "media_files" edges to the MediaFile entity.
@@ -1148,10 +1265,10 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if _u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -1161,10 +1278,10 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -1177,10 +1294,55 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   episode.DownloadRecordsTable,
-			Columns: []string{episode.DownloadRecordsColumn},
+			Columns: episode.DownloadRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnchoredDownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnchoredDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.AnchoredDownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnchoredDownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.AnchoredDownloadRecordsTable,
+			Columns: []string{episode.AnchoredDownloadRecordsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),

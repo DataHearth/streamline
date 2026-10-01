@@ -45,6 +45,15 @@ var downloadSpans = func() *tracetest.SpanRecorder {
 	return rec
 }()
 
+// linked builds the episodes edge of a record that links ids.
+func linked(ids ...uint32) []*ent.Episode {
+	eps := make([]*ent.Episode, len(ids))
+	for i, id := range ids {
+		eps[i] = &ent.Episode{ID: id}
+	}
+	return eps
+}
+
 func endedSpan(rec *tracetest.SpanRecorder, name string) sdktrace.ReadOnlySpan {
 	GinkgoHelper()
 
@@ -886,7 +895,7 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 				func(p db.CreateDownloadRecordParams) bool {
 					return p.EpisodeID == 21 &&
 						p.SelectionState == downloadrecord.SelectionStateApplied &&
-						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21 &&
+						len(p.EpisodeIDs) == 1 && p.EpisodeIDs[0] == 21 &&
 						len(p.SelectedFiles) == 1 && p.SelectedFiles[0] == 0 &&
 						p.SelectedBytes == aboveFloor
 				},
@@ -966,7 +975,7 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 			result, _ := twoEpisodeRelease(true)
 			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
 				func(p db.CreateDownloadRecordParams) bool {
-					return len(p.WantedEpisodes) == 0 && p.SelectionState == ""
+					return len(p.EpisodeIDs) == 0 && p.SelectionState == ""
 				},
 			)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
 
@@ -1021,7 +1030,7 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 				func(p db.CreateDownloadRecordParams) bool {
 					return p.EpisodeID == 21 &&
 						p.SelectionState == downloadrecord.SelectionStatePending &&
-						len(p.WantedEpisodes) == 1 && p.WantedEpisodes[0] == 21
+						len(p.EpisodeIDs) == 1 && p.EpisodeIDs[0] == 21
 				},
 			)).Return(&ent.DownloadRecord{ID: 43}, nil).Once()
 
@@ -1255,8 +1264,10 @@ var _ = Describe(
 					TorrentHash:        hash,
 					DownloadClientName: "embedded",
 					Status:             downloadrecord.StatusCompleted,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStateApplied,
+					Edges: ent.DownloadRecordEdges{
+						Episodes: linked(21),
+					},
+					SelectionState: downloadrecord.SelectionStateApplied,
 				}
 				client.listFilesResult = []TorrentFile{
 					{Index: 0, Path: "Show.S01E01.mkv", Size: aboveFloor},
@@ -1269,8 +1280,8 @@ var _ = Describe(
 					TVShowForEpisode(mock.Anything, uint32(22)).
 					Return(widenShow(), nil).Once()
 				store.EXPECT().
-					SetDownloadRecordWantedEpisodes(
-						mock.Anything, uint32(42), []uint32{21, 22},
+					AddDownloadRecordEpisodes(
+						mock.Anything, uint32(42), []uint32{22},
 					).
 					Return(nil).Once()
 				store.EXPECT().
@@ -1323,7 +1334,7 @@ var _ = Describe(
 
 				Expect(errors.Is(err, ErrTorrentAlreadyExists)).To(BeTrue())
 				Expect(client.addTorrentCalls).To(Equal(0))
-				// SetDownloadRecordWantedEpisodes carries no expectation above:
+				// AddDownloadRecordEpisodes carries no expectation above:
 				// calling it would panic the mock.
 			},
 		)
@@ -1338,8 +1349,10 @@ var _ = Describe(
 					TorrentHash:        hash,
 					DownloadClientName: "embedded",
 					Status:             downloadrecord.StatusDownloading,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStateUnsupported,
+					Edges: ent.DownloadRecordEdges{
+						Episodes: linked(21),
+					},
+					SelectionState: downloadrecord.SelectionStateUnsupported,
 				}
 				store.EXPECT().
 					FindWidenableDownloadRecordByHash(mock.Anything, hash).
@@ -1353,7 +1366,7 @@ var _ = Describe(
 				Expect(errors.Is(err, ErrTorrentAlreadyExists)).To(BeTrue())
 				Expect(client.addTorrentCalls).To(Equal(0))
 				Expect(client.listFilesCalls).To(Equal(0))
-				// SetDownloadRecordWantedEpisodes carries no expectation above:
+				// AddDownloadRecordEpisodes carries no expectation above:
 				// calling it would panic the mock.
 			},
 		)
@@ -1412,16 +1425,18 @@ var _ = Describe(
 					TorrentHash:        hash,
 					DownloadClientName: "embedded",
 					Status:             downloadrecord.StatusDownloading,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStatePending,
+					Edges: ent.DownloadRecordEdges{
+						Episodes: linked(21),
+					},
+					SelectionState: downloadrecord.SelectionStatePending,
 				}
 				client.listFilesResult = nil // metadata not yet resolved
 				store.EXPECT().
 					FindWidenableDownloadRecordByHash(mock.Anything, hash).
 					Return(live, nil).Once()
 				store.EXPECT().
-					SetDownloadRecordWantedEpisodes(
-						mock.Anything, uint32(42), []uint32{21, 22},
+					AddDownloadRecordEpisodes(
+						mock.Anything, uint32(42), []uint32{22},
 					).
 					Return(nil).Once()
 				store.EXPECT().
@@ -1458,8 +1473,10 @@ var _ = Describe(
 					TorrentHash:        hash,
 					DownloadClientName: "embedded",
 					Status:             downloadrecord.StatusDownloading,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStateApplied,
+					Edges: ent.DownloadRecordEdges{
+						Episodes: linked(21),
+					},
+					SelectionState: downloadrecord.SelectionStateApplied,
 				}
 				// A video file the show's own season/episode list has no
 				// counterpart for — matches neither 21 nor 22.
@@ -1480,7 +1497,7 @@ var _ = Describe(
 
 				Expect(errors.Is(err, ErrTorrentAlreadyExists)).To(BeTrue())
 				Expect(client.setWantedCalls).To(Equal(0))
-				// SetDownloadRecordWantedEpisodes/SetDownloadRecordSelection
+				// AddDownloadRecordEpisodes/SetDownloadRecordSelection
 				// carry no expectation above: calling either would panic the
 				// mock, so reaching here proves no DB write happened.
 			},
@@ -1524,8 +1541,10 @@ var _ = Describe(
 					TorrentHash:        hash,
 					DownloadClientName: "embedded",
 					Status:             downloadrecord.StatusCompleted,
-					WantedEpisodes:     []uint32{21},
-					SelectionState:     downloadrecord.SelectionStateApplied,
+					Edges: ent.DownloadRecordEdges{
+						Episodes: linked(21),
+					},
+					SelectionState: downloadrecord.SelectionStateApplied,
 				}
 				client.listFilesResult = []TorrentFile{
 					{Index: 0, Path: "Show.S02E01.mkv", Size: aboveFloor},
@@ -1538,8 +1557,8 @@ var _ = Describe(
 					TVShowForEpisode(mock.Anything, uint32(23)).
 					Return(liveShow, nil).Once()
 				store.EXPECT().
-					SetDownloadRecordWantedEpisodes(
-						mock.Anything, uint32(42), []uint32{21, 23, 24},
+					AddDownloadRecordEpisodes(
+						mock.Anything, uint32(42), []uint32{23, 24},
 					).
 					Return(nil).Once()
 				store.EXPECT().

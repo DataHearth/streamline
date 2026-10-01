@@ -669,15 +669,52 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				}},
 			}}
 			storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show, nil).Once()
-			// Anchored on the season's first episode regardless of its status;
-			// the wanted set carries only the wanted+aired one (11 is available,
-			// 12 hasn't aired).
+			// Anchored on the first wanted episode; the wanted set carries only
+			// the wanted+aired one (11 is available, 12 hasn't aired).
 			dlMk.GrabEpisode(mock.Anything,
 				mock.AnythingOfType("indexer.SearchResult"), uint32(10),
 				[]uint32{10}).
 				Return(&ent.DownloadRecord{ID: 1}, nil).Once()
 			// Only the wanted+aired episode flips; available and future ones don't.
 			storeMk.SetEpisodeStatus(mock.Anything, uint32(10), episode.StatusDownloading).
+				Return(nil).
+				Once()
+
+			err := svc.GrabSeasonRelease(ctx, 3, 1,
+				indexer.SearchResult{Title: "BB S01", Download: "magnet:x"}, false)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		// The anchor is always one of the record's episodes, and the file
+		// selection keeps every episode the record links: anchored on an
+		// episode already on disk, the pack re-downloads it.
+		It("anchors on the first wanted episode, not one already held", func() {
+			past := time.Now().Add(-24 * time.Hour)
+			show := &ent.TVShow{ID: 3, Edges: ent.TVShowEdges{
+				Seasons: []*ent.Season{{
+					Number: 1,
+					Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{
+							ID:      10,
+							Number:  1,
+							Status:  episode.StatusAvailable,
+							AirDate: past,
+						},
+						{
+							ID:      11,
+							Number:  2,
+							Status:  episode.StatusWanted,
+							AirDate: past,
+						},
+					}},
+				}},
+			}}
+			storeMk.FindTVShowByID(mock.Anything, uint32(3)).Return(show, nil).Once()
+			dlMk.GrabEpisode(mock.Anything,
+				mock.AnythingOfType("indexer.SearchResult"), uint32(11),
+				[]uint32{11}).
+				Return(&ent.DownloadRecord{ID: 2}, nil).Once()
+			storeMk.SetEpisodeStatus(mock.Anything, uint32(11), episode.StatusDownloading).
 				Return(nil).
 				Once()
 

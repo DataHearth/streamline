@@ -45,7 +45,18 @@ func (Episode) Fields() []ent.Field {
 func (Episode) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("season", Season.Type).Ref("episodes").Unique().Required(),
+		// Every record whose download is for this episode — a season pack links
+		// each episode it covers. download_records rather than a new name so
+		// that every HasDownloadRecordsWith predicate means the whole set.
 		edge.To("download_records", DownloadRecord.Type).
+			StorageKey(
+				edge.Table("download_record_episodes"),
+				edge.Columns("episode_id", "download_record_id"),
+			),
+		// The records filed under this episode. The column keeps its pre-M2M
+		// name: renaming it would make the migration drop and re-add it.
+		edge.To("anchored_download_records", DownloadRecord.Type).
+			StorageKey(edge.Column("episode_download_records")).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("media_files", MediaFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

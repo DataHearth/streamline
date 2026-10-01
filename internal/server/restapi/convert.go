@@ -788,7 +788,7 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 	if r.Edges.Movie != nil {
 		out.Movie = movieToAPI(r.Edges.Movie)
 	}
-	out.Episode = episodeRef(r.Edges.Episode)
+	out.Episode = episodeRef(r.Edges.AnchorEpisode)
 	if r.Quality != "" {
 		out.Quality = &r.Quality
 	}
@@ -848,8 +848,8 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 			Title: m.Title,
 			Year:  &y,
 		}
-	case r.Edges.Episode != nil:
-		ep := r.Edges.Episode
+	case r.Edges.AnchorEpisode != nil:
+		ep := r.Edges.AnchorEpisode
 		item.HasFile = len(ep.Edges.MediaFiles) > 0
 		epNum := ep.Number
 		media := &PendingMedia{

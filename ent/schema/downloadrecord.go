@@ -53,11 +53,7 @@ func (DownloadRecord) Fields() []ent.Field {
 		field.JSON("hold_reasons", []HoldReason{}).Optional(),
 		// Set by a resolve-import so the re-run skips verification.
 		field.Bool("verification_bypassed").Default(false),
-		// Grab-time intent: which episodes this record's file selection was
-		// meant to cover, for a season pack where only some episodes are
-		// wanted. Movie records and packs pulled in whole leave this empty.
-		field.JSON("wanted_episodes", []uint32{}).Optional(),
-		// Resolution of that intent against the torrent's actual file list —
+		// Resolution of the episodes edge against the torrent's actual file list —
 		// the indices SetWantedFiles was called with.
 		field.JSON("selected_files", []int{}).Optional(),
 		// Sum of the selected files' sizes, computed once at selection time —
@@ -87,13 +83,22 @@ func (DownloadRecord) Indexes() []ent.Index {
 		// SQLite indexes no foreign key on its own, so deleting a movie or an
 		// episode scans this table for children to cascade.
 		index.Edges("movie"),
-		index.Edges("episode"),
+		index.Edges("anchor_episode"),
 	}
 }
 
 func (DownloadRecord) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("download_records").Unique(),
-		edge.From("episode", Episode.Type).Ref("download_records").Unique(),
+		// The one episode the record is filed under: what the importer resolves
+		// the show from and what grab failures are counted against. Always a
+		// member of episodes.
+		edge.From("anchor_episode", Episode.Type).
+			Ref("anchored_download_records").
+			Unique(),
+		// Every episode the download is for. Includes the on-disk episodes an
+		// upgrade pack replaces, which keep their "available" status — every
+		// status write over this set filters on the status it moves from.
+		edge.From("episodes", Episode.Type).Ref("download_records"),
 	}
 }

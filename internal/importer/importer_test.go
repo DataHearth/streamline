@@ -941,6 +941,45 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(recorded).To(HaveKey(eps[1].ID))
 	})
 
+	It("multi-season pack imports a file from a season past its anchor's", func() {
+		season, eps := buildShow()
+		show := season.Edges.TvShow
+		s3e1 := &ent.Episode{ID: 301, Number: 1}
+		s3 := &ent.Season{ID: 13, Number: 3}
+		s3.Edges.Episodes = []*ent.Episode{s3e1}
+		s3.Edges.TvShow = show
+		s3e1.Edges.Season = s3
+		show.Edges.Seasons = append(show.Edges.Seasons, s3)
+		src := filepath.Join(tmp, "integrale")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S01E01.1080p.mkv")
+		seedMediaFile(src, "Show.S03E01.1080p.mkv")
+		rec := episodeRecord(5, src, season, eps[0])
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(5)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		recorded := map[uint32]bool{}
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				recorded[p.EpisodeID] = true
+				return p.RecordID == 5
+			})).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 5)).To(Succeed())
+		Expect(recorded).To(HaveKey(eps[0].ID))
+		Expect(recorded).To(HaveKey(s3e1.ID))
+	})
+
 	It("season pack records one series imported event for the whole pack", func() {
 		ctx := context.Background()
 		entClient := dbtest.SetupTestDB(ctx)
@@ -1729,7 +1768,7 @@ func episodeRecord(
 		DownloadClientName: "qbit",
 		ReplaceMode:        downloadrecord.ReplaceModeNone,
 	}
-	r.Edges.Episode = ep
+	r.Edges.AnchorEpisode = ep
 	_ = season
 	return r
 }

@@ -623,7 +623,7 @@ func HasDownloadRecords() predicate.Episode {
 	return predicate.Episode(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, DownloadRecordsTable, DownloadRecordsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -633,6 +633,29 @@ func HasDownloadRecords() predicate.Episode {
 func HasDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Episode {
 	return predicate.Episode(func(s *sql.Selector) {
 		step := newDownloadRecordsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAnchoredDownloadRecords applies the HasEdge predicate on the "anchored_download_records" edge.
+func HasAnchoredDownloadRecords() predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnchoredDownloadRecordsTable, AnchoredDownloadRecordsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnchoredDownloadRecordsWith applies the HasEdge predicate on the "anchored_download_records" edge with a given conditions (other predicates).
+func HasAnchoredDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := newAnchoredDownloadRecordsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

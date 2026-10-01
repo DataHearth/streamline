@@ -123,13 +123,9 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
 			app.store.EXPECT().
-				SetDownloadRecordWantedEpisodes(
-					mock.Anything, uint32(1), mock.Anything,
-				).Return(nil).Once()
-			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(0), uint32(501),
-					mock.AnythingOfType("string"),
+					mock.Anything, mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
 			resp := identify(`{"kind":"series","provider_id":359569}`)
@@ -149,13 +145,9 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			app.tvshows.EXPECT().
 				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
 			app.store.EXPECT().
-				SetDownloadRecordWantedEpisodes(
-					mock.Anything, uint32(1), mock.Anything,
-				).Return(nil).Once()
-			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(0), uint32(501),
-					mock.AnythingOfType("string"),
+					mock.Anything, mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
 			resp := identify(`{"kind":"series","provider_id":359569}`)
@@ -178,16 +170,13 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			app.movies.EXPECT().
 				Add(mock.Anything, uint32(414906), "").
 				Return(&ent.Movie{ID: 3}, "", nil).Once()
-			// A movie proposal carries no episode claim, and one left over from
-			// a previous series identify would outlive its episodes.
-			app.store.EXPECT().
-				SetDownloadRecordWantedEpisodes(
-					mock.Anything, uint32(1), []uint32(nil),
-				).Return(nil).Once()
+			// A movie proposal links no episodes: IdentifyDownloadRecord
+			// replaces the set, so one left over from a previous series
+			// identify cannot outlive its episodes.
 			app.store.EXPECT().
 				IdentifyDownloadRecord(
 					mock.Anything, uint32(1), uint32(3), uint32(0),
-					mock.AnythingOfType("string"),
+					[]uint32(nil), mock.AnythingOfType("string"),
 				).Return(nil).Once()
 
 			resp := identify(`{"kind":"movie","provider_id":414906}`)
@@ -296,7 +285,7 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			ep.Edges.Season = s.Edges.Seasons[0]
 			return &ent.DownloadRecord{
 				ID: 1, TorrentHash: "abc", DownloadClientName: "qbit",
-				Edges: ent.DownloadRecordEdges{Episode: ep},
+				Edges: ent.DownloadRecordEdges{AnchorEpisode: ep},
 			}
 		}
 

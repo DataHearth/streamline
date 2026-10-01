@@ -261,13 +261,12 @@ func adoptionScope(
 }
 
 // AdoptionEpisodes is every episode an adopted release is for: the one it
-// matches, or a pack's whole scope. It is what the record stores as its claim,
-// and the reason a record needs one is that its episode edge holds a single id
-// — every state write scoped to "this record's episodes" reads the claim, and
-// without one an adopted pack could only ever speak for its anchor.
+// matches, or a pack's whole scope. It is what the record links as its
+// episodes — every state write scoped to "this record's episodes" reads that
+// set, and without it an adopted pack could only ever speak for its anchor.
 //
 // Episodes already holding a file stay in: the importer decides per file
-// whether a pack replaces one, and a claim that dropped them would describe
+// whether a pack replaces one, and a set that dropped them would describe
 // the release as smaller than it is. No writer acts on them regardless —
 // pause/resume and the importing move both touch in-flight rows only.
 //
@@ -640,7 +639,7 @@ func (d *download) persistAdoption(
 		Status:             status,
 		MovieID:            dec.movieID,
 		EpisodeID:          dec.episodeID,
-		WantedEpisodes:     dec.episodeIDs,
+		EpisodeIDs:         dec.episodeIDs,
 		DownloadClientName: u.clientName,
 		SavePath:           savePath,
 		Quality:            dec.quality,

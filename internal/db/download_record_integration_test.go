@@ -134,13 +134,62 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			ep, err := rec.QueryEpisode().Only(ctx)
+			ep, err := rec.QueryAnchorEpisode().Only(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ep.ID).To(Equal(episodeID))
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(episodeID))
 
 			_, err = rec.QueryMovie().Only(ctx)
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
+	})
+
+	Describe("LatestImportedRecordForEpisode", func() {
+		It(
+			"finds the completed pack behind a file, never a newer record in flight",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "Source", Year: 2024, TvdbID: 9050,
+					Seasons: []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{
+						{Number: 1, Title: "One"}, {Number: 2, Title: "Two"},
+					}}},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				eps := show.Edges.Seasons[0].Edges.Episodes
+				imported := time.Now().Add(-time.Hour)
+				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+					Title: "pack", Size: 1, TorrentHash: "source-pack",
+					Status:             downloadrecord.StatusCompleted,
+					EpisodeID:          eps[0].ID,
+					EpisodeIDs:         []uint32{eps[1].ID},
+					DownloadClientName: clientName,
+					ImportedAt:         &imported,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				// An upgrade pack still downloading, and a proposal the operator
+				// dismissed: both link the episode, neither produced its file.
+				for hash, status := range map[string]downloadrecord.Status{
+					"upgrade-in-flight": downloadrecord.StatusDownloading,
+					"dismissed":         downloadrecord.StatusDismissed,
+				} {
+					_, err = store.CreateDownloadRecord(
+						ctx,
+						CreateDownloadRecordParams{
+							Title: "newer", Size: 1, TorrentHash: hash,
+							Status:             status,
+							EpisodeID:          eps[0].ID,
+							EpisodeIDs:         []uint32{eps[1].ID},
+							DownloadClientName: clientName,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				rec, err := store.LatestImportedRecordForEpisode(ctx, eps[1].ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.TorrentHash).To(Equal("source-pack"))
+			},
+		)
 	})
 
 	Describe("FindSeedingDownloadRecord", func() {
@@ -179,36 +228,46 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		)
 
 		It(
-			"finds a season pack's record for an episode it only lists in wanted_episodes",
+			"finds a multi-season pack's record for either season's episode",
 			func() {
 				ad := time.Now()
 				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 					Title: "The Black Sea", Year: 2024, TvdbID: 9001,
-					Seasons: []SeasonSeed{{
-						Number: 1,
-						Episodes: []EpisodeSeed{
-							{Number: 1, Title: "One", AirDate: &ad},
-							{Number: 2, Title: "Two", AirDate: &ad},
+					Seasons: []SeasonSeed{
+						{
+							Number: 1,
+							Episodes: []EpisodeSeed{
+								{Number: 1, Title: "One", AirDate: &ad},
+							},
 						},
-					}},
+						{
+							Number: 2,
+							Episodes: []EpisodeSeed{
+								{Number: 1, Title: "Two", AirDate: &ad},
+							},
+						},
+					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				eps := show.Edges.Seasons[0].Edges.Episodes
+				s1e1 := show.Edges.Seasons[0].Edges.Episodes[0].ID
+				s2e1 := show.Edges.Seasons[1].Edges.Episodes[0].ID
 				now := time.Now()
 				_, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 					Title: "pack", Size: 1, TorrentHash: "pack",
 					Status:             downloadrecord.StatusCompleted,
-					EpisodeID:          eps[0].ID,
-					WantedEpisodes:     []uint32{eps[0].ID, eps[1].ID},
+					EpisodeID:          s1e1,
+					EpisodeIDs:         []uint32{s2e1},
 					DownloadClientName: clientName,
 					ImportedAt:         &now,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				rec, err := store.FindSeedingDownloadRecord(ctx, 0, eps[1].ID)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(rec).NotTo(BeNil())
-				Expect(rec.TorrentHash).To(Equal("pack"))
+				for _, id := range []uint32{s1e1, s2e1} {
+					rec, err := store.FindSeedingDownloadRecord(ctx, 0, id)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rec).NotTo(BeNil())
+					Expect(rec.TorrentHash).To(Equal("pack"))
+				}
 			},
 		)
 
@@ -606,6 +665,47 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			other, _ := client.Episode.Get(ctx, eps[1].ID)
 			Expect(other.Status).To(Equal(episode.StatusWanted),
 				"an episode this record does not link is not its business")
+		})
+
+		// A whole-series adoption links the show's every numbered episode, the
+		// announced-but-unaired ones and seasons the torrent never held among
+		// them. Moving those to importing parks them there for as long as a
+		// hold lasts, out of every missing search.
+		It("moves only the anchor of a set wider than the torrent", func() {
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "The Black Sea", Year: 2024, TvdbID: 9206,
+				Seasons: []SeasonSeed{
+					{
+						Number:   1,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}},
+					},
+					{
+						Number:   2,
+						Episodes: []EpisodeSeed{{Number: 1, Title: "Announced"}},
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			anchor := show.Edges.Seasons[0].Edges.Episodes[0].ID
+			beyond := show.Edges.Seasons[1].Edges.Episodes[0].ID
+			rec, err := store.CreateDownloadRecord(
+				ctx, CreateDownloadRecordParams{
+					Title: "t", Size: 1, TorrentHash: "adopt-integrale",
+					Status:             downloadrecord.StatusImporting,
+					EpisodeID:          anchor,
+					EpisodeIDs:         []uint32{beyond},
+					DownloadClientName: clientName,
+				},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(store.MarkWantedRecordEpisodesImporting(ctx, rec.ID)).
+				To(Succeed())
+
+			a, _ := client.Episode.Get(ctx, anchor)
+			Expect(a.Status).To(Equal(episode.StatusImporting))
+			b, _ := client.Episode.Get(ctx, beyond)
+			Expect(b.Status).To(Equal(episode.StatusWanted))
 		})
 
 		It("leaves an episode that already holds a file alone", func() {
@@ -1096,12 +1196,13 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			}
 		})
 
-		It("spares the whole season while it has an active record", func() {
+		It("spares every episode an active record covers", func() {
 			ids := seedDownloadingSeason(7002, 3)
 			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: "pack", Size: 1, TorrentHash: "h",
 				Status:             downloadrecord.StatusDownloading,
 				EpisodeID:          ids[0],
+				EpisodeIDs:         ids,
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1115,12 +1216,31 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			}
 		})
 
-		It("spares the whole season while its record is held", func() {
+		It("reverts a season sibling no active record covers", func() {
+			ids := seedDownloadingSeason(7008, 3)
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "pack", Size: 1, TorrentHash: "h-partial",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[:2],
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.RevertOrphanedDownloadingEpisodes(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+			stranded, _ := client.Episode.Get(ctx, ids[2])
+			Expect(stranded.Status).To(Equal(episode.StatusWanted))
+		})
+
+		It("spares every episode a held record covers", func() {
 			ids := seedDownloadingSeason(7004, 3)
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: "pack", Size: 1, TorrentHash: "held-h",
 				Status:             downloadrecord.StatusImporting,
 				EpisodeID:          ids[0],
+				EpisodeIDs:         ids,
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1138,8 +1258,8 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 
 		It(
-			"spares a stranded episode with a file too, while its season's "+
-				"record is held",
+			"spares an in-flight episode with a file too, while a held "+
+				"record covers it",
 			func() {
 				ids := seedDownloadingSeason(7005, 2)
 				_, err := client.MediaFile.Create().
@@ -1152,6 +1272,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 						Title: "pack", Size: 1, TorrentHash: "held-h2",
 						Status:             downloadrecord.StatusImporting,
 						EpisodeID:          ids[1],
+						EpisodeIDs:         ids,
 						DownloadClientName: clientName,
 					},
 				)
@@ -1195,7 +1316,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		)
 
 		It(
-			"spares the seasons a multi-season pack claims in wanted_episodes",
+			"spares every season a multi-season pack covers",
 			func() {
 				eps := []EpisodeSeed{
 					{Number: 1, Title: "E1"}, {Number: 2, Title: "E2"},
@@ -1217,7 +1338,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 						all = append(all, e.ID)
 					}
 				}
-				// The record anchors to season 1 and claims both seasons —
+				// The record anchors to season 1 and links both seasons —
 				// what a whole-series grab writes.
 				_, err = store.CreateDownloadRecord(
 					ctx,
@@ -1225,7 +1346,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 						Title: "pack", Size: 1, TorrentHash: "integrale-h",
 						Status:             downloadrecord.StatusDownloading,
 						EpisodeID:          all[0],
-						WantedEpisodes:     all,
+						EpisodeIDs:         all,
 						DownloadClientName: clientName,
 					},
 				)
@@ -1279,13 +1400,13 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				epIDs = append(epIDs, e.ID)
 			}
-			// The season-pack shape: the edge links the first episode, the
-			// claim names them all. Every grab path records the claim.
+			// The season-pack shape: anchored on the first episode, linked to
+			// them all, as every grab path writes it.
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title: "pack", Size: 1, TorrentHash: "h",
 				Status:             downloadrecord.StatusDownloading,
 				EpisodeID:          epIDs[0],
-				WantedEpisodes:     epIDs,
+				EpisodeIDs:         epIDs,
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1307,7 +1428,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		It("leaves another record's episodes in the same season alone", func() {
 			// The homelab shape: a whole-series pack anchored in season 1
-			// claims season 2 as well, and a duplicate grab of one season-2
+			// covers season 2 as well, and a duplicate grab of one season-2
 			// episode is paused by hand. Season scope flipped the pack's eight
 			// other season-2 episodes with it and the resume — scoped to the
 			// pack's own anchor season — never reached them again.
@@ -1332,7 +1453,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Title: "integrale", Size: 1, TorrentHash: "ih",
 				Status:             downloadrecord.StatusDownloading,
 				EpisodeID:          all[0],
-				WantedEpisodes:     all,
+				EpisodeIDs:         all,
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1341,7 +1462,6 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Title: "dupe", Size: 1, TorrentHash: "dh",
 				Status:             downloadrecord.StatusDownloading,
 				EpisodeID:          all[2],
-				WantedEpisodes:     []uint32{all[2]},
 				DownloadClientName: clientName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1700,16 +1820,38 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	})
 
 	Describe("selection fields", func() {
-		It("creates with wanted episodes and a non-default selection state", func() {
-			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
-				Title: "t", Size: 1, TorrentHash: "sel-create",
-				Status:  downloadrecord.StatusDownloading,
-				MovieID: movieID, DownloadClientName: clientName,
-				WantedEpisodes: []uint32{1, 2, 3},
-				SelectionState: downloadrecord.SelectionStatePending,
+		// seedEpisodes creates a show with one season of n episodes and
+		// returns their ids.
+		seedEpisodes := func(tvdb uint32, n int) []uint32 {
+			GinkgoHelper()
+			eps := make([]EpisodeSeed, n)
+			for i := range eps {
+				eps[i] = EpisodeSeed{Number: uint16(i + 1), Title: "E"}
+			}
+			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+				Title: "Selection", Year: 2024, TvdbID: tvdb,
+				Seasons: []SeasonSeed{{Number: 1, Episodes: eps}},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rec.WantedEpisodes).To(Equal([]uint32{1, 2, 3}))
+			ids := make([]uint32, 0, n)
+			for _, e := range show.Edges.Seasons[0].Edges.Episodes {
+				ids = append(ids, e.ID)
+			}
+			return ids
+		}
+
+		It("creates linking its episodes, anchor included", func() {
+			ids := seedEpisodes(9101, 3)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "sel-create",
+				Status:             downloadrecord.StatusDownloading,
+				EpisodeID:          ids[0],
+				EpisodeIDs:         ids[1:],
+				DownloadClientName: clientName,
+				SelectionState:     downloadrecord.SelectionStatePending,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(ids))
 			Expect(
 				rec.SelectionState,
 			).To(Equal(downloadrecord.SelectionStatePending))
@@ -1741,7 +1883,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(
 				rec.SelectionState,
 			).To(Equal(downloadrecord.SelectionStateSkipped))
-			Expect(rec.WantedEpisodes).To(BeEmpty())
+			Expect(rec.QueryEpisodes().IDs(ctx)).To(BeEmpty())
 		})
 
 		It(
@@ -1768,20 +1910,28 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			},
 		)
 
-		It("SetDownloadRecordWantedEpisodes writes the union, re-readable", func() {
-			rec := createRec("sel-wanted", downloadrecord.StatusDownloading)
+		It(
+			"AddDownloadRecordEpisodes adds to the set, keeping what is linked",
+			func() {
+				ids := seedEpisodes(9102, 3)
+				rec, err := store.CreateDownloadRecord(
+					ctx,
+					CreateDownloadRecordParams{
+						Title: "t", Size: 1, TorrentHash: "sel-add",
+						Status:             downloadrecord.StatusDownloading,
+						EpisodeID:          ids[0],
+						DownloadClientName: clientName,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
 
-			err := store.SetDownloadRecordWantedEpisodes(
-				ctx,
-				rec.ID,
-				[]uint32{5, 6, 7},
-			)
-			Expect(err).NotTo(HaveOccurred())
+				Expect(
+					store.AddDownloadRecordEpisodes(ctx, rec.ID, ids),
+				).To(Succeed())
 
-			got, err := store.FindDownloadRecordByID(ctx, rec.ID)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got.WantedEpisodes).To(Equal([]uint32{5, 6, 7}))
-		})
+				Expect(rec.QueryEpisodes().IDs(ctx)).To(ConsistOf(ids))
+			},
+		)
 
 		It(
 			"ListPendingSelectionRecords returns only pending rows, with episode edges loaded",
@@ -1823,8 +1973,9 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(list).To(HaveLen(1))
 				Expect(list[0].ID).To(Equal(pending.ID))
-				Expect(list[0].Edges.Episode).NotTo(BeNil())
-				Expect(list[0].Edges.Episode.Edges.Season).NotTo(BeNil())
+				Expect(list[0].Edges.AnchorEpisode).NotTo(BeNil())
+				Expect(list[0].Edges.AnchorEpisode.Edges.Season).NotTo(BeNil())
+				Expect(RecordEpisodeIDs(list[0])).To(ConsistOf(episodeID))
 			},
 		)
 	})

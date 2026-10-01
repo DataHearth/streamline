@@ -41,6 +41,8 @@ const (
 	EdgeSeason = "season"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
+	// EdgeAnchoredDownloadRecords holds the string denoting the anchored_download_records edge name in mutations.
+	EdgeAnchoredDownloadRecords = "anchored_download_records"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
 	EdgeMediaFiles = "media_files"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
@@ -54,13 +56,18 @@ const (
 	SeasonInverseTable = "seasons"
 	// SeasonColumn is the table column denoting the season relation/edge.
 	SeasonColumn = "season_episodes"
-	// DownloadRecordsTable is the table that holds the download_records relation/edge.
-	DownloadRecordsTable = "download_records"
+	// DownloadRecordsTable is the table that holds the download_records relation/edge. The primary key declared below.
+	DownloadRecordsTable = "download_record_episodes"
 	// DownloadRecordsInverseTable is the table name for the DownloadRecord entity.
 	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
 	DownloadRecordsInverseTable = "download_records"
-	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
-	DownloadRecordsColumn = "episode_download_records"
+	// AnchoredDownloadRecordsTable is the table that holds the anchored_download_records relation/edge.
+	AnchoredDownloadRecordsTable = "download_records"
+	// AnchoredDownloadRecordsInverseTable is the table name for the DownloadRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
+	AnchoredDownloadRecordsInverseTable = "download_records"
+	// AnchoredDownloadRecordsColumn is the table column denoting the anchored_download_records relation/edge.
+	AnchoredDownloadRecordsColumn = "episode_download_records"
 	// MediaFilesTable is the table that holds the media_files relation/edge.
 	MediaFilesTable = "media_files"
 	// MediaFilesInverseTable is the table name for the MediaFile entity.
@@ -98,6 +105,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"season_episodes",
 }
+
+var (
+	// DownloadRecordsPrimaryKey and DownloadRecordsColumn2 are the table columns denoting the
+	// primary key for the download_records relation (M2M).
+	DownloadRecordsPrimaryKey = []string{"episode_id", "download_record_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -243,6 +256,20 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnchoredDownloadRecordsCount orders the results by anchored_download_records count.
+func ByAnchoredDownloadRecordsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnchoredDownloadRecordsStep(), opts...)
+	}
+}
+
+// ByAnchoredDownloadRecords orders the results by anchored_download_records terms.
+func ByAnchoredDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnchoredDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByMediaFilesCount orders the results by media_files count.
 func ByMediaFilesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -281,7 +308,14 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, DownloadRecordsTable, DownloadRecordsPrimaryKey...),
+	)
+}
+func newAnchoredDownloadRecordsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnchoredDownloadRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnchoredDownloadRecordsTable, AnchoredDownloadRecordsColumn),
 	)
 }
 func newMediaFilesStep() *sqlgraph.Step {

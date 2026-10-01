@@ -136,9 +136,11 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			DownloadClientName: "embedded",
 			Status:             downloadrecord.StatusDownloading,
 			SelectionState:     downloadrecord.SelectionStatePending,
-			WantedEpisodes:     []uint32{21},
 			CreateTime:         createdAt,
-			Edges:              ent.DownloadRecordEdges{Episode: anchor},
+			Edges: ent.DownloadRecordEdges{
+				AnchorEpisode: anchor,
+				Episodes:      linked(21),
+			},
 		}
 	}
 
@@ -265,7 +267,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 			// 21 and 22 are real rows on the show and nothing in the release
 			// serves either, so the reason has labels to render; 999 has no
 			// counterpart and falls back to its id.
-			rec.WantedEpisodes = []uint32{21, 22, 999}
+			rec.Edges.Episodes = linked(21, 22, 999)
 			store.EXPECT().
 				ListPendingSelectionRecords(mock.Anything).
 				Return([]*ent.DownloadRecord{rec}, nil).Once()
@@ -311,7 +313,7 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 		func() {
 			anchor := passShow()
 			rec := pendingRecord(anchor, time.Now())
-			rec.WantedEpisodes = []uint32{999}
+			rec.Edges.Episodes = linked(999)
 			store.EXPECT().
 				ListPendingSelectionRecords(mock.Anything).
 				Return([]*ent.DownloadRecord{rec}, nil).Once()

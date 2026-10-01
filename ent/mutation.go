@@ -1488,8 +1488,6 @@ type DownloadRecordMutation struct {
 	hold_reasons          *[]schema.HoldReason
 	appendhold_reasons    []schema.HoldReason
 	verification_bypassed *bool
-	wanted_episodes       *[]uint32
-	appendwanted_episodes []uint32
 	selected_files        *[]int
 	appendselected_files  []int
 	selected_bytes        *int64
@@ -1498,8 +1496,11 @@ type DownloadRecordMutation struct {
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
-	episode               *uint32
-	clearedepisode        bool
+	anchor_episode        *uint32
+	clearedanchor_episode bool
+	episodes              map[uint32]struct{}
+	removedepisodes       map[uint32]struct{}
+	clearedepisodes       bool
 	done                  bool
 	oldValue              func(context.Context) (*DownloadRecord, error)
 	predicates            []predicate.DownloadRecord
@@ -2408,71 +2409,6 @@ func (m *DownloadRecordMutation) ResetVerificationBypassed() {
 	m.verification_bypassed = nil
 }
 
-// SetWantedEpisodes sets the "wanted_episodes" field.
-func (m *DownloadRecordMutation) SetWantedEpisodes(u []uint32) {
-	m.wanted_episodes = &u
-	m.appendwanted_episodes = nil
-}
-
-// WantedEpisodes returns the value of the "wanted_episodes" field in the mutation.
-func (m *DownloadRecordMutation) WantedEpisodes() (r []uint32, exists bool) {
-	v := m.wanted_episodes
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWantedEpisodes returns the old "wanted_episodes" field's value of the DownloadRecord entity.
-// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DownloadRecordMutation) OldWantedEpisodes(ctx context.Context) (v []uint32, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWantedEpisodes is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWantedEpisodes requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWantedEpisodes: %w", err)
-	}
-	return oldValue.WantedEpisodes, nil
-}
-
-// AppendWantedEpisodes adds u to the "wanted_episodes" field.
-func (m *DownloadRecordMutation) AppendWantedEpisodes(u []uint32) {
-	m.appendwanted_episodes = append(m.appendwanted_episodes, u...)
-}
-
-// AppendedWantedEpisodes returns the list of values that were appended to the "wanted_episodes" field in this mutation.
-func (m *DownloadRecordMutation) AppendedWantedEpisodes() ([]uint32, bool) {
-	if len(m.appendwanted_episodes) == 0 {
-		return nil, false
-	}
-	return m.appendwanted_episodes, true
-}
-
-// ClearWantedEpisodes clears the value of the "wanted_episodes" field.
-func (m *DownloadRecordMutation) ClearWantedEpisodes() {
-	m.wanted_episodes = nil
-	m.appendwanted_episodes = nil
-	m.clearedFields[downloadrecord.FieldWantedEpisodes] = struct{}{}
-}
-
-// WantedEpisodesCleared returns if the "wanted_episodes" field was cleared in this mutation.
-func (m *DownloadRecordMutation) WantedEpisodesCleared() bool {
-	_, ok := m.clearedFields[downloadrecord.FieldWantedEpisodes]
-	return ok
-}
-
-// ResetWantedEpisodes resets all changes to the "wanted_episodes" field.
-func (m *DownloadRecordMutation) ResetWantedEpisodes() {
-	m.wanted_episodes = nil
-	m.appendwanted_episodes = nil
-	delete(m.clearedFields, downloadrecord.FieldWantedEpisodes)
-}
-
 // SetSelectedFiles sets the "selected_files" field.
 func (m *DownloadRecordMutation) SetSelectedFiles(i []int) {
 	m.selected_files = &i
@@ -2683,43 +2619,97 @@ func (m *DownloadRecordMutation) ResetMovie() {
 	m.clearedmovie = false
 }
 
-// SetEpisodeID sets the "episode" edge to the Episode entity by id.
-func (m *DownloadRecordMutation) SetEpisodeID(id uint32) {
-	m.episode = &id
+// SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by id.
+func (m *DownloadRecordMutation) SetAnchorEpisodeID(id uint32) {
+	m.anchor_episode = &id
 }
 
-// ClearEpisode clears the "episode" edge to the Episode entity.
-func (m *DownloadRecordMutation) ClearEpisode() {
-	m.clearedepisode = true
+// ClearAnchorEpisode clears the "anchor_episode" edge to the Episode entity.
+func (m *DownloadRecordMutation) ClearAnchorEpisode() {
+	m.clearedanchor_episode = true
 }
 
-// EpisodeCleared reports if the "episode" edge to the Episode entity was cleared.
-func (m *DownloadRecordMutation) EpisodeCleared() bool {
-	return m.clearedepisode
+// AnchorEpisodeCleared reports if the "anchor_episode" edge to the Episode entity was cleared.
+func (m *DownloadRecordMutation) AnchorEpisodeCleared() bool {
+	return m.clearedanchor_episode
 }
 
-// EpisodeID returns the "episode" edge ID in the mutation.
-func (m *DownloadRecordMutation) EpisodeID() (id uint32, exists bool) {
-	if m.episode != nil {
-		return *m.episode, true
+// AnchorEpisodeID returns the "anchor_episode" edge ID in the mutation.
+func (m *DownloadRecordMutation) AnchorEpisodeID() (id uint32, exists bool) {
+	if m.anchor_episode != nil {
+		return *m.anchor_episode, true
 	}
 	return
 }
 
-// EpisodeIDs returns the "episode" edge IDs in the mutation.
+// AnchorEpisodeIDs returns the "anchor_episode" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// EpisodeID instead. It exists only for internal usage by the builders.
-func (m *DownloadRecordMutation) EpisodeIDs() (ids []uint32) {
-	if id := m.episode; id != nil {
+// AnchorEpisodeID instead. It exists only for internal usage by the builders.
+func (m *DownloadRecordMutation) AnchorEpisodeIDs() (ids []uint32) {
+	if id := m.anchor_episode; id != nil {
 		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetEpisode resets all changes to the "episode" edge.
-func (m *DownloadRecordMutation) ResetEpisode() {
-	m.episode = nil
-	m.clearedepisode = false
+// ResetAnchorEpisode resets all changes to the "anchor_episode" edge.
+func (m *DownloadRecordMutation) ResetAnchorEpisode() {
+	m.anchor_episode = nil
+	m.clearedanchor_episode = false
+}
+
+// AddEpisodeIDs adds the "episodes" edge to the Episode entity by ids.
+func (m *DownloadRecordMutation) AddEpisodeIDs(ids ...uint32) {
+	if m.episodes == nil {
+		m.episodes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.episodes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEpisodes clears the "episodes" edge to the Episode entity.
+func (m *DownloadRecordMutation) ClearEpisodes() {
+	m.clearedepisodes = true
+}
+
+// EpisodesCleared reports if the "episodes" edge to the Episode entity was cleared.
+func (m *DownloadRecordMutation) EpisodesCleared() bool {
+	return m.clearedepisodes
+}
+
+// RemoveEpisodeIDs removes the "episodes" edge to the Episode entity by IDs.
+func (m *DownloadRecordMutation) RemoveEpisodeIDs(ids ...uint32) {
+	if m.removedepisodes == nil {
+		m.removedepisodes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.episodes, ids[i])
+		m.removedepisodes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEpisodes returns the removed IDs of the "episodes" edge to the Episode entity.
+func (m *DownloadRecordMutation) RemovedEpisodesIDs() (ids []uint32) {
+	for id := range m.removedepisodes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EpisodesIDs returns the "episodes" edge IDs in the mutation.
+func (m *DownloadRecordMutation) EpisodesIDs() (ids []uint32) {
+	for id := range m.episodes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEpisodes resets all changes to the "episodes" edge.
+func (m *DownloadRecordMutation) ResetEpisodes() {
+	m.episodes = nil
+	m.clearedepisodes = false
+	m.removedepisodes = nil
 }
 
 // Where appends a list predicates to the DownloadRecordMutation builder.
@@ -2756,7 +2746,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -2807,9 +2797,6 @@ func (m *DownloadRecordMutation) Fields() []string {
 	}
 	if m.verification_bypassed != nil {
 		fields = append(fields, downloadrecord.FieldVerificationBypassed)
-	}
-	if m.wanted_episodes != nil {
-		fields = append(fields, downloadrecord.FieldWantedEpisodes)
 	}
 	if m.selected_files != nil {
 		fields = append(fields, downloadrecord.FieldSelectedFiles)
@@ -2862,8 +2849,6 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.HoldReasons()
 	case downloadrecord.FieldVerificationBypassed:
 		return m.VerificationBypassed()
-	case downloadrecord.FieldWantedEpisodes:
-		return m.WantedEpisodes()
 	case downloadrecord.FieldSelectedFiles:
 		return m.SelectedFiles()
 	case downloadrecord.FieldSelectedBytes:
@@ -2913,8 +2898,6 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldHoldReasons(ctx)
 	case downloadrecord.FieldVerificationBypassed:
 		return m.OldVerificationBypassed(ctx)
-	case downloadrecord.FieldWantedEpisodes:
-		return m.OldWantedEpisodes(ctx)
 	case downloadrecord.FieldSelectedFiles:
 		return m.OldSelectedFiles(ctx)
 	case downloadrecord.FieldSelectedBytes:
@@ -3049,13 +3032,6 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetVerificationBypassed(v)
 		return nil
-	case downloadrecord.FieldWantedEpisodes:
-		v, ok := value.([]uint32)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWantedEpisodes(v)
-		return nil
 	case downloadrecord.FieldSelectedFiles:
 		v, ok := value.([]int)
 		if !ok {
@@ -3176,9 +3152,6 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	if m.FieldCleared(downloadrecord.FieldHoldReasons) {
 		fields = append(fields, downloadrecord.FieldHoldReasons)
 	}
-	if m.FieldCleared(downloadrecord.FieldWantedEpisodes) {
-		fields = append(fields, downloadrecord.FieldWantedEpisodes)
-	}
 	if m.FieldCleared(downloadrecord.FieldSelectedFiles) {
 		fields = append(fields, downloadrecord.FieldSelectedFiles)
 	}
@@ -3228,9 +3201,6 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldHoldReasons:
 		m.ClearHoldReasons()
-		return nil
-	case downloadrecord.FieldWantedEpisodes:
-		m.ClearWantedEpisodes()
 		return nil
 	case downloadrecord.FieldSelectedFiles:
 		m.ClearSelectedFiles()
@@ -3297,9 +3267,6 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 	case downloadrecord.FieldVerificationBypassed:
 		m.ResetVerificationBypassed()
 		return nil
-	case downloadrecord.FieldWantedEpisodes:
-		m.ResetWantedEpisodes()
-		return nil
 	case downloadrecord.FieldSelectedFiles:
 		m.ResetSelectedFiles()
 		return nil
@@ -3315,12 +3282,15 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DownloadRecordMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.movie != nil {
 		edges = append(edges, downloadrecord.EdgeMovie)
 	}
-	if m.episode != nil {
-		edges = append(edges, downloadrecord.EdgeEpisode)
+	if m.anchor_episode != nil {
+		edges = append(edges, downloadrecord.EdgeAnchorEpisode)
+	}
+	if m.episodes != nil {
+		edges = append(edges, downloadrecord.EdgeEpisodes)
 	}
 	return edges
 }
@@ -3333,34 +3303,54 @@ func (m *DownloadRecordMutation) AddedIDs(name string) []ent.Value {
 		if id := m.movie; id != nil {
 			return []ent.Value{*id}
 		}
-	case downloadrecord.EdgeEpisode:
-		if id := m.episode; id != nil {
+	case downloadrecord.EdgeAnchorEpisode:
+		if id := m.anchor_episode; id != nil {
 			return []ent.Value{*id}
 		}
+	case downloadrecord.EdgeEpisodes:
+		ids := make([]ent.Value, 0, len(m.episodes))
+		for id := range m.episodes {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DownloadRecordMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedepisodes != nil {
+		edges = append(edges, downloadrecord.EdgeEpisodes)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *DownloadRecordMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case downloadrecord.EdgeEpisodes:
+		ids := make([]ent.Value, 0, len(m.removedepisodes))
+		for id := range m.removedepisodes {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DownloadRecordMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedmovie {
 		edges = append(edges, downloadrecord.EdgeMovie)
 	}
-	if m.clearedepisode {
-		edges = append(edges, downloadrecord.EdgeEpisode)
+	if m.clearedanchor_episode {
+		edges = append(edges, downloadrecord.EdgeAnchorEpisode)
+	}
+	if m.clearedepisodes {
+		edges = append(edges, downloadrecord.EdgeEpisodes)
 	}
 	return edges
 }
@@ -3371,8 +3361,10 @@ func (m *DownloadRecordMutation) EdgeCleared(name string) bool {
 	switch name {
 	case downloadrecord.EdgeMovie:
 		return m.clearedmovie
-	case downloadrecord.EdgeEpisode:
-		return m.clearedepisode
+	case downloadrecord.EdgeAnchorEpisode:
+		return m.clearedanchor_episode
+	case downloadrecord.EdgeEpisodes:
+		return m.clearedepisodes
 	}
 	return false
 }
@@ -3384,8 +3376,8 @@ func (m *DownloadRecordMutation) ClearEdge(name string) error {
 	case downloadrecord.EdgeMovie:
 		m.ClearMovie()
 		return nil
-	case downloadrecord.EdgeEpisode:
-		m.ClearEpisode()
+	case downloadrecord.EdgeAnchorEpisode:
+		m.ClearAnchorEpisode()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord unique edge %s", name)
@@ -3398,8 +3390,11 @@ func (m *DownloadRecordMutation) ResetEdge(name string) error {
 	case downloadrecord.EdgeMovie:
 		m.ResetMovie()
 		return nil
-	case downloadrecord.EdgeEpisode:
-		m.ResetEpisode()
+	case downloadrecord.EdgeAnchorEpisode:
+		m.ResetAnchorEpisode()
+		return nil
+	case downloadrecord.EdgeEpisodes:
+		m.ResetEpisodes()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord edge %s", name)
@@ -3408,38 +3403,41 @@ func (m *DownloadRecordMutation) ResetEdge(name string) error {
 // EpisodeMutation represents an operation that mutates the Episode nodes in the graph.
 type EpisodeMutation struct {
 	config
-	op                      Op
-	typ                     string
-	id                      *uint32
-	create_time             *time.Time
-	update_time             *time.Time
-	number                  *uint16
-	addnumber               *int16
-	title                   *string
-	overview                *string
-	air_date                *time.Time
-	monitored               *bool
-	absolute_number         *uint16
-	addabsolute_number      *int16
-	grab_failures           *uint8
-	addgrab_failures        *int8
-	last_search_at          *time.Time
-	status                  *episode.Status
-	clearedFields           map[string]struct{}
-	season                  *uint32
-	clearedseason           bool
-	download_records        map[uint32]struct{}
-	removeddownload_records map[uint32]struct{}
-	cleareddownload_records bool
-	media_files             map[uint32]struct{}
-	removedmedia_files      map[uint32]struct{}
-	clearedmedia_files      bool
-	events                  map[uint32]struct{}
-	removedevents           map[uint32]struct{}
-	clearedevents           bool
-	done                    bool
-	oldValue                func(context.Context) (*Episode, error)
-	predicates              []predicate.Episode
+	op                               Op
+	typ                              string
+	id                               *uint32
+	create_time                      *time.Time
+	update_time                      *time.Time
+	number                           *uint16
+	addnumber                        *int16
+	title                            *string
+	overview                         *string
+	air_date                         *time.Time
+	monitored                        *bool
+	absolute_number                  *uint16
+	addabsolute_number               *int16
+	grab_failures                    *uint8
+	addgrab_failures                 *int8
+	last_search_at                   *time.Time
+	status                           *episode.Status
+	clearedFields                    map[string]struct{}
+	season                           *uint32
+	clearedseason                    bool
+	download_records                 map[uint32]struct{}
+	removeddownload_records          map[uint32]struct{}
+	cleareddownload_records          bool
+	anchored_download_records        map[uint32]struct{}
+	removedanchored_download_records map[uint32]struct{}
+	clearedanchored_download_records bool
+	media_files                      map[uint32]struct{}
+	removedmedia_files               map[uint32]struct{}
+	clearedmedia_files               bool
+	events                           map[uint32]struct{}
+	removedevents                    map[uint32]struct{}
+	clearedevents                    bool
+	done                             bool
+	oldValue                         func(context.Context) (*Episode, error)
+	predicates                       []predicate.Episode
 }
 
 var _ ent.Mutation = (*EpisodeMutation)(nil)
@@ -4161,6 +4159,60 @@ func (m *EpisodeMutation) ResetDownloadRecords() {
 	m.removeddownload_records = nil
 }
 
+// AddAnchoredDownloadRecordIDs adds the "anchored_download_records" edge to the DownloadRecord entity by ids.
+func (m *EpisodeMutation) AddAnchoredDownloadRecordIDs(ids ...uint32) {
+	if m.anchored_download_records == nil {
+		m.anchored_download_records = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.anchored_download_records[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAnchoredDownloadRecords clears the "anchored_download_records" edge to the DownloadRecord entity.
+func (m *EpisodeMutation) ClearAnchoredDownloadRecords() {
+	m.clearedanchored_download_records = true
+}
+
+// AnchoredDownloadRecordsCleared reports if the "anchored_download_records" edge to the DownloadRecord entity was cleared.
+func (m *EpisodeMutation) AnchoredDownloadRecordsCleared() bool {
+	return m.clearedanchored_download_records
+}
+
+// RemoveAnchoredDownloadRecordIDs removes the "anchored_download_records" edge to the DownloadRecord entity by IDs.
+func (m *EpisodeMutation) RemoveAnchoredDownloadRecordIDs(ids ...uint32) {
+	if m.removedanchored_download_records == nil {
+		m.removedanchored_download_records = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.anchored_download_records, ids[i])
+		m.removedanchored_download_records[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAnchoredDownloadRecords returns the removed IDs of the "anchored_download_records" edge to the DownloadRecord entity.
+func (m *EpisodeMutation) RemovedAnchoredDownloadRecordsIDs() (ids []uint32) {
+	for id := range m.removedanchored_download_records {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AnchoredDownloadRecordsIDs returns the "anchored_download_records" edge IDs in the mutation.
+func (m *EpisodeMutation) AnchoredDownloadRecordsIDs() (ids []uint32) {
+	for id := range m.anchored_download_records {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAnchoredDownloadRecords resets all changes to the "anchored_download_records" edge.
+func (m *EpisodeMutation) ResetAnchoredDownloadRecords() {
+	m.anchored_download_records = nil
+	m.clearedanchored_download_records = false
+	m.removedanchored_download_records = nil
+}
+
 // AddMediaFileIDs adds the "media_files" edge to the MediaFile entity by ids.
 func (m *EpisodeMutation) AddMediaFileIDs(ids ...uint32) {
 	if m.media_files == nil {
@@ -4644,12 +4696,15 @@ func (m *EpisodeMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EpisodeMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.season != nil {
 		edges = append(edges, episode.EdgeSeason)
 	}
 	if m.download_records != nil {
 		edges = append(edges, episode.EdgeDownloadRecords)
+	}
+	if m.anchored_download_records != nil {
+		edges = append(edges, episode.EdgeAnchoredDownloadRecords)
 	}
 	if m.media_files != nil {
 		edges = append(edges, episode.EdgeMediaFiles)
@@ -4674,6 +4729,12 @@ func (m *EpisodeMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case episode.EdgeAnchoredDownloadRecords:
+		ids := make([]ent.Value, 0, len(m.anchored_download_records))
+		for id := range m.anchored_download_records {
+			ids = append(ids, id)
+		}
+		return ids
 	case episode.EdgeMediaFiles:
 		ids := make([]ent.Value, 0, len(m.media_files))
 		for id := range m.media_files {
@@ -4692,9 +4753,12 @@ func (m *EpisodeMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EpisodeMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removeddownload_records != nil {
 		edges = append(edges, episode.EdgeDownloadRecords)
+	}
+	if m.removedanchored_download_records != nil {
+		edges = append(edges, episode.EdgeAnchoredDownloadRecords)
 	}
 	if m.removedmedia_files != nil {
 		edges = append(edges, episode.EdgeMediaFiles)
@@ -4712,6 +4776,12 @@ func (m *EpisodeMutation) RemovedIDs(name string) []ent.Value {
 	case episode.EdgeDownloadRecords:
 		ids := make([]ent.Value, 0, len(m.removeddownload_records))
 		for id := range m.removeddownload_records {
+			ids = append(ids, id)
+		}
+		return ids
+	case episode.EdgeAnchoredDownloadRecords:
+		ids := make([]ent.Value, 0, len(m.removedanchored_download_records))
+		for id := range m.removedanchored_download_records {
 			ids = append(ids, id)
 		}
 		return ids
@@ -4733,12 +4803,15 @@ func (m *EpisodeMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EpisodeMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedseason {
 		edges = append(edges, episode.EdgeSeason)
 	}
 	if m.cleareddownload_records {
 		edges = append(edges, episode.EdgeDownloadRecords)
+	}
+	if m.clearedanchored_download_records {
+		edges = append(edges, episode.EdgeAnchoredDownloadRecords)
 	}
 	if m.clearedmedia_files {
 		edges = append(edges, episode.EdgeMediaFiles)
@@ -4757,6 +4830,8 @@ func (m *EpisodeMutation) EdgeCleared(name string) bool {
 		return m.clearedseason
 	case episode.EdgeDownloadRecords:
 		return m.cleareddownload_records
+	case episode.EdgeAnchoredDownloadRecords:
+		return m.clearedanchored_download_records
 	case episode.EdgeMediaFiles:
 		return m.clearedmedia_files
 	case episode.EdgeEvents:
@@ -4785,6 +4860,9 @@ func (m *EpisodeMutation) ResetEdge(name string) error {
 		return nil
 	case episode.EdgeDownloadRecords:
 		m.ResetDownloadRecords()
+		return nil
+	case episode.EdgeAnchoredDownloadRecords:
+		m.ResetAnchoredDownloadRecords()
 		return nil
 	case episode.EdgeMediaFiles:
 		m.ResetMediaFiles()

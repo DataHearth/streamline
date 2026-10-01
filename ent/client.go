@@ -825,15 +825,31 @@ func (c *DownloadRecordClient) QueryMovie(_m *DownloadRecord) *MovieQuery {
 	return query
 }
 
-// QueryEpisode queries the episode edge of a DownloadRecord.
-func (c *DownloadRecordClient) QueryEpisode(_m *DownloadRecord) *EpisodeQuery {
+// QueryAnchorEpisode queries the anchor_episode edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryAnchorEpisode(_m *DownloadRecord) *EpisodeQuery {
 	query := (&EpisodeClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
 			sqlgraph.To(episode.Table, episode.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.EpisodeTable, downloadrecord.EpisodeColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.AnchorEpisodeTable, downloadrecord.AnchorEpisodeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEpisodes queries the episodes edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryEpisodes(_m *DownloadRecord) *EpisodeQuery {
+	query := (&EpisodeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(episode.Table, episode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, downloadrecord.EpisodesTable, downloadrecord.EpisodesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -998,7 +1014,23 @@ func (c *EpisodeClient) QueryDownloadRecords(_m *Episode) *DownloadRecordQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(episode.Table, episode.FieldID, id),
 			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, episode.DownloadRecordsTable, episode.DownloadRecordsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, episode.DownloadRecordsTable, episode.DownloadRecordsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAnchoredDownloadRecords queries the anchored_download_records edge of a Episode.
+func (c *EpisodeClient) QueryAnchoredDownloadRecords(_m *Episode) *DownloadRecordQuery {
+	query := (&DownloadRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(episode.Table, episode.FieldID, id),
+			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, episode.AnchoredDownloadRecordsTable, episode.AnchoredDownloadRecordsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

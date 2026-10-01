@@ -245,12 +245,6 @@ func (_c *DownloadRecordCreate) SetNillableVerificationBypassed(v *bool) *Downlo
 	return _c
 }
 
-// SetWantedEpisodes sets the "wanted_episodes" field.
-func (_c *DownloadRecordCreate) SetWantedEpisodes(v []uint32) *DownloadRecordCreate {
-	_c.mutation.SetWantedEpisodes(v)
-	return _c
-}
-
 // SetSelectedFiles sets the "selected_files" field.
 func (_c *DownloadRecordCreate) SetSelectedFiles(v []int) *DownloadRecordCreate {
 	_c.mutation.SetSelectedFiles(v)
@@ -310,23 +304,38 @@ func (_c *DownloadRecordCreate) SetMovie(v *Movie) *DownloadRecordCreate {
 	return _c.SetMovieID(v.ID)
 }
 
-// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
-func (_c *DownloadRecordCreate) SetEpisodeID(id uint32) *DownloadRecordCreate {
-	_c.mutation.SetEpisodeID(id)
+// SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
+func (_c *DownloadRecordCreate) SetAnchorEpisodeID(id uint32) *DownloadRecordCreate {
+	_c.mutation.SetAnchorEpisodeID(id)
 	return _c
 }
 
-// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
-func (_c *DownloadRecordCreate) SetNillableEpisodeID(id *uint32) *DownloadRecordCreate {
+// SetNillableAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableAnchorEpisodeID(id *uint32) *DownloadRecordCreate {
 	if id != nil {
-		_c = _c.SetEpisodeID(*id)
+		_c = _c.SetAnchorEpisodeID(*id)
 	}
 	return _c
 }
 
-// SetEpisode sets the "episode" edge to the Episode entity.
-func (_c *DownloadRecordCreate) SetEpisode(v *Episode) *DownloadRecordCreate {
-	return _c.SetEpisodeID(v.ID)
+// SetAnchorEpisode sets the "anchor_episode" edge to the Episode entity.
+func (_c *DownloadRecordCreate) SetAnchorEpisode(v *Episode) *DownloadRecordCreate {
+	return _c.SetAnchorEpisodeID(v.ID)
+}
+
+// AddEpisodeIDs adds the "episodes" edge to the Episode entity by IDs.
+func (_c *DownloadRecordCreate) AddEpisodeIDs(ids ...uint32) *DownloadRecordCreate {
+	_c.mutation.AddEpisodeIDs(ids...)
+	return _c
+}
+
+// AddEpisodes adds the "episodes" edges to the Episode entity.
+func (_c *DownloadRecordCreate) AddEpisodes(v ...*Episode) *DownloadRecordCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEpisodeIDs(ids...)
 }
 
 // Mutation returns the DownloadRecordMutation object of the builder.
@@ -540,10 +549,6 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 		_spec.SetField(downloadrecord.FieldVerificationBypassed, field.TypeBool, value)
 		_node.VerificationBypassed = value
 	}
-	if value, ok := _c.mutation.WantedEpisodes(); ok {
-		_spec.SetField(downloadrecord.FieldWantedEpisodes, field.TypeJSON, value)
-		_node.WantedEpisodes = value
-	}
 	if value, ok := _c.mutation.SelectedFiles(); ok {
 		_spec.SetField(downloadrecord.FieldSelectedFiles, field.TypeJSON, value)
 		_node.SelectedFiles = value
@@ -573,12 +578,12 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 		_node.movie_download_records = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.EpisodeIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.AnchorEpisodeIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   downloadrecord.EpisodeTable,
-			Columns: []string{downloadrecord.EpisodeColumn},
+			Table:   downloadrecord.AnchorEpisodeTable,
+			Columns: []string{downloadrecord.AnchorEpisodeColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
@@ -588,6 +593,22 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.episode_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EpisodesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   downloadrecord.EpisodesTable,
+			Columns: downloadrecord.EpisodesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -6,8 +6,6 @@ import (
 	"slices"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqljson"
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -15,7 +13,6 @@ import (
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
-	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -47,9 +44,9 @@ type CreateDownloadRecordParams struct {
 	SavePath      string
 	Quality       string
 	FailureReason string
-	// Grab-time intent for a partial season-pack selection; empty leaves the
-	// schema default (no scoped episodes).
-	WantedEpisodes []uint32
+	// EpisodeID is the anchor; EpisodeIDs the rest of what the download is
+	// for. The anchor is linked whether or not it is listed here.
+	EpisodeIDs []uint32
 	// Zero value resolves to the schema default (skipped).
 	SelectionState downloadrecord.SelectionState
 	// The keep-set behind an "applied" SelectionState, stored at create so a
@@ -88,11 +85,9 @@ func (db *DB) CreateDownloadRecord(
 		b = b.SetMovieID(p.MovieID)
 	}
 	if p.EpisodeID != 0 {
-		b = b.SetEpisodeID(p.EpisodeID)
+		b = b.SetAnchorEpisodeID(p.EpisodeID).AddEpisodeIDs(p.EpisodeID)
 	}
-	if len(p.WantedEpisodes) > 0 {
-		b = b.SetWantedEpisodes(p.WantedEpisodes)
-	}
+	b = b.AddEpisodeIDs(p.EpisodeIDs...)
 	if p.SelectionState != "" {
 		b = b.SetSelectionState(p.SelectionState)
 	}
@@ -140,7 +135,7 @@ func (db *DB) ListPendingDownloadRecords(
 	}
 	rows, err := pending.
 		WithMovie(func(mq *ent.MovieQuery) { mq.WithMediaFiles() }).
-		WithEpisode(func(q *ent.EpisodeQuery) {
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithMediaFiles()
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
@@ -151,17 +146,26 @@ func (db *DB) ListPendingDownloadRecords(
 	return rows, numeric.SaturateU32(total), err
 }
 
+// IdentifyDownloadRecord files a record under a movie or under an anchor
+// episode plus the episodes it covers. The episode set is replaced, never
+// merged: a proposal re-identified to another title must not keep episode
+// ids from the one adoption guessed, or every record-scoped write would reach
+// the wrong series' rows.
 func (db *DB) IdentifyDownloadRecord(
 	ctx context.Context,
 	id, movieID, episodeID uint32,
+	episodeIDs []uint32,
 	reason string,
 ) error {
-	q := db.client.DownloadRecord.UpdateOneID(id).SetFailureReason(reason)
+	q := db.client.DownloadRecord.UpdateOneID(id).
+		SetFailureReason(reason).
+		ClearEpisodes().
+		AddEpisodeIDs(episodeIDs...)
 	if movieID != 0 {
 		q = q.SetMovieID(movieID)
 	}
 	if episodeID != 0 {
-		q = q.SetEpisodeID(episodeID)
+		q = q.SetAnchorEpisodeID(episodeID).AddEpisodeIDs(episodeID)
 	}
 	return q.Exec(ctx)
 }
@@ -253,7 +257,7 @@ func (db *DB) FindPendingDownloadRecordByID(
 		// resolves the pack against the show's whole episode tree, and an
 		// episode with no season loaded is indistinguishable from no episode
 		// at all.
-		WithEpisode(func(q *ent.EpisodeQuery) {
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
 		Only(ctx)
@@ -299,17 +303,23 @@ func (db *DB) LatestImportedRecordForMovie(
 		First(ctx)
 }
 
-// LatestImportedRecordForEpisode is the episode twin of the above.
+// LatestImportedRecordForEpisode is the episode twin of the above. It matches
+// every episode a record covers, not only its anchor — a season pack is the
+// torrent behind each of its episodes' files — and so only a completed import:
+// a pack also links episodes it has not produced yet (an upgrade still
+// downloading, a proposal the operator dismissed and left seeding), and those
+// torrents are not this file's to remove.
 func (db *DB) LatestImportedRecordForEpisode(
 	ctx context.Context,
 	episodeID uint32,
 ) (*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(
-			downloadrecord.HasEpisodeWith(episode.ID(episodeID)),
+			downloadrecord.HasEpisodesWith(episode.ID(episodeID)),
+			downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
 			downloadrecord.TorrentHashNEQ(""),
 		).
-		Order(ent.Desc(downloadrecord.FieldCreateTime)).
+		Order(ent.Desc(downloadrecord.FieldImportedAt)).
 		First(ctx)
 }
 
@@ -404,8 +414,8 @@ func (db *DB) SetDownloadRecordReplaceMode(
 
 // SetDownloadRecordSelection writes the resolution of a file selection: the
 // state it landed in, the file indices actually selected, and their summed
-// size. Called once the client's file listing is known — before that only
-// wanted_episodes (the intent) is set.
+// size. Called once the client's file listing is known — before that only the
+// record's episodes (the intent) are set.
 func (db *DB) SetDownloadRecordSelection(
 	ctx context.Context,
 	id uint32,
@@ -420,18 +430,27 @@ func (db *DB) SetDownloadRecordSelection(
 		Exec(ctx)
 }
 
-// SetDownloadRecordWantedEpisodes overwrites wanted_episodes with the given
-// union. A season pack can grow its selection as more episodes are confirmed
-// wanted between the grab and file-listing resolving, so this is a full
-// rewrite rather than an append.
-func (db *DB) SetDownloadRecordWantedEpisodes(
+// AddDownloadRecordEpisodes links more episodes to a record. A season pack can
+// grow its selection as more episodes are confirmed wanted between the grab
+// and file-listing resolving; ids already linked are left as they are.
+func (db *DB) AddDownloadRecordEpisodes(
 	ctx context.Context,
 	id uint32,
 	eps []uint32,
 ) error {
 	return db.client.DownloadRecord.UpdateOneID(id).
-		SetWantedEpisodes(eps).
+		AddEpisodeIDs(eps...).
 		Exec(ctx)
+}
+
+// RecordEpisodeIDs lists the ids of rec's eager-loaded episodes edge; empty
+// when the edge was not loaded or the record covers none.
+func RecordEpisodeIDs(rec *ent.DownloadRecord) []uint32 {
+	ids := make([]uint32, 0, len(rec.Edges.Episodes))
+	for _, e := range rec.Edges.Episodes {
+		ids = append(ids, e.ID)
+	}
+	return ids
 }
 
 // ListPendingSelectionRecords returns records still awaiting file-selection
@@ -442,7 +461,8 @@ func (db *DB) ListPendingSelectionRecords(
 ) ([]*ent.DownloadRecord, error) {
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.SelectionStateEQ(downloadrecord.SelectionStatePending)).
-		WithEpisode(withEpisodeContext).
+		WithAnchorEpisode(withEpisodeContext).
+		WithEpisodes().
 		All(ctx)
 }
 
@@ -488,7 +508,7 @@ func (db *DB) ListImportingDownloadRecords(
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
 		WithMovie().
-		WithEpisode(withEpisodeContext).
+		WithAnchorEpisode(withEpisodeContext).
 		All(ctx)
 }
 
@@ -506,7 +526,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 			downloadrecord.StatusEQ(downloadrecord.StatusImporting),
 		).
 		WithMovie().
-		WithEpisode(withEpisodeContext).
+		WithAnchorEpisode(withEpisodeContext).
 		Only(ctx)
 }
 
@@ -545,7 +565,7 @@ func (db *DB) FindHeldDownloadRecordByID(
 			downloadrecord.StatusEQ(downloadrecord.StatusHeld),
 		).
 		WithMovie().
-		WithEpisode(withEpisodeContext).
+		WithAnchorEpisode(withEpisodeContext).
 		Only(ctx)
 }
 
@@ -602,10 +622,10 @@ func (db *DB) FailHeldDownloadRecord(
 			return fmt.Errorf("update movie: %w", err)
 		}
 	}
-	if rec.Edges.Episode != nil {
+	if rec.Edges.AnchorEpisode != nil {
 		if _, err := tx.Episode.Update().
 			Where(
-				episode.ID(rec.Edges.Episode.ID),
+				episode.ID(rec.Edges.AnchorEpisode.ID),
 				episode.Not(episode.HasMediaFiles()),
 			).
 			SetStatus(episode.StatusWanted).
@@ -782,24 +802,26 @@ func (db *DB) RecordImportFailure(
 	return tx.Commit()
 }
 
-// recordEpisodesWanted selects the episodes a record links that are still
-// "wanted" — the rows an import is about to take over.
+// recordEpisodesWanted selects the record's anchor while it is still
+// "wanted" — the row an import is about to take over. MarkRecordEpisodesImporting
+// skips "wanted" because a grab marked its episodes downloading; both callers
+// here are the case where nothing did.
 //
-// Record-scoped, not season-scoped, and that is the difference from
-// MarkRecordEpisodesImporting: that one walks the whole season and skips
-// "wanted" on purpose, because a wanted episode in the season of a running
-// grab is usually not part of it. Both callers here are the case where the
-// opposite holds — the record's own linked episodes are wanted precisely
-// because this record is what is going to fill them.
+// The anchor, not the whole set: an adopted whole-series pack links every
+// numbered episode of the show — unaired ones, and seasons the torrent never
+// held — and none of the set's wanted rows can be told apart from those. Moved
+// to importing they sit out every missing search for as long as a hold lasts.
+// The rest of the set stays wanted, which no search acts on while this record
+// is in flight: ListEligibleEpisodesForSync excludes every episode it links.
 func recordEpisodesWanted(recordID uint32) predicate.Episode {
 	return episode.And(
-		episode.HasDownloadRecordsWith(downloadrecord.ID(recordID)),
+		episode.HasAnchoredDownloadRecordsWith(downloadrecord.ID(recordID)),
 		episode.StatusEQ(episode.StatusWanted),
 	)
 }
 
-// MarkWantedRecordEpisodesImporting moves a record's own linked episodes from
-// "wanted" to "importing".
+// MarkWantedRecordEpisodesImporting moves a record's anchor episode from
+// "wanted" to "importing" — see recordEpisodesWanted for why not its whole set.
 //
 // Adoption needs this and the normal completion sweep does not: a grab
 // streamline issued left its episodes "downloading", which is what
@@ -834,7 +856,7 @@ func (db *DB) MarkWantedRecordEpisodesImporting(
 // rows that claim nothing is coming, and the missing-search would grab a
 // second release for an episode already being imported.
 //
-// Only rows this record owns are touched: the episode edge, not the season.
+// Only rows this record owns are touched: its episodes, not the season.
 // MarkRecordEpisodesImporting deliberately leaves "wanted" alone because a
 // wanted episode is usually none of a running grab's business — here "wanted"
 // is precisely what this record's own failure wrote.
@@ -969,7 +991,7 @@ func (db *DB) ListActiveDownloadRecords(
 			downloadrecord.StatusHeld,
 		)).
 		WithMovie().
-		WithEpisode(func(q *ent.EpisodeQuery) {
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
 		All(ctx)
@@ -1059,6 +1081,7 @@ func (db *DB) FindWidenableDownloadRecordByHash(
 			),
 		).
 		WithMovie().
+		WithEpisodes().
 		First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
@@ -1072,10 +1095,9 @@ func (db *DB) FindWidenableDownloadRecordByHash(
 }
 
 // FindSeedingDownloadRecord is the transcoding worker's route from a library
-// file back to the torrent that produced it. An episode matches through
-// wanted_episodes as well as its own edge: a season pack's record points its
-// edge at the first wanted episode only, and the other episodes' files came
-// out of the same torrent.
+// file back to the torrent that produced it. An episode matches every record
+// that covers it, not only the one anchored on it: a season pack's files all
+// came out of the same torrent.
 func (db *DB) FindSeedingDownloadRecord(
 	ctx context.Context,
 	movieID, episodeID uint32,
@@ -1085,14 +1107,7 @@ func (db *DB) FindSeedingDownloadRecord(
 	case movieID != 0:
 		owner = downloadrecord.HasMovieWith(movie.ID(movieID))
 	case episodeID != 0:
-		owner = downloadrecord.Or(
-			downloadrecord.HasEpisodeWith(episode.ID(episodeID)),
-			func(s *sql.Selector) {
-				s.Where(sqljson.ValueContains(
-					downloadrecord.FieldWantedEpisodes, episodeID,
-				))
-			},
-		)
+		owner = downloadrecord.HasEpisodesWith(episode.ID(episodeID))
 	default:
 		return nil, nil
 	}
@@ -1169,7 +1184,7 @@ func (db *DB) ListDownloadHistory(
 			ent.Desc(downloadrecord.FieldID),
 		).
 		WithMovie().
-		WithEpisode(func(q *ent.EpisodeQuery) {
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		})
 
@@ -1258,82 +1273,20 @@ var inFlightRecordStatuses = []downloadrecord.Status{
 	downloadrecord.StatusHeld,
 }
 
-// noActiveSeasonRecord excludes an episode whose season has a download record
-// still in flight. Shared by both RevertOrphanedDownloadingEpisodes arms.
-func noActiveSeasonRecord() predicate.Episode {
-	return episode.Not(episode.HasSeasonWith(
-		season.HasEpisodesWith(
-			episode.HasDownloadRecordsWith(
-				downloadrecord.StatusIn(inFlightRecordStatuses...),
-			),
-		),
-	))
+// recordEpisodes selects every episode a record's download is for.
+func recordEpisodes(recordID uint32) predicate.Episode {
+	return episode.HasDownloadRecordsWith(downloadrecord.ID(recordID))
 }
 
-// claimedEpisodes collects every episode an in-flight record says its download
-// is for. The Episode edge holds one id — a pack's anchor — while
-// wanted_episodes holds the whole set, and that set is the only place a
-// multi-season pack names the seasons past its anchor's. Read into Go rather
-// than joined against the column: it is JSON, and the set is bounded by what
-// is in flight right now.
-// recordClaimedEpisodes returns the episodes one record's download is for: the
-// set it recorded at grab time, plus its anchor, which is all a record that
-// recorded no set has. Empty for a movie record.
+// RevertOrphanedDownloadingEpisodes reconciles episodes stuck in flight with
+// no in-flight download record covering them — a cancelled or lost record
+// leaves every episode it marked behind.
 //
-// This is what "the episodes behind this download" means anywhere it is asked.
-// The season the anchor happens to sit in is not: a pack spanning seasons
-// anchors in one of them, and two records can hold different episodes of the
-// same season at the same time.
-func (db *DB) recordClaimedEpisodes(
-	ctx context.Context,
-	recordID uint32,
-) ([]uint32, error) {
-	rec, err := db.client.DownloadRecord.Query().
-		Where(downloadrecord.ID(recordID)).
-		WithEpisode().
-		Only(ctx)
-	if ent.IsNotFound(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("load download record %d: %w", recordID, err)
-	}
-	ids := slices.Clone(rec.WantedEpisodes)
-	if rec.Edges.Episode != nil && !slices.Contains(ids, rec.Edges.Episode.ID) {
-		ids = append(ids, rec.Edges.Episode.ID)
-	}
-	return ids, nil
-}
-
-func (db *DB) claimedEpisodes(ctx context.Context) ([]uint32, error) {
-	recs, err := db.client.DownloadRecord.Query().
-		Where(downloadrecord.StatusIn(inFlightRecordStatuses...)).
-		Select(downloadrecord.FieldWantedEpisodes).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list in-flight download records: %w", err)
-	}
-	var ids []uint32
-	for _, r := range recs {
-		ids = append(ids, r.WantedEpisodes...)
-	}
-	return ids, nil
-}
-
-// RevertOrphanedDownloadingEpisodes reconciles episodes stuck in "downloading"
-// with no active download record behind them — the season-pack fan-out marks
-// every episode in a pack downloading but links only one record, so cancelling
-// or losing that record (or, historically, an upgrade grab that never
-// resolved) leaves the rest stranded.
-//
-// An episode is spared two ways, and it takes both. Its season holding an
-// active download covers the episodes a pack fans out over without naming
-// them. Being named in an in-flight record's wanted_episodes covers the rest:
-// a whole-series pack claims every season at once but anchors its record to
-// one episode of one season, so the season rule alone declared every *other*
-// season stranded 20 seconds after the grab — and the missing-search then
-// grabbed duplicates of episodes already downloading (Narcos INTEGRALE, S02
-// and S03, 2026-09-20).
+// Covering means linked through the record's episodes, never sharing a season
+// with it: a pack spanning seasons anchors in only one, and the season rule
+// that used to stand in for the link declared every other season stranded 20
+// seconds after the grab, so the missing-search grabbed duplicates of episodes
+// already downloading (Narcos INTEGRALE, S02 and S03, 2026-09-20).
 //
 // Two arms, not one query: an episode with no media file has never had
 // anything, so it goes back to "wanted"; an episode that already has a file
@@ -1343,20 +1296,15 @@ func (db *DB) claimedEpisodes(ctx context.Context) ([]uint32, error) {
 func (db *DB) RevertOrphanedDownloadingEpisodes(
 	ctx context.Context,
 ) (int, error) {
-	claimed, err := db.claimedEpisodes(ctx)
-	if err != nil {
-		return 0, err
-	}
-	stranded := []predicate.Episode{
+	stranded := episode.And(
 		episode.StatusIn(inFlightEpisodeStatuses...),
-		noActiveSeasonRecord(),
-	}
-	if len(claimed) > 0 {
-		stranded = append(stranded, episode.IDNotIn(claimed...))
-	}
+		episode.Not(episode.HasDownloadRecordsWith(
+			downloadrecord.StatusIn(inFlightRecordStatuses...),
+		)),
+	)
 	toWanted, err := db.client.Episode.Update().
 		Where(
-			episode.And(stranded...),
+			stranded,
 			episode.Not(episode.HasMediaFiles()),
 		).
 		SetStatus(episode.StatusWanted).
@@ -1366,7 +1314,7 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 	}
 	toAvailable, err := db.client.Episode.Update().
 		Where(
-			episode.And(stranded...),
+			stranded,
 			episode.HasMediaFiles(),
 		).
 		SetStatus(episode.StatusAvailable).
@@ -1409,16 +1357,9 @@ func (db *DB) MarkRecordEpisodesImporting(
 	ctx context.Context,
 	recordID uint32,
 ) error {
-	claimed, err := db.recordClaimedEpisodes(ctx, recordID)
-	if err != nil {
-		return err
-	}
-	if len(claimed) == 0 {
-		return nil // movie record, or nothing linked
-	}
 	if _, err := db.client.Episode.Update().
 		Where(
-			episode.IDIn(claimed...),
+			recordEpisodes(recordID),
 			episode.StatusIn(
 				episode.StatusDownloading,
 				episode.StatusPaused,
@@ -1434,9 +1375,9 @@ func (db *DB) MarkRecordEpisodesImporting(
 // SyncDownloadStateForRecord reflects a download's live torrent state onto its
 // episode badges: when paused, the episodes this record is for that are still
 // "downloading" flip to "paused"; when active again they flip back. A no-op
-// for movie records, and for a record that claims no episode.
+// for movie records, which cover no episode.
 //
-// Scoped to the record's own claim, not to the season its anchor sits in.
+// Scoped to the record's own episodes, not to the season its anchor sits in.
 // Season scope crossed records: pausing a duplicate grab of season 2 also
 // paused the eight episodes of that season a whole-series pack was fetching,
 // and the resume never reached them — the pack's own anchor is in season 1,
@@ -1450,21 +1391,13 @@ func (db *DB) SyncDownloadStateForRecord(
 	recordID uint32,
 	paused bool,
 ) error {
-	claimed, err := db.recordClaimedEpisodes(ctx, recordID)
-	if err != nil {
-		return err
-	}
-	if len(claimed) == 0 {
-		return nil // movie record, or nothing linked
-	}
-
 	from, to := episode.StatusDownloading, episode.StatusPaused
 	if !paused {
 		from, to = episode.StatusPaused, episode.StatusDownloading
 	}
 	if _, err := db.client.Episode.Update().
 		Where(
-			episode.IDIn(claimed...),
+			recordEpisodes(recordID),
 			episode.StatusEQ(from),
 		).
 		SetStatus(to).

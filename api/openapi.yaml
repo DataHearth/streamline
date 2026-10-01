@@ -900,8 +900,10 @@ paths:
         Removes the episode's media file from disk and DB and reverts the
         episode to "wanted" so the next monitored search re-grabs it. When
         remove_torrent=true, also removes the source torrent from its
-        download client (best-effort). 409 when the file's stored path is
-        outside the series library root: nothing is deleted, row included.
+        download client (best-effort) — for an episode imported from a
+        season pack that is the pack's torrent, so its other episodes stop
+        seeding too. 409 when the file's stored path is outside the series
+        library root: nothing is deleted, row included.
       tags: [series]
       requestBody:
         $ref: "#/components/requestBodies/DeleteFile"

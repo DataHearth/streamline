@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -20,14 +21,15 @@ import (
 // DownloadRecordQuery is the builder for querying DownloadRecord entities.
 type DownloadRecordQuery struct {
 	config
-	ctx         *QueryContext
-	order       []downloadrecord.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.DownloadRecord
-	withMovie   *MovieQuery
-	withEpisode *EpisodeQuery
-	withFKs     bool
-	modifiers   []func(*sql.Selector)
+	ctx               *QueryContext
+	order             []downloadrecord.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.DownloadRecord
+	withMovie         *MovieQuery
+	withAnchorEpisode *EpisodeQuery
+	withEpisodes      *EpisodeQuery
+	withFKs           bool
+	modifiers         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -86,8 +88,8 @@ func (_q *DownloadRecordQuery) QueryMovie() *MovieQuery {
 	return query
 }
 
-// QueryEpisode chains the current query on the "episode" edge.
-func (_q *DownloadRecordQuery) QueryEpisode() *EpisodeQuery {
+// QueryAnchorEpisode chains the current query on the "anchor_episode" edge.
+func (_q *DownloadRecordQuery) QueryAnchorEpisode() *EpisodeQuery {
 	query := (&EpisodeClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -100,7 +102,29 @@ func (_q *DownloadRecordQuery) QueryEpisode() *EpisodeQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
 			sqlgraph.To(episode.Table, episode.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.EpisodeTable, downloadrecord.EpisodeColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.AnchorEpisodeTable, downloadrecord.AnchorEpisodeColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEpisodes chains the current query on the "episodes" edge.
+func (_q *DownloadRecordQuery) QueryEpisodes() *EpisodeQuery {
+	query := (&EpisodeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(episode.Table, episode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, downloadrecord.EpisodesTable, downloadrecord.EpisodesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +319,14 @@ func (_q *DownloadRecordQuery) Clone() *DownloadRecordQuery {
 		return nil
 	}
 	return &DownloadRecordQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]downloadrecord.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.DownloadRecord{}, _q.predicates...),
-		withMovie:   _q.withMovie.Clone(),
-		withEpisode: _q.withEpisode.Clone(),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]downloadrecord.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.DownloadRecord{}, _q.predicates...),
+		withMovie:         _q.withMovie.Clone(),
+		withAnchorEpisode: _q.withAnchorEpisode.Clone(),
+		withEpisodes:      _q.withEpisodes.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -320,14 +345,25 @@ func (_q *DownloadRecordQuery) WithMovie(opts ...func(*MovieQuery)) *DownloadRec
 	return _q
 }
 
-// WithEpisode tells the query-builder to eager-load the nodes that are connected to
-// the "episode" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *DownloadRecordQuery) WithEpisode(opts ...func(*EpisodeQuery)) *DownloadRecordQuery {
+// WithAnchorEpisode tells the query-builder to eager-load the nodes that are connected to
+// the "anchor_episode" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithAnchorEpisode(opts ...func(*EpisodeQuery)) *DownloadRecordQuery {
 	query := (&EpisodeClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withEpisode = query
+	_q.withAnchorEpisode = query
+	return _q
+}
+
+// WithEpisodes tells the query-builder to eager-load the nodes that are connected to
+// the "episodes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithEpisodes(opts ...func(*EpisodeQuery)) *DownloadRecordQuery {
+	query := (&EpisodeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEpisodes = query
 	return _q
 }
 
@@ -410,12 +446,13 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*DownloadRecord{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withMovie != nil,
-			_q.withEpisode != nil,
+			_q.withAnchorEpisode != nil,
+			_q.withEpisodes != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withEpisode != nil {
+	if _q.withMovie != nil || _q.withAnchorEpisode != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -448,9 +485,16 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 			return nil, err
 		}
 	}
-	if query := _q.withEpisode; query != nil {
-		if err := _q.loadEpisode(ctx, query, nodes, nil,
-			func(n *DownloadRecord, e *Episode) { n.Edges.Episode = e }); err != nil {
+	if query := _q.withAnchorEpisode; query != nil {
+		if err := _q.loadAnchorEpisode(ctx, query, nodes, nil,
+			func(n *DownloadRecord, e *Episode) { n.Edges.AnchorEpisode = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEpisodes; query != nil {
+		if err := _q.loadEpisodes(ctx, query, nodes,
+			func(n *DownloadRecord) { n.Edges.Episodes = []*Episode{} },
+			func(n *DownloadRecord, e *Episode) { n.Edges.Episodes = append(n.Edges.Episodes, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -489,7 +533,7 @@ func (_q *DownloadRecordQuery) loadMovie(ctx context.Context, query *MovieQuery,
 	}
 	return nil
 }
-func (_q *DownloadRecordQuery) loadEpisode(ctx context.Context, query *EpisodeQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Episode)) error {
+func (_q *DownloadRecordQuery) loadAnchorEpisode(ctx context.Context, query *EpisodeQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Episode)) error {
 	ids := make([]uint32, 0, len(nodes))
 	nodeids := make(map[uint32][]*DownloadRecord)
 	for i := range nodes {
@@ -517,6 +561,67 @@ func (_q *DownloadRecordQuery) loadEpisode(ctx context.Context, query *EpisodeQu
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadEpisodes(ctx context.Context, query *EpisodeQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Episode)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uint32]*DownloadRecord)
+	nids := make(map[uint32]map[*DownloadRecord]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(downloadrecord.EpisodesTable)
+		s.Join(joinT).On(s.C(episode.FieldID), joinT.C(downloadrecord.EpisodesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(downloadrecord.EpisodesPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(downloadrecord.EpisodesPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := uint32(values[0].(*sql.NullInt64).Int64)
+				inValue := uint32(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*DownloadRecord]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Episode](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "episodes" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

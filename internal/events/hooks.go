@@ -374,8 +374,8 @@ func downloadRecordOwner(
 	if hasID(m.MovieID) {
 		return owner{ScopeMovie, mustID(m.MovieID)}, nil
 	}
-	if hasID(m.EpisodeID) {
-		return owner{ScopeEpisode, mustID(m.EpisodeID)}, nil
+	if hasID(m.AnchorEpisodeID) {
+		return owner{ScopeEpisode, mustID(m.AnchorEpisodeID)}, nil
 	}
 	// A create carries its edges in the mutation or not at all — there is no
 	// stored row to fall back to, and ent refuses IDs() on OpCreate outright.
@@ -397,7 +397,7 @@ func downloadRecordOwner(
 		// Only the owner's id is read below, and this runs inside the
 		// caller's transaction on every download-record mutation.
 		WithMovie(func(q *ent.MovieQuery) { q.Select(movie.FieldID) }).
-		WithEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
 		Only(ctx)
 	if ent.IsNotFound(err) {
 		return owner{}, nil
@@ -408,8 +408,8 @@ func downloadRecordOwner(
 	switch {
 	case row.Edges.Movie != nil:
 		return owner{ScopeMovie, row.Edges.Movie.ID}, nil
-	case row.Edges.Episode != nil:
-		return owner{ScopeEpisode, row.Edges.Episode.ID}, nil
+	case row.Edges.AnchorEpisode != nil:
+		return owner{ScopeEpisode, row.Edges.AnchorEpisode.ID}, nil
 	}
 	return owner{}, nil
 }

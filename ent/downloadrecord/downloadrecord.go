@@ -49,8 +49,6 @@ const (
 	FieldHoldReasons = "hold_reasons"
 	// FieldVerificationBypassed holds the string denoting the verification_bypassed field in the database.
 	FieldVerificationBypassed = "verification_bypassed"
-	// FieldWantedEpisodes holds the string denoting the wanted_episodes field in the database.
-	FieldWantedEpisodes = "wanted_episodes"
 	// FieldSelectedFiles holds the string denoting the selected_files field in the database.
 	FieldSelectedFiles = "selected_files"
 	// FieldSelectedBytes holds the string denoting the selected_bytes field in the database.
@@ -59,8 +57,10 @@ const (
 	FieldSelectionState = "selection_state"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
-	// EdgeEpisode holds the string denoting the episode edge name in mutations.
-	EdgeEpisode = "episode"
+	// EdgeAnchorEpisode holds the string denoting the anchor_episode edge name in mutations.
+	EdgeAnchorEpisode = "anchor_episode"
+	// EdgeEpisodes holds the string denoting the episodes edge name in mutations.
+	EdgeEpisodes = "episodes"
 	// Table holds the table name of the downloadrecord in the database.
 	Table = "download_records"
 	// MovieTable is the table that holds the movie relation/edge.
@@ -70,13 +70,18 @@ const (
 	MovieInverseTable = "movies"
 	// MovieColumn is the table column denoting the movie relation/edge.
 	MovieColumn = "movie_download_records"
-	// EpisodeTable is the table that holds the episode relation/edge.
-	EpisodeTable = "download_records"
-	// EpisodeInverseTable is the table name for the Episode entity.
+	// AnchorEpisodeTable is the table that holds the anchor_episode relation/edge.
+	AnchorEpisodeTable = "download_records"
+	// AnchorEpisodeInverseTable is the table name for the Episode entity.
 	// It exists in this package in order to avoid circular dependency with the "episode" package.
-	EpisodeInverseTable = "episodes"
-	// EpisodeColumn is the table column denoting the episode relation/edge.
-	EpisodeColumn = "episode_download_records"
+	AnchorEpisodeInverseTable = "episodes"
+	// AnchorEpisodeColumn is the table column denoting the anchor_episode relation/edge.
+	AnchorEpisodeColumn = "episode_download_records"
+	// EpisodesTable is the table that holds the episodes relation/edge. The primary key declared below.
+	EpisodesTable = "download_record_episodes"
+	// EpisodesInverseTable is the table name for the Episode entity.
+	// It exists in this package in order to avoid circular dependency with the "episode" package.
+	EpisodesInverseTable = "episodes"
 )
 
 // Columns holds all SQL columns for downloadrecord fields.
@@ -99,7 +104,6 @@ var Columns = []string{
 	FieldReplaceMode,
 	FieldHoldReasons,
 	FieldVerificationBypassed,
-	FieldWantedEpisodes,
 	FieldSelectedFiles,
 	FieldSelectedBytes,
 	FieldSelectionState,
@@ -111,6 +115,12 @@ var ForeignKeys = []string{
 	"episode_download_records",
 	"movie_download_records",
 }
+
+var (
+	// EpisodesPrimaryKey and EpisodesColumn2 are the table columns denoting the
+	// primary key for the episodes relation (M2M).
+	EpisodesPrimaryKey = []string{"episode_id", "download_record_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -333,10 +343,24 @@ func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByEpisodeField orders the results by episode field.
-func ByEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByAnchorEpisodeField orders the results by anchor_episode field.
+func ByAnchorEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newEpisodeStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newAnchorEpisodeStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEpisodesCount orders the results by episodes count.
+func ByEpisodesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEpisodesStep(), opts...)
+	}
+}
+
+// ByEpisodes orders the results by episodes terms.
+func ByEpisodes(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEpisodesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newMovieStep() *sqlgraph.Step {
@@ -346,10 +370,17 @@ func newMovieStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, MovieTable, MovieColumn),
 	)
 }
-func newEpisodeStep() *sqlgraph.Step {
+func newAnchorEpisodeStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(EpisodeInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
+		sqlgraph.To(AnchorEpisodeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AnchorEpisodeTable, AnchorEpisodeColumn),
+	)
+}
+func newEpisodesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EpisodesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, EpisodesTable, EpisodesPrimaryKey...),
 	)
 }

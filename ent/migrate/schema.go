@@ -119,7 +119,6 @@ var (
 		{Name: "replace_mode", Type: field.TypeEnum, Enums: []string{"none", "upgrades", "all"}, Default: "none"},
 		{Name: "hold_reasons", Type: field.TypeJSON, Nullable: true},
 		{Name: "verification_bypassed", Type: field.TypeBool, Default: false},
-		{Name: "wanted_episodes", Type: field.TypeJSON, Nullable: true},
 		{Name: "selected_files", Type: field.TypeJSON, Nullable: true},
 		{Name: "selected_bytes", Type: field.TypeInt64, Nullable: true},
 		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
@@ -133,14 +132,14 @@ var (
 		PrimaryKey: []*schema.Column{DownloadRecordsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "download_records_episodes_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
+				Symbol:     "download_records_episodes_anchored_download_records",
+				Columns:    []*schema.Column{DownloadRecordsColumns[21]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -149,7 +148,7 @@ var (
 			{
 				Name:    "downloadrecord_selection_state",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[21]},
+				Columns: []*schema.Column{DownloadRecordsColumns[20]},
 			},
 			{
 				Name:    "downloadrecord_status",
@@ -169,12 +168,12 @@ var (
 			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[23]},
+				Columns: []*schema.Column{DownloadRecordsColumns[22]},
 			},
 			{
 				Name:    "downloadrecord_episode_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[22]},
+				Columns: []*schema.Column{DownloadRecordsColumns[21]},
 			},
 		},
 	}
@@ -938,6 +937,31 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
+	// DownloadRecordEpisodesColumns holds the columns for the "download_record_episodes" table.
+	DownloadRecordEpisodesColumns = []*schema.Column{
+		{Name: "episode_id", Type: field.TypeUint32},
+		{Name: "download_record_id", Type: field.TypeUint32},
+	}
+	// DownloadRecordEpisodesTable holds the schema information for the "download_record_episodes" table.
+	DownloadRecordEpisodesTable = &schema.Table{
+		Name:       "download_record_episodes",
+		Columns:    DownloadRecordEpisodesColumns,
+		PrimaryKey: []*schema.Column{DownloadRecordEpisodesColumns[0], DownloadRecordEpisodesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "download_record_episodes_episode_id",
+				Columns:    []*schema.Column{DownloadRecordEpisodesColumns[0]},
+				RefColumns: []*schema.Column{EpisodesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "download_record_episodes_download_record_id",
+				Columns:    []*schema.Column{DownloadRecordEpisodesColumns[1]},
+				RefColumns: []*schema.Column{DownloadRecordsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
@@ -961,6 +985,7 @@ var (
 		TorrentSessionsTable,
 		TranscodeJobsTable,
 		UsersTable,
+		DownloadRecordEpisodesTable,
 	}
 )
 
@@ -987,4 +1012,6 @@ func init() {
 	SeasonsTable.ForeignKeys[0].RefTable = TvShowsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
+	DownloadRecordEpisodesTable.ForeignKeys[0].RefTable = EpisodesTable
+	DownloadRecordEpisodesTable.ForeignKeys[1].RefTable = DownloadRecordsTable
 }
