@@ -311,11 +311,11 @@ Both keys have `_file` twins.
 
 ### ffmpeg
 
-Backs the media probe feature: technical details (resolution, codecs, duration, bitrate) read from your files with `ffprobe` and shown as `media_info` on movies and episodes. See [REST API](REST-API#media-probe).
+Locates the `ffmpeg`/`ffprobe` binaries. `ffprobe` backs the media probe — technical details (resolution, codecs, duration, bitrate) read from your files and shown as `media_info` on movies and episodes, which [import verification](#import-verification) also reads. The [transcoder](#transcoding) needs both binaries. See [REST API](REST-API#media-probe).
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `ffmpeg.enabled` | bool | `true` | Turns probing off entirely. **Runtime-editable** |
+| `ffmpeg.enabled` | bool | `true` | Turns probing off entirely, and the transcoder with it. **Runtime-editable** |
 | `ffmpeg.path` | path | `""` | A **directory** holding the `ffmpeg`/`ffprobe` binaries — not a binary path. Empty resolves via `$PATH`. Read once at boot; changing it needs a restart |
 
 Missing binaries (or `enabled: false`) degrade gracefully — imports and library scans work exactly as they did before this feature existed, just without `media_info`. Nothing errors at boot. `GET /api/v1/system/info` surfaces `ffmpeg_warn: true` when probing is enabled but ffprobe wasn't found; the official Docker image ships the binaries, so this only bites custom builds or `path` misconfiguration.
@@ -343,7 +343,7 @@ A rejected encode lands on the queue as `rejected` with both sizes and the check
 
 None of these keys is read at boot, so a change needs no restart: `enabled` and `max_concurrent` are read at every worker tick, and `max_failures` when a job fails. Turning `enabled` off does not interrupt an encode already running; it stops the next one from starting. `hw_accel` and `hw_device` are probed the first time a job needs them and the result is kept until either key changes, so a fixed device passthrough takes effect on the next job with no restart — except under `hw_accel: vaapi`, where a job held back for the missing hardware also drops that result, so a device that comes back is picked up on the next job. The view reports `hw_status` (`off`, `ready` or `unavailable`) and, when unavailable, `hw_reason` with the probe's error.
 
-The worker needs `ffmpeg` itself, not just `ffprobe`. With `ffmpeg.enabled: false`, or with the binary missing, the worker stays idle and **Scan library** refuses with a `409` rather than queueing rows nothing would ever drain. The official Docker image ships both binaries.
+The worker needs **both** binaries: `ffprobe` reads every source and verifies every output, and `ffmpeg` encodes. With `ffmpeg.enabled: false`, or with either binary missing, the worker stays idle and **Scan library** refuses with a `409` rather than queueing rows nothing would ever drain. The official Docker image ships both binaries.
 
 ### log
 

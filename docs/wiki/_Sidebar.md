@@ -10,6 +10,7 @@
 - [Requests and Users](Requests-and-Users)
 - [NixOS and Nix](NixOS)
 - [Troubleshooting](Troubleshooting)
+- [Upgrading](Upgrading)
 - [Roadmap](Roadmap)
 
 **⚙️ Advanced**

@@ -96,7 +96,7 @@ Traces, metrics and logs are all batch-exported to that single endpoint.
 `otel.environment` fills `deployment.environment` on the resource. Two installs exporting to one collector are otherwise indistinguishable; the resource also carries host and OS attributes, and honours `OTEL_RESOURCE_ATTRIBUTES`.
 
 > [!NOTE]
-> `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before v1.1 it disabled the whole pipeline.)
+> `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before 3.1.0 it disabled the whole pipeline — see [Upgrading](Upgrading#310).)
 
 If the collector is unreachable, the export failure is logged to stderr as `opentelemetry export failed`, at most once a minute. Silence there means export is working — or that `log.app.enabled` is false.
 

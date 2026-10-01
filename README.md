@@ -32,7 +32,7 @@ https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
 - CGO-free SQLite — single binary, no database server, no runtime, nothing to install alongside it
-- Optional `ffprobe`: unlocks media info and import verification; without it Streamline runs exactly as before, just without those two ([details](#optional-ffmpeg))
+- Optional `ffmpeg`/`ffprobe`: `ffprobe` unlocks media info and import verification, and transcoding needs both; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg))
 
 ## Quick start (Docker Compose)
 
@@ -74,7 +74,7 @@ kubectl -n streamline logs deploy/streamline-streamline | grep 'default admin'  
 
 Copy it right then and change it from Settings. It is never written to your config file and never passed to the log pipeline, so if you lose it the only way back is to wipe the data dir and re-seed — `auth.seed_admin` is applied against an empty database and ignored afterwards. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
 
-If you're upgrading from a release that saved those credentials into `auth.seed_admin.password`, Streamline no longer reads or rewrites that value once the admin exists. It's your file: delete the leftover plaintext yourself.
+Upgrading from before 2.0.0, which saved those credentials into `auth.seed_admin.password`? See [Upgrading](https://github.com/DataHearth/streamline/wiki/Upgrading#the-generated-seed-admin-password-is-no-longer-written-to-your-config).
 
 ## Install
 
@@ -189,12 +189,15 @@ task
 
 ### Optional: ffmpeg
 
-Streamline needs nothing but itself to run. Two features are gated behind the `ffmpeg`/`ffprobe`
-binaries, and both are opt-in extras rather than requirements:
+Streamline needs nothing but itself to run. Three features are gated behind the `ffmpeg`/`ffprobe`
+binaries, and all three are opt-in extras rather than requirements:
 
-- **Media info** — resolution, codecs, duration and bitrate shown on files and episodes
-- **Import verification** — holding a finished download whose actual resolution, duration or codec
-  contradicts what the release claimed, instead of importing it blind
+- **Media info** (needs `ffprobe`) — resolution, codecs, duration and bitrate shown on files and
+  episodes
+- **Import verification** (needs `ffprobe`) — holding a finished download whose actual resolution,
+  duration or codec contradicts what the release claimed, instead of importing it blind
+- **Transcoding** (needs **both**) — `ffprobe` reads the source and checks the output, `ffmpeg`
+  encodes. With either one missing the worker stays idle and **Scan library** refuses
 
 With the binaries absent, or `ffmpeg.enabled: false` in the config, nothing errors and nothing is
 blocked: imports fall back to filename parsing exactly as they did before the feature existed, and
@@ -323,36 +326,10 @@ admin the moment the operator set that provider back to `disabled`. Splitting
 them makes each axis monotone: no move on one can add capability on the other.
 
 > [!IMPORTANT]
-> **Upgrade impact.** Two defaults changed, both closing something earlier
-> releases left open.
->
-> *Adoption.* Earlier releases adopted a matching account unconditionally, and
-> `email_linking` defaults to `disabled`. Any user whose local account was being
-> reached that way — rather than by an identity already linked from a previous
-> SSO login — starts failing at the login screen with *"this SSO account is not
-> linked to a Streamline user"* (`oidc_link_not_allowed`). To bind those
-> identities, open the provider up for one pass and close it again:
->
-> 1. set `email_linking: non_admin` on the provider and restart;
-> 2. have each affected user sign in through SSO once — that login links the
->    identity permanently;
-> 3. set `email_linking: disabled` again and restart.
->
-> Admin accounts are not covered by `non_admin`. Either move them during a
-> maintenance window with `email_linking: all`, or leave them on password login.
-> The pass does not touch roles: an adoption never writes one, `allow_admin`
-> alone decides how high a role can go, and none of the three steps changes it.
->
-> *Roles.* `allow_admin` defaults to `false`, so a provider whose `role_mapping`
-> grants `admin` stops doing so until you set it. An existing admin whose claims
-> map only to `admin` keeps the role — the barred mapping is dropped, not
-> downgraded, so nothing is written. One whose claims *also* map to a lower role
-> is demoted to it on the next login, that being the highest role the provider
-> may now confer. Set `allow_admin: true` on the providers you want back in
-> charge of admin.
->
-> Nothing else changes for users who already signed in through SSO, or for
-> password-only installs.
+> Upgrading from before 2.0.0? Both keys default closed, and earlier releases
+> adopted matching accounts unconditionally — SSO users who were reached that
+> way start failing at the login screen. The one-pass migration is in
+> [Upgrading](https://github.com/DataHearth/streamline/wiki/Upgrading#oidc-account-linking-and-admin-grants-are-closed-by-default).
 
 ### Running behind a reverse proxy
 
@@ -383,19 +360,10 @@ the client, and is warned about at most once a minute.
 > and be handed the `auth.trusted_role` identity without authenticating. One
 > forged entry is enough — there is no hop count or padding to get past.
 
-**Upgrade impact.** `server.trusted_proxies` is new, and defaulting it to empty
-changes behaviour for every install that already runs behind a reverse proxy —
-previously the last `X-Forwarded-For` entry was trusted unconditionally. Until
-you set it, every request is attributed to the proxy's own address:
-
-- access logs and the IP shown on each session record read as the proxy;
-- the login rate limit keys on the proxy, so **all** users behind it share one
-  5-attempt / 15-min budget and lock each other out;
-- `auth.mode: trusted-network` stops recognising LAN clients, because the
-  address compared against `auth.trusted_networks` is now the proxy's.
-
-Set `server.trusted_proxies` as part of the upgrade if a proxy sits in front.
-Direct-to-binary installs need no change.
+Upgrading from before 2.0.0, which trusted the last `X-Forwarded-For` entry
+unconditionally? Set `server.trusted_proxies` as part of the upgrade if a proxy
+sits in front — see
+[Upgrading](https://github.com/DataHearth/streamline/wiki/Upgrading#x-forwarded-for-is-believed-only-from-servertrusted_proxies).
 
 ## Supported integrations
 
@@ -441,6 +409,7 @@ Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
 - Issues: https://github.com/datahearth/streamline/issues
 - Releases: https://github.com/datahearth/streamline/releases
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Upgrading (what each release needs from you): [docs/wiki/Upgrading.md](docs/wiki/Upgrading.md)
 - Roadmap: [docs/wiki/Roadmap.md](docs/wiki/Roadmap.md)
 
 ## Screenshots

@@ -180,7 +180,7 @@ It is only ever a **fallback**. An invite carries its own role, chosen by the ad
 
 `admin` is clamped to `member` on both self-registration paths: always on the local one, and on the federated one unless that provider sets `allow_admin: true`. So setting `auth.default_role: admin` for an IdP you trust cannot also hand admin to whoever posts `/auth/register` first. An invite is not clamped locally — naming a role for one specific account is a direct decision — but an invite consumed *through SSO* still passes the provider's ceiling.
 
-> **Upgrading:** this key was previously called `auth.oidc_default_role`, and the old name is **no longer read**. If your config still uses it, rename it — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API is the same clean break: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
+> **Upgrading from before 3.0.0:** this key was called `auth.oidc_default_role`, and the old name is no longer read — see [Upgrading](Upgrading#authoidc_default_role-is-now-authdefault_role).
 
 Invites: `POST /api/v1/auth/invites` returns the raw token **once**. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days rather than a free-text field, since a typo there is a `422` on a form whose other two fields are fine. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 
@@ -221,6 +221,8 @@ auth:
       issuer: https://auth.example.com/application/o/streamline/
       client_id: streamline
       client_secret_file: /run/secrets/oidc-client-secret
+      email_linking: disabled   # disabled (default) | non_admin | all
+      allow_admin: false        # default — no login here yields admin
       role_claim: groups
       role_mapping:
         streamline-admins: admin
@@ -258,7 +260,27 @@ Redirect URI:
 
 Register that exact URI at your IdP, using the `name` you configured.
 
+`name` identifies the provider everywhere — in the callback URL, in the trust lookup, in the discovered-verifier cache — so two entries may not share one. Streamline refuses to start on a duplicate rather than let the entry that validates a token differ from the entry whose `allow_admin` bounds it.
+
 > The redirect URI is derived per-request from the host you connect on, so multi-domain SSO works without extra config — register each domain's callback at the IdP. `STREAMLINE_PUBLIC_URL` only sets the canonical base for invite links.
+
+### Provider trust
+
+How far Streamline trusts a provider is two independent questions, and each has its own key: `email_linking` says which existing accounts it may take over, `allow_admin` says whether it may hand out the `admin` role. Both default closed, and both are **file-only** — the provider API and the Settings → SSO page neither show nor change them.
+
+**`email_linking` — which accounts it may adopt.** "Adopt" means a federated identity the provider has never presented before signing in as an existing account **because the email addresses match**. That is only safe where nobody can choose their own address at the IdP: anywhere they can — an IdP with open self-registration, or one that marks an unchecked address verified — a matching email would otherwise mint a login for any local user, the seeded admin included.
+
+| `email_linking` | May adopt an existing account |
+| --- | --- |
+| `disabled` (default) | no |
+| `non_admin` | non-admin accounts only |
+| `all` | any account, `admin` included |
+
+The setting gates the adoption, not what the adoption leaves behind. An adoption links the federated identity to the account permanently, and every later login matches on that identity without consulting `email_linking` at all — so a provider back at `disabled` still signs in as each account it adopted while it was open, local password and all. That is what makes a one-pass migration work (open the provider at `non_admin`, have users sign in once, close it — see [Upgrading](Upgrading#oidc-account-linking-and-admin-grants-are-closed-by-default)), and it is the same reason the pass has to be a short one: Streamline has no unlink, so the only way to undo a binding is to delete the user, which cascades the identity away with it.
+
+**`allow_admin` — whether it may grant `admin`.** With it `false` (the default) **no login through this provider ever puts an account on `admin`**, with no exception: not a claim mapped to `admin` by `role_mapping`, not an `auth.default_role` of `admin` a signup falls back to, and not the role carried by an invite consumed through SSO. A user in both an admin group and a member group lands on member; one in an admin group alone keeps whatever role they already had. Set `allow_admin: true` for a provider that really is allowed to decide who administers Streamline.
+
+The two keys are deliberately separate. While one key meant both, tightening the adoption tier could *raise* the role ceiling — an account of federated origin, adopted while the provider was at `non_admin`, became promotable to admin the moment the operator set that provider back to `disabled`. Splitting them makes each axis monotone: no move on one can add capability on the other.
 
 ### Account linking
 
@@ -266,7 +288,7 @@ On callback, in order:
 
 1. **Known `(provider, subject)`** → log that user in.
 2. **`email_verified` is false** → reject (`oidc_email_unverified`). Streamline will not link on an unverified email; that would let anyone who can assert an address take over the matching account.
-3. **Existing user with that (lowercased) email** → link the identity and promote `auth_method` from `local` to `both`.
+3. **Existing user with that (lowercased) email** → only if the provider's [`email_linking`](#provider-trust) allows adopting that account: link the identity and promote `auth_method` from `local` to `both`. Otherwise reject (`oidc_link_not_allowed`). The adoption never writes a role; a mapped role applies from the next login.
 4. **New user** → apply `registration_mode`:
    - `open` → create with `auth.default_role`
    - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`, or `auth.default_role` when the provider sets `auto_provision`
@@ -274,7 +296,7 @@ On callback, in order:
 
 ### Role mapping
 
-With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect. A login that changes the role also signs the user out of every other session, which would otherwise keep the old role until it expired. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
+With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect, up to the provider's ceiling: a mapping to `admin` counts only on a provider with [`allow_admin: true`](#provider-trust). A login that changes the role also signs the user out of every other session, which would otherwise keep the old role until it expired. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
 
 With no mapping configured, new users get `auth.default_role` and existing users keep whatever role they have.
 
@@ -286,6 +308,7 @@ Callback failures redirect to `/login?error=<code>`:
 | --- | --- |
 | `oidc_state_missing`, `oidc_state_mismatch`, `oidc_nonce_mismatch` | Flow cookies expired or were tampered with — usually just a stale tab |
 | `oidc_email_unverified` | IdP reported the email as unverified |
+| `oidc_link_not_allowed` | The email matches an existing account the provider's `email_linking` may not adopt. The login page tells the user to sign in with their password and ask an administrator to enable account linking for this provider |
 | `oidc_registration_disabled` | New user, `registration_mode: disabled` |
 | `oidc_no_invite` | New user, `invite` mode, no matching invite, provider without `auto_provision` |
 | `oidc_provider_error` | The IdP returned an error |

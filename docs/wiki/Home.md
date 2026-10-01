@@ -25,6 +25,7 @@ For anyone running Streamline for themselves, their family, or a handful of frie
 | **[Activity and Calendar](Activity-and-Calendar)** | The queue, history, stuck downloads, what's coming |
 | **[Requests and Users](Requests-and-Users)** | Inviting people, roles, approving requests |
 | **[Troubleshooting](Troubleshooting)** | Nothing downloads, nothing imports, and other common walls |
+| **[Upgrading](Upgrading)** | What each release needs from you before or after you move to it |
 
 ---
 

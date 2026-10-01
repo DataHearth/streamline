@@ -2,7 +2,7 @@
 
 Streamline is a single binary with no external dependencies — no database server, no runtime, no CGO. Pick whichever install method matches how you already run things.
 
-A couple of features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info and import verification. See [Optional: ffmpeg](#optional-ffmpeg).
+A few features are gated behind the `ffmpeg`/`ffprobe` binaries, but they are opt-in extras and never a requirement: without them Streamline installs, boots and runs the same, just without media info, import verification and transcoding. See [Optional: ffmpeg](#optional-ffmpeg).
 
 ## Which install method?
 
@@ -253,7 +253,7 @@ helm install streamline oci://ghcr.io/datahearth/charts/streamline \
 
 Pin a chart version with `--version X.Y.Z`.
 
-**`image.tag` is required** (chart 2.2.0+): the chart never picks a Streamline version for you — you choose the app release to deploy and bump it yourself to upgrade. Installing without it fails with `image.tag is required`. App releases are tagged `vX.Y.Z` (the image tag is `X.Y.Z`), chart releases `chart-vX.Y.Z`.
+**`image.tag` is required** (chart 2.0.0+, see [Upgrading](Upgrading#helm-chart-200)): the chart never picks a Streamline version for you — you choose the app release to deploy and bump it yourself to upgrade. Installing without it fails with `image.tag is required`. App releases are tagged `vX.Y.Z` (the image tag is `X.Y.Z`), chart releases `chart-vX.Y.Z`.
 
 The chart is versioned **independently** of Streamline itself: a chart fix ships without an app release and vice versa. `--version` selects the chart; `image.tag` selects the app.
 
@@ -266,14 +266,16 @@ Two things about the chart that surprise people:
 
 ## Optional: ffmpeg
 
-Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Three features
-are gated behind them, and only those three:
+Streamline runs perfectly well with no `ffmpeg` or `ffprobe` anywhere on the machine. Four features
+are gated behind them, and only those four. The first three need `ffprobe` alone; transcoding needs
+both binaries:
 
-| Feature | What you lose without ffprobe |
+| Feature | What you lose without the binaries |
 | --- | --- |
 | **Media info** | Resolution, codecs, duration, channels, bitrate and stream languages on files and episodes. The rest of the page is unaffected |
 | **Import verification** | Downloads are imported on the strength of the release name alone. With ffprobe, a file whose real resolution, duration or codec contradicts the claim is *held* for you to resolve instead of landing in your library |
 | **Scoring a file you already have** | The `audio_tracks`, `audio_language` and `subtitle_language` conditions are answerable only from a probe. Without one they are unanswerable for a file on disk, so automatic upgrades compare the two sides on the parsed release name alone — see [What a file can be scored on](Quality-Profiles-and-Custom-Formats#what-a-file-can-be-scored-on) |
+| **Transcoding** | Needs `ffmpeg` *and* `ffprobe`: every job probes its source, encodes with `ffmpeg`, then probes the output to verify it before the swap. With either missing the worker stays idle and **Scan library** refuses with a `409`, rather than queueing jobs nothing can run. Off by default anyway — see [Configuration Reference](Configuration-Reference#transcoding) |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
 identically either way. Missing binaries are a **graceful degrade, never a boot error**: nothing
@@ -300,6 +302,8 @@ ffmpeg:
 
 If probing is enabled but ffprobe can't be found, `GET /api/v1/system/info` returns
 `ffmpeg_warn: true`, Settings → General shows a notice, and the header health pill goes amber.
+`ffmpeg` itself is checked separately: `GET /api/v1/config/ffmpeg` reports a `version` only when
+`ffmpeg -version` answers, so `ffprobe` being found does not prove transcoding can run.
 That's the signal that `path` is wrong or the binaries aren't installed. With `enabled: false` the
 key is absent: you opted out, so it isn't a warning.
 

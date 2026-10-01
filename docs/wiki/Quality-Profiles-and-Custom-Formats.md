@@ -426,14 +426,7 @@ Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream co
 
 ## Behavior changes from the old filter
 
-Three, all a consequence of moving from "first release that passes" to score-then-select — worth knowing if you're tuning an install that predates this feature:
-
-1. **`pickBest` is now score-ranked, then seeders-ranked** — previously it was first-hit (whichever the indexer listed first). A profile with an empty `formats` list still improves: it becomes seeders-ranked instead of first-hit.
-2. **A profile with `upgrade_allowed: false` and `min_resolution` below `preferred_resolution` can now grab anywhere in that band.** Before, "upgrades off" meant "accept only exactly `preferred_resolution`". Now it means "accept the whole band, just don't replace a file already there."
-3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution will stop grabbing anything above it until the profile is raised.
-
-> [!WARNING]
-> If your library already has files above a profile's `preferred_resolution`, review your profiles before relying on automatic search after upgrading — the ceiling now applies everywhere, so grabbing above it silently stops until the profile is raised.
+Score-then-select replaced "first release that passes" in 3.0.0. What that changes for an install that predates it — score-ranked picks, `upgrade_allowed: false` accepting the whole band, and `preferred_resolution` becoming a hard ceiling in the feed scanners too — is on [Upgrading](Upgrading#release-selection-is-score-ranked-and-preferred_resolution-is-a-hard-ceiling).
 
 ---
 
