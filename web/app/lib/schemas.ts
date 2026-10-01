@@ -9,29 +9,29 @@ export const password = v.pipe(
 
 export const displayName = v.pipe(
 	v.string(),
-	v.maxLength(64, "Too long"),
+	v.maxLength(64, i18n.validation_too_long()),
 );
 
 export const email = v.pipe(v.string(), v.email(i18n.validation_invalid_email()));
 
 export const userRole = v.picklist(
 	["admin", "member", "request_only"] as const,
-	"Invalid role",
+	i18n.validation_invalid_role(),
 );
 
-export const inviteEmail = v.pipe(v.string(), v.email("Invalid email"));
+export const inviteEmail = v.pipe(v.string(), v.email(i18n.validation_invalid_email()));
 
 export const goDuration = v.pipe(
 	v.string(),
 	v.regex(
 		/^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$/,
-		"Use a Go duration (e.g. 168h, 30m, 10s)",
+		i18n.validation_go_duration(),
 	),
 );
 
 export const registrationMode = v.picklist(
 	["disabled", "open", "invite"] as const,
-	"Invalid mode",
+	i18n.validation_invalid_mode(),
 );
 
 export const authConfigPatch = v.object({
@@ -41,9 +41,9 @@ export const authConfigPatch = v.object({
 	lockout: v.object({
 		threshold: v.pipe(
 			v.number(),
-			v.integer("Whole number"),
-			v.minValue(1, "At least 1"),
-			v.maxValue(255, "At most 255"),
+			v.integer(i18n.validation_whole_number()),
+			v.minValue(1, i18n.validation_at_least_one()),
+			v.maxValue(255, i18n.validation_at_most_255()),
 		),
 		window: goDuration,
 		duration: goDuration,
@@ -52,16 +52,16 @@ export const authConfigPatch = v.object({
 
 // A blank api key means "leave the stored one alone", so the empty string has
 // to pass — the field is never seeded with the current value.
-const optionalSecret = v.pipe(v.string(), v.maxLength(256, "Too long"));
+const optionalSecret = v.pipe(v.string(), v.maxLength(256, i18n.validation_too_long()));
 
 export const metadataConfigPatch = v.object({
 	language: v.pipe(
 		v.string(),
-		v.regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, "Use a BCP-47 tag (e.g. en, fr)"),
+		v.regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, i18n.validation_bcp47()),
 	),
 	tmdb_region: v.pipe(
 		v.string(),
-		v.regex(/^[A-Z]{2}$/, "Two uppercase letters (e.g. FR)"),
+		v.regex(/^[A-Z]{2}$/, i18n.validation_region_code()),
 	),
 	tmdb_api_key: optionalSecret,
 	tvdb_api_key: optionalSecret,
@@ -70,25 +70,25 @@ export const metadataConfigPatch = v.object({
 export const oidcProviderCreate = v.object({
 	name: v.pipe(
 		v.string(),
-		v.minLength(1, "Required"),
-		v.regex(/^[a-z0-9_-]+$/i, "Letters, digits, dash, underscore only"),
+		v.minLength(1, i18n.validation_required()),
+		v.regex(/^[a-z0-9_-]+$/i, i18n.validation_slug_chars()),
 	),
-	issuer: v.pipe(v.string(), v.url("Must be a valid URL")),
-	client_id: v.pipe(v.string(), v.minLength(1, "Required")),
-	client_secret: v.pipe(v.string(), v.minLength(1, "Required")),
+	issuer: v.pipe(v.string(), v.url(i18n.validation_url())),
+	client_id: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
+	client_secret: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 });
 
 export const resolution = v.picklist(
 	["720p", "1080p", "2160p"] as const,
-	"Invalid resolution",
+	i18n.validation_invalid_resolution(),
 );
 
 export const qualityProfileFormatScore = v.object({
-	name: v.pipe(v.string(), v.minLength(1, "Pick a format")),
-	score: v.pipe(v.number("Score required"), v.integer("Whole numbers only")),
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_pick_format())),
+	score: v.pipe(v.number(i18n.validation_score_required()), v.integer(i18n.validation_whole_numbers_only())),
 });
 
-const score = v.pipe(v.number("Number required"), v.integer("Whole numbers only"));
+const score = v.pipe(v.number(i18n.validation_number_required()), v.integer(i18n.validation_whole_numbers_only()));
 
 // ffmpeg-style rate: "8M", "4500k", or a bare bits-per-second count. Empty is
 // the valid "no bitrate rule" value, which is why this is not a minLength.
@@ -96,7 +96,7 @@ export const transcodeBitrate = v.union([
 	v.literal(""),
 	v.pipe(
 		v.string(),
-		v.regex(/^\d+(\.\d+)?[kKmM]?$/, "Use a rate like 8M or 4500k"),
+		v.regex(/^\d+(\.\d+)?[kKmM]?$/, i18n.validation_bitrate()),
 	),
 ]);
 
@@ -106,8 +106,8 @@ export const transcodeTo = v.object({
 	// 0 means "leave -crf off", not a near-lossless encode, so it is a legal
 	// value rather than a missing one.
 	crf: v.pipe(
-		v.number("Number required"),
-		v.integer("Whole numbers only"),
+		v.number(i18n.validation_number_required()),
+		v.integer(i18n.validation_whole_numbers_only()),
 		v.minValue(0, "0–51"),
 		v.maxValue(51, "0–51"),
 	),
@@ -134,7 +134,7 @@ export const transcodeIf = v.object({
 });
 
 export const qualityProfile = v.object({
-	name: v.pipe(v.string(), v.minLength(1, "Required")),
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	preferred_resolution: resolution,
 	min_resolution: resolution,
 	upgrade_allowed: v.boolean(),
@@ -172,7 +172,7 @@ export const customFormatConditionType = v.picklist(
 		"audio_language",
 		"subtitle_language",
 	] as const,
-	"Pick a condition type",
+	i18n.validation_pick_condition_type(),
 );
 
 // Which fields a condition type actually reads. The editor keeps every field
@@ -209,54 +209,54 @@ export const customFormatCondition = v.pipe(
 		(c) =>
 			!(PATTERN_CONDITIONS as readonly string[]).includes(c.type) ||
 			c.pattern.trim().length > 0,
-		"Pattern required",
+		i18n.validation_pattern_required(),
 	),
 	v.check(
 		(c) =>
 			!(VALUE_CONDITIONS as readonly string[]).includes(c.type) ||
 			c.value.trim().length > 0,
-		"Value required",
+		i18n.validation_value_required(),
 	),
 	v.check(
 		(c) => c.type !== "resolution" || ["720p", "1080p", "2160p"].includes(c.value),
-		"Pick a resolution",
+		i18n.validation_pick_resolution(),
 	),
 	v.check(
 		(c) => c.type !== "size" || c.min_gb > 0 || c.max_gb > 0,
-		"Set a minimum, a maximum, or both",
+		i18n.validation_size_bounds(),
 	),
 	v.check(
 		(c) => c.type !== "size" || c.max_gb === 0 || c.max_gb >= c.min_gb,
-		"Maximum must not be below the minimum",
+		i18n.validation_max_below_min(),
 	),
-	v.check((c) => c.type !== "seeders" || c.min > 0, "Minimum seeders required"),
+	v.check((c) => c.type !== "seeders" || c.min > 0, i18n.validation_min_seeders()),
 	v.check(
 		(c) => c.type !== "audio_tracks" || c.min > 0,
-		"Minimum audio tracks required",
+		i18n.validation_min_audio_tracks(),
 	),
 );
 
 export const customFormat = v.object({
 	name: v.pipe(
 		v.string(),
-		v.minLength(1, "Required"),
-		v.maxLength(64, "Too long"),
+		v.minLength(1, i18n.validation_required()),
+		v.maxLength(64, i18n.validation_too_long()),
 	),
 	conditions: v.pipe(
 		v.array(customFormatCondition),
-		v.minLength(1, "Add at least one condition"),
+		v.minLength(1, i18n.validation_one_condition()),
 	),
 });
 
 const port = v.pipe(
-	v.number("Port required"),
+	v.number(i18n.validation_port_required()),
 	v.integer(),
 	v.minValue(1, "1–65535"),
 	v.maxValue(65535, "1–65535"),
 );
 
 const priority = v.pipe(
-	v.number("Priority required"),
+	v.number(i18n.validation_priority_required()),
 	v.integer(),
 	v.minValue(0, "0–255"),
 	v.maxValue(255, "0–255"),
@@ -264,13 +264,13 @@ const priority = v.pipe(
 
 export const indexerProtocol = v.picklist(
 	["torznab", "prowlarr"] as const,
-	"Pick a protocol",
+	i18n.validation_pick_protocol(),
 );
 
 export const indexerForm = v.object({
-	name: v.pipe(v.string(), v.minLength(1, "Required")),
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	protocol: indexerProtocol,
-	host: v.pipe(v.string(), v.minLength(1, "Required")),
+	host: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	port,
 	path: v.string(),
 	use_ssl: v.boolean(),
@@ -282,18 +282,18 @@ export const indexerForm = v.object({
 
 export const downloadClientType = v.picklist(
 	["qbittorrent", "transmission", "deluge"] as const,
-	"Pick a client",
+	i18n.validation_pick_client(),
 );
 
 export const downloadClientAuth = v.picklist(
 	["password", "api_key"] as const,
-	"Pick an auth method",
+	i18n.validation_pick_auth(),
 );
 
 export const downloadClientForm = v.object({
-	name: v.pipe(v.string(), v.minLength(1, "Required")),
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	client_type: downloadClientType,
-	host: v.pipe(v.string(), v.minLength(1, "Required")),
+	host: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	port,
 	auth_method: downloadClientAuth,
 	username: v.string(),
@@ -308,38 +308,38 @@ export const downloadClientForm = v.object({
 // a constructed engine runs in-process. listen_port 0 = auto; kbps 0 =
 // unlimited; seed_ratio 0 = unlimited; seed_time empty = unlimited.
 const kbps = v.pipe(
-	v.number("Enter a number"),
+	v.number(i18n.validation_enter_number()),
 	v.integer(),
-	v.minValue(0, "0 = unlimited"),
+	v.minValue(0, i18n.validation_zero_unlimited()),
 );
 
 export const builtinClientForm = v.object({
 	download_dir: v.pipe(
 		v.string(),
-		v.minLength(1, "Required"),
-		v.regex(/^\//, "Must be an absolute path"),
+		v.minLength(1, i18n.validation_required()),
+		v.regex(/^\//, i18n.validation_absolute_path()),
 	),
 	bind_interface: v.pipe(
 		v.string(),
 		v.regex(
 			/^$|^[A-Za-z0-9._:-]+$/,
-			"Interface name (e.g. wg0) or IP — empty = all interfaces",
+			i18n.validation_bind_interface(),
 		),
 	),
 	listen_port: v.pipe(
-		v.number("Enter a port"),
+		v.number(i18n.validation_enter_port()),
 		v.integer(),
-		v.minValue(0, "0 (auto) – 65535"),
-		v.maxValue(65535, "0 (auto) – 65535"),
+		v.minValue(0, i18n.validation_port_auto_range()),
+		v.maxValue(65535, i18n.validation_port_auto_range()),
 	),
 	max_download_kbps: kbps,
 	max_upload_kbps: kbps,
-	seed_ratio: v.pipe(v.number("Enter a ratio"), v.minValue(0, "0 = unlimited")),
+	seed_ratio: v.pipe(v.number(i18n.validation_enter_ratio()), v.minValue(0, i18n.validation_zero_unlimited())),
 	seed_time: v.pipe(
 		v.string(),
 		v.regex(
 			/^$|^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$/,
-			"Empty = unlimited, or a Go duration (e.g. 72h)",
+			i18n.validation_seed_time(),
 		),
 	),
 	disable_dht: v.boolean(),
@@ -348,13 +348,13 @@ export const builtinClientForm = v.object({
 
 export const mediaServerType = v.picklist(
 	["plex", "jellyfin", "emby"] as const,
-	"Pick a server type",
+	i18n.validation_pick_server_type(),
 );
 
 export const mediaServerForm = v.object({
-	name: v.pipe(v.string(), v.minLength(1, "Required")),
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	server_type: mediaServerType,
-	host: v.pipe(v.string(), v.minLength(1, "Required")),
+	host: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
 	api_key: v.string(),
 	library_section: v.string(),
 	library_section_tv: v.string(),
@@ -363,23 +363,23 @@ export const mediaServerForm = v.object({
 
 export const scheduleInterval = goDuration;
 
-export const importMode = v.picklist(["in_place", "rename"] as const, "Pick a mode");
+export const importMode = v.picklist(["in_place", "rename"] as const, i18n.validation_pick_mode());
 
 export const importTransferMode = v.picklist(
 	["", "hardlink", "copy", "move"] as const,
-	"Pick a transfer mode",
+	i18n.validation_pick_transfer_mode(),
 );
 
 export const importScanKind = v.picklist(
 	["movie", "series"] as const,
-	"Pick a media type",
+	i18n.validation_pick_media_type(),
 );
 
 export const importStartForm = v.object({
 	source_path: v.pipe(
 		v.string(),
-		v.minLength(1, "Required"),
-		v.regex(/^\//, "Must be an absolute path"),
+		v.minLength(1, i18n.validation_required()),
+		v.regex(/^\//, i18n.validation_absolute_path()),
 	),
 	kind: importScanKind,
 	mode: importMode,
