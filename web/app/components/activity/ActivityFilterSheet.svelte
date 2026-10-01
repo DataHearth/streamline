@@ -15,10 +15,10 @@
 	let {
 		open,
 		onClose,
-		title = "Filter",
+		title = i18n.common_filter(),
 		search,
 		onSearchChange,
-		searchPlaceholder = "Filter title or release…",
+		searchPlaceholder = i18n.activity_filter_title_release(),
 		sortChips,
 		sortKey = null,
 		onSortChange,
@@ -162,7 +162,7 @@
 						class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-[14px] font-medium text-fg transition active:bg-surface-2 disabled:opacity-40"
 					>
 						<Trash2 size={16} aria-hidden="true" />
-						Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
+						{i18n.activity_clear_completed()}{clearableCount > 0 ? ` (${clearableCount})` : ""}
 					</button>
 				{/if}
 				<button

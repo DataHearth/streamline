@@ -75,7 +75,7 @@
 					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
 				></span>
 				<h2 class="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-fg">
-					Needs attention
+					{i18n.common_needs_attention()}
 					{#if items.length > 0}
 						<span
 							class="rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[11px] tabular-nums text-status-wanted"

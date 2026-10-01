@@ -20,8 +20,8 @@
 		],
 		torrents: [
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
-			{ key: "stalled", label: "stalled", dot: "stalled" },
-			{ key: "seeding", label: "seeding", dot: "seeding" },
+			{ key: "stalled", label: i18n.lc_stalled(), dot: "stalled" },
+			{ key: "seeding", label: i18n.lc_seeding(), dot: "seeding" },
 			{ key: "completed", label: i18n.lc_completed(), dot: "completed" },
 			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },
 		],
@@ -179,9 +179,9 @@
 			class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
 		>
 			<Trash2 size={14} aria-hidden="true" />
-			<span class="md:hidden">Clear{clearableCount > 0 ? ` (${clearableCount})` : ""}</span>
+			<span class="md:hidden">{i18n.common_clear()}{clearableCount > 0 ? ` (${clearableCount})` : ""}</span>
 			<span class="hidden md:inline">
-				Clear completed{clearableCount > 0 ? ` (${clearableCount})` : ""}
+				{i18n.activity_clear_completed()}{clearableCount > 0 ? ` (${clearableCount})` : ""}
 			</span>
 		</button>
 	{/if}

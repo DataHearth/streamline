@@ -63,7 +63,7 @@
 						class="shrink-0 rounded-full border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-fg-subtle"
 						title={i18n.torrent_not_linked()}
 					>
-						untracked
+						{i18n.torrent_untracked()}
 					</span>
 				{/if}
 			</div>

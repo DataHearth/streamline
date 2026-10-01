@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import { slide } from "svelte/transition";
 	import { Pause, Play, Ban, Trash2, RotateCw, LoaderCircle } from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
@@ -7,6 +8,11 @@
 	import { formatDateTime } from "@lib/dates";
 	import type { QueueEntry, HistoryEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Confirm bodies: whole sentences with the title (and status) marked up.
+	const cancelBody = parts(i18n.activity_cancel_body, ["title", "status"]);
+	const retryBody = parts(i18n.activity_retry_body, ["title"]);
+	const deleteEntryBody = parts(i18n.activity_delete_entry_body, ["title"]);
 
 	let {
 		item,
@@ -139,7 +145,7 @@
 							{:else}
 								<Play size={13} aria-hidden="true" />
 							{/if}
-							Resume
+							{i18n.common_resume()}
 						</button>
 					{:else}
 						<button
@@ -157,7 +163,7 @@
 							{:else}
 								<Pause size={13} aria-hidden="true" />
 							{/if}
-							Pause
+							{i18n.common_pause()}
 						</button>
 					{/if}
 					<button
@@ -220,8 +226,7 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{i18n.activity_cancel_help()} <span class="font-medium text-fg">{item.title}</span> from the
-		queue. The movie returns to <em>wanted</em> if it has no file yet.
+		{#each cancelBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else if p.slot === "status"}<em>{i18n.lc_wanted()}</em>{:else}{p.text}{/if}{/each}
 	</p>
 </Dialog>
 
@@ -239,9 +244,7 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{i18n.activity_retry_help()}
-		<span class="font-medium text-fg">{item.title}</span>. It reads the same
-		files as before, so fix what made it fail first or it just fails again.
+		{#each retryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
 	</p>
 </Dialog>
 
@@ -255,8 +258,6 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{i18n.activity_deletes_entry_for()}
-		<span class="font-medium text-fg">{item.title}</span>. The movie and
-		its files are not affected.
+		{#each deleteEntryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
 	</p>
 </Dialog>

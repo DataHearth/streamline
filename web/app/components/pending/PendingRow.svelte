@@ -99,7 +99,7 @@
 				return `${m.title} · S${pad(onlySeason)}`;
 			}
 			if (packSeasons.length > 1) {
-				return `${m.title} · ${packSeasons.length} seasons`;
+				return i18n.pending_pack_seasons({ title: m.title, count: packSeasons.length });
 			}
 			return `${m.title} · S${pad(m.season)}E${pad(m.episode)}`;
 		}
@@ -141,10 +141,13 @@
 				aria-hidden="true"
 			></span>
 			{#if showBreakdown && counts}
-				{counts.imports.length} to import · {counts.upgrades.length} upgrade{counts
-					.upgrades.length === 1
-					? ""
-					: "s"} · {counts.keeps.length} kept
+				{i18n.pending_breakdown({
+					imports: counts.imports.length,
+					upgrades: (counts.upgrades.length === 1
+						? i18n.pending_upgrades_one
+						: i18n.pending_upgrades_other)({ count: counts.upgrades.length }),
+					keeps: counts.keeps.length,
+				})}
 			{:else}
 				{item.reason}
 			{/if}
@@ -163,30 +166,32 @@
 					class="h-3 w-3 transition-transform {expanded ? 'rotate-90' : ''}"
 					aria-hidden="true"
 				/>
-				{expanded ? "Hide" : "Show"} what this torrent holds
+				{expanded ? i18n.pending_hide_contents() : i18n.pending_show_contents()}
 			</button>
 			{#if expanded}
 				<ul class="mt-1.5 space-y-0.5 ps-4 text-[11px] text-fg-muted">
 					{#each counts.imports as e (`i-${e.season}-${e.episode}`)}
 						<li class="truncate">
-							<span class="text-status-wanted">Import</span>
+							<span class="text-status-wanted">{i18n.pending_import()}</span>
 							{label(e)}
 						</li>
 					{/each}
 					{#each counts.upgrades as e (`u-${e.season}-${e.episode}`)}
 						<li class="truncate">
-							<span class="text-accent">Upgrade</span>
+							<span class="text-accent">{i18n.pending_upgrade()}</span>
 							{label(e)}
 						</li>
 					{/each}
 					{#if counts.keeps.length > 0}
 						<li class="pt-1 text-fg-faint">
-							{counts.keeps.length} kept — the file on disk is not beaten
+							{i18n.pending_kept_note({ count: counts.keeps.length })}
 						</li>
 					{/if}
 					{#if counts.unmatched > 0}
 						<li class="text-fg-faint">
-							{counts.unmatched} file(s) matched no episode
+							{(counts.unmatched === 1
+								? i18n.pending_unmatched_one
+								: i18n.pending_unmatched_other)({ count: counts.unmatched })}
 						</li>
 					{/if}
 					<!--
@@ -196,8 +201,7 @@
 					-->
 					{#if counts.upgrades.length > 0}
 						<li class="pt-1 text-fg-faint italic">
-							Upgrades are estimated from release names until the files
-							are probed on import.
+							{i18n.pending_upgrades_estimated()}
 						</li>
 					{/if}
 				</ul>
@@ -227,7 +231,7 @@
 				disabled={busy}
 				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
-				Identify
+				{i18n.pending_identify()}
 			</button>
 			<!-- Only offered here: an unidentified proposal is the one shape a
 			     later library change can turn into a real match, and forgetting
@@ -253,7 +257,7 @@
 					{#if busy}
 						<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 					{/if}
-					Import
+					{i18n.pending_import()}
 				</button>
 			{/if}
 			{#if showReplace}
@@ -271,7 +275,7 @@
 					{#if busy && !showImport}
 						<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 					{/if}
-					Replace
+					{i18n.common_replace()}
 				</button>
 			{/if}
 		{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import { Magnet, Upload, Info, FileText } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import { cn } from "@lib/cn";
@@ -6,6 +7,8 @@
 	import type { AddTorrentRequest } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { errorText } from "@lib/api";
+
+	const notLinkedBody = parts(i18n.torrent_not_linked_body, ["place"]);
 
 	let {
 		open,
@@ -118,7 +121,7 @@
 			{:else}
 				<Upload size={22} class="text-fg-faint" aria-hidden="true" />
 				<span class="text-sm text-fg-muted">{i18n.torrent_choose_file()}</span>
-				<span class="text-[11px] text-fg-subtle">or drag it onto this area</span>
+				<span class="text-[11px] text-fg-subtle">{i18n.torrent_or_drag()}</span>
 			{/if}
 		</label>
 		{#if fileErr}
@@ -132,8 +135,7 @@
 	>
 		<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
 		<span>
-			{i18n.torrent_not_linked_curly()}
-			<span class="font-medium">{i18n.common_needs_attention()}</span> once it finishes.
+			{#each notLinkedBody as p}{#if p.slot === "place"}<span class="font-medium">{i18n.common_needs_attention()}</span>{:else}{p.text}{/if}{/each}
 		</span>
 	</div>
 

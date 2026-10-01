@@ -223,7 +223,9 @@
 	{:else if error}
 		<div class="px-5 py-10 text-center">
 			<p class="text-sm font-semibold text-status-failed">
-				Failed to load {view}
+				{view === "queue"
+					? i18n.activity_load_failed_queue()
+					: i18n.activity_load_failed_history()}
 			</p>
 			<p class="mt-1 text-xs text-fg-subtle">
 				{errorText(error)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import {
 		ChevronRight,
 		Folder,
@@ -14,6 +15,8 @@
 		TorrentFilePriority,
 		TorrentStatus,
 	} from "@lib/types";
+
+	const filesSummary = parts(i18n.torrent_files_summary, ["count", "size"]);
 
 	let {
 		files,
@@ -203,10 +206,9 @@
 
 <div class="flex items-center justify-between gap-2 pb-2">
 	<p class="text-[11px] text-fg-faint">
-		<span class="font-mono tabular-nums text-fg-muted">{total.count}</span>
-		files ·
-		<span class="font-mono tabular-nums text-fg-muted">{formatBytes(total.size)}</span>
-		wanted{virtual ? " · virtualized" : ""}
+		{#each filesSummary as p}{#if p.slot === "count"}<span class="font-mono tabular-nums text-fg-muted">{total.count}</span>{:else if p.slot === "size"}<span class="font-mono tabular-nums text-fg-muted">{formatBytes(total.size)}</span>{:else}{p.text}{/if}{/each}{virtual
+			? ` · ${i18n.torrent_virtualized()}`
+			: ""}
 	</p>
 	{#if allFolders(tree).length > 0}
 		<button
@@ -272,15 +274,23 @@
 						<div
 							class="inline-flex shrink-0 overflow-hidden rounded-md border border-border"
 							role="radiogroup"
-							aria-label="Priority for everything in {row.name}"
+							aria-label={i18n.torrent_priority_folder({ name: row.name })}
 						>
 							{#each PRIOS as p (p.key)}
 								{@const sel = fp === p.key}
 								<button
 									type="button"
 									aria-pressed={sel}
-									aria-label="{p.label} — all {row.count} files in {row.name}"
-									title="{p.label} — all {row.count} files in {row.name}"
+									aria-label={i18n.torrent_priority_all_files({
+										label: p.label,
+										count: row.count,
+										name: row.name,
+									})}
+									title={i18n.torrent_priority_all_files({
+										label: p.label,
+										count: row.count,
+										name: row.name,
+									})}
 									onclick={() => setFolderPriority(row.path, p.key)}
 									class={cn(
 										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",

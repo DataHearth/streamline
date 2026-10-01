@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
@@ -45,11 +46,11 @@
 		onSuccess: (_res, v) => {
 			qc.invalidateQueries({ queryKey: ["activity", "pending"] });
 			qc.invalidateQueries({ queryKey: [v.kind === "movie" ? "movies" : "series"] });
-			toast.ok("Matched. Review it and import when you're ready.");
+			toast.ok(i18n.pending_matched());
 			kind = null;
 			onClose();
 		},
-		onError: (e) => toast.err(errorText(e, "Could not match that download")),
+		onError: (e) => toast.err(errorText(e, i18n.pending_match_failed())),
 	}));
 
 	function onPickMovie(r: TMDBMovieResult) {
@@ -64,8 +65,8 @@
 
 <Dialog
 	open={open && kind === null}
-	title="What is this download?"
-	body="Pick the title it belongs to. It is added to your library if it isn't there yet, and this download is matched to it — nothing is imported until you say so."
+	title={i18n.pending_identify_title()}
+	body={i18n.pending_identify_body()}
 	actions={[
 		{
 			label: "A movie",

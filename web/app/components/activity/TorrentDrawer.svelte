@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
@@ -38,6 +39,9 @@
 		TorrentDetails,
 		TorrentFilePriority,
 	} from "@lib/types";
+
+	const removeBody = parts(i18n.torrent_remove_body, ["name"]);
+	const deleteFilesBody = parts(i18n.torrent_delete_files_body, ["action"]);
 
 	let {
 		open,
@@ -237,16 +241,16 @@
 						<span
 							class="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle"
 						>
-							untracked
+							{i18n.torrent_untracked()}
 						</span>
 					{/if}
 					<span class="ml-auto font-mono text-xs tabular-nums text-fg-faint">
 						{#if torrent.status === "downloading" && torrent.eta > 0}
-							{formatEta(torrent.eta)} left
+							{i18n.queue_time_left({ eta: formatEta(torrent.eta) })}
 						{:else if torrent.status === "seeding"}
-							seeding
+							{i18n.lc_seeding()}
 						{:else if torrent.status === "completed"}
-							complete
+							{i18n.common_complete()}
 						{/if}
 					</span>
 				</div>
@@ -268,7 +272,7 @@
 					<dd class="min-w-0 break-all font-mono text-fg-muted">{torrent.save_path}</dd>
 					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.torrent_swarm()}</dt>
 					<dd class="font-mono tabular-nums text-fg-muted">
-						{torrent.seeds} seeds · {torrent.peer_count} peers
+						{i18n.torrent_seeds_peers_line({ seeds: torrent.seeds, peers: torrent.peer_count })}
 					</dd>
 					<dt class="font-medium uppercase tracking-[0.1em] text-fg-faint">{i18n.common_added()}</dt>
 					<dd class="text-fg-muted" title={formatDateTime(torrent.added_at)}>
@@ -353,7 +357,7 @@
 							class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
 						>
 							{#if busy}<LoaderCircle size={14} class="motion-safe:animate-spin" aria-hidden="true" />{:else}<Play size={14} aria-hidden="true" />{/if}
-							Resume
+							{i18n.common_resume()}
 						</button>
 					{:else if canPause}
 						<button
@@ -363,7 +367,7 @@
 							class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-bg-subtle px-3.5 text-sm font-semibold text-fg transition hover:bg-surface disabled:opacity-50"
 						>
 							{#if busy}<LoaderCircle size={14} class="motion-safe:animate-spin" aria-hidden="true" />{:else}<Pause size={14} aria-hidden="true" />{/if}
-							Pause
+							{i18n.common_pause()}
 						</button>
 					{/if}
 					<button
@@ -415,9 +419,7 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{i18n.torrent_removes()}
-		<span class="font-medium text-fg">{torrent?.name || "this torrent"}</span>
-		from the built-in engine.
+		{#each removeBody as p}{#if p.slot === "name"}<span class="font-medium text-fg">{torrent?.name || i18n.torrent_this()}</span>{:else}{p.text}{/if}{/each}
 	</p>
 	<Checkbox
 		checked={deleteFiles}
@@ -426,8 +428,7 @@
 		class="mt-4 rounded-md border border-border bg-bg-card p-3"
 	>
 		<span class="text-sm text-fg-muted">
-			<span class="font-medium text-fg">{i18n.torrent_also_delete_files()}</span>
-			from disk. This can’t be undone.
+			{#each deleteFilesBody as p}{#if p.slot === "action"}<span class="font-medium text-fg">{i18n.torrent_also_delete_files()}</span>{:else}{p.text}{/if}{/each}
 		</span>
 	</Checkbox>
 </Dialog>

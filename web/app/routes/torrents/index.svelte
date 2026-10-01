@@ -167,7 +167,7 @@
 			// queue on the Activity page is stale the moment this returns.
 			qc.invalidateQueries({ queryKey: ["activity", "queue"] });
 			selectedHash = null;
-			toast.ok("Torrent removed");
+			toast.ok(i18n.torrent_removed());
 		},
 		onError: (e) => toast.err(errorText(e)),
 	}));
@@ -290,10 +290,11 @@
 			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.torrent_label()}</h1>
 			<p class="mt-1 text-sm text-fg-muted">
 				{#if torrentsNotConfigured}
-					Built-in engine · disabled
+					{i18n.torrent_engine_disabled()}
 				{:else}
-					{torrentItems.length} torrent{torrentItems.length === 1 ? "" : "s"} · built-in
-					engine
+					{(torrentItems.length === 1
+						? i18n.torrent_engine_count_one
+						: i18n.torrent_engine_count_other)({ count: torrentItems.length })}
 				{/if}
 			</p>
 		</div>
@@ -488,7 +489,7 @@
 	onClose={() => (filtersOpen = false)}
 	{search}
 	onSearchChange={(q) => (search = q)}
-	searchPlaceholder="Filter name or hash…"
+	searchPlaceholder={i18n.activity_filter_placeholder()}
 	sortChips={TORRENT_SORT_CHIPS}
 	sortKey={sortChipKey}
 	onSortChange={pickSortChip}
