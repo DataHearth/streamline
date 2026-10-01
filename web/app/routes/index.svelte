@@ -190,7 +190,7 @@
 			title: m.title,
 			year: m.year,
 			status,
-			added: addedAt(m.added_at),
+			added: addedAt(m.file_summary?.imported_at ?? m.added_at),
 		};
 	}
 	function seriesItem(s: TVShow, status: StatusKind): DatedItem {
@@ -205,11 +205,12 @@
 		};
 	}
 
-	// This row lists arrivals, and for a series the arrival is the import, not
-	// the show record: a show followed since March that took an episode this
-	// morning is one of today's additions, and the card names the episodes rather
-	// than repeating the show. A show whose imports predate the field keeps its
-	// own added_at and says nothing.
+	// This row lists arrivals, and the arrival is the import, not the record: a
+	// movie wanted since August that downloaded this morning is one of today's
+	// additions (movieItem reads its file's imported_at), and so is a show
+	// followed since March that took an episode — whose card names the episodes
+	// rather than repeating the show. A show whose imports predate the field
+	// keeps its own added_at and says nothing.
 	let recent = $derived(
 		[
 			...allMovies
