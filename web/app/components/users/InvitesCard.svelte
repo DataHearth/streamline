@@ -256,7 +256,7 @@
 						<div class="min-w-0 flex-1">
 							<div class="flex flex-wrap items-center gap-2">
 								<p class="truncate text-sm font-medium text-fg">
-									{inv.email || "(no email bound)"}
+									{inv.email || i18n.invites_no_email()}
 								</p>
 								<span
 									class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {rolePill(

@@ -89,7 +89,7 @@
 	open={pending !== null}
 	title={i18n.account_signout_device()}
 	body={pendingLabel
-		? `Sign out ${pendingLabel}? It will need to log in again to access your account.`
+		? i18n.session_signout_named({ device: pendingLabel })
 		: i18n.action_signout_session()}
 	onClose={() => {
 		if (!revoke.isPending) pending = null;

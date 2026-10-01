@@ -262,7 +262,9 @@
 					type="button"
 					onclick={() => toggle(s.number)}
 					aria-expanded={open}
-					aria-label="{open ? 'Collapse' : 'Expand'} {seasonName(s)}"
+					aria-label={open
+						? i18n.series_collapse_season({ season: seasonName(s) })
+						: i18n.series_expand_season({ season: seasonName(s) })}
 					class="grid h-9 w-6 shrink-0 place-items-center"
 				>
 					<ChevronRight

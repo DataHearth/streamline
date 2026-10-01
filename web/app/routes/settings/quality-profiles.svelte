@@ -198,7 +198,9 @@
 						type="button"
 						onclick={() => openEdit(p)}
 						class="flex min-w-0 flex-1 items-center gap-4 text-left"
-						aria-label="{config.readOnly ? 'View' : 'Edit'} {p.name}"
+						aria-label={config.readOnly
+							? i18n.common_view_name({ name: p.name })
+							: i18n.common_edit_name({ name: p.name })}
 					>
 						<div
 							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"

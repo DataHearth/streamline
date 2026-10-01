@@ -90,11 +90,11 @@
 		<dl
 			class="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border md:max-w-md"
 		>
-			{@render stat(Monitor, "Sessions", String(sessions.length))}
-			{@render stat(KeyRound, "API keys", String(apiKeys.length))}
+			{@render stat(Monitor, i18n.account_stat_sessions(), String(sessions.length))}
+			{@render stat(KeyRound, i18n.account_stat_api_keys(), String(apiKeys.length))}
 			{@render stat(
 				Shield,
-				"Last seen",
+				i18n.account_stat_last_seen(),
 				lastSeen ? formatRelative(lastSeen) : "—",
 			)}
 		</dl>

@@ -120,7 +120,9 @@
 							<SelectBox
 								checked={isSel}
 								onChange={(v) => onToggle(show.id, v)}
-								label={isSel ? `Deselect ${show.title}` : i18n.a11y_select_item({ title: show.title })}
+								label={isSel
+					? i18n.a11y_deselect_item({ title: show.title })
+					: i18n.a11y_select_item({ title: show.title })}
 							/>
 						</td>
 					{/if}

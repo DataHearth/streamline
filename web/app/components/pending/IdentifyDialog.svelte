@@ -69,14 +69,14 @@
 	body={i18n.pending_identify_body()}
 	actions={[
 		{
-			label: "A movie",
+			label: i18n.pending_identify_movie(),
 			variant: guess === "movie" ? "primary" : "ghost",
 			autofocus: guess === "movie",
 			dismiss: false,
 			onClick: () => (kind = "movie"),
 		},
 		{
-			label: "A series",
+			label: i18n.pending_identify_series(),
 			variant: guess === "series" ? "primary" : "ghost",
 			autofocus: guess === "series",
 			dismiss: false,

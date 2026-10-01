@@ -198,26 +198,26 @@
 	<div class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
 		{@render card(
 			Globe,
-			"Public URL",
+			i18n.system_public_url(),
 			d.public_url,
 			true,
 			d.https_warn ? { kind: "warn", label: i18n.settings_no_https() } : null,
 		)}
 		{@render storageCard(
 			Folder,
-			"Data directory",
+			i18n.system_data_dir(),
 			d.data_dir,
 			d.data_usage,
 			null,
 		)}
 		{@render storageCard(
 			Database,
-			"Database",
+			i18n.system_database(),
 			d.db_path,
 			d.db_usage,
 			d.db_size,
 		)}
-		{@render card(Lock, "Auth mode", d.auth_mode, true, {
+		{@render card(Lock, i18n.settings_auth_mode(), d.auth_mode, true, {
 			kind: d.read_only ? "warn" : "ok",
 			label: d.read_only
 				? i18n.settings_readonly_config()
@@ -303,14 +303,14 @@
 			</div>
 		</header>
 		<dl class="divide-y divide-border text-sm">
-			{@render kv("Version", d.version)}
-			{@render kv("Go runtime", d.go_version)}
-			{@render kv("Platform", d.go_os_arch)}
+			{@render kv(i18n.system_version(), d.version)}
+			{@render kv(i18n.system_go_runtime(), d.go_version)}
+			{@render kv(i18n.system_platform(), d.go_os_arch)}
 			{#if d.commit}
-				{@render kv("Commit", d.commit)}
+				{@render kv(i18n.system_commit(), d.commit)}
 			{/if}
 			{#if d.built_at}
-				{@render kv("Built at", d.built_at)}
+				{@render kv(i18n.system_built_at(), d.built_at)}
 			{/if}
 		</dl>
 	</section>

@@ -73,14 +73,14 @@
 			/>
 		</div>
 
-		{@render section("Identity", "Profile fields applied immediately.")}
+		{@render section(i18n.account_section_identity(), i18n.users_identity_desc())}
 		<div class="grid items-start gap-5">
 			<UserDetailHeader user={target} />
 		</div>
 
 		{@render section(
-			"Devices & access",
-			"Where this user is signed in and which tools can talk to their account.",
+			i18n.account_section_devices(),
+			i18n.users_devices_desc(),
 		)}
 		<div class="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
 			<UserAPIKeysCard
@@ -94,8 +94,8 @@
 		</div>
 
 		{@render section(
-			"Danger zone",
-			"Destructive actions on this account. Admin only.",
+			i18n.account_section_danger(),
+			i18n.users_danger_desc(),
 			true,
 		)}
 		<UserDangerActions user={target} {isSelf} />

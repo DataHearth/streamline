@@ -112,9 +112,9 @@
 	title={i18n.reidentify_title({ label: pickedLabel })}
 	body={confirmBody}
 	actions={[
-		{ label: "Back", variant: "ghost", onClick: () => (picked = null) },
+		{ label: i18n.common_back(), variant: "ghost", onClick: () => (picked = null) },
 		{
-			label: "Change match",
+			label: i18n.imports_change_match(),
 			variant: "primary",
 			autofocus: true,
 			pending: reidentify.isPending,

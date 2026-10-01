@@ -260,10 +260,10 @@
 				<div
 					class="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded-md border border-border bg-border"
 				>
-					{@render stat("Ratio", fetching ? "—" : formatRatio(torrent.ratio))}
-					{@render stat("Size", formatBytes(torrent.size))}
-					{@render stat("↓ Down", formatSpeed(torrent.download_speed) || "—")}
-					{@render stat("↑ Up", formatSpeed(torrent.upload_speed) || "—")}
+					{@render stat(i18n.torrent_ratio(), fetching ? "—" : formatRatio(torrent.ratio))}
+					{@render stat(i18n.common_size(), formatBytes(torrent.size))}
+					{@render stat(i18n.torrent_stat_down(), formatSpeed(torrent.download_speed) || "—")}
+					{@render stat(i18n.torrent_stat_up(), formatSpeed(torrent.upload_speed) || "—")}
 				</div>
 
 				<!-- meta -->

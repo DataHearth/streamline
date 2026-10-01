@@ -178,7 +178,9 @@
 						type="button"
 						onclick={() => openAdd(rec)}
 						class="snap-start group relative block w-full overflow-hidden rounded-lg text-left ring-1 ring-border transition duration-200 hover:ring-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none"
-						title={auth.canAddDirectly ? `Add ${rec.title} to your library` : `Request ${rec.title}`}
+						title={auth.canAddDirectly
+							? i18n.add_title_to_library({ title: rec.title })
+							: i18n.request_title({ title: rec.title })}
 					>
 						{@render poster()}
 					</button>

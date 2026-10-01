@@ -316,10 +316,10 @@
 						class="bg-surface text-left text-xs uppercase tracking-wider text-fg-muted"
 					>
 						<tr>
-							{@render sortHeader("name", "User")}
-							{@render sortHeader("role", "Role")}
-							{@render sortHeader("auth", "Auth")}
-							{@render sortHeader("created", "Created")}
+							{@render sortHeader("name", i18n.users_col_user())}
+							{@render sortHeader("role", i18n.common_role())}
+							{@render sortHeader("auth", i18n.users_sort_auth())}
+							{@render sortHeader("created", i18n.common_created())}
 							<th class="px-4 py-2.5"></th>
 						</tr>
 					</thead>
@@ -340,7 +340,9 @@
 			class="mt-4 flex h-9 items-center justify-between text-sm text-fg-muted"
 		>
 			<span>
-				{items.length ? `${from}–${to} of ${total}` : `0 of ${total}`}
+				{items.length
+					? i18n.users_page_range({ from, to, total })
+					: i18n.users_page_empty({ total })}
 			</span>
 			<div class="flex gap-2">
 				<button
