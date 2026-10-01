@@ -3578,8 +3578,9 @@ paths:
         409 while an earlier scan is still walking the library, while
         transcoding.enabled is false, and — carrying code
         worker_unavailable — when the worker could not claim the rows a
-        scan would queue anyway: ffmpeg disabled, or its binary not found
-        in this process.
+        scan would queue anyway: ffmpeg disabled, or either the ffmpeg or
+        the ffprobe binary not found in this process — every job probes its
+        source and output with ffprobe, so ffmpeg alone is not enough.
       tags: [transcoding, admin]
       security:
         - BearerAuth: []

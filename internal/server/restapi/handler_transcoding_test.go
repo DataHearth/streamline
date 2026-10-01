@@ -333,6 +333,7 @@ var _ = Describe(
 					FFmpegPath().
 					Return("/usr/bin/ffmpeg").
 					Maybe()
+				app.prober.EXPECT().Available().Return(true).Maybe()
 			})
 
 			It("dispatches a scan, then refuses a second one", func() {
@@ -393,7 +394,7 @@ var _ = Describe(
 				var body Error
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Message).To(Equal(
-					"transcoding worker cannot run: ffmpeg disabled or not found",
+					"transcoding worker cannot run: ffmpeg disabled, or ffmpeg/ffprobe not found",
 				))
 				Expect(body.Code).To(HaveValue(Equal("worker_unavailable")))
 			})
@@ -413,10 +414,35 @@ var _ = Describe(
 				var body Error
 				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 				Expect(body.Message).To(Equal(
-					"transcoding worker cannot run: ffmpeg disabled or not found",
+					"transcoding worker cannot run: ffmpeg disabled, or ffmpeg/ffprobe not found",
 				))
 				Expect(body.Code).To(HaveValue(Equal("worker_unavailable")))
 			})
+
+			It(
+				"answers 409 when ffprobe is not found, even with ffmpeg present",
+				func() {
+					// Every job probes its source and output, so ffmpeg alone
+					// cannot run one.
+					app.prober.EXPECT().Available().Unset()
+					app.prober.EXPECT().Available().Return(false).Once()
+
+					resp := app.do(app.req(
+						http.MethodPost, "/api/v1/transcoding/scan", "", nil,
+					))
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+
+					// Asserted so this cannot pass through the feature-off arm,
+					// which the config here deliberately leaves satisfied.
+					var body Error
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Message).To(Equal(
+						"transcoding worker cannot run: ffmpeg disabled, or ffmpeg/ffprobe not found",
+					))
+					Expect(body.Code).To(HaveValue(Equal("worker_unavailable")))
+				},
+			)
 
 			It("refuses a non-admin", func() {
 				app.addMember("member@test.com")

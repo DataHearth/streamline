@@ -247,9 +247,13 @@ func (w *Worker) tick(ctx context.Context) bool {
 	return true
 }
 
+// enabled needs both binaries: every job probes its source and its output
+// with ffprobe before and after ffmpeg encodes. Gating on ffmpeg alone let a
+// host missing ffprobe claim every job and fail each one at "probe source"
+// until max_failures parked it.
 func (w *Worker) enabled(cfg *config.Config) bool {
 	return cfg != nil && cfg.Transcoding.Enabled && cfg.FFmpeg.Enabled &&
-		w.prober.FFmpegPath() != ""
+		w.prober.FFmpegPath() != "" && w.prober.Available()
 }
 
 // Ready reports whether this worker would claim work right now. A scan that

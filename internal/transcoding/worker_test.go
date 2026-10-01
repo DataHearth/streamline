@@ -902,6 +902,27 @@ var _ = Describe("Worker", Label("integration", "transcoding"), func() {
 		Expect(got.Error).To(ContainSubstring("already exists"))
 	})
 
+	It("stays idle when ffmpeg resolves but ffprobe does not", func() {
+		// Every job probes its source before it encodes, so a host carrying
+		// ffmpeg alone would claim each job only to fail it at "probe
+		// source" until max_failures parked it.
+		onlyFFmpeg := GinkgoT().TempDir()
+		Expect(os.Symlink(
+			filepath.Join(bin, "ffmpeg"), filepath.Join(onlyFFmpeg, "ffmpeg"),
+		)).To(Succeed())
+		job := queueJob(seedMovieFile("hevc"))
+
+		w := NewWorker(Deps{
+			DB: store, Prober: ffmpeg.NewCLI(onlyFFmpeg), MediaServer: ms,
+		})
+		Expect(w.Ready()).To(BeFalse())
+		Expect(w.tick(ctx)).To(BeFalse())
+
+		got := reload(job)
+		Expect(got.Status).To(Equal(transcodejob.StatusQueued))
+		Expect(got.Attempts).To(BeZero())
+	})
+
 	It("fails terminally when the row cannot be updated after the swap", func() {
 		// The store is mocked here because the failure under test is the store
 		// itself refusing the write once the bytes on disk have already been

@@ -123,12 +123,12 @@ func (s *Server) StartTranscodeScan(
 	}
 	// The other three endpoints act on rows that already exist; a scan
 	// creates them. Queueing work no worker can claim leaves rows nothing
-	// drains and nothing explains, so this one refuses unless ffmpeg is
-	// actually usable.
+	// drains and nothing explains, so this one refuses unless ffmpeg and
+	// ffprobe are both actually usable.
 	if !s.transcoder.Ready() {
 		return StartTranscodeScan409JSONResponse{
 			ConflictJSONResponse: errWorkerUnavailable(
-				"transcoding worker cannot run: ffmpeg disabled or not found",
+				"transcoding worker cannot run: ffmpeg disabled, or ffmpeg/ffprobe not found",
 			),
 		}, nil
 	}
