@@ -433,10 +433,17 @@ input[type="checkbox"]:not(.native):disabled {
 /* ------------------------------------------------------------------ */
 /* Global focus-visible                                                */
 /* ------------------------------------------------------------------ */
-:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
-	border-radius: 4px;
+/* Layered so a component's own focus treatment wins. Unlayered, it outranked
+   every utility: an input that sets `outline-none` and lets its rounded
+   wrapper light up via `focus-within:` still drew this rectangle inside the
+   pill — and Chrome matches :focus-visible on any focus of a text field, a tap
+   included, so every phone search field showed two rings. */
+@layer base {
+	:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
 }
 
 /* A locked field still takes focus so its value can be read and copied, but the
