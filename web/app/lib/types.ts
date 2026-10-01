@@ -300,6 +300,7 @@ export type Movie = {
 export type MovieFileSummary = {
 	file_count: number;
 	size_bytes: number;
+	imported_at: string;
 	resolution?: string;
 	codec?: string;
 };

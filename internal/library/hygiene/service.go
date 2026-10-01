@@ -16,7 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
-	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -128,7 +127,6 @@ type Service struct {
 	store    db.Store
 	metadata metadata.Provider
 	tvmeta   metadata.TVProvider
-	importer library.Importer
 	cfg      *config.LibraryConfig
 
 	// Probe is optional: media_probe no-ops when unset, matching the
@@ -141,14 +139,12 @@ func New(
 	store db.Store,
 	meta metadata.Provider,
 	tvmeta metadata.TVProvider,
-	importer library.Importer,
 	cfg *config.LibraryConfig,
 ) *Service {
 	return &Service{
 		store:    store,
 		metadata: meta,
 		tvmeta:   tvmeta,
-		importer: importer,
 		cfg:      cfg,
 	}
 }

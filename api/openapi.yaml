@@ -5348,7 +5348,7 @@ components:
         files. The library grid's size and quality columns and the bulk-action
         totals read this; anything needing the files themselves uses
         GET /movies/{id}.
-      required: [file_count, size_bytes]
+      required: [file_count, size_bytes, imported_at]
       properties:
         file_count:
           type: integer
@@ -5357,6 +5357,13 @@ components:
           type: integer
           format: int64
           description: Sum of every attached file's size.
+        imported_at:
+          type: string
+          format: date-time
+          description: |
+            When the newest attached file was imported. `added_at` on the
+            movie is when the row was created, which for a title added as
+            wanted can be weeks before its file arrived.
         resolution:
           type: string
           description: |

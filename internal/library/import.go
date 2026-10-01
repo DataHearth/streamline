@@ -440,17 +440,3 @@ func copyFile(src, dst string) error {
 	_, err = io.Copy(out, in)
 	return err
 }
-
-// Importer is the consumer-facing surface needed by callers that import a
-// movie file into the managed library (e.g. internal/library/hygiene's
-// orphan auto-import path). *ImportService implements it.
-type Importer interface {
-	ImportMovieWithMode(
-		ctx context.Context,
-		srcDir string,
-		m *ent.Movie,
-		modeOverride string,
-	) (ImportedFile, error)
-}
-
-var _ Importer = (*ImportService)(nil)

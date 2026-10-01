@@ -290,16 +290,17 @@ func closeSeeder(seeder *antorrent.Client, st *antorrent.Torrent) {
 // before its initial piece check has settled.
 //
 // Adding a torrent hashes every piece against the download dir, and a piece
-// mid-hash is ignored for requests (anacrolix v1.61 piece.go:303). A peer that
-// completes its handshake inside that window finds nothing to want and never
-// sends a request; when the check ends the pieces do become requestable, but
-// that peer's request loop is never woken, so the download sits at zero bytes
-// with a live unchoked seeder until the spec times out. Hashing is CPU-bound,
-// so a contended machine — CI especially — loses this race regularly.
-//
-// The wedge is anacrolix's lost writer wakeup (see the keepalive note in
-// New, which bounds it to 5s). These specs are not the place it gets
-// exercised, so they wait the window out instead of racing it.
+// mid-hash is ignored for requests (anacrolix Piece.ignoreForRequests). A peer
+// that completes its handshake inside that window finds nothing to want, and
+// only requests once the check ends and its message writer is woken to
+// recompute its request state. anacrolix used to lose that wakeup when it
+// landed while the writer was mid-fill, leaving the download at zero bytes
+// with a live unchoked seeder until the next keepalive. The pinned version
+// installs the wakeup channel before filling (anacrolix #1070,
+// peer-conn-msg-writer.go), so the wedge is gone; these specs still wait the
+// hashing window out because the handshake-during-check path is anacrolix's
+// to test, not theirs, and hashing is CPU-bound enough that a contended
+// machine — CI especially — lands in it regularly.
 // The Consistently guards against the check not having *started* yet: a bare
 // "nothing hashing" poll is also true before the first piece is queued.
 func connectToSeeder(e *Engine, hash string, seederPort int) {
@@ -519,12 +520,24 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		})
 		Expect(err).NotTo(HaveOccurred())
 		connectToSeeder(engine, hash, seederPort)
+		// Polled tightly on purpose, to catch the first instant seeding is
+		// reported. Seeding used to be read off byte counts that include
+		// written-but-unhashed chunks, so it could arrive with pieces still
+		// queued for hash; closing then dropped their hash results, the store
+		// kept them incomplete, and the restored engine sat stalled with no
+		// peer to fetch them from.
 		Eventually(func() download.TorrentStatus {
 			t, terr := engine.GetTorrent(ctx, hash)
 			Expect(terr).NotTo(HaveOccurred())
 			return t.Status
-		}).WithTimeout(60 * time.Second).WithPolling(200 * time.Millisecond).
+		}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
 			Should(Equal(download.StatusSeeding))
+		lt, err := engine.torrent(hash)
+		Expect(err).NotTo(HaveOccurred())
+		for _, run := range lt.PieceStateRuns() {
+			Expect(run.Complete).To(BeTrue(),
+				"seeding reported with unverified pieces: %v", lt.PieceStateRuns())
+		}
 		// A ratio built only from anacrolix's counter restarts at zero with the
 		// process, so a seed_ratio limit could never be met. Stand in for a
 		// prior life's upload and require the restored engine to carry it.
@@ -547,10 +560,12 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(views[0].Ratio).To(BeNumerically(">", 0))
 	})
 
-	// Starts 30 download cycles, which made it the loudest victim of the
-	// anacrolix lost-wakeup wedge (see the keepalive note in New): the
-	// engine's 5s keepalive heals a wedge well inside every wait here.
-	// Removing that mitigation makes this spec flake under CPU load again.
+	// Starts 30 download cycles, which made it the loudest victim of
+	// anacrolix's lost writer wakeup (see connectToSeeder) before the pinned
+	// version fixed it. The engine now runs anacrolix's default 1min
+	// keepalive, so a wedged cycle would stall for about the whole 60s
+	// progress wait: a regression upstream shows here as a failure, not a
+	// slow run.
 	It("never writes piece completion into a closing store", func() {
 		var sink logSink
 		teeEngineLogs(&sink)

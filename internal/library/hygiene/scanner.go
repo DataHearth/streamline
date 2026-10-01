@@ -190,9 +190,8 @@ const (
 )
 
 // handleOrphan decides what to do with one orphan candidate. A confirmed match
-// whose movie already has its file is skipped, not queued: import_mode hardlink
-// (the default) and copy both leave the source in place, so re-queueing it would
-// file a fresh review line on every scan.
+// whose movie already has its file is skipped, not queued: the movie needs
+// nothing from it.
 func (s *Service) handleOrphan(
 	ctx context.Context,
 	cand orphanCandidate,
@@ -226,19 +225,14 @@ func (s *Service) handleOrphan(
 		return outcomeQueue
 	}
 
-	imported, err := s.importer.ImportMovieWithMode(
-		ctx, filepath.Dir(cand.Path), movie, "",
-	)
-	if err != nil {
-		orphanImportFailed.Add(ctx, 1)
-		slog.ErrorContext(ctx, "auto-import failed",
-			"path", cand.Path, "error", err)
-		return outcomeQueue
-	}
+	// The orphan is already inside the library, so it is adopted where it
+	// lies. Transferring it under import_mode (hardlink by default) left the
+	// original beside a second link at the template path, tracked only the
+	// link, and a later delete-with-files removed that one and nothing else.
 	if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
 		MovieID:      movie.ID,
-		Path:         imported.Path,
-		Size:         imported.Size,
+		Path:         cand.Path,
+		Size:         cand.Size,
 		Quality:      cand.Parsed.Resolution,
 		ReleaseGroup: cand.Parsed.Group,
 		Parsed:       &cand.Parsed,
@@ -246,7 +240,7 @@ func (s *Service) handleOrphan(
 	}); err != nil {
 		orphanImportFailed.Add(ctx, 1)
 		slog.ErrorContext(ctx, "auto-import: CreateMediaFile failed",
-			"movie_id", movie.ID, "path", imported.Path, "error", err)
+			"movie_id", movie.ID, "path", cand.Path, "error", err)
 		return outcomeQueue
 	}
 	if err := s.store.UpdateMovieStatus(
@@ -261,7 +255,7 @@ func (s *Service) handleOrphan(
 	slog.InfoContext(ctx, "orphan auto-imported",
 		"movie.id", movie.ID,
 		"movie.tmdb_id", movie.TmdbID,
-		"media_file.path", imported.Path)
+		"media_file.path", cand.Path)
 	return outcomeImported
 }
 

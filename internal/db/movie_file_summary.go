@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 
@@ -11,13 +12,14 @@ import (
 )
 
 // MovieFileSummary is what a list response needs to know about a movie's
-// files: how many, how big, and what the primary one is. PrimaryPath is the
-// path of the largest attached file — the caller parses resolution and codec
-// off it, since neither is stored.
+// files: how many, how big, what the primary one is and when the newest one
+// arrived. PrimaryPath is the path of the largest attached file — the caller
+// parses resolution and codec off it, since neither is stored.
 type MovieFileSummary struct {
 	FileCount   uint32
 	SizeBytes   int64
 	PrimaryPath string
+	ImportedAt  time.Time
 }
 
 // MovieFileSummaries rolls up the files of the given movies in one lean pass.
@@ -36,9 +38,10 @@ func (db *DB) MovieFileSummaries(
 		return out, nil
 	}
 	var rows []struct {
-		MovieID uint32 `sql:"movie_id"`
-		Size    int64  `sql:"size"`
-		Path    string `sql:"path"`
+		MovieID    uint32    `sql:"movie_id"`
+		Size       int64     `sql:"size"`
+		Path       string    `sql:"path"`
+		CreateTime time.Time `sql:"create_time"`
 	}
 	err := db.client.MediaFile.Query().
 		Where(mediafile.HasMovieWith(movie.IDIn(movieIDs...))).
@@ -47,6 +50,7 @@ func (db *DB) MovieFileSummaries(
 				entsql.As(s.C(mediafile.MovieColumn), "movie_id"),
 				s.C(mediafile.FieldSize),
 				s.C(mediafile.FieldPath),
+				s.C(mediafile.FieldCreateTime),
 			)
 		}).
 		Scan(ctx, &rows)
@@ -64,6 +68,9 @@ func (db *DB) MovieFileSummaries(
 		if sum.PrimaryPath == "" || r.Size > primarySize[r.MovieID] {
 			sum.PrimaryPath = r.Path
 			primarySize[r.MovieID] = r.Size
+		}
+		if r.CreateTime.After(sum.ImportedAt) {
+			sum.ImportedAt = r.CreateTime
 		}
 		out[r.MovieID] = sum
 	}

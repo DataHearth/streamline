@@ -341,8 +341,9 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 	})
 
 	Describe("MovieFileSummaries", func() {
-		It("rolls up count, total size and the largest file's path", func() {
+		It("rolls up count, size, primary path and newest import", func() {
 			m := seed("Summed", 2020, 990, entmovie.StatusAvailable)
+			var newest time.Time
 			for _, f := range []struct {
 				path string
 				size int64
@@ -350,10 +351,11 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 				{"/lib/Summed/small.1080p.x264.mkv", 100},
 				{"/lib/Summed/big.2160p.hevc.mkv", 900},
 			} {
-				_, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
+				mf, err := store.CreateMediaFile(ctx, CreateMediaFileParams{
 					MovieID: m.ID, Path: f.path, Size: f.size,
 				})
 				Expect(err).NotTo(HaveOccurred())
+				newest = mf.CreateTime
 			}
 
 			got, err := store.MovieFileSummaries(ctx, []uint32{m.ID})
@@ -363,6 +365,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			// Largest wins the primary slot, so the quality column reports the
 			// file a viewer would actually play.
 			Expect(got[m.ID].PrimaryPath).To(HaveSuffix("big.2160p.hevc.mkv"))
+			Expect(got[m.ID].ImportedAt).To(BeTemporally("==", newest))
 		})
 
 		It("omits a movie with no files rather than reporting a zero row", func() {

@@ -44,7 +44,7 @@ So a new release typically lands in minutes; something old can take up to 12 hou
 
 Two halves of keeping the database honest against the filesystem.
 
-**Orphan scan** finds files on disk that Streamline doesn't know about, and queues them for review rather than importing blind — you get the same accept/match/exclude flow as an import scan.
+**Orphan scan** finds files on disk that Streamline doesn't know about. A confident match for a movie already in the library with no file is adopted where it lies — no copy, no link, no rename — and everything else is queued for review rather than imported blind, with the same accept/match/exclude flow as an import scan.
 
 **Drift check** finds records whose files have gone. It doesn't act immediately: a file must be missing for `library.drift_grace_ticks` consecutive checks (default 3) before its row is deleted. At the default 15-minute interval that's 45 minutes of tolerance, which is what stops a brief NFS outage from erasing your library metadata.
 

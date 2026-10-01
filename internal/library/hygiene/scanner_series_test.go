@@ -13,7 +13,6 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
-	libmocks "github.com/datahearth/streamline/internal/library/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 )
@@ -25,7 +24,6 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		store  *dbmocks.MockStore
 		meta   *metamocks.MockProvider
 		tvmeta *metamocks.MockTVProvider
-		imp    *libmocks.MockImporter
 		svc    *Service
 	)
 
@@ -35,8 +33,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
 		tvmeta = metamocks.NewMockTVProvider(GinkgoT())
-		imp = libmocks.NewMockImporter(GinkgoT())
-		svc = New(store, meta, tvmeta, imp, &config.LibraryConfig{
+		svc = New(store, meta, tvmeta, &config.LibraryConfig{
 			SeriesPath: tmpDir,
 			ImportMode: "hardlink",
 		})
@@ -123,7 +120,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 	})
 
 	It("skips cleanly when series_path does not exist", func() {
-		svc = New(store, meta, tvmeta, imp, &config.LibraryConfig{
+		svc = New(store, meta, tvmeta, &config.LibraryConfig{
 			SeriesPath: filepath.Join(tmpDir, "nope"),
 			ImportMode: "hardlink",
 		})

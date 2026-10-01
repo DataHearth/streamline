@@ -3890,6 +3890,11 @@ type MovieFileSummary struct {
 	Codec     *string `json:"codec,omitempty"`
 	FileCount uint32  `json:"file_count"`
 
+	// ImportedAt When the newest attached file was imported. `added_at` on the
+	// movie is when the row was created, which for a title added as
+	// wanted can be weeks before its file arrived.
+	ImportedAt time.Time `json:"imported_at"`
+
 	// Resolution Parsed resolution of the primary (largest) file. Absent when the
 	// filename does not name one.
 	Resolution *string `json:"resolution,omitempty"`
