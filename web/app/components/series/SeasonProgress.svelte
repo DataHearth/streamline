@@ -47,14 +47,14 @@
 	);
 	let visible = $derived(segments.filter((s) => s.count > 0));
 	let summary = $derived(
-		visible.map((s) => `${s.count} ${s.label}`).join(", ") || "no episodes",
+		visible.map((s) => `${s.count} ${s.label}`).join(", ") || i18n.series_no_episodes(),
 	);
 </script>
 
 <div
 	class="flex h-1 w-full overflow-hidden rounded-full bg-white/[0.06]"
 	role="img"
-	aria-label="Season progress: {summary}"
+	aria-label={i18n.series_season_progress({ summary })}
 >
 	{#each visible as s (s.key)}
 		<span

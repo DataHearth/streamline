@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Bookmark, Tv } from "@lucide/svelte";
@@ -190,7 +191,7 @@
 						>
 						{#if (show.wanted_episodes ?? 0) > 0}
 							<span class="ml-1.5 text-status-wanted"
-								>· {show.wanted_episodes} wanted</span
+								>· {countWanted(show.wanted_episodes ?? 0)}</span
 							>
 						{/if}
 						{#if (show.downloading_episodes ?? 0) > 0}

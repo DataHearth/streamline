@@ -32,7 +32,7 @@
 			api<RenamePlan>(`/movies/${movieId}/rename`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok(i18n.movies_files_renamed());
+			toast.ok(i18n.rename_done());
 			onClose();
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.rename_failed())),

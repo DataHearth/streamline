@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { NOUN_SERIES } from "@lib/nouns";
+	import { NOUN_EPISODE, NOUN_SERIES } from "@lib/nouns";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import {
 		Bookmark,
@@ -12,7 +12,7 @@
 	} from "@lucide/svelte";
 	import { api } from "@lib/api";
 	import { toast } from "@lib/toast";
-	import { runBulk, plural } from "@lib/bulk";
+	import { runBulk } from "@lib/bulk";
 	import BulkActionBar from "@components/shared/BulkActionBar.svelte";
 	import BulkTouchBar from "@components/shared/BulkTouchBar.svelte";
 	import type {
@@ -68,21 +68,23 @@
 		enabled: qpOpen,
 	}));
 
+	// done renders the success toast around the counted shows, so each
+	// language orders the sentence itself.
+	type Done = (inputs: { items: string }) => string;
+
 	function report(
-		verb: string,
+		done: Done,
 		res: { ok: number; failed: number; firstError?: string },
 	) {
-		if (res.failed === 0)
-			toast.ok(`${verb} ${plural(res.ok, "series", "series")}`);
-		else if (res.ok === 0)
-			toast.err(res.firstError ?? `Could not ${verb.toLowerCase()} any series`);
-		else toast.err(`${verb} ${res.ok}, ${res.failed} failed`);
+		if (res.failed === 0) toast.ok(done({ items: NOUN_SERIES.count(res.ok) }));
+		else if (res.ok === 0) toast.err(res.firstError ?? i18n.bulk_failed_all());
+		else toast.err(i18n.bulk_partial({ ok: res.ok, failed: res.failed }));
 	}
 
 	// items defaults to the whole selection; rename passes the subset that has
 	// episodes on disk, so the count the toast reports is what was acted on.
 	async function run(
-		verb: string,
+		done: Done,
 		fn: (s: TVShow) => Promise<unknown>,
 		after?: () => void,
 		items: TVShow[] = picked,
@@ -92,7 +94,7 @@
 		try {
 			const res = await runBulk(items, fn);
 			qc.invalidateQueries({ queryKey: ["series"] });
-			report(verb, res);
+			report(done, res);
 			after?.();
 			if (res.failed === 0) onClear();
 		} finally {
@@ -104,17 +106,17 @@
 		api(`/series/${s.id}`, { method: "PATCH", body });
 
 	function setMonitored(v: boolean) {
-		run(v ? i18n.monitor_monitoring() : i18n.monitor_stopped(), (s) =>
+		run(v ? i18n.bulk_monitoring : i18n.bulk_unmonitoring, (s) =>
 			patch(s, { monitored: v }),
 		);
 	}
 	function searchNow() {
-		run("Search dispatched for", (s) =>
+		run(i18n.bulk_search_dispatched, (s) =>
 			api(`/series/${s.id}/search`, { method: "POST" }),
 		);
 	}
 	function refresh() {
-		run("Refresh requested for", (s) =>
+		run(i18n.bulk_refresh_requested, (s) =>
 			api(`/series/${s.id}/refresh-metadata`, { method: "POST" }),
 		);
 	}
@@ -123,20 +125,20 @@
 	// holds. The single-show kebab keeps its preview for when the moves matter.
 	function renameFiles() {
 		run(
-			"Renamed",
+			i18n.bulk_renamed,
 			(s) => api(`/series/${s.id}/rename`, { method: "POST" }),
 			() => (renameOpen = false),
 			renamable,
 		);
 	}
 	function saveProfile(profile: string) {
-		run("Reprofiled", (s) => patch(s, { quality_profile: profile }), () => {
+		run(i18n.bulk_reprofiled, (s) => patch(s, { quality_profile: profile }), () => {
 			qpOpen = false;
 		});
 	}
 	function remove(withFiles: boolean) {
 		run(
-			"Deleted",
+			i18n.bulk_deleted,
 			(s) => api(`/series/${s.id}?delete_files=${withFiles}`, { method: "DELETE" }),
 			() => {
 				qc.invalidateQueries({ queryKey: ["series", "counts"] });
@@ -153,7 +155,7 @@
 			disabled: renamable.length === 0,
 			title:
 				renamable.length === 0
-					? "Available once an episode has been imported"
+					? i18n.series_available_after_import()
 					: undefined,
 			onSelect: () => (renameOpen = true),
 		},
@@ -191,7 +193,7 @@
 			key: "monitor",
 			label: i18n.action_monitor(),
 			icon: Bookmark,
-			line: `${monitoredPicked} of ${count} already monitored`,
+			line: i18n.bulk_already_monitored({ done: monitoredPicked, total: count }),
 			onSelect: () => setMonitored(true),
 		},
 		{
@@ -205,8 +207,10 @@
 			label: i18n.action_search_wanted_episodes(),
 			icon: Radar,
 			line: wantedCount
-				? `${plural(wantedCount, "episode")} wanted`
-				: "nothing wanted right now",
+				? (wantedCount === 1
+						? i18n.nav_count_episodes_wanted_one
+						: i18n.nav_count_episodes_wanted_other)({ count: wantedCount.toLocaleString() })
+				: i18n.bulk_nothing_wanted(),
 			onSelect: searchNow,
 		},
 		{
@@ -222,8 +226,8 @@
 			disabled: renamable.length === 0,
 			line:
 				renamable.length === 0
-					? "no episodes on disk"
-					: `${plural(renamable.length, "series", "series")} with episodes on disk`,
+					? i18n.bulk_no_episodes()
+					: i18n.bulk_with_episodes({ items: NOUN_SERIES.count(renamable.length) }),
 			onSelect: () => (renameOpen = true),
 		},
 		{
@@ -240,8 +244,8 @@
 			dividerBefore: true,
 			line:
 				episodeCount === 0
-					? "no episodes on disk"
-					: `${plural(episodeCount, "episode")} on disk`,
+					? i18n.bulk_no_episodes()
+					: i18n.bulk_on_disk({ items: NOUN_EPISODE.count(episodeCount) }),
 			onSelect: () => (deleteOpen = true),
 		},
 	]);
@@ -310,8 +314,8 @@
 />
 <Dialog
 	open={renameOpen}
-	title="Rename files for {plural(renamable.length, 'series', 'series')}?"
-	body="Every episode on disk is moved to match your naming template. Files already sitting at their target name are left alone."
+	title={i18n.bulk_rename_title({ items: NOUN_SERIES.count(renamable.length) })}
+	body={i18n.bulk_rename_series_body()}
 	onClose={() => (renameOpen = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
@@ -326,10 +330,10 @@
 />
 <DeleteTitleDialog
 	open={deleteOpen}
-	title="Remove {count} series from your library?"
-	body="The series leave your library. Files on disk are kept unless you say otherwise."
-	filesLabel="Also delete {plural(episodeCount, 'episode')} from disk"
-	filesNote="This cannot be undone."
+	title={i18n.bulk_remove_title({ items: NOUN_SERIES.count(count) })}
+	body={i18n.bulk_remove_series_body()}
+	filesLabel={i18n.bulk_delete_files_label({ items: NOUN_EPISODE.count(episodeCount) })}
+	filesNote={i18n.common_cannot_undo()}
 	canDeleteFiles={episodeCount > 0}
 	pending={busy}
 	onClose={() => (deleteOpen = false)}

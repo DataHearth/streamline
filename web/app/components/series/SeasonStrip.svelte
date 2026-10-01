@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { countFuture, countMissing, countWanted } from "@lib/nouns";
 	import { cn } from "@lib/cn";
 	import { missingEpisodes } from "@lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
@@ -55,13 +56,13 @@
 			<div class="font-mono text-[11px] text-fg-muted">
 				<span class="text-fg">{s.available ?? 0}</span>/{s.total ?? 0}
 				{#if (s.missing ?? 0) > 0}
-					<span class="text-status-wanted">· {s.missing} wanted</span>
+					<span class="text-status-wanted">· {countWanted(s.missing ?? 0)}</span>
 				{/if}
 				{#if missing > 0}
-					<span class="text-status-missing">· {missing} missing</span>
+					<span class="text-status-missing">· {countMissing(missing)}</span>
 				{/if}
 				{#if (s.unaired ?? 0) > 0}
-					<span class="text-fg-faint">· {s.unaired} future</span>
+					<span class="text-fg-faint">· {countFuture(s.unaired ?? 0)}</span>
 				{/if}
 			</div>
 			<SeasonProgress season={s} {showMonitored} />

@@ -37,3 +37,13 @@ export const NOUN_EPISODE: Noun = {
 	count: counted(i18n.noun_episode_one, i18n.noun_episode_other),
 	items: i18n.noun_episode_items(),
 };
+
+// Status tallies for the season and show lines ("3 wanted · 1 missing").
+export const countWanted = counted(i18n.count_wanted_one, i18n.count_wanted_other);
+export const countMissing = counted(i18n.count_missing_one, i18n.count_missing_other);
+export const countUnaired = counted(i18n.count_unaired_one, i18n.count_unaired_other);
+export const countFuture = counted(i18n.count_future_one, i18n.count_future_other);
+export const countAvailable = counted(
+	i18n.count_available_one,
+	i18n.count_available_other,
+);

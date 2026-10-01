@@ -250,7 +250,10 @@
 		if (searchQuery.isError) return errorText(searchQuery.error, i18n.common_search_failed());
 		if (results.length === 0) return i18n.lookup_no_results_for({ query: debounced });
 		const n = results.length;
-		return `${n} result${n === 1 ? "" : "s"} for "${debounced}"`;
+		return (n === 1 ? i18n.lookup_results_for_one : i18n.lookup_results_for_other)({
+			count: n,
+			query: debounced,
+		});
 	});
 
 	function selectResult(r: SeriesLookupResult, revealPanel = false) {
@@ -352,8 +355,9 @@
 
 			{#if debounced.length >= 2 && !searchQuery.isLoading && !searchQuery.isError && results.length > 0}
 				<p class="px-1 text-[11px] text-fg-faint">
-					{results.length}
-					{results.length === 1 ? "match" : "matches"} for &ldquo;{debounced}&rdquo;
+					{(results.length === 1
+						? i18n.lookup_matches_for_one
+						: i18n.lookup_matches_for_other)({ count: results.length, query: debounced })}
 				</p>
 			{/if}
 
@@ -400,7 +404,7 @@
 					<Tv class="mb-3 h-8 w-8 text-fg-faint" aria-hidden="true" />
 					<p class="text-sm font-medium text-fg-muted">{i18n.common_no_matches()}</p>
 					<p class="mt-1 text-xs text-fg-faint">
-						Nothing on TVDB for &ldquo;{debounced}&rdquo;.
+						{i18n.lookup_nothing_on_tvdb({ query: debounced })}
 					</p>
 				</div>
 			{:else}
