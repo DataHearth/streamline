@@ -75,7 +75,7 @@
 	function segmentLabel(segment: string): string {
 		// Every dynamic route under these sections keys off a numeric id, which
 		// carries no name until its record loads.
-		if (/^\d+$/.test(segment)) return "Details";
+		if (/^\d+$/.test(segment)) return i18n.common_details();
 		const known = SEGMENT_LABELS[segment];
 		if (known) return known;
 		return segment

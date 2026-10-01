@@ -276,10 +276,11 @@
 	let metaLine = $derived.by(() => {
 		const parts = [
 			filtering
-				? `${matchedTotal} of ${counts.total} titles`
-				: `${counts.total} titles`,
+				? i18n.movies_count_of({ visible: matchedTotal, total: counts.total })
+				: i18n.movies_count({ count: counts.total }),
 		];
-		if (lastScan) parts.push(`scan ${formatRelative(lastScan)}`);
+		if (lastScan)
+			parts.push(i18n.movies_scan_meta({ when: formatRelative(lastScan) }));
 		return parts.join(" · ");
 	});
 

@@ -137,7 +137,10 @@
 					<span>{section.label}</span>
 					{#if section.id === "titles" && model.searchable !== null}
 						<span class="text-[10px] normal-case tracking-[0.04em]">
-							{model.titleHits} of {model.searchable.toLocaleString()}
+							{i18n.search_hits_of({
+								hits: model.titleHits,
+								total: model.searchable.toLocaleString(),
+							})}
 						</span>
 					{/if}
 				</div>
@@ -150,7 +153,7 @@
 				<div class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
 					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
 					<p class="text-[13.5px] text-fg-subtle">
-						No matches for “{query.trim()}”
+						{i18n.search_no_matches_for({ query: query.trim() })}
 					</p>
 				</div>
 			{/if}

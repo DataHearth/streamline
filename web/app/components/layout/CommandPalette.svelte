@@ -311,7 +311,7 @@
 
 				{#if flat.length === 0}
 					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						No matches for "{query}"
+						{i18n.search_no_matches_for({ query: query.trim() })}
 					</div>
 				{/if}
 			</div>
