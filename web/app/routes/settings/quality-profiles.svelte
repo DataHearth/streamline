@@ -61,7 +61,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["quality-profiles"] });
-			toast.ok("Profile deleted");
+			toast.ok(i18n.qp_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -221,13 +221,13 @@
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										upgrades on
+										{i18n.qp_upgrades_on()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 									>
-										locked
+										{i18n.qp_locked()}
 									</span>
 								{/if}
 							</div>
@@ -338,8 +338,8 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete quality profile '{deleting?.name ?? ''}'?"
-	body="Movies using it will fall back to the default profile."
+	title={i18n.qp_delete_title({ name: deleting?.name ?? "" })}
+	body={i18n.qp_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

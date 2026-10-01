@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		QualityProfileFormatScore,
 		Resolution,
@@ -77,7 +78,7 @@
 	// Codec values are ffprobe's, matching lib/media-info VIDEO_CODECS.
 	export const PROFILE_PRESETS = [
 		{
-			label: "Quality first",
+			label: i18n.qp_preset_quality_first(),
 			preferred_resolution: "2160p",
 			min_resolution: "1080p",
 			allowed_codecs: [],
@@ -89,7 +90,7 @@
 			upgrade_until_score: 300,
 		},
 		{
-			label: "Space saver",
+			label: i18n.qp_preset_space_saver(),
 			preferred_resolution: "1080p",
 			min_resolution: "720p",
 			allowed_codecs: ["hevc", "av1"],
@@ -102,7 +103,7 @@
 			upgrade_until_score: 100,
 		},
 		{
-			label: "x265 only",
+			label: i18n.qp_preset_x265_only(),
 			preferred_resolution: "1080p",
 			min_resolution: "720p",
 			allowed_codecs: ["hevc"],
@@ -130,7 +131,6 @@
 	import { VIDEO_CODECS } from "@lib/media-info";
 	import type { CustomFormat } from "@lib/types";
 	import type { AppForm } from "@lib/form";
-	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { INPUT_CLASS } from "@lib/form";
 
 	type Props = {

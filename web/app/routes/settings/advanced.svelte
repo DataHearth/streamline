@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import {
 		createQuery,
 		createMutation,
@@ -27,6 +28,15 @@
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Whole sentences with their code paths and counts marked up in place.
+	const fillInTo = parts(i18n.migration_fill_in_to, ["to"]);
+	const fromNeededBody = parts(i18n.migration_from_needed, ["root"]);
+	const fromLockedBody = parts(i18n.migration_from_locked, ["from"]);
+	const previewOne = parts(i18n.migration_preview_one, ["count", "from"]);
+	const previewOther = parts(i18n.migration_preview_other, ["count", "from"]);
+	const confirmOne = parts(i18n.migration_confirm_body_one, ["count", "from", "to"]);
+	const confirmOther = parts(i18n.migration_confirm_body_other, ["count", "from", "to"]);
 
 	// Saves per control rather than through one form, so nothing else
 	// establishes the config-form context the field primitives read. Without
@@ -156,7 +166,11 @@
 			confirmOpen = false;
 			preview = null;
 			status.refetch();
-			toast.ok(`Migrating ${data.total} path${data.total === 1 ? "" : "s"}`);
+			toast.ok(
+				(data.total === 1 ? i18n.migration_started_one : i18n.migration_started_other)({
+					count: data.total,
+				}),
+			);
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -213,9 +227,9 @@
 			</div>
 			<label class="min-w-0 flex-1">
 				<span class="mb-1 block text-sm font-medium text-fg">
-					From
+					{i18n.common_from()}
 					{#if fromNeeded}
-						<span class="font-normal text-status-wanted">(required)</span>
+						<span class="font-normal text-status-wanted">{i18n.common_required_paren()}</span>
 					{/if}
 				</span>
 				<input
@@ -239,7 +253,7 @@
 				aria-hidden="true"
 			/>
 			<label class="min-w-0 flex-1">
-				<span class="mb-1 block text-sm font-medium text-fg">To</span>
+				<span class="mb-1 block text-sm font-medium text-fg">{i18n.common_to()}</span>
 				<input
 					type="text"
 					bind:value={to}
@@ -255,7 +269,9 @@
 		</div>
 		<div class="mt-3">
 			<span class="mb-1 block text-sm font-medium text-fg">
-				Resulting {ROOTS.find((r) => r.value === root)?.label.toLowerCase()} root
+				{i18n.migration_resulting_root({
+					label: ROOTS.find((r) => r.value === root)?.label ?? root,
+				})}
 			</span>
 			<output
 				class="flex w-full cursor-default flex-col gap-1 overflow-hidden rounded-md border border-dashed border-border bg-surface/40 px-3 py-2 font-mono text-sm sm:h-[38px] sm:flex-row sm:items-center sm:gap-2 sm:py-0"
@@ -274,12 +290,13 @@
 					>
 					{#if rootUnchanged}
 						<span class="shrink-0 font-sans text-xs text-fg-faint">
-							unchanged
+							{i18n.migration_unchanged()}
 						</span>
 					{/if}
 				{:else}
 					<span class="font-sans text-fg-faint">
-						{i18n.migration_fill_in()} <em class="not-italic">To</em> to see where the root lands
+						{#each fillInTo as p}{#if p.slot === "to"}<em class="not-italic">{i18n.common_to()}</em
+							>{:else}{p.text}{/if}{/each}
 					</span>
 				{/if}
 			</output>
@@ -289,23 +306,18 @@
 			<Info size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
 			<span>
 				{#if fromNeeded}
-					Nothing is stored under <code class="font-mono text-fg-subtle">
-						{configuredRoot}
-					</code>, so this instance no longer knows where your files used to
-					live — name that old location yourself. This is the normal state
-					once you have re-pointed the root in the config, as on a read-only
-					instance.
+					{#each fromNeededBody as p}{#if p.slot === "root"}<code class="font-mono text-fg-subtle"
+								>{configuredRoot}</code
+							>{:else}{p.text}{/if}{/each}
 				{:else if rootEmpty}
-					Nothing is stored for this root yet, so there is nothing to migrate.
+					{i18n.migration_root_empty()}
 				{:else}
-					<em class="not-italic text-fg-subtle">{i18n.common_from()}</em> is the configured
-					root, which is where your files are stored right now, so there is
-					nothing to choose. It unlocks only if the config stops matching the
-					database.
+					{#each fromLockedBody as p}{#if p.slot === "from"}<em class="not-italic text-fg-subtle"
+								>{i18n.common_from()}</em
+							>{:else}{p.text}{/if}{/each}
 				{/if}
 				{#if rootUnchanged}
-					The root sits outside the prefix being migrated, so it stays put and
-					only the matching paths move.
+					{i18n.migration_root_outside()}
 				{/if}
 			</span>
 		</p>
@@ -364,11 +376,12 @@
 		{#if preview}
 			<div class="mt-4 rounded-md border border-border bg-bg p-3">
 				<p class="flex flex-wrap items-center gap-1.5 text-sm text-fg">
-					<span class="font-semibold">{preview.total}</span>
-					path{preview.total === 1 ? "" : "s"} under
-					<code class="break-all rounded bg-surface px-1 py-0.5 font-mono text-xs">
-						{preview.from}
-					</code>
+					{#each preview.total === 1 ? previewOne : previewOther as p}{#if p.slot === "count"}<span
+								class="font-semibold">{preview.total}</span
+							>{:else if p.slot === "from"}<code
+								class="break-all rounded bg-surface px-1 py-0.5 font-mono text-xs"
+								>{preview.from}</code
+							>{:else}{p.text}{/if}{/each}
 					<ArrowRight size={13} class="text-fg-faint" aria-hidden="true" />
 					<code class="break-all rounded bg-surface px-1 py-0.5 font-mono text-xs">
 						{preview.to}
@@ -387,9 +400,9 @@
 							class="mt-0.5 shrink-0"
 							aria-hidden="true"
 						/>
-						{preview.skipped} of them {preview.skipped === 1 ? "is" : "are"} not
-						on disk where this migration expects
-						{preview.skipped === 1 ? "it" : "them"}, and will be left untouched.
+						{(preview.skipped === 1
+							? i18n.migration_skipped_one
+							: i18n.migration_skipped_other)({ count: preview.skipped })}
 					</p>
 				{/if}
 
@@ -417,7 +430,7 @@
 					</ul>
 					{#if preview.total > preview.samples.length}
 						<p class="mt-1.5 text-[11px] text-fg-faint">
-							and {preview.total - preview.samples.length} more
+							{i18n.common_and_n_more({ count: preview.total - preview.samples.length })}
 						</p>
 					{/if}
 				{/if}
@@ -438,21 +451,23 @@
 								class="animate-spin text-fg-muted"
 								aria-hidden="true"
 							/>
-							Migrating {s.root}
+							{i18n.migration_running({
+								root: ROOTS.find((r) => r.value === s.root)?.label ?? s.root,
+							})}
 						{:else if s.error}
 							<TriangleAlert
 								size={13}
 								class="text-status-failed"
 								aria-hidden="true"
 							/>
-							Migration failed
+							{i18n.migration_failed()}
 						{:else}
 							<Check
 								size={13}
 								class="text-status-available"
 								aria-hidden="true"
 							/>
-							Migration finished
+							{i18n.migration_finished()}
 						{/if}
 					</p>
 					<span class="font-mono text-xs text-fg-subtle">
@@ -484,9 +499,9 @@
 				{/if}
 				{#if !live}
 					<p class="mt-2 text-xs text-fg-muted">
-						{s.done} re-pointed{s.skipped > 0
-							? `, ${s.skipped} left untouched`
-							: ""}.
+						{s.skipped > 0
+							? i18n.migration_result_skipped({ done: s.done, skipped: s.skipped })
+							: i18n.migration_result({ done: s.done })}
 					</p>
 				{/if}
 				{#if s.error}
@@ -514,17 +529,13 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{preview?.total ?? 0} stored path{preview?.total === 1 ? "" : "s"} will be rewritten
-		from
-		<code class="rounded bg-surface px-1 py-0.5 font-mono text-xs">
-			{preview?.from}
-		</code>
-		to
-		<code class="rounded bg-surface px-1 py-0.5 font-mono text-xs">
-			{preview?.to}
-		</code>.
+		{#each preview?.total === 1 ? confirmOne : confirmOther as p}{#if p.slot === "count"}{preview?.total ?? 0}{:else if p.slot === "from"}<code
+					class="rounded bg-surface px-1 py-0.5 font-mono text-xs">{preview?.from}</code
+				>{:else if p.slot === "to"}<code class="rounded bg-surface px-1 py-0.5 font-mono text-xs"
+					>{preview?.to}</code
+				>{:else}{p.text}{/if}{/each}
 		{#if moveFiles}
-			The files themselves will be moved.
+			{i18n.migration_files_moved()}
 		{/if}
 	</p>
 	<p class="mt-2 text-sm text-fg-muted">

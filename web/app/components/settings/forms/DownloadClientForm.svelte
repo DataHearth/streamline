@@ -81,7 +81,7 @@
 				name={field.name}
 				value={field.state.value}
 				locked={isEdit}
-				lockedHint="Type can't be changed once selected."
+				lockedHint={i18n.form_type_locked()}
 				options={TYPES.map((t) => ({ value: t.type, label: t.label }))}
 				onChange={(v) => {
 					field.handleChange(v);

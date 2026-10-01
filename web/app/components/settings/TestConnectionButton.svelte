@@ -32,7 +32,7 @@
 
 	let {
 		endpoint,
-		label = "Test connection",
+		label = i18n.common_test_connection(),
 		size = "sm",
 		variant = "inline",
 		trailing,

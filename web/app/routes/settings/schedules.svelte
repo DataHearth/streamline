@@ -94,7 +94,7 @@
 					),
 				}),
 			);
-			toast.ok("Schedule updated");
+			toast.ok(i18n.schedule_updated());
 			modalOpen = false;
 			editing = null;
 		},

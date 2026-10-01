@@ -185,7 +185,7 @@
 				name={field.name}
 				value={field.state.value}
 				locked={isEdit}
-				lockedHint="Type can't be changed once selected."
+				lockedHint={i18n.form_type_locked()}
 				options={TYPES.map((t) => ({ value: t.type, label: t.label }))}
 				onChange={(v) => {
 					field.handleChange(v);
@@ -278,11 +278,11 @@
 					>
 						<Search size={13} aria-hidden="true" />
 						{#if discover.isPending}
-							Discovering sections…
+							{i18n.plex_discovering()}
 						{:else if sections.length > 0}
-							Re-discover sections
+							{i18n.plex_rediscover()}
 						{:else}
-							Discover sections
+							{i18n.plex_discover()}
 						{/if}
 					</button>
 					{#if lock() && sections.length > 0}

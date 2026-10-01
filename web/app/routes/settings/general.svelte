@@ -700,7 +700,7 @@
 					></div>
 				</div>
 				<div class="mt-1.5 text-[11px] text-fg-subtle">
-					{usage.free} free of {usage.total}{#if meta} · {meta}{/if}
+					{i18n.disk_free_of({ free: usage.free, total: usage.total })}{#if meta} · {meta}{/if}
 				</div>
 			{:else if meta}
 				<div class="mt-1 text-[11px] text-fg-subtle">{meta}</div>

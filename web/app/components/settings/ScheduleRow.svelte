@@ -147,7 +147,7 @@
 					title={i18n.settings_managed_by_streamline()}
 				>
 					<Lock size={12} aria-hidden="true" />
-					system
+					{i18n.schedule_system()}
 				</span>
 			{:else}
 				<button

@@ -104,7 +104,7 @@
 {#snippet presetChip(p: Preset, aggregator: boolean)}
 	<button
 		type="button"
-		title="Prefill from {p.label}"
+		title={i18n.indexer_prefill_from({ label: p.label })}
 		disabled={lock()}
 		onclick={() => applyPreset(p)}
 		class={cn(
@@ -145,7 +145,7 @@
 						>{i18n.indexer_aggregators()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"
-						>query every indexer at once</span
+						>{i18n.indexer_hint_prowlarr()}</span
 					>
 				</div>
 				<div class="flex flex-wrap gap-2">
@@ -162,7 +162,7 @@
 						>{i18n.indexer_single_feed()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"
-						>one tracker per entry</span
+						>{i18n.indexer_hint_torznab()}</span
 					>
 				</div>
 				<div class="flex flex-wrap gap-2">

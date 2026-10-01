@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import { Check, Copy, TriangleAlert } from "@lucide/svelte";
 	import { toast } from "@lib/toast";
 	import Modal from "@components/modals/Modal.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	const editHost = parts(i18n.plex_edit_host, ["host"]);
 
 	type Props = {
 		open: boolean;
@@ -34,12 +37,12 @@
 		try {
 			await navigator.clipboard.writeText(value);
 			copied = label;
-			toast.ok("Copied");
+			toast.ok(i18n.common_copied());
 			setTimeout(() => {
 				if (copied === label) copied = "";
 			}, 1500);
 		} catch {
-			toast.err("Clipboard unavailable");
+			toast.err(i18n.common_clipboard_unavailable());
 		}
 	}
 
@@ -70,7 +73,7 @@
 					<button
 						type="button"
 						onclick={() => copy(f.value, f.label)}
-						aria-label="Copy {f.label}"
+						aria-label={i18n.common_copy_label({ label: f.label })}
 						class="inline-flex shrink-0 items-center rounded-md border border-border p-2 text-fg-muted transition hover:bg-surface hover:text-fg"
 					>
 						{#if copied === f.label}
@@ -100,17 +103,17 @@
 					>
 						{#if copied === "yaml"}
 							<Check size={12} class="text-status-available" aria-hidden="true" />
-							Copied
+							{i18n.common_copied()}
 						{:else}
 							<Copy size={12} aria-hidden="true" />
-							Copy YAML
+							{i18n.plex_copy_yaml()}
 						{/if}
 					</button>
 				</div>
 				<pre
 					class="overflow-x-auto rounded-md border border-border bg-bg-base p-3 font-mono text-[11px] leading-relaxed text-fg">{snippet}</pre>
 				<p class="mt-1 text-[11px] text-fg-muted">
-					{i18n.common_edit()} <code class="font-mono">host</code> to your Plex address, then commit and redeploy.
+					{#each editHost as p}{#if p.slot === "host"}<code class="font-mono">host</code>{:else}{p.text}{/if}{/each}
 				</p>
 			</div>
 		{/if}

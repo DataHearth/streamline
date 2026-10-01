@@ -108,7 +108,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["download-clients"] });
-			toast.ok("Client deleted");
+			toast.ok(i18n.dlclient_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -197,7 +197,7 @@
 			},
 			onSuccess: () => {
 				qc.invalidateQueries({ queryKey: ["download-clients"] });
-				toast.ok("Built-in client saved — changes apply after restart");
+				toast.ok(i18n.builtin_saved_restart());
 				builtinModalOpen = false;
 			},
 			onError: (err) => toast.err(errorText(err)),
@@ -209,7 +209,7 @@
 			api<null>("/download-clients/builtin", { method: "DELETE" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["download-clients"] });
-			toast.ok("Built-in client removed");
+			toast.ok(i18n.builtin_removed());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -247,12 +247,16 @@
 
 	let builtinSubtitle = $derived.by(() => {
 		if (!builtinCfg) return "";
-		const port = builtinCfg.port_bound || builtinCfg.listen_port || "auto";
+		const port = builtinCfg.port_bound || builtinCfg.listen_port || i18n.lc_auto();
 		const iface = builtinCfg.interface_bound || builtinCfg.bind_interface;
-		const net = iface ? `${iface} · port ${port}` : `port ${port}`;
+		const net = iface
+			? i18n.builtin_net_iface({ iface, port })
+			: i18n.builtin_net_port({ port });
 		const ratio = builtinCfg.seed_ratio ?? 0;
 		const seed =
-			ratio > 0 ? `seed to ratio ${ratio.toFixed(1)}` : "unlimited seeding";
+			ratio > 0
+				? i18n.builtin_seed_ratio_to({ ratio: ratio.toFixed(1) })
+				: i18n.builtin_seed_unlimited();
 		return i18n.dlclient_builtin_summary({ net, seed });
 	});
 </script>
@@ -289,7 +293,7 @@
 					type="button"
 					onclick={openBuiltinEdit}
 					class="flex items-start gap-3 text-left"
-					aria-label="{config.readOnly ? 'View' : 'Edit'} built-in client"
+					aria-label={config.readOnly ? i18n.builtin_view() : i18n.builtin_edit()}
 				>
 					<div
 						class="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent"
@@ -305,13 +309,13 @@
 								<span
 									class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 								>
-									enabled
+									{i18n.lc_enabled()}
 								</span>
 							{:else}
 								<span
 									class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 								>
-									disabled
+									{i18n.lc_disabled()}
 								</span>
 							{/if}
 							{#if builtinCfg.running}
@@ -321,13 +325,13 @@
 									<span
 										class="h-1.5 w-1.5 rounded-full bg-status-seeding motion-safe:animate-pulse"
 									></span>
-									running
+									{i18n.lc_running()}
 								</span>
 							{:else}
 								<span
 									class="inline-flex items-center rounded-full bg-status-paused/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-paused"
 								>
-									stopped
+									{i18n.lc_stopped()}
 								</span>
 							{/if}
 						</div>
@@ -344,9 +348,14 @@
 				>
 					<span class="text-xs text-fg-subtle">
 						{#if builtinCfg.running}
-							Engine running · port {builtinCfg.port_bound} bound{#if builtinCfg.interface_bound} · via {builtinCfg.interface_bound}{/if}
+							{builtinCfg.interface_bound
+								? i18n.builtin_engine_running_via({
+										port: builtinCfg.port_bound ?? "",
+										iface: builtinCfg.interface_bound,
+									})
+								: i18n.builtin_engine_running({ port: builtinCfg.port_bound ?? "" })}
 						{:else}
-							Engine stopped
+							{i18n.builtin_engine_stopped()}
 						{/if}
 					</span>
 					<div class="flex items-center gap-1">
@@ -455,26 +464,26 @@
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										enabled
+										{i18n.lc_enabled()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 									>
-										disabled
+										{i18n.lc_disabled()}
 									</span>
 								{/if}
 								{#if (c.auth_method === "api_key" ? c.api_key_set : c.password_set)}
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										credentials set
+										{i18n.creds_set()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 									>
-										credentials missing
+										{i18n.creds_missing()}
 									</span>
 								{/if}
 							</div>
@@ -622,8 +631,8 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete download client '{deleting?.name ?? ''}'?"
-	body="Grabs will no longer be sent to this client."
+	title={i18n.dlclient_delete_title({ name: deleting?.name ?? "" })}
+	body={i18n.dlclient_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
@@ -638,7 +647,7 @@
 <Dialog
 	open={deletingBuiltin}
 	title={i18n.builtin_remove_confirm()}
-	body="The engine stops managing torrents and won't start on next restart. Downloaded files on disk are left in place."
+	body={i18n.builtin_remove_body()}
 	onClose={() => (deletingBuiltin = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

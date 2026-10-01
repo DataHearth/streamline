@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { parts } from "@lib/message-parts";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -19,6 +20,8 @@
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
+	const noneHelp = parts(i18n.oidc_none_help, ["action"]);
+
 	const qc = useQueryClient();
 
 	const list = createQuery<OIDCProviderList>(() => ({
@@ -34,7 +37,7 @@
 				api<OIDCProvider>("/config/oidc", { method: "POST", body }),
 			onSuccess: () => {
 				qc.invalidateQueries({ queryKey: ["config", "oidc"] });
-				toast.ok("Provider added — restart required to apply");
+				toast.ok(i18n.oidc_added_restart());
 				modalOpen = false;
 				form.reset();
 			},
@@ -49,7 +52,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["config", "oidc"] });
-			toast.ok("Provider deleted");
+			toast.ok(i18n.oidc_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -128,8 +131,9 @@
 				/>
 				<p class="mt-3 text-sm text-fg">{i18n.oidc_none()}</p>
 				<p class="mt-1 text-xs text-fg-muted">
-					Click <span class="font-medium text-fg-muted">{i18n.oidc_add_provider()}</span>
-					to federate with an external IdP.
+					{#each noneHelp as p}{#if p.slot === "action"}<span class="font-medium text-fg-muted"
+								>{i18n.oidc_add_provider()}</span
+							>{:else}{p.text}{/if}{/each}
 				</p>
 			</div>
 		{:else}
@@ -152,13 +156,13 @@
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										configured
+										{i18n.lc_configured()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 									>
-										secret missing
+										{i18n.oidc_secret_missing()}
 									</span>
 								{/if}
 							</div>
@@ -214,8 +218,8 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete OIDC provider '{deleting?.name ?? ''}'?"
-	body="Users will no longer be able to sign in through this provider."
+	title={i18n.oidc_delete_title({ name: deleting?.name ?? "" })}
+	body={i18n.oidc_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },

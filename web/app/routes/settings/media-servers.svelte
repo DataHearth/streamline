@@ -85,7 +85,7 @@
 			}),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["media-servers"] });
-			toast.ok("Server deleted");
+			toast.ok(i18n.mediaserver_deleted());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -201,26 +201,26 @@
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										enabled
+										{i18n.lc_enabled()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 									>
-										disabled
+										{i18n.lc_disabled()}
 									</span>
 								{/if}
 								{#if s.api_key_set}
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
-										api key set
+										{i18n.apikey_set()}
 									</span>
 								{:else}
 									<span
 										class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
 									>
-										api key missing
+										{i18n.apikey_missing()}
 									</span>
 								{/if}
 							</div>
@@ -338,8 +338,8 @@
 
 <Dialog
 	open={deleting !== null}
-	title="Delete media server '{deleting?.name ?? ''}'?"
-	body="Streamline will stop notifying this server about library changes."
+	title={i18n.mediaserver_delete_title({ name: deleting?.name ?? "" })}
+	body={i18n.mediaserver_delete_body()}
 	onClose={() => (deleting = null)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
