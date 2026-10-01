@@ -219,7 +219,6 @@
 		<SelectionTopBar
 			count={selectedCount}
 			total={visibleCount}
-			noun="title"
 			onClear={() => onSelectModeChange(false)}
 			{onSelectAll}
 		/>
@@ -316,7 +315,6 @@
 <MediaFilterSheet
 	open={sheetOpen}
 	onClose={() => (sheetOpen = false)}
-	noun="titles"
 	{query}
 	{onQueryChange}
 	{sortOptions}

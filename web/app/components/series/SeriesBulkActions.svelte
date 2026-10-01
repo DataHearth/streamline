@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { NOUN_SERIES } from "@lib/nouns";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import {
 		Bookmark,
@@ -252,8 +253,7 @@
 		{count}
 		{total}
 		{busy}
-		noun="series"
-		nounPlural="series"
+		noun={NOUN_SERIES}
 		{onSelectAll}
 		{onClear}
 	>
@@ -295,8 +295,7 @@
 	<BulkTouchBar
 		{count}
 		{busy}
-		noun="series"
-		nounPlural="series"
+		noun={NOUN_SERIES}
 		actions={touchActions}
 		menu={touchMenu}
 	/>

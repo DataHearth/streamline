@@ -18,6 +18,7 @@
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 
 	// Everything the library toolbars can no longer afford to keep on screen at
 	// phone width: the filter query, sort, view and the way into
@@ -25,7 +26,7 @@
 	let {
 		open,
 		onClose,
-		noun = "titles",
+		noun = NOUN_TITLE,
 		query,
 		onQueryChange,
 		sortOptions,
@@ -40,7 +41,7 @@
 	}: {
 		open: boolean;
 		onClose: () => void;
-		noun?: string;
+		noun?: Noun;
 		query: string;
 		onQueryChange: (q: string) => void;
 		sortOptions: FilterOption[];
@@ -127,7 +128,7 @@
 						type="search"
 						value={query}
 						oninput={(e) => onQueryChange(e.currentTarget.value)}
-						placeholder="Filter {noun}…"
+						placeholder={i18n.common_filter_items({ items: noun.items })}
 						class="min-w-0 flex-1 bg-transparent text-[15px] text-fg outline-none placeholder:text-fg-faint"
 					/>
 					{#if query}
@@ -211,7 +212,7 @@
 						class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface text-[14px] font-medium text-fg transition active:bg-surface-2"
 					>
 						<ListChecks size={16} aria-hidden="true" />
-						Select {noun}
+						{i18n.a11y_select_all_of({ items: noun.items })}
 					</button>
 				{/if}
 				<button

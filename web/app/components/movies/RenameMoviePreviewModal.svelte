@@ -32,7 +32,7 @@
 			api<RenamePlan>(`/movies/${movieId}/rename`, { method: "POST" }),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok("Files renamed");
+			toast.ok(i18n.movies_files_renamed());
 			onClose();
 		},
 		onError: (e: Error) => toast.err(errorText(e, i18n.rename_failed())),
@@ -54,7 +54,9 @@
 		</p>
 	{:else}
 		<p class="mb-3 text-sm text-fg-muted">
-			{opsCount} file{opsCount === 1 ? "" : "s"} will be moved:
+			{(opsCount === 1 ? i18n.rename_will_move_one : i18n.rename_will_move_other)({
+				count: opsCount,
+			})}
 		</p>
 		<ul class="flex flex-col gap-2">
 			{#each preview.data?.operations ?? [] as op (op.media_file_id)}
@@ -79,7 +81,7 @@
 						<span
 							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-accent-text"
 						>
-							To
+							{i18n.common_to()}
 						</span>
 						<span class="min-w-0 break-all font-mono text-fg" title={op.to}>
 							{op.to}

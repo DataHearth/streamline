@@ -410,7 +410,7 @@
 			class="hidden w-full flex-wrap items-baseline justify-between gap-2 px-4 pt-4 pb-2 font-mono text-[11px] text-fg-subtle md:flex md:px-6"
 		>
 			<div>
-				{visibleMovies.length} of {matchedTotal} titles
+				{i18n.movies_visible_of({ visible: visibleMovies.length, total: matchedTotal })}
 				{#if query}
 					<span
 						class="ml-2 inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-accent-text"
@@ -429,7 +429,7 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if lastScan}
-					<span>last scan {formatRelative(lastScan)}</span>
+					<span>{i18n.movies_last_scan({ when: formatRelative(lastScan) })}</span>
 				{/if}
 			</div>
 		</div>
