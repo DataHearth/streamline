@@ -119,6 +119,12 @@ Either way, the proposal re-resolves on the next monitor tick.
 
 > Before this check existed, an unlocatable torrent was auto-imported anyway, failed three times on a path that never existed, and landed in History as permanently failed.
 
+## A series search request stays pending
+
+`POST /api/v1/series/{id}/search` now returns `202 Accepted` as soon as the per-series search is queued in the running process. The search continues in the background; pressing it again while that series is already being searched does not start a duplicate pass. Episode and download statuses update as releases are found. A search failure is written to the Streamline service log.
+
+`GET /api/v1/transcoding/queue` returning `409` is separate: it means transcoding is disabled, and does not cancel or report the result of a series search.
+
 ---
 
 ## Permission denied on import

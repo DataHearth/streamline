@@ -485,11 +485,7 @@ func (s *Server) SearchSeries(
 			InternalErrorJSONResponse: errInternal(ctx, errTVSearchNotConfigured),
 		}, nil
 	}
-	if err := s.tvSearcher.SearchShow(ctx, request.Id); err != nil {
-		return SearchSeries500JSONResponse{
-			InternalErrorJSONResponse: errInternal(ctx, err),
-		}, nil
-	}
+	s.tvSearcher.StartSearchShow(ctx, request.Id)
 	return SearchSeries202Response{}, nil
 }
 
