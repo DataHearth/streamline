@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	moviesvc "github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -278,7 +279,8 @@ func (s *Server) SearchMovieNow(
 			InternalErrorJSONResponse: errInternal(ctx, errSearchNotConfigured),
 		}, nil
 	}
-	if err := s.missingSearcher.SearchOne(ctx, m); err != nil {
+	if err := s.missingSearcher.SearchOne(ctx, m); err != nil &&
+		!errors.Is(err, rss.ErrNoEligibleRelease) {
 		return SearchMovieNow500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
