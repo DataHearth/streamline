@@ -827,6 +827,22 @@ func (i *indexer) searchAll(
 				params := base
 				params.Query = title
 				res, err := client.Search(queryCtx, params)
+				retriedBareTitle := false
+				if errors.Is(err, ErrBadRequest) && base.narrowed() {
+					// Jackett reports HTTP 400 when a tracker does not support
+					// TMDB/TVDB ID searches. Retry without IDs or episode scope,
+					// as the empty-result path below already does.
+					slog.DebugContext(queryCtx,
+						"indexer rejected narrowed search, retrying on the bare title",
+						"indexer", idx.Name,
+						"title", title,
+					)
+					res, err = client.Search(queryCtx, SearchParams{
+						Query: title,
+						Kind:  base.Kind,
+					})
+					retriedBareTitle = true
+				}
 				if err != nil {
 					indexerQueries.Add(queryCtx, 1, metric.WithAttributes(
 						attribute.String("indexer.name", idx.Name),
@@ -855,7 +871,7 @@ func (i *indexer) searchAll(
 				// empty. This is also the path that saves absolute-numbered
 				// anime, where the show genuinely has no SxxExx release and
 				// the title alone is the only query that can match.
-				if len(res) == 0 && base.narrowed() {
+				if len(res) == 0 && base.narrowed() && !retriedBareTitle {
 					slog.DebugContext(queryCtx,
 						"indexer search empty, retrying on the bare title",
 						"indexer", idx.Name,
