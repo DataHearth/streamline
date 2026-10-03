@@ -108,7 +108,7 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows in **Activity → Needs attention** as a proposal reading `files not found — client reports /some/path`.
 
-**qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
+**This applies to torrents you add by hand.** qBittorrent only moves those to a category's save path under Automatic Torrent Management. A torrent added in Manual mode keeps whatever save path it was added with; setting its category changes the label and nothing else, so Streamline may look under `library.download_path/<torrent name>` and find nothing. Streamline passes that path explicitly when it adds a torrent itself.
 
 The proposal names both paths so you can compare them. Two fixes:
 

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -517,9 +518,18 @@ func buildEpisodeIndex(shows []*ent.TVShow) map[string]*wantedShow {
 	index := make(map[string]*wantedShow, len(shows))
 	for _, show := range shows {
 		w := newWantedShow(show)
-		index[showKey(show.Title)] = w
-		if show.OriginalTitle != "" {
-			index[showKey(show.OriginalTitle)] = w
+		for _, title := range append(
+			[]string{show.Title, show.OriginalTitle}, show.Aliases...,
+		) {
+			key := showKey(title)
+			if key == "" {
+				continue
+			}
+			if existing, ok := index[key]; ok && existing != w {
+				index[key] = nil
+				continue
+			}
+			index[key] = w
 		}
 	}
 	return index
@@ -531,7 +541,6 @@ var (
 	// title — so it is optional, and everything through the first closing
 	// bracket goes. No show title carries one.
 	fansubTagRe = regexp.MustCompile(`^\[?[^\]]*\]\s*`)
-	separatorRe = regexp.MustCompile(`[^a-z0-9]+`)
 )
 
 // showKey normalizes a title to its comparable form: a leading fansub tag
@@ -540,7 +549,20 @@ var (
 // land on the same key.
 func showKey(title string) string {
 	k := fansubTagRe.ReplaceAllString(strings.ToLower(title), "")
-	return strings.TrimSpace(separatorRe.ReplaceAllString(k, " "))
+	var key strings.Builder
+	separator := false
+	for _, r := range k {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			if separator && key.Len() > 0 {
+				key.WriteByte(' ')
+			}
+			key.WriteRune(r)
+			separator = false
+		} else if key.Len() > 0 {
+			separator = true
+		}
+	}
+	return key.String()
 }
 
 // releaseShowKey derives the show key from a parsed release name. library.Parse
