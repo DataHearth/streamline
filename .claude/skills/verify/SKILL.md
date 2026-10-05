@@ -25,12 +25,22 @@ If a hook blocks a bare `go`, call it as `"$(command -v go)"`.
 ## 2. Boot
 
 Shell state does not survive between Bash calls, so run this as one block and
-reuse the printed `S` and `PORT` literally from then on.
+reuse the printed `S`, `PORT`, `TRACKER_HOST` and `TRACKER` literally from then
+on.
+
+The fake tracker must not listen on loopback. Its magnets announce to the
+address it listens on, and the builtin engine refuses a tracker on loopback or
+link-local (`internal/bittorrent/egress.go`), so on `127.0.0.1` every torrent
+sits at "fetching" with no peers and nothing is ever downloaded. Prefer the
+docker bridge, which only this machine can reach; otherwise take the address the
+default route leaves from.
 
 ```sh
 mkdir -p "${TMPDIR:-/tmp}/streamline"; S=$(mktemp -d "${TMPDIR:-/tmp}/streamline/verify.XXXXXX"); mkdir -p "$S"/{data,downloads,movies,series}
 PORT=18080; while curl -s -m1 -o /dev/null "127.0.0.1:$PORT"; do PORT=$((PORT+1)); done
-TRACKER=$((PORT+1)); while curl -s -m1 -o /dev/null "127.0.0.1:$TRACKER"; do TRACKER=$((TRACKER+1)); done
+TRACKER_HOST=$(ip -4 -o addr show docker0 2>/dev/null | awk '{sub("/.*", "", $4); print $4}')
+[ -n "$TRACKER_HOST" ] || TRACKER_HOST=$(ip -4 route get 1.1.1.1 | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i+1)}')
+TRACKER=$((PORT+1)); while curl -s -m1 -o /dev/null "$TRACKER_HOST:$TRACKER"; do TRACKER=$((TRACKER+1)); done
 TMDB=${STREAMLINE_METADATA__TMDB_API_KEY:-$(sed -n 's/^ *tmdb_api_key: *//p' tmp/config.yaml 2>/dev/null | head -1)}
 TVDB=${STREAMLINE_METADATA__TVDB_API_KEY:-$(sed -n 's/^ *tvdb_api_key: *//p' tmp/config.yaml 2>/dev/null | head -1)}
 cat > "$S/config.yaml" <<EOF
@@ -44,9 +54,9 @@ metadata: {tmdb_api_key: "$TMDB", tvdb_api_key: "$TVDB"}
 download_clients:
   - {name: builtin, client_type: builtin, enabled: true, download_dir: $S/downloads}
 indexers:
-  - {name: faketracker, protocol: torznab, host: 127.0.0.1, port: $TRACKER, api_key: fake-key, enabled: true}
+  - {name: faketracker, protocol: torznab, host: $TRACKER_HOST, port: $TRACKER, api_key: fake-key, enabled: true}
 EOF
-task build:app BINARY="$S/streamline" && echo "S=$S PORT=$PORT TRACKER=$TRACKER"
+task build:app BINARY="$S/streamline" && echo "S=$S PORT=$PORT TRACKER_HOST=$TRACKER_HOST TRACKER=$TRACKER"
 ```
 
 Then start it with `run_in_background`. The `env -u` strips every inherited
@@ -80,7 +90,7 @@ curl -s -H "Authorization: Bearer $TOKEN" 127.0.0.1:$PORT/api/v1/...
 |---|---|
 | REST / service logic | `curl` with the Bearer token. The spec is `api/openapi.yaml` |
 | UI (`web/app/**`) | A browser tool if the session has one (Playwright MCP, Chrome); else `go run ./.claude/skills/verify/shot -url http://127.0.0.1:$PORT -out "$S" /movies /settings/indexers` (add `-width 390` for a phone). It screenshots each path and prints console errors, exceptions and failed requests (a 409 from `/transcoding/queue` only means transcoding is off). **Read every PNG** before judging |
-| Grab / download / import | `go run ./e2e/faketracker -listen 127.0.0.1:$TRACKER -data "$S/tracker" -magnets -pack "Reacher:1:8"` in the background. It is the instance's indexer already, and `-magnets` skips the indexer-trust check |
+| Grab / download / import | `go run ./e2e/faketracker -listen $TRACKER_HOST:$TRACKER -data "$S/tracker" -magnets -pack "Reacher:1:8"` in the background. It is the instance's indexer already, and `-magnets` skips the indexer-trust check |
 | Background job | `POST /api/v1/schedules/{name}/run`. `GET /api/v1/schedules` lists the names |
 | DB state | `sqlite3 "$S/data/streamline.db"`, for reading only |
 
