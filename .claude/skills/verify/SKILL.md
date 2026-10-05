@@ -109,6 +109,17 @@ doesn't count as a pass.
 
 ## 5. Tear down and report
 
-`pkill -f "$S/"` (the instance and the faketracker), then `rm -rf "$S"`. Report
-what you drove, the evidence (responses, screenshots read), and anything left
-unverified with the reason.
+Stop the instance and the faketracker, then `rm -rf "$S"`. With
+`S=/tmp/streamline/verify.AbC123`:
+
+```sh
+pkill -f 'verify\.AbC123/(streamline|tracker)'
+```
+
+Write the pattern as a regex, not as `pkill -f "$S/"`: the shell running pkill
+has the literal path in its own command line, so the plain form kills that
+shell too and the step reports exit 144. The escaped dot and the alternation
+match the instance and the tracker, never the text of the pattern itself.
+
+Report what you drove, the evidence (responses, screenshots read), and anything
+left unverified with the reason.
