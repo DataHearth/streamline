@@ -904,18 +904,26 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 }
 
 // DeleteCompletedDownloadRecordsBefore deletes records whose status is
-// completed and whose imported_at is older than cutoff. Returns the number of
-// rows deleted.
+// completed and whose imported_at is older than cutoff, sparing any whose
+// torrent_hash is in keepHashes. Returns the number of rows deleted.
 func (db *DB) DeleteCompletedDownloadRecordsBefore(
 	ctx context.Context,
 	cutoff time.Time,
+	keepHashes []string,
 ) (int, error) {
-	return db.client.DownloadRecord.Delete().
-		Where(
-			downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
-			downloadrecord.ImportedAtLT(cutoff),
-		).
-		Exec(ctx)
+	preds := []predicate.DownloadRecord{
+		downloadrecord.StatusEQ(downloadrecord.StatusCompleted),
+		downloadrecord.ImportedAtLT(cutoff),
+	}
+	if len(keepHashes) > 0 {
+		// torrent_hash is nullable and NULL NOT IN (...) is NULL, so without
+		// the IsNil arm a hashless record would never be purged again.
+		preds = append(preds, downloadrecord.Or(
+			downloadrecord.TorrentHashIsNil(),
+			downloadrecord.TorrentHashNotIn(keepHashes...),
+		))
+	}
+	return db.client.DownloadRecord.Delete().Where(preds...).Exec(ctx)
 }
 
 // DeleteFailedDownloadRecordsBefore deletes records whose status is failed and

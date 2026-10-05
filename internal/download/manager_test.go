@@ -532,10 +532,12 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 	})
 
 	Describe("PurgeOldRecords", func() {
+		BeforeEach(func() { configtest.Setup() })
+
 		It("returns nil when both deletes succeed with zero rows", func() {
 			cleaner := mgr.(Cleaner)
 			store.EXPECT().DeleteCompletedDownloadRecordsBefore(
-				mock.Anything, mock.AnythingOfType("time.Time"),
+				mock.Anything, mock.AnythingOfType("time.Time"), []string(nil),
 			).Return(0, nil).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
 				mock.Anything, mock.AnythingOfType("time.Time"),
@@ -547,8 +549,8 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			cleaner := mgr.(Cleaner)
 			var compCutoff, failCutoff time.Time
 			store.EXPECT().DeleteCompletedDownloadRecordsBefore(
-				mock.Anything, mock.AnythingOfType("time.Time"),
-			).Run(func(_ context.Context, c time.Time) { compCutoff = c }).
+				mock.Anything, mock.AnythingOfType("time.Time"), []string(nil),
+			).Run(func(_ context.Context, c time.Time, _ []string) { compCutoff = c }).
 				Return(2, nil).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
 				mock.Anything, mock.AnythingOfType("time.Time"),
@@ -567,7 +569,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		It("joins errors when both deletes fail", func() {
 			cleaner := mgr.(Cleaner)
 			store.EXPECT().DeleteCompletedDownloadRecordsBefore(
-				mock.Anything, mock.Anything,
+				mock.Anything, mock.Anything, mock.Anything,
 			).Return(0, errors.New("comp")).Once()
 			store.EXPECT().DeleteFailedDownloadRecordsBefore(
 				mock.Anything, mock.Anything,
@@ -1605,13 +1607,14 @@ type seedReapClient struct {
 	stubClient
 
 	torrents []Torrent
+	listErr  error
 	failHash string
 	removed  []string
 	deleted  []bool
 }
 
 func (c *seedReapClient) ListTorrents(context.Context) ([]Torrent, error) {
-	return c.torrents, nil
+	return c.torrents, c.listErr
 }
 
 func (c *seedReapClient) RemoveTorrent(
@@ -1740,6 +1743,59 @@ var _ = Describe(
 
 			Expect(mgr.RemoveSeedCompleteTorrents(ctx)).To(Succeed())
 			Expect(client.removed).To(Equal([]string{"h2"}))
+		})
+	},
+)
+
+var _ = Describe(
+	"PurgeOldRecords with a builtin client",
+	Label("unit", "downloads"),
+	func() {
+		var (
+			ctx    context.Context
+			store  *dbmocks.MockStore
+			client *seedReapClient
+			mgr    Cleaner
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			store = dbmocks.NewMockStore(GinkgoT())
+			client = &seedReapClient{torrents: []Torrent{
+				{Hash: "h1", SeedingStopped: true},
+				{Hash: "h2"},
+			}}
+			configtest.Setup(map[string]any{
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": "/downloads", "enabled": true,
+				}},
+			})
+			mgr = New(store, client).(Cleaner)
+		})
+
+		It("keeps the records of every torrent the engine still holds", func() {
+			store.EXPECT().DeleteCompletedDownloadRecordsBefore(
+				mock.Anything, mock.AnythingOfType("time.Time"),
+				[]string{"h1", "h2"},
+			).Return(0, nil).Once()
+			store.EXPECT().DeleteFailedDownloadRecordsBefore(
+				mock.Anything, mock.AnythingOfType("time.Time"),
+			).Return(0, nil).Once()
+
+			Expect(mgr.PurgeOldRecords(ctx)).To(Succeed())
+		})
+
+		It("skips the completed purge when the engine cannot be listed", func() {
+			client.listErr = errors.New("engine boom")
+			// No completed-delete EXPECT: purging blind would drop the very
+			// records the seed reap needs. The mock fails the spec on a call.
+			store.EXPECT().DeleteFailedDownloadRecordsBefore(
+				mock.Anything, mock.AnythingOfType("time.Time"),
+			).Return(0, nil).Once()
+
+			Expect(mgr.PurgeOldRecords(ctx)).
+				To(MatchError(ContainSubstring("engine boom")))
 		})
 	},
 )

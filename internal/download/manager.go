@@ -1392,14 +1392,23 @@ func (d *download) ReconcileEpisodeStatuses(ctx context.Context) error {
 // PurgeOldRecords deletes completed records past completedRecordRetention and
 // failed records past failedRecordRetention. Both deletes run independently;
 // one failing does not block the other. Errors are joined.
+//
+// A completed record whose torrent the builtin engine still holds is kept
+// however old it is: it is RemoveSeedCompleteTorrents' only permission to
+// reap that torrent, and a seed_time at or past the retention window would
+// otherwise lose the record first and strand the files for good.
 func (d *download) PurgeOldRecords(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "download.purge_old_records")
 	defer span.End()
 
 	now := time.Now()
-	compN, compErr := d.db.DeleteCompletedDownloadRecordsBefore(
-		ctx, now.Add(-completedRecordRetention),
-	)
+	var compN int
+	keep, compErr := d.builtinTorrentHashes(ctx)
+	if compErr == nil {
+		compN, compErr = d.db.DeleteCompletedDownloadRecordsBefore(
+			ctx, now.Add(-completedRecordRetention), keep,
+		)
+	}
 	failN, failErr := d.db.DeleteFailedDownloadRecordsBefore(
 		ctx, now.Add(-failedRecordRetention),
 	)
@@ -1410,6 +1419,26 @@ func (d *download) PurgeOldRecords(ctx context.Context) error {
 			"completed", compN, "failed", failN)
 	}
 	return errors.Join(compErr, failErr)
+}
+
+func (d *download) builtinTorrentHashes(ctx context.Context) ([]string, error) {
+	dc, ok := config.BuiltinDownloadClient()
+	if !ok {
+		return nil, nil
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return nil, fmt.Errorf("build builtin client: %w", err)
+	}
+	torrents, err := client.ListTorrents(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list builtin torrents: %w", err)
+	}
+	hashes := make([]string, len(torrents))
+	for i, t := range torrents {
+		hashes[i] = t.Hash
+	}
+	return hashes, nil
 }
 
 // PurgeOrphanedTorrents deletes "downloading" records whose torrent is no

@@ -988,7 +988,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			createRec("oldf", downloadrecord.StatusFailed)
 
 			n, err := store.DeleteCompletedDownloadRecordsBefore(
-				ctx, time.Now().Add(-30*24*time.Hour),
+				ctx, time.Now().Add(-30*24*time.Hour), nil,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(1))
@@ -997,6 +997,34 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(ent.IsNotFound(err)).To(BeTrue())
 			_, err = client.DownloadRecord.Get(ctx, fresh.ID)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("spares kept hashes and still purges hashless records", func() {
+			aged := time.Now().Add(-40 * 24 * time.Hour)
+			kept := createRec("seeding", downloadrecord.StatusCompleted)
+			gone := createRec("removed", downloadrecord.StatusCompleted)
+			hashless := createRec("tmp", downloadrecord.StatusCompleted)
+			for _, id := range []uint32{kept.ID, gone.ID} {
+				_, err := client.DownloadRecord.UpdateOneID(id).
+					SetImportedAt(aged).Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			_, err := client.DownloadRecord.UpdateOneID(hashless.ID).
+				SetImportedAt(aged).ClearTorrentHash().Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.DeleteCompletedDownloadRecordsBefore(
+				ctx, time.Now().Add(-30*24*time.Hour), []string{"seeding"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+
+			_, err = client.DownloadRecord.Get(ctx, kept.ID)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.DownloadRecord.Get(ctx, gone.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
+			_, err = client.DownloadRecord.Get(ctx, hashless.ID)
+			Expect(ent.IsNotFound(err)).To(BeTrue())
 		})
 	})
 

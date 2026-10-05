@@ -346,6 +346,7 @@ type Store interface {
 	DeleteCompletedDownloadRecordsBefore(
 		ctx context.Context,
 		cutoff time.Time,
+		keepHashes []string,
 	) (int, error)
 	DeleteFailedDownloadRecordsBefore(
 		ctx context.Context,

@@ -3155,8 +3155,8 @@ func (_c *MockStore_DeleteAllCompletedDownloadRecords_Call) RunAndReturn(run fun
 }
 
 // DeleteCompletedDownloadRecordsBefore provides a mock function for the type MockStore
-func (_mock *MockStore) DeleteCompletedDownloadRecordsBefore(ctx context.Context, cutoff time.Time) (int, error) {
-	ret := _mock.Called(ctx, cutoff)
+func (_mock *MockStore) DeleteCompletedDownloadRecordsBefore(ctx context.Context, cutoff time.Time, keepHashes []string) (int, error) {
+	ret := _mock.Called(ctx, cutoff, keepHashes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteCompletedDownloadRecordsBefore")
@@ -3164,16 +3164,16 @@ func (_mock *MockStore) DeleteCompletedDownloadRecordsBefore(ctx context.Context
 
 	var r0 int
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) (int, error)); ok {
-		return returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, []string) (int, error)); ok {
+		return returnFunc(ctx, cutoff, keepHashes)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) int); ok {
-		r0 = returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, []string) int); ok {
+		r0 = returnFunc(ctx, cutoff, keepHashes)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
-		r1 = returnFunc(ctx, cutoff)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, []string) error); ok {
+		r1 = returnFunc(ctx, cutoff, keepHashes)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -3188,11 +3188,12 @@ type MockStore_DeleteCompletedDownloadRecordsBefore_Call struct {
 // DeleteCompletedDownloadRecordsBefore is a helper method to define mock.On call
 //   - ctx context.Context
 //   - cutoff time.Time
-func (_e *MockStore_Expecter) DeleteCompletedDownloadRecordsBefore(ctx any, cutoff any) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
-	return &MockStore_DeleteCompletedDownloadRecordsBefore_Call{Call: _e.mock.On("DeleteCompletedDownloadRecordsBefore", ctx, cutoff)}
+//   - keepHashes []string
+func (_e *MockStore_Expecter) DeleteCompletedDownloadRecordsBefore(ctx any, cutoff any, keepHashes any) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
+	return &MockStore_DeleteCompletedDownloadRecordsBefore_Call{Call: _e.mock.On("DeleteCompletedDownloadRecordsBefore", ctx, cutoff, keepHashes)}
 }
 
-func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) Run(run func(ctx context.Context, cutoff time.Time)) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
+func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) Run(run func(ctx context.Context, cutoff time.Time, keepHashes []string)) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -3202,9 +3203,14 @@ func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(time.Time)
 		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -3215,7 +3221,7 @@ func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) Return(n int, err
 	return _c
 }
 
-func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time) (int, error)) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
+func (_c *MockStore_DeleteCompletedDownloadRecordsBefore_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time, keepHashes []string) (int, error)) *MockStore_DeleteCompletedDownloadRecordsBefore_Call {
 	_c.Call.Return(run)
 	return _c
 }
