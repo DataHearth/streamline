@@ -69,12 +69,16 @@ const (
 	FieldTranscodedAt = "transcoded_at"
 	// FieldSizeBefore holds the string denoting the size_before field in the database.
 	FieldSizeBefore = "size_before"
+	// FieldBookKind holds the string denoting the book_kind field in the database.
+	FieldBookKind = "book_kind"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
 	EdgeEpisode = "episode"
 	// EdgeTrack holds the string denoting the track edge name in mutations.
 	EdgeTrack = "track"
+	// EdgeBook holds the string denoting the book edge name in mutations.
+	EdgeBook = "book"
 	// EdgeTranscodeJobs holds the string denoting the transcode_jobs edge name in mutations.
 	EdgeTranscodeJobs = "transcode_jobs"
 	// Table holds the table name of the mediafile in the database.
@@ -100,6 +104,13 @@ const (
 	TrackInverseTable = "tracks"
 	// TrackColumn is the table column denoting the track relation/edge.
 	TrackColumn = "track_media_files"
+	// BookTable is the table that holds the book relation/edge.
+	BookTable = "media_files"
+	// BookInverseTable is the table name for the Book entity.
+	// It exists in this package in order to avoid circular dependency with the "book" package.
+	BookInverseTable = "books"
+	// BookColumn is the table column denoting the book relation/edge.
+	BookColumn = "book_media_files"
 	// TranscodeJobsTable is the table that holds the transcode_jobs relation/edge.
 	TranscodeJobsTable = "transcode_jobs"
 	// TranscodeJobsInverseTable is the table name for the TranscodeJob entity.
@@ -139,11 +150,13 @@ var Columns = []string{
 	FieldParsedCodec,
 	FieldTranscodedAt,
 	FieldSizeBefore,
+	FieldBookKind,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"book_media_files",
 	"episode_media_files",
 	"movie_media_files",
 	"track_media_files",
@@ -201,6 +214,29 @@ func SourceValidator(s Source) error {
 		return nil
 	default:
 		return fmt.Errorf("mediafile: invalid enum value for source field: %q", s)
+	}
+}
+
+// BookKind defines the type for the "book_kind" enum field.
+type BookKind string
+
+// BookKind values.
+const (
+	BookKindEbook     BookKind = "ebook"
+	BookKindAudiobook BookKind = "audiobook"
+)
+
+func (bk BookKind) String() string {
+	return string(bk)
+}
+
+// BookKindValidator is a validator for the "book_kind" field enum values. It is called by the builders before save.
+func BookKindValidator(bk BookKind) error {
+	switch bk {
+	case BookKindEbook, BookKindAudiobook:
+		return nil
+	default:
+		return fmt.Errorf("mediafile: invalid enum value for book_kind field: %q", bk)
 	}
 }
 
@@ -347,6 +383,11 @@ func BySizeBefore(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSizeBefore, opts...).ToFunc()
 }
 
+// ByBookKind orders the results by the book_kind field.
+func ByBookKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBookKind, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -365,6 +406,13 @@ func ByEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByTrackField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newTrackStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBookField orders the results by book field.
+func ByBookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -400,6 +448,13 @@ func newTrackStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TrackInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, TrackTable, TrackColumn),
+	)
+}
+func newBookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
 	)
 }
 func newTranscodeJobsStep() *sqlgraph.Step {

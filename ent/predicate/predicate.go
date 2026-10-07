@@ -15,6 +15,12 @@ type ApiKey func(*sql.Selector)
 // Artist is the predicate function for artist builders.
 type Artist func(*sql.Selector)
 
+// Author is the predicate function for author builders.
+type Author func(*sql.Selector)
+
+// Book is the predicate function for book builders.
+type Book func(*sql.Selector)
+
 // Credit is the predicate function for credit builders.
 type Credit func(*sql.Selector)
 

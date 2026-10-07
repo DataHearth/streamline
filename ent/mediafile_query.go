@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -30,6 +31,7 @@ type MediaFileQuery struct {
 	withMovie         *MovieQuery
 	withEpisode       *EpisodeQuery
 	withTrack         *TrackQuery
+	withBook          *BookQuery
 	withTranscodeJobs *TranscodeJobQuery
 	withFKs           bool
 	modifiers         []func(*sql.Selector)
@@ -128,6 +130,28 @@ func (_q *MediaFileQuery) QueryTrack() *TrackQuery {
 			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
 			sqlgraph.To(track.Table, track.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.TrackTable, mediafile.TrackColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBook chains the current query on the "book" edge.
+func (_q *MediaFileQuery) QueryBook() *BookQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.BookTable, mediafile.BookColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +376,7 @@ func (_q *MediaFileQuery) Clone() *MediaFileQuery {
 		withMovie:         _q.withMovie.Clone(),
 		withEpisode:       _q.withEpisode.Clone(),
 		withTrack:         _q.withTrack.Clone(),
+		withBook:          _q.withBook.Clone(),
 		withTranscodeJobs: _q.withTranscodeJobs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -390,6 +415,17 @@ func (_q *MediaFileQuery) WithTrack(opts ...func(*TrackQuery)) *MediaFileQuery {
 		opt(query)
 	}
 	_q.withTrack = query
+	return _q
+}
+
+// WithBook tells the query-builder to eager-load the nodes that are connected to
+// the "book" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaFileQuery) WithBook(opts ...func(*BookQuery)) *MediaFileQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBook = query
 	return _q
 }
 
@@ -483,14 +519,15 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 		nodes       = []*MediaFile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withMovie != nil,
 			_q.withEpisode != nil,
 			_q.withTrack != nil,
+			_q.withBook != nil,
 			_q.withTranscodeJobs != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTrack != nil {
+	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTrack != nil || _q.withBook != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -532,6 +569,12 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 	if query := _q.withTrack; query != nil {
 		if err := _q.loadTrack(ctx, query, nodes, nil,
 			func(n *MediaFile, e *Track) { n.Edges.Track = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBook; query != nil {
+		if err := _q.loadBook(ctx, query, nodes, nil,
+			func(n *MediaFile, e *Book) { n.Edges.Book = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -634,6 +677,38 @@ func (_q *MediaFileQuery) loadTrack(ctx context.Context, query *TrackQuery, node
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "track_media_files" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaFileQuery) loadBook(ctx context.Context, query *BookQuery, nodes []*MediaFile, init func(*MediaFile), assign func(*MediaFile, *Book)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaFile)
+	for i := range nodes {
+		if nodes[i].book_media_files == nil {
+			continue
+		}
+		fk := *nodes[i].book_media_files
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(book.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "book_media_files" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

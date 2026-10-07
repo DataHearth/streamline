@@ -65,6 +65,7 @@ type DownloadRecord struct {
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
 	album_download_records   *uint32
+	book_download_records    *uint32
 	episode_download_records *uint32
 	movie_download_records   *uint32
 	selectValues             sql.SelectValues
@@ -131,9 +132,11 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case downloadrecord.ForeignKeys[0]: // album_download_records
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.ForeignKeys[1]: // episode_download_records
+		case downloadrecord.ForeignKeys[1]: // book_download_records
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.ForeignKeys[2]: // movie_download_records
+		case downloadrecord.ForeignKeys[2]: // episode_download_records
+			values[i] = new(sql.NullInt64)
+		case downloadrecord.ForeignKeys[3]: // movie_download_records
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -290,12 +293,19 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			}
 		case downloadrecord.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field book_download_records", value)
+			} else if value.Valid {
+				_m.book_download_records = new(uint32)
+				*_m.book_download_records = uint32(value.Int64)
+			}
+		case downloadrecord.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_download_records", value)
 			} else if value.Valid {
 				_m.episode_download_records = new(uint32)
 				*_m.episode_download_records = uint32(value.Int64)
 			}
-		case downloadrecord.ForeignKeys[2]:
+		case downloadrecord.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field movie_download_records", value)
 			} else if value.Valid {

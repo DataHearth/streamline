@@ -1765,6 +1765,36 @@ func SizeBeforeNotNil() predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldNotNull(FieldSizeBefore))
 }
 
+// BookKindEQ applies the EQ predicate on the "book_kind" field.
+func BookKindEQ(v BookKind) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldBookKind, v))
+}
+
+// BookKindNEQ applies the NEQ predicate on the "book_kind" field.
+func BookKindNEQ(v BookKind) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldBookKind, v))
+}
+
+// BookKindIn applies the In predicate on the "book_kind" field.
+func BookKindIn(vs ...BookKind) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldBookKind, vs...))
+}
+
+// BookKindNotIn applies the NotIn predicate on the "book_kind" field.
+func BookKindNotIn(vs ...BookKind) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldBookKind, vs...))
+}
+
+// BookKindIsNil applies the IsNil predicate on the "book_kind" field.
+func BookKindIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldBookKind))
+}
+
+// BookKindNotNil applies the NotNil predicate on the "book_kind" field.
+func BookKindNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldBookKind))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.MediaFile {
 	return predicate.MediaFile(func(s *sql.Selector) {
@@ -1826,6 +1856,29 @@ func HasTrack() predicate.MediaFile {
 func HasTrackWith(preds ...predicate.Track) predicate.MediaFile {
 	return predicate.MediaFile(func(s *sql.Selector) {
 		step := newTrackStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBook applies the HasEdge predicate on the "book" edge.
+func HasBook() predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookWith applies the HasEdge predicate on the "book" edge with a given conditions (other predicates).
+func HasBookWith(preds ...predicate.Book) predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := newBookStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

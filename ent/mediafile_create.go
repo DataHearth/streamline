@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -386,6 +387,20 @@ func (_c *MediaFileCreate) SetNillableSizeBefore(v *int64) *MediaFileCreate {
 	return _c
 }
 
+// SetBookKind sets the "book_kind" field.
+func (_c *MediaFileCreate) SetBookKind(v mediafile.BookKind) *MediaFileCreate {
+	_c.mutation.SetBookKind(v)
+	return _c
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableBookKind(v *mediafile.BookKind) *MediaFileCreate {
+	if v != nil {
+		_c.SetBookKind(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -447,6 +462,25 @@ func (_c *MediaFileCreate) SetNillableTrackID(id *uint32) *MediaFileCreate {
 // SetTrack sets the "track" edge to the Track entity.
 func (_c *MediaFileCreate) SetTrack(v *Track) *MediaFileCreate {
 	return _c.SetTrackID(v.ID)
+}
+
+// SetBookID sets the "book" edge to the Book entity by ID.
+func (_c *MediaFileCreate) SetBookID(id uint32) *MediaFileCreate {
+	_c.mutation.SetBookID(id)
+	return _c
+}
+
+// SetNillableBookID sets the "book" edge to the Book entity by ID if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableBookID(id *uint32) *MediaFileCreate {
+	if id != nil {
+		_c = _c.SetBookID(*id)
+	}
+	return _c
+}
+
+// SetBook sets the "book" edge to the Book entity.
+func (_c *MediaFileCreate) SetBook(v *Book) *MediaFileCreate {
+	return _c.SetBookID(v.ID)
 }
 
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
@@ -542,6 +576,11 @@ func (_c *MediaFileCreate) check() error {
 	if v, ok := _c.mutation.Source(); ok {
 		if err := mediafile.SourceValidator(v); err != nil {
 			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "MediaFile.source": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.BookKind(); ok {
+		if err := mediafile.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
 		}
 	}
 	return nil
@@ -684,6 +723,10 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 		_spec.SetField(mediafile.FieldSizeBefore, field.TypeInt64, value)
 		_node.SizeBefore = value
 	}
+	if value, ok := _c.mutation.BookKind(); ok {
+		_spec.SetField(mediafile.FieldBookKind, field.TypeEnum, value)
+		_node.BookKind = value
+	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -733,6 +776,23 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.track_media_files = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.BookTable,
+			Columns: []string{mediafile.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.book_media_files = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TranscodeJobsIDs(); len(nodes) > 0 {

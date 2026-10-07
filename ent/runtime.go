@@ -8,6 +8,8 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/author"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -117,6 +119,64 @@ func init() {
 	artistDescMonitored := artistFields[4].Descriptor()
 	// artist.DefaultMonitored holds the default value on creation for the monitored field.
 	artist.DefaultMonitored = artistDescMonitored.Default.(bool)
+	authorMixin := schema.Author{}.Mixin()
+	authorMixinFields1 := authorMixin[1].Fields()
+	_ = authorMixinFields1
+	authorFields := schema.Author{}.Fields()
+	_ = authorFields
+	// authorDescCreateTime is the schema descriptor for create_time field.
+	authorDescCreateTime := authorMixinFields1[0].Descriptor()
+	// author.DefaultCreateTime holds the default value on creation for the create_time field.
+	author.DefaultCreateTime = authorDescCreateTime.Default.(func() time.Time)
+	// authorDescUpdateTime is the schema descriptor for update_time field.
+	authorDescUpdateTime := authorMixinFields1[1].Descriptor()
+	// author.DefaultUpdateTime holds the default value on creation for the update_time field.
+	author.DefaultUpdateTime = authorDescUpdateTime.Default.(func() time.Time)
+	// author.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	author.UpdateDefaultUpdateTime = authorDescUpdateTime.UpdateDefault.(func() time.Time)
+	// authorDescName is the schema descriptor for name field.
+	authorDescName := authorFields[1].Descriptor()
+	// author.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	author.NameValidator = authorDescName.Validators[0].(func(string) error)
+	// authorDescMonitored is the schema descriptor for monitored field.
+	authorDescMonitored := authorFields[4].Descriptor()
+	// author.DefaultMonitored holds the default value on creation for the monitored field.
+	author.DefaultMonitored = authorDescMonitored.Default.(bool)
+	bookMixin := schema.Book{}.Mixin()
+	bookMixinFields1 := bookMixin[1].Fields()
+	_ = bookMixinFields1
+	bookFields := schema.Book{}.Fields()
+	_ = bookFields
+	// bookDescCreateTime is the schema descriptor for create_time field.
+	bookDescCreateTime := bookMixinFields1[0].Descriptor()
+	// book.DefaultCreateTime holds the default value on creation for the create_time field.
+	book.DefaultCreateTime = bookDescCreateTime.Default.(func() time.Time)
+	// bookDescUpdateTime is the schema descriptor for update_time field.
+	bookDescUpdateTime := bookMixinFields1[1].Descriptor()
+	// book.DefaultUpdateTime holds the default value on creation for the update_time field.
+	book.DefaultUpdateTime = bookDescUpdateTime.Default.(func() time.Time)
+	// book.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	book.UpdateDefaultUpdateTime = bookDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookDescTitle is the schema descriptor for title field.
+	bookDescTitle := bookFields[1].Descriptor()
+	// book.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	book.TitleValidator = bookDescTitle.Validators[0].(func(string) error)
+	// bookDescEbookMonitored is the schema descriptor for ebook_monitored field.
+	bookDescEbookMonitored := bookFields[7].Descriptor()
+	// book.DefaultEbookMonitored holds the default value on creation for the ebook_monitored field.
+	book.DefaultEbookMonitored = bookDescEbookMonitored.Default.(bool)
+	// bookDescEbookGrabFailures is the schema descriptor for ebook_grab_failures field.
+	bookDescEbookGrabFailures := bookFields[9].Descriptor()
+	// book.DefaultEbookGrabFailures holds the default value on creation for the ebook_grab_failures field.
+	book.DefaultEbookGrabFailures = bookDescEbookGrabFailures.Default.(uint8)
+	// bookDescAudiobookMonitored is the schema descriptor for audiobook_monitored field.
+	bookDescAudiobookMonitored := bookFields[11].Descriptor()
+	// book.DefaultAudiobookMonitored holds the default value on creation for the audiobook_monitored field.
+	book.DefaultAudiobookMonitored = bookDescAudiobookMonitored.Default.(bool)
+	// bookDescAudiobookGrabFailures is the schema descriptor for audiobook_grab_failures field.
+	bookDescAudiobookGrabFailures := bookFields[13].Descriptor()
+	// book.DefaultAudiobookGrabFailures holds the default value on creation for the audiobook_grab_failures field.
+	book.DefaultAudiobookGrabFailures = bookDescAudiobookGrabFailures.Default.(uint8)
 	creditMixin := schema.Credit{}.Mixin()
 	creditMixinFields1 := creditMixin[1].Fields()
 	_ = creditMixinFields1

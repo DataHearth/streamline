@@ -72,6 +72,9 @@ func (MediaFile) Fields() []ent.Field {
 		// them without reaching the job.
 		field.Time("transcoded_at").Optional().Nillable(),
 		field.Int64("size_before").Optional(),
+		// book_kind discriminates which slot a book file belongs to. Only set
+		// on files with a book edge.
+		field.Enum("book_kind").Values("ebook", "audiobook").Optional(),
 	}
 }
 
@@ -80,6 +83,7 @@ func (MediaFile) Edges() []ent.Edge {
 		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
 		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
 		edge.From("track", Track.Type).Ref("media_files").Unique(),
+		edge.From("book", Book.Type).Ref("media_files").Unique(),
 		edge.To("transcode_jobs", TranscodeJob.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
@@ -93,6 +97,7 @@ func (MediaFile) Indexes() []ent.Index {
 		index.Edges("episode"),
 		index.Edges("movie"),
 		index.Edges("track"),
+		index.Edges("book"),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and
 		// the 15-minute job stops scanning the whole table forever.

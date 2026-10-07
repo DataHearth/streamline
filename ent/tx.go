@@ -18,6 +18,10 @@ type Tx struct {
 	ApiKey *ApiKeyClient
 	// Artist is the client for interacting with the Artist builders.
 	Artist *ArtistClient
+	// Author is the client for interacting with the Author builders.
+	Author *AuthorClient
+	// Book is the client for interacting with the Book builders.
+	Book *BookClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -194,6 +198,8 @@ func (tx *Tx) init() {
 	tx.Album = NewAlbumClient(tx.config)
 	tx.ApiKey = NewApiKeyClient(tx.config)
 	tx.Artist = NewArtistClient(tx.config)
+	tx.Author = NewAuthorClient(tx.config)
+	tx.Book = NewBookClient(tx.config)
 	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)

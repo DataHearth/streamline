@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -577,6 +578,26 @@ func (_u *MediaFileUpdate) ClearSizeBefore() *MediaFileUpdate {
 	return _u
 }
 
+// SetBookKind sets the "book_kind" field.
+func (_u *MediaFileUpdate) SetBookKind(v mediafile.BookKind) *MediaFileUpdate {
+	_u.mutation.SetBookKind(v)
+	return _u
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableBookKind(v *mediafile.BookKind) *MediaFileUpdate {
+	if v != nil {
+		_u.SetBookKind(*v)
+	}
+	return _u
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (_u *MediaFileUpdate) ClearBookKind() *MediaFileUpdate {
+	_u.mutation.ClearBookKind()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -634,6 +655,25 @@ func (_u *MediaFileUpdate) SetTrack(v *Track) *MediaFileUpdate {
 	return _u.SetTrackID(v.ID)
 }
 
+// SetBookID sets the "book" edge to the Book entity by ID.
+func (_u *MediaFileUpdate) SetBookID(id uint32) *MediaFileUpdate {
+	_u.mutation.SetBookID(id)
+	return _u
+}
+
+// SetNillableBookID sets the "book" edge to the Book entity by ID if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableBookID(id *uint32) *MediaFileUpdate {
+	if id != nil {
+		_u = _u.SetBookID(*id)
+	}
+	return _u
+}
+
+// SetBook sets the "book" edge to the Book entity.
+func (_u *MediaFileUpdate) SetBook(v *Book) *MediaFileUpdate {
+	return _u.SetBookID(v.ID)
+}
+
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
 func (_u *MediaFileUpdate) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdate {
 	_u.mutation.AddTranscodeJobIDs(ids...)
@@ -669,6 +709,12 @@ func (_u *MediaFileUpdate) ClearEpisode() *MediaFileUpdate {
 // ClearTrack clears the "track" edge to the Track entity.
 func (_u *MediaFileUpdate) ClearTrack() *MediaFileUpdate {
 	_u.mutation.ClearTrack()
+	return _u
+}
+
+// ClearBook clears the "book" edge to the Book entity.
+func (_u *MediaFileUpdate) ClearBook() *MediaFileUpdate {
+	_u.mutation.ClearBook()
 	return _u
 }
 
@@ -739,6 +785,11 @@ func (_u *MediaFileUpdate) check() error {
 	if v, ok := _u.mutation.Source(); ok {
 		if err := mediafile.SourceValidator(v); err != nil {
 			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "MediaFile.source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.BookKind(); ok {
+		if err := mediafile.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
 		}
 	}
 	return nil
@@ -930,6 +981,12 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.SizeBeforeCleared() {
 		_spec.ClearField(mediafile.FieldSizeBefore, field.TypeInt64)
 	}
+	if value, ok := _u.mutation.BookKind(); ok {
+		_spec.SetField(mediafile.FieldBookKind, field.TypeEnum, value)
+	}
+	if _u.mutation.BookKindCleared() {
+		_spec.ClearField(mediafile.FieldBookKind, field.TypeEnum)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1010,6 +1067,35 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.BookTable,
+			Columns: []string{mediafile.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.BookTable,
+			Columns: []string{mediafile.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1628,6 +1714,26 @@ func (_u *MediaFileUpdateOne) ClearSizeBefore() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetBookKind sets the "book_kind" field.
+func (_u *MediaFileUpdateOne) SetBookKind(v mediafile.BookKind) *MediaFileUpdateOne {
+	_u.mutation.SetBookKind(v)
+	return _u
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableBookKind(v *mediafile.BookKind) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetBookKind(*v)
+	}
+	return _u
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (_u *MediaFileUpdateOne) ClearBookKind() *MediaFileUpdateOne {
+	_u.mutation.ClearBookKind()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1685,6 +1791,25 @@ func (_u *MediaFileUpdateOne) SetTrack(v *Track) *MediaFileUpdateOne {
 	return _u.SetTrackID(v.ID)
 }
 
+// SetBookID sets the "book" edge to the Book entity by ID.
+func (_u *MediaFileUpdateOne) SetBookID(id uint32) *MediaFileUpdateOne {
+	_u.mutation.SetBookID(id)
+	return _u
+}
+
+// SetNillableBookID sets the "book" edge to the Book entity by ID if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableBookID(id *uint32) *MediaFileUpdateOne {
+	if id != nil {
+		_u = _u.SetBookID(*id)
+	}
+	return _u
+}
+
+// SetBook sets the "book" edge to the Book entity.
+func (_u *MediaFileUpdateOne) SetBook(v *Book) *MediaFileUpdateOne {
+	return _u.SetBookID(v.ID)
+}
+
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
 func (_u *MediaFileUpdateOne) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdateOne {
 	_u.mutation.AddTranscodeJobIDs(ids...)
@@ -1720,6 +1845,12 @@ func (_u *MediaFileUpdateOne) ClearEpisode() *MediaFileUpdateOne {
 // ClearTrack clears the "track" edge to the Track entity.
 func (_u *MediaFileUpdateOne) ClearTrack() *MediaFileUpdateOne {
 	_u.mutation.ClearTrack()
+	return _u
+}
+
+// ClearBook clears the "book" edge to the Book entity.
+func (_u *MediaFileUpdateOne) ClearBook() *MediaFileUpdateOne {
+	_u.mutation.ClearBook()
 	return _u
 }
 
@@ -1803,6 +1934,11 @@ func (_u *MediaFileUpdateOne) check() error {
 	if v, ok := _u.mutation.Source(); ok {
 		if err := mediafile.SourceValidator(v); err != nil {
 			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "MediaFile.source": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.BookKind(); ok {
+		if err := mediafile.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
 		}
 	}
 	return nil
@@ -2011,6 +2147,12 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	if _u.mutation.SizeBeforeCleared() {
 		_spec.ClearField(mediafile.FieldSizeBefore, field.TypeInt64)
 	}
+	if value, ok := _u.mutation.BookKind(); ok {
+		_spec.SetField(mediafile.FieldBookKind, field.TypeEnum, value)
+	}
+	if _u.mutation.BookKindCleared() {
+		_spec.ClearField(mediafile.FieldBookKind, field.TypeEnum)
+	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -2091,6 +2233,35 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.BookTable,
+			Columns: []string{mediafile.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.BookTable,
+			Columns: []string{mediafile.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

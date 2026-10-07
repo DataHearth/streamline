@@ -15,6 +15,8 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/author"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -99,6 +101,8 @@ func checkColumn(t, c string) error {
 			album.Table:          album.ValidColumn,
 			apikey.Table:         apikey.ValidColumn,
 			artist.Table:         artist.ValidColumn,
+			author.Table:         author.ValidColumn,
+			book.Table:           book.ValidColumn,
 			credit.Table:         credit.ValidColumn,
 			downloadrecord.Table: downloadrecord.ValidColumn,
 			episode.Table:        episode.ValidColumn,
