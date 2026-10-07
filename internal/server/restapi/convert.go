@@ -1306,3 +1306,59 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, error) {
 func replaceExisting(body *SearchResult) bool {
 	return body != nil && body.ReplaceExisting != nil && *body.ReplaceExisting
 }
+
+func musicArtistToAPI(a *ent.Artist) MusicArtist {
+	out := MusicArtist{
+		Id:             a.ID,
+		Mbid:           a.Mbid,
+		Name:           a.Name,
+		SortName:       a.SortName,
+		Overview:       optString(a.Overview),
+		Monitored:      a.Monitored,
+		Path:           a.Path,
+		QualityProfile: a.QualityProfile,
+		AlbumCount:     numeric.SaturateU32(len(a.Edges.Albums)),
+	}
+	if a.Edges.Albums != nil {
+		items := make([]MusicAlbum, len(a.Edges.Albums))
+		for i, al := range a.Edges.Albums {
+			items[i] = musicAlbumToAPI(al)
+		}
+		out.Albums = &items
+	}
+	return out
+}
+
+func musicAlbumToAPI(a *ent.Album) MusicAlbum {
+	out := MusicAlbum{
+		Id:         a.ID,
+		Mbid:       a.Mbid,
+		Title:      a.Title,
+		Type:       MusicAlbumType(a.Type),
+		Monitored:  a.Monitored,
+		Status:     MusicAlbumStatus(a.Status),
+		TrackCount: numeric.SaturateU32(len(a.Edges.Tracks)),
+	}
+	if a.ReleaseDate != nil {
+		out.ReleaseDate = &openapi_types.Date{Time: *a.ReleaseDate}
+	}
+	if a.Edges.Tracks != nil {
+		items := make([]MusicTrack, len(a.Edges.Tracks))
+		for i, t := range a.Edges.Tracks {
+			items[i] = musicTrackToAPI(t)
+		}
+		out.Tracks = &items
+	}
+	return out
+}
+
+func musicTrackToAPI(t *ent.Track) MusicTrack {
+	return MusicTrack{
+		Id:       t.ID,
+		Mbid:     t.Mbid,
+		Title:    t.Title,
+		Disc:     t.Disc,
+		Position: t.Position,
+		Duration: t.Duration,
+	}
+}

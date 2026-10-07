@@ -180,6 +180,38 @@ var _ = Describe("Music service", Label("integration", "music"), func() {
 		)
 	})
 
+	Describe("GetAlbum", func() {
+		It("returns the album with its tracks", func() {
+			artist := addSeeded()
+			got, err := svc.GetAlbum(ctx, artist.Edges.Albums[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Edges.Tracks).To(HaveLen(1))
+		})
+
+		It("maps a missing row to ErrAlbumNotFound", func() {
+			_, err := svc.GetAlbum(ctx, 999)
+			Expect(err).To(MatchError(ErrAlbumNotFound))
+		})
+	})
+
+	Describe("SetArtistQualityProfile", func() {
+		It("stores the profile name", func() {
+			artist := addSeeded()
+			Expect(
+				svc.SetArtistQualityProfile(ctx, artist.ID, "lossless"),
+			).To(Succeed())
+			Expect(
+				client.Artist.GetX(ctx, artist.ID).QualityProfile,
+			).To(Equal("lossless"))
+		})
+
+		It("maps a missing artist to ErrArtistNotFound", func() {
+			Expect(
+				svc.SetArtistQualityProfile(ctx, 999, "lossless"),
+			).To(MatchError(ErrArtistNotFound))
+		})
+	})
+
 	Describe("SetArtistMonitored", func() {
 		It("cascades to the artist's albums", func() {
 			artist := addSeeded()

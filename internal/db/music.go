@@ -132,6 +132,16 @@ func (db *DB) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error
 		Only(ctx)
 }
 
+func (db *DB) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(album.IDEQ(id)).
+		WithTracks(func(tq *ent.TrackQuery) {
+			tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
+				WithMediaFiles()
+		}).
+		Only(ctx)
+}
+
 func (db *DB) FindArtistByMBID(
 	ctx context.Context,
 	mbid string,
@@ -238,6 +248,14 @@ func (db *DB) SetArtistMonitored(
 		return err
 	}
 	return tx.Commit()
+}
+
+func (db *DB) SetArtistQualityProfile(
+	ctx context.Context,
+	id uint32,
+	profile string,
+) error {
+	return db.client.Artist.UpdateOneID(id).SetQualityProfile(profile).Exec(ctx)
 }
 
 func (db *DB) SetAlbumMonitored(

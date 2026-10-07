@@ -5094,6 +5094,74 @@ func (_c *MockTx_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// FindAlbumByID provides a mock function for the type MockTx
+func (_mock *MockTx) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAlbumByID")
+	}
+
+	var r0 *ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Album, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Album); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindAlbumByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAlbumByID'
+type MockTx_FindAlbumByID_Call struct {
+	*mock.Call
+}
+
+// FindAlbumByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) FindAlbumByID(ctx any, id any) *MockTx_FindAlbumByID_Call {
+	return &MockTx_FindAlbumByID_Call{Call: _e.mock.On("FindAlbumByID", ctx, id)}
+}
+
+func (_c *MockTx_FindAlbumByID_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_FindAlbumByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindAlbumByID_Call) Return(album *ent.Album, err error) *MockTx_FindAlbumByID_Call {
+	_c.Call.Return(album, err)
+	return _c
+}
+
+func (_c *MockTx_FindAlbumByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Album, error)) *MockTx_FindAlbumByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindArtistByID provides a mock function for the type MockTx
 func (_mock *MockTx) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error) {
 	ret := _mock.Called(ctx, id)
@@ -12917,6 +12985,69 @@ func (_c *MockTx_SetArtistMonitored_Call) Return(err error) *MockTx_SetArtistMon
 }
 
 func (_c *MockTx_SetArtistMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitored bool) error) *MockTx_SetArtistMonitored_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetArtistQualityProfile provides a mock function for the type MockTx
+func (_mock *MockTx) SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error {
+	ret := _mock.Called(ctx, id, profile)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetArtistQualityProfile")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, profile)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetArtistQualityProfile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistQualityProfile'
+type MockTx_SetArtistQualityProfile_Call struct {
+	*mock.Call
+}
+
+// SetArtistQualityProfile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - profile string
+func (_e *MockTx_Expecter) SetArtistQualityProfile(ctx any, id any, profile any) *MockTx_SetArtistQualityProfile_Call {
+	return &MockTx_SetArtistQualityProfile_Call{Call: _e.mock.On("SetArtistQualityProfile", ctx, id, profile)}
+}
+
+func (_c *MockTx_SetArtistQualityProfile_Call) Run(run func(ctx context.Context, id uint32, profile string)) *MockTx_SetArtistQualityProfile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetArtistQualityProfile_Call) Return(err error) *MockTx_SetArtistQualityProfile_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetArtistQualityProfile_Call) RunAndReturn(run func(ctx context.Context, id uint32, profile string) error) *MockTx_SetArtistQualityProfile_Call {
 	_c.Call.Return(run)
 	return _c
 }

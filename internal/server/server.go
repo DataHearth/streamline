@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -69,6 +70,8 @@ type Config struct {
 	Requests        request.Manager
 	TVSearcher      *rss.EpisodeMissingSearcher
 	MetadataTV      metadata.TVProvider
+	Music           music.Manager
+	MetadataMusic   metadata.MusicProvider
 	Posters         posters.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
@@ -105,6 +108,8 @@ func New(cfg Config) *Server {
 		Requests:        cfg.Requests,
 		TVSearcher:      cfg.TVSearcher,
 		MetadataTV:      cfg.MetadataTV,
+		Music:           cfg.Music,
+		MetadataMusic:   cfg.MetadataMusic,
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,
 		Importer:        cfg.Importer,

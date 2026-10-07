@@ -1173,6 +1173,195 @@ func (e MovieStatus) Valid() bool {
 	}
 }
 
+// Defines values for MusicAlbumStatus.
+const (
+	MusicAlbumStatusAvailable   MusicAlbumStatus = "available"
+	MusicAlbumStatusDownloading MusicAlbumStatus = "downloading"
+	MusicAlbumStatusPaused      MusicAlbumStatus = "paused"
+	MusicAlbumStatusSkipped     MusicAlbumStatus = "skipped"
+	MusicAlbumStatusWanted      MusicAlbumStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the MusicAlbumStatus enum.
+func (e MusicAlbumStatus) Valid() bool {
+	switch e {
+	case MusicAlbumStatusAvailable:
+		return true
+	case MusicAlbumStatusDownloading:
+		return true
+	case MusicAlbumStatusPaused:
+		return true
+	case MusicAlbumStatusSkipped:
+		return true
+	case MusicAlbumStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicAlbumType.
+const (
+	MusicAlbumTypeAlbum       MusicAlbumType = "album"
+	MusicAlbumTypeCompilation MusicAlbumType = "compilation"
+	MusicAlbumTypeEp          MusicAlbumType = "ep"
+	MusicAlbumTypeLive        MusicAlbumType = "live"
+	MusicAlbumTypeOther       MusicAlbumType = "other"
+	MusicAlbumTypeSingle      MusicAlbumType = "single"
+)
+
+// Valid indicates whether the value is a known member of the MusicAlbumType enum.
+func (e MusicAlbumType) Valid() bool {
+	switch e {
+	case MusicAlbumTypeAlbum:
+		return true
+	case MusicAlbumTypeCompilation:
+		return true
+	case MusicAlbumTypeEp:
+		return true
+	case MusicAlbumTypeLive:
+		return true
+	case MusicAlbumTypeOther:
+		return true
+	case MusicAlbumTypeSingle:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicQualityProfileCutoff.
+const (
+	MusicQualityProfileCutoffFlac   MusicQualityProfileCutoff = "flac"
+	MusicQualityProfileCutoffFlac24 MusicQualityProfileCutoff = "flac-24"
+	MusicQualityProfileCutoffMp3192 MusicQualityProfileCutoff = "mp3-192"
+	MusicQualityProfileCutoffMp3256 MusicQualityProfileCutoff = "mp3-256"
+	MusicQualityProfileCutoffMp3320 MusicQualityProfileCutoff = "mp3-320"
+	MusicQualityProfileCutoffMp3V0  MusicQualityProfileCutoff = "mp3-v0"
+	MusicQualityProfileCutoffOther  MusicQualityProfileCutoff = "other"
+)
+
+// Valid indicates whether the value is a known member of the MusicQualityProfileCutoff enum.
+func (e MusicQualityProfileCutoff) Valid() bool {
+	switch e {
+	case MusicQualityProfileCutoffFlac:
+		return true
+	case MusicQualityProfileCutoffFlac24:
+		return true
+	case MusicQualityProfileCutoffMp3192:
+		return true
+	case MusicQualityProfileCutoffMp3256:
+		return true
+	case MusicQualityProfileCutoffMp3320:
+		return true
+	case MusicQualityProfileCutoffMp3V0:
+		return true
+	case MusicQualityProfileCutoffOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicQualityProfileFormats.
+const (
+	MusicQualityProfileFormatsFlac   MusicQualityProfileFormats = "flac"
+	MusicQualityProfileFormatsFlac24 MusicQualityProfileFormats = "flac-24"
+	MusicQualityProfileFormatsMp3192 MusicQualityProfileFormats = "mp3-192"
+	MusicQualityProfileFormatsMp3256 MusicQualityProfileFormats = "mp3-256"
+	MusicQualityProfileFormatsMp3320 MusicQualityProfileFormats = "mp3-320"
+	MusicQualityProfileFormatsMp3V0  MusicQualityProfileFormats = "mp3-v0"
+	MusicQualityProfileFormatsOther  MusicQualityProfileFormats = "other"
+)
+
+// Valid indicates whether the value is a known member of the MusicQualityProfileFormats enum.
+func (e MusicQualityProfileFormats) Valid() bool {
+	switch e {
+	case MusicQualityProfileFormatsFlac:
+		return true
+	case MusicQualityProfileFormatsFlac24:
+		return true
+	case MusicQualityProfileFormatsMp3192:
+		return true
+	case MusicQualityProfileFormatsMp3256:
+		return true
+	case MusicQualityProfileFormatsMp3320:
+		return true
+	case MusicQualityProfileFormatsMp3V0:
+		return true
+	case MusicQualityProfileFormatsOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicQualityProfileCreateCutoff.
+const (
+	MusicQualityProfileCreateCutoffFlac   MusicQualityProfileCreateCutoff = "flac"
+	MusicQualityProfileCreateCutoffFlac24 MusicQualityProfileCreateCutoff = "flac-24"
+	MusicQualityProfileCreateCutoffMp3192 MusicQualityProfileCreateCutoff = "mp3-192"
+	MusicQualityProfileCreateCutoffMp3256 MusicQualityProfileCreateCutoff = "mp3-256"
+	MusicQualityProfileCreateCutoffMp3320 MusicQualityProfileCreateCutoff = "mp3-320"
+	MusicQualityProfileCreateCutoffMp3V0  MusicQualityProfileCreateCutoff = "mp3-v0"
+	MusicQualityProfileCreateCutoffOther  MusicQualityProfileCreateCutoff = "other"
+)
+
+// Valid indicates whether the value is a known member of the MusicQualityProfileCreateCutoff enum.
+func (e MusicQualityProfileCreateCutoff) Valid() bool {
+	switch e {
+	case MusicQualityProfileCreateCutoffFlac:
+		return true
+	case MusicQualityProfileCreateCutoffFlac24:
+		return true
+	case MusicQualityProfileCreateCutoffMp3192:
+		return true
+	case MusicQualityProfileCreateCutoffMp3256:
+		return true
+	case MusicQualityProfileCreateCutoffMp3320:
+		return true
+	case MusicQualityProfileCreateCutoffMp3V0:
+		return true
+	case MusicQualityProfileCreateCutoffOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicQualityProfileCreateFormats.
+const (
+	MusicQualityProfileCreateFormatsFlac   MusicQualityProfileCreateFormats = "flac"
+	MusicQualityProfileCreateFormatsFlac24 MusicQualityProfileCreateFormats = "flac-24"
+	MusicQualityProfileCreateFormatsMp3192 MusicQualityProfileCreateFormats = "mp3-192"
+	MusicQualityProfileCreateFormatsMp3256 MusicQualityProfileCreateFormats = "mp3-256"
+	MusicQualityProfileCreateFormatsMp3320 MusicQualityProfileCreateFormats = "mp3-320"
+	MusicQualityProfileCreateFormatsMp3V0  MusicQualityProfileCreateFormats = "mp3-v0"
+	MusicQualityProfileCreateFormatsOther  MusicQualityProfileCreateFormats = "other"
+)
+
+// Valid indicates whether the value is a known member of the MusicQualityProfileCreateFormats enum.
+func (e MusicQualityProfileCreateFormats) Valid() bool {
+	switch e {
+	case MusicQualityProfileCreateFormatsFlac:
+		return true
+	case MusicQualityProfileCreateFormatsFlac24:
+		return true
+	case MusicQualityProfileCreateFormatsMp3192:
+		return true
+	case MusicQualityProfileCreateFormatsMp3256:
+		return true
+	case MusicQualityProfileCreateFormatsMp3320:
+		return true
+	case MusicQualityProfileCreateFormatsMp3V0:
+		return true
+	case MusicQualityProfileCreateFormatsOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PatchSeriesRequestPreset.
 const (
 	PatchSeriesRequestPresetAll      PatchSeriesRequestPreset = "all"
@@ -2627,6 +2816,15 @@ type AddMovieRequest struct {
 	TmdbId         uint32  `json:"tmdb_id"`
 }
 
+// AddMusicArtistRequest defines model for AddMusicArtistRequest.
+type AddMusicArtistRequest struct {
+	Mbid string `json:"mbid"`
+
+	// Monitored Defaults to true.
+	Monitored      *bool   `json:"monitored,omitempty"`
+	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
 // AddSeriesRequest defines model for AddSeriesRequest.
 type AddSeriesRequest struct {
 	// Preset One-shot monitoring preset applied to seasons/episodes.
@@ -3914,6 +4112,99 @@ type MovieSearchAccepted struct {
 	MovieId      uint32    `json:"movie_id"`
 }
 
+// MusicAlbum defines model for MusicAlbum.
+type MusicAlbum struct {
+	Id          uint32              `json:"id"`
+	Mbid        string              `json:"mbid"`
+	Monitored   bool                `json:"monitored"`
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+	Status      MusicAlbumStatus    `json:"status"`
+	Title       string              `json:"title"`
+	TrackCount  uint32              `json:"track_count"`
+
+	// Tracks Populated by the album endpoints.
+	Tracks *[]MusicTrack  `json:"tracks,omitempty"`
+	Type   MusicAlbumType `json:"type"`
+}
+
+// MusicAlbumStatus defines model for MusicAlbum.Status.
+type MusicAlbumStatus string
+
+// MusicAlbumType defines model for MusicAlbum.Type.
+type MusicAlbumType string
+
+// MusicArtist defines model for MusicArtist.
+type MusicArtist struct {
+	AlbumCount uint32 `json:"album_count"`
+
+	// Albums Populated by the detail, patch and refresh responses.
+	Albums         *[]MusicAlbum `json:"albums,omitempty"`
+	Id             uint32        `json:"id"`
+	Mbid           string        `json:"mbid"`
+	Monitored      bool          `json:"monitored"`
+	Name           string        `json:"name"`
+	Overview       *string       `json:"overview,omitempty"`
+	Path           string        `json:"path"`
+	QualityProfile string        `json:"quality_profile"`
+	SortName       string        `json:"sort_name"`
+}
+
+// MusicArtistSearchResult defines model for MusicArtistSearchResult.
+type MusicArtistSearchResult struct {
+	AlreadyAdded   bool    `json:"already_added"`
+	Disambiguation *string `json:"disambiguation,omitempty"`
+	Mbid           string  `json:"mbid"`
+	Name           string  `json:"name"`
+	Score          uint8   `json:"score"`
+	SortName       string  `json:"sort_name"`
+}
+
+// MusicArtistSearchResultList defines model for MusicArtistSearchResultList.
+type MusicArtistSearchResultList struct {
+	Items []MusicArtistSearchResult `json:"items"`
+}
+
+// MusicQualityProfile defines model for MusicQualityProfile.
+type MusicQualityProfile struct {
+	Cutoff         MusicQualityProfileCutoff    `json:"cutoff"`
+	Formats        []MusicQualityProfileFormats `json:"formats"`
+	IsDefault      bool                         `json:"is_default"`
+	Name           string                       `json:"name"`
+	UpgradeAllowed bool                         `json:"upgrade_allowed"`
+}
+
+// MusicQualityProfileCutoff defines model for MusicQualityProfile.Cutoff.
+type MusicQualityProfileCutoff string
+
+// MusicQualityProfileFormats defines model for MusicQualityProfile.Formats.
+type MusicQualityProfileFormats string
+
+// MusicQualityProfileCreate defines model for MusicQualityProfileCreate.
+type MusicQualityProfileCreate struct {
+	Cutoff         MusicQualityProfileCreateCutoff    `json:"cutoff"`
+	Formats        []MusicQualityProfileCreateFormats `json:"formats"`
+	Name           string                             `json:"name"`
+	UpgradeAllowed bool                               `json:"upgrade_allowed"`
+}
+
+// MusicQualityProfileCreateCutoff defines model for MusicQualityProfileCreate.Cutoff.
+type MusicQualityProfileCreateCutoff string
+
+// MusicQualityProfileCreateFormats defines model for MusicQualityProfileCreate.Formats.
+type MusicQualityProfileCreateFormats string
+
+// MusicTrack defines model for MusicTrack.
+type MusicTrack struct {
+	Disc uint8 `json:"disc"`
+
+	// Duration Length in seconds, 0 when unknown.
+	Duration uint32 `json:"duration"`
+	Id       uint32 `json:"id"`
+	Mbid     string `json:"mbid"`
+	Position uint16 `json:"position"`
+	Title    string `json:"title"`
+}
+
 // OIDCProviderCreate defines model for OIDCProviderCreate.
 type OIDCProviderCreate struct {
 	ClientId     string `json:"client_id"`
@@ -3956,6 +4247,14 @@ type PaginatedMovies struct {
 	Total uint32  `json:"total"`
 }
 
+// PaginatedMusicArtists defines model for PaginatedMusicArtists.
+type PaginatedMusicArtists struct {
+	Items []MusicArtist `json:"items"`
+	Limit uint16        `json:"limit"`
+	Page  uint32        `json:"page"`
+	Total uint32        `json:"total"`
+}
+
 // PaginatedRequests defines model for PaginatedRequests.
 type PaginatedRequests struct {
 	Items []Request `json:"items"`
@@ -3970,6 +4269,17 @@ type PaginatedTVShows struct {
 	Limit uint16   `json:"limit"`
 	Page  uint32   `json:"page"`
 	Total uint32   `json:"total"`
+}
+
+// PatchMusicAlbumRequest defines model for PatchMusicAlbumRequest.
+type PatchMusicAlbumRequest struct {
+	Monitored *bool `json:"monitored,omitempty"`
+}
+
+// PatchMusicArtistRequest defines model for PatchMusicArtistRequest.
+type PatchMusicArtistRequest struct {
+	Monitored      *bool   `json:"monitored,omitempty"`
+	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
 // PatchSeriesRequest defines model for PatchSeriesRequest.
@@ -5616,6 +5926,9 @@ type MoviesSort = string
 // MoviesStatus defines model for MoviesStatus.
 type MoviesStatus = string
 
+// MusicSearchQuery defines model for MusicSearchQuery.
+type MusicSearchQuery = string
+
 // OIDCProviderName defines model for OIDCProviderName.
 type OIDCProviderName = string
 
@@ -5769,6 +6082,24 @@ type MovieRefreshed = Movie
 // MovieRenamePlan defines model for MovieRenamePlan.
 type MovieRenamePlan = RenamePlan
 
+// MusicAlbumDetail defines model for MusicAlbumDetail.
+type MusicAlbumDetail = MusicAlbum
+
+// MusicArtistCreated defines model for MusicArtistCreated.
+type MusicArtistCreated = MusicArtist
+
+// MusicArtistDetail defines model for MusicArtistDetail.
+type MusicArtistDetail = MusicArtist
+
+// MusicArtistList defines model for MusicArtistList.
+type MusicArtistList = PaginatedMusicArtists
+
+// MusicQualityProfileResponse defines model for MusicQualityProfileResponse.
+type MusicQualityProfileResponse = MusicQualityProfile
+
+// MusicSearchResults defines model for MusicSearchResults.
+type MusicSearchResults = MusicArtistSearchResultList
+
 // NotFound defines model for NotFound.
 type NotFound = Error
 
@@ -5851,6 +6182,9 @@ type UsersList = UserList
 // AddMovie defines model for AddMovie.
 type AddMovie = AddMovieRequest
 
+// AddMusicArtist defines model for AddMusicArtist.
+type AddMusicArtist = AddMusicArtistRequest
+
 // AddSeries defines model for AddSeries.
 type AddSeries = AddSeriesRequest
 
@@ -5884,6 +6218,9 @@ type CreateInvite = CreateInviteRequest
 // CreateMediaServer defines model for CreateMediaServer.
 type CreateMediaServer = MediaServerCreate
 
+// CreateMusicQualityProfile defines model for CreateMusicQualityProfile.
+type CreateMusicQualityProfile = MusicQualityProfileCreate
+
 // CreateOIDCProvider defines model for CreateOIDCProvider.
 type CreateOIDCProvider = OIDCProviderCreate
 
@@ -5916,6 +6253,12 @@ type IgnorePending = IgnorePendingRequest
 
 // MonitorToggle defines model for MonitorToggle.
 type MonitorToggle = MonitorToggleRequest
+
+// PatchMusicAlbum defines model for PatchMusicAlbum.
+type PatchMusicAlbum = PatchMusicAlbumRequest
+
+// PatchMusicArtist defines model for PatchMusicArtist.
+type PatchMusicArtist = PatchMusicArtistRequest
 
 // PatchSeries defines model for PatchSeries.
 type PatchSeries = PatchSeriesRequest
@@ -6097,6 +6440,24 @@ type ReidentifyMovieJSONBody struct {
 type RenameMovieFilesParams struct {
 	// Preview When true, returns the rename plan without applying it.
 	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// ListMusicArtistsParams defines parameters for ListMusicArtists.
+type ListMusicArtistsParams struct {
+	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
+	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DeleteMusicArtistParams defines parameters for DeleteMusicArtist.
+type DeleteMusicArtistParams struct {
+	// DeleteFiles When true, also delete attached media files from disk.
+	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+}
+
+// SearchMusicArtistsParams defines parameters for SearchMusicArtists.
+type SearchMusicArtistsParams struct {
+	// Query MusicBrainz artist search query.
+	Query MusicSearchQuery `form:"query" json:"query"`
 }
 
 // ListPeopleParams defines parameters for ListPeople.
@@ -6370,6 +6731,21 @@ type GrabMovieReleaseJSONRequestBody = SearchResult
 
 // ReidentifyMovieJSONRequestBody defines body for ReidentifyMovie for application/json ContentType.
 type ReidentifyMovieJSONRequestBody ReidentifyMovieJSONBody
+
+// PatchMusicAlbumJSONRequestBody defines body for PatchMusicAlbum for application/json ContentType.
+type PatchMusicAlbumJSONRequestBody = PatchMusicAlbumRequest
+
+// AddMusicArtistJSONRequestBody defines body for AddMusicArtist for application/json ContentType.
+type AddMusicArtistJSONRequestBody = AddMusicArtistRequest
+
+// PatchMusicArtistJSONRequestBody defines body for PatchMusicArtist for application/json ContentType.
+type PatchMusicArtistJSONRequestBody = PatchMusicArtistRequest
+
+// CreateMusicQualityProfileJSONRequestBody defines body for CreateMusicQualityProfile for application/json ContentType.
+type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
+
+// UpdateMusicQualityProfileJSONRequestBody defines body for UpdateMusicQualityProfile for application/json ContentType.
+type UpdateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
@@ -6754,6 +7130,45 @@ type ServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicAlbum Get album details
+	// (GET /music/albums/{id})
+	GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// PatchMusicAlbum Patch an album
+	// (PATCH /music/albums/{id})
+	PatchMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListMusicArtists List music artists
+	// (GET /music/artists)
+	ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams)
+	// AddMusicArtist Add an artist by MusicBrainz id
+	// (POST /music/artists)
+	AddMusicArtist(w http.ResponseWriter, r *http.Request)
+	// DeleteMusicArtist Remove an artist from the library
+	// (DELETE /music/artists/{id})
+	DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams)
+	// GetMusicArtist Get artist details
+	// (GET /music/artists/{id})
+	GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// PatchMusicArtist Patch an artist
+	// (PATCH /music/artists/{id})
+	PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RefreshMusicArtist Refresh an artist from MusicBrainz
+	// (POST /music/artists/{id}/refresh)
+	RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ListMusicQualityProfiles List music quality profiles
+	// (GET /music/quality-profiles)
+	ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request)
+	// CreateMusicQualityProfile Create a music quality profile
+	// (POST /music/quality-profiles)
+	CreateMusicQualityProfile(w http.ResponseWriter, r *http.Request)
+	// DeleteMusicQualityProfile Delete a music quality profile
+	// (DELETE /music/quality-profiles/{name})
+	DeleteMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// UpdateMusicQualityProfile Update a music quality profile
+	// (PUT /music/quality-profiles/{name})
+	UpdateMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// SearchMusicArtists Search MusicBrainz for artists to add
+	// (GET /music/search)
+	SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams)
@@ -7587,6 +8002,84 @@ func (_ Unimplemented) SearchMovie(w http.ResponseWriter, r *http.Request, id Re
 // SearchMovieNow Dispatch an indexer search and grab for a single movie
 // (POST /movies/{id}/search-now)
 func (_ Unimplemented) SearchMovieNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicAlbum Get album details
+// (GET /music/albums/{id})
+func (_ Unimplemented) GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMusicAlbum Patch an album
+// (PATCH /music/albums/{id})
+func (_ Unimplemented) PatchMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMusicArtists List music artists
+// (GET /music/artists)
+func (_ Unimplemented) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AddMusicArtist Add an artist by MusicBrainz id
+// (POST /music/artists)
+func (_ Unimplemented) AddMusicArtist(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMusicArtist Remove an artist from the library
+// (DELETE /music/artists/{id})
+func (_ Unimplemented) DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicArtist Get artist details
+// (GET /music/artists/{id})
+func (_ Unimplemented) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMusicArtist Patch an artist
+// (PATCH /music/artists/{id})
+func (_ Unimplemented) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RefreshMusicArtist Refresh an artist from MusicBrainz
+// (POST /music/artists/{id}/refresh)
+func (_ Unimplemented) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMusicQualityProfiles List music quality profiles
+// (GET /music/quality-profiles)
+func (_ Unimplemented) ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CreateMusicQualityProfile Create a music quality profile
+// (POST /music/quality-profiles)
+func (_ Unimplemented) CreateMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMusicQualityProfile Delete a music quality profile
+// (DELETE /music/quality-profiles/{name})
+func (_ Unimplemented) DeleteMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// UpdateMusicQualityProfile Update a music quality profile
+// (PUT /music/quality-profiles/{name})
+func (_ Unimplemented) UpdateMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchMusicArtists Search MusicBrainz for artists to add
+// (GET /music/search)
+func (_ Unimplemented) SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -10663,6 +11156,351 @@ func (siw *ServerInterfaceWrapper) SearchMovieNow(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicAlbum operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicAlbum(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicAlbum(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMusicAlbum operation middleware
+func (siw *ServerInterfaceWrapper) PatchMusicAlbum(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMusicAlbum(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMusicArtists operation middleware
+func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMusicArtistsParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMusicArtists(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) AddMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddMusicArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteMusicArtistParams
+
+	// ------------- Optional query parameter "delete_files" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "delete_files", r.URL.Query(), &params.DeleteFiles, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "delete_files"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "delete_files", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMusicArtist(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) PatchMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMusicArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshMusicArtist operation middleware
+func (siw *ServerInterfaceWrapper) RefreshMusicArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshMusicArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMusicQualityProfiles operation middleware
+func (siw *ServerInterfaceWrapper) ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMusicQualityProfiles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateMusicQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) CreateMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateMusicQualityProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMusicQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMusicQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateMusicQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateMusicQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchMusicArtists operation middleware
+func (siw *ServerInterfaceWrapper) SearchMusicArtists(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchMusicArtistsParams
+
+	// ------------- Required query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMusicArtists(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPeople operation middleware
 func (siw *ServerInterfaceWrapper) ListPeople(w http.ResponseWriter, r *http.Request) {
 
@@ -12951,6 +13789,45 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/people/{id}", wrapper.GetPerson)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/search", wrapper.SearchMusicArtists)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/artists", wrapper.ListMusicArtists)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists", wrapper.AddMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/music/artists/{id}", wrapper.DeleteMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/artists/{id}", wrapper.GetMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/music/artists/{id}", wrapper.PatchMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/refresh", wrapper.RefreshMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums/{id}", wrapper.GetMusicAlbum)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/music/albums/{id}", wrapper.PatchMusicAlbum)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/quality-profiles", wrapper.ListMusicQualityProfiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/quality-profiles", wrapper.CreateMusicQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/music/quality-profiles/{name}", wrapper.DeleteMusicQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/music/quality-profiles/{name}", wrapper.UpdateMusicQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/quality-profiles", wrapper.ListQualityProfiles)
 	})
 	r.Group(func(r chi.Router) {
@@ -13434,6 +14311,24 @@ type MovieRefreshedJSONResponse Movie
 type MovieRenamePlanJSONResponse RenamePlan
 
 type MovieSearchAcceptedJSONResponse MovieSearchAccepted
+
+type MusicAlbumDetailJSONResponse MusicAlbum
+
+type MusicArtistCreatedJSONResponse MusicArtist
+
+type MusicArtistDeletedResponse struct {
+}
+
+type MusicArtistDetailJSONResponse MusicArtist
+
+type MusicArtistListJSONResponse PaginatedMusicArtists
+
+type MusicQualityProfileDeletedResponse struct {
+}
+
+type MusicQualityProfileResponseJSONResponse MusicQualityProfile
+
+type MusicSearchResultsJSONResponse MusicArtistSearchResultList
 
 type NoContentResponse struct {
 }
@@ -20214,6 +21109,865 @@ func (response SearchMovieNow500JSONResponse) VisitSearchMovieNowResponse(w http
 	return err
 }
 
+type GetMusicAlbumRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetMusicAlbumResponseObject interface {
+	VisitGetMusicAlbumResponse(w http.ResponseWriter) error
+}
+
+type GetMusicAlbum200JSONResponse struct{ MusicAlbumDetailJSONResponse }
+
+func (response GetMusicAlbum200JSONResponse) VisitGetMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbum404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicAlbum404JSONResponse) VisitGetMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbum500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicAlbum500JSONResponse) VisitGetMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicAlbumRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PatchMusicAlbumJSONRequestBody
+}
+
+type PatchMusicAlbumResponseObject interface {
+	VisitPatchMusicAlbumResponse(w http.ResponseWriter) error
+}
+
+type PatchMusicAlbum200JSONResponse struct{ MusicAlbumDetailJSONResponse }
+
+func (response PatchMusicAlbum200JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicAlbum403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchMusicAlbum403JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicAlbum404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchMusicAlbum404JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicAlbum413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMusicAlbum413JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicAlbum500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PatchMusicAlbum500JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicArtistsRequestObject struct {
+	Params ListMusicArtistsParams
+}
+
+type ListMusicArtistsResponseObject interface {
+	VisitListMusicArtistsResponse(w http.ResponseWriter) error
+}
+
+type ListMusicArtists200JSONResponse struct{ MusicArtistListJSONResponse }
+
+func (response ListMusicArtists200JSONResponse) VisitListMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicArtists400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMusicArtists400JSONResponse) VisitListMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicArtists500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMusicArtists500JSONResponse) VisitListMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtistRequestObject struct {
+	Body *AddMusicArtistJSONRequestBody
+}
+
+type AddMusicArtistResponseObject interface {
+	VisitAddMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type AddMusicArtist201JSONResponse struct{ MusicArtistCreatedJSONResponse }
+
+func (response AddMusicArtist201JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtist403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddMusicArtist403JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtist409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AddMusicArtist409JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtist413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddMusicArtist413JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AddMusicArtist500JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicArtistRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params DeleteMusicArtistParams
+}
+
+type DeleteMusicArtistResponseObject interface {
+	VisitDeleteMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type DeleteMusicArtist204Response = MusicArtistDeletedResponse
+
+func (response DeleteMusicArtist204Response) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMusicArtist403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMusicArtist403JSONResponse) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicArtist404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteMusicArtist404JSONResponse) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteMusicArtist500JSONResponse) VisitDeleteMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetMusicArtistResponseObject interface {
+	VisitGetMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtist200JSONResponse struct{ MusicArtistDetailJSONResponse }
+
+func (response GetMusicArtist200JSONResponse) VisitGetMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtist404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicArtist404JSONResponse) VisitGetMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtist500JSONResponse) VisitGetMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtistRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PatchMusicArtistJSONRequestBody
+}
+
+type PatchMusicArtistResponseObject interface {
+	VisitPatchMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type PatchMusicArtist200JSONResponse struct{ MusicArtistDetailJSONResponse }
+
+func (response PatchMusicArtist200JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtist403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchMusicArtist403JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtist404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchMusicArtist404JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtist413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMusicArtist413JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtist422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchMusicArtist422JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PatchMusicArtist500JSONResponse) VisitPatchMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtistRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type RefreshMusicArtistResponseObject interface {
+	VisitRefreshMusicArtistResponse(w http.ResponseWriter) error
+}
+
+type RefreshMusicArtist200JSONResponse struct{ MusicArtistDetailJSONResponse }
+
+func (response RefreshMusicArtist200JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtist403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RefreshMusicArtist403JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtist404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RefreshMusicArtist404JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RefreshMusicArtist500JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicQualityProfilesRequestObject struct {
+}
+
+type ListMusicQualityProfilesResponseObject interface {
+	VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error
+}
+
+type ListMusicQualityProfiles200JSONResponse []MusicQualityProfile
+
+func (response ListMusicQualityProfiles200JSONResponse) VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMusicQualityProfiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMusicQualityProfiles500JSONResponse) VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfileRequestObject struct {
+	Body *CreateMusicQualityProfileJSONRequestBody
+}
+
+type CreateMusicQualityProfileResponseObject interface {
+	VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type CreateMusicQualityProfile201JSONResponse struct {
+	MusicQualityProfileResponseJSONResponse
+}
+
+func (response CreateMusicQualityProfile201JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateMusicQualityProfile403JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateMusicQualityProfile409JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateMusicQualityProfile413JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfile422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateMusicQualityProfile422JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMusicQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateMusicQualityProfile500JSONResponse) VisitCreateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type DeleteMusicQualityProfileResponseObject interface {
+	VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type DeleteMusicQualityProfile204Response = MusicQualityProfileDeletedResponse
+
+func (response DeleteMusicQualityProfile204Response) VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMusicQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMusicQualityProfile403JSONResponse) VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteMusicQualityProfile404JSONResponse) VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteMusicQualityProfile409JSONResponse) VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteMusicQualityProfile500JSONResponse) VisitDeleteMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *UpdateMusicQualityProfileJSONRequestBody
+}
+
+type UpdateMusicQualityProfileResponseObject interface {
+	VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type UpdateMusicQualityProfile200JSONResponse struct {
+	MusicQualityProfileResponseJSONResponse
+}
+
+func (response UpdateMusicQualityProfile200JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateMusicQualityProfile403JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateMusicQualityProfile404JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateMusicQualityProfile413JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfile422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateMusicQualityProfile422JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMusicQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateMusicQualityProfile500JSONResponse) VisitUpdateMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicArtistsRequestObject struct {
+	Params SearchMusicArtistsParams
+}
+
+type SearchMusicArtistsResponseObject interface {
+	VisitSearchMusicArtistsResponse(w http.ResponseWriter) error
+}
+
+type SearchMusicArtists200JSONResponse struct{ MusicSearchResultsJSONResponse }
+
+func (response SearchMusicArtists200JSONResponse) VisitSearchMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicArtists500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchMusicArtists500JSONResponse) VisitSearchMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListPeopleRequestObject struct {
 	Params ListPeopleParams
 }
@@ -24826,6 +26580,45 @@ type StrictServerInterface interface {
 	// SearchMovieNow Dispatch an indexer search and grab for a single movie
 	// (POST /movies/{id}/search-now)
 	SearchMovieNow(ctx context.Context, request SearchMovieNowRequestObject) (SearchMovieNowResponseObject, error)
+	// GetMusicAlbum Get album details
+	// (GET /music/albums/{id})
+	GetMusicAlbum(ctx context.Context, request GetMusicAlbumRequestObject) (GetMusicAlbumResponseObject, error)
+	// PatchMusicAlbum Patch an album
+	// (PATCH /music/albums/{id})
+	PatchMusicAlbum(ctx context.Context, request PatchMusicAlbumRequestObject) (PatchMusicAlbumResponseObject, error)
+	// ListMusicArtists List music artists
+	// (GET /music/artists)
+	ListMusicArtists(ctx context.Context, request ListMusicArtistsRequestObject) (ListMusicArtistsResponseObject, error)
+	// AddMusicArtist Add an artist by MusicBrainz id
+	// (POST /music/artists)
+	AddMusicArtist(ctx context.Context, request AddMusicArtistRequestObject) (AddMusicArtistResponseObject, error)
+	// DeleteMusicArtist Remove an artist from the library
+	// (DELETE /music/artists/{id})
+	DeleteMusicArtist(ctx context.Context, request DeleteMusicArtistRequestObject) (DeleteMusicArtistResponseObject, error)
+	// GetMusicArtist Get artist details
+	// (GET /music/artists/{id})
+	GetMusicArtist(ctx context.Context, request GetMusicArtistRequestObject) (GetMusicArtistResponseObject, error)
+	// PatchMusicArtist Patch an artist
+	// (PATCH /music/artists/{id})
+	PatchMusicArtist(ctx context.Context, request PatchMusicArtistRequestObject) (PatchMusicArtistResponseObject, error)
+	// RefreshMusicArtist Refresh an artist from MusicBrainz
+	// (POST /music/artists/{id}/refresh)
+	RefreshMusicArtist(ctx context.Context, request RefreshMusicArtistRequestObject) (RefreshMusicArtistResponseObject, error)
+	// ListMusicQualityProfiles List music quality profiles
+	// (GET /music/quality-profiles)
+	ListMusicQualityProfiles(ctx context.Context, request ListMusicQualityProfilesRequestObject) (ListMusicQualityProfilesResponseObject, error)
+	// CreateMusicQualityProfile Create a music quality profile
+	// (POST /music/quality-profiles)
+	CreateMusicQualityProfile(ctx context.Context, request CreateMusicQualityProfileRequestObject) (CreateMusicQualityProfileResponseObject, error)
+	// DeleteMusicQualityProfile Delete a music quality profile
+	// (DELETE /music/quality-profiles/{name})
+	DeleteMusicQualityProfile(ctx context.Context, request DeleteMusicQualityProfileRequestObject) (DeleteMusicQualityProfileResponseObject, error)
+	// UpdateMusicQualityProfile Update a music quality profile
+	// (PUT /music/quality-profiles/{name})
+	UpdateMusicQualityProfile(ctx context.Context, request UpdateMusicQualityProfileRequestObject) (UpdateMusicQualityProfileResponseObject, error)
+	// SearchMusicArtists Search MusicBrainz for artists to add
+	// (GET /music/search)
+	SearchMusicArtists(ctx context.Context, request SearchMusicArtistsRequestObject) (SearchMusicArtistsResponseObject, error)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
@@ -28041,6 +29834,374 @@ func (sh *strictHandler) SearchMovieNow(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMovieNowResponseObject); ok {
 		if err := validResponse.VisitSearchMovieNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicAlbum operation middleware
+func (sh *strictHandler) GetMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicAlbumRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicAlbum(ctx, request.(GetMusicAlbumRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicAlbum")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicAlbumResponseObject); ok {
+		if err := validResponse.VisitGetMusicAlbumResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMusicAlbum operation middleware
+func (sh *strictHandler) PatchMusicAlbum(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PatchMusicAlbumRequestObject
+
+	request.Id = id
+
+	var body PatchMusicAlbumJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMusicAlbum(ctx, request.(PatchMusicAlbumRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMusicAlbum")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMusicAlbumResponseObject); ok {
+		if err := validResponse.VisitPatchMusicAlbumResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMusicArtists operation middleware
+func (sh *strictHandler) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
+	var request ListMusicArtistsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMusicArtists(ctx, request.(ListMusicArtistsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMusicArtists")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMusicArtistsResponseObject); ok {
+		if err := validResponse.VisitListMusicArtistsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddMusicArtist operation middleware
+func (sh *strictHandler) AddMusicArtist(w http.ResponseWriter, r *http.Request) {
+	var request AddMusicArtistRequestObject
+
+	var body AddMusicArtistJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddMusicArtist(ctx, request.(AddMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddMusicArtistResponseObject); ok {
+		if err := validResponse.VisitAddMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMusicArtist operation middleware
+func (sh *strictHandler) DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams) {
+	var request DeleteMusicArtistRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMusicArtist(ctx, request.(DeleteMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMusicArtistResponseObject); ok {
+		if err := validResponse.VisitDeleteMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicArtist operation middleware
+func (sh *strictHandler) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicArtistRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtist(ctx, request.(GetMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMusicArtist operation middleware
+func (sh *strictHandler) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PatchMusicArtistRequestObject
+
+	request.Id = id
+
+	var body PatchMusicArtistJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMusicArtist(ctx, request.(PatchMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMusicArtistResponseObject); ok {
+		if err := validResponse.VisitPatchMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RefreshMusicArtist operation middleware
+func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request RefreshMusicArtistRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RefreshMusicArtist(ctx, request.(RefreshMusicArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefreshMusicArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RefreshMusicArtistResponseObject); ok {
+		if err := validResponse.VisitRefreshMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMusicQualityProfiles operation middleware
+func (sh *strictHandler) ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request) {
+	var request ListMusicQualityProfilesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMusicQualityProfiles(ctx, request.(ListMusicQualityProfilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMusicQualityProfiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMusicQualityProfilesResponseObject); ok {
+		if err := validResponse.VisitListMusicQualityProfilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateMusicQualityProfile operation middleware
+func (sh *strictHandler) CreateMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+	var request CreateMusicQualityProfileRequestObject
+
+	var body CreateMusicQualityProfileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateMusicQualityProfile(ctx, request.(CreateMusicQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateMusicQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateMusicQualityProfileResponseObject); ok {
+		if err := validResponse.VisitCreateMusicQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMusicQualityProfile operation middleware
+func (sh *strictHandler) DeleteMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request DeleteMusicQualityProfileRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMusicQualityProfile(ctx, request.(DeleteMusicQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMusicQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMusicQualityProfileResponseObject); ok {
+		if err := validResponse.VisitDeleteMusicQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateMusicQualityProfile operation middleware
+func (sh *strictHandler) UpdateMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request UpdateMusicQualityProfileRequestObject
+
+	request.Name = name
+
+	var body UpdateMusicQualityProfileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMusicQualityProfile(ctx, request.(UpdateMusicQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMusicQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateMusicQualityProfileResponseObject); ok {
+		if err := validResponse.VisitUpdateMusicQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchMusicArtists operation middleware
+func (sh *strictHandler) SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams) {
+	var request SearchMusicArtistsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMusicArtists(ctx, request.(SearchMusicArtistsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMusicArtists")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMusicArtistsResponseObject); ok {
+		if err := validResponse.VisitSearchMusicArtistsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

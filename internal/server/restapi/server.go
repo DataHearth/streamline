@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -47,6 +48,8 @@ type Server struct {
 	tvshows         tvshow.Manager
 	tvSearcher      *rss.EpisodeMissingSearcher
 	metadataTV      metadata.TVProvider
+	music           music.Manager
+	metadataMusic   metadata.MusicProvider
 	deepLinker      *mediaserver.DeepLinker
 	renamer         library.Renamer
 	seriesRenamer   library.Renamer
@@ -77,6 +80,8 @@ type Deps struct {
 	TVShows         tvshow.Manager
 	TVSearcher      *rss.EpisodeMissingSearcher
 	MetadataTV      metadata.TVProvider
+	Music           music.Manager
+	MetadataMusic   metadata.MusicProvider
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
@@ -106,6 +111,8 @@ func New(d Deps) *Server {
 		tvshows:         d.TVShows,
 		tvSearcher:      d.TVSearcher,
 		metadataTV:      d.MetadataTV,
+		music:           d.Music,
+		metadataMusic:   d.MetadataMusic,
 		deepLinker:      d.DeepLinker,
 		renamer:         d.Renamer,
 		seriesRenamer:   d.SeriesRenamer,

@@ -43,6 +43,10 @@ type Store interface {
 	// FindArtistByID eager-loads albums (release_date, then title) with their
 	// tracks (disc, position) and the tracks' media files.
 	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindAlbumByID eager-loads the album's tracks (disc, then position) with
+	// their media files.
+	FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error)
+	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	// FindArtistByMBID returns nil, nil when no artist has the mbid.
 	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
 	CountArtists(ctx context.Context) (int, error)

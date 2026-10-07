@@ -36,6 +36,10 @@ tags:
     description: Background re-encode queue driven by quality-profile transcode policies
   - name: people
     description: Cast members credited on the library's movies and series
+  - name: music
+    description: Music library, artists, albums and tracks backed by MusicBrainz
+  - name: music-quality-profiles
+    description: Audio format quality profiles for the music library
 
 servers:
   - url: /api/v1
@@ -1059,6 +1063,246 @@ paths:
                 $ref: "#/components/schemas/PersonCredits"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Music ───────────────────────────────────────────────
+  /music/search:
+    get:
+      operationId: searchMusicArtists
+      summary: Search MusicBrainz for artists to add
+      description: |
+        Searches MusicBrainz for artists matching the query. Used to find
+        MBIDs before adding artists to the library.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/MusicSearchQuery"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicSearchResults"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists:
+    get:
+      operationId: listMusicArtists
+      summary: List music artists
+      description: Returns a paginated list of artists in the library.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/SeriesPage"
+        - $ref: "#/components/parameters/SeriesLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: addMusicArtist
+      summary: Add an artist by MusicBrainz id
+      description: |
+        Fetches the artist and its discography from MusicBrainz and adds
+        them to the library. MusicBrainz is rate limited to one request per
+        second, so an artist with a large discography is slow to add.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/AddMusicArtist"
+      responses:
+        "201":
+          $ref: "#/components/responses/MusicArtistCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicArtist
+      summary: Get artist details
+      description: Returns one artist with its albums.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchMusicArtist
+      summary: Patch an artist
+      description: |
+        Partially updates an artist. Changing `monitored` applies to every
+        album of the artist. An unknown `quality_profile` answers 422.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/PatchMusicArtist"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteMusicArtist
+      summary: Remove an artist from the library
+      description: |
+        Deletes the artist with its albums and tracks. When delete_files=true,
+        also removes attached media files from disk.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/DeleteSeriesFiles"
+      responses:
+        "204":
+          $ref: "#/components/responses/MusicArtistDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/refresh:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshMusicArtist
+      summary: Refresh an artist from MusicBrainz
+      description: |
+        Re-fetches the discography. New release groups become albums
+        inheriting the artist's monitored flag; existing albums update
+        metadata only.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicAlbum
+      summary: Get album details
+      description: Returns one album with its tracks.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicAlbumDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchMusicAlbum
+      summary: Patch an album
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/PatchMusicAlbum"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicAlbumDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/quality-profiles:
+    get:
+      operationId: listMusicQualityProfiles
+      summary: List music quality profiles
+      tags: [music-quality-profiles]
+      responses:
+        "200":
+          description: Music quality profile list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MusicQualityProfile"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createMusicQualityProfile
+      summary: Create a music quality profile
+      tags: [music-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateMusicQualityProfile"
+      responses:
+        "201":
+          $ref: "#/components/responses/MusicQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/quality-profiles/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateMusicQualityProfile
+      summary: Update a music quality profile
+      description: The name in the body is ignored; the path names the profile.
+      tags: [music-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateMusicQualityProfile"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteMusicQualityProfile
+      summary: Delete a music quality profile
+      tags: [music-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/MusicQualityProfileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -4262,6 +4506,14 @@ components:
         type: integer
         x-go-type: uint32
 
+    MusicSearchQuery:
+      name: query
+      in: query
+      required: true
+      description: MusicBrainz artist search query.
+      schema:
+        type: string
+
     DeleteSeriesFiles:
       name: delete_files
       in: query
@@ -4334,6 +4586,34 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/QualityProfileCreate"
+
+    AddMusicArtist:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddMusicArtistRequest"
+
+    PatchMusicArtist:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PatchMusicArtistRequest"
+
+    PatchMusicAlbum:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PatchMusicAlbumRequest"
+
+    CreateMusicQualityProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicQualityProfileCreate"
 
     CreateCustomFormat:
       required: true
@@ -4819,6 +5099,54 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/LookupDetail"
+
+    MusicSearchResults:
+      description: MusicBrainz artist search results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtistSearchResultList"
+
+    MusicArtistList:
+      description: Paginated artist list.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaginatedMusicArtists"
+
+    MusicArtistDetail:
+      description: An artist with its albums.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtist"
+
+    MusicArtistCreated:
+      description: Artist added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtist"
+
+    MusicArtistDeleted:
+      description: Artist deleted.
+
+    MusicAlbumDetail:
+      description: An album with its tracks.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicAlbum"
+
+    MusicQualityProfileResponse:
+      description: A music quality profile.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicQualityProfile"
+
+    MusicQualityProfileDeleted:
+      description: Profile deleted.
 
     SeriesDeleted:
       description: Series deleted.
@@ -6168,6 +6496,197 @@ components:
             what states the saving.
         media_info:
           $ref: "#/components/schemas/MediaInfo"
+
+    MusicArtist:
+      type: object
+      required: [id, mbid, name, sort_name, monitored, path, quality_profile, album_count]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        mbid:
+          type: string
+        name:
+          type: string
+        sort_name:
+          type: string
+        overview:
+          type: string
+        monitored:
+          type: boolean
+        path:
+          type: string
+        quality_profile:
+          type: string
+        album_count:
+          type: integer
+          x-go-type: uint32
+        albums:
+          type: array
+          description: Populated by the detail, patch and refresh responses.
+          items:
+            $ref: "#/components/schemas/MusicAlbum"
+
+    MusicAlbum:
+      type: object
+      required: [id, mbid, title, type, monitored, status, track_count]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        mbid:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          enum: [album, ep, single, compilation, live, other]
+        release_date:
+          type: string
+          format: date
+          nullable: true
+        monitored:
+          type: boolean
+        status:
+          type: string
+          enum: [wanted, downloading, paused, available, skipped]
+        track_count:
+          type: integer
+          x-go-type: uint32
+        tracks:
+          type: array
+          description: Populated by the album endpoints.
+          items:
+            $ref: "#/components/schemas/MusicTrack"
+
+    MusicTrack:
+      type: object
+      required: [id, mbid, title, disc, position, duration]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        mbid:
+          type: string
+        title:
+          type: string
+        disc:
+          type: integer
+          x-go-type: uint8
+        position:
+          type: integer
+          x-go-type: uint16
+        duration:
+          type: integer
+          x-go-type: uint32
+          description: Length in seconds, 0 when unknown.
+
+    MusicArtistSearchResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicArtistSearchResult"
+
+    MusicArtistSearchResult:
+      type: object
+      required: [mbid, name, sort_name, score, already_added]
+      properties:
+        mbid:
+          type: string
+        name:
+          type: string
+        sort_name:
+          type: string
+        disambiguation:
+          type: string
+        score:
+          type: integer
+          x-go-type: uint8
+        already_added:
+          type: boolean
+
+    PaginatedMusicArtists:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicArtist"
+        total:
+          type: integer
+          x-go-type: uint32
+        page:
+          type: integer
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+
+    AddMusicArtistRequest:
+      type: object
+      required: [mbid]
+      properties:
+        mbid:
+          type: string
+        monitored:
+          type: boolean
+          description: Defaults to true.
+        quality_profile:
+          type: string
+
+    PatchMusicArtistRequest:
+      type: object
+      properties:
+        monitored:
+          type: boolean
+        quality_profile:
+          type: string
+
+    PatchMusicAlbumRequest:
+      type: object
+      properties:
+        monitored:
+          type: boolean
+
+    MusicQualityProfile:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed, is_default]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+        cutoff:
+          type: string
+          enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+        upgrade_allowed:
+          type: boolean
+        is_default:
+          type: boolean
+
+    MusicQualityProfileCreate:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+        cutoff:
+          type: string
+          enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+        upgrade_allowed:
+          type: boolean
 
     PaginatedTVShows:
       type: object

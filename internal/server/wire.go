@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -157,6 +158,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	// 3. Create metadata / media / indexer / download services
 	tmdb := metadata.NewTMDB()
 	tvdb := metadata.NewTVDB()
+	mb := metadata.NewMusicBrainz()
 	postersSvc, err := posters.New(cfg.DataDir)
 	if err != nil {
 		dbClient.Close()
@@ -178,6 +180,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	dispatcher := mediaserver.NewDispatcher()
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
+	musicSvc := music.NewService(store, mb, postersSvc)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
 	// subfolders, so on a fresh install they'd first appear after an import that
@@ -477,6 +480,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Importer:        imp,
 		Prober:          prober,
 		Transcoder:      transcoder,
+		Music:           musicSvc,
+		MetadataMusic:   mb,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

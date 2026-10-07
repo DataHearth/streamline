@@ -172,6 +172,26 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
+### Music
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added` | Authenticated |
+| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100); items carry `album_count` but no `albums` | Authenticated |
+| `POST` | `/music/artists` | Add an artist by `mbid` (`monitored` defaults to true, optional `quality_profile`); `409` if already added | Member |
+| `GET` | `/music/artists/{id}` | Fetch an artist with its `albums` | Authenticated |
+| `PATCH` | `/music/artists/{id}` | Update `monitored` (cascades to every album) and `quality_profile` (`422` for an unknown profile name) | Member |
+| `DELETE` | `/music/artists/{id}` | Remove an artist; `?delete_files=true` also deletes files from disk | Member |
+| `POST` | `/music/artists/{id}/refresh` | Re-fetch the discography from MusicBrainz | Member |
+| `GET` | `/music/albums/{id}` | Fetch an album with its `tracks` | Authenticated |
+| `PATCH` | `/music/albums/{id}` | Update `monitored` | Member |
+| `GET` `POST` | `/music/quality-profiles` | List / create music quality profiles | Authenticated / 🔒 Admin |
+| `PUT` `DELETE` | `/music/quality-profiles/{name}` | Update / delete a music quality profile | 🔒 Admin |
+
+Adding an artist fetches its whole discography from MusicBrainz, which allows one request per second, so a large catalogue makes `POST /music/artists` slow. Poster URLs are not in the payloads: clients build `/posters/artists/{id}/poster.jpg` and `/posters/albums/{id}/poster.jpg` themselves.
+
+A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `formats` and `cutoff` drawn from `flac-24`, `flac`, `mp3-320`, `mp3-v0`, `mp3-256`, `mp3-192`, `other`. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`. `PUT` takes the same body as `POST` and ignores the name in the body.
+
 ### People (cast)
 
 | Method | Path | What it does | Auth |

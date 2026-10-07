@@ -65,6 +65,39 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		).To(Equal("Smells Like Teen Spirit"))
 	})
 
+	It("loads an album with its tracks ordered by disc and position", func() {
+		a := seed()
+		var id uint32
+		for _, al := range a.Edges.Albums {
+			if al.Mbid == "rg-1" {
+				id = al.ID
+			}
+		}
+		row, err := store.FindAlbumByID(ctx, id)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(row.Edges.Tracks).To(HaveLen(2))
+		Expect(row.Edges.Tracks[0].Title).To(Equal("Smells Like Teen Spirit"))
+	})
+
+	It("reports an unknown album id as not found", func() {
+		_, err := store.FindAlbumByID(ctx, 999)
+		Expect(ent.IsNotFound(err)).To(BeTrue())
+	})
+
+	It("sets the artist's quality profile", func() {
+		a := seed()
+		Expect(store.SetArtistQualityProfile(ctx, a.ID, "lossless")).To(Succeed())
+		Expect(client.Artist.GetX(ctx, a.ID).QualityProfile).To(Equal("lossless"))
+	})
+
+	It("lists artists with their albums loaded", func() {
+		seed()
+		rows, err := store.ListArtists(ctx, 0, 10)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].Edges.Albums).To(HaveLen(2))
+	})
+
 	It("returns nil, nil for an unknown mbid", func() {
 		row, err := store.FindArtistByMBID(ctx, "nope")
 		Expect(err).NotTo(HaveOccurred())

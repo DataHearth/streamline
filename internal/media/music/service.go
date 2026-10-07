@@ -31,6 +31,21 @@ var (
 	ErrAlbumNotFound  = errors.New("album not found")
 )
 
+// Manager is the surface the REST handlers use.
+type Manager interface {
+	Add(ctx context.Context, p AddParams) (*ent.Artist, error)
+	List(ctx context.Context, page, limit uint16) ([]*ent.Artist, uint32, error)
+	Get(ctx context.Context, id uint32) (*ent.Artist, error)
+	GetAlbum(ctx context.Context, id uint32) (*ent.Album, error)
+	SetArtistMonitored(ctx context.Context, id uint32, m bool) error
+	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
+	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
+	Delete(ctx context.Context, id uint32, deleteFiles bool) error
+	RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error)
+}
+
+var _ Manager = (*Service)(nil)
+
 type Service struct {
 	db       db.Store
 	metadata metadata.MusicProvider
@@ -191,6 +206,37 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.Artist, error) {
 		return nil, otelx.RecordSpanError(span, notFound(err))
 	}
 	return artist, nil
+}
+
+func (s *Service) GetAlbum(ctx context.Context, id uint32) (*ent.Album, error) {
+	ctx, span := tracer.Start(ctx, "music.get_album",
+		trace.WithAttributes(attribute.Int("album.id", int(id))))
+	defer span.End()
+	album, err := s.db.FindAlbumByID(ctx, id)
+	if ent.IsNotFound(err) {
+		err = ErrAlbumNotFound
+	}
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	return album, nil
+}
+
+func (s *Service) SetArtistQualityProfile(
+	ctx context.Context,
+	id uint32,
+	profile string,
+) error {
+	ctx, span := tracer.Start(ctx, "music.set_artist_quality_profile",
+		trace.WithAttributes(
+			attribute.Int("artist.id", int(id)),
+			attribute.String("quality_profile", profile),
+		))
+	defer span.End()
+	return otelx.RecordSpanError(
+		span,
+		notFound(s.db.SetArtistQualityProfile(ctx, id, profile)),
+	)
 }
 
 func (s *Service) SetArtistMonitored(ctx context.Context, id uint32, m bool) error {
