@@ -170,3 +170,66 @@ type TVProvider interface {
 	// TVDBID.
 	GetPerson(ctx context.Context, tvdbID uint32) (*PersonDetails, error)
 }
+
+// ArtistResult is a single MusicBrainz artist search hit.
+type ArtistResult struct {
+	MBID           string
+	Name           string
+	SortName       string
+	Disambiguation string
+	Score          uint8
+}
+
+// AlbumType mirrors the Album schema enum values.
+type AlbumType string
+
+const (
+	AlbumTypeAlbum       AlbumType = "album"
+	AlbumTypeEP          AlbumType = "ep"
+	AlbumTypeSingle      AlbumType = "single"
+	AlbumTypeCompilation AlbumType = "compilation"
+	AlbumTypeLive        AlbumType = "live"
+	AlbumTypeOther       AlbumType = "other"
+)
+
+// ReleaseGroupInfo is one release-group in an artist's discography.
+type ReleaseGroupInfo struct {
+	MBID        string
+	Title       string
+	Type        AlbumType
+	ReleaseDate *time.Time // nil when MusicBrainz has no first-release-date
+}
+
+// TrackInfo is one track of the canonical release picked for a release-group.
+type TrackInfo struct {
+	MBID     string // recording MBID
+	Title    string
+	Disc     uint8
+	Position uint16
+	Duration uint32 // seconds, 0 when unknown
+}
+
+// ReleaseGroupDetails carries the canonical release pick and its track list.
+type ReleaseGroupDetails struct {
+	ReleaseGroupInfo
+	ReleaseMBID string
+	Tracks      []TrackInfo
+}
+
+// ArtistDetails is the full artist record used to seed an artist and its albums.
+type ArtistDetails struct {
+	ArtistResult
+	Overview      string
+	ReleaseGroups []ReleaseGroupInfo
+}
+
+// MusicProvider fetches music metadata. Implemented by *MusicBrainz.
+type MusicProvider interface {
+	SearchArtists(ctx context.Context, query string) ([]ArtistResult, error)
+	// GetArtist returns the artist plus its full release-group listing
+	// (browse-paginated internally).
+	GetArtist(ctx context.Context, mbid string) (*ArtistDetails, error)
+	// GetReleaseGroup picks the canonical release (earliest official) and
+	// returns its track list.
+	GetReleaseGroup(ctx context.Context, mbid string) (*ReleaseGroupDetails, error)
+}
