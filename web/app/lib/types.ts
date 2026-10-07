@@ -1564,3 +1564,78 @@ export type MusicQualityProfile = {
 	upgrade_allowed: boolean;
 	is_default: boolean;
 };
+
+export type EbookFormat = "epub" | "azw3" | "mobi" | "pdf" | "other";
+
+export type AudiobookFormat = "m4b" | "mp3" | "other";
+
+export type BookMonitorPolicy = "all" | "future" | "none";
+
+export type BookWantKinds = "ebook" | "audiobook" | "both";
+
+export type BookSlotStatus =
+	| "wanted"
+	| "downloading"
+	| "paused"
+	| "available"
+	| "skipped";
+
+export type BookSlot = {
+	monitored: boolean;
+	status: BookSlotStatus;
+	file_count: number;
+};
+
+export type BookEntry = {
+	id: number;
+	hardcover_id: number;
+	title: string;
+	release_date?: string | null;
+	overview?: string;
+	series_name?: string;
+	series_position?: string;
+	ebook: BookSlot;
+	audiobook: BookSlot;
+};
+
+export type Book = BookEntry & { author_id: number };
+
+export type BookAuthor = {
+	id: number;
+	hardcover_id: number;
+	name: string;
+	sort_name: string;
+	overview?: string;
+	monitored: boolean;
+	monitor_policy: BookMonitorPolicy;
+	want_kinds: BookWantKinds;
+	ebook_quality_profile: string;
+	audiobook_quality_profile: string;
+	book_count: number;
+	// Only the detail, patch and refresh responses fill this.
+	books?: BookEntry[];
+};
+
+export type BookAuthorSearchResult = {
+	hardcover_id: number;
+	name: string;
+	books_count: number;
+	image_url?: string;
+	already_added: boolean;
+};
+
+export type EbookQualityProfile = {
+	name: string;
+	formats: EbookFormat[];
+	cutoff: EbookFormat;
+	upgrade_allowed: boolean;
+	is_default: boolean;
+};
+
+export type AudiobookQualityProfile = {
+	name: string;
+	formats: AudiobookFormat[];
+	cutoff: AudiobookFormat;
+	upgrade_allowed: boolean;
+	is_default: boolean;
+};

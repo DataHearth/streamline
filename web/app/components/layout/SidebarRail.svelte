@@ -8,6 +8,7 @@
 		Film,
 		Tv,
 		Music,
+		BookOpen,
 		Activity,
 		ListVideo,
 		Magnet,
@@ -61,6 +62,7 @@
 			{ label: i18n.movies_label(), href: "/movies", icon: Film },
 			{ label: i18n.settings_series(), href: "/series", icon: Tv },
 			{ label: i18n.music_label(), href: "/music", icon: Music },
+			{ label: i18n.books_label(), href: "/books", icon: BookOpen },
 		],
 		Activity: [
 			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },
@@ -102,7 +104,7 @@
 		};
 	}
 
-	let libraryActive = $derived(["/movies", "/series", "/music"].some((p) => isActiveFn(p)));
+	let libraryActive = $derived(["/movies", "/series", "/music", "/books"].some((p) => isActiveFn(p)));
 	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let dashActive = $derived(isActiveFn("/", {}, { recursive: false }));
 

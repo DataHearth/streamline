@@ -6,6 +6,7 @@
 		Film,
 		Tv,
 		Music,
+		BookOpen,
 		FolderInput,
 		CalendarDays,
 		Inbox,
@@ -93,6 +94,7 @@
 		{ label: i18n.movies_label(), href: "/movies", icon: Film },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv },
 		{ label: i18n.music_label(), href: "/music", icon: Music },
+		{ label: i18n.books_label(), href: "/books", icon: BookOpen },
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin

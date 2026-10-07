@@ -56,6 +56,7 @@
 		{ prefix: "/movies", label: i18n.movies_label() },
 		{ prefix: "/series", label: i18n.settings_series() },
 		{ prefix: "/music", label: i18n.music_label() },
+		{ prefix: "/books", label: i18n.books_label() },
 		{ prefix: "/activity", label: i18n.nav_activity() },
 		{ prefix: "/torrents", label: i18n.torrent_label() },
 		{ prefix: "/transcoding", label: i18n.transcode_label() },
@@ -73,6 +74,7 @@
 	const PAGE_LABELS: Record<string, () => string> = {
 		...SETTINGS_TITLES,
 		"/music/add": () => i18n.music_add_artist(),
+		"/books/add": () => i18n.books_add_author(),
 	};
 
 	function segmentLabel(segment: string, href: string): string {
@@ -105,6 +107,7 @@
 		let href = root.prefix;
 		segments.forEach((seg, i) => {
 			href += `/${seg}`;
+			if (href === "/books/author") return;
 			const label = segmentLabel(seg, href);
 			trail.push(i === segments.length - 1 ? { label } : { label, href });
 		});

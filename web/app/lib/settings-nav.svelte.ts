@@ -16,12 +16,16 @@ import {
 	KeyRound,
 	Users,
 	Music,
+	BookOpen,
+	Headphones,
 } from "@lucide/svelte";
 import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
 import { api } from "./api";
 import type {
+	AudiobookQualityProfile,
 	CustomFormat,
+	EbookQualityProfile,
 	DownloadClient,
 	Indexer,
 	MediaServer,
@@ -48,6 +52,8 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
 	"/settings/music-profiles": () => i18n.settings_music_profiles(),
+	"/settings/ebook-profiles": () => i18n.settings_ebook_profiles(),
+	"/settings/audiobook-profiles": () => i18n.settings_audiobook_profiles(),
 	"/settings/custom-formats": () => i18n.settings_custom_formats(),
 	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
@@ -97,6 +103,17 @@ export function createSettingsNav(withCounts = true) {
 	const musicProfiles = createQuery<MusicQualityProfile[]>(() => ({
 		queryKey: ["music", "quality-profiles"],
 		queryFn: () => api<MusicQualityProfile[]>("/music/quality-profiles"),
+		enabled: withCounts,
+	}));
+	const ebookProfiles = createQuery<EbookQualityProfile[]>(() => ({
+		queryKey: ["books", "ebook-quality-profiles"],
+		queryFn: () => api<EbookQualityProfile[]>("/books/ebook-quality-profiles"),
+		enabled: withCounts,
+	}));
+	const audiobookProfiles = createQuery<AudiobookQualityProfile[]>(() => ({
+		queryKey: ["books", "audiobook-quality-profiles"],
+		queryFn: () =>
+			api<AudiobookQualityProfile[]>("/books/audiobook-quality-profiles"),
 		enabled: withCounts,
 	}));
 	const customFormats = createQuery<CustomFormat[]>(() => ({
@@ -153,6 +170,18 @@ export function createSettingsNav(withCounts = true) {
 						Icon: Music,
 						label: i18n.settings_music_profiles(),
 						count: musicProfiles.data?.length,
+					},
+					{
+						path: "/settings/ebook-profiles",
+						Icon: BookOpen,
+						label: i18n.settings_ebook_profiles(),
+						count: ebookProfiles.data?.length,
+					},
+					{
+						path: "/settings/audiobook-profiles",
+						Icon: Headphones,
+						label: i18n.settings_audiobook_profiles(),
+						count: audiobookProfiles.data?.length,
 					},
 					// Counts what the operator can act on: the shipped library is a
 					// constant, so including builtins would show the same 13 on every

@@ -13,6 +13,7 @@
 		Replace,
 		Tv,
 		Music,
+		BookOpen,
 		CalendarDays,
 		Inbox,
 		FolderInput,
@@ -112,6 +113,7 @@
 		{ label: i18n.movies_label(), href: "/movies", icon: Film, line: counts.moviesLine },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv, line: counts.seriesLine },
 		{ label: i18n.music_label(), href: "/music", icon: Music },
+		{ label: i18n.books_label(), href: "/books", icon: BookOpen },
 	]);
 	const transcodeCounts = transcodeCountsQuery();
 	// Words, not dots: this sheet is the phone's entry point and the two numbers
@@ -203,7 +205,7 @@
 		"/settings",
 		"/account",
 	];
-	let libraryActive = $derived(["/movies", "/series", "/music"].some((p) => isActiveFn(p)));
+	let libraryActive = $derived(["/movies", "/series", "/music", "/books"].some((p) => isActiveFn(p)));
 	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let moreActive = $derived(IN_MORE.some((p) => isActiveFn(p)));
 	let moreOn = $derived(moreActive || sheet === "More");
