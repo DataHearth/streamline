@@ -25,6 +25,10 @@ func (s *Server) GetSystemInfo(
 		warn := true
 		out.FfmpegWarn = &warn
 	}
+	if s.hardcover != nil && s.hardcover.AuthRejected() {
+		warn := true
+		out.HardcoverAuthWarn = &warn
+	}
 	return GetSystemInfo200JSONResponse{
 		SystemInfoJSONResponse: SystemInfoJSONResponse(out),
 	}, nil

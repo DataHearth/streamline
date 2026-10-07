@@ -5137,6 +5137,10 @@ type SystemInfo struct {
 	GoOsArch   string `json:"go_os_arch"`
 	GoVersion  string `json:"go_version"`
 
+	// HardcoverAuthWarn True when Hardcover's most recent answer was HTTP 401 (rejected
+	// token); it clears on the next successful call. Absent otherwise.
+	HardcoverAuthWarn *bool `json:"hardcover_auth_warn,omitempty"`
+
 	// HttpsWarn True when public_url is plain http://.
 	HttpsWarn bool `json:"https_warn"`
 

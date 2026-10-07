@@ -420,6 +420,8 @@ It describes the file's **main** video track and its first audio track. Embedded
 
 **`ffmpeg_warn`** on `GET /system/info` is `true` when `ffmpeg.enabled` is true but ffprobe wasn't found on this process — a misconfigured `ffmpeg.path` or a custom build missing the binaries. The key is absent when `ffmpeg.enabled` is false; the operator opted out, so it's not a warning.
 
+**`hardcover_auth_warn`** on `GET /system/info` is `true` when Hardcover's most recent answer was HTTP 401, which means the configured token was rejected or has expired. The header pill turns amber and Settings → General shows a notice; the flag clears on the next successful Hardcover call. Absent when no 401 is outstanding.
+
 **`GET`/`PATCH /config/ffmpeg`** (admin) reads and edits the runtime config:
 
 ```bash

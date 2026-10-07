@@ -61,10 +61,14 @@ type Server struct {
 	ent             *ent.Client
 	publicURL       string
 	prober          ffmpeg.Prober
+	hardcover       authRejecter
 	// transcoder is nil in any composition that wired no worker; the
 	// /transcoding/* handlers read that as the feature being off.
 	transcoder *transcoding.Worker
 }
+
+// authRejecter is a provider that can report its credentials being refused.
+type authRejecter interface{ AuthRejected() bool }
 
 // Deps is the dependency set required by restapi handlers.
 type Deps struct {
@@ -93,6 +97,7 @@ type Deps struct {
 	Ent             *ent.Client
 	PublicURL       string
 	Prober          ffmpeg.Prober
+	Hardcover       authRejecter
 	Transcoder      *transcoding.Worker
 }
 
@@ -124,6 +129,7 @@ func New(d Deps) *Server {
 		ent:             d.Ent,
 		publicURL:       d.PublicURL,
 		prober:          d.Prober,
+		hardcover:       d.Hardcover,
 		transcoder:      d.Transcoder,
 	}
 }

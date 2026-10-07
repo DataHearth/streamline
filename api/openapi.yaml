@@ -9746,6 +9746,11 @@ components:
           description: |
             True when ffmpeg.enabled is true and ffprobe was not found.
             Absent when ffmpeg is disabled — the operator opted out.
+        hardcover_auth_warn:
+          type: boolean
+          description: |
+            True when Hardcover's most recent answer was HTTP 401 (rejected
+            token); it clears on the next successful call. Absent otherwise.
         auth_mode:
           type: string
         data_dir:

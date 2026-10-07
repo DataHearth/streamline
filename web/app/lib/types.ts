@@ -1260,6 +1260,7 @@ export type SystemInfo = {
 	public_url: string;
 	https_warn: boolean;
 	ffmpeg_warn?: boolean;
+	hardcover_auth_warn?: boolean;
 	auth_mode: string;
 	data_dir: string;
 	data_usage?: DiskUsage;

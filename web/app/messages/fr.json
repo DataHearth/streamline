@@ -1776,6 +1776,7 @@
 	"settings_custom_formats": "Formats personnalisés",
 	"settings_download_clients": "Clients de téléchargement",
 	"settings_ffmpeg_missing": "ffmpeg manquant",
+	"settings_hardcover_token_rejected": "Jeton Hardcover refusé",
 	"settings_file_only": "Serveur et sécurité",
 	"settings_file_only_help": "Réglages en fichier uniquement — modifiez votre configuration puis redémarrez. La frontière de confiance reste hors de l'interface à dessein : un réglage que l'API peut atteindre est un réglage qu'on peut lui faire accorder.",
 	"settings_general": "Général",

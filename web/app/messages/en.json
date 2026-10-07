@@ -1776,6 +1776,7 @@
 	"settings_custom_formats": "Custom formats",
 	"settings_download_clients": "Download clients",
 	"settings_ffmpeg_missing": "ffmpeg missing",
+	"settings_hardcover_token_rejected": "Hardcover token rejected",
 	"settings_file_only": "Server & security",
 	"settings_file_only_help": "File-only settings — edit your config file and restart. The trust boundary stays out of the UI on purpose: a setting the API can reach is one the API can be made to grant.",
 	"settings_general": "General",
