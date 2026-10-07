@@ -242,3 +242,56 @@ type MusicProvider interface {
 	// returns its track list.
 	GetReleaseGroup(ctx context.Context, mbid string) (*ReleaseGroupDetails, error)
 }
+
+// AuthorResult is a single Hardcover author search hit.
+type AuthorResult struct {
+	HardcoverID uint32
+	Name        string
+	BooksCount  uint32
+	ImageURL    string
+}
+
+// BookInfo is one book in an author's bibliography.
+type BookInfo struct {
+	HardcoverID    uint32
+	Title          string
+	ReleaseDate    *time.Time // nil when Hardcover has no release date
+	SeriesName     string
+	SeriesPosition string
+	CoverURL       string
+}
+
+// BookEdition is one edition of a book, used for grab/import matching only —
+// editions are never persisted.
+type BookEdition struct {
+	ISBN13       string
+	ASIN         string
+	Format       string // "ebook", "audiobook", "physical"
+	Pages        uint16
+	AudioSeconds uint32
+}
+
+// BookDetails carries the full book record incl. editions.
+type BookDetails struct {
+	BookInfo
+	Overview        string
+	AuthorHardcover uint32 // primary author's Hardcover ID
+	Editions        []BookEdition
+}
+
+// AuthorDetails is the full author record used to seed an author and its books.
+type AuthorDetails struct {
+	AuthorResult
+	Overview string
+	Books    []BookInfo
+}
+
+// BookProvider fetches book metadata. Implemented by *Hardcover.
+type BookProvider interface {
+	SearchAuthors(ctx context.Context, query string) ([]AuthorResult, error)
+	// GetAuthor returns the author plus the primary-author bibliography
+	// (paginated internally; translations and anthology-only appearances
+	// filtered out).
+	GetAuthor(ctx context.Context, hardcoverID uint32) (*AuthorDetails, error)
+	GetBook(ctx context.Context, hardcoverID uint32) (*BookDetails, error)
+}
