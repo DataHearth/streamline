@@ -98,6 +98,7 @@ Every secret-bearing key has a `_file` twin that reads the value from a path ins
 | `auth.oidc[].client_secret` | `auth.oidc[].client_secret_file` |
 | `metadata.tmdb_api_key` | `metadata.tmdb_api_key_file` |
 | `metadata.tvdb_api_key` | `metadata.tvdb_api_key_file` |
+| `metadata.hardcover_api_key` | `metadata.hardcover_api_key_file` |
 | `indexers[].api_key` | `indexers[].api_key_file` |
 | `download_clients[].password` | `download_clients[].password_file` |
 | `download_clients[].api_key` | `download_clients[].api_key_file` |
@@ -202,6 +203,10 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `quality_default_profile` | string | `default` | Profile used when an item names none |
 | `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `formats` (non-empty, from `flac-24` `flac` `mp3-320` `mp3-v0` `mp3-256` `mp3-192` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
 | `music_quality_default_profile` | string | empty | Music profile used when an item names none |
+| `ebook_quality_profiles` | list | `[]` | Ebook quality profiles: `name`, `formats` (non-empty, from `epub` `azw3` `mobi` `pdf` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
+| `ebook_quality_default_profile` | string | empty | Ebook profile used when an item names none |
+| `audiobook_quality_profiles` | list | `[]` | Audiobook quality profiles: `name`, `formats` (non-empty, from `m4b` `mp3` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
+| `audiobook_quality_default_profile` | string | empty | Audiobook profile used when an item names none |
 
 ### server
 
@@ -241,6 +246,10 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.series_path` | path | `/media/series` | TV library root |
 | `library.music_path` | path | `/data/music` | Music library root. File-only |
 | `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:00} - {Title}` | File-only |
+| `library.ebook_path` | path | `/data/books` | Ebook library root. File-only |
+| `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | File-only |
+| `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
+| `library.audiobook_naming` | template | `{Author}/{Title} ({Year})` | Folder only; chapter files keep their names. File-only |
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
@@ -308,6 +317,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | --- | --- | --- | --- |
 | `metadata.tmdb_api_key` | string | `""` | **Required for movies.** No key, no movie search |
 | `metadata.tvdb_api_key` | string | `""` | **Required for TV.** |
+| `metadata.hardcover_api_key` | string | `""` | **Required for books.** File-only |
 | `metadata.language` | BCP-47 | `en` | Empty lets the provider pick its own default |
 | `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar — set it to yours |
 

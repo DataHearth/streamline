@@ -121,6 +121,36 @@
         "upgrade_allowed": { "type": "boolean" }
       }
     },
+    "ebookQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "formats", "cutoff"],
+      "properties": {
+        "name": { "type": "string" },
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["epub", "azw3", "mobi", "pdf", "other"] }
+        },
+        "cutoff": { "enum": ["epub", "azw3", "mobi", "pdf", "other"] },
+        "upgrade_allowed": { "type": "boolean" }
+      }
+    },
+    "audiobookQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "formats", "cutoff"],
+      "properties": {
+        "name": { "type": "string" },
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["m4b", "mp3", "other"] }
+        },
+        "cutoff": { "enum": ["m4b", "mp3", "other"] },
+        "upgrade_allowed": { "type": "boolean" }
+      }
+    },
     "qualityProfileEntry": {
       "type": "object",
       "additionalProperties": false,
@@ -440,6 +470,10 @@
         "series_naming": { "type": "string" },
         "music_path": { "type": "string" },
         "music_naming": { "type": "string" },
+        "ebook_path": { "type": "string" },
+        "ebook_naming": { "type": "string" },
+        "audiobook_path": { "type": "string" },
+        "audiobook_naming": { "type": "string" },
         "download_path": {
           "type": "string",
           "description": "Host-side directory streamline reads completed torrents from. Combined with the torrent name to locate content (<download_path>/<torrent.Name>)."
@@ -530,6 +564,8 @@
         "tmdb_api_key_file": { "type": "string" },
         "tvdb_api_key": { "type": "string" },
         "tvdb_api_key_file": { "type": "string" },
+        "hardcover_api_key": { "type": "string" },
+        "hardcover_api_key_file": { "type": "string" },
         "language": {
           "type": "string",
           "description": "BCP-47 language tag, e.g. \"en\", \"fr\"."
@@ -764,6 +800,24 @@
     "music_quality_default_profile": {
       "type": "string",
       "description": "Name of the music quality profile used when an artist names none."
+    },
+    "ebook_quality_profiles": {
+      "type": "array",
+      "description": "Named ebook quality profiles, ranked over the format ladder epub > azw3 > mobi > pdf > other.",
+      "items": { "$ref": "#/definitions/ebookQualityProfileEntry" }
+    },
+    "ebook_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the ebook quality profile used when an author names none."
+    },
+    "audiobook_quality_profiles": {
+      "type": "array",
+      "description": "Named audiobook quality profiles, ranked over the format ladder m4b > mp3 > other.",
+      "items": { "$ref": "#/definitions/audiobookQualityProfileEntry" }
+    },
+    "audiobook_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the audiobook quality profile used when an author names none."
     },
     "custom_formats": {
       "type": "array",

@@ -349,6 +349,91 @@ func findMusicProfile(
 	return MusicQualityProfileEntry{}, false
 }
 
+// EbookFormats is the ordered quality ladder, best first. Profile Formats
+// and Cutoff must come from this set.
+var EbookFormats = []string{"epub", "azw3", "mobi", "pdf", "other"}
+
+// AudiobookFormats is the ordered quality ladder, best first. Profile Formats
+// and Cutoff must come from this set.
+var AudiobookFormats = []string{"m4b", "mp3", "other"}
+
+type EbookQualityProfileEntry struct {
+	Name           string   `koanf:"name"            validate:"required"`
+	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=epub azw3 mobi pdf other"`
+	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=epub azw3 mobi pdf other"`
+	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
+}
+
+type AudiobookQualityProfileEntry struct {
+	Name           string   `koanf:"name"            validate:"required"`
+	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=m4b mp3 other"`
+	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=m4b mp3 other"`
+	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
+}
+
+// ResolveEbookQualityProfile returns the profile named by name, falling back
+// to EbookQualityDefaultProfile when name is empty or unknown. ok is false
+// only when no ebook profiles are configured at all.
+func ResolveEbookQualityProfile(name string) (EbookQualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return EbookQualityProfileEntry{}, false
+	}
+	if p, ok := findEbookProfile(c.EbookQualityProfiles, name); ok {
+		return p, true
+	}
+	return findEbookProfile(c.EbookQualityProfiles, c.EbookQualityDefaultProfile)
+}
+
+func findEbookProfile(
+	profiles []EbookQualityProfileEntry,
+	name string,
+) (EbookQualityProfileEntry, bool) {
+	if name == "" {
+		return EbookQualityProfileEntry{}, false
+	}
+	for _, p := range profiles {
+		if p.Name == name {
+			return p, true
+		}
+	}
+	return EbookQualityProfileEntry{}, false
+}
+
+// ResolveAudiobookQualityProfile returns the profile named by name, falling back
+// to AudiobookQualityDefaultProfile when name is empty or unknown. ok is false
+// only when no audiobook profiles are configured at all.
+func ResolveAudiobookQualityProfile(
+	name string,
+) (AudiobookQualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return AudiobookQualityProfileEntry{}, false
+	}
+	if p, ok := findAudiobookProfile(c.AudiobookQualityProfiles, name); ok {
+		return p, true
+	}
+	return findAudiobookProfile(
+		c.AudiobookQualityProfiles,
+		c.AudiobookQualityDefaultProfile,
+	)
+}
+
+func findAudiobookProfile(
+	profiles []AudiobookQualityProfileEntry,
+	name string,
+) (AudiobookQualityProfileEntry, bool) {
+	if name == "" {
+		return AudiobookQualityProfileEntry{}, false
+	}
+	for _, p := range profiles {
+		if p.Name == name {
+			return p, true
+		}
+	}
+	return AudiobookQualityProfileEntry{}, false
+}
+
 // PickDownloadClient returns the highest-priority enabled download client.
 func PickDownloadClient() (DownloadClientEntry, bool) {
 	c := Get()

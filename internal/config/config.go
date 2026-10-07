@@ -65,6 +65,11 @@ type Config struct {
 
 	MusicQualityProfiles       []MusicQualityProfileEntry `koanf:"music_quality_profiles"        validate:"unique=Name,dive"`
 	MusicQualityDefaultProfile string                     `koanf:"music_quality_default_profile"`
+
+	EbookQualityProfiles           []EbookQualityProfileEntry     `koanf:"ebook_quality_profiles"            validate:"unique=Name,dive"`
+	EbookQualityDefaultProfile     string                         `koanf:"ebook_quality_default_profile"`
+	AudiobookQualityProfiles       []AudiobookQualityProfileEntry `koanf:"audiobook_quality_profiles"        validate:"unique=Name,dive"`
+	AudiobookQualityDefaultProfile string                         `koanf:"audiobook_quality_default_profile"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -227,12 +232,16 @@ const (
 )
 
 type LibraryConfig struct {
-	MoviePath    string `koanf:"movie_path"    validate:"required"`
-	MovieNaming  string `koanf:"movie_naming"  validate:"required"`
-	SeriesPath   string `koanf:"series_path"   validate:"required"`
-	SeriesNaming string `koanf:"series_naming" validate:"required"`
-	MusicPath    string `koanf:"music_path"    validate:"required"`
-	MusicNaming  string `koanf:"music_naming"  validate:"required"`
+	MoviePath       string `koanf:"movie_path"       validate:"required"`
+	MovieNaming     string `koanf:"movie_naming"     validate:"required"`
+	SeriesPath      string `koanf:"series_path"      validate:"required"`
+	SeriesNaming    string `koanf:"series_naming"    validate:"required"`
+	MusicPath       string `koanf:"music_path"       validate:"required"`
+	MusicNaming     string `koanf:"music_naming"     validate:"required"`
+	EbookPath       string `koanf:"ebook_path"       validate:"required"`
+	EbookNaming     string `koanf:"ebook_naming"     validate:"required"`
+	AudiobookPath   string `koanf:"audiobook_path"   validate:"required"`
+	AudiobookNaming string `koanf:"audiobook_naming" validate:"required"`
 	// MonitorSpecials opts season 0 into monitoring when a series is added or
 	// a refresh discovers the season. Off by default: specials are usually
 	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
@@ -294,12 +303,14 @@ type ScheduleConfig struct {
 }
 
 type MetadataConfig struct {
-	TMDBAPIKey     string `koanf:"tmdb_api_key"      validate:"excluded_with=TMDBAPIKeyFile"`
-	TMDBAPIKeyFile string `koanf:"tmdb_api_key_file" validate:"omitempty,excluded_with=TMDBAPIKey,filepath"`
-	TVDBAPIKey     string `koanf:"tvdb_api_key"      validate:"excluded_with=TVDBAPIKeyFile"`
-	TVDBAPIKeyFile string `koanf:"tvdb_api_key_file" validate:"omitempty,excluded_with=TVDBAPIKey,filepath"`
-	Language       string `koanf:"language"          validate:"omitempty,bcp47_language_tag"`
-	TMDBRegion     string `koanf:"tmdb_region"       validate:"omitempty,len=2,uppercase"`
+	TMDBAPIKey          string `koanf:"tmdb_api_key"           validate:"excluded_with=TMDBAPIKeyFile"`
+	TMDBAPIKeyFile      string `koanf:"tmdb_api_key_file"      validate:"omitempty,excluded_with=TMDBAPIKey,filepath"`
+	TVDBAPIKey          string `koanf:"tvdb_api_key"           validate:"excluded_with=TVDBAPIKeyFile"`
+	TVDBAPIKeyFile      string `koanf:"tvdb_api_key_file"      validate:"omitempty,excluded_with=TVDBAPIKey,filepath"`
+	HardcoverAPIKey     string `koanf:"hardcover_api_key"      validate:"excluded_with=HardcoverAPIKeyFile"`
+	HardcoverAPIKeyFile string `koanf:"hardcover_api_key_file" validate:"omitempty,excluded_with=HardcoverAPIKey,filepath"`
+	Language            string `koanf:"language"               validate:"omitempty,bcp47_language_tag"`
+	TMDBRegion          string `koanf:"tmdb_region"            validate:"omitempty,len=2,uppercase"`
 }
 
 // EventsConfig governs the MediaEvent retention window. Old rows are deleted
@@ -777,6 +788,10 @@ func defaults() map[string]any {
 		"library.series_naming":            "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
 		"library.music_path":               "/data/music",
 		"library.music_naming":             "{Artist}/{Album} ({Year})/{Disc}{Track:00} - {Title}",
+		"library.ebook_path":               "/data/books",
+		"library.ebook_naming":             "{Author}/{Title} ({Year})",
+		"library.audiobook_path":           "/data/audiobooks",
+		"library.audiobook_naming":         "{Author}/{Title} ({Year})",
 		"library.download_path":            "/downloads",
 		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":              "hardlink",
@@ -807,6 +822,8 @@ func defaults() map[string]any {
 		"metadata.tmdb_api_key_file":       "",
 		"metadata.tvdb_api_key":            "",
 		"metadata.tvdb_api_key_file":       "",
+		"metadata.hardcover_api_key":       "",
+		"metadata.hardcover_api_key_file":  "",
 		"metadata.language":                "en",
 		"metadata.tmdb_region":             "FR",
 		"otel.endpoint":                    "",
@@ -829,6 +846,10 @@ func defaults() map[string]any {
 		"custom_formats":                      []any{},
 		"music_quality_profiles":              []any{},
 		"music_quality_default_profile":       "",
+		"ebook_quality_profiles":              []any{},
+		"ebook_quality_default_profile":       "",
+		"audiobook_quality_profiles":          []any{},
+		"audiobook_quality_default_profile":   "",
 		"events.retention":                    "2160h",
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",
@@ -1328,6 +1349,7 @@ func loadSecretFiles(c *Config) (map[string]string, error) {
 	read(c.Auth.SessionSecretFile)
 	read(c.Metadata.TMDBAPIKeyFile)
 	read(c.Metadata.TVDBAPIKeyFile)
+	read(c.Metadata.HardcoverAPIKeyFile)
 	for _, o := range c.Auth.OIDC {
 		read(o.ClientSecretFile)
 	}

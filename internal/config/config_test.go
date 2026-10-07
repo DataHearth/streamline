@@ -327,6 +327,38 @@ auth:
 				},
 			)
 
+			It("reads the hardcover key file into SecretValue", func() {
+				dir := GinkgoT().TempDir()
+				hcPath := filepath.Join(dir, "hardcover")
+				Expect(
+					os.WriteFile(hcPath, []byte("  file-hardcover\n"), 0o600),
+				).To(Succeed())
+
+				cfg, err := Load(writeCfg(
+					"metadata:\n  hardcover_api_key_file: " + hcPath + "\n",
+				))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cfg.Metadata.HardcoverAPIKey).To(BeEmpty())
+				Expect(
+					SecretValue(
+						cfg.Metadata.HardcoverAPIKey,
+						cfg.Metadata.HardcoverAPIKeyFile,
+					),
+				).To(Equal("file-hardcover"))
+			})
+
+			It("rejects setting both hardcover key and file", func() {
+				hcPath := filepath.Join(GinkgoT().TempDir(), "hardcover")
+				Expect(
+					os.WriteFile(hcPath, []byte("file-hardcover"), 0o600),
+				).To(Succeed())
+				cfgFile := writeCfg(
+					"metadata:\n  hardcover_api_key: inline\n  hardcover_api_key_file: " + hcPath + "\n",
+				)
+				_, err := Load(cfgFile)
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("rejects setting both inline and file for one secret", func() {
 				cfgFile := writeCfg(
 					"metadata:\n  tmdb_api_key: inline\n  tmdb_api_key_file: /x\n")
