@@ -11,7 +11,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | Movies | ✅ Shipped |
 | TV shows | ✅ Shipped |
 | Music | 🚧 In progress — library management (artists, albums, tracks, MusicBrainz metadata, music quality profiles) is in; adoption of existing files, Subsonic, searching and requests follow |
-| Books | 📋 Planned |
+| Books | 🚧 In progress — library management (authors, books with ebook and audiobook slots, Hardcover metadata, ebook and audiobook quality profiles) is in; adoption of existing files, OPDS, searching and requests follow |
 
 Music and books follow the same path as movies and TV: browse and organise your existing library first, then automatic searching and grabbing, then requests. Music will also be reachable from Subsonic clients, and books from OPDS readers.
 
