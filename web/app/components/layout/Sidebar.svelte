@@ -5,6 +5,7 @@
 		LayoutDashboard,
 		Film,
 		Tv,
+		Music,
 		FolderInput,
 		CalendarDays,
 		Inbox,
@@ -91,6 +92,7 @@
 		{ label: i18n.nav_dashboard(), href: "/", icon: LayoutDashboard },
 		{ label: i18n.movies_label(), href: "/movies", icon: Film },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv },
+		{ label: i18n.music_label(), href: "/music", icon: Music },
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin

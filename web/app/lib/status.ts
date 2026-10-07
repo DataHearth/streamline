@@ -1,11 +1,17 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
-import type { Episode, EpisodeStatus, Movie, TVShow } from "./types";
+import type { Episode, EpisodeStatus, Movie, MusicAlbum, TVShow } from "./types";
 
 // The backend keeps a fileless movie in "wanted" whether or not anyone is
 // looking for it. Unmonitored means nobody is, so the card reads "missing".
 export function movieStatus(m: Movie): StatusKind {
 	if (m.status === "wanted" && !m.monitored) return "missing";
 	return m.status;
+}
+
+// Same split as movieStatus: a wanted album nobody monitors is missing.
+export function albumStatus(a: MusicAlbum): StatusKind {
+	if (a.status === "wanted" && !a.monitored) return "missing";
+	return a.status;
 }
 
 // What a series card reads, rolled up from the show's episode counts.

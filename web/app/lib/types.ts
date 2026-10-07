@@ -1485,3 +1485,81 @@ export type ReidentifyResult = {
 	// counterpart in the new show.
 	unmatched?: string[];
 };
+
+export type MusicFormat =
+	| "flac-24"
+	| "flac"
+	| "mp3-320"
+	| "mp3-v0"
+	| "mp3-256"
+	| "mp3-192"
+	| "other";
+
+export type MusicAlbumType =
+	| "album"
+	| "ep"
+	| "single"
+	| "compilation"
+	| "live"
+	| "other";
+
+export type MusicAlbumStatus =
+	| "wanted"
+	| "downloading"
+	| "paused"
+	| "available"
+	| "skipped";
+
+export type MusicTrack = {
+	id: number;
+	mbid: string;
+	title: string;
+	disc: number;
+	position: number;
+	// Milliseconds.
+	duration: number;
+};
+
+export type MusicAlbum = {
+	id: number;
+	mbid: string;
+	title: string;
+	type: MusicAlbumType;
+	release_date?: string | null;
+	monitored: boolean;
+	status: MusicAlbumStatus;
+	track_count: number;
+	// Only the album endpoints fill this.
+	tracks?: MusicTrack[];
+};
+
+export type MusicArtist = {
+	id: number;
+	mbid: string;
+	name: string;
+	sort_name: string;
+	overview?: string;
+	monitored: boolean;
+	path: string;
+	quality_profile: string;
+	album_count: number;
+	// Only the detail, patch and refresh responses fill this.
+	albums?: MusicAlbum[];
+};
+
+export type MusicArtistSearchResult = {
+	mbid: string;
+	name: string;
+	sort_name: string;
+	disambiguation?: string;
+	score: number;
+	already_added: boolean;
+};
+
+export type MusicQualityProfile = {
+	name: string;
+	formats: MusicFormat[];
+	cutoff: MusicFormat;
+	upgrade_allowed: boolean;
+	is_default: boolean;
+};

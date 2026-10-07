@@ -12,6 +12,7 @@
 		Magnet,
 		Replace,
 		Tv,
+		Music,
 		CalendarDays,
 		Inbox,
 		FolderInput,
@@ -110,6 +111,7 @@
 	let libraryRows = $derived<Row[]>([
 		{ label: i18n.movies_label(), href: "/movies", icon: Film, line: counts.moviesLine },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv, line: counts.seriesLine },
+		{ label: i18n.music_label(), href: "/music", icon: Music },
 	]);
 	const transcodeCounts = transcodeCountsQuery();
 	// Words, not dots: this sheet is the phone's entry point and the two numbers
@@ -201,7 +203,7 @@
 		"/settings",
 		"/account",
 	];
-	let libraryActive = $derived(["/movies", "/series"].some((p) => isActiveFn(p)));
+	let libraryActive = $derived(["/movies", "/series", "/music"].some((p) => isActiveFn(p)));
 	let activityActive = $derived(activityGroupActive(isActiveFn));
 	let moreActive = $derived(IN_MORE.some((p) => isActiveFn(p)));
 	let moreOn = $derived(moreActive || sheet === "More");

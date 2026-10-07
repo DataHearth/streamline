@@ -15,6 +15,7 @@ import {
 	Shield,
 	KeyRound,
 	Users,
+	Music,
 } from "@lucide/svelte";
 import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
@@ -24,6 +25,7 @@ import type {
 	DownloadClient,
 	Indexer,
 	MediaServer,
+	MusicQualityProfile,
 	QualityProfileFull,
 	ScheduleList,
 	UserList,
@@ -45,6 +47,7 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/general": () => i18n.settings_general(),
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
+	"/settings/music-profiles": () => i18n.settings_music_profiles(),
 	"/settings/custom-formats": () => i18n.settings_custom_formats(),
 	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
@@ -89,6 +92,11 @@ export function createSettingsNav(withCounts = true) {
 	const profiles = createQuery<QualityProfileFull[]>(() => ({
 		queryKey: ["quality-profiles"],
 		queryFn: () => api<QualityProfileFull[]>("/quality-profiles"),
+		enabled: withCounts,
+	}));
+	const musicProfiles = createQuery<MusicQualityProfile[]>(() => ({
+		queryKey: ["music", "quality-profiles"],
+		queryFn: () => api<MusicQualityProfile[]>("/music/quality-profiles"),
 		enabled: withCounts,
 	}));
 	const customFormats = createQuery<CustomFormat[]>(() => ({
@@ -139,6 +147,12 @@ export function createSettingsNav(withCounts = true) {
 						Icon: Gauge,
 						label: i18n.settings_quality_profiles(),
 						count: profiles.data?.length,
+					},
+					{
+						path: "/settings/music-profiles",
+						Icon: Music,
+						label: i18n.settings_music_profiles(),
+						count: musicProfiles.data?.length,
 					},
 					// Counts what the operator can act on: the shipped library is a
 					// constant, so including builtins would show the same 13 on every

@@ -55,6 +55,7 @@
 		{ prefix: "/", label: i18n.nav_dashboard() },
 		{ prefix: "/movies", label: i18n.movies_label() },
 		{ prefix: "/series", label: i18n.settings_series() },
+		{ prefix: "/music", label: i18n.music_label() },
 		{ prefix: "/activity", label: i18n.nav_activity() },
 		{ prefix: "/torrents", label: i18n.torrent_label() },
 		{ prefix: "/transcoding", label: i18n.transcode_label() },
@@ -67,9 +68,12 @@
 
 	// Sub-pages are named by their full path, from the same titles their own
 	// page heading uses. Deriving the crumb from the slug ("media-servers" →
-	// "Media servers") only ever produced English. Settings is the only section
-	// with named sub-pages; every other sub-route is a numeric id.
-	const PAGE_LABELS: Record<string, () => string> = SETTINGS_TITLES;
+	// "Media servers") only ever produced English. Every sub-route not listed
+	// here is a numeric id.
+	const PAGE_LABELS: Record<string, () => string> = {
+		...SETTINGS_TITLES,
+		"/music/add": () => i18n.music_add_artist(),
+	};
 
 	function segmentLabel(segment: string, href: string): string {
 		// Every dynamic route under these sections keys off a numeric id, which
