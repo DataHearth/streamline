@@ -40,6 +40,12 @@ tags:
     description: Music library, artists, albums and tracks backed by MusicBrainz
   - name: music-quality-profiles
     description: Audio format quality profiles for the music library
+  - name: books
+    description: Book library, authors and books backed by Hardcover
+  - name: ebook-quality-profiles
+    description: Format quality profiles for the ebook slot of the book library
+  - name: audiobook-quality-profiles
+    description: Format quality profiles for the audiobook slot of the book library
 
 servers:
   - url: /api/v1
@@ -1297,6 +1303,328 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/MusicQualityProfileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Books ───────────────────────────────────────────────
+  /books/search:
+    get:
+      operationId: searchBookAuthors
+      summary: Search Hardcover for authors to add
+      description: |
+        Searches Hardcover for authors matching the query. Answers 503 when
+        no Hardcover API key is configured.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/BookSearchQuery"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookSearchResults"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/authors:
+    get:
+      operationId: listBookAuthors
+      summary: List book authors
+      description: |
+        Returns a paginated list of authors in the library. Items carry
+        `book_count` but not the nested books.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/SeriesPage"
+        - $ref: "#/components/parameters/SeriesLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookAuthorList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: addBookAuthor
+      summary: Add an author by Hardcover id
+      description: |
+        Fetches the author and bibliography from Hardcover and adds them to
+        the library. Answers 503 when no Hardcover API key is configured and
+        422 for an unknown enum value or quality profile name.
+      tags: [books]
+      requestBody:
+        $ref: "#/components/requestBodies/AddBookAuthor"
+      responses:
+        "201":
+          $ref: "#/components/responses/BookAuthorCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/authors/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getBookAuthor
+      summary: Get author details
+      description: Returns one author with its books.
+      tags: [books]
+      responses:
+        "200":
+          $ref: "#/components/responses/BookAuthorDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchBookAuthor
+      summary: Patch an author
+      description: |
+        Partially updates an author. An unknown enum value or quality profile
+        name answers 422.
+      tags: [books]
+      requestBody:
+        $ref: "#/components/requestBodies/PatchBookAuthor"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookAuthorDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteBookAuthor
+      summary: Remove an author from the library
+      description: |
+        Deletes the author with its books. When delete_files=true, also
+        removes attached media files from disk.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/DeleteSeriesFiles"
+      responses:
+        "204":
+          $ref: "#/components/responses/BookAuthorDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/authors/{id}/refresh:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshBookAuthor
+      summary: Refresh an author from Hardcover
+      description: Re-fetches the bibliography. Answers 503 when no Hardcover API key is configured.
+      tags: [books]
+      responses:
+        "200":
+          $ref: "#/components/responses/BookAuthorDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getBook
+      summary: Get book details
+      tags: [books]
+      responses:
+        "200":
+          $ref: "#/components/responses/BookDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: patchBook
+      summary: Patch a book
+      description: Sets the monitored flag of the ebook and audiobook slots.
+      tags: [books]
+      requestBody:
+        $ref: "#/components/requestBodies/PatchBook"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookDetail"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/ebook-quality-profiles:
+    get:
+      operationId: listEbookQualityProfiles
+      summary: List ebook quality profiles
+      tags: [ebook-quality-profiles]
+      responses:
+        "200":
+          description: Ebook quality profile list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EbookQualityProfile"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createEbookQualityProfile
+      summary: Create an ebook quality profile
+      tags: [ebook-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateEbookQualityProfile"
+      responses:
+        "201":
+          $ref: "#/components/responses/EbookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/ebook-quality-profiles/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateEbookQualityProfile
+      summary: Update an ebook quality profile
+      description: The name in the body is ignored; the path names the profile.
+      tags: [ebook-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateEbookQualityProfile"
+      responses:
+        "200":
+          $ref: "#/components/responses/EbookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteEbookQualityProfile
+      summary: Delete an ebook quality profile
+      tags: [ebook-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/EbookQualityProfileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/audiobook-quality-profiles:
+    get:
+      operationId: listAudiobookQualityProfiles
+      summary: List audiobook quality profiles
+      tags: [audiobook-quality-profiles]
+      responses:
+        "200":
+          description: Audiobook quality profile list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AudiobookQualityProfile"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createAudiobookQualityProfile
+      summary: Create an audiobook quality profile
+      tags: [audiobook-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateAudiobookQualityProfile"
+      responses:
+        "201":
+          $ref: "#/components/responses/AudiobookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/audiobook-quality-profiles/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateAudiobookQualityProfile
+      summary: Update an audiobook quality profile
+      description: The name in the body is ignored; the path names the profile.
+      tags: [audiobook-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateAudiobookQualityProfile"
+      responses:
+        "200":
+          $ref: "#/components/responses/AudiobookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteAudiobookQualityProfile
+      summary: Delete an audiobook quality profile
+      tags: [audiobook-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/AudiobookQualityProfileDeleted"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -4514,6 +4842,14 @@ components:
       schema:
         type: string
 
+    BookSearchQuery:
+      name: query
+      in: query
+      required: true
+      description: Hardcover author search query.
+      schema:
+        type: string
+
     DeleteSeriesFiles:
       name: delete_files
       in: query
@@ -4614,6 +4950,41 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MusicQualityProfileCreate"
+
+    AddBookAuthor:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddBookAuthorRequest"
+
+    PatchBookAuthor:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PatchBookAuthorRequest"
+
+    PatchBook:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PatchBookRequest"
+
+    CreateEbookQualityProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EbookQualityProfileCreate"
+
+    CreateAudiobookQualityProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AudiobookQualityProfileCreate"
 
     CreateCustomFormat:
       required: true
@@ -5147,6 +5518,71 @@ components:
 
     MusicQualityProfileDeleted:
       description: Profile deleted.
+
+    BookSearchResults:
+      description: Hardcover author search results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookAuthorSearchResultList"
+
+    BookAuthorList:
+      description: Paginated author list.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PaginatedBookAuthors"
+
+    BookAuthorDetail:
+      description: An author with its books.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookAuthor"
+
+    BookAuthorCreated:
+      description: Author added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookAuthor"
+
+    BookAuthorDeleted:
+      description: Author deleted.
+
+    BookDetail:
+      description: A book with its ebook and audiobook slots.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Book"
+
+    EbookQualityProfileResponse:
+      description: An ebook quality profile.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/EbookQualityProfile"
+
+    EbookQualityProfileDeleted:
+      description: Profile deleted.
+
+    AudiobookQualityProfileResponse:
+      description: An audiobook quality profile.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AudiobookQualityProfile"
+
+    AudiobookQualityProfileDeleted:
+      description: Profile deleted.
+
+    ServiceUnavailable:
+      description: Feature not configured.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
 
     SeriesDeleted:
       description: Series deleted.
@@ -6685,6 +7121,267 @@ components:
         cutoff:
           type: string
           enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+        upgrade_allowed:
+          type: boolean
+
+    BookAuthor:
+      type: object
+      required:
+        [
+          id,
+          hardcover_id,
+          name,
+          sort_name,
+          monitored,
+          monitor_policy,
+          want_kinds,
+          ebook_quality_profile,
+          audiobook_quality_profile,
+          book_count,
+        ]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+        name:
+          type: string
+        sort_name:
+          type: string
+        overview:
+          type: string
+        monitored:
+          type: boolean
+        monitor_policy:
+          type: string
+          enum: [all, future, none]
+        want_kinds:
+          type: string
+          enum: [ebook, audiobook, both]
+        ebook_quality_profile:
+          type: string
+        audiobook_quality_profile:
+          type: string
+        book_count:
+          type: integer
+          x-go-type: uint32
+        books:
+          type: array
+          description: Populated by the detail, patch and refresh responses.
+          items:
+            $ref: "#/components/schemas/BookEntry"
+
+    BookEntry:
+      type: object
+      required: [id, hardcover_id, title, ebook, audiobook]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        release_date:
+          type: string
+          format: date
+          nullable: true
+        overview:
+          type: string
+        series_name:
+          type: string
+        series_position:
+          type: string
+        ebook:
+          $ref: "#/components/schemas/BookSlot"
+        audiobook:
+          $ref: "#/components/schemas/BookSlot"
+
+    Book:
+      allOf:
+        - $ref: "#/components/schemas/BookEntry"
+        - type: object
+          required: [author_id]
+          properties:
+            author_id:
+              type: integer
+              x-go-type: uint32
+
+    BookSlot:
+      type: object
+      required: [monitored, status, file_count]
+      properties:
+        monitored:
+          type: boolean
+        status:
+          type: string
+          enum: [wanted, downloading, paused, available, skipped]
+        file_count:
+          type: integer
+          x-go-type: uint32
+
+    BookAuthorSearchResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookAuthorSearchResult"
+
+    BookAuthorSearchResult:
+      type: object
+      required: [hardcover_id, name, books_count, already_added]
+      properties:
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+        name:
+          type: string
+        books_count:
+          type: integer
+          x-go-type: uint32
+        image_url:
+          type: string
+          description: Hardcover image of an author not added yet; there is no poster to proxy.
+        already_added:
+          type: boolean
+
+    PaginatedBookAuthors:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookAuthor"
+        total:
+          type: integer
+          x-go-type: uint32
+        page:
+          type: integer
+          x-go-type: uint32
+        limit:
+          type: integer
+          x-go-type: uint16
+
+    AddBookAuthorRequest:
+      type: object
+      required: [hardcover_id]
+      properties:
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+        monitored:
+          type: boolean
+          description: Defaults to true.
+        monitor_policy:
+          type: string
+          enum: [all, future, none]
+        want_kinds:
+          type: string
+          enum: [ebook, audiobook, both]
+        ebook_quality_profile:
+          type: string
+        audiobook_quality_profile:
+          type: string
+
+    PatchBookAuthorRequest:
+      type: object
+      properties:
+        monitored:
+          type: boolean
+        monitor_policy:
+          type: string
+          enum: [all, future, none]
+        want_kinds:
+          type: string
+          enum: [ebook, audiobook, both]
+        ebook_quality_profile:
+          type: string
+        audiobook_quality_profile:
+          type: string
+
+    PatchBookRequest:
+      type: object
+      properties:
+        ebook_monitored:
+          type: boolean
+        audiobook_monitored:
+          type: boolean
+
+    EbookQualityProfile:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed, is_default]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [epub, azw3, mobi, pdf, other]
+        cutoff:
+          type: string
+          enum: [epub, azw3, mobi, pdf, other]
+        upgrade_allowed:
+          type: boolean
+        is_default:
+          type: boolean
+
+    EbookQualityProfileCreate:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [epub, azw3, mobi, pdf, other]
+        cutoff:
+          type: string
+          enum: [epub, azw3, mobi, pdf, other]
+        upgrade_allowed:
+          type: boolean
+
+    AudiobookQualityProfile:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed, is_default]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [m4b, mp3, other]
+        cutoff:
+          type: string
+          enum: [m4b, mp3, other]
+        upgrade_allowed:
+          type: boolean
+        is_default:
+          type: boolean
+
+    AudiobookQualityProfileCreate:
+      type: object
+      required: [name, formats, cutoff, upgrade_allowed]
+      properties:
+        name:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [m4b, mp3, other]
+        cutoff:
+          type: string
+          enum: [m4b, mp3, other]
         upgrade_allowed:
           type: boolean
 

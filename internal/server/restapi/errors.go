@@ -50,6 +50,10 @@ func errConflict(msg string) ConflictJSONResponse {
 	return ConflictJSONResponse{Message: msg}
 }
 
+func errServiceUnavailable(msg string) ServiceUnavailableJSONResponse {
+	return ServiceUnavailableJSONResponse{Message: msg}
+}
+
 func errUnprocessable(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg}
 }

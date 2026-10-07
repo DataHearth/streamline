@@ -22,6 +22,7 @@ import (
 	bulkimportmocks "github.com/datahearth/streamline/internal/library/bulkimport/mocks"
 	librarymocks "github.com/datahearth/streamline/internal/library/mocks"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
 	tvshowmocks "github.com/datahearth/streamline/internal/media/tvshow/mocks"
@@ -79,6 +80,8 @@ type apiKeyApp struct {
 	metadataTV    *metadatamocks.MockTVProvider
 	music         *musicmocks.MockManager
 	metadataMusic *metadatamocks.MockMusicProvider
+	books         *bookmocks.MockManager
+	metadataBook  *metadatamocks.MockBookProvider
 	requests      *reqmocks.MockManager
 	torrents      *bittorrentmocks.MockManager
 	bulkImports   *bulkimportmocks.MockManager
@@ -116,6 +119,8 @@ func newAPIKeyApp() *apiKeyApp {
 		metadataTV:     metadatamocks.NewMockTVProvider(t),
 		music:          musicmocks.NewMockManager(t),
 		metadataMusic:  metadatamocks.NewMockMusicProvider(t),
+		books:          bookmocks.NewMockManager(t),
+		metadataBook:   metadatamocks.NewMockBookProvider(t),
 		requests:       reqmocks.NewMockManager(t),
 		torrents:       bittorrentmocks.NewMockManager(t),
 		bulkImports:    bulkimportmocks.NewMockManager(t),
@@ -142,6 +147,8 @@ func newAPIKeyApp() *apiKeyApp {
 		MetadataTV:     a.metadataTV,
 		Music:          a.music,
 		MetadataMusic:  a.metadataMusic,
+		Books:          a.books,
+		MetadataBook:   a.metadataBook,
 		Requests:       a.requests,
 		Torrents:       a.torrents,
 		BulkImports:    a.bulkImports,

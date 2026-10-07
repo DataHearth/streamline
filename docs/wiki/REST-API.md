@@ -192,6 +192,28 @@ Adding an artist fetches its whole discography from MusicBrainz, which allows on
 
 A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `formats` and `cutoff` drawn from `flac-24`, `flac`, `mp3-320`, `mp3-v0`, `mp3-256`, `mp3-192`, `other`. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`. `PUT` takes the same body as `POST` and ignores the name in the body.
 
+### Books
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/books/search?query=` | Search Hardcover for authors; each hit carries `already_added` | Authenticated |
+| `GET` | `/books/authors` | Paginated list (`?page=`, `?limit=` 1-100); items carry `book_count` but no `books` | Authenticated |
+| `POST` | `/books/authors` | Add an author by `hardcover_id` (`monitored` defaults to true, optional `monitor_policy`, `want_kinds`, `ebook_quality_profile`, `audiobook_quality_profile`); `409` if already added, `422` for an unknown profile name or enum value | Member |
+| `GET` | `/books/authors/{id}` | Fetch an author with its `books` | Authenticated |
+| `PATCH` | `/books/authors/{id}` | Update `monitored`, `monitor_policy`, `want_kinds` and the two profile names; `422` for an unknown profile name or enum value | Member |
+| `DELETE` | `/books/authors/{id}` | Remove an author; `?delete_files=true` also deletes files from disk | Member |
+| `POST` | `/books/authors/{id}/refresh` | Re-fetch the bibliography from Hardcover | Member |
+| `GET` | `/books/{id}` | Fetch a book with its `ebook` and `audiobook` slots | Authenticated |
+| `PATCH` | `/books/{id}` | Update `ebook_monitored` / `audiobook_monitored` | Member |
+| `GET` `POST` | `/books/ebook-quality-profiles` | List / create ebook quality profiles | Authenticated / 🔒 Admin |
+| `PUT` `DELETE` | `/books/ebook-quality-profiles/{name}` | Update / delete an ebook quality profile | 🔒 Admin |
+| `GET` `POST` | `/books/audiobook-quality-profiles` | List / create audiobook quality profiles | Authenticated / 🔒 Admin |
+| `PUT` `DELETE` | `/books/audiobook-quality-profiles/{name}` | Update / delete an audiobook quality profile | 🔒 Admin |
+
+Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add and refresh endpoints answer `503` while browsing the library keeps working. A book carries an `ebook` and an `audiobook` slot, each `{monitored, status, file_count}`. Poster URLs are not in the payloads: clients build `/posters/authors/{id}/poster.jpg` and `/posters/books/{id}/poster.jpg` themselves.
+
+The ebook (`epub`, `azw3`, `mobi`, `pdf`, `other`) and audiobook (`m4b`, `mp3`, `other`) quality profiles are `{name, formats, cutoff, upgrade_allowed}` and follow the music profile semantics: `is_default` marks the profile an author with an empty profile name resolves to, deleting it is a `409`, and `PUT` takes the same body as `POST` and ignores the name in the body.
+
 ### People (cast)
 
 | Method | Path | What it does | Auth |

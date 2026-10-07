@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -159,6 +160,20 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	tmdb := metadata.NewTMDB()
 	tvdb := metadata.NewTVDB()
 	mb := metadata.NewMusicBrainz()
+	var (
+		bookMeta        metadata.BookProvider
+		hardcoverHealth interface{ AuthRejected() bool }
+	)
+	hc, err := metadata.NewHardcover()
+	switch {
+	case errors.Is(err, metadata.ErrHardcoverKeyMissing):
+		slog.WarnContext(ctx, "hardcover api key missing, books are unavailable")
+	case err != nil:
+		dbClient.Close()
+		return nil, fmt.Errorf("create hardcover provider: %w", err)
+	default:
+		bookMeta, hardcoverHealth = hc, hc
+	}
 	postersSvc, err := posters.New(cfg.DataDir)
 	if err != nil {
 		dbClient.Close()
@@ -181,6 +196,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
 	musicSvc := music.NewService(store, mb, postersSvc)
+	bookSvc := book.NewService(store, bookMeta, postersSvc)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
 	// subfolders, so on a fresh install they'd first appear after an import that
@@ -482,6 +498,9 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Transcoder:      transcoder,
 		Music:           musicSvc,
 		MetadataMusic:   mb,
+		Books:           bookSvc,
+		MetadataBook:    bookMeta,
+		Hardcover:       hardcoverHealth,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
 	})

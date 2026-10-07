@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -72,6 +73,9 @@ type Config struct {
 	MetadataTV      metadata.TVProvider
 	Music           music.Manager
 	MetadataMusic   metadata.MusicProvider
+	Books           book.Manager
+	MetadataBook    metadata.BookProvider
+	Hardcover       interface{ AuthRejected() bool }
 	Posters         posters.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
@@ -110,6 +114,9 @@ func New(cfg Config) *Server {
 		MetadataTV:      cfg.MetadataTV,
 		Music:           cfg.Music,
 		MetadataMusic:   cfg.MetadataMusic,
+		Books:           cfg.Books,
+		MetadataBook:    cfg.MetadataBook,
+		Hardcover:       cfg.Hardcover,
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,
 		Importer:        cfg.Importer,

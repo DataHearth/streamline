@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -1350,6 +1351,91 @@ func musicAlbumToAPI(a *ent.Album) MusicAlbum {
 		out.Tracks = &items
 	}
 	return out
+}
+
+func bookAuthorToAPI(a *ent.Author) BookAuthor {
+	out := BookAuthor{
+		Id:                      a.ID,
+		HardcoverId:             a.HardcoverID,
+		Name:                    a.Name,
+		SortName:                a.SortName,
+		Overview:                optString(a.Overview),
+		Monitored:               a.Monitored,
+		MonitorPolicy:           BookAuthorMonitorPolicy(a.MonitorPolicy),
+		WantKinds:               BookAuthorWantKinds(a.WantKinds),
+		EbookQualityProfile:     a.EbookQualityProfile,
+		AudiobookQualityProfile: a.AudiobookQualityProfile,
+		BookCount:               numeric.SaturateU32(len(a.Edges.Books)),
+	}
+	if a.Edges.Books != nil {
+		items := make([]BookEntry, len(a.Edges.Books))
+		for i, b := range a.Edges.Books {
+			items[i] = bookEntryToAPI(b)
+		}
+		out.Books = &items
+	}
+	return out
+}
+
+func bookEntryToAPI(b *ent.Book) BookEntry {
+	out := BookEntry{
+		Id:             b.ID,
+		HardcoverId:    b.HardcoverID,
+		Title:          b.Title,
+		Overview:       optString(b.Overview),
+		SeriesName:     optString(b.SeriesName),
+		SeriesPosition: optString(b.SeriesPosition),
+		Ebook: bookSlot(
+			string(b.EbookStatus), b.EbookMonitored,
+			mediafile.BookKindEbook, b.Edges.MediaFiles,
+		),
+		Audiobook: bookSlot(
+			string(b.AudiobookStatus), b.AudiobookMonitored,
+			mediafile.BookKindAudiobook, b.Edges.MediaFiles,
+		),
+	}
+	if b.ReleaseDate != nil {
+		out.ReleaseDate = &openapi_types.Date{Time: *b.ReleaseDate}
+	}
+	return out
+}
+
+func bookToAPI(b *ent.Book) Book {
+	e := bookEntryToAPI(b)
+	out := Book{
+		Id:             e.Id,
+		HardcoverId:    e.HardcoverId,
+		Title:          e.Title,
+		ReleaseDate:    e.ReleaseDate,
+		Overview:       e.Overview,
+		SeriesName:     e.SeriesName,
+		SeriesPosition: e.SeriesPosition,
+		Ebook:          e.Ebook,
+		Audiobook:      e.Audiobook,
+	}
+	if b.Edges.Author != nil {
+		out.AuthorId = b.Edges.Author.ID
+	}
+	return out
+}
+
+func bookSlot(
+	status string,
+	monitored bool,
+	kind mediafile.BookKind,
+	files []*ent.MediaFile,
+) BookSlot {
+	n := 0
+	for _, f := range files {
+		if f.BookKind == kind {
+			n++
+		}
+	}
+	return BookSlot{
+		Monitored: monitored,
+		Status:    BookSlotStatus(status),
+		FileCount: numeric.SaturateU32(n),
+	}
 }
 
 func musicTrackToAPI(t *ent.Track) MusicTrack {
