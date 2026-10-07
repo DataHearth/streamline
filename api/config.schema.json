@@ -102,6 +102,25 @@
         "enabled": { "type": "boolean" }
       }
     },
+    "musicQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "formats", "cutoff"],
+      "properties": {
+        "name": { "type": "string" },
+        "formats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["flac-24", "flac", "mp3-320", "mp3-v0", "mp3-256", "mp3-192", "other"]
+          }
+        },
+        "cutoff": {
+          "enum": ["flac-24", "flac", "mp3-320", "mp3-v0", "mp3-256", "mp3-192", "other"]
+        },
+        "upgrade_allowed": { "type": "boolean" }
+      }
+    },
     "qualityProfileEntry": {
       "type": "object",
       "additionalProperties": false,
@@ -419,6 +438,8 @@
         "movie_naming": { "type": "string" },
         "series_path": { "type": "string" },
         "series_naming": { "type": "string" },
+        "music_path": { "type": "string" },
+        "music_naming": { "type": "string" },
         "download_path": {
           "type": "string",
           "description": "Host-side directory streamline reads completed torrents from. Combined with the torrent name to locate content (<download_path>/<torrent.Name>)."
@@ -734,6 +755,15 @@
     "quality_default_profile": {
       "type": "string",
       "description": "Name of the quality profile used when a movie names none. Must name an entry in quality_profiles whenever that list has any."
+    },
+    "music_quality_profiles": {
+      "type": "array",
+      "description": "Named music quality profiles, ranked over the format ladder flac-24 > flac > mp3-320 > mp3-v0 > mp3-256 > mp3-192 > other.",
+      "items": { "$ref": "#/definitions/musicQualityProfileEntry" }
+    },
+    "music_quality_default_profile": {
+      "type": "string",
+      "description": "Name of the music quality profile used when an artist names none."
     },
     "custom_formats": {
       "type": "array",

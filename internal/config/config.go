@@ -62,6 +62,9 @@ type Config struct {
 	QualityProfiles       []QualityProfileEntry `koanf:"quality_profiles"        validate:"unique=Name,dive"`
 	QualityDefaultProfile string                `koanf:"quality_default_profile"`
 	CustomFormats         []CustomFormatEntry   `koanf:"custom_formats"          validate:"unique=Name,dive"`
+
+	MusicQualityProfiles       []MusicQualityProfileEntry `koanf:"music_quality_profiles"        validate:"unique=Name,dive"`
+	MusicQualityDefaultProfile string                     `koanf:"music_quality_default_profile"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -228,6 +231,8 @@ type LibraryConfig struct {
 	MovieNaming  string `koanf:"movie_naming"  validate:"required"`
 	SeriesPath   string `koanf:"series_path"   validate:"required"`
 	SeriesNaming string `koanf:"series_naming" validate:"required"`
+	MusicPath    string `koanf:"music_path"    validate:"required"`
+	MusicNaming  string `koanf:"music_naming"  validate:"required"`
 	// MonitorSpecials opts season 0 into monitoring when a series is added or
 	// a refresh discovers the season. Off by default: specials are usually
 	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
@@ -770,6 +775,8 @@ func defaults() map[string]any {
 		"library.movie_path":               "/media/movies",
 		"library.series_path":              "/media/series",
 		"library.series_naming":            "{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}",
+		"library.music_path":               "/data/music",
+		"library.music_naming":             "{Artist}/{Album} ({Year})/{Disc}{Track:00} - {Title}",
 		"library.download_path":            "/downloads",
 		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":              "hardlink",
@@ -820,6 +827,8 @@ func defaults() map[string]any {
 		},
 		"quality_default_profile":             "default",
 		"custom_formats":                      []any{},
+		"music_quality_profiles":              []any{},
+		"music_quality_default_profile":       "",
 		"events.retention":                    "2160h",
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",

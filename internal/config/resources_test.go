@@ -844,3 +844,41 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 		Expect(after.MaxResolution).To(Equal("2160p"))
 	})
 })
+
+var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"music_quality_profiles": []map[string]any{
+				{
+					"name":    "lossless",
+					"formats": []string{"flac-24", "flac"},
+					"cutoff":  "flac",
+				},
+				{
+					"name":    "lossy",
+					"formats": []string{"mp3-320", "mp3-v0"},
+					"cutoff":  "mp3-320",
+				},
+			},
+			"music_quality_default_profile": "lossless",
+		})
+	})
+
+	It("returns the named profile", func() {
+		p, ok := config.ResolveMusicQualityProfile("lossy")
+		Expect(ok).To(BeTrue())
+		Expect(p.Cutoff).To(Equal("mp3-320"))
+	})
+
+	It("falls back to the default profile on unknown name", func() {
+		p, ok := config.ResolveMusicQualityProfile("nope")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("lossless"))
+	})
+
+	It("reports ok=false when no music profiles exist", func() {
+		configtest.Setup()
+		_, ok := config.ResolveMusicQualityProfile("")
+		Expect(ok).To(BeFalse())
+	})
+})

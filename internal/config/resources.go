@@ -301,6 +301,54 @@ func findProfile(
 	return QualityProfileEntry{}, false
 }
 
+// MusicFormats is the ordered quality ladder, best first. Profile Formats
+// and Cutoff must come from this set.
+var MusicFormats = []string{
+	"flac-24",
+	"flac",
+	"mp3-320",
+	"mp3-v0",
+	"mp3-256",
+	"mp3-192",
+	"other",
+}
+
+type MusicQualityProfileEntry struct {
+	Name           string   `koanf:"name"            validate:"required"`
+	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=flac-24 flac mp3-320 mp3-v0 mp3-256 mp3-192 other"`
+	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=flac-24 flac mp3-320 mp3-v0 mp3-256 mp3-192 other"`
+	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
+}
+
+// ResolveMusicQualityProfile returns the profile named by name, falling back
+// to MusicQualityDefaultProfile when name is empty or unknown. ok is false
+// only when no music profiles are configured at all.
+func ResolveMusicQualityProfile(name string) (MusicQualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return MusicQualityProfileEntry{}, false
+	}
+	if p, ok := findMusicProfile(c.MusicQualityProfiles, name); ok {
+		return p, true
+	}
+	return findMusicProfile(c.MusicQualityProfiles, c.MusicQualityDefaultProfile)
+}
+
+func findMusicProfile(
+	profiles []MusicQualityProfileEntry,
+	name string,
+) (MusicQualityProfileEntry, bool) {
+	if name == "" {
+		return MusicQualityProfileEntry{}, false
+	}
+	for _, p := range profiles {
+		if p.Name == name {
+			return p, true
+		}
+	}
+	return MusicQualityProfileEntry{}, false
+}
+
 // PickDownloadClient returns the highest-priority enabled download client.
 func PickDownloadClient() (DownloadClientEntry, bool) {
 	c := Get()

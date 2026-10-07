@@ -200,6 +200,8 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `read_only` | bool | `false` | Reject all runtime config write-backs. For GitOps deploys |
 | `torrent_listen_port` | int | `0` | Overrides the builtin download client's `listen_port`. Top-level so `STREAMLINE_TORRENT_LISTEN_PORT` can reach it — see [torrent_listen_port](#torrent_listen_port) |
 | `quality_default_profile` | string | `default` | Profile used when an item names none |
+| `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `formats` (non-empty, from `flac-24` `flac` `mp3-320` `mp3-v0` `mp3-256` `mp3-192` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
+| `music_quality_default_profile` | string | empty | Music profile used when an item names none |
 
 ### server
 
@@ -237,6 +239,8 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | --- | --- | --- | --- |
 | `library.movie_path` | path | `/media/movies` | Movie library root |
 | `library.series_path` | path | `/media/series` | TV library root |
+| `library.music_path` | path | `/data/music` | Music library root. File-only |
+| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:00} - {Title}` | File-only |
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
