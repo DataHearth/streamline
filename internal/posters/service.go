@@ -52,6 +52,8 @@ const maxPosterSize = 20 * 1024 * 1024
 var validKinds = map[string]struct{}{
 	"movies":  {},
 	"tvshows": {},
+	"artists": {},
+	"albums":  {},
 }
 
 // Manager is the consumer-facing surface for the poster cache: fetch on

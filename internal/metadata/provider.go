@@ -104,6 +104,15 @@ func TVDBArtworkURL(p string) string {
 	return "https://artworks.thetvdb.com" + p
 }
 
+// CoverArtURL returns the Cover Art Archive front-cover URL for a
+// release-group. CAA redirects to the image; 404 means no art exists.
+func CoverArtURL(releaseGroupMBID string) string {
+	if releaseGroupMBID == "" {
+		return ""
+	}
+	return "https://coverartarchive.org/release-group/" + releaseGroupMBID + "/front-500"
+}
+
 // TVResult is a single TVDB search hit.
 type TVResult struct {
 	TVDBID        uint32

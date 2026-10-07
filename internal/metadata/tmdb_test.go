@@ -1027,4 +1027,15 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			).To(Equal("https://image.tmdb.org/t/p/w185/abc.jpg"))
 		})
 	})
+
+	Describe("CoverArtURL", func() {
+		It("returns empty when the MBID is empty", func() {
+			Expect(CoverArtURL("")).To(Equal(""))
+		})
+		It("builds the release-group front-500 URL", func() {
+			Expect(CoverArtURL("abc-123")).To(Equal(
+				"https://coverartarchive.org/release-group/abc-123/front-500",
+			))
+		})
+	})
 })
