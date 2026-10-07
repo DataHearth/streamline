@@ -3,6 +3,7 @@
 /bin/
 /dist/
 /docs/plans/
+/docs/superpowers/
 /docs/api-gaps-*.md
 /node_modules/
 /.task/
