@@ -57,6 +57,32 @@ type Store interface {
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
 	DeleteArtist(ctx context.Context, id uint32) error
 
+	// books
+	CreateAuthor(ctx context.Context, p CreateAuthorParams) (*ent.Author, error)
+	// FindAuthorByID eager-loads books (release_date, then title) with their
+	// media files.
+	FindAuthorByID(ctx context.Context, id uint32) (*ent.Author, error)
+	// FindBookByID eager-loads the book's author and media files.
+	FindBookByID(ctx context.Context, id uint32) (*ent.Book, error)
+	// FindAuthorByHardcoverID returns nil, nil when no author has the id.
+	FindAuthorByHardcoverID(
+		ctx context.Context,
+		hardcoverID uint32,
+	) (*ent.Author, error)
+	CountAuthors(ctx context.Context) (int, error)
+	ListAuthors(ctx context.Context, offset, limit uint32) ([]*ent.Author, error)
+	// RefreshAuthor updates metadata of stored books only and creates new ones
+	// with their seed's slot flags.
+	RefreshAuthor(ctx context.Context, id uint32, p RefreshAuthorParams) error
+	// SetAuthorMonitored does not cascade to the author's books.
+	SetAuthorMonitored(ctx context.Context, id uint32, monitored bool) error
+	UpdateAuthor(ctx context.Context, id uint32, p UpdateAuthorParams) error
+	// SetBookSlot writes the slot flag; kind is "ebook" or "audiobook". A slot
+	// holding a file stays available, otherwise skipped and wanted follow the
+	// flag.
+	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	DeleteAuthor(ctx context.Context, id uint32) error
+
 	// users
 	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
 	FindUserByID(ctx context.Context, id uint32) (*ent.User, error)

@@ -1325,6 +1325,66 @@ func (_c *MockStore_CountArtists_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// CountAuthors provides a mock function for the type MockStore
+func (_mock *MockStore) CountAuthors(ctx context.Context) (int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountAuthors")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_CountAuthors_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountAuthors'
+type MockStore_CountAuthors_Call struct {
+	*mock.Call
+}
+
+// CountAuthors is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountAuthors(ctx any) *MockStore_CountAuthors_Call {
+	return &MockStore_CountAuthors_Call{Call: _e.mock.On("CountAuthors", ctx)}
+}
+
+func (_c *MockStore_CountAuthors_Call) Run(run func(ctx context.Context)) *MockStore_CountAuthors_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_CountAuthors_Call) Return(n int, err error) *MockStore_CountAuthors_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockStore_CountAuthors_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockStore_CountAuthors_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountDownloadingEpisodes provides a mock function for the type MockStore
 func (_mock *MockStore) CountDownloadingEpisodes(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -2201,6 +2261,74 @@ func (_c *MockStore_CreateArtist_Call) Return(artist *ent.Artist, err error) *Mo
 }
 
 func (_c *MockStore_CreateArtist_Call) RunAndReturn(run func(ctx context.Context, p db.CreateArtistParams) (*ent.Artist, error)) *MockStore_CreateArtist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateAuthor provides a mock function for the type MockStore
+func (_mock *MockStore) CreateAuthor(ctx context.Context, p db.CreateAuthorParams) (*ent.Author, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateAuthor")
+	}
+
+	var r0 *ent.Author
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CreateAuthorParams) (*ent.Author, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CreateAuthorParams) *ent.Author); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Author)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CreateAuthorParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_CreateAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateAuthor'
+type MockStore_CreateAuthor_Call struct {
+	*mock.Call
+}
+
+// CreateAuthor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.CreateAuthorParams
+func (_e *MockStore_Expecter) CreateAuthor(ctx any, p any) *MockStore_CreateAuthor_Call {
+	return &MockStore_CreateAuthor_Call{Call: _e.mock.On("CreateAuthor", ctx, p)}
+}
+
+func (_c *MockStore_CreateAuthor_Call) Run(run func(ctx context.Context, p db.CreateAuthorParams)) *MockStore_CreateAuthor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CreateAuthorParams
+		if args[1] != nil {
+			arg1 = args[1].(db.CreateAuthorParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_CreateAuthor_Call) Return(author *ent.Author, err error) *MockStore_CreateAuthor_Call {
+	_c.Call.Return(author, err)
+	return _c
+}
+
+func (_c *MockStore_CreateAuthor_Call) RunAndReturn(run func(ctx context.Context, p db.CreateAuthorParams) (*ent.Author, error)) *MockStore_CreateAuthor_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3335,6 +3463,63 @@ func (_c *MockStore_DeleteArtist_Call) Return(err error) *MockStore_DeleteArtist
 }
 
 func (_c *MockStore_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_DeleteArtist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteAuthor provides a mock function for the type MockStore
+func (_mock *MockStore) DeleteAuthor(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAuthor")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_DeleteAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAuthor'
+type MockStore_DeleteAuthor_Call struct {
+	*mock.Call
+}
+
+// DeleteAuthor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) DeleteAuthor(ctx any, id any) *MockStore_DeleteAuthor_Call {
+	return &MockStore_DeleteAuthor_Call{Call: _e.mock.On("DeleteAuthor", ctx, id)}
+}
+
+func (_c *MockStore_DeleteAuthor_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_DeleteAuthor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_DeleteAuthor_Call) Return(err error) *MockStore_DeleteAuthor_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_DeleteAuthor_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_DeleteAuthor_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5250,6 +5435,210 @@ func (_c *MockStore_FindArtistByMBID_Call) Return(artist *ent.Artist, err error)
 }
 
 func (_c *MockStore_FindArtistByMBID_Call) RunAndReturn(run func(ctx context.Context, mbid string) (*ent.Artist, error)) *MockStore_FindArtistByMBID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindAuthorByHardcoverID provides a mock function for the type MockStore
+func (_mock *MockStore) FindAuthorByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Author, error) {
+	ret := _mock.Called(ctx, hardcoverID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAuthorByHardcoverID")
+	}
+
+	var r0 *ent.Author
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Author, error)); ok {
+		return returnFunc(ctx, hardcoverID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Author); ok {
+		r0 = returnFunc(ctx, hardcoverID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Author)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, hardcoverID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindAuthorByHardcoverID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAuthorByHardcoverID'
+type MockStore_FindAuthorByHardcoverID_Call struct {
+	*mock.Call
+}
+
+// FindAuthorByHardcoverID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - hardcoverID uint32
+func (_e *MockStore_Expecter) FindAuthorByHardcoverID(ctx any, hardcoverID any) *MockStore_FindAuthorByHardcoverID_Call {
+	return &MockStore_FindAuthorByHardcoverID_Call{Call: _e.mock.On("FindAuthorByHardcoverID", ctx, hardcoverID)}
+}
+
+func (_c *MockStore_FindAuthorByHardcoverID_Call) Run(run func(ctx context.Context, hardcoverID uint32)) *MockStore_FindAuthorByHardcoverID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindAuthorByHardcoverID_Call) Return(author *ent.Author, err error) *MockStore_FindAuthorByHardcoverID_Call {
+	_c.Call.Return(author, err)
+	return _c
+}
+
+func (_c *MockStore_FindAuthorByHardcoverID_Call) RunAndReturn(run func(ctx context.Context, hardcoverID uint32) (*ent.Author, error)) *MockStore_FindAuthorByHardcoverID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindAuthorByID provides a mock function for the type MockStore
+func (_mock *MockStore) FindAuthorByID(ctx context.Context, id uint32) (*ent.Author, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAuthorByID")
+	}
+
+	var r0 *ent.Author
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Author, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Author); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Author)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindAuthorByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAuthorByID'
+type MockStore_FindAuthorByID_Call struct {
+	*mock.Call
+}
+
+// FindAuthorByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindAuthorByID(ctx any, id any) *MockStore_FindAuthorByID_Call {
+	return &MockStore_FindAuthorByID_Call{Call: _e.mock.On("FindAuthorByID", ctx, id)}
+}
+
+func (_c *MockStore_FindAuthorByID_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindAuthorByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindAuthorByID_Call) Return(author *ent.Author, err error) *MockStore_FindAuthorByID_Call {
+	_c.Call.Return(author, err)
+	return _c
+}
+
+func (_c *MockStore_FindAuthorByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Author, error)) *MockStore_FindAuthorByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindBookByID provides a mock function for the type MockStore
+func (_mock *MockStore) FindBookByID(ctx context.Context, id uint32) (*ent.Book, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindBookByID")
+	}
+
+	var r0 *ent.Book
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Book, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Book); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Book)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindBookByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindBookByID'
+type MockStore_FindBookByID_Call struct {
+	*mock.Call
+}
+
+// FindBookByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindBookByID(ctx any, id any) *MockStore_FindBookByID_Call {
+	return &MockStore_FindBookByID_Call{Call: _e.mock.On("FindBookByID", ctx, id)}
+}
+
+func (_c *MockStore_FindBookByID_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindBookByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindBookByID_Call) Return(book *ent.Book, err error) *MockStore_FindBookByID_Call {
+	_c.Call.Return(book, err)
+	return _c
+}
+
+func (_c *MockStore_FindBookByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Book, error)) *MockStore_FindBookByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7901,6 +8290,80 @@ func (_c *MockStore_ListArtists_Call) Return(artists []*ent.Artist, err error) *
 }
 
 func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.Artist, error)) *MockStore_ListArtists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListAuthors provides a mock function for the type MockStore
+func (_mock *MockStore) ListAuthors(ctx context.Context, offset uint32, limit uint32) ([]*ent.Author, error) {
+	ret := _mock.Called(ctx, offset, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAuthors")
+	}
+
+	var r0 []*ent.Author
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]*ent.Author, error)); ok {
+		return returnFunc(ctx, offset, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) []*ent.Author); ok {
+		r0 = returnFunc(ctx, offset, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Author)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, offset, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListAuthors_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAuthors'
+type MockStore_ListAuthors_Call struct {
+	*mock.Call
+}
+
+// ListAuthors is a helper method to define mock.On call
+//   - ctx context.Context
+//   - offset uint32
+//   - limit uint32
+func (_e *MockStore_Expecter) ListAuthors(ctx any, offset any, limit any) *MockStore_ListAuthors_Call {
+	return &MockStore_ListAuthors_Call{Call: _e.mock.On("ListAuthors", ctx, offset, limit)}
+}
+
+func (_c *MockStore_ListAuthors_Call) Run(run func(ctx context.Context, offset uint32, limit uint32)) *MockStore_ListAuthors_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListAuthors_Call) Return(authors []*ent.Author, err error) *MockStore_ListAuthors_Call {
+	_c.Call.Return(authors, err)
+	return _c
+}
+
+func (_c *MockStore_ListAuthors_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.Author, error)) *MockStore_ListAuthors_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -11645,6 +12108,69 @@ func (_c *MockStore_RefreshArtist_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// RefreshAuthor provides a mock function for the type MockStore
+func (_mock *MockStore) RefreshAuthor(ctx context.Context, id uint32, p db.RefreshAuthorParams) error {
+	ret := _mock.Called(ctx, id, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshAuthor")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshAuthorParams) error); ok {
+		r0 = returnFunc(ctx, id, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_RefreshAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshAuthor'
+type MockStore_RefreshAuthor_Call struct {
+	*mock.Call
+}
+
+// RefreshAuthor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - p db.RefreshAuthorParams
+func (_e *MockStore_Expecter) RefreshAuthor(ctx any, id any, p any) *MockStore_RefreshAuthor_Call {
+	return &MockStore_RefreshAuthor_Call{Call: _e.mock.On("RefreshAuthor", ctx, id, p)}
+}
+
+func (_c *MockStore_RefreshAuthor_Call) Run(run func(ctx context.Context, id uint32, p db.RefreshAuthorParams)) *MockStore_RefreshAuthor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.RefreshAuthorParams
+		if args[2] != nil {
+			arg2 = args[2].(db.RefreshAuthorParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_RefreshAuthor_Call) Return(err error) *MockStore_RefreshAuthor_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_RefreshAuthor_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshAuthorParams) error) *MockStore_RefreshAuthor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RejectTranscodeJob provides a mock function for the type MockStore
 func (_mock *MockStore) RejectTranscodeJob(ctx context.Context, id uint32, reason string, sizeBefore int64, sizeAfter int64) error {
 	ret := _mock.Called(ctx, id, reason, sizeBefore, sizeAfter)
@@ -12960,6 +13486,138 @@ func (_c *MockStore_SetArtistQualityProfile_Call) Return(err error) *MockStore_S
 }
 
 func (_c *MockStore_SetArtistQualityProfile_Call) RunAndReturn(run func(ctx context.Context, id uint32, profile string) error) *MockStore_SetArtistQualityProfile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetAuthorMonitored provides a mock function for the type MockStore
+func (_mock *MockStore) SetAuthorMonitored(ctx context.Context, id uint32, monitored bool) error {
+	ret := _mock.Called(ctx, id, monitored)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAuthorMonitored")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+		r0 = returnFunc(ctx, id, monitored)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetAuthorMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAuthorMonitored'
+type MockStore_SetAuthorMonitored_Call struct {
+	*mock.Call
+}
+
+// SetAuthorMonitored is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - monitored bool
+func (_e *MockStore_Expecter) SetAuthorMonitored(ctx any, id any, monitored any) *MockStore_SetAuthorMonitored_Call {
+	return &MockStore_SetAuthorMonitored_Call{Call: _e.mock.On("SetAuthorMonitored", ctx, id, monitored)}
+}
+
+func (_c *MockStore_SetAuthorMonitored_Call) Run(run func(ctx context.Context, id uint32, monitored bool)) *MockStore_SetAuthorMonitored_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetAuthorMonitored_Call) Return(err error) *MockStore_SetAuthorMonitored_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetAuthorMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitored bool) error) *MockStore_SetAuthorMonitored_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetBookSlot provides a mock function for the type MockStore
+func (_mock *MockStore) SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error {
+	ret := _mock.Called(ctx, id, kind, monitored)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetBookSlot")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, bool) error); ok {
+		r0 = returnFunc(ctx, id, kind, monitored)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetBookSlot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetBookSlot'
+type MockStore_SetBookSlot_Call struct {
+	*mock.Call
+}
+
+// SetBookSlot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - kind string
+//   - monitored bool
+func (_e *MockStore_Expecter) SetBookSlot(ctx any, id any, kind any, monitored any) *MockStore_SetBookSlot_Call {
+	return &MockStore_SetBookSlot_Call{Call: _e.mock.On("SetBookSlot", ctx, id, kind, monitored)}
+}
+
+func (_c *MockStore_SetBookSlot_Call) Run(run func(ctx context.Context, id uint32, kind string, monitored bool)) *MockStore_SetBookSlot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetBookSlot_Call) Return(err error) *MockStore_SetBookSlot_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetBookSlot_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string, monitored bool) error) *MockStore_SetBookSlot_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -15073,6 +15731,69 @@ func (_c *MockStore_UpcomingReleases_Call) Return(movies []*ent.Movie, err error
 }
 
 func (_c *MockStore_UpcomingReleases_Call) RunAndReturn(run func(ctx context.Context, from time.Time, to time.Time) ([]*ent.Movie, error)) *MockStore_UpcomingReleases_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateAuthor provides a mock function for the type MockStore
+func (_mock *MockStore) UpdateAuthor(ctx context.Context, id uint32, p db.UpdateAuthorParams) error {
+	ret := _mock.Called(ctx, id, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAuthor")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.UpdateAuthorParams) error); ok {
+		r0 = returnFunc(ctx, id, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_UpdateAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAuthor'
+type MockStore_UpdateAuthor_Call struct {
+	*mock.Call
+}
+
+// UpdateAuthor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - p db.UpdateAuthorParams
+func (_e *MockStore_Expecter) UpdateAuthor(ctx any, id any, p any) *MockStore_UpdateAuthor_Call {
+	return &MockStore_UpdateAuthor_Call{Call: _e.mock.On("UpdateAuthor", ctx, id, p)}
+}
+
+func (_c *MockStore_UpdateAuthor_Call) Run(run func(ctx context.Context, id uint32, p db.UpdateAuthorParams)) *MockStore_UpdateAuthor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.UpdateAuthorParams
+		if args[2] != nil {
+			arg2 = args[2].(db.UpdateAuthorParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_UpdateAuthor_Call) Return(err error) *MockStore_UpdateAuthor_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_UpdateAuthor_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.UpdateAuthorParams) error) *MockStore_UpdateAuthor_Call {
 	_c.Call.Return(run)
 	return _c
 }

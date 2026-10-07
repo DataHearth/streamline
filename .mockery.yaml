@@ -52,6 +52,9 @@ packages:
   github.com/datahearth/streamline/internal/media/music:
     interfaces:
       Manager: {}
+  github.com/datahearth/streamline/internal/media/book:
+    interfaces:
+      Manager: {}
   github.com/datahearth/streamline/internal/mediaserver:
     interfaces:
       Manager: {}
