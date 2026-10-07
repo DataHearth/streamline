@@ -73,6 +73,8 @@ const (
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
 	EdgeEpisode = "episode"
+	// EdgeTrack holds the string denoting the track edge name in mutations.
+	EdgeTrack = "track"
 	// EdgeTranscodeJobs holds the string denoting the transcode_jobs edge name in mutations.
 	EdgeTranscodeJobs = "transcode_jobs"
 	// Table holds the table name of the mediafile in the database.
@@ -91,6 +93,13 @@ const (
 	EpisodeInverseTable = "episodes"
 	// EpisodeColumn is the table column denoting the episode relation/edge.
 	EpisodeColumn = "episode_media_files"
+	// TrackTable is the table that holds the track relation/edge.
+	TrackTable = "media_files"
+	// TrackInverseTable is the table name for the Track entity.
+	// It exists in this package in order to avoid circular dependency with the "track" package.
+	TrackInverseTable = "tracks"
+	// TrackColumn is the table column denoting the track relation/edge.
+	TrackColumn = "track_media_files"
 	// TranscodeJobsTable is the table that holds the transcode_jobs relation/edge.
 	TranscodeJobsTable = "transcode_jobs"
 	// TranscodeJobsInverseTable is the table name for the TranscodeJob entity.
@@ -137,6 +146,7 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"episode_media_files",
 	"movie_media_files",
+	"track_media_files",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -351,6 +361,13 @@ func ByEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByTrackField orders the results by track field.
+func ByTrackField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTrackStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByTranscodeJobsCount orders the results by transcode_jobs count.
 func ByTranscodeJobsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -376,6 +393,13 @@ func newEpisodeStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EpisodeInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
+	)
+}
+func newTrackStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TrackInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TrackTable, TrackColumn),
 	)
 }
 func newTranscodeJobsStep() *sqlgraph.Step {

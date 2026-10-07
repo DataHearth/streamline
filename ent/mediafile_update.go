@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
@@ -614,6 +615,25 @@ func (_u *MediaFileUpdate) SetEpisode(v *Episode) *MediaFileUpdate {
 	return _u.SetEpisodeID(v.ID)
 }
 
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_u *MediaFileUpdate) SetTrackID(id uint32) *MediaFileUpdate {
+	_u.mutation.SetTrackID(id)
+	return _u
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTrackID(id *uint32) *MediaFileUpdate {
+	if id != nil {
+		_u = _u.SetTrackID(*id)
+	}
+	return _u
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_u *MediaFileUpdate) SetTrack(v *Track) *MediaFileUpdate {
+	return _u.SetTrackID(v.ID)
+}
+
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
 func (_u *MediaFileUpdate) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdate {
 	_u.mutation.AddTranscodeJobIDs(ids...)
@@ -643,6 +663,12 @@ func (_u *MediaFileUpdate) ClearMovie() *MediaFileUpdate {
 // ClearEpisode clears the "episode" edge to the Episode entity.
 func (_u *MediaFileUpdate) ClearEpisode() *MediaFileUpdate {
 	_u.mutation.ClearEpisode()
+	return _u
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (_u *MediaFileUpdate) ClearTrack() *MediaFileUpdate {
+	_u.mutation.ClearTrack()
 	return _u
 }
 
@@ -955,6 +981,35 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TrackCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.TrackTable,
+			Columns: []string{mediafile.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.TrackTable,
+			Columns: []string{mediafile.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1611,6 +1666,25 @@ func (_u *MediaFileUpdateOne) SetEpisode(v *Episode) *MediaFileUpdateOne {
 	return _u.SetEpisodeID(v.ID)
 }
 
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_u *MediaFileUpdateOne) SetTrackID(id uint32) *MediaFileUpdateOne {
+	_u.mutation.SetTrackID(id)
+	return _u
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTrackID(id *uint32) *MediaFileUpdateOne {
+	if id != nil {
+		_u = _u.SetTrackID(*id)
+	}
+	return _u
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_u *MediaFileUpdateOne) SetTrack(v *Track) *MediaFileUpdateOne {
+	return _u.SetTrackID(v.ID)
+}
+
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
 func (_u *MediaFileUpdateOne) AddTranscodeJobIDs(ids ...uint32) *MediaFileUpdateOne {
 	_u.mutation.AddTranscodeJobIDs(ids...)
@@ -1640,6 +1714,12 @@ func (_u *MediaFileUpdateOne) ClearMovie() *MediaFileUpdateOne {
 // ClearEpisode clears the "episode" edge to the Episode entity.
 func (_u *MediaFileUpdateOne) ClearEpisode() *MediaFileUpdateOne {
 	_u.mutation.ClearEpisode()
+	return _u
+}
+
+// ClearTrack clears the "track" edge to the Track entity.
+func (_u *MediaFileUpdateOne) ClearTrack() *MediaFileUpdateOne {
+	_u.mutation.ClearTrack()
 	return _u
 }
 
@@ -1982,6 +2062,35 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TrackCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.TrackTable,
+			Columns: []string{mediafile.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.TrackTable,
+			Columns: []string{mediafile.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

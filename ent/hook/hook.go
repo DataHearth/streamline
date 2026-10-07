@@ -9,6 +9,18 @@ import (
 	"github.com/datahearth/streamline/ent"
 )
 
+// The AlbumFunc type is an adapter to allow the use of ordinary
+// function as Album mutator.
+type AlbumFunc func(context.Context, *ent.AlbumMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AlbumFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AlbumMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AlbumMutation", m)
+}
+
 // The ApiKeyFunc type is an adapter to allow the use of ordinary
 // function as ApiKey mutator.
 type ApiKeyFunc func(context.Context, *ent.ApiKeyMutation) (ent.Value, error)
@@ -19,6 +31,18 @@ func (f ApiKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ApiKeyMutation", m)
+}
+
+// The ArtistFunc type is an adapter to allow the use of ordinary
+// function as Artist mutator.
+type ArtistFunc func(context.Context, *ent.ArtistMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ArtistFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ArtistMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ArtistMutation", m)
 }
 
 // The CreditFunc type is an adapter to allow the use of ordinary
@@ -235,6 +259,18 @@ func (f TorrentSessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TorrentSessionMutation", m)
+}
+
+// The TrackFunc type is an adapter to allow the use of ordinary
+// function as Track mutator.
+type TrackFunc func(context.Context, *ent.TrackMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TrackFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TrackMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TrackMutation", m)
 }
 
 // The TranscodeJobFunc type is an adapter to allow the use of ordinary

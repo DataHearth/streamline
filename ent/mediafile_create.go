@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
@@ -429,6 +430,25 @@ func (_c *MediaFileCreate) SetEpisode(v *Episode) *MediaFileCreate {
 	return _c.SetEpisodeID(v.ID)
 }
 
+// SetTrackID sets the "track" edge to the Track entity by ID.
+func (_c *MediaFileCreate) SetTrackID(id uint32) *MediaFileCreate {
+	_c.mutation.SetTrackID(id)
+	return _c
+}
+
+// SetNillableTrackID sets the "track" edge to the Track entity by ID if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTrackID(id *uint32) *MediaFileCreate {
+	if id != nil {
+		_c = _c.SetTrackID(*id)
+	}
+	return _c
+}
+
+// SetTrack sets the "track" edge to the Track entity.
+func (_c *MediaFileCreate) SetTrack(v *Track) *MediaFileCreate {
+	return _c.SetTrackID(v.ID)
+}
+
 // AddTranscodeJobIDs adds the "transcode_jobs" edge to the TranscodeJob entity by IDs.
 func (_c *MediaFileCreate) AddTranscodeJobIDs(ids ...uint32) *MediaFileCreate {
 	_c.mutation.AddTranscodeJobIDs(ids...)
@@ -696,6 +716,23 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.episode_media_files = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TrackIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   mediafile.TrackTable,
+			Columns: []string{mediafile.TrackColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(track.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.track_media_files = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TranscodeJobsIDs(); len(nodes) > 0 {

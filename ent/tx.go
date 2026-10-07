@@ -12,8 +12,12 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Album is the client for interacting with the Album builders.
+	Album *AlbumClient
 	// ApiKey is the client for interacting with the ApiKey builders.
 	ApiKey *ApiKeyClient
+	// Artist is the client for interacting with the Artist builders.
+	Artist *ArtistClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -50,6 +54,8 @@ type Tx struct {
 	TVShow *TVShowClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
+	// Track is the client for interacting with the Track builders.
+	Track *TrackClient
 	// TranscodeJob is the client for interacting with the TranscodeJob builders.
 	TranscodeJob *TranscodeJobClient
 	// User is the client for interacting with the User builders.
@@ -185,7 +191,9 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Album = NewAlbumClient(tx.config)
 	tx.ApiKey = NewApiKeyClient(tx.config)
+	tx.Artist = NewArtistClient(tx.config)
 	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
@@ -204,6 +212,7 @@ func (tx *Tx) init() {
 	tx.Session = NewSessionClient(tx.config)
 	tx.TVShow = NewTVShowClient(tx.config)
 	tx.TorrentSession = NewTorrentSessionClient(tx.config)
+	tx.Track = NewTrackClient(tx.config)
 	tx.TranscodeJob = NewTranscodeJobClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
@@ -215,7 +224,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: ApiKey.QueryXXX(), the query will be executed
+// applies a query, for example: Album.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

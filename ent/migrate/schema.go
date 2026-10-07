@@ -9,6 +9,48 @@ import (
 )
 
 var (
+	// AlbumsColumns holds the columns for the "albums" table.
+	AlbumsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "mbid", Type: field.TypeString, Unique: true},
+		{Name: "release_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "ep", "single", "compilation", "live", "other"}, Default: "album"},
+		{Name: "release_date", Type: field.TypeTime, Nullable: true},
+		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
+		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "wanted"},
+		{Name: "artist_albums", Type: field.TypeUint32},
+	}
+	// AlbumsTable holds the schema information for the "albums" table.
+	AlbumsTable = &schema.Table{
+		Name:       "albums",
+		Columns:    AlbumsColumns,
+		PrimaryKey: []*schema.Column{AlbumsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "albums_artists_albums",
+				Columns:    []*schema.Column{AlbumsColumns[12]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "album_artist_albums",
+				Unique:  false,
+				Columns: []*schema.Column{AlbumsColumns[12]},
+			},
+			{
+				Name:    "album_status",
+				Unique:  false,
+				Columns: []*schema.Column{AlbumsColumns[11]},
+			},
+		},
+	}
 	// APIKeysColumns holds the columns for the "api_keys" table.
 	APIKeysColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -44,6 +86,26 @@ var (
 				Columns: []*schema.Column{APIKeysColumns[6]},
 			},
 		},
+	}
+	// ArtistsColumns holds the columns for the "artists" table.
+	ArtistsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "mbid", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "sort_name", Type: field.TypeString, Nullable: true},
+		{Name: "overview", Type: field.TypeString, Nullable: true},
+		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "path", Type: field.TypeString, Nullable: true},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ArtistsTable holds the schema information for the "artists" table.
+	ArtistsTable = &schema.Table{
+		Name:       "artists",
+		Columns:    ArtistsColumns,
+		PrimaryKey: []*schema.Column{ArtistsColumns[0]},
 	}
 	// CreditsColumns holds the columns for the "credits" table.
 	CreditsColumns = []*schema.Column{
@@ -122,6 +184,7 @@ var (
 		{Name: "selected_files", Type: field.TypeJSON, Nullable: true},
 		{Name: "selected_bytes", Type: field.TypeInt64, Nullable: true},
 		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
+		{Name: "album_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
 	}
@@ -132,14 +195,20 @@ var (
 		PrimaryKey: []*schema.Column{DownloadRecordsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "download_records_episodes_anchored_download_records",
+				Symbol:     "download_records_albums_download_records",
 				Columns:    []*schema.Column{DownloadRecordsColumns[21]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "download_records_episodes_anchored_download_records",
+				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[22]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -168,12 +237,12 @@ var (
 			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[22]},
+				Columns: []*schema.Column{DownloadRecordsColumns[23]},
 			},
 			{
 				Name:    "downloadrecord_episode_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[21]},
+				Columns: []*schema.Column{DownloadRecordsColumns[22]},
 			},
 		},
 	}
@@ -510,6 +579,7 @@ var (
 		{Name: "size_before", Type: field.TypeInt64, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
+		{Name: "track_media_files", Type: field.TypeUint32, Nullable: true},
 	}
 	// MediaFilesTable holds the schema information for the "media_files" table.
 	MediaFilesTable = &schema.Table{
@@ -529,6 +599,12 @@ var (
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
+			{
+				Symbol:     "media_files_tracks_media_files",
+				Columns:    []*schema.Column{MediaFilesColumns[30]},
+				RefColumns: []*schema.Column{TracksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
 		},
 		Indexes: []*schema.Index{
 			{
@@ -540,6 +616,11 @@ var (
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[29]},
+			},
+			{
+				Name:    "mediafile_track_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[30]},
 			},
 			{
 				Name:    "mediafile_probed_at",
@@ -876,6 +957,39 @@ var (
 		Columns:    TorrentSessionsColumns,
 		PrimaryKey: []*schema.Column{TorrentSessionsColumns[0]},
 	}
+	// TracksColumns holds the columns for the "tracks" table.
+	TracksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "mbid", Type: field.TypeString, Nullable: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "disc", Type: field.TypeUint8, Default: 1},
+		{Name: "position", Type: field.TypeUint16},
+		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "album_tracks", Type: field.TypeUint32},
+	}
+	// TracksTable holds the schema information for the "tracks" table.
+	TracksTable = &schema.Table{
+		Name:       "tracks",
+		Columns:    TracksColumns,
+		PrimaryKey: []*schema.Column{TracksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "tracks_albums_tracks",
+				Columns:    []*schema.Column{TracksColumns[8]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "track_album_tracks",
+				Unique:  false,
+				Columns: []*schema.Column{TracksColumns[8]},
+			},
+		},
+	}
 	// TranscodeJobsColumns holds the columns for the "transcode_jobs" table.
 	TranscodeJobsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -964,7 +1078,9 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AlbumsTable,
 		APIKeysTable,
+		ArtistsTable,
 		CreditsTable,
 		DownloadRecordsTable,
 		EpisodesTable,
@@ -983,6 +1099,7 @@ var (
 		SessionsTable,
 		TvShowsTable,
 		TorrentSessionsTable,
+		TracksTable,
 		TranscodeJobsTable,
 		UsersTable,
 		DownloadRecordEpisodesTable,
@@ -990,12 +1107,14 @@ var (
 )
 
 func init() {
+	AlbumsTable.ForeignKeys[0].RefTable = ArtistsTable
 	APIKeysTable.ForeignKeys[0].RefTable = UsersTable
 	CreditsTable.ForeignKeys[0].RefTable = MoviesTable
 	CreditsTable.ForeignKeys[1].RefTable = PersonsTable
 	CreditsTable.ForeignKeys[2].RefTable = TvShowsTable
-	DownloadRecordsTable.ForeignKeys[0].RefTable = EpisodesTable
-	DownloadRecordsTable.ForeignKeys[1].RefTable = MoviesTable
+	DownloadRecordsTable.ForeignKeys[0].RefTable = AlbumsTable
+	DownloadRecordsTable.ForeignKeys[1].RefTable = EpisodesTable
+	DownloadRecordsTable.ForeignKeys[2].RefTable = MoviesTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanShowsTable.ForeignKeys[0].RefTable = ImportScansTable
@@ -1006,11 +1125,13 @@ func init() {
 	MediaEventsTable.ForeignKeys[2].RefTable = TvShowsTable
 	MediaFilesTable.ForeignKeys[0].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[1].RefTable = MoviesTable
+	MediaFilesTable.ForeignKeys[2].RefTable = TracksTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable
 	SeasonsTable.ForeignKeys[0].RefTable = TvShowsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
+	TracksTable.ForeignKeys[0].RefTable = AlbumsTable
 	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
 	DownloadRecordEpisodesTable.ForeignKeys[0].RefTable = EpisodesTable
 	DownloadRecordEpisodesTable.ForeignKeys[1].RefTable = DownloadRecordsTable

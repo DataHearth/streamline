@@ -1811,6 +1811,29 @@ func HasEpisodeWith(preds ...predicate.Episode) predicate.MediaFile {
 	})
 }
 
+// HasTrack applies the HasEdge predicate on the "track" edge.
+func HasTrack() predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TrackTable, TrackColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTrackWith applies the HasEdge predicate on the "track" edge with a given conditions (other predicates).
+func HasTrackWith(preds ...predicate.Track) predicate.MediaFile {
+	return predicate.MediaFile(func(s *sql.Selector) {
+		step := newTrackStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasTranscodeJobs applies the HasEdge predicate on the "transcode_jobs" edge.
 func HasTranscodeJobs() predicate.MediaFile {
 	return predicate.MediaFile(func(s *sql.Selector) {

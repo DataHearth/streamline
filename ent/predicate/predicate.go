@@ -6,8 +6,14 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Album is the predicate function for album builders.
+type Album func(*sql.Selector)
+
 // ApiKey is the predicate function for apikey builders.
 type ApiKey func(*sql.Selector)
+
+// Artist is the predicate function for artist builders.
+type Artist func(*sql.Selector)
 
 // Credit is the predicate function for credit builders.
 type Credit func(*sql.Selector)
@@ -62,6 +68,9 @@ type TVShow func(*sql.Selector)
 
 // TorrentSession is the predicate function for torrentsession builders.
 type TorrentSession func(*sql.Selector)
+
+// Track is the predicate function for track builders.
+type Track func(*sql.Selector)
 
 // TranscodeJob is the predicate function for transcodejob builders.
 type TranscodeJob func(*sql.Selector)

@@ -12,7 +12,9 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -30,6 +32,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
@@ -93,7 +96,9 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			album.Table:          album.ValidColumn,
 			apikey.Table:         apikey.ValidColumn,
+			artist.Table:         artist.ValidColumn,
 			credit.Table:         credit.ValidColumn,
 			downloadrecord.Table: downloadrecord.ValidColumn,
 			episode.Table:        episode.ValidColumn,
@@ -112,6 +117,7 @@ func checkColumn(t, c string) error {
 			session.Table:        session.ValidColumn,
 			tvshow.Table:         tvshow.ValidColumn,
 			torrentsession.Table: torrentsession.ValidColumn,
+			track.Table:          track.ValidColumn,
 			transcodejob.Table:   transcodejob.ValidColumn,
 			user.Table:           user.ValidColumn,
 		})

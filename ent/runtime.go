@@ -5,7 +5,9 @@ package ent
 import (
 	"time"
 
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -24,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
@@ -33,6 +36,37 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	albumMixin := schema.Album{}.Mixin()
+	albumMixinFields1 := albumMixin[1].Fields()
+	_ = albumMixinFields1
+	albumFields := schema.Album{}.Fields()
+	_ = albumFields
+	// albumDescCreateTime is the schema descriptor for create_time field.
+	albumDescCreateTime := albumMixinFields1[0].Descriptor()
+	// album.DefaultCreateTime holds the default value on creation for the create_time field.
+	album.DefaultCreateTime = albumDescCreateTime.Default.(func() time.Time)
+	// albumDescUpdateTime is the schema descriptor for update_time field.
+	albumDescUpdateTime := albumMixinFields1[1].Descriptor()
+	// album.DefaultUpdateTime holds the default value on creation for the update_time field.
+	album.DefaultUpdateTime = albumDescUpdateTime.Default.(func() time.Time)
+	// album.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	album.UpdateDefaultUpdateTime = albumDescUpdateTime.UpdateDefault.(func() time.Time)
+	// albumDescMbid is the schema descriptor for mbid field.
+	albumDescMbid := albumFields[0].Descriptor()
+	// album.MbidValidator is a validator for the "mbid" field. It is called by the builders before save.
+	album.MbidValidator = albumDescMbid.Validators[0].(func(string) error)
+	// albumDescTitle is the schema descriptor for title field.
+	albumDescTitle := albumFields[2].Descriptor()
+	// album.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	album.TitleValidator = albumDescTitle.Validators[0].(func(string) error)
+	// albumDescMonitored is the schema descriptor for monitored field.
+	albumDescMonitored := albumFields[5].Descriptor()
+	// album.DefaultMonitored holds the default value on creation for the monitored field.
+	album.DefaultMonitored = albumDescMonitored.Default.(bool)
+	// albumDescGrabFailures is the schema descriptor for grab_failures field.
+	albumDescGrabFailures := albumFields[6].Descriptor()
+	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
+	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()
 	apikeyMixinFields1 := apikeyMixin[1].Fields()
 	_ = apikeyMixinFields1
@@ -56,6 +90,33 @@ func init() {
 	apikeyDescKeyHash := apikeyFields[1].Descriptor()
 	// apikey.KeyHashValidator is a validator for the "key_hash" field. It is called by the builders before save.
 	apikey.KeyHashValidator = apikeyDescKeyHash.Validators[0].(func(string) error)
+	artistMixin := schema.Artist{}.Mixin()
+	artistMixinFields1 := artistMixin[1].Fields()
+	_ = artistMixinFields1
+	artistFields := schema.Artist{}.Fields()
+	_ = artistFields
+	// artistDescCreateTime is the schema descriptor for create_time field.
+	artistDescCreateTime := artistMixinFields1[0].Descriptor()
+	// artist.DefaultCreateTime holds the default value on creation for the create_time field.
+	artist.DefaultCreateTime = artistDescCreateTime.Default.(func() time.Time)
+	// artistDescUpdateTime is the schema descriptor for update_time field.
+	artistDescUpdateTime := artistMixinFields1[1].Descriptor()
+	// artist.DefaultUpdateTime holds the default value on creation for the update_time field.
+	artist.DefaultUpdateTime = artistDescUpdateTime.Default.(func() time.Time)
+	// artist.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	artist.UpdateDefaultUpdateTime = artistDescUpdateTime.UpdateDefault.(func() time.Time)
+	// artistDescMbid is the schema descriptor for mbid field.
+	artistDescMbid := artistFields[0].Descriptor()
+	// artist.MbidValidator is a validator for the "mbid" field. It is called by the builders before save.
+	artist.MbidValidator = artistDescMbid.Validators[0].(func(string) error)
+	// artistDescName is the schema descriptor for name field.
+	artistDescName := artistFields[1].Descriptor()
+	// artist.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	artist.NameValidator = artistDescName.Validators[0].(func(string) error)
+	// artistDescMonitored is the schema descriptor for monitored field.
+	artistDescMonitored := artistFields[4].Descriptor()
+	// artist.DefaultMonitored holds the default value on creation for the monitored field.
+	artist.DefaultMonitored = artistDescMonitored.Default.(bool)
 	creditMixin := schema.Credit{}.Mixin()
 	creditMixinFields1 := creditMixin[1].Fields()
 	_ = creditMixinFields1
@@ -495,6 +556,33 @@ func init() {
 	torrentsession.DefaultUploaded = torrentsessionDescUploaded.Default.(int64)
 	// torrentsession.UploadedValidator is a validator for the "uploaded" field. It is called by the builders before save.
 	torrentsession.UploadedValidator = torrentsessionDescUploaded.Validators[0].(func(int64) error)
+	trackMixin := schema.Track{}.Mixin()
+	trackMixinFields1 := trackMixin[1].Fields()
+	_ = trackMixinFields1
+	trackFields := schema.Track{}.Fields()
+	_ = trackFields
+	// trackDescCreateTime is the schema descriptor for create_time field.
+	trackDescCreateTime := trackMixinFields1[0].Descriptor()
+	// track.DefaultCreateTime holds the default value on creation for the create_time field.
+	track.DefaultCreateTime = trackDescCreateTime.Default.(func() time.Time)
+	// trackDescUpdateTime is the schema descriptor for update_time field.
+	trackDescUpdateTime := trackMixinFields1[1].Descriptor()
+	// track.DefaultUpdateTime holds the default value on creation for the update_time field.
+	track.DefaultUpdateTime = trackDescUpdateTime.Default.(func() time.Time)
+	// track.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	track.UpdateDefaultUpdateTime = trackDescUpdateTime.UpdateDefault.(func() time.Time)
+	// trackDescTitle is the schema descriptor for title field.
+	trackDescTitle := trackFields[1].Descriptor()
+	// track.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	track.TitleValidator = trackDescTitle.Validators[0].(func(string) error)
+	// trackDescDisc is the schema descriptor for disc field.
+	trackDescDisc := trackFields[2].Descriptor()
+	// track.DefaultDisc holds the default value on creation for the disc field.
+	track.DefaultDisc = trackDescDisc.Default.(uint8)
+	// trackDescDuration is the schema descriptor for duration field.
+	trackDescDuration := trackFields[4].Descriptor()
+	// track.DefaultDuration holds the default value on creation for the duration field.
+	track.DefaultDuration = trackDescDuration.Default.(uint32)
 	transcodejobMixin := schema.TranscodeJob{}.Mixin()
 	transcodejobMixinFields1 := transcodejobMixin[1].Fields()
 	_ = transcodejobMixinFields1

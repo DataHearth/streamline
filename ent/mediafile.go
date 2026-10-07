@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // MediaFile is the model entity for the MediaFile schema.
@@ -78,6 +79,7 @@ type MediaFile struct {
 	Edges               MediaFileEdges `json:"edges"`
 	episode_media_files *uint32
 	movie_media_files   *uint32
+	track_media_files   *uint32
 	selectValues        sql.SelectValues
 }
 
@@ -87,11 +89,13 @@ type MediaFileEdges struct {
 	Movie *Movie `json:"movie,omitempty"`
 	// Episode holds the value of the episode edge.
 	Episode *Episode `json:"episode,omitempty"`
+	// Track holds the value of the track edge.
+	Track *Track `json:"track,omitempty"`
 	// TranscodeJobs holds the value of the transcode_jobs edge.
 	TranscodeJobs []*TranscodeJob `json:"transcode_jobs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -116,10 +120,21 @@ func (e MediaFileEdges) EpisodeOrErr() (*Episode, error) {
 	return nil, &NotLoadedError{edge: "episode"}
 }
 
+// TrackOrErr returns the Track value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MediaFileEdges) TrackOrErr() (*Track, error) {
+	if e.Track != nil {
+		return e.Track, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: track.Label}
+	}
+	return nil, &NotLoadedError{edge: "track"}
+}
+
 // TranscodeJobsOrErr returns the TranscodeJobs value or an error if the edge
 // was not loaded in eager-loading.
 func (e MediaFileEdges) TranscodeJobsOrErr() ([]*TranscodeJob, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.TranscodeJobs, nil
 	}
 	return nil, &NotLoadedError{edge: "transcode_jobs"}
@@ -139,6 +154,8 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 		case mediafile.ForeignKeys[0]: // episode_media_files
 			values[i] = new(sql.NullInt64)
 		case mediafile.ForeignKeys[1]: // movie_media_files
+			values[i] = new(sql.NullInt64)
+		case mediafile.ForeignKeys[2]: // track_media_files
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -341,6 +358,13 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 				_m.movie_media_files = new(uint32)
 				*_m.movie_media_files = uint32(value.Int64)
 			}
+		case mediafile.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field track_media_files", value)
+			} else if value.Valid {
+				_m.track_media_files = new(uint32)
+				*_m.track_media_files = uint32(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -362,6 +386,11 @@ func (_m *MediaFile) QueryMovie() *MovieQuery {
 // QueryEpisode queries the "episode" edge of the MediaFile entity.
 func (_m *MediaFile) QueryEpisode() *EpisodeQuery {
 	return NewMediaFileClient(_m.config).QueryEpisode(_m)
+}
+
+// QueryTrack queries the "track" edge of the MediaFile entity.
+func (_m *MediaFile) QueryTrack() *TrackQuery {
+	return NewMediaFileClient(_m.config).QueryTrack(_m)
 }
 
 // QueryTranscodeJobs queries the "transcode_jobs" edge of the MediaFile entity.

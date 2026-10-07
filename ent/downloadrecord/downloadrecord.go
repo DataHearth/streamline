@@ -112,6 +112,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"album_download_records",
 	"episode_download_records",
 	"movie_download_records",
 }

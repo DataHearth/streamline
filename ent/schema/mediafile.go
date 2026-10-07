@@ -79,6 +79,7 @@ func (MediaFile) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("media_files").Unique(),
 		edge.From("episode", Episode.Type).Ref("media_files").Unique(),
+		edge.From("track", Track.Type).Ref("media_files").Unique(),
 		edge.To("transcode_jobs", TranscodeJob.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
@@ -91,6 +92,7 @@ func (MediaFile) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Edges("episode"),
 		index.Edges("movie"),
+		index.Edges("track"),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and
 		// the 15-minute job stops scanning the whole table forever.

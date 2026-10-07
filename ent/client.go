@@ -15,7 +15,9 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -33,6 +35,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/torrentsession"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/ent/user"
@@ -43,8 +46,12 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Album is the client for interacting with the Album builders.
+	Album *AlbumClient
 	// ApiKey is the client for interacting with the ApiKey builders.
 	ApiKey *ApiKeyClient
+	// Artist is the client for interacting with the Artist builders.
+	Artist *ArtistClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -81,6 +88,8 @@ type Client struct {
 	TVShow *TVShowClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
+	// Track is the client for interacting with the Track builders.
+	Track *TrackClient
 	// TranscodeJob is the client for interacting with the TranscodeJob builders.
 	TranscodeJob *TranscodeJobClient
 	// User is the client for interacting with the User builders.
@@ -96,7 +105,9 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Album = NewAlbumClient(c.config)
 	c.ApiKey = NewApiKeyClient(c.config)
+	c.Artist = NewArtistClient(c.config)
 	c.Credit = NewCreditClient(c.config)
 	c.DownloadRecord = NewDownloadRecordClient(c.config)
 	c.Episode = NewEpisodeClient(c.config)
@@ -115,6 +126,7 @@ func (c *Client) init() {
 	c.Session = NewSessionClient(c.config)
 	c.TVShow = NewTVShowClient(c.config)
 	c.TorrentSession = NewTorrentSessionClient(c.config)
+	c.Track = NewTrackClient(c.config)
 	c.TranscodeJob = NewTranscodeJobClient(c.config)
 	c.User = NewUserClient(c.config)
 }
@@ -209,7 +221,9 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		Album:          NewAlbumClient(cfg),
 		ApiKey:         NewApiKeyClient(cfg),
+		Artist:         NewArtistClient(cfg),
 		Credit:         NewCreditClient(cfg),
 		DownloadRecord: NewDownloadRecordClient(cfg),
 		Episode:        NewEpisodeClient(cfg),
@@ -228,6 +242,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
 		TorrentSession: NewTorrentSessionClient(cfg),
+		Track:          NewTrackClient(cfg),
 		TranscodeJob:   NewTranscodeJobClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
@@ -249,7 +264,9 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:            ctx,
 		config:         cfg,
+		Album:          NewAlbumClient(cfg),
 		ApiKey:         NewApiKeyClient(cfg),
+		Artist:         NewArtistClient(cfg),
 		Credit:         NewCreditClient(cfg),
 		DownloadRecord: NewDownloadRecordClient(cfg),
 		Episode:        NewEpisodeClient(cfg),
@@ -268,6 +285,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Session:        NewSessionClient(cfg),
 		TVShow:         NewTVShowClient(cfg),
 		TorrentSession: NewTorrentSessionClient(cfg),
+		Track:          NewTrackClient(cfg),
 		TranscodeJob:   NewTranscodeJobClient(cfg),
 		User:           NewUserClient(cfg),
 	}, nil
@@ -276,7 +294,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		ApiKey.
+//		Album.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -299,10 +317,11 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.ApiKey, c.Credit, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
-		c.TorrentSession, c.TranscodeJob, c.User,
+		c.Album, c.ApiKey, c.Artist, c.Credit, c.DownloadRecord, c.Episode,
+		c.ImportScan, c.ImportScanFile, c.ImportScanShow, c.Invite, c.MediaEvent,
+		c.MediaFile, c.Movie, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
+		c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob,
+		c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -312,10 +331,11 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.ApiKey, c.Credit, c.DownloadRecord, c.Episode, c.ImportScan, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
-		c.TorrentSession, c.TranscodeJob, c.User,
+		c.Album, c.ApiKey, c.Artist, c.Credit, c.DownloadRecord, c.Episode,
+		c.ImportScan, c.ImportScanFile, c.ImportScanShow, c.Invite, c.MediaEvent,
+		c.MediaFile, c.Movie, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
+		c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob,
+		c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -324,8 +344,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AlbumMutation:
+		return c.Album.mutate(ctx, m)
 	case *ApiKeyMutation:
 		return c.ApiKey.mutate(ctx, m)
+	case *ArtistMutation:
+		return c.Artist.mutate(ctx, m)
 	case *CreditMutation:
 		return c.Credit.mutate(ctx, m)
 	case *DownloadRecordMutation:
@@ -362,12 +386,195 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.TVShow.mutate(ctx, m)
 	case *TorrentSessionMutation:
 		return c.TorrentSession.mutate(ctx, m)
+	case *TrackMutation:
+		return c.Track.mutate(ctx, m)
 	case *TranscodeJobMutation:
 		return c.TranscodeJob.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AlbumClient is a client for the Album schema.
+type AlbumClient struct {
+	config
+}
+
+// NewAlbumClient returns a client for the Album from the given config.
+func NewAlbumClient(c config) *AlbumClient {
+	return &AlbumClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `album.Hooks(f(g(h())))`.
+func (c *AlbumClient) Use(hooks ...Hook) {
+	c.hooks.Album = append(c.hooks.Album, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `album.Intercept(f(g(h())))`.
+func (c *AlbumClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Album = append(c.inters.Album, interceptors...)
+}
+
+// Create returns a builder for creating a Album entity.
+func (c *AlbumClient) Create() *AlbumCreate {
+	mutation := newAlbumMutation(c.config, OpCreate)
+	return &AlbumCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Album entities.
+func (c *AlbumClient) CreateBulk(builders ...*AlbumCreate) *AlbumCreateBulk {
+	return &AlbumCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AlbumClient) MapCreateBulk(slice any, setFunc func(*AlbumCreate, int)) *AlbumCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AlbumCreateBulk{err: fmt.Errorf("calling to AlbumClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AlbumCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AlbumCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Album.
+func (c *AlbumClient) Update() *AlbumUpdate {
+	mutation := newAlbumMutation(c.config, OpUpdate)
+	return &AlbumUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AlbumClient) UpdateOne(_m *Album) *AlbumUpdateOne {
+	mutation := newAlbumMutation(c.config, OpUpdateOne, withAlbum(_m))
+	return &AlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AlbumClient) UpdateOneID(id uint32) *AlbumUpdateOne {
+	mutation := newAlbumMutation(c.config, OpUpdateOne, withAlbumID(id))
+	return &AlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Album.
+func (c *AlbumClient) Delete() *AlbumDelete {
+	mutation := newAlbumMutation(c.config, OpDelete)
+	return &AlbumDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AlbumClient) DeleteOne(_m *Album) *AlbumDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AlbumClient) DeleteOneID(id uint32) *AlbumDeleteOne {
+	builder := c.Delete().Where(album.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AlbumDeleteOne{builder}
+}
+
+// Query returns a query builder for Album.
+func (c *AlbumClient) Query() *AlbumQuery {
+	return &AlbumQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAlbum},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Album entity by its id.
+func (c *AlbumClient) Get(ctx context.Context, id uint32) (*Album, error) {
+	return c.Query().Where(album.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AlbumClient) GetX(ctx context.Context, id uint32) *Album {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryArtist queries the artist edge of a Album.
+func (c *AlbumClient) QueryArtist(_m *Album) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, album.ArtistTable, album.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTracks queries the tracks edge of a Album.
+func (c *AlbumClient) QueryTracks(_m *Album) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.TracksTable, album.TracksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDownloadRecords queries the download_records edge of a Album.
+func (c *AlbumClient) QueryDownloadRecords(_m *Album) *DownloadRecordQuery {
+	query := (&DownloadRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.DownloadRecordsTable, album.DownloadRecordsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AlbumClient) Hooks() []Hook {
+	return c.hooks.Album
+}
+
+// Interceptors returns the client interceptors.
+func (c *AlbumClient) Interceptors() []Interceptor {
+	return c.inters.Album
+}
+
+func (c *AlbumClient) mutate(ctx context.Context, m *AlbumMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AlbumCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AlbumUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AlbumDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Album mutation op: %q", m.Op())
 	}
 }
 
@@ -517,6 +724,155 @@ func (c *ApiKeyClient) mutate(ctx context.Context, m *ApiKeyMutation) (Value, er
 		return (&ApiKeyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ApiKey mutation op: %q", m.Op())
+	}
+}
+
+// ArtistClient is a client for the Artist schema.
+type ArtistClient struct {
+	config
+}
+
+// NewArtistClient returns a client for the Artist from the given config.
+func NewArtistClient(c config) *ArtistClient {
+	return &ArtistClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `artist.Hooks(f(g(h())))`.
+func (c *ArtistClient) Use(hooks ...Hook) {
+	c.hooks.Artist = append(c.hooks.Artist, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `artist.Intercept(f(g(h())))`.
+func (c *ArtistClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Artist = append(c.inters.Artist, interceptors...)
+}
+
+// Create returns a builder for creating a Artist entity.
+func (c *ArtistClient) Create() *ArtistCreate {
+	mutation := newArtistMutation(c.config, OpCreate)
+	return &ArtistCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Artist entities.
+func (c *ArtistClient) CreateBulk(builders ...*ArtistCreate) *ArtistCreateBulk {
+	return &ArtistCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ArtistClient) MapCreateBulk(slice any, setFunc func(*ArtistCreate, int)) *ArtistCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ArtistCreateBulk{err: fmt.Errorf("calling to ArtistClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ArtistCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ArtistCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Artist.
+func (c *ArtistClient) Update() *ArtistUpdate {
+	mutation := newArtistMutation(c.config, OpUpdate)
+	return &ArtistUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ArtistClient) UpdateOne(_m *Artist) *ArtistUpdateOne {
+	mutation := newArtistMutation(c.config, OpUpdateOne, withArtist(_m))
+	return &ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ArtistClient) UpdateOneID(id uint32) *ArtistUpdateOne {
+	mutation := newArtistMutation(c.config, OpUpdateOne, withArtistID(id))
+	return &ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Artist.
+func (c *ArtistClient) Delete() *ArtistDelete {
+	mutation := newArtistMutation(c.config, OpDelete)
+	return &ArtistDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ArtistClient) DeleteOne(_m *Artist) *ArtistDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ArtistClient) DeleteOneID(id uint32) *ArtistDeleteOne {
+	builder := c.Delete().Where(artist.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ArtistDeleteOne{builder}
+}
+
+// Query returns a query builder for Artist.
+func (c *ArtistClient) Query() *ArtistQuery {
+	return &ArtistQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeArtist},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Artist entity by its id.
+func (c *ArtistClient) Get(ctx context.Context, id uint32) (*Artist, error) {
+	return c.Query().Where(artist.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ArtistClient) GetX(ctx context.Context, id uint32) *Artist {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAlbums queries the albums edge of a Artist.
+func (c *ArtistClient) QueryAlbums(_m *Artist) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.AlbumsTable, artist.AlbumsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ArtistClient) Hooks() []Hook {
+	return c.hooks.Artist
+}
+
+// Interceptors returns the client interceptors.
+func (c *ArtistClient) Interceptors() []Interceptor {
+	return c.inters.Artist
+}
+
+func (c *ArtistClient) mutate(ctx context.Context, m *ArtistMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ArtistCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ArtistUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ArtistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ArtistDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Artist mutation op: %q", m.Op())
 	}
 }
 
@@ -2044,6 +2400,22 @@ func (c *MediaFileClient) QueryEpisode(_m *MediaFile) *EpisodeQuery {
 	return query
 }
 
+// QueryTrack queries the track edge of a MediaFile.
+func (c *MediaFileClient) QueryTrack(_m *MediaFile) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediafile.Table, mediafile.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.TrackTable, mediafile.TrackColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryTranscodeJobs queries the transcode_jobs edge of a MediaFile.
 func (c *MediaFileClient) QueryTranscodeJobs(_m *MediaFile) *TranscodeJobQuery {
 	query := (&TranscodeJobClient{config: c.config}).Query()
@@ -3506,6 +3878,171 @@ func (c *TorrentSessionClient) mutate(ctx context.Context, m *TorrentSessionMuta
 	}
 }
 
+// TrackClient is a client for the Track schema.
+type TrackClient struct {
+	config
+}
+
+// NewTrackClient returns a client for the Track from the given config.
+func NewTrackClient(c config) *TrackClient {
+	return &TrackClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `track.Hooks(f(g(h())))`.
+func (c *TrackClient) Use(hooks ...Hook) {
+	c.hooks.Track = append(c.hooks.Track, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `track.Intercept(f(g(h())))`.
+func (c *TrackClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Track = append(c.inters.Track, interceptors...)
+}
+
+// Create returns a builder for creating a Track entity.
+func (c *TrackClient) Create() *TrackCreate {
+	mutation := newTrackMutation(c.config, OpCreate)
+	return &TrackCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Track entities.
+func (c *TrackClient) CreateBulk(builders ...*TrackCreate) *TrackCreateBulk {
+	return &TrackCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TrackClient) MapCreateBulk(slice any, setFunc func(*TrackCreate, int)) *TrackCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TrackCreateBulk{err: fmt.Errorf("calling to TrackClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TrackCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TrackCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Track.
+func (c *TrackClient) Update() *TrackUpdate {
+	mutation := newTrackMutation(c.config, OpUpdate)
+	return &TrackUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TrackClient) UpdateOne(_m *Track) *TrackUpdateOne {
+	mutation := newTrackMutation(c.config, OpUpdateOne, withTrack(_m))
+	return &TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TrackClient) UpdateOneID(id uint32) *TrackUpdateOne {
+	mutation := newTrackMutation(c.config, OpUpdateOne, withTrackID(id))
+	return &TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Track.
+func (c *TrackClient) Delete() *TrackDelete {
+	mutation := newTrackMutation(c.config, OpDelete)
+	return &TrackDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TrackClient) DeleteOne(_m *Track) *TrackDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TrackClient) DeleteOneID(id uint32) *TrackDeleteOne {
+	builder := c.Delete().Where(track.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TrackDeleteOne{builder}
+}
+
+// Query returns a query builder for Track.
+func (c *TrackClient) Query() *TrackQuery {
+	return &TrackQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTrack},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Track entity by its id.
+func (c *TrackClient) Get(ctx context.Context, id uint32) (*Track, error) {
+	return c.Query().Where(track.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TrackClient) GetX(ctx context.Context, id uint32) *Track {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAlbum queries the album edge of a Track.
+func (c *TrackClient) QueryAlbum(_m *Track) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, track.AlbumTable, track.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMediaFiles queries the media_files edge of a Track.
+func (c *TrackClient) QueryMediaFiles(_m *Track) *MediaFileQuery {
+	query := (&MediaFileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(mediafile.Table, mediafile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.MediaFilesTable, track.MediaFilesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TrackClient) Hooks() []Hook {
+	return c.hooks.Track
+}
+
+// Interceptors returns the client interceptors.
+func (c *TrackClient) Interceptors() []Interceptor {
+	return c.inters.Track
+}
+
+func (c *TrackClient) mutate(ctx context.Context, m *TrackMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TrackCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TrackUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TrackUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TrackDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Track mutation op: %q", m.Op())
+	}
+}
+
 // TranscodeJobClient is a client for the TranscodeJob schema.
 type TranscodeJobClient struct {
 	config
@@ -3855,15 +4392,15 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		ApiKey, Credit, DownloadRecord, Episode, ImportScan, ImportScanFile,
-		ImportScanShow, Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person,
-		Request, ScheduledJob, Season, Session, TVShow, TorrentSession, TranscodeJob,
-		User []ent.Hook
+		Album, ApiKey, Artist, Credit, DownloadRecord, Episode, ImportScan,
+		ImportScanFile, ImportScanShow, Invite, MediaEvent, MediaFile, Movie,
+		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
+		TorrentSession, Track, TranscodeJob, User []ent.Hook
 	}
 	inters struct {
-		ApiKey, Credit, DownloadRecord, Episode, ImportScan, ImportScanFile,
-		ImportScanShow, Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person,
-		Request, ScheduledJob, Season, Session, TVShow, TorrentSession, TranscodeJob,
-		User []ent.Interceptor
+		Album, ApiKey, Artist, Credit, DownloadRecord, Episode, ImportScan,
+		ImportScanFile, ImportScanShow, Invite, MediaEvent, MediaFile, Movie,
+		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
+		TorrentSession, Track, TranscodeJob, User []ent.Interceptor
 	}
 )

@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 )
 
@@ -28,6 +29,7 @@ type MediaFileQuery struct {
 	predicates        []predicate.MediaFile
 	withMovie         *MovieQuery
 	withEpisode       *EpisodeQuery
+	withTrack         *TrackQuery
 	withTranscodeJobs *TranscodeJobQuery
 	withFKs           bool
 	modifiers         []func(*sql.Selector)
@@ -104,6 +106,28 @@ func (_q *MediaFileQuery) QueryEpisode() *EpisodeQuery {
 			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
 			sqlgraph.To(episode.Table, episode.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.EpisodeTable, mediafile.EpisodeColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTrack chains the current query on the "track" edge.
+func (_q *MediaFileQuery) QueryTrack() *TrackQuery {
+	query := (&TrackClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediafile.Table, mediafile.FieldID, selector),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediafile.TrackTable, mediafile.TrackColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,6 +351,7 @@ func (_q *MediaFileQuery) Clone() *MediaFileQuery {
 		predicates:        append([]predicate.MediaFile{}, _q.predicates...),
 		withMovie:         _q.withMovie.Clone(),
 		withEpisode:       _q.withEpisode.Clone(),
+		withTrack:         _q.withTrack.Clone(),
 		withTranscodeJobs: _q.withTranscodeJobs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -354,6 +379,17 @@ func (_q *MediaFileQuery) WithEpisode(opts ...func(*EpisodeQuery)) *MediaFileQue
 		opt(query)
 	}
 	_q.withEpisode = query
+	return _q
+}
+
+// WithTrack tells the query-builder to eager-load the nodes that are connected to
+// the "track" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaFileQuery) WithTrack(opts ...func(*TrackQuery)) *MediaFileQuery {
+	query := (&TrackClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTrack = query
 	return _q
 }
 
@@ -447,13 +483,14 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 		nodes       = []*MediaFile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withMovie != nil,
 			_q.withEpisode != nil,
+			_q.withTrack != nil,
 			_q.withTranscodeJobs != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withEpisode != nil {
+	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTrack != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -489,6 +526,12 @@ func (_q *MediaFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Me
 	if query := _q.withEpisode; query != nil {
 		if err := _q.loadEpisode(ctx, query, nodes, nil,
 			func(n *MediaFile, e *Episode) { n.Edges.Episode = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTrack; query != nil {
+		if err := _q.loadTrack(ctx, query, nodes, nil,
+			func(n *MediaFile, e *Track) { n.Edges.Track = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -559,6 +602,38 @@ func (_q *MediaFileQuery) loadEpisode(ctx context.Context, query *EpisodeQuery, 
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "episode_media_files" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaFileQuery) loadTrack(ctx context.Context, query *TrackQuery, nodes []*MediaFile, init func(*MediaFile), assign func(*MediaFile, *Track)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaFile)
+	for i := range nodes {
+		if nodes[i].track_media_files == nil {
+			continue
+		}
+		fk := *nodes[i].track_media_files
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(track.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "track_media_files" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

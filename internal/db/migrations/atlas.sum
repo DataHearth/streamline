@@ -1,4 +1,4 @@
-h1:NaW4dkETPo0OAb0fZyrJzlrKZ6KrCb+5nSlgSHHK+OM=
+h1:4UjwTsNUyLtGMDTkJAIeqcxVyUo4ffArm6BsaujdGsg=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -38,3 +38,4 @@ h1:NaW4dkETPo0OAb0fZyrJzlrKZ6KrCb+5nSlgSHHK+OM=
 20260918183600_unstamp_movie_aliases.up.sql h1:FALKEejzTvZFFWo6W2tyXSACLdlXeCnfZ4vGOe5B0YY=
 20261001222021_download_record_episodes.up.sql h1:4ccWkyZmff7KAjgGJ+YoDVkCeSwUhjXPMfIpyz/1bhI=
 20261001222038_drop_download_record_wanted_episodes.up.sql h1:f7xpAJ/gWiFE/6XnZmne9ivAxnABvNEN3TgC9mmu5xw=
+20261007154555_music_entities.up.sql h1:/voZsO1iRjcCCDCR4u8xBCrLeek2UnI3wzx1Pye5eVs=
