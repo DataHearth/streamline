@@ -1309,6 +1309,66 @@ func (_c *MockTx_CountActiveImportScans_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// CountArtists provides a mock function for the type MockTx
+func (_mock *MockTx) CountArtists(ctx context.Context) (int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountArtists")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_CountArtists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountArtists'
+type MockTx_CountArtists_Call struct {
+	*mock.Call
+}
+
+// CountArtists is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) CountArtists(ctx any) *MockTx_CountArtists_Call {
+	return &MockTx_CountArtists_Call{Call: _e.mock.On("CountArtists", ctx)}
+}
+
+func (_c *MockTx_CountArtists_Call) Run(run func(ctx context.Context)) *MockTx_CountArtists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CountArtists_Call) Return(n int, err error) *MockTx_CountArtists_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_CountArtists_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_CountArtists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CountDownloadingEpisodes provides a mock function for the type MockTx
 func (_mock *MockTx) CountDownloadingEpisodes(ctx context.Context) (int, error) {
 	ret := _mock.Called(ctx)
@@ -2117,6 +2177,74 @@ func (_c *MockTx_CreateAPIKey_Call) Return(apiKey *ent.ApiKey, err error) *MockT
 }
 
 func (_c *MockTx_CreateAPIKey_Call) RunAndReturn(run func(ctx context.Context, p db.CreateAPIKeyParams) (*ent.ApiKey, error)) *MockTx_CreateAPIKey_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateArtist provides a mock function for the type MockTx
+func (_mock *MockTx) CreateArtist(ctx context.Context, p db.CreateArtistParams) (*ent.Artist, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateArtist")
+	}
+
+	var r0 *ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CreateArtistParams) (*ent.Artist, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CreateArtistParams) *ent.Artist); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CreateArtistParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_CreateArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateArtist'
+type MockTx_CreateArtist_Call struct {
+	*mock.Call
+}
+
+// CreateArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.CreateArtistParams
+func (_e *MockTx_Expecter) CreateArtist(ctx any, p any) *MockTx_CreateArtist_Call {
+	return &MockTx_CreateArtist_Call{Call: _e.mock.On("CreateArtist", ctx, p)}
+}
+
+func (_c *MockTx_CreateArtist_Call) Run(run func(ctx context.Context, p db.CreateArtistParams)) *MockTx_CreateArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CreateArtistParams
+		if args[1] != nil {
+			arg1 = args[1].(db.CreateArtistParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_CreateArtist_Call) Return(artist *ent.Artist, err error) *MockTx_CreateArtist_Call {
+	_c.Call.Return(artist, err)
+	return _c
+}
+
+func (_c *MockTx_CreateArtist_Call) RunAndReturn(run func(ctx context.Context, p db.CreateArtistParams) (*ent.Artist, error)) *MockTx_CreateArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -3194,6 +3322,63 @@ func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) Return(n int, err error
 }
 
 func (_c *MockTx_DeleteAllCompletedDownloadRecords_Call) RunAndReturn(run func(ctx context.Context) (int, error)) *MockTx_DeleteAllCompletedDownloadRecords_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteArtist provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteArtist(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteArtist")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteArtist'
+type MockTx_DeleteArtist_Call struct {
+	*mock.Call
+}
+
+// DeleteArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) DeleteArtist(ctx any, id any) *MockTx_DeleteArtist_Call {
+	return &MockTx_DeleteArtist_Call{Call: _e.mock.On("DeleteArtist", ctx, id)}
+}
+
+func (_c *MockTx_DeleteArtist_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_DeleteArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteArtist_Call) Return(err error) *MockTx_DeleteArtist_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_DeleteArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -4905,6 +5090,142 @@ func (_c *MockTx_FindActiveRequest_Call) Return(request1 *ent.Request, err error
 }
 
 func (_c *MockTx_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID uint32) (*ent.Request, error)) *MockTx_FindActiveRequest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindArtistByID provides a mock function for the type MockTx
+func (_mock *MockTx) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindArtistByID")
+	}
+
+	var r0 *ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Artist, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Artist); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindArtistByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArtistByID'
+type MockTx_FindArtistByID_Call struct {
+	*mock.Call
+}
+
+// FindArtistByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) FindArtistByID(ctx any, id any) *MockTx_FindArtistByID_Call {
+	return &MockTx_FindArtistByID_Call{Call: _e.mock.On("FindArtistByID", ctx, id)}
+}
+
+func (_c *MockTx_FindArtistByID_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_FindArtistByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindArtistByID_Call) Return(artist *ent.Artist, err error) *MockTx_FindArtistByID_Call {
+	_c.Call.Return(artist, err)
+	return _c
+}
+
+func (_c *MockTx_FindArtistByID_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Artist, error)) *MockTx_FindArtistByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindArtistByMBID provides a mock function for the type MockTx
+func (_mock *MockTx) FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error) {
+	ret := _mock.Called(ctx, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindArtistByMBID")
+	}
+
+	var r0 *ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ent.Artist, error)); ok {
+		return returnFunc(ctx, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ent.Artist); ok {
+		r0 = returnFunc(ctx, mbid)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindArtistByMBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArtistByMBID'
+type MockTx_FindArtistByMBID_Call struct {
+	*mock.Call
+}
+
+// FindArtistByMBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbid string
+func (_e *MockTx_Expecter) FindArtistByMBID(ctx any, mbid any) *MockTx_FindArtistByMBID_Call {
+	return &MockTx_FindArtistByMBID_Call{Call: _e.mock.On("FindArtistByMBID", ctx, mbid)}
+}
+
+func (_c *MockTx_FindArtistByMBID_Call) Run(run func(ctx context.Context, mbid string)) *MockTx_FindArtistByMBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindArtistByMBID_Call) Return(artist *ent.Artist, err error) *MockTx_FindArtistByMBID_Call {
+	_c.Call.Return(artist, err)
+	return _c
+}
+
+func (_c *MockTx_FindArtistByMBID_Call) RunAndReturn(run func(ctx context.Context, mbid string) (*ent.Artist, error)) *MockTx_FindArtistByMBID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -7482,6 +7803,80 @@ func (_c *MockTx_ListAllMediaFilesWithOwners_Call) Return(mediaFiles []*ent.Medi
 }
 
 func (_c *MockTx_ListAllMediaFilesWithOwners_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.MediaFile, error)) *MockTx_ListAllMediaFilesWithOwners_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListArtists provides a mock function for the type MockTx
+func (_mock *MockTx) ListArtists(ctx context.Context, offset uint32, limit uint32) ([]*ent.Artist, error) {
+	ret := _mock.Called(ctx, offset, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArtists")
+	}
+
+	var r0 []*ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]*ent.Artist, error)); ok {
+		return returnFunc(ctx, offset, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) []*ent.Artist); ok {
+		r0 = returnFunc(ctx, offset, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, offset, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListArtists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtists'
+type MockTx_ListArtists_Call struct {
+	*mock.Call
+}
+
+// ListArtists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - offset uint32
+//   - limit uint32
+func (_e *MockTx_Expecter) ListArtists(ctx any, offset any, limit any) *MockTx_ListArtists_Call {
+	return &MockTx_ListArtists_Call{Call: _e.mock.On("ListArtists", ctx, offset, limit)}
+}
+
+func (_c *MockTx_ListArtists_Call) Run(run func(ctx context.Context, offset uint32, limit uint32)) *MockTx_ListArtists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListArtists_Call) Return(artists []*ent.Artist, err error) *MockTx_ListArtists_Call {
+	_c.Call.Return(artists, err)
+	return _c
+}
+
+func (_c *MockTx_ListArtists_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.Artist, error)) *MockTx_ListArtists_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -11163,6 +11558,69 @@ func (_c *MockTx_RecordImportSuccess_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// RefreshArtist provides a mock function for the type MockTx
+func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) error {
+	ret := _mock.Called(ctx, id, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshArtist")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
+		r0 = returnFunc(ctx, id, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_RefreshArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshArtist'
+type MockTx_RefreshArtist_Call struct {
+	*mock.Call
+}
+
+// RefreshArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - p db.RefreshArtistParams
+func (_e *MockTx_Expecter) RefreshArtist(ctx any, id any, p any) *MockTx_RefreshArtist_Call {
+	return &MockTx_RefreshArtist_Call{Call: _e.mock.On("RefreshArtist", ctx, id, p)}
+}
+
+func (_c *MockTx_RefreshArtist_Call) Run(run func(ctx context.Context, id uint32, p db.RefreshArtistParams)) *MockTx_RefreshArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.RefreshArtistParams
+		if args[2] != nil {
+			arg2 = args[2].(db.RefreshArtistParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RefreshArtist_Call) Return(err error) *MockTx_RefreshArtist_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) error) *MockTx_RefreshArtist_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RejectTranscodeJob provides a mock function for the type MockTx
 func (_mock *MockTx) RejectTranscodeJob(ctx context.Context, id uint32, reason string, sizeBefore int64, sizeAfter int64) error {
 	ret := _mock.Called(ctx, id, reason, sizeBefore, sizeAfter)
@@ -12333,6 +12791,132 @@ func (_c *MockTx_SeasonEpisodeCounts_Call) Return(uint32ToUint16ToInt map[uint32
 }
 
 func (_c *MockTx_SeasonEpisodeCounts_Call) RunAndReturn(run func(ctx context.Context, showIDs []uint32) (map[uint32]map[uint16]int, error)) *MockTx_SeasonEpisodeCounts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetAlbumMonitored provides a mock function for the type MockTx
+func (_mock *MockTx) SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error {
+	ret := _mock.Called(ctx, id, monitored)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumMonitored")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+		r0 = returnFunc(ctx, id, monitored)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetAlbumMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumMonitored'
+type MockTx_SetAlbumMonitored_Call struct {
+	*mock.Call
+}
+
+// SetAlbumMonitored is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - monitored bool
+func (_e *MockTx_Expecter) SetAlbumMonitored(ctx any, id any, monitored any) *MockTx_SetAlbumMonitored_Call {
+	return &MockTx_SetAlbumMonitored_Call{Call: _e.mock.On("SetAlbumMonitored", ctx, id, monitored)}
+}
+
+func (_c *MockTx_SetAlbumMonitored_Call) Run(run func(ctx context.Context, id uint32, monitored bool)) *MockTx_SetAlbumMonitored_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetAlbumMonitored_Call) Return(err error) *MockTx_SetAlbumMonitored_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetAlbumMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitored bool) error) *MockTx_SetAlbumMonitored_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetArtistMonitored provides a mock function for the type MockTx
+func (_mock *MockTx) SetArtistMonitored(ctx context.Context, id uint32, monitored bool) error {
+	ret := _mock.Called(ctx, id, monitored)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetArtistMonitored")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+		r0 = returnFunc(ctx, id, monitored)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetArtistMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistMonitored'
+type MockTx_SetArtistMonitored_Call struct {
+	*mock.Call
+}
+
+// SetArtistMonitored is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - monitored bool
+func (_e *MockTx_Expecter) SetArtistMonitored(ctx any, id any, monitored any) *MockTx_SetArtistMonitored_Call {
+	return &MockTx_SetArtistMonitored_Call{Call: _e.mock.On("SetArtistMonitored", ctx, id, monitored)}
+}
+
+func (_c *MockTx_SetArtistMonitored_Call) Run(run func(ctx context.Context, id uint32, monitored bool)) *MockTx_SetArtistMonitored_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetArtistMonitored_Call) Return(err error) *MockTx_SetArtistMonitored_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetArtistMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitored bool) error) *MockTx_SetArtistMonitored_Call {
 	_c.Call.Return(run)
 	return _c
 }

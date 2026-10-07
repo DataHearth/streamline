@@ -38,6 +38,21 @@ type Store interface {
 	// Commit/Rollback.
 	Tx(ctx context.Context) (Tx, error)
 
+	// music
+	CreateArtist(ctx context.Context, p CreateArtistParams) (*ent.Artist, error)
+	// FindArtistByID eager-loads albums (release_date, then title) with their
+	// tracks (disc, position) and the tracks' media files.
+	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindArtistByMBID returns nil, nil when no artist has the mbid.
+	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
+	CountArtists(ctx context.Context) (int, error)
+	ListArtists(ctx context.Context, offset, limit uint32) ([]*ent.Artist, error)
+	RefreshArtist(ctx context.Context, id uint32, p RefreshArtistParams) error
+	// SetArtistMonitored flips the artist and every one of its albums.
+	SetArtistMonitored(ctx context.Context, id uint32, monitored bool) error
+	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
+	DeleteArtist(ctx context.Context, id uint32) error
+
 	// users
 	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
 	FindUserByID(ctx context.Context, id uint32) (*ent.User, error)
