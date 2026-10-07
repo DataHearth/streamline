@@ -83,6 +83,17 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			}
 		})
 
+		It("accepts the authors and books kinds", func() {
+			for _, kind := range []string{"authors", "books"} {
+				Expect(
+					svc.Fetch(context.Background(), kind, 7, src.URL),
+				).To(Succeed())
+				got, err := os.ReadFile(svc.Path(kind, 7))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(Equal(payload))
+			}
+		})
+
 		It("returns error when source server unreachable", func() {
 			closed := httptest.NewServer(
 				http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
@@ -177,6 +188,22 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			Expect(rec.Code).To(Equal(http.StatusNotFound))
 		})
 
+		It("serves a cached authors and books poster", func() {
+			for _, kind := range []string{"authors", "books"} {
+				Expect(
+					svc.Fetch(context.Background(), kind, 7, src.URL),
+				).To(Succeed())
+				rec := httptest.NewRecorder()
+				req := httptest.NewRequest(
+					http.MethodGet,
+					"/posters/"+kind+"/7/poster.jpg",
+					nil,
+				)
+				svc.Serve(rec, req, kind, 7)
+				Expect(rec.Code).To(Equal(http.StatusOK))
+			}
+		})
+
 		It("serves a cached artists and albums poster", func() {
 			for _, kind := range []string{"artists", "albums"} {
 				Expect(
@@ -201,6 +228,15 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			).To(Succeed())
 			Expect(svc.Remove("albums", 3)).To(Succeed())
 			_, err := os.Stat(svc.Path("albums", 3))
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		})
+
+		It("drops a cached books poster", func() {
+			Expect(
+				svc.Fetch(context.Background(), "books", 3, src.URL),
+			).To(Succeed())
+			Expect(svc.Remove("books", 3)).To(Succeed())
+			_, err := os.Stat(svc.Path("books", 3))
 			Expect(os.IsNotExist(err)).To(BeTrue())
 		})
 	})

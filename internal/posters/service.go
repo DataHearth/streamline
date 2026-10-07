@@ -54,6 +54,8 @@ var validKinds = map[string]struct{}{
 	"tvshows": {},
 	"artists": {},
 	"albums":  {},
+	"authors": {},
+	"books":   {},
 }
 
 // Manager is the consumer-facing surface for the poster cache: fetch on
