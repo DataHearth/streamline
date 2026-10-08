@@ -1,5 +1,13 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
-import type { ImportMode, ImportScanKind, ImportStatus, ImportTransferMode } from "./types";
+import { appLabel } from "./arr-import";
+import type {
+	ImportMode,
+	ImportScan,
+	ImportScanFile,
+	ImportScanKind,
+	ImportStatus,
+	ImportTransferMode,
+} from "./types";
 import { NOUN_ALBUM, NOUN_BOOK, NOUN_FILE, NOUN_SHOW, type Noun } from "./nouns";
 import { m as i18n } from "./paraglide/messages.js";
 
@@ -21,6 +29,29 @@ export const IMPORT_KIND: Record<
 // The query key the unfiltered row list lives under, which the review's
 // counts and its bulk skip read. Files predate the others and kept theirs.
 export const pendingRowsKey = (rows: ImportRows) => (rows === "files" ? "pending" : `pending-${rows}`);
+
+// importSourceLabel names the application a migrated scan read from, for its
+// badge; a folder scan has none.
+export function importSourceLabel(
+	scan: Pick<ImportScan, "source">,
+): string | null {
+	return scan.source === "filesystem" ? null : appLabel(scan.source);
+}
+
+// scanLocation is what a scan is "of": the instance a migration read, or the
+// directory a folder scan walked. A migrated scan's source_path is empty.
+export function scanLocation(
+	scan: Pick<ImportScan, "source" | "source_path" | "source_url">,
+): string {
+	if (scan.source !== "filesystem") return scan.source_url ?? "";
+	return scan.source_path;
+}
+
+// isTitleOnly marks a row a Radarr source tracks without a file: it has no
+// path to show and commits as a wanted library entry with no media file.
+export function isTitleOnly(f: Pick<ImportScanFile, "source_path">): boolean {
+	return f.source_path === "";
+}
 
 export type ImportStatusMeta = {
 	label: string;
