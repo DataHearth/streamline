@@ -93,6 +93,21 @@ var _ = g.Describe("download", g.Label("integration"), func() {
 		},
 	)
 
+	g.It(
+		"keeps the filename well-formed when the extension is hostile",
+		func(ctx g.SpecContext) {
+			path := filepath.Join(g.GinkgoT().TempDir(), `elantris.e"; x`)
+			Expect(os.WriteFile(path, []byte("X"), 0o600)).To(Succeed())
+			f.client.MediaFile.Create().SetPath(path).SetSize(1).SetQuality("other").
+				SetBookKind(mediafile.BookKindEbook).SetBook(f.ebook).SaveX(ctx)
+
+			rec := f.get(downloadPath(f.ebook.ID, "other"), true)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Header().Get("Content-Disposition")).
+				To(MatchRegexp(`^attachment; filename="[^"]*"$`))
+		},
+	)
+
 	g.It("requires authentication", func() {
 		Expect(
 			f.get(downloadPath(f.ebook.ID, "epub"), false).Code,

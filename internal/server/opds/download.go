@@ -42,9 +42,8 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := os.Open(
-		mf.Path,
-	) //nolint:gosec // path is the media_file row's, never request input
+	//nolint:gosec // path is the media_file row's, never request input
+	f, err := os.Open(mf.Path)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			slog.ErrorContext(
@@ -70,9 +69,9 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 }
 
 func downloadName(bk *ent.Book, ext string) string {
-	name := library.SanitizePath(bk.Title + " - " + bk.Edges.Author.Name)
-	if ext == "" {
-		return name
+	name := bk.Title + " - " + bk.Edges.Author.Name
+	if ext != "" {
+		name += "." + ext
 	}
-	return name + "." + ext
+	return library.SanitizePath(name)
 }
