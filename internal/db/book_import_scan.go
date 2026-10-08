@@ -6,6 +6,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
@@ -22,6 +23,11 @@ type CreateImportScanBookParams struct {
 	AuthorHardcoverID uint32
 	Candidates        []schema.ScannedBookCandidate
 	ExistingBookID    *uint32
+}
+
+type UpdateScanBookOutcomeOpts struct {
+	Message       string
+	CreatedBookID uint32
 }
 
 func (db *DB) BulkCreateImportScanBooks(
@@ -79,4 +85,58 @@ func (db *DB) BookHardcoverIndex(
 		out[r.HardcoverID] = r.ID
 	}
 	return out, nil
+}
+
+// ListImportScanBooksForCommit returns the books to adopt when a book scan is
+// committed: everything not explicitly skipped that was either accepted by the
+// reviewer or auto-matched (confirmed / existing).
+func (db *DB) ListImportScanBooksForCommit(
+	ctx context.Context, scanID uint32,
+) ([]*ent.ImportScanBook, error) {
+	return db.client.ImportScanBook.Query().
+		Where(
+			entimportscanbook.HasScanWith(entimportscan.ID(scanID)),
+			entimportscanbook.DecisionNEQ(entimportscanbook.DecisionSkip),
+			entimportscanbook.Or(
+				entimportscanbook.DecisionEQ(entimportscanbook.DecisionAccept),
+				entimportscanbook.ClassificationIn(
+					entimportscanbook.ClassificationConfirmed,
+					entimportscanbook.ClassificationExisting,
+				),
+			),
+		).
+		All(ctx)
+}
+
+func (db *DB) UpdateImportScanBookOutcome(
+	ctx context.Context, id uint32,
+	outcome entimportscanbook.Outcome, opts UpdateScanBookOutcomeOpts,
+) error {
+	u := db.client.ImportScanBook.UpdateOneID(id).SetOutcome(outcome)
+	if opts.Message != "" {
+		u = u.SetOutcomeMessage(opts.Message)
+	}
+	if opts.CreatedBookID != 0 {
+		u = u.SetCreatedBookID(opts.CreatedBookID)
+	}
+	return u.Exec(ctx)
+}
+
+// MarkBookSlotAvailable monitors the slot and marks it available. SetBookSlot
+// cannot: it only moves a slot between skipped and wanted, and an adopted file
+// is neither.
+func (db *DB) MarkBookSlotAvailable(
+	ctx context.Context, bookID uint32, kind string,
+) error {
+	u := db.client.Book.UpdateOneID(bookID)
+	switch entmediafile.BookKind(kind) {
+	case entmediafile.BookKindEbook:
+		u = u.SetEbookMonitored(true).SetEbookStatus(book.EbookStatusAvailable)
+	case entmediafile.BookKindAudiobook:
+		u = u.SetAudiobookMonitored(true).
+			SetAudiobookStatus(book.AudiobookStatusAvailable)
+	default:
+		return fmt.Errorf("mark book slot available: unknown kind %q", kind)
+	}
+	return u.Exec(ctx)
 }

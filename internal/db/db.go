@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/movie"
@@ -749,6 +750,19 @@ type Store interface {
 		books []CreateImportScanBookParams,
 	) error
 	BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error)
+	ListImportScanBooksForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanBook, error)
+	UpdateImportScanBookOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanbook.Outcome,
+		opts UpdateScanBookOutcomeOpts,
+	) error
+	// MarkBookSlotAvailable monitors the slot and marks it available; kind is
+	// "ebook" or "audiobook".
+	MarkBookSlotAvailable(ctx context.Context, bookID uint32, kind string) error
 
 	// series import scans (import_scan_show children)
 	ListPendingImportScanShowFolders(ctx context.Context) ([]string, error)

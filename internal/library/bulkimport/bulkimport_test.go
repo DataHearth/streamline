@@ -30,6 +30,7 @@ var _ = Describe("Service skeleton", Label("unit", "bulkimport"), func() {
 			nil,
 			nil,
 			nil,
+			nil,
 		)
 		Expect(s).ToNot(BeNil())
 	})
@@ -55,7 +56,7 @@ var _ = Describe("Service file decisions", Label("unit", "bulkimport"), func() {
 			nil,
 			"/library",
 			"/library-tv",
-			nil, nil, nil,
+			nil, nil, nil, nil,
 		)
 	})
 
@@ -190,6 +191,7 @@ var _ = Describe("Service.BulkDecide", Label("unit", "bulkimport"), func() {
 			nil,
 			"/lib",
 			"/lib-tv",
+			nil,
 			nil,
 			nil,
 			nil,

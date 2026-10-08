@@ -112,13 +112,15 @@ var _ = Describe("StartScan kind dispatch", Label("unit", "bulkimport"), func() 
 			"/lib-tv",
 			nil,
 			nil,
+			nil,
+			nil,
 		)
 	})
 
 	It("rejects a kind with no runner before creating anything", func() {
 		_, err := svc.StartScan(ctx, StartScanParams{
 			SourcePath: GinkgoT().TempDir(),
-			Kind:       entimportscan.KindBook,
+			Kind:       entimportscan.Kind("podcast"),
 			Mode:       entimportscan.ModeInPlace,
 		})
 		Expect(err).To(MatchError(ErrUnsupportedKind))
@@ -128,7 +130,7 @@ var _ = Describe("StartScan kind dispatch", Label("unit", "bulkimport"), func() 
 		store.EXPECT().FindImportScan(mock.Anything, uint32(1)).
 			Return(&ent.ImportScan{
 				ID:     1,
-				Kind:   entimportscan.KindBook,
+				Kind:   entimportscan.Kind("podcast"),
 				Status: entimportscan.StatusAwaitingReview,
 			}, nil).Once()
 		Expect(svc.Commit(ctx, 1)).To(MatchError(ErrUnsupportedKind))
@@ -187,6 +189,8 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 			"/lib",
 			"/lib-tv",
 			mb,
+			nil,
+			nil,
 			nil,
 		)
 

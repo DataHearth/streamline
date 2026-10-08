@@ -224,6 +224,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		mb,
 		musicSvc,
 		bookMeta,
+		bookSvc,
 	)
 	hygieneSvc := hygiene.New(store, tmdb, tvdb, &cfg.Library)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {

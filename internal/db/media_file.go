@@ -23,6 +23,8 @@ type CreateMediaFileParams struct {
 	ReleaseGroup string
 	MovieID      uint32 // set for movie files; mutually exclusive with EpisodeID
 	EpisodeID    uint32 // set for episode files (e.g. series adoption)
+	BookID       uint32 // set for book files, together with BookKind
+	BookKind     mediafile.BookKind
 	Source       mediafile.Source
 	// Parsed is the release name's parse, when the caller has it. Nil falls
 	// back to parsing Path's basename — see applyParsed.
@@ -101,6 +103,12 @@ func (db *DB) CreateMediaFile(
 	}
 	if p.EpisodeID != 0 {
 		q = q.SetEpisodeID(p.EpisodeID)
+	}
+	if p.BookID != 0 {
+		q = q.SetBookID(p.BookID)
+	}
+	if p.BookKind != "" {
+		q = q.SetBookKind(p.BookKind)
 	}
 	if p.Source != "" {
 		q = q.SetSource(p.Source)

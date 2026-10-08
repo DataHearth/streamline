@@ -10,6 +10,7 @@ import (
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -64,12 +65,19 @@ type MusicAdder interface {
 	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
 }
 
+// BookAdder creates an author and its bibliography from a Hardcover id.
+// Satisfied by *book.Service; used to adopt books on book-scan commit.
+type BookAdder interface {
+	Add(ctx context.Context, p book.AddParams) (*ent.Author, error)
+}
+
 // Service implements Manager.
 type Service struct {
 	store       db.Store
 	metadata    metadata.Provider
 	tvmeta      metadata.TVProvider
 	bookmeta    metadata.BookProvider
+	bookAdder   BookAdder
 	importSvc   *library.ImportService
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
@@ -94,6 +102,7 @@ func NewService(
 	musicmeta metadata.MusicProvider,
 	musicAdder MusicAdder,
 	bookmeta metadata.BookProvider,
+	bookAdder BookAdder,
 ) *Service {
 	return &Service{
 		store:       store,
@@ -108,6 +117,7 @@ func NewService(
 		musicmeta:   musicmeta,
 		musicAdder:  musicAdder,
 		bookmeta:    bookmeta,
+		bookAdder:   bookAdder,
 	}
 }
 

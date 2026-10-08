@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	mock "github.com/stretchr/testify/mock"
@@ -312,6 +313,86 @@ func (_c *MockDownloader_GrabAlbum_Call) Return(downloadRecord *ent.DownloadReco
 }
 
 func (_c *MockDownloader_GrabAlbum_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult, albumID uint32) (*ent.DownloadRecord, error)) *MockDownloader_GrabAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GrabBook provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) GrabBook(ctx context.Context, result indexer.SearchResult, bookID uint32, kind mediafile.BookKind) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, result, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrabBook")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32, mediafile.BookKind) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, result, bookID, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32, mediafile.BookKind) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, result, bookID, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, indexer.SearchResult, uint32, mediafile.BookKind) error); ok {
+		r1 = returnFunc(ctx, result, bookID, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDownloader_GrabBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrabBook'
+type MockDownloader_GrabBook_Call struct {
+	*mock.Call
+}
+
+// GrabBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - result indexer.SearchResult
+//   - bookID uint32
+//   - kind mediafile.BookKind
+func (_e *MockDownloader_Expecter) GrabBook(ctx any, result any, bookID any, kind any) *MockDownloader_GrabBook_Call {
+	return &MockDownloader_GrabBook_Call{Call: _e.mock.On("GrabBook", ctx, result, bookID, kind)}
+}
+
+func (_c *MockDownloader_GrabBook_Call) Run(run func(ctx context.Context, result indexer.SearchResult, bookID uint32, kind mediafile.BookKind)) *MockDownloader_GrabBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 indexer.SearchResult
+		if args[1] != nil {
+			arg1 = args[1].(indexer.SearchResult)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 mediafile.BookKind
+		if args[3] != nil {
+			arg3 = args[3].(mediafile.BookKind)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_GrabBook_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockDownloader_GrabBook_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockDownloader_GrabBook_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult, bookID uint32, kind mediafile.BookKind) (*ent.DownloadRecord, error)) *MockDownloader_GrabBook_Call {
 	_c.Call.Return(run)
 	return _c
 }

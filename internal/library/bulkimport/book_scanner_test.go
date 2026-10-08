@@ -91,7 +91,21 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		DeferCleanup(client.Close)
 		store = db.New(client)
 		bookmeta = metamocks.NewMockBookProvider(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/m", "/s", bookmeta)
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/m",
+			"/s",
+			nil,
+			nil,
+			bookmeta,
+			nil,
+		)
 	})
 
 	scan := func(root string) []*ent.ImportScanBook {
@@ -252,7 +266,21 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		})
 
 		It("refuses a book scan when Hardcover is not configured", func() {
-			svc = NewService(store, nil, nil, nil, nil, nil, nil, "/m", "/s", nil)
+			svc = NewService(
+				store,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				"/m",
+				"/s",
+				nil,
+				nil,
+				nil,
+				nil,
+			)
 			_, err := svc.StartScan(ctx, StartScanParams{
 				SourcePath: ebookRoot,
 				Kind:       entimportscan.KindBook,

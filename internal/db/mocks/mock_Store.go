@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/movie"
@@ -9341,6 +9342,74 @@ func (_c *MockStore_ListImportScanAlbumsForCommit_Call) RunAndReturn(run func(ct
 	return _c
 }
 
+// ListImportScanBooksForCommit provides a mock function for the type MockStore
+func (_mock *MockStore) ListImportScanBooksForCommit(ctx context.Context, scanID uint32) ([]*ent.ImportScanBook, error) {
+	ret := _mock.Called(ctx, scanID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListImportScanBooksForCommit")
+	}
+
+	var r0 []*ent.ImportScanBook
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]*ent.ImportScanBook, error)); ok {
+		return returnFunc(ctx, scanID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []*ent.ImportScanBook); ok {
+		r0 = returnFunc(ctx, scanID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.ImportScanBook)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, scanID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListImportScanBooksForCommit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListImportScanBooksForCommit'
+type MockStore_ListImportScanBooksForCommit_Call struct {
+	*mock.Call
+}
+
+// ListImportScanBooksForCommit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+func (_e *MockStore_Expecter) ListImportScanBooksForCommit(ctx any, scanID any) *MockStore_ListImportScanBooksForCommit_Call {
+	return &MockStore_ListImportScanBooksForCommit_Call{Call: _e.mock.On("ListImportScanBooksForCommit", ctx, scanID)}
+}
+
+func (_c *MockStore_ListImportScanBooksForCommit_Call) Run(run func(ctx context.Context, scanID uint32)) *MockStore_ListImportScanBooksForCommit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListImportScanBooksForCommit_Call) Return(importScanBooks []*ent.ImportScanBook, err error) *MockStore_ListImportScanBooksForCommit_Call {
+	_c.Call.Return(importScanBooks, err)
+	return _c
+}
+
+func (_c *MockStore_ListImportScanBooksForCommit_Call) RunAndReturn(run func(ctx context.Context, scanID uint32) ([]*ent.ImportScanBook, error)) *MockStore_ListImportScanBooksForCommit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListImportScanFilesForCommit provides a mock function for the type MockStore
 func (_mock *MockStore) ListImportScanFilesForCommit(ctx context.Context, scanID uint32) ([]*ent.ImportScanFile, error) {
 	ret := _mock.Called(ctx, scanID)
@@ -11735,6 +11804,69 @@ func (_c *MockStore_ListWantedMovies_Call) Return(movies []*ent.Movie, err error
 }
 
 func (_c *MockStore_ListWantedMovies_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.Movie, error)) *MockStore_ListWantedMovies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkBookSlotAvailable provides a mock function for the type MockStore
+func (_mock *MockStore) MarkBookSlotAvailable(ctx context.Context, bookID uint32, kind string) error {
+	ret := _mock.Called(ctx, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkBookSlotAvailable")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, bookID, kind)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_MarkBookSlotAvailable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkBookSlotAvailable'
+type MockStore_MarkBookSlotAvailable_Call struct {
+	*mock.Call
+}
+
+// MarkBookSlotAvailable is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind string
+func (_e *MockStore_Expecter) MarkBookSlotAvailable(ctx any, bookID any, kind any) *MockStore_MarkBookSlotAvailable_Call {
+	return &MockStore_MarkBookSlotAvailable_Call{Call: _e.mock.On("MarkBookSlotAvailable", ctx, bookID, kind)}
+}
+
+func (_c *MockStore_MarkBookSlotAvailable_Call) Run(run func(ctx context.Context, bookID uint32, kind string)) *MockStore_MarkBookSlotAvailable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_MarkBookSlotAvailable_Call) Return(err error) *MockStore_MarkBookSlotAvailable_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_MarkBookSlotAvailable_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind string) error) *MockStore_MarkBookSlotAvailable_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -14668,6 +14800,81 @@ func (_c *MockStore_SetBookSlot_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// SetBookSlotStatus provides a mock function for the type MockStore
+func (_mock *MockStore) SetBookSlotStatus(ctx context.Context, id uint32, kind string, from string, to string) error {
+	ret := _mock.Called(ctx, id, kind, from, to)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetBookSlotStatus")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, string, string) error); ok {
+		r0 = returnFunc(ctx, id, kind, from, to)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetBookSlotStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetBookSlotStatus'
+type MockStore_SetBookSlotStatus_Call struct {
+	*mock.Call
+}
+
+// SetBookSlotStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - kind string
+//   - from string
+//   - to string
+func (_e *MockStore_Expecter) SetBookSlotStatus(ctx any, id any, kind any, from any, to any) *MockStore_SetBookSlotStatus_Call {
+	return &MockStore_SetBookSlotStatus_Call{Call: _e.mock.On("SetBookSlotStatus", ctx, id, kind, from, to)}
+}
+
+func (_c *MockStore_SetBookSlotStatus_Call) Run(run func(ctx context.Context, id uint32, kind string, from string, to string)) *MockStore_SetBookSlotStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetBookSlotStatus_Call) Return(err error) *MockStore_SetBookSlotStatus_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetBookSlotStatus_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string, from string, to string) error) *MockStore_SetBookSlotStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetDownloadRecordReplaceMode provides a mock function for the type MockStore
 func (_mock *MockStore) SetDownloadRecordReplaceMode(ctx context.Context, id uint32, mode downloadrecord.ReplaceMode) error {
 	ret := _mock.Called(ctx, id, mode)
@@ -16972,6 +17179,75 @@ func (_c *MockStore_UpdateImportScanAlbumOutcome_Call) Return(err error) *MockSt
 }
 
 func (_c *MockStore_UpdateImportScanAlbumOutcome_Call) RunAndReturn(run func(ctx context.Context, id uint32, outcome importscanalbum.Outcome, opts db.UpdateScanAlbumOutcomeOpts) error) *MockStore_UpdateImportScanAlbumOutcome_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateImportScanBookOutcome provides a mock function for the type MockStore
+func (_mock *MockStore) UpdateImportScanBookOutcome(ctx context.Context, id uint32, outcome importscanbook.Outcome, opts db.UpdateScanBookOutcomeOpts) error {
+	ret := _mock.Called(ctx, id, outcome, opts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateImportScanBookOutcome")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanbook.Outcome, db.UpdateScanBookOutcomeOpts) error); ok {
+		r0 = returnFunc(ctx, id, outcome, opts)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_UpdateImportScanBookOutcome_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateImportScanBookOutcome'
+type MockStore_UpdateImportScanBookOutcome_Call struct {
+	*mock.Call
+}
+
+// UpdateImportScanBookOutcome is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - outcome importscanbook.Outcome
+//   - opts db.UpdateScanBookOutcomeOpts
+func (_e *MockStore_Expecter) UpdateImportScanBookOutcome(ctx any, id any, outcome any, opts any) *MockStore_UpdateImportScanBookOutcome_Call {
+	return &MockStore_UpdateImportScanBookOutcome_Call{Call: _e.mock.On("UpdateImportScanBookOutcome", ctx, id, outcome, opts)}
+}
+
+func (_c *MockStore_UpdateImportScanBookOutcome_Call) Run(run func(ctx context.Context, id uint32, outcome importscanbook.Outcome, opts db.UpdateScanBookOutcomeOpts)) *MockStore_UpdateImportScanBookOutcome_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 importscanbook.Outcome
+		if args[2] != nil {
+			arg2 = args[2].(importscanbook.Outcome)
+		}
+		var arg3 db.UpdateScanBookOutcomeOpts
+		if args[3] != nil {
+			arg3 = args[3].(db.UpdateScanBookOutcomeOpts)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_UpdateImportScanBookOutcome_Call) Return(err error) *MockStore_UpdateImportScanBookOutcome_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_UpdateImportScanBookOutcome_Call) RunAndReturn(run func(ctx context.Context, id uint32, outcome importscanbook.Outcome, opts db.UpdateScanBookOutcomeOpts) error) *MockStore_UpdateImportScanBookOutcome_Call {
 	_c.Call.Return(run)
 	return _c
 }
