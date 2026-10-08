@@ -1542,6 +1542,68 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /books/{id}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/BookSlotKind"
+    post:
+      operationId: searchBookReleases
+      summary: Search indexers for one slot of a book
+      description: |
+        Interactive search across enabled indexers for the ebook or audiobook
+        slot of one book, judged against that slot's quality profile.
+        Rejected releases stay in the list with `release.rejected` set and
+        sort last. POST the chosen `release` object back unchanged to
+        `.../grab`, handle included. A 422 with `code: no_quality_profile`
+        means the slot has no usable quality profile.
+      tags: [books]
+      responses:
+        "200":
+          $ref: "#/components/responses/BookReleaseList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/{id}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/BookSlotKind"
+    post:
+      operationId: grabBookRelease
+      summary: Grab a specific release for one slot of a book
+      description: |
+        Dispatches the chosen release to the highest-priority download client
+        and marks the slot downloading. The body is the `release` object of an
+        item from the search response, unchanged (its `download_url` is a
+        sealed handle). A refused grab answers 422 with `code: grab_rejected`;
+        a slot with no usable quality profile answers 422 with
+        `code: no_quality_profile`.
+      tags: [books]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabBookRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/ReleaseGrabAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /books/ebook-quality-profiles:
     get:
       operationId: listEbookQualityProfiles
@@ -4631,6 +4693,14 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    BookSlotKind:
+      name: kind
+      in: query
+      required: true
+      description: Which slot of the book to search or grab for.
+      schema:
+        type: string
+        enum: [ebook, audiobook]
     PeopleQuery:
       name: query
       in: query
@@ -5221,6 +5291,13 @@ components:
           schema:
             $ref: "#/components/schemas/SearchResult"
 
+    GrabBookRelease:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResult"
+
     PatchBook:
       required: true
       content:
@@ -5785,6 +5862,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/AlbumReleaseList"
+
+    BookReleaseList:
+      description: Ranked indexer releases for one slot of a book.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookReleaseList"
 
     ReleaseGrabAccepted:
       description: Release grab dispatched.
@@ -7289,6 +7373,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AlbumRelease"
+
+    BookRelease:
+      type: object
+      required: [format, release]
+      properties:
+        format:
+          type: string
+          description: Book format parsed from the release title.
+        release:
+          $ref: "#/components/schemas/SearchResult"
+
+    BookReleaseList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookRelease"
 
     MusicAlbum:
       type: object

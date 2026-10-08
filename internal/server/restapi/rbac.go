@@ -216,6 +216,8 @@ var minRole = map[string]string{
 	"DeleteBookAuthor":              roleMember,
 	"RefreshBookAuthor":             roleMember,
 	"PatchBook":                     roleMember,
+	"SearchBookReleases":            roleMember,
+	"GrabBookRelease":               roleMember,
 	"CreateEbookQualityProfile":     roleAdmin,
 	"UpdateEbookQualityProfile":     roleAdmin,
 	"DeleteEbookQualityProfile":     roleAdmin,

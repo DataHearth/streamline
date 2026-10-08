@@ -209,10 +209,14 @@ A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `form
 | `POST` | `/books/authors/{id}/refresh` | Re-fetch the bibliography from Hardcover | Member |
 | `GET` | `/books/{id}` | Fetch a book with its `ebook` and `audiobook` slots | Authenticated |
 | `PATCH` | `/books/{id}` | Update `ebook_monitored` / `audiobook_monitored` | Member |
+| `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Search the indexers for one slot of a book; returns `{items: [{format, release}]}` ranked, rejected releases kept at the end with `release.rejected` and `release.reject_reason` | Member |
+| `POST` | `/books/{id}/grab?kind=ebook\|audiobook` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
 | `GET` `POST` | `/books/ebook-quality-profiles` | List / create ebook quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/books/ebook-quality-profiles/{name}` | Update / delete an ebook quality profile | 🔒 Admin |
 | `GET` `POST` | `/books/audiobook-quality-profiles` | List / create audiobook quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/books/audiobook-quality-profiles/{name}` | Update / delete an audiobook quality profile | 🔒 Admin |
+
+A book search or grab without a valid `kind` answers `400`; a slot with no usable quality profile answers `422` with `code: no_quality_profile`, and a refused grab `422` with `code: grab_rejected`. The grab flips the slot to `downloading`.
 
 Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add and refresh endpoints answer `503` while browsing the library keeps working. A book carries an `ebook` and an `audiobook` slot, each `{monitored, status, file_count}`. Poster URLs are not in the payloads: clients build `/posters/authors/{id}/poster.jpg` and `/posters/books/{id}/poster.jpg` themselves.
 

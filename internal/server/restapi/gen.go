@@ -2883,6 +2883,24 @@ func (e UserRole) Valid() bool {
 	}
 }
 
+// Defines values for BookSlotKind.
+const (
+	BookSlotKindAudiobook BookSlotKind = "audiobook"
+	BookSlotKindEbook     BookSlotKind = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the BookSlotKind enum.
+func (e BookSlotKind) Valid() bool {
+	switch e {
+	case BookSlotKindAudiobook:
+		return true
+	case BookSlotKindEbook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportClassification.
 const (
 	ImportClassificationAmbiguous ImportClassification = "ambiguous"
@@ -3647,6 +3665,18 @@ type BookEntry struct {
 	SeriesName     *string             `json:"series_name,omitempty"`
 	SeriesPosition *string             `json:"series_position,omitempty"`
 	Title          string              `json:"title"`
+}
+
+// BookRelease defines model for BookRelease.
+type BookRelease struct {
+	// Format Book format parsed from the release title.
+	Format  string       `json:"format"`
+	Release SearchResult `json:"release"`
+}
+
+// BookReleaseList defines model for BookReleaseList.
+type BookReleaseList struct {
+	Items []BookRelease `json:"items"`
 }
 
 // BookSlot defines model for BookSlot.
@@ -6835,6 +6865,9 @@ type ApiKeyID = uint32
 // BookSearchQuery defines model for BookSearchQuery.
 type BookSearchQuery = string
 
+// BookSlotKind defines model for BookSlotKind.
+type BookSlotKind string
+
 // CalendarFrom defines model for CalendarFrom.
 type CalendarFrom = time.Time
 
@@ -7247,6 +7280,9 @@ type DiscoverMediaServer = MediaServerDiscoveryRequest
 // GrabAlbumRelease defines model for GrabAlbumRelease.
 type GrabAlbumRelease = SearchResult
 
+// GrabBookRelease defines model for GrabBookRelease.
+type GrabBookRelease = SearchResult
+
 // GrabMovieRelease defines model for GrabMovieRelease.
 type GrabMovieRelease = SearchResult
 
@@ -7382,6 +7418,18 @@ type DeleteBookAuthorParams struct {
 type SearchBookAuthorsParams struct {
 	// Query Hardcover author search query.
 	Query BookSearchQuery `form:"query" json:"query"`
+}
+
+// GrabBookReleaseParams defines parameters for GrabBookRelease.
+type GrabBookReleaseParams struct {
+	// Kind Which slot of the book to search or grab for.
+	Kind BookSlotKind `form:"kind" json:"kind"`
+}
+
+// SearchBookReleasesParams defines parameters for SearchBookReleases.
+type SearchBookReleasesParams struct {
+	// Kind Which slot of the book to search or grab for.
+	Kind BookSlotKind `form:"kind" json:"kind"`
 }
 
 // ListUpcomingReleasesParams defines parameters for ListUpcomingReleases.
@@ -7710,6 +7758,9 @@ type UpdateEbookQualityProfileJSONRequestBody = EbookQualityProfileCreate
 
 // PatchBookJSONRequestBody defines body for PatchBook for application/json ContentType.
 type PatchBookJSONRequestBody = PatchBookRequest
+
+// GrabBookReleaseJSONRequestBody defines body for GrabBookRelease for application/json ContentType.
+type GrabBookReleaseJSONRequestBody = SearchResult
 
 // UpdateConfigAuthJSONRequestBody defines body for UpdateConfigAuth for application/json ContentType.
 type UpdateConfigAuthJSONRequestBody = AuthConfigPatch
@@ -8055,6 +8106,12 @@ type ServerInterface interface {
 	// PatchBook Patch a book
 	// (PATCH /books/{id})
 	PatchBook(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GrabBookRelease Grab a specific release for one slot of a book
+	// (POST /books/{id}/grab)
+	GrabBookRelease(w http.ResponseWriter, r *http.Request, id ResourceID, params GrabBookReleaseParams)
+	// SearchBookReleases Search indexers for one slot of a book
+	// (POST /books/{id}/search)
+	SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
@@ -8859,6 +8916,18 @@ func (_ Unimplemented) GetBook(w http.ResponseWriter, r *http.Request, id Resour
 // PatchBook Patch a book
 // (PATCH /books/{id})
 func (_ Unimplemented) PatchBook(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GrabBookRelease Grab a specific release for one slot of a book
+// (POST /books/{id}/grab)
+func (_ Unimplemented) GrabBookRelease(w http.ResponseWriter, r *http.Request, id ResourceID, params GrabBookReleaseParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchBookReleases Search indexers for one slot of a book
+// (POST /books/{id}/search)
+func (_ Unimplemented) SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -11068,6 +11137,90 @@ func (siw *ServerInterfaceWrapper) PatchBook(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PatchBook(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GrabBookRelease operation middleware
+func (siw *ServerInterfaceWrapper) GrabBookRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GrabBookReleaseParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GrabBookRelease(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchBookReleases operation middleware
+func (siw *ServerInterfaceWrapper) SearchBookReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchBookReleasesParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchBookReleases(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -16001,6 +16154,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/books/{id}", wrapper.PatchBook)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/{id}/search", wrapper.SearchBookReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/{id}/grab", wrapper.GrabBookRelease)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/books/ebook-quality-profiles", wrapper.ListEbookQualityProfiles)
 	})
 	r.Group(func(r chi.Router) {
@@ -16477,6 +16636,8 @@ type BookAuthorDetailJSONResponse BookAuthor
 type BookAuthorListJSONResponse PaginatedBookAuthors
 
 type BookDetailJSONResponse Book
+
+type BookReleaseListJSONResponse BookReleaseList
 
 type BookSearchResultsJSONResponse BookAuthorSearchResultList
 
@@ -19728,6 +19889,204 @@ func (response PatchBook413JSONResponse) VisitPatchBookResponse(w http.ResponseW
 type PatchBook500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchBook500JSONResponse) VisitPatchBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookReleaseRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params GrabBookReleaseParams
+	Body   *GrabBookReleaseJSONRequestBody
+}
+
+type GrabBookReleaseResponseObject interface {
+	VisitGrabBookReleaseResponse(w http.ResponseWriter) error
+}
+
+type GrabBookRelease202Response = ReleaseGrabAcceptedResponse
+
+func (response GrabBookRelease202Response) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type GrabBookRelease400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GrabBookRelease400JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabBookRelease403JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookRelease404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GrabBookRelease404JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabBookRelease413JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookRelease422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GrabBookRelease422JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabBookRelease500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GrabBookRelease500JSONResponse) VisitGrabBookReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleasesRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params SearchBookReleasesParams
+}
+
+type SearchBookReleasesResponseObject interface {
+	VisitSearchBookReleasesResponse(w http.ResponseWriter) error
+}
+
+type SearchBookReleases200JSONResponse struct{ BookReleaseListJSONResponse }
+
+func (response SearchBookReleases200JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchBookReleases400JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchBookReleases403JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchBookReleases404JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SearchBookReleases422JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookReleases500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchBookReleases500JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -30554,6 +30913,12 @@ type StrictServerInterface interface {
 	// PatchBook Patch a book
 	// (PATCH /books/{id})
 	PatchBook(ctx context.Context, request PatchBookRequestObject) (PatchBookResponseObject, error)
+	// GrabBookRelease Grab a specific release for one slot of a book
+	// (POST /books/{id}/grab)
+	GrabBookRelease(ctx context.Context, request GrabBookReleaseRequestObject) (GrabBookReleaseResponseObject, error)
+	// SearchBookReleases Search indexers for one slot of a book
+	// (POST /books/{id}/search)
+	SearchBookReleases(ctx context.Context, request SearchBookReleasesRequestObject) (SearchBookReleasesResponseObject, error)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
@@ -32480,6 +32845,67 @@ func (sh *strictHandler) PatchBook(w http.ResponseWriter, r *http.Request, id Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PatchBookResponseObject); ok {
 		if err := validResponse.VisitPatchBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GrabBookRelease operation middleware
+func (sh *strictHandler) GrabBookRelease(w http.ResponseWriter, r *http.Request, id ResourceID, params GrabBookReleaseParams) {
+	var request GrabBookReleaseRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body GrabBookReleaseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GrabBookRelease(ctx, request.(GrabBookReleaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GrabBookRelease")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GrabBookReleaseResponseObject); ok {
+		if err := validResponse.VisitGrabBookReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchBookReleases operation middleware
+func (sh *strictHandler) SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams) {
+	var request SearchBookReleasesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchBookReleases(ctx, request.(SearchBookReleasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchBookReleases")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchBookReleasesResponseObject); ok {
+		if err := validResponse.VisitSearchBookReleasesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -2,6 +2,8 @@ package restapi
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,6 +20,8 @@ import (
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -565,5 +569,252 @@ var _ = Describe("Handler: Books", Label("unit", "server", "books"), func() {
 		)
 		defer resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	})
+
+	Describe("SearchBookReleases", func() {
+		for _, kind := range []string{"ebook", "audiobook"} {
+			It(
+				"returns the ranked "+kind+" releases, rejected rows flagged",
+				func() {
+					accepted := indexer.SearchResult{
+						Title:    "Dune " + kind,
+						Download: "magnet:?xt=urn:btih:aaaa",
+						Seeders:  5,
+					}
+					rejected := indexer.SearchResult{
+						Title:    "Dune pdf",
+						Download: "magnet:?xt=urn:btih:bbbb",
+					}
+					app.books.EXPECT().
+						SearchBookReleases(mock.Anything, uint32(3), kind).
+						Return([]book.ReleaseResult{
+							{
+								SearchResult: accepted,
+								Format:       "epub",
+								Score:        30,
+							},
+							{
+								SearchResult: rejected,
+								Format:       "pdf",
+								Rejected:     true,
+								Reason:       "format not accepted by the quality profile",
+							},
+						}, nil).
+						Once()
+					resp := send(
+						http.MethodPost,
+						"/api/v1/books/3/search?kind="+kind,
+						app.memberKey,
+						"",
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					var body BookReleaseList
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Items).To(HaveLen(2))
+					Expect(body.Items[0].Format).To(Equal("epub"))
+					Expect(body.Items[0].Release.Title).To(Equal("Dune " + kind))
+					Expect(body.Items[0].Release.Score).To(HaveValue(Equal(30)))
+					Expect(body.Items[0].Release.Rejected).To(HaveValue(BeFalse()))
+					Expect(body.Items[0].Release.RejectReason).To(BeNil())
+					Expect(body.Items[0].Release.DownloadUrl).To(HavePrefix("slr1."))
+					Expect(body.Items[1].Release.Rejected).To(HaveValue(BeTrue()))
+					Expect(body.Items[1].Release.RejectReason).To(HaveValue(
+						Equal("format not accepted by the quality profile"),
+					))
+				},
+			)
+		}
+
+		DescribeTable("400s a missing or invalid kind without calling the service",
+			func(query string) {
+				resp := send(
+					http.MethodPost,
+					"/api/v1/books/3/search"+query,
+					app.memberKey,
+					"",
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			},
+			Entry("missing", ""),
+			Entry("unknown", "?kind=comic"),
+		)
+
+		It("404s for an unknown book", func() {
+			app.books.EXPECT().
+				SearchBookReleases(mock.Anything, uint32(99), "ebook").
+				Return(nil, book.ErrBookNotFound).
+				Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/99/search?kind=ebook",
+				app.memberKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("422s with no_quality_profile", func() {
+			app.books.EXPECT().SearchBookReleases(mock.Anything, uint32(3), "ebook").
+				Return(nil, book.ErrNoQualityProfile).Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/3/search?kind=ebook",
+				app.memberKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			var body struct {
+				Code string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).To(Equal("no_quality_profile"))
+		})
+
+		It("answers 403 to a request-only caller", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/3/search?kind=ebook",
+				app.requestOnlyKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
+	Describe("GrabBookRelease", func() {
+		const plain = `{"title":"Dune","download_url":"magnet:?xt=urn:btih:aaaa","size":1,"seeders":1}`
+		grab := func(kind, body string) *http.Response {
+			GinkgoHelper()
+			return send(
+				http.MethodPost,
+				"/api/v1/books/3/grab?kind="+kind,
+				app.memberKey,
+				body,
+			)
+		}
+		code := func(resp *http.Response) string {
+			GinkgoHelper()
+			var body struct {
+				Code string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			return body.Code
+		}
+
+		for _, kind := range []string{"ebook", "audiobook"} {
+			It("dispatches a "+kind+" grab with the slot kind", func() {
+				app.books.EXPECT().
+					GrabBookRelease(mock.Anything, uint32(3), mock.MatchedBy(
+						func(p book.GrabParams) bool {
+							return p.Kind == kind &&
+								p.Result.Download == "magnet:?xt=urn:btih:aaaa"
+						},
+					)).
+					Return(nil).Once()
+				resp := grab(kind, plain)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			})
+		}
+
+		It("opens a sealed handle", func() {
+			app.books.EXPECT().
+				GrabBookRelease(mock.Anything, uint32(3), mock.MatchedBy(
+					func(p book.GrabParams) bool {
+						return p.Result.Download == "magnet:?xt=urn:btih:aaaa"
+					},
+				)).
+				Return(nil).Once()
+			resp := grab("ebook", `{"title":"Dune","download_url":"`+
+				sealReleaseLink(
+					"magnet:?xt=urn:btih:aaaa",
+				)+`","size":1,"seeders":1}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+
+		It("400s an invalid kind", func() {
+			resp := grab("comic", plain)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("tells the caller to search again on a bad handle", func() {
+			resp := grab(
+				"ebook",
+				`{"title":"Dune","download_url":"slr1.bm90LWEtaGFuZGxl","size":1,"seeders":1}`,
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			Expect(code(resp)).To(Equal("grab_rejected"))
+		})
+
+		It("422s an empty title or url without a code", func() {
+			resp := grab(
+				"ebook",
+				`{"title":"","download_url":"","size":1,"seeders":1}`,
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			Expect(code(resp)).To(BeEmpty())
+		})
+
+		DescribeTable("maps a refused grab to grab_rejected",
+			func(sentinel error) {
+				app.books.EXPECT().
+					GrabBookRelease(mock.Anything, uint32(3), mock.Anything).
+					Return(fmt.Errorf("grab book: %w", sentinel)).Once()
+				resp := grab("ebook", plain)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				Expect(code(resp)).To(Equal("grab_rejected"))
+			},
+			Entry("untrusted source", download.ErrUntrustedSource),
+			Entry("client full", download.ErrClientFull),
+			Entry("unsafe torrent name", download.ErrUnsafeTorrentName),
+		)
+
+		DescribeTable(
+			"maps a service sentinel",
+			func(sentinel error, status int, wantCode string) {
+				app.books.EXPECT().
+					GrabBookRelease(mock.Anything, uint32(3), mock.Anything).
+					Return(fmt.Errorf("grab book: %w", sentinel)).Once()
+				resp := grab("ebook", plain)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(status))
+				if wantCode != "" {
+					Expect(code(resp)).To(Equal(wantCode))
+				}
+			},
+			Entry("unknown book", book.ErrBookNotFound, http.StatusNotFound, ""),
+			Entry(
+				"invalid slot kind",
+				book.ErrInvalidSlotKind,
+				http.StatusBadRequest,
+				"",
+			),
+			Entry("no quality profile", book.ErrNoQualityProfile,
+				http.StatusUnprocessableEntity, "no_quality_profile"),
+			Entry("anything else", errors.New("boom"),
+				http.StatusInternalServerError, ""),
+		)
+
+		It("answers 403 to a request-only caller", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/3/grab?kind=ebook",
+				app.requestOnlyKey,
+				plain,
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
 	})
 })

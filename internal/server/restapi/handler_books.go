@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -13,6 +14,8 @@ import (
 const (
 	slotKindEbook     = "ebook"
 	slotKindAudiobook = "audiobook"
+
+	invalidSlotKindMsg = "kind must be ebook or audiobook"
 )
 
 var (
@@ -415,4 +418,118 @@ func audiobookProfileExists(name string) bool {
 		c.AudiobookQualityProfiles,
 		func(p config.AudiobookQualityProfileEntry) bool { return p.Name == name },
 	)
+}
+
+func (s *Server) SearchBookReleases(
+	ctx context.Context,
+	request SearchBookReleasesRequestObject,
+) (SearchBookReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchBookReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if !request.Params.Kind.Valid() {
+		return SearchBookReleases400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(invalidSlotKindMsg),
+		}, nil
+	}
+	releases, err := s.books.SearchBookReleases(
+		ctx, request.Id, string(request.Params.Kind),
+	)
+	switch {
+	case errors.Is(err, book.ErrBookNotFound):
+		return SearchBookReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, book.ErrInvalidSlotKind):
+		return SearchBookReleases400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, book.ErrNoQualityProfile):
+		return SearchBookReleases422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	case err != nil:
+		return SearchBookReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	private := indexerPrivacy()
+	items := make([]BookRelease, 0, len(releases))
+	for _, r := range releases {
+		item := toSearchResult(r.SearchResult)
+		score := r.Score
+		item.Score = &score
+		rejected := r.Rejected
+		item.Rejected = &rejected
+		if r.Reason != "" {
+			reason := r.Reason
+			item.RejectReason = &reason
+		}
+		if p, ok := private[r.ConfiguredIndexer]; ok {
+			item.IndexerPrivate = &p
+		}
+		items = append(items, BookRelease{Format: r.Format, Release: item})
+	}
+	out := BookReleaseListJSONResponse{Items: items}
+	return SearchBookReleases200JSONResponse{
+		BookReleaseListJSONResponse: out,
+	}, nil
+}
+
+func (s *Server) GrabBookRelease(
+	ctx context.Context,
+	request GrabBookReleaseRequestObject,
+) (GrabBookReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabBookRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	if !request.Params.Kind.Valid() {
+		return GrabBookRelease400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(invalidSlotKindMsg),
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabBookRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabBookRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	err = s.books.GrabBookRelease(ctx, request.Id, book.GrabParams{
+		Kind:   string(request.Params.Kind),
+		Result: sr,
+	})
+	switch {
+	case errors.Is(err, book.ErrBookNotFound):
+		return GrabBookRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, book.ErrInvalidSlotKind):
+		return GrabBookRelease400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case errors.Is(err, book.ErrNoQualityProfile):
+		return GrabBookRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabBookRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabBookRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GrabBookRelease202Response{}, nil
 }
