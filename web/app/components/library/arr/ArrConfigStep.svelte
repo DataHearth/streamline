@@ -82,10 +82,18 @@
 		return null;
 	}
 
+	// The type line only earns its place when it says something the name does
+	// not: a Prowlarr entry is named "Prowlarr", and an *arr's default client
+	// name is its type.
+	function typeLine(name: string, type: string): string | null {
+		return name.toLowerCase() === type.toLowerCase() ? null : type;
+	}
+
 	let indexerRows = $derived<Row[]>(
 		indexers.map((o) => ({
 			name: o.name,
-			type: o.kind === "unsupported" ? null : INDEXER_TYPES[o.kind],
+			type:
+				o.kind === "unsupported" ? null : typeLine(o.name, INDEXER_TYPES[o.kind]),
 			blocked: blockedReason({ ...o, unsupported: o.kind === "unsupported" }),
 			needsSecret: o.needs_secret,
 			collapses: o.kind === "prowlarr" ? o.collapses : 0,
@@ -95,7 +103,10 @@
 	let clientRows = $derived<Row[]>(
 		clients.map((o) => ({
 			name: o.name,
-			type: o.client_type === "unsupported" ? null : CLIENT_TYPES[o.client_type],
+			type:
+				o.client_type === "unsupported"
+					? null
+					: typeLine(o.name, CLIENT_TYPES[o.client_type]),
 			blocked: blockedReason({
 				...o,
 				unsupported: o.client_type === "unsupported",
