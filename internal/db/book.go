@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 )
 
@@ -348,5 +349,123 @@ func (db *DB) ListUpcomingBooks(
 		).
 		WithAuthor().
 		Order(ent.Asc(book.FieldReleaseDate)).
+		All(ctx)
+}
+
+// ListEligibleBookSlotsForSync returns the books whose kind slot is wanted and
+// monitored, under that slot's failure cap, and past that slot's cooldown,
+// least recently searched first (never-searched rows lead, SQLite sorts NULL
+// first). The in-flight exclusion is per kind: an audiobook download does not
+// hide the ebook slot.
+func (db *DB) ListEligibleBookSlotsForSync(
+	ctx context.Context,
+	kind string,
+	maxGrabFailures uint8,
+	notSearchedSince time.Time,
+) ([]*ent.Book, error) {
+	inFlight := book.Not(book.HasDownloadRecordsWith(
+		downloadrecord.BookKindEQ(downloadrecord.BookKind(kind)),
+		downloadrecord.StatusIn(
+			downloadrecord.StatusDownloading,
+			downloadrecord.StatusImporting,
+		),
+	))
+	q := db.client.Book.Query().WithAuthor()
+	switch kind {
+	case string(mediafile.BookKindEbook):
+		q = q.Where(
+			book.EbookStatusEQ(book.EbookStatusWanted),
+			book.EbookMonitoredEQ(true),
+			book.EbookGrabFailuresLT(maxGrabFailures),
+			book.Or(
+				book.EbookLastSearchAtIsNil(),
+				book.EbookLastSearchAtLT(notSearchedSince),
+			),
+			inFlight,
+		).Order(ent.Asc(book.FieldEbookLastSearchAt), ent.Asc(book.FieldID))
+	case string(mediafile.BookKindAudiobook):
+		q = q.Where(
+			book.AudiobookStatusEQ(book.AudiobookStatusWanted),
+			book.AudiobookMonitoredEQ(true),
+			book.AudiobookGrabFailuresLT(maxGrabFailures),
+			book.Or(
+				book.AudiobookLastSearchAtIsNil(),
+				book.AudiobookLastSearchAtLT(notSearchedSince),
+			),
+			inFlight,
+		).Order(ent.Asc(book.FieldAudiobookLastSearchAt), ent.Asc(book.FieldID))
+	default:
+		return nil, fmt.Errorf("unknown book slot kind %q", kind)
+	}
+	return q.All(ctx)
+}
+
+func (db *DB) SetBookSlotLastSearchAt(
+	ctx context.Context,
+	id uint32,
+	kind string,
+	when time.Time,
+) error {
+	u := db.client.Book.UpdateOneID(id)
+	switch kind {
+	case string(mediafile.BookKindEbook):
+		u = u.SetEbookLastSearchAt(when)
+	case string(mediafile.BookKindAudiobook):
+		u = u.SetAudiobookLastSearchAt(when)
+	default:
+		return fmt.Errorf("unknown book slot kind %q", kind)
+	}
+	return u.Exec(ctx)
+}
+
+func (db *DB) IncrementBookSlotGrabFailures(
+	ctx context.Context,
+	id uint32,
+	kind string,
+) error {
+	u := db.client.Book.UpdateOneID(id)
+	switch kind {
+	case string(mediafile.BookKindEbook):
+		u = u.AddEbookGrabFailures(1)
+	case string(mediafile.BookKindAudiobook):
+		u = u.AddAudiobookGrabFailures(1)
+	default:
+		return fmt.Errorf("unknown book slot kind %q", kind)
+	}
+	return u.Exec(ctx)
+}
+
+func (db *DB) ResetBookSlotGrabFailures(
+	ctx context.Context,
+	id uint32,
+	kind string,
+) error {
+	u := db.client.Book.UpdateOneID(id)
+	switch kind {
+	case string(mediafile.BookKindEbook):
+		u = u.SetEbookGrabFailures(0)
+	case string(mediafile.BookKindAudiobook):
+		u = u.SetAudiobookGrabFailures(0)
+	default:
+		return fmt.Errorf("unknown book slot kind %q", kind)
+	}
+	return u.Exec(ctx)
+}
+
+// ListAuthorsStaleSince returns at most limit authors never refreshed or last
+// refreshed before cutoff, oldest first. Keyed on last_refreshed_at, not
+// update_time, which moves on every write.
+func (db *DB) ListAuthorsStaleSince(
+	ctx context.Context,
+	cutoff time.Time,
+	limit int,
+) ([]*ent.Author, error) {
+	return db.client.Author.Query().
+		Where(author.Or(
+			author.LastRefreshedAtIsNil(),
+			author.LastRefreshedAtLT(cutoff),
+		)).
+		Order(ent.Asc(author.FieldLastRefreshedAt), ent.Asc(author.FieldID)).
+		Limit(limit).
 		All(ctx)
 }

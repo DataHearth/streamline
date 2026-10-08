@@ -59,6 +59,8 @@ packages:
     interfaces:
       Adder: {}
       Manager: {}
+      MetadataRefresher: {}
+      MissingSearcher: {}
   github.com/datahearth/streamline/internal/mediaserver:
     interfaces:
       Manager: {}

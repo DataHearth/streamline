@@ -119,6 +119,32 @@ type Store interface {
 		from, to string,
 	) error
 	DeleteAuthor(ctx context.Context, id uint32) error
+	// ListEligibleBookSlotsForSync returns the books whose kind slot is
+	// wanted, monitored, under the failure cap and past cooldown with no
+	// in-flight record for that kind, least recently searched first. The
+	// author is eager-loaded.
+	ListEligibleBookSlotsForSync(
+		ctx context.Context,
+		kind string,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Book, error)
+	SetBookSlotLastSearchAt(
+		ctx context.Context,
+		id uint32,
+		kind string,
+		when time.Time,
+	) error
+	IncrementBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
+	ResetBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
+	// ListAuthorsStaleSince returns at most limit authors never refreshed or
+	// refreshed before cutoff, oldest first.
+	ListAuthorsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.Author, error)
+
 	// users
 	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
 	FindUserByID(ctx context.Context, id uint32) (*ent.User, error)

@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
 	moviemocks "github.com/datahearth/streamline/internal/media/movie/mocks"
 	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
 )
@@ -46,5 +47,20 @@ var _ = Describe("MetadataRefresh", Label("unit"), func() {
 		err := MetadataRefresh(movies, music)(context.Background())
 		Expect(err).To(MatchError(boom))
 		Expect(err).To(MatchError(musicBoom))
+	})
+
+	It("refreshes movies, artists and authors, joining their errors", func() {
+		movies := moviemocks.NewMockMetadataRefresher(GinkgoT())
+		music := musicmocks.NewMockMetadataRefresher(GinkgoT())
+		books := bookmocks.NewMockMetadataRefresher(GinkgoT())
+		boom := errors.New("artist refresh failed")
+		bookBoom := errors.New("author refresh failed")
+		movies.EXPECT().RefreshStale(mock.Anything).Return(nil).Once()
+		music.EXPECT().RefreshStale(mock.Anything).Return(boom).Once()
+		books.EXPECT().RefreshStale(mock.Anything).Return(bookBoom).Once()
+
+		err := MetadataRefresh(movies, music, books)(context.Background())
+		Expect(err).To(MatchError(boom))
+		Expect(err).To(MatchError(bookBoom))
 	})
 })

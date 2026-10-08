@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 )
 
@@ -172,6 +173,186 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			Expect(client.Author.GetX(ctx, a.ID).LastRefreshedAt).NotTo(BeNil())
 		},
 	)
+
+	Describe("backlog search", func() {
+		var cutoff time.Time
+
+		BeforeEach(func() {
+			cutoff = time.Now().Add(-time.Hour)
+		})
+
+		ids := func(rows []*ent.Book) []uint32 {
+			out := make([]uint32, len(rows))
+			for i, r := range rows {
+				out[i] = r.ID
+			}
+			return out
+		}
+
+		It("lists a book for one kind and not the other", func() {
+			seed()
+			ebookOnly, audioOnly := bookByHC(1), bookByHC(2)
+
+			ebooks, err := store.ListEligibleBookSlotsForSync(
+				ctx,
+				"ebook",
+				3,
+				cutoff,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(ebooks)).To(Equal([]uint32{ebookOnly.ID}))
+			Expect(ebooks[0].Edges.Author).NotTo(BeNil())
+
+			audio, err := store.ListEligibleBookSlotsForSync(
+				ctx, "audiobook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(audio)).To(Equal([]uint32{audioOnly.ID}))
+		})
+
+		It("applies the cap, cooldown and monitored gates per slot", func() {
+			seed()
+			b1 := bookByHC(1)
+			client.Book.UpdateOneID(b1.ID).SetEbookGrabFailures(3).ExecX(ctx)
+			rows, err := store.ListEligibleBookSlotsForSync(ctx, "ebook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(BeEmpty())
+
+			client.Book.UpdateOneID(b1.ID).SetEbookGrabFailures(0).
+				SetEbookLastSearchAt(time.Now()).ExecX(ctx)
+			rows, err = store.ListEligibleBookSlotsForSync(ctx, "ebook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(BeEmpty())
+
+			client.Book.UpdateOneID(b1.ID).ClearEbookLastSearchAt().
+				SetEbookMonitored(false).ExecX(ctx)
+			rows, err = store.ListEligibleBookSlotsForSync(ctx, "ebook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(BeEmpty())
+		})
+
+		It("scopes the in-flight exclusion to the record's book kind", func() {
+			seed()
+			both := bookByHC(3)
+			client.Book.UpdateOneID(both.ID).
+				SetEbookMonitored(true).SetEbookStatus(book.EbookStatusWanted).
+				SetAudiobookMonitored(true).
+				SetAudiobookStatus(book.AudiobookStatusWanted).ExecX(ctx)
+			client.DownloadRecord.Create().SetTitle("x").SetStatus("downloading").
+				SetBookID(both.ID).
+				SetBookKind(downloadrecord.BookKindAudiobook).SaveX(ctx)
+
+			ebooks, err := store.ListEligibleBookSlotsForSync(
+				ctx,
+				"ebook",
+				3,
+				cutoff,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(ebooks)).To(ContainElement(both.ID))
+
+			audio, err := store.ListEligibleBookSlotsForSync(
+				ctx, "audiobook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(audio)).NotTo(ContainElement(both.ID))
+		})
+
+		It("orders never-searched first, then oldest slot search", func() {
+			seed()
+			b1, b3 := bookByHC(1), bookByHC(3)
+			client.Book.UpdateOneID(b3.ID).
+				SetEbookMonitored(true).SetEbookStatus(book.EbookStatusWanted).
+				SetEbookLastSearchAt(time.Now().Add(-5 * time.Hour)).ExecX(ctx)
+			client.Book.UpdateOneID(b1.ID).
+				SetEbookLastSearchAt(time.Now().Add(-3 * time.Hour)).ExecX(ctx)
+			fresh, err := store.CreateAuthor(ctx, CreateAuthorParams{
+				HardcoverID: 11, Name: "Other", Monitored: true,
+				MonitorPolicy: "all", WantKinds: "ebook",
+				Books: []BookSeed{
+					{HardcoverID: 9, Title: "Never", EbookMonitored: true},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			rows, err := store.ListEligibleBookSlotsForSync(ctx, "ebook", 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(rows)).To(Equal(
+				[]uint32{fresh.Edges.Books[0].ID, b3.ID, b1.ID}))
+		})
+
+		It("writes only the named slot's search columns", func() {
+			seed()
+			b := bookByHC(1)
+			when := time.Now().Truncate(time.Second)
+
+			Expect(
+				store.SetBookSlotLastSearchAt(ctx, b.ID, "ebook", when),
+			).To(Succeed())
+			Expect(
+				store.IncrementBookSlotGrabFailures(ctx, b.ID, "ebook"),
+			).To(Succeed())
+			Expect(
+				store.IncrementBookSlotGrabFailures(ctx, b.ID, "ebook"),
+			).To(Succeed())
+			got := client.Book.GetX(ctx, b.ID)
+			Expect(got.EbookLastSearchAt).
+				To(HaveValue(BeTemporally("~", when, time.Second)))
+			Expect(got.EbookGrabFailures).To(Equal(uint8(2)))
+			Expect(got.AudiobookLastSearchAt).To(BeNil())
+			Expect(got.AudiobookGrabFailures).To(BeZero())
+
+			Expect(store.IncrementBookSlotGrabFailures(ctx, b.ID, "audiobook")).
+				To(Succeed())
+			Expect(store.ResetBookSlotGrabFailures(ctx, b.ID, "ebook")).To(Succeed())
+			got = client.Book.GetX(ctx, b.ID)
+			Expect(got.EbookGrabFailures).To(BeZero())
+			Expect(got.AudiobookGrabFailures).To(Equal(uint8(1)))
+		})
+
+		It("rejects an unknown kind on every slot method", func() {
+			seed()
+			b := bookByHC(1)
+			_, err := store.ListEligibleBookSlotsForSync(ctx, "comic", 3, cutoff)
+			Expect(err).To(MatchError(ContainSubstring("unknown book slot kind")))
+			Expect(store.SetBookSlotLastSearchAt(ctx, b.ID, "comic", time.Now())).
+				To(MatchError(ContainSubstring("unknown book slot kind")))
+			Expect(store.IncrementBookSlotGrabFailures(ctx, b.ID, "comic")).
+				To(MatchError(ContainSubstring("unknown book slot kind")))
+			Expect(store.ResetBookSlotGrabFailures(ctx, b.ID, "comic")).
+				To(MatchError(ContainSubstring("unknown book slot kind")))
+		})
+
+		It("lists stale authors oldest first within the limit", func() {
+			never := seed()
+			fresh, err := store.CreateAuthor(ctx, CreateAuthorParams{
+				HardcoverID:   11,
+				Name:          "Fresh",
+				MonitorPolicy: "all",
+				WantKinds:     "ebook",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			client.Author.UpdateOneID(fresh.ID).
+				SetLastRefreshedAt(time.Now()).ExecX(ctx)
+			older, err := store.CreateAuthor(ctx, CreateAuthorParams{
+				HardcoverID:   12,
+				Name:          "Older",
+				MonitorPolicy: "all",
+				WantKinds:     "ebook",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			client.Author.UpdateOneID(older.ID).
+				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).ExecX(ctx)
+
+			rows, err := store.ListAuthorsStaleSince(ctx, cutoff, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].ID).To(Equal(never.ID))
+			Expect(rows[1].ID).To(Equal(older.ID))
+
+			rows, err = store.ListAuthorsStaleSince(ctx, cutoff, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+		})
+	})
 
 	It("cascades the delete to books", func() {
 		a := seed()
