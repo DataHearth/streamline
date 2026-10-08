@@ -124,6 +124,124 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 		})
 
+		postRequest := func(key string, body map[string]any) *http.Response {
+			payload, _ := json.Marshal(body)
+			r := app.req(
+				http.MethodPost, "/api/v1/requests", key, bytes.NewReader(payload),
+			)
+			r.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(r)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(resp.Body.Close)
+			return resp
+		}
+
+		It("lets request_only create an artist request by mbid (201)", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "artist", MediaMBID: "a-uuid", Title: "X",
+					RequesterID: app.requestOnlyID,
+				}).
+				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: "a-uuid", Title: "X", Status: "pending"}, nil).
+				Once()
+
+			resp := postRequest(app.requestOnlyKey, map[string]any{
+				"media_type": "artist", "media_mbid": "a-uuid", "title": "X",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			var got map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got).To(HaveKeyWithValue("media_mbid", "a-uuid"))
+		})
+
+		It("creates an album request by release-group mbid (201)", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "album", MediaMBID: "rg-uuid", Title: "Y",
+					RequesterID: app.memberID,
+				}).
+				Return(&ent.Request{ID: 2, MediaType: "album", MediaMbid: "rg-uuid", Title: "Y", Status: "pending"}, nil).
+				Once()
+
+			resp := postRequest(app.memberKey, map[string]any{
+				"media_type": "album", "media_mbid": "rg-uuid", "title": "Y",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+		})
+
+		It("400s a body the service rejects as invalid", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "album", Title: "Y", RequesterID: app.memberID,
+				}).
+				Return(nil, fmt.Errorf("%w: album needs media_mbid", requestsvc.ErrInvalidRequest)).
+				Once()
+
+			resp := postRequest(app.memberKey, map[string]any{
+				"media_type": "album", "title": "Y",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			var got map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got).To(HaveKey("message"))
+		})
+
+		It("400s an unknown media_type without calling the service", func() {
+			resp := postRequest(app.memberKey, map[string]any{
+				"media_type": "podcast", "media_id": 1, "title": "Z",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
+		It("creates an author request as request_only (201)", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "author", MediaID: 123, Title: "A",
+					RequesterID: app.requestOnlyID,
+				}).
+				Return(&ent.Request{ID: 3, MediaType: "author", MediaID: 123, Title: "A", Status: "pending"}, nil).
+				Once()
+
+			resp := postRequest(app.requestOnlyKey, map[string]any{
+				"media_type": "author", "media_id": 123, "title": "A",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+		})
+
+		It("creates a book request with its kind (201)", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "book", MediaID: 9, BookKind: "ebook", Title: "B",
+					RequesterID: app.memberID,
+				}).
+				Return(&ent.Request{ID: 4, MediaType: "book", MediaID: 9, BookKind: "ebook", Title: "B", Status: "pending"}, nil).
+				Once()
+
+			resp := postRequest(app.memberKey, map[string]any{
+				"media_type": "book", "media_id": 9,
+				"book_kind": "ebook", "title": "B",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			var got map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got).To(HaveKeyWithValue("book_kind", "ebook"))
+		})
+
+		It("400s a book request the service rejects", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, requestsvc.CreateParams{
+					MediaType: "book", MediaID: 9, Title: "B",
+					RequesterID: app.memberID,
+				}).
+				Return(nil, fmt.Errorf("%w: book needs book_kind", requestsvc.ErrInvalidRequest)).
+				Once()
+
+			resp := postRequest(app.memberKey, map[string]any{
+				"media_type": "book", "media_id": 9, "title": "B",
+			})
+			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		})
+
 		It("409s on duplicate", func() {
 			app.requests.EXPECT().
 				Create(mock.Anything, requestsvc.CreateParams{
@@ -179,6 +297,47 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			)
 			r.Header.Set("Content-Type", "application/json")
 			resp, err := http.DefaultClient.Do(r)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		It("approves a music request and returns its mbid (200)", func() {
+			app.requests.EXPECT().
+				Approve(mock.Anything, uint32(1), app.adminID, "").
+				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: "a-uuid", Title: "A", Status: "approved"}, nil).
+				Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/requests/1/approve",
+					app.adminKey,
+					nil,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var got map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got).To(HaveKeyWithValue("media_mbid", "a-uuid"))
+		})
+
+		It("approves a book request as admin (200)", func() {
+			app.requests.EXPECT().
+				Approve(mock.Anything, uint32(1), app.adminID, "").
+				Return(&ent.Request{ID: 1, MediaType: "book", MediaID: 9, BookKind: "both", Title: "B", Status: "approved"}, nil).
+				Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/requests/1/approve",
+					app.adminKey,
+					nil,
+				),
+			)
 			Expect(err).NotTo(HaveOccurred())
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))

@@ -4508,13 +4508,18 @@ paths:
           $ref: "#/components/responses/InternalError"
     post:
       operationId: createRequest
-      summary: Request a movie or show
+      summary: Request a movie, show, artist, album, author or book
+      description: |
+        Request a movie, show, artist, album, author or book. A body whose
+        identity does not fit its type answers 400.
       tags: [requests]
       requestBody:
         $ref: "#/components/requestBodies/CreateRequest"
       responses:
         "201":
           $ref: "#/components/responses/RequestCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "409":
@@ -4770,7 +4775,7 @@ components:
       required: false
       schema:
         type: string
-        enum: [movie, tvshow]
+        enum: [movie, tvshow, artist, album, author, book]
     RequestPage:
       name: page
       in: query
@@ -11312,11 +11317,18 @@ components:
           x-go-type: uint32
         media_type:
           type: string
-          enum: [movie, tvshow]
+          enum: [movie, tvshow, artist, album, author, book]
         media_id:
           type: integer
           x-go-type: uint32
-          description: TMDB id for movies, TVDB id for shows.
+          description: TMDB id for movies, TVDB id for shows, Hardcover id for authors and books; 0 for artists and albums.
+        media_mbid:
+          type: string
+          description: MusicBrainz id of an artist or album request.
+        book_kind:
+          type: string
+          enum: [ebook, audiobook, both]
+          description: Slot a book request asks for.
         title:
           type: string
         status:
@@ -11373,14 +11385,23 @@ components:
 
     CreateRequestRequest:
       type: object
-      required: [media_type, media_id, title]
+      required: [media_type, title]
       properties:
         media_type:
           type: string
-          enum: [movie, tvshow]
+          enum: [movie, tvshow, artist, album, author, book]
         media_id:
           type: integer
           x-go-type: uint32
+        media_mbid:
+          type: string
+          description: |
+            MusicBrainz id: artist MBID for artist requests, release-group
+            MBID for album requests. Exactly one of media_id/media_mbid per type.
+        book_kind:
+          type: string
+          enum: [ebook, audiobook, both]
+          description: Slot a book request asks for; required for media_type=book and rejected for every other type.
         title:
           type: string
         quality_profile:

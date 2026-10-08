@@ -77,26 +77,49 @@ func (s *Server) CreateRequest(
 			UnauthorizedJSONResponse: unauthorizedResp("login required"),
 		}, nil
 	}
+	if !req.Body.MediaType.Valid() {
+		return CreateRequest400JSONResponse{
+			BadRequestJSONResponse: errBadRequest("unknown media_type"),
+		}, nil
+	}
 	qualityProfile := ""
 	if req.Body.QualityProfile != nil {
 		qualityProfile = *req.Body.QualityProfile
 	}
+	var mediaID uint32
+	if req.Body.MediaId != nil {
+		mediaID = *req.Body.MediaId
+	}
+	mediaMBID := ""
+	if req.Body.MediaMbid != nil {
+		mediaMBID = *req.Body.MediaMbid
+	}
+	bookKind := ""
+	if req.Body.BookKind != nil {
+		bookKind = string(*req.Body.BookKind)
+	}
 	r, err := s.requests.Create(ctx, requestsvc.CreateParams{
 		MediaType:      string(req.Body.MediaType),
-		MediaID:        req.Body.MediaId,
+		MediaID:        mediaID,
+		MediaMBID:      mediaMBID,
+		BookKind:       bookKind,
 		Title:          req.Body.Title,
 		RequesterID:    claims.UserID,
 		QualityProfile: qualityProfile,
 	})
-	if errors.Is(err, requestsvc.ErrDuplicate) {
+	switch {
+	case errors.Is(err, requestsvc.ErrDuplicate):
 		return CreateRequest409JSONResponse{
 			ConflictJSONResponse: conflictResp(
 				"duplicate",
 				"already requested or in library",
 			),
 		}, nil
-	}
-	if err != nil {
+	case errors.Is(err, requestsvc.ErrInvalidRequest):
+		return CreateRequest400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(err.Error()),
+		}, nil
+	case err != nil:
 		return CreateRequest500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil

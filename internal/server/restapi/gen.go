@@ -465,8 +465,33 @@ func (e CreateInviteRequestRole) Valid() bool {
 	}
 }
 
+// Defines values for CreateRequestRequestBookKind.
+const (
+	CreateRequestRequestBookKindAudiobook CreateRequestRequestBookKind = "audiobook"
+	CreateRequestRequestBookKindBoth      CreateRequestRequestBookKind = "both"
+	CreateRequestRequestBookKindEbook     CreateRequestRequestBookKind = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the CreateRequestRequestBookKind enum.
+func (e CreateRequestRequestBookKind) Valid() bool {
+	switch e {
+	case CreateRequestRequestBookKindAudiobook:
+		return true
+	case CreateRequestRequestBookKindBoth:
+		return true
+	case CreateRequestRequestBookKindEbook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRequestRequestMediaType.
 const (
+	CreateRequestRequestMediaTypeAlbum  CreateRequestRequestMediaType = "album"
+	CreateRequestRequestMediaTypeArtist CreateRequestRequestMediaType = "artist"
+	CreateRequestRequestMediaTypeAuthor CreateRequestRequestMediaType = "author"
+	CreateRequestRequestMediaTypeBook   CreateRequestRequestMediaType = "book"
 	CreateRequestRequestMediaTypeMovie  CreateRequestRequestMediaType = "movie"
 	CreateRequestRequestMediaTypeTvshow CreateRequestRequestMediaType = "tvshow"
 )
@@ -474,6 +499,14 @@ const (
 // Valid indicates whether the value is a known member of the CreateRequestRequestMediaType enum.
 func (e CreateRequestRequestMediaType) Valid() bool {
 	switch e {
+	case CreateRequestRequestMediaTypeAlbum:
+		return true
+	case CreateRequestRequestMediaTypeArtist:
+		return true
+	case CreateRequestRequestMediaTypeAuthor:
+		return true
+	case CreateRequestRequestMediaTypeBook:
+		return true
 	case CreateRequestRequestMediaTypeMovie:
 		return true
 	case CreateRequestRequestMediaTypeTvshow:
@@ -2220,8 +2253,33 @@ func (e QueueEntryStatus) Valid() bool {
 	}
 }
 
+// Defines values for RequestBookKind.
+const (
+	RequestBookKindAudiobook RequestBookKind = "audiobook"
+	RequestBookKindBoth      RequestBookKind = "both"
+	RequestBookKindEbook     RequestBookKind = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the RequestBookKind enum.
+func (e RequestBookKind) Valid() bool {
+	switch e {
+	case RequestBookKindAudiobook:
+		return true
+	case RequestBookKindBoth:
+		return true
+	case RequestBookKindEbook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RequestMediaType.
 const (
+	RequestMediaTypeAlbum  RequestMediaType = "album"
+	RequestMediaTypeArtist RequestMediaType = "artist"
+	RequestMediaTypeAuthor RequestMediaType = "author"
+	RequestMediaTypeBook   RequestMediaType = "book"
 	RequestMediaTypeMovie  RequestMediaType = "movie"
 	RequestMediaTypeTvshow RequestMediaType = "tvshow"
 )
@@ -2229,6 +2287,14 @@ const (
 // Valid indicates whether the value is a known member of the RequestMediaType enum.
 func (e RequestMediaType) Valid() bool {
 	switch e {
+	case RequestMediaTypeAlbum:
+		return true
+	case RequestMediaTypeArtist:
+		return true
+	case RequestMediaTypeAuthor:
+		return true
+	case RequestMediaTypeBook:
+		return true
 	case RequestMediaTypeMovie:
 		return true
 	case RequestMediaTypeTvshow:
@@ -2963,6 +3029,10 @@ func (e MoviesOrder) Valid() bool {
 
 // Defines values for RequestMediaTypeParam.
 const (
+	RequestMediaTypeParamAlbum  RequestMediaTypeParam = "album"
+	RequestMediaTypeParamArtist RequestMediaTypeParam = "artist"
+	RequestMediaTypeParamAuthor RequestMediaTypeParam = "author"
+	RequestMediaTypeParamBook   RequestMediaTypeParam = "book"
 	RequestMediaTypeParamMovie  RequestMediaTypeParam = "movie"
 	RequestMediaTypeParamTvshow RequestMediaTypeParam = "tvshow"
 )
@@ -2970,6 +3040,14 @@ const (
 // Valid indicates whether the value is a known member of the RequestMediaTypeParam enum.
 func (e RequestMediaTypeParam) Valid() bool {
 	switch e {
+	case RequestMediaTypeParamAlbum:
+		return true
+	case RequestMediaTypeParamArtist:
+		return true
+	case RequestMediaTypeParamAuthor:
+		return true
+	case RequestMediaTypeParamBook:
+		return true
 	case RequestMediaTypeParamMovie:
 		return true
 	case RequestMediaTypeParamTvshow:
@@ -3257,6 +3335,10 @@ func (e ListRequestsParamsStatus) Valid() bool {
 
 // Defines values for ListRequestsParamsMediaType.
 const (
+	ListRequestsParamsMediaTypeAlbum  ListRequestsParamsMediaType = "album"
+	ListRequestsParamsMediaTypeArtist ListRequestsParamsMediaType = "artist"
+	ListRequestsParamsMediaTypeAuthor ListRequestsParamsMediaType = "author"
+	ListRequestsParamsMediaTypeBook   ListRequestsParamsMediaType = "book"
 	ListRequestsParamsMediaTypeMovie  ListRequestsParamsMediaType = "movie"
 	ListRequestsParamsMediaTypeTvshow ListRequestsParamsMediaType = "tvshow"
 )
@@ -3264,6 +3346,14 @@ const (
 // Valid indicates whether the value is a known member of the ListRequestsParamsMediaType enum.
 func (e ListRequestsParamsMediaType) Valid() bool {
 	switch e {
+	case ListRequestsParamsMediaTypeAlbum:
+		return true
+	case ListRequestsParamsMediaTypeArtist:
+		return true
+	case ListRequestsParamsMediaTypeAuthor:
+		return true
+	case ListRequestsParamsMediaTypeBook:
+		return true
 	case ListRequestsParamsMediaTypeMovie:
 		return true
 	case ListRequestsParamsMediaTypeTvshow:
@@ -3741,7 +3831,13 @@ type CreateInviteRequestRole string
 
 // CreateRequestRequest defines model for CreateRequestRequest.
 type CreateRequestRequest struct {
-	MediaId   uint32                        `json:"media_id"`
+	// BookKind Slot a book request asks for; required for media_type=book and rejected for every other type.
+	BookKind *CreateRequestRequestBookKind `json:"book_kind,omitempty"`
+	MediaId  *uint32                       `json:"media_id,omitempty"`
+
+	// MediaMbid MusicBrainz id: artist MBID for artist requests, release-group
+	// MBID for album requests. Exactly one of media_id/media_mbid per type.
+	MediaMbid *string                       `json:"media_mbid,omitempty"`
 	MediaType CreateRequestRequestMediaType `json:"media_type"`
 
 	// QualityProfile Preferred profile name; omitted or empty records no preference.
@@ -3749,6 +3845,9 @@ type CreateRequestRequest struct {
 	QualityProfile *string `json:"quality_profile,omitempty"`
 	Title          string  `json:"title"`
 }
+
+// CreateRequestRequestBookKind Slot a book request asks for; required for media_type=book and rejected for every other type.
+type CreateRequestRequestBookKind string
 
 // CreateRequestRequestMediaType defines model for CreateRequestRequest.MediaType.
 type CreateRequestRequestMediaType string
@@ -5766,11 +5865,17 @@ type ReplacePendingRequest struct {
 // Request defines model for Request.
 type Request struct {
 	ApprovedBy *RequestUser `json:"approved_by,omitempty"`
-	CreatedAt  time.Time    `json:"created_at"`
-	Id         uint32       `json:"id"`
 
-	// MediaId TMDB id for movies, TVDB id for shows.
-	MediaId   uint32           `json:"media_id"`
+	// BookKind Slot a book request asks for.
+	BookKind  *RequestBookKind `json:"book_kind,omitempty"`
+	CreatedAt time.Time        `json:"created_at"`
+	Id        uint32           `json:"id"`
+
+	// MediaId TMDB id for movies, TVDB id for shows, Hardcover id for authors and books; 0 for artists and albums.
+	MediaId uint32 `json:"media_id"`
+
+	// MediaMbid MusicBrainz id of an artist or album request.
+	MediaMbid *string          `json:"media_mbid,omitempty"`
 	MediaType RequestMediaType `json:"media_type"`
 
 	// QualityProfile Profile the requester asked for; absent means no preference. The
@@ -5782,6 +5887,9 @@ type Request struct {
 	Title          string        `json:"title"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 }
+
+// RequestBookKind Slot a book request asks for.
+type RequestBookKind string
 
 // RequestMediaType defines model for Request.MediaType.
 type RequestMediaType string
@@ -8427,7 +8535,7 @@ type ServerInterface interface {
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(w http.ResponseWriter, r *http.Request, params ListRequestsParams)
-	// CreateRequest Request a movie or show
+	// CreateRequest Request a movie, show, artist, album, author or book
 	// (POST /requests)
 	CreateRequest(w http.ResponseWriter, r *http.Request)
 	// GetRequestCounts Request counts by status
@@ -9547,7 +9655,7 @@ func (_ Unimplemented) ListRequests(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// CreateRequest Request a movie or show
+// CreateRequest Request a movie, show, artist, album, author or book
 // (POST /requests)
 func (_ Unimplemented) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -27006,6 +27114,20 @@ func (response CreateRequest201JSONResponse) VisitCreateRequestResponse(w http.R
 	return err
 }
 
+type CreateRequest400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateRequest400JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateRequest401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response CreateRequest401JSONResponse) VisitCreateRequestResponse(w http.ResponseWriter) error {
@@ -31234,7 +31356,7 @@ type StrictServerInterface interface {
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
-	// CreateRequest Request a movie or show
+	// CreateRequest Request a movie, show, artist, album, author or book
 	// (POST /requests)
 	CreateRequest(ctx context.Context, request CreateRequestRequestObject) (CreateRequestResponseObject, error)
 	// GetRequestCounts Request counts by status

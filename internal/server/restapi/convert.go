@@ -1145,6 +1145,13 @@ func requestToAPI(r *ent.Request) Request {
 	if r.QualityProfile != "" {
 		out.QualityProfile = &r.QualityProfile
 	}
+	if r.MediaMbid != "" {
+		out.MediaMbid = &r.MediaMbid
+	}
+	if r.BookKind != "" {
+		kind := RequestBookKind(r.BookKind)
+		out.BookKind = &kind
+	}
 	if u := r.Edges.Requester; u != nil {
 		out.Requester = requestUserToAPI(u)
 	}
