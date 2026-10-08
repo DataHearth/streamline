@@ -28,6 +28,10 @@ type ImportScanFile struct {
 	SourcePath string `json:"source_path,omitempty"`
 	// Size holds the value of the "size" field.
 	Size int64 `json:"size,omitempty"`
+	// QualityProfile holds the value of the "quality_profile" field.
+	QualityProfile string `json:"quality_profile,omitempty"`
+	// Monitored holds the value of the "monitored" field.
+	Monitored bool `json:"monitored,omitempty"`
 	// ParsedTitle holds the value of the "parsed_title" field.
 	ParsedTitle string `json:"parsed_title,omitempty"`
 	// ParsedYear holds the value of the "parsed_year" field.
@@ -88,9 +92,11 @@ func (*ImportScanFile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanfile.FieldCandidates:
 			values[i] = new([]byte)
+		case importscanfile.FieldMonitored:
+			values[i] = new(sql.NullBool)
 		case importscanfile.FieldID, importscanfile.FieldSize, importscanfile.FieldParsedYear, importscanfile.FieldTmdbID, importscanfile.FieldExistingMovieID, importscanfile.FieldDecisionTmdbID, importscanfile.FieldCreatedMovieID:
 			values[i] = new(sql.NullInt64)
-		case importscanfile.FieldSourcePath, importscanfile.FieldParsedTitle, importscanfile.FieldParsedQuality, importscanfile.FieldParsedReleaseGroup, importscanfile.FieldClassification, importscanfile.FieldDecision, importscanfile.FieldOutcome, importscanfile.FieldOutcomeMessage:
+		case importscanfile.FieldSourcePath, importscanfile.FieldQualityProfile, importscanfile.FieldParsedTitle, importscanfile.FieldParsedQuality, importscanfile.FieldParsedReleaseGroup, importscanfile.FieldClassification, importscanfile.FieldDecision, importscanfile.FieldOutcome, importscanfile.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanfile.FieldCreateTime, importscanfile.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -140,6 +146,18 @@ func (_m *ImportScanFile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field size", values[i])
 			} else if value.Valid {
 				_m.Size = value.Int64
+			}
+		case importscanfile.FieldQualityProfile:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quality_profile", values[i])
+			} else if value.Valid {
+				_m.QualityProfile = value.String
+			}
+		case importscanfile.FieldMonitored:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field monitored", values[i])
+			} else if value.Valid {
+				_m.Monitored = value.Bool
 			}
 		case importscanfile.FieldParsedTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -281,6 +299,12 @@ func (_m *ImportScanFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("size=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Size))
+	builder.WriteString(", ")
+	builder.WriteString("quality_profile=")
+	builder.WriteString(_m.QualityProfile)
+	builder.WriteString(", ")
+	builder.WriteString("monitored=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
 	builder.WriteString(", ")
 	builder.WriteString("parsed_title=")
 	builder.WriteString(_m.ParsedTitle)

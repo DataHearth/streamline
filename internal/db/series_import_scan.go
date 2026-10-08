@@ -27,6 +27,11 @@ type CreateImportScanShowParams struct {
 	Candidates       []schema.ScannedShowCandidate
 	ExistingTvshowID *uint32
 	FileCount        uint16
+	QualityProfile   string
+	Monitored        *bool // nil = schema default (monitored)
+	SeriesType       string
+	Monitoring       *schema.ShowMonitoring
+	SourceFiles      []schema.SourceEpisodeFile
 }
 
 type ListImportScanShowsParams struct {
@@ -86,6 +91,21 @@ func (db *DB) BulkCreateImportScanShows(
 		}
 		if len(p.Candidates) > 0 {
 			c.SetCandidates(p.Candidates)
+		}
+		if p.QualityProfile != "" {
+			c.SetQualityProfile(p.QualityProfile)
+		}
+		if p.Monitored != nil {
+			c.SetMonitored(*p.Monitored)
+		}
+		if p.SeriesType != "" {
+			c.SetSeriesType(p.SeriesType)
+		}
+		if p.Monitoring != nil {
+			c.SetMonitoring(*p.Monitoring)
+		}
+		if len(p.SourceFiles) > 0 {
+			c.SetSourceFiles(p.SourceFiles)
 		}
 		creates = append(creates, c)
 	}

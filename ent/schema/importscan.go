@@ -11,6 +11,26 @@ import (
 	"github.com/datahearth/streamline/ent/schema/mixins"
 )
 
+// ScanMappings is how an *arr scan translates the source's world into ours:
+// its root folders onto paths this process can open, and its quality profile
+// ids onto profile names here. Stored on the scan so a commit weeks later
+// still knows what the operator chose at review time.
+type ScanMappings struct {
+	Roots    []RootMapping    `json:"roots"`
+	Profiles []ProfileMapping `json:"profiles"`
+}
+
+type RootMapping struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type ProfileMapping struct {
+	SourceID   uint32 `json:"source_id"`
+	SourceName string `json:"source_name"`
+	Target     string `json:"target"`
+}
+
 type ImportScan struct{ ent.Schema }
 
 func (ImportScan) Mixin() []ent.Mixin {
@@ -19,7 +39,13 @@ func (ImportScan) Mixin() []ent.Mixin {
 
 func (ImportScan) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("source_path").NotEmpty(),
+		// Empty for a source that is not a filesystem path.
+		field.String("source_path").Optional(),
+		field.Enum("source").
+			Values("filesystem", "radarr", "sonarr").
+			Default("filesystem"),
+		field.String("source_url").Optional(),
+		field.JSON("mappings", ScanMappings{}).Optional(),
 		field.Enum("kind").
 			Values("movie", "series", "music", "book").
 			Default("movie"),
@@ -58,5 +84,6 @@ func (ImportScan) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("status"),
 		index.Fields("kind"),
+		index.Fields("source"),
 	}
 }

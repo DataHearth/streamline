@@ -23,6 +23,10 @@ const (
 	FieldSourcePath = "source_path"
 	// FieldSize holds the string denoting the size field in the database.
 	FieldSize = "size"
+	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
+	FieldQualityProfile = "quality_profile"
+	// FieldMonitored holds the string denoting the monitored field in the database.
+	FieldMonitored = "monitored"
 	// FieldParsedTitle holds the string denoting the parsed_title field in the database.
 	FieldParsedTitle = "parsed_title"
 	// FieldParsedYear holds the string denoting the parsed_year field in the database.
@@ -69,6 +73,8 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldSourcePath,
 	FieldSize,
+	FieldQualityProfile,
+	FieldMonitored,
 	FieldParsedTitle,
 	FieldParsedYear,
 	FieldParsedQuality,
@@ -112,8 +118,8 @@ var (
 	DefaultUpdateTime func() time.Time
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
-	// SourcePathValidator is a validator for the "source_path" field. It is called by the builders before save.
-	SourcePathValidator func(string) error
+	// DefaultMonitored holds the default value on creation for the "monitored" field.
+	DefaultMonitored bool
 )
 
 // Classification defines the type for the "classification" enum field.
@@ -226,6 +232,16 @@ func BySourcePath(opts ...sql.OrderTermOption) OrderOption {
 // BySize orders the results by the size field.
 func BySize(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSize, opts...).ToFunc()
+}
+
+// ByQualityProfile orders the results by the quality_profile field.
+func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
+}
+
+// ByMonitored orders the results by the monitored field.
+func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
 }
 
 // ByParsedTitle orders the results by the parsed_title field.

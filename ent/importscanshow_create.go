@@ -146,6 +146,68 @@ func (_c *ImportScanShowCreate) SetNillableFileCount(v *uint16) *ImportScanShowC
 	return _c
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (_c *ImportScanShowCreate) SetQualityProfile(v string) *ImportScanShowCreate {
+	_c.mutation.SetQualityProfile(v)
+	return _c
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_c *ImportScanShowCreate) SetNillableQualityProfile(v *string) *ImportScanShowCreate {
+	if v != nil {
+		_c.SetQualityProfile(*v)
+	}
+	return _c
+}
+
+// SetMonitored sets the "monitored" field.
+func (_c *ImportScanShowCreate) SetMonitored(v bool) *ImportScanShowCreate {
+	_c.mutation.SetMonitored(v)
+	return _c
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_c *ImportScanShowCreate) SetNillableMonitored(v *bool) *ImportScanShowCreate {
+	if v != nil {
+		_c.SetMonitored(*v)
+	}
+	return _c
+}
+
+// SetSeriesType sets the "series_type" field.
+func (_c *ImportScanShowCreate) SetSeriesType(v string) *ImportScanShowCreate {
+	_c.mutation.SetSeriesType(v)
+	return _c
+}
+
+// SetNillableSeriesType sets the "series_type" field if the given value is not nil.
+func (_c *ImportScanShowCreate) SetNillableSeriesType(v *string) *ImportScanShowCreate {
+	if v != nil {
+		_c.SetSeriesType(*v)
+	}
+	return _c
+}
+
+// SetMonitoring sets the "monitoring" field.
+func (_c *ImportScanShowCreate) SetMonitoring(v schema.ShowMonitoring) *ImportScanShowCreate {
+	_c.mutation.SetMonitoring(v)
+	return _c
+}
+
+// SetNillableMonitoring sets the "monitoring" field if the given value is not nil.
+func (_c *ImportScanShowCreate) SetNillableMonitoring(v *schema.ShowMonitoring) *ImportScanShowCreate {
+	if v != nil {
+		_c.SetMonitoring(*v)
+	}
+	return _c
+}
+
+// SetSourceFiles sets the "source_files" field.
+func (_c *ImportScanShowCreate) SetSourceFiles(v []schema.SourceEpisodeFile) *ImportScanShowCreate {
+	_c.mutation.SetSourceFiles(v)
+	return _c
+}
+
 // SetDecision sets the "decision" field.
 func (_c *ImportScanShowCreate) SetDecision(v importscanshow.Decision) *ImportScanShowCreate {
 	_c.mutation.SetDecision(v)
@@ -284,6 +346,10 @@ func (_c *ImportScanShowCreate) defaults() {
 		v := importscanshow.DefaultFileCount
 		_c.mutation.SetFileCount(v)
 	}
+	if _, ok := _c.mutation.Monitored(); !ok {
+		v := importscanshow.DefaultMonitored
+		_c.mutation.SetMonitored(v)
+	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		v := importscanshow.DefaultDecision
 		_c.mutation.SetDecision(v)
@@ -320,6 +386,9 @@ func (_c *ImportScanShowCreate) check() error {
 	}
 	if _, ok := _c.mutation.FileCount(); !ok {
 		return &ValidationError{Name: "file_count", err: errors.New(`ent: missing required field "ImportScanShow.file_count"`)}
+	}
+	if _, ok := _c.mutation.Monitored(); !ok {
+		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "ImportScanShow.monitored"`)}
 	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		return &ValidationError{Name: "decision", err: errors.New(`ent: missing required field "ImportScanShow.decision"`)}
@@ -411,6 +480,26 @@ func (_c *ImportScanShowCreate) createSpec() (*ImportScanShow, *sqlgraph.CreateS
 	if value, ok := _c.mutation.FileCount(); ok {
 		_spec.SetField(importscanshow.FieldFileCount, field.TypeUint16, value)
 		_node.FileCount = value
+	}
+	if value, ok := _c.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanshow.FieldQualityProfile, field.TypeString, value)
+		_node.QualityProfile = value
+	}
+	if value, ok := _c.mutation.Monitored(); ok {
+		_spec.SetField(importscanshow.FieldMonitored, field.TypeBool, value)
+		_node.Monitored = value
+	}
+	if value, ok := _c.mutation.SeriesType(); ok {
+		_spec.SetField(importscanshow.FieldSeriesType, field.TypeString, value)
+		_node.SeriesType = value
+	}
+	if value, ok := _c.mutation.Monitoring(); ok {
+		_spec.SetField(importscanshow.FieldMonitoring, field.TypeJSON, value)
+		_node.Monitoring = value
+	}
+	if value, ok := _c.mutation.SourceFiles(); ok {
+		_spec.SetField(importscanshow.FieldSourceFiles, field.TypeJSON, value)
+		_node.SourceFiles = value
 	}
 	if value, ok := _c.mutation.Decision(); ok {
 		_spec.SetField(importscanshow.FieldDecision, field.TypeEnum, value)

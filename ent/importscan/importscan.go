@@ -21,6 +21,12 @@ const (
 	FieldUpdateTime = "update_time"
 	// FieldSourcePath holds the string denoting the source_path field in the database.
 	FieldSourcePath = "source_path"
+	// FieldSource holds the string denoting the source field in the database.
+	FieldSource = "source"
+	// FieldSourceURL holds the string denoting the source_url field in the database.
+	FieldSourceURL = "source_url"
+	// FieldMappings holds the string denoting the mappings field in the database.
+	FieldMappings = "mappings"
 	// FieldKind holds the string denoting the kind field in the database.
 	FieldKind = "kind"
 	// FieldMode holds the string denoting the mode field in the database.
@@ -91,6 +97,9 @@ var Columns = []string{
 	FieldCreateTime,
 	FieldUpdateTime,
 	FieldSourcePath,
+	FieldSource,
+	FieldSourceURL,
+	FieldMappings,
 	FieldKind,
 	FieldMode,
 	FieldImportMode,
@@ -122,8 +131,6 @@ var (
 	DefaultUpdateTime func() time.Time
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
-	// SourcePathValidator is a validator for the "source_path" field. It is called by the builders before save.
-	SourcePathValidator func(string) error
 	// DefaultTotalCount holds the default value on creation for the "total_count" field.
 	DefaultTotalCount uint32
 	// DefaultProcessedCount holds the default value on creation for the "processed_count" field.
@@ -133,6 +140,33 @@ var (
 	// DefaultCommitFailedCount holds the default value on creation for the "commit_failed_count" field.
 	DefaultCommitFailedCount uint32
 )
+
+// Source defines the type for the "source" enum field.
+type Source string
+
+// SourceFilesystem is the default value of the Source enum.
+const DefaultSource = SourceFilesystem
+
+// Source values.
+const (
+	SourceFilesystem Source = "filesystem"
+	SourceRadarr     Source = "radarr"
+	SourceSonarr     Source = "sonarr"
+)
+
+func (s Source) String() string {
+	return string(s)
+}
+
+// SourceValidator is a validator for the "source" field enum values. It is called by the builders before save.
+func SourceValidator(s Source) error {
+	switch s {
+	case SourceFilesystem, SourceRadarr, SourceSonarr:
+		return nil
+	default:
+		return fmt.Errorf("importscan: invalid enum value for source field: %q", s)
+	}
+}
 
 // Kind defines the type for the "kind" enum field.
 type Kind string
@@ -260,6 +294,16 @@ func ByUpdateTime(opts ...sql.OrderTermOption) OrderOption {
 // BySourcePath orders the results by the source_path field.
 func BySourcePath(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSourcePath, opts...).ToFunc()
+}
+
+// BySource orders the results by the source field.
+func BySource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSource, opts...).ToFunc()
+}
+
+// BySourceURL orders the results by the source_url field.
+func BySourceURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSourceURL, opts...).ToFunc()
 }
 
 // ByKind orders the results by the kind field.

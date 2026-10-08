@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // ImportScanUpdate is the builder for updating ImportScan entities.
@@ -50,6 +51,66 @@ func (_u *ImportScanUpdate) SetNillableSourcePath(v *string) *ImportScanUpdate {
 	if v != nil {
 		_u.SetSourcePath(*v)
 	}
+	return _u
+}
+
+// ClearSourcePath clears the value of the "source_path" field.
+func (_u *ImportScanUpdate) ClearSourcePath() *ImportScanUpdate {
+	_u.mutation.ClearSourcePath()
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *ImportScanUpdate) SetSource(v importscan.Source) *ImportScanUpdate {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *ImportScanUpdate) SetNillableSource(v *importscan.Source) *ImportScanUpdate {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
+// SetSourceURL sets the "source_url" field.
+func (_u *ImportScanUpdate) SetSourceURL(v string) *ImportScanUpdate {
+	_u.mutation.SetSourceURL(v)
+	return _u
+}
+
+// SetNillableSourceURL sets the "source_url" field if the given value is not nil.
+func (_u *ImportScanUpdate) SetNillableSourceURL(v *string) *ImportScanUpdate {
+	if v != nil {
+		_u.SetSourceURL(*v)
+	}
+	return _u
+}
+
+// ClearSourceURL clears the value of the "source_url" field.
+func (_u *ImportScanUpdate) ClearSourceURL() *ImportScanUpdate {
+	_u.mutation.ClearSourceURL()
+	return _u
+}
+
+// SetMappings sets the "mappings" field.
+func (_u *ImportScanUpdate) SetMappings(v schema.ScanMappings) *ImportScanUpdate {
+	_u.mutation.SetMappings(v)
+	return _u
+}
+
+// SetNillableMappings sets the "mappings" field if the given value is not nil.
+func (_u *ImportScanUpdate) SetNillableMappings(v *schema.ScanMappings) *ImportScanUpdate {
+	if v != nil {
+		_u.SetMappings(*v)
+	}
+	return _u
+}
+
+// ClearMappings clears the value of the "mappings" field.
+func (_u *ImportScanUpdate) ClearMappings() *ImportScanUpdate {
+	_u.mutation.ClearMappings()
 	return _u
 }
 
@@ -466,9 +527,9 @@ func (_u *ImportScanUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ImportScanUpdate) check() error {
-	if v, ok := _u.mutation.SourcePath(); ok {
-		if err := importscan.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source_path": %w`, err)}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := importscan.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Kind(); ok {
@@ -517,6 +578,24 @@ func (_u *ImportScanUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.SourcePath(); ok {
 		_spec.SetField(importscan.FieldSourcePath, field.TypeString, value)
+	}
+	if _u.mutation.SourcePathCleared() {
+		_spec.ClearField(importscan.FieldSourcePath, field.TypeString)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(importscan.FieldSource, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.SourceURL(); ok {
+		_spec.SetField(importscan.FieldSourceURL, field.TypeString, value)
+	}
+	if _u.mutation.SourceURLCleared() {
+		_spec.ClearField(importscan.FieldSourceURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Mappings(); ok {
+		_spec.SetField(importscan.FieldMappings, field.TypeJSON, value)
+	}
+	if _u.mutation.MappingsCleared() {
+		_spec.ClearField(importscan.FieldMappings, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Kind(); ok {
 		_spec.SetField(importscan.FieldKind, field.TypeEnum, value)
@@ -800,6 +879,66 @@ func (_u *ImportScanUpdateOne) SetNillableSourcePath(v *string) *ImportScanUpdat
 	if v != nil {
 		_u.SetSourcePath(*v)
 	}
+	return _u
+}
+
+// ClearSourcePath clears the value of the "source_path" field.
+func (_u *ImportScanUpdateOne) ClearSourcePath() *ImportScanUpdateOne {
+	_u.mutation.ClearSourcePath()
+	return _u
+}
+
+// SetSource sets the "source" field.
+func (_u *ImportScanUpdateOne) SetSource(v importscan.Source) *ImportScanUpdateOne {
+	_u.mutation.SetSource(v)
+	return _u
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_u *ImportScanUpdateOne) SetNillableSource(v *importscan.Source) *ImportScanUpdateOne {
+	if v != nil {
+		_u.SetSource(*v)
+	}
+	return _u
+}
+
+// SetSourceURL sets the "source_url" field.
+func (_u *ImportScanUpdateOne) SetSourceURL(v string) *ImportScanUpdateOne {
+	_u.mutation.SetSourceURL(v)
+	return _u
+}
+
+// SetNillableSourceURL sets the "source_url" field if the given value is not nil.
+func (_u *ImportScanUpdateOne) SetNillableSourceURL(v *string) *ImportScanUpdateOne {
+	if v != nil {
+		_u.SetSourceURL(*v)
+	}
+	return _u
+}
+
+// ClearSourceURL clears the value of the "source_url" field.
+func (_u *ImportScanUpdateOne) ClearSourceURL() *ImportScanUpdateOne {
+	_u.mutation.ClearSourceURL()
+	return _u
+}
+
+// SetMappings sets the "mappings" field.
+func (_u *ImportScanUpdateOne) SetMappings(v schema.ScanMappings) *ImportScanUpdateOne {
+	_u.mutation.SetMappings(v)
+	return _u
+}
+
+// SetNillableMappings sets the "mappings" field if the given value is not nil.
+func (_u *ImportScanUpdateOne) SetNillableMappings(v *schema.ScanMappings) *ImportScanUpdateOne {
+	if v != nil {
+		_u.SetMappings(*v)
+	}
+	return _u
+}
+
+// ClearMappings clears the value of the "mappings" field.
+func (_u *ImportScanUpdateOne) ClearMappings() *ImportScanUpdateOne {
+	_u.mutation.ClearMappings()
 	return _u
 }
 
@@ -1229,9 +1368,9 @@ func (_u *ImportScanUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ImportScanUpdateOne) check() error {
-	if v, ok := _u.mutation.SourcePath(); ok {
-		if err := importscan.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source_path": %w`, err)}
+	if v, ok := _u.mutation.Source(); ok {
+		if err := importscan.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Kind(); ok {
@@ -1297,6 +1436,24 @@ func (_u *ImportScanUpdateOne) sqlSave(ctx context.Context) (_node *ImportScan, 
 	}
 	if value, ok := _u.mutation.SourcePath(); ok {
 		_spec.SetField(importscan.FieldSourcePath, field.TypeString, value)
+	}
+	if _u.mutation.SourcePathCleared() {
+		_spec.ClearField(importscan.FieldSourcePath, field.TypeString)
+	}
+	if value, ok := _u.mutation.Source(); ok {
+		_spec.SetField(importscan.FieldSource, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.SourceURL(); ok {
+		_spec.SetField(importscan.FieldSourceURL, field.TypeString, value)
+	}
+	if _u.mutation.SourceURLCleared() {
+		_spec.ClearField(importscan.FieldSourceURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.Mappings(); ok {
+		_spec.SetField(importscan.FieldMappings, field.TypeJSON, value)
+	}
+	if _u.mutation.MappingsCleared() {
+		_spec.ClearField(importscan.FieldMappings, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Kind(); ok {
 		_spec.SetField(importscan.FieldKind, field.TypeEnum, value)

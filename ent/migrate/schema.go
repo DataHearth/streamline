@@ -616,7 +616,10 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "source_path", Type: field.TypeString},
+		{Name: "source_path", Type: field.TypeString, Nullable: true},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"filesystem", "radarr", "sonarr"}, Default: "filesystem"},
+		{Name: "source_url", Type: field.TypeString, Nullable: true},
+		{Name: "mappings", Type: field.TypeJSON, Nullable: true},
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"movie", "series", "music", "book"}, Default: "movie"},
 		{Name: "mode", Type: field.TypeEnum, Enums: []string{"in_place", "rename"}},
 		{Name: "import_mode", Type: field.TypeEnum, Nullable: true, Enums: []string{"hardlink", "copy", "move"}},
@@ -639,10 +642,15 @@ var (
 			{
 				Name:    "importscan_status",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScansColumns[7]},
+				Columns: []*schema.Column{ImportScansColumns[10]},
 			},
 			{
 				Name:    "importscan_kind",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScansColumns[7]},
+			},
+			{
+				Name:    "importscan_source",
 				Unique:  false,
 				Columns: []*schema.Column{ImportScansColumns[4]},
 			},
@@ -767,8 +775,10 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "source_path", Type: field.TypeString},
+		{Name: "source_path", Type: field.TypeString, Nullable: true},
 		{Name: "size", Type: field.TypeInt64},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "parsed_title", Type: field.TypeString, Nullable: true},
 		{Name: "parsed_year", Type: field.TypeUint16, Nullable: true},
 		{Name: "parsed_quality", Type: field.TypeString, Nullable: true},
@@ -792,7 +802,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "import_scan_files_import_scans_files",
-				Columns:    []*schema.Column{ImportScanFilesColumns[18]},
+				Columns:    []*schema.Column{ImportScanFilesColumns[20]},
 				RefColumns: []*schema.Column{ImportScansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -801,17 +811,17 @@ var (
 			{
 				Name:    "importscanfile_classification",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanFilesColumns[9]},
+				Columns: []*schema.Column{ImportScanFilesColumns[11]},
 			},
 			{
 				Name:    "importscanfile_decision",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanFilesColumns[13]},
+				Columns: []*schema.Column{ImportScanFilesColumns[15]},
 			},
 			{
 				Name:    "importscanfile_import_scan_files",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanFilesColumns[18]},
+				Columns: []*schema.Column{ImportScanFilesColumns[20]},
 			},
 			{
 				Name:    "importscanfile_source_path",
@@ -833,6 +843,11 @@ var (
 		{Name: "candidates", Type: field.TypeJSON, Nullable: true},
 		{Name: "existing_tvshow_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "file_count", Type: field.TypeUint16, Default: 0},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "series_type", Type: field.TypeString, Nullable: true},
+		{Name: "monitoring", Type: field.TypeJSON, Nullable: true},
+		{Name: "source_files", Type: field.TypeJSON, Nullable: true},
 		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
 		{Name: "decision_tvdb_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "attached", "failed"}, Default: "pending"},
@@ -848,7 +863,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "import_scan_shows_import_scans_shows",
-				Columns:    []*schema.Column{ImportScanShowsColumns[16]},
+				Columns:    []*schema.Column{ImportScanShowsColumns[21]},
 				RefColumns: []*schema.Column{ImportScansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -862,12 +877,12 @@ var (
 			{
 				Name:    "importscanshow_decision",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanShowsColumns[11]},
+				Columns: []*schema.Column{ImportScanShowsColumns[16]},
 			},
 			{
 				Name:    "importscanshow_import_scan_shows",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanShowsColumns[16]},
+				Columns: []*schema.Column{ImportScanShowsColumns[21]},
 			},
 			{
 				Name:    "importscanshow_folder_path",

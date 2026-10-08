@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // ImportScan is the model entity for the ImportScan schema.
@@ -23,6 +25,12 @@ type ImportScan struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// SourcePath holds the value of the "source_path" field.
 	SourcePath string `json:"source_path,omitempty"`
+	// Source holds the value of the "source" field.
+	Source importscan.Source `json:"source,omitempty"`
+	// SourceURL holds the value of the "source_url" field.
+	SourceURL string `json:"source_url,omitempty"`
+	// Mappings holds the value of the "mappings" field.
+	Mappings schema.ScanMappings `json:"mappings,omitempty"`
 	// Kind holds the value of the "kind" field.
 	Kind importscan.Kind `json:"kind,omitempty"`
 	// Mode holds the value of the "mode" field.
@@ -109,9 +117,11 @@ func (*ImportScan) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case importscan.FieldMappings:
+			values[i] = new([]byte)
 		case importscan.FieldID, importscan.FieldTotalCount, importscan.FieldProcessedCount, importscan.FieldCommitSuccessCount, importscan.FieldCommitFailedCount:
 			values[i] = new(sql.NullInt64)
-		case importscan.FieldSourcePath, importscan.FieldKind, importscan.FieldMode, importscan.FieldImportMode, importscan.FieldStatus, importscan.FieldFailureReason, importscan.FieldFailureCode:
+		case importscan.FieldSourcePath, importscan.FieldSource, importscan.FieldSourceURL, importscan.FieldKind, importscan.FieldMode, importscan.FieldImportMode, importscan.FieldStatus, importscan.FieldFailureReason, importscan.FieldFailureCode:
 			values[i] = new(sql.NullString)
 		case importscan.FieldCreateTime, importscan.FieldUpdateTime, importscan.FieldScannedAt, importscan.FieldCommittedAt:
 			values[i] = new(sql.NullTime)
@@ -153,6 +163,26 @@ func (_m *ImportScan) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field source_path", values[i])
 			} else if value.Valid {
 				_m.SourcePath = value.String
+			}
+		case importscan.FieldSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source", values[i])
+			} else if value.Valid {
+				_m.Source = importscan.Source(value.String)
+			}
+		case importscan.FieldSourceURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source_url", values[i])
+			} else if value.Valid {
+				_m.SourceURL = value.String
+			}
+		case importscan.FieldMappings:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field mappings", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Mappings); err != nil {
+					return fmt.Errorf("unmarshal field mappings: %w", err)
+				}
 			}
 		case importscan.FieldKind:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -292,6 +322,15 @@ func (_m *ImportScan) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("source_path=")
 	builder.WriteString(_m.SourcePath)
+	builder.WriteString(", ")
+	builder.WriteString("source=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Source))
+	builder.WriteString(", ")
+	builder.WriteString("source_url=")
+	builder.WriteString(_m.SourceURL)
+	builder.WriteString(", ")
+	builder.WriteString("mappings=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Mappings))
 	builder.WriteString(", ")
 	builder.WriteString("kind=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Kind))

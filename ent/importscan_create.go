@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/schema"
 )
 
 // ImportScanCreate is the builder for creating a ImportScan entity.
@@ -55,6 +56,56 @@ func (_c *ImportScanCreate) SetNillableUpdateTime(v *time.Time) *ImportScanCreat
 // SetSourcePath sets the "source_path" field.
 func (_c *ImportScanCreate) SetSourcePath(v string) *ImportScanCreate {
 	_c.mutation.SetSourcePath(v)
+	return _c
+}
+
+// SetNillableSourcePath sets the "source_path" field if the given value is not nil.
+func (_c *ImportScanCreate) SetNillableSourcePath(v *string) *ImportScanCreate {
+	if v != nil {
+		_c.SetSourcePath(*v)
+	}
+	return _c
+}
+
+// SetSource sets the "source" field.
+func (_c *ImportScanCreate) SetSource(v importscan.Source) *ImportScanCreate {
+	_c.mutation.SetSource(v)
+	return _c
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (_c *ImportScanCreate) SetNillableSource(v *importscan.Source) *ImportScanCreate {
+	if v != nil {
+		_c.SetSource(*v)
+	}
+	return _c
+}
+
+// SetSourceURL sets the "source_url" field.
+func (_c *ImportScanCreate) SetSourceURL(v string) *ImportScanCreate {
+	_c.mutation.SetSourceURL(v)
+	return _c
+}
+
+// SetNillableSourceURL sets the "source_url" field if the given value is not nil.
+func (_c *ImportScanCreate) SetNillableSourceURL(v *string) *ImportScanCreate {
+	if v != nil {
+		_c.SetSourceURL(*v)
+	}
+	return _c
+}
+
+// SetMappings sets the "mappings" field.
+func (_c *ImportScanCreate) SetMappings(v schema.ScanMappings) *ImportScanCreate {
+	_c.mutation.SetMappings(v)
+	return _c
+}
+
+// SetNillableMappings sets the "mappings" field if the given value is not nil.
+func (_c *ImportScanCreate) SetNillableMappings(v *schema.ScanMappings) *ImportScanCreate {
+	if v != nil {
+		_c.SetMappings(*v)
+	}
 	return _c
 }
 
@@ -327,6 +378,10 @@ func (_c *ImportScanCreate) defaults() {
 		v := importscan.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
+	if _, ok := _c.mutation.Source(); !ok {
+		v := importscan.DefaultSource
+		_c.mutation.SetSource(v)
+	}
 	if _, ok := _c.mutation.Kind(); !ok {
 		v := importscan.DefaultKind
 		_c.mutation.SetKind(v)
@@ -361,12 +416,12 @@ func (_c *ImportScanCreate) check() error {
 	if _, ok := _c.mutation.UpdateTime(); !ok {
 		return &ValidationError{Name: "update_time", err: errors.New(`ent: missing required field "ImportScan.update_time"`)}
 	}
-	if _, ok := _c.mutation.SourcePath(); !ok {
-		return &ValidationError{Name: "source_path", err: errors.New(`ent: missing required field "ImportScan.source_path"`)}
+	if _, ok := _c.mutation.Source(); !ok {
+		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "ImportScan.source"`)}
 	}
-	if v, ok := _c.mutation.SourcePath(); ok {
-		if err := importscan.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source_path": %w`, err)}
+	if v, ok := _c.mutation.Source(); ok {
+		if err := importscan.SourceValidator(v); err != nil {
+			return &ValidationError{Name: "source", err: fmt.Errorf(`ent: validator failed for field "ImportScan.source": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Kind(); !ok {
@@ -453,6 +508,18 @@ func (_c *ImportScanCreate) createSpec() (*ImportScan, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SourcePath(); ok {
 		_spec.SetField(importscan.FieldSourcePath, field.TypeString, value)
 		_node.SourcePath = value
+	}
+	if value, ok := _c.mutation.Source(); ok {
+		_spec.SetField(importscan.FieldSource, field.TypeEnum, value)
+		_node.Source = value
+	}
+	if value, ok := _c.mutation.SourceURL(); ok {
+		_spec.SetField(importscan.FieldSourceURL, field.TypeString, value)
+		_node.SourceURL = value
+	}
+	if value, ok := _c.mutation.Mappings(); ok {
+		_spec.SetField(importscan.FieldMappings, field.TypeJSON, value)
+		_node.Mappings = value
 	}
 	if value, ok := _c.mutation.Kind(); ok {
 		_spec.SetField(importscan.FieldKind, field.TypeEnum, value)

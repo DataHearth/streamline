@@ -368,24 +368,20 @@ func init() {
 	importscan.DefaultUpdateTime = importscanDescUpdateTime.Default.(func() time.Time)
 	// importscan.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	importscan.UpdateDefaultUpdateTime = importscanDescUpdateTime.UpdateDefault.(func() time.Time)
-	// importscanDescSourcePath is the schema descriptor for source_path field.
-	importscanDescSourcePath := importscanFields[0].Descriptor()
-	// importscan.SourcePathValidator is a validator for the "source_path" field. It is called by the builders before save.
-	importscan.SourcePathValidator = importscanDescSourcePath.Validators[0].(func(string) error)
 	// importscanDescTotalCount is the schema descriptor for total_count field.
-	importscanDescTotalCount := importscanFields[5].Descriptor()
+	importscanDescTotalCount := importscanFields[8].Descriptor()
 	// importscan.DefaultTotalCount holds the default value on creation for the total_count field.
 	importscan.DefaultTotalCount = importscanDescTotalCount.Default.(uint32)
 	// importscanDescProcessedCount is the schema descriptor for processed_count field.
-	importscanDescProcessedCount := importscanFields[6].Descriptor()
+	importscanDescProcessedCount := importscanFields[9].Descriptor()
 	// importscan.DefaultProcessedCount holds the default value on creation for the processed_count field.
 	importscan.DefaultProcessedCount = importscanDescProcessedCount.Default.(uint32)
 	// importscanDescCommitSuccessCount is the schema descriptor for commit_success_count field.
-	importscanDescCommitSuccessCount := importscanFields[7].Descriptor()
+	importscanDescCommitSuccessCount := importscanFields[10].Descriptor()
 	// importscan.DefaultCommitSuccessCount holds the default value on creation for the commit_success_count field.
 	importscan.DefaultCommitSuccessCount = importscanDescCommitSuccessCount.Default.(uint32)
 	// importscanDescCommitFailedCount is the schema descriptor for commit_failed_count field.
-	importscanDescCommitFailedCount := importscanFields[8].Descriptor()
+	importscanDescCommitFailedCount := importscanFields[11].Descriptor()
 	// importscan.DefaultCommitFailedCount holds the default value on creation for the commit_failed_count field.
 	importscan.DefaultCommitFailedCount = importscanDescCommitFailedCount.Default.(uint32)
 	importscanalbumMixin := schema.ImportScanAlbum{}.Mixin()
@@ -449,10 +445,10 @@ func init() {
 	importscanfile.DefaultUpdateTime = importscanfileDescUpdateTime.Default.(func() time.Time)
 	// importscanfile.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	importscanfile.UpdateDefaultUpdateTime = importscanfileDescUpdateTime.UpdateDefault.(func() time.Time)
-	// importscanfileDescSourcePath is the schema descriptor for source_path field.
-	importscanfileDescSourcePath := importscanfileFields[0].Descriptor()
-	// importscanfile.SourcePathValidator is a validator for the "source_path" field. It is called by the builders before save.
-	importscanfile.SourcePathValidator = importscanfileDescSourcePath.Validators[0].(func(string) error)
+	// importscanfileDescMonitored is the schema descriptor for monitored field.
+	importscanfileDescMonitored := importscanfileFields[3].Descriptor()
+	// importscanfile.DefaultMonitored holds the default value on creation for the monitored field.
+	importscanfile.DefaultMonitored = importscanfileDescMonitored.Default.(bool)
 	importscanshowMixin := schema.ImportScanShow{}.Mixin()
 	importscanshowMixinFields1 := importscanshowMixin[1].Fields()
 	_ = importscanshowMixinFields1
@@ -476,6 +472,10 @@ func init() {
 	importscanshowDescFileCount := importscanshowFields[7].Descriptor()
 	// importscanshow.DefaultFileCount holds the default value on creation for the file_count field.
 	importscanshow.DefaultFileCount = importscanshowDescFileCount.Default.(uint16)
+	// importscanshowDescMonitored is the schema descriptor for monitored field.
+	importscanshowDescMonitored := importscanshowFields[9].Descriptor()
+	// importscanshow.DefaultMonitored holds the default value on creation for the monitored field.
+	importscanshow.DefaultMonitored = importscanshowDescMonitored.Default.(bool)
 	inviteMixin := schema.Invite{}.Mixin()
 	inviteMixinFields1 := inviteMixin[1].Fields()
 	_ = inviteMixinFields1

@@ -27,8 +27,12 @@ func (ImportScanFile) Mixin() []ent.Mixin {
 
 func (ImportScanFile) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("source_path").NotEmpty(),
+		// Empty for a title the source tracks without a file on disk, which
+		// commits as a library entry with no media file.
+		field.String("source_path").Optional(),
 		field.Int64("size"),
+		field.String("quality_profile").Optional(),
+		field.Bool("monitored").Default(true),
 
 		field.String("parsed_title").Optional(),
 		field.Uint16("parsed_year").Optional().Nillable(),
