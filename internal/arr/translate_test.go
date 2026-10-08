@@ -1,6 +1,8 @@
 package arr
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -191,5 +193,175 @@ var _ = Describe("TranslateProfile", Label("unit", "arr"), func() {
 		Expect(got.Formats[0].Score).To(Equal(5))
 		Expect(notes).To(ContainElement(ContainSubstring("x265 (no HDR)")))
 		Expect(notes).NotTo(ContainElement(ContainSubstring("Unscored")))
+	})
+})
+
+var _ = Describe("TranslateIndexers", Label("unit", "arr"), func() {
+	It("renders a plain Torznab indexer, joining its api path", func() {
+		got := TranslateIndexers([]Provider{{
+			Name:           "Nyaa",
+			Implementation: "Torznab",
+			Protocol:       "torrent",
+			Priority:       25,
+			EnableRSS:      true,
+			Fields: []Field{
+				{
+					Name:  "baseUrl",
+					Value: "https://jackett.lan:9117/api/v2.0/indexers/nyaa/results/torznab/",
+				},
+				{Name: "apiPath", Value: "/api"},
+				{Name: "apiKey", Value: "abc123", Privacy: "apiKey"},
+			},
+		}})
+
+		Expect(got).To(HaveLen(1))
+		Expect(got[0].Kind).To(Equal(IndexerTorznab))
+		Expect(got[0].Entry.Host).To(Equal("jackett.lan"))
+		Expect(got[0].Entry.Port).To(Equal(uint16(9117)))
+		Expect(got[0].Entry.UseSSL).To(BeTrue())
+		Expect(got[0].Entry.Path).
+			To(Equal("/api/v2.0/indexers/nyaa/results/torznab/api"))
+		Expect(got[0].Entry.APIKey).To(Equal("abc123"))
+		Expect(got[0].Entry.Protocol).To(Equal("torznab"))
+		Expect(got[0].Entry.Priority).To(Equal(uint8(26)))
+		Expect(got[0].Entry.Enabled).To(BeTrue())
+		Expect(got[0].NeedsSecret).To(BeFalse())
+	})
+
+	It(
+		"collapses prowlarr-synced indexers on one instance into a single entry",
+		func() {
+			prowlarr := func(name string, id int, rss bool) Provider {
+				return Provider{
+					Name:           name,
+					Implementation: "Torznab",
+					Protocol:       "torrent",
+					EnableRSS:      rss,
+					Fields: []Field{
+						{
+							Name: "baseUrl",
+							Value: fmt.Sprintf(
+								"http://prowlarr.lan:9696/prowlarr/%d/",
+								id,
+							),
+						},
+						{Name: "apiPath", Value: "/api"},
+						{Name: "apiKey", Value: "shared", Privacy: "apiKey"},
+					},
+				}
+			}
+			got := TranslateIndexers([]Provider{
+				prowlarr("TorrentLeech (Prowlarr)", 3, false),
+				prowlarr("IPTorrents (Prowlarr)", 4, true),
+			})
+
+			Expect(got).To(HaveLen(1))
+			Expect(got[0].Kind).To(Equal(IndexerProwlarr))
+			Expect(got[0].Collapses).To(Equal(uint32(2)))
+			Expect(got[0].Entry.Host).To(Equal("prowlarr.lan"))
+			Expect(got[0].Entry.Port).To(Equal(uint16(9696)))
+			Expect(got[0].Entry.Path).To(Equal("/prowlarr"))
+			Expect(got[0].Entry.Protocol).To(Equal("prowlarr"))
+			Expect(got[0].Entry.APIKey).To(Equal("shared"))
+			Expect(got[0].Entry.Enabled).To(BeTrue())
+		},
+	)
+
+	It("keeps two prowlarr instances apart", func() {
+		mk := func(host string) Provider {
+			return Provider{
+				Name: "X (Prowlarr)", Implementation: "Torznab", Protocol: "torrent",
+				Fields: []Field{
+					{Name: "baseUrl", Value: "http://" + host + ":9696/1/"},
+					{Name: "apiKey", Value: "k"},
+				},
+			}
+		}
+		Expect(TranslateIndexers([]Provider{mk("a"), mk("b")})).To(HaveLen(2))
+	})
+
+	It("marks usenet and unknown implementations unsupported with a reason", func() {
+		got := TranslateIndexers([]Provider{
+			{Name: "NZBgeek", Implementation: "Newznab", Protocol: "usenet"},
+			{Name: "Weird", Implementation: "SomethingElse", Protocol: "torrent"},
+		})
+
+		Expect(got).To(HaveLen(2))
+		Expect(got[0].Kind).To(Equal(IndexerUnsupported))
+		Expect(got[0].Reason).To(ContainSubstring("usenet"))
+		Expect(got[1].Kind).To(Equal(IndexerUnsupported))
+		Expect(got[1].Reason).To(ContainSubstring("SomethingElse"))
+	})
+
+	It("flags a blank or masked secret as needing one", func() {
+		mk := func(key string) Provider {
+			return Provider{
+				Name: "Nyaa", Implementation: "Torznab", Protocol: "torrent",
+				Fields: []Field{
+					{Name: "baseUrl", Value: "http://h:1/api"},
+					{Name: "apiKey", Value: key, Privacy: "apiKey"},
+				},
+			}
+		}
+		got := TranslateIndexers([]Provider{mk(""), mk("********")})
+		Expect(got[0].NeedsSecret).To(BeTrue())
+		Expect(got[1].NeedsSecret).To(BeTrue())
+		Expect(got[1].Entry.APIKey).To(BeEmpty())
+	})
+})
+
+var _ = Describe("TranslateDownloadClients", Label("unit", "arr"), func() {
+	It("renders qbittorrent with its credentials", func() {
+		got := TranslateDownloadClients([]Provider{{
+			Name:           "qbit",
+			Implementation: "QBittorrent",
+			Protocol:       "torrent",
+			Enable:         true,
+			Priority:       1,
+			Fields: []Field{
+				{Name: "host", Value: "qbit.lan"},
+				{Name: "port", Value: float64(8080)},
+				{Name: "useSsl", Value: false},
+				{Name: "username", Value: "admin"},
+				{Name: "password", Value: "pw", Privacy: "password"},
+			},
+		}})
+
+		Expect(got).To(HaveLen(1))
+		Expect(got[0].Reason).To(BeEmpty())
+		Expect(got[0].Entry.ClientType).To(Equal("qbittorrent"))
+		Expect(got[0].Entry.Host).To(Equal("qbit.lan"))
+		Expect(got[0].Entry.Port).To(Equal(uint16(8080)))
+		Expect(got[0].Entry.AuthMethod).To(Equal("password"))
+		Expect(got[0].Entry.Username).To(Equal("admin"))
+		Expect(got[0].Entry.Password).To(Equal("pw"))
+		Expect(got[0].Entry.Priority).To(Equal(uint8(50)))
+		Expect(got[0].Entry.Enabled).To(BeTrue())
+		Expect(got[0].NeedsSecret).To(BeFalse())
+	})
+
+	It("drops the username for deluge", func() {
+		got := TranslateDownloadClients([]Provider{{
+			Name: "d", Implementation: "Deluge", Protocol: "torrent",
+			Fields: []Field{
+				{Name: "host", Value: "deluge"},
+				{Name: "port", Value: float64(8112)},
+				{Name: "username", Value: "ignored"},
+				{Name: "password", Value: "********", Privacy: "password"},
+			},
+		}})
+		Expect(got[0].Entry.ClientType).To(Equal("deluge"))
+		Expect(got[0].Entry.Username).To(BeEmpty())
+		Expect(got[0].NeedsSecret).To(BeTrue())
+	})
+
+	It("rejects a usenet or unknown client with a reason", func() {
+		got := TranslateDownloadClients([]Provider{
+			{Name: "sab", Implementation: "Sabnzbd", Protocol: "usenet"},
+			{Name: "rt", Implementation: "RTorrent", Protocol: "torrent"},
+		})
+		Expect(got[0].Entry.ClientType).To(BeEmpty())
+		Expect(got[0].Reason).To(ContainSubstring("usenet"))
+		Expect(got[1].Reason).To(ContainSubstring("RTorrent"))
 	})
 })
