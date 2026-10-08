@@ -62,8 +62,8 @@ api -X POST -d "{$SRC}" "$SL/api/v1/library/imports/sources/preview" | jq
 Nothing is written. The answer lists:
 
 - **`root_folders`** — each with a `sample_path`, one real file under it. You use these in the next step.
-- **`quality_profiles`** — each translated into a Streamline profile (`translated`), with every lossy step spelled out in `notes`. `existing` is set when a Streamline profile of the same name already exists.
-- **`indexers`** and **`download_clients`** — with a `reason` on anything that cannot come across, `needs_secret` where the instance did not return the API key or password, and `conflict` where the name is already taken here.
+- **`quality_profiles`** — each with the instance's `id` and `name`, `in_use` (how many of its titles use it), its translation into a Streamline profile (`translation`), and every lossy step spelled out in `notes`. `existing` names the Streamline profile spelled exactly the same, or is empty when there is none.
+- **`indexers`** and **`download_clients`** — with a `reason` on anything that cannot come across (an indexer's `kind` and a client's `client_type` read `unsupported` then), `needs_secret` where the instance did not return the API key or password, and `conflict` where the name is already taken here.
 - **`counts`** — titles, how many have a file, how many are monitored.
 
 A wrong URL, a rejected key, or pointing a Radarr migration at a Sonarr answers `422` with a message that says which.
@@ -105,7 +105,7 @@ api -X POST -d "{$SRC,
 }" "$SL/api/v1/library/imports/sources/apply-config" | jq
 ```
 
-It is all or nothing: a name that collides, an unsupported entry, or a missing secret answers `422` and **nothing** is written. Run it once per instance, or skip it entirely if Streamline is already set up.
+It is all or nothing: a name that collides, an unsupported entry, or a missing secret answers `422` with `code: migration_rejected` and **nothing** is written. Every colliding name is listed in that one answer, so you can deselect or rename them all in one pass. Run it once per instance, or skip it entirely if Streamline is already set up.
 
 > [!NOTE]
 > Streamline adds torrents to qBittorrent under the `streamline` category and expects finished downloads at `library.download_path/<torrent name>`. Radarr's category settings do not carry over — check the client's category configuration after copying it.
@@ -114,7 +114,7 @@ It is all or nothing: a name that collides, an unsupported entry, or a missing s
 
 ## 4. Start the migration
 
-Map every source profile id onto a Streamline profile. Either name one that exists, or add `create` (usually the preview's `translated` block) to have it created first:
+Map every source profile id onto a Streamline profile. Either name one that exists, or add `create` (usually the preview's `translation` block) to have it created first:
 
 ```bash
 scan=$(api -X POST -d "{
@@ -131,7 +131,9 @@ scan=$(api -X POST -d "{
 
 `source: "sonarr"` does the same for series. A title whose profile you did not map gets the default profile.
 
-The request is refused (`422`) before any scan starts when a `sample_path` does not resolve through its mapping, a root breaks the rule in the table above, or a profile to create collides with a different one of the same name. Re-sending a start that already created its profiles is fine — an identical profile is not a collision.
+If another import scan is still running the request answers `409` **before** any profile is created, so nothing is left behind; wait for it and send the same request again.
+
+The request is refused (`422`, `code: migration_rejected`) before any scan starts when a `sample_path` does not resolve through its mapping, a root breaks the rule in the table above, or a profile to create collides with a different one of the same name — every colliding name is listed at once. The message says which, and the web UI shows it as is. Re-sending a start that already created its profiles is fine — an identical profile is not a collision.
 
 The scan then reads the instance in the background. Poll it until `status` is `awaiting_review`:
 
@@ -177,7 +179,7 @@ Streamline gates a release on a resolution band and a custom-format score. Radar
 | Upgrades allowed | `upgrade_allowed` |
 | Minimum custom format score | `min_score` |
 | Upgrade until custom format score | `upgrade_until_score` |
-| Custom format scores | `formats`, for every format whose **name** exists here (built-in or yours); the rest are listed in `notes` |
+| Custom format scores | `formats`, for every format whose **name** exists here (built-in or yours), matched regardless of case and stored under Streamline's spelling (`REMUX` lands as `remux`); the rest are listed in `notes` |
 | Anything below 720p (SDTV, DVD) | Floored to 720p — Streamline has no lower band |
 | Release source (Bluray vs WEB-DL vs HDTV) | Dropped — a Streamline profile does not gate on source; write a [custom format](Quality-Profiles-and-Custom-Formats) if it matters to you |
 

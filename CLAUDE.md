@@ -151,6 +151,7 @@ Metadata is Hardcover (GraphQL, `metadata.hardcover_api_key` or `_file`): **the 
 - **`GET /requests/{id}/metadata` for an artist, book or series calls the same handler method as its lookup detail** (`GetMusicArtistLookup`, `GetBookLookup`), so the request panel and the add flow share one cache and one provider budget; 429 and 503 pass through and the SPA falls back to the title without retrying.
 - **A 422 for a title with no usable quality profile carries `code: no_quality_profile`** (`errNoQualityProfile`), for the same reason: the album and book-slot search/grab endpoints would otherwise fall to the SPA's generic 422 line.
 - **A Hardcover `503` carries `code: hardcover_not_configured` or `code: hardcover_key_rejected`**, distinct from `rate_limited` (429). One helper builds it (`errHardcoverUnavailable`); a handler that returns the book provider's 503 with `errServiceUnavailable` leaves the SPA unable to tell a missing key from a refused one from an outage. Approving a book or series request answers the same codes (and `429`) and the request stays pending.
+- **A refused Radarr/Sonarr migration step answers `422` with `code: migration_rejected`** (`errMigrationRejected`) — the arr arm of `StartImport` and `apply-config` — for the same reason as `grab_rejected`: its message names the mapping, name or secret to fix, and without a code the SPA shows its generic 422 instead. Connection problems keep `connection_failed`; filesystem-scan 422s stay uncoded.
 
 ## Testing
 - Framework: Ginkgo (Describe/Context/It/By) + Gomega assertions
