@@ -1543,6 +1543,38 @@ func (c *DownloadRecordClient) QueryMovie(_m *DownloadRecord) *MovieQuery {
 	return query
 }
 
+// QueryAlbum queries the album edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryAlbum(_m *DownloadRecord) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.AlbumTable, downloadrecord.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBook queries the book edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryBook(_m *DownloadRecord) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.BookTable, downloadrecord.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryAnchorEpisode queries the anchor_episode edge of a DownloadRecord.
 func (c *DownloadRecordClient) QueryAnchorEpisode(_m *DownloadRecord) *EpisodeQuery {
 	query := (&EpisodeClient{config: c.config}).Query()

@@ -55,8 +55,14 @@ const (
 	FieldSelectedBytes = "selected_bytes"
 	// FieldSelectionState holds the string denoting the selection_state field in the database.
 	FieldSelectionState = "selection_state"
+	// FieldBookKind holds the string denoting the book_kind field in the database.
+	FieldBookKind = "book_kind"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
+	// EdgeAlbum holds the string denoting the album edge name in mutations.
+	EdgeAlbum = "album"
+	// EdgeBook holds the string denoting the book edge name in mutations.
+	EdgeBook = "book"
 	// EdgeAnchorEpisode holds the string denoting the anchor_episode edge name in mutations.
 	EdgeAnchorEpisode = "anchor_episode"
 	// EdgeEpisodes holds the string denoting the episodes edge name in mutations.
@@ -70,6 +76,20 @@ const (
 	MovieInverseTable = "movies"
 	// MovieColumn is the table column denoting the movie relation/edge.
 	MovieColumn = "movie_download_records"
+	// AlbumTable is the table that holds the album relation/edge.
+	AlbumTable = "download_records"
+	// AlbumInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	AlbumInverseTable = "albums"
+	// AlbumColumn is the table column denoting the album relation/edge.
+	AlbumColumn = "album_download_records"
+	// BookTable is the table that holds the book relation/edge.
+	BookTable = "download_records"
+	// BookInverseTable is the table name for the Book entity.
+	// It exists in this package in order to avoid circular dependency with the "book" package.
+	BookInverseTable = "books"
+	// BookColumn is the table column denoting the book relation/edge.
+	BookColumn = "book_download_records"
 	// AnchorEpisodeTable is the table that holds the anchor_episode relation/edge.
 	AnchorEpisodeTable = "download_records"
 	// AnchorEpisodeInverseTable is the table name for the Episode entity.
@@ -107,6 +127,7 @@ var Columns = []string{
 	FieldSelectedFiles,
 	FieldSelectedBytes,
 	FieldSelectionState,
+	FieldBookKind,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "download_records"
@@ -240,6 +261,29 @@ func SelectionStateValidator(ss SelectionState) error {
 	}
 }
 
+// BookKind defines the type for the "book_kind" enum field.
+type BookKind string
+
+// BookKind values.
+const (
+	BookKindEbook     BookKind = "ebook"
+	BookKindAudiobook BookKind = "audiobook"
+)
+
+func (bk BookKind) String() string {
+	return string(bk)
+}
+
+// BookKindValidator is a validator for the "book_kind" field enum values. It is called by the builders before save.
+func BookKindValidator(bk BookKind) error {
+	switch bk {
+	case BookKindEbook, BookKindAudiobook:
+		return nil
+	default:
+		return fmt.Errorf("downloadrecord: invalid enum value for book_kind field: %q", bk)
+	}
+}
+
 // OrderOption defines the ordering options for the DownloadRecord queries.
 type OrderOption func(*sql.Selector)
 
@@ -338,10 +382,29 @@ func BySelectionState(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSelectionState, opts...).ToFunc()
 }
 
+// ByBookKind orders the results by the book_kind field.
+func ByBookKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBookKind, opts...).ToFunc()
+}
+
 // ByMovieField orders the results by movie field.
 func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newMovieStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAlbumField orders the results by album field.
+func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlbumStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBookField orders the results by book field.
+func ByBookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -370,6 +433,20 @@ func newMovieStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(MovieInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, MovieTable, MovieColumn),
+	)
+}
+func newAlbumStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlbumInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+	)
+}
+func newBookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
 	)
 }
 func newAnchorEpisodeStep() *sqlgraph.Step {

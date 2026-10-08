@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
@@ -26,6 +28,8 @@ type DownloadRecordQuery struct {
 	inters            []Interceptor
 	predicates        []predicate.DownloadRecord
 	withMovie         *MovieQuery
+	withAlbum         *AlbumQuery
+	withBook          *BookQuery
 	withAnchorEpisode *EpisodeQuery
 	withEpisodes      *EpisodeQuery
 	withFKs           bool
@@ -81,6 +85,50 @@ func (_q *DownloadRecordQuery) QueryMovie() *MovieQuery {
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
 			sqlgraph.To(movie.Table, movie.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.MovieTable, downloadrecord.MovieColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAlbum chains the current query on the "album" edge.
+func (_q *DownloadRecordQuery) QueryAlbum() *AlbumQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.AlbumTable, downloadrecord.AlbumColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBook chains the current query on the "book" edge.
+func (_q *DownloadRecordQuery) QueryBook() *BookQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.BookTable, downloadrecord.BookColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -325,6 +373,8 @@ func (_q *DownloadRecordQuery) Clone() *DownloadRecordQuery {
 		inters:            append([]Interceptor{}, _q.inters...),
 		predicates:        append([]predicate.DownloadRecord{}, _q.predicates...),
 		withMovie:         _q.withMovie.Clone(),
+		withAlbum:         _q.withAlbum.Clone(),
+		withBook:          _q.withBook.Clone(),
 		withAnchorEpisode: _q.withAnchorEpisode.Clone(),
 		withEpisodes:      _q.withEpisodes.Clone(),
 		// clone intermediate query.
@@ -342,6 +392,28 @@ func (_q *DownloadRecordQuery) WithMovie(opts ...func(*MovieQuery)) *DownloadRec
 		opt(query)
 	}
 	_q.withMovie = query
+	return _q
+}
+
+// WithAlbum tells the query-builder to eager-load the nodes that are connected to
+// the "album" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithAlbum(opts ...func(*AlbumQuery)) *DownloadRecordQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlbum = query
+	return _q
+}
+
+// WithBook tells the query-builder to eager-load the nodes that are connected to
+// the "book" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithBook(opts ...func(*BookQuery)) *DownloadRecordQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBook = query
 	return _q
 }
 
@@ -446,13 +518,15 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*DownloadRecord{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [5]bool{
 			_q.withMovie != nil,
+			_q.withAlbum != nil,
+			_q.withBook != nil,
 			_q.withAnchorEpisode != nil,
 			_q.withEpisodes != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withAnchorEpisode != nil {
+	if _q.withMovie != nil || _q.withAlbum != nil || _q.withBook != nil || _q.withAnchorEpisode != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -482,6 +556,18 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if query := _q.withMovie; query != nil {
 		if err := _q.loadMovie(ctx, query, nodes, nil,
 			func(n *DownloadRecord, e *Movie) { n.Edges.Movie = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAlbum; query != nil {
+		if err := _q.loadAlbum(ctx, query, nodes, nil,
+			func(n *DownloadRecord, e *Album) { n.Edges.Album = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBook; query != nil {
+		if err := _q.loadBook(ctx, query, nodes, nil,
+			func(n *DownloadRecord, e *Book) { n.Edges.Book = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -526,6 +612,70 @@ func (_q *DownloadRecordQuery) loadMovie(ctx context.Context, query *MovieQuery,
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "movie_download_records" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadAlbum(ctx context.Context, query *AlbumQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Album)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*DownloadRecord)
+	for i := range nodes {
+		if nodes[i].album_download_records == nil {
+			continue
+		}
+		fk := *nodes[i].album_download_records
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(album.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "album_download_records" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadBook(ctx context.Context, query *BookQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Book)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*DownloadRecord)
+	for i := range nodes {
+		if nodes[i].book_download_records == nil {
+			continue
+		}
+		fk := *nodes[i].book_download_records
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(book.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "book_download_records" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

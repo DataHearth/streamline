@@ -10,6 +10,8 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
@@ -61,6 +63,8 @@ type DownloadRecord struct {
 	SelectedBytes int64 `json:"selected_bytes,omitempty"`
 	// SelectionState holds the value of the "selection_state" field.
 	SelectionState downloadrecord.SelectionState `json:"selection_state,omitempty"`
+	// BookKind holds the value of the "book_kind" field.
+	BookKind downloadrecord.BookKind `json:"book_kind,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
@@ -75,13 +79,17 @@ type DownloadRecord struct {
 type DownloadRecordEdges struct {
 	// Movie holds the value of the movie edge.
 	Movie *Movie `json:"movie,omitempty"`
+	// Album holds the value of the album edge.
+	Album *Album `json:"album,omitempty"`
+	// Book holds the value of the book edge.
+	Book *Book `json:"book,omitempty"`
 	// AnchorEpisode holds the value of the anchor_episode edge.
 	AnchorEpisode *Episode `json:"anchor_episode,omitempty"`
 	// Episodes holds the value of the episodes edge.
 	Episodes []*Episode `json:"episodes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -95,12 +103,34 @@ func (e DownloadRecordEdges) MovieOrErr() (*Movie, error) {
 	return nil, &NotLoadedError{edge: "movie"}
 }
 
+// AlbumOrErr returns the Album value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DownloadRecordEdges) AlbumOrErr() (*Album, error) {
+	if e.Album != nil {
+		return e.Album, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: album.Label}
+	}
+	return nil, &NotLoadedError{edge: "album"}
+}
+
+// BookOrErr returns the Book value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DownloadRecordEdges) BookOrErr() (*Book, error) {
+	if e.Book != nil {
+		return e.Book, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: book.Label}
+	}
+	return nil, &NotLoadedError{edge: "book"}
+}
+
 // AnchorEpisodeOrErr returns the AnchorEpisode value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 	if e.AnchorEpisode != nil {
 		return e.AnchorEpisode, nil
-	} else if e.loadedTypes[1] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: episode.Label}
 	}
 	return nil, &NotLoadedError{edge: "anchor_episode"}
@@ -109,7 +139,7 @@ func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 // EpisodesOrErr returns the Episodes value or an error if the edge
 // was not loaded in eager-loading.
 func (e DownloadRecordEdges) EpisodesOrErr() ([]*Episode, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[4] {
 		return e.Episodes, nil
 	}
 	return nil, &NotLoadedError{edge: "episodes"}
@@ -126,7 +156,7 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case downloadrecord.FieldID, downloadrecord.FieldSize, downloadrecord.FieldImportAttempts, downloadrecord.FieldSelectedBytes:
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName, downloadrecord.FieldReplaceMode, downloadrecord.FieldSelectionState:
+		case downloadrecord.FieldTitle, downloadrecord.FieldQuality, downloadrecord.FieldStatus, downloadrecord.FieldTorrentHash, downloadrecord.FieldReleaseGroup, downloadrecord.FieldSavePath, downloadrecord.FieldFailureReason, downloadrecord.FieldIndexerName, downloadrecord.FieldDownloadClientName, downloadrecord.FieldReplaceMode, downloadrecord.FieldSelectionState, downloadrecord.FieldBookKind:
 			values[i] = new(sql.NullString)
 		case downloadrecord.FieldCreateTime, downloadrecord.FieldUpdateTime, downloadrecord.FieldImportedAt:
 			values[i] = new(sql.NullTime)
@@ -284,6 +314,12 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SelectionState = downloadrecord.SelectionState(value.String)
 			}
+		case downloadrecord.FieldBookKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field book_kind", values[i])
+			} else if value.Valid {
+				_m.BookKind = downloadrecord.BookKind(value.String)
+			}
 		case downloadrecord.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field album_download_records", value)
@@ -328,6 +364,16 @@ func (_m *DownloadRecord) Value(name string) (ent.Value, error) {
 // QueryMovie queries the "movie" edge of the DownloadRecord entity.
 func (_m *DownloadRecord) QueryMovie() *MovieQuery {
 	return NewDownloadRecordClient(_m.config).QueryMovie(_m)
+}
+
+// QueryAlbum queries the "album" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryAlbum() *AlbumQuery {
+	return NewDownloadRecordClient(_m.config).QueryAlbum(_m)
+}
+
+// QueryBook queries the "book" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryBook() *BookQuery {
+	return NewDownloadRecordClient(_m.config).QueryBook(_m)
 }
 
 // QueryAnchorEpisode queries the "anchor_episode" edge of the DownloadRecord entity.
@@ -424,6 +470,9 @@ func (_m *DownloadRecord) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("selection_state=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SelectionState))
+	builder.WriteString(", ")
+	builder.WriteString("book_kind=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BookKind))
 	builder.WriteByte(')')
 	return builder.String()
 }

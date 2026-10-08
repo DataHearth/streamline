@@ -1080,6 +1080,36 @@ func SelectionStateNotIn(vs ...SelectionState) predicate.DownloadRecord {
 	return predicate.DownloadRecord(sql.FieldNotIn(FieldSelectionState, vs...))
 }
 
+// BookKindEQ applies the EQ predicate on the "book_kind" field.
+func BookKindEQ(v BookKind) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldEQ(FieldBookKind, v))
+}
+
+// BookKindNEQ applies the NEQ predicate on the "book_kind" field.
+func BookKindNEQ(v BookKind) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNEQ(FieldBookKind, v))
+}
+
+// BookKindIn applies the In predicate on the "book_kind" field.
+func BookKindIn(vs ...BookKind) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIn(FieldBookKind, vs...))
+}
+
+// BookKindNotIn applies the NotIn predicate on the "book_kind" field.
+func BookKindNotIn(vs ...BookKind) predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotIn(FieldBookKind, vs...))
+}
+
+// BookKindIsNil applies the IsNil predicate on the "book_kind" field.
+func BookKindIsNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldIsNull(FieldBookKind))
+}
+
+// BookKindNotNil applies the NotNil predicate on the "book_kind" field.
+func BookKindNotNil() predicate.DownloadRecord {
+	return predicate.DownloadRecord(sql.FieldNotNull(FieldBookKind))
+}
+
 // HasMovie applies the HasEdge predicate on the "movie" edge.
 func HasMovie() predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
@@ -1095,6 +1125,52 @@ func HasMovie() predicate.DownloadRecord {
 func HasMovieWith(preds ...predicate.Movie) predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {
 		step := newMovieStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAlbum applies the HasEdge predicate on the "album" edge.
+func HasAlbum() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlbumWith applies the HasEdge predicate on the "album" edge with a given conditions (other predicates).
+func HasAlbumWith(preds ...predicate.Album) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newAlbumStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBook applies the HasEdge predicate on the "book" edge.
+func HasBook() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookWith applies the HasEdge predicate on the "book" edge with a given conditions (other predicates).
+func HasBookWith(preds ...predicate.Book) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newBookStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

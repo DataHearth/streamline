@@ -6614,9 +6614,14 @@ type DownloadRecordMutation struct {
 	selected_bytes        *int64
 	addselected_bytes     *int64
 	selection_state       *downloadrecord.SelectionState
+	book_kind             *downloadrecord.BookKind
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
+	album                 *uint32
+	clearedalbum          bool
+	book                  *uint32
+	clearedbook           bool
 	anchor_episode        *uint32
 	clearedanchor_episode bool
 	episodes              map[uint32]struct{}
@@ -7701,6 +7706,55 @@ func (m *DownloadRecordMutation) ResetSelectionState() {
 	m.selection_state = nil
 }
 
+// SetBookKind sets the "book_kind" field.
+func (m *DownloadRecordMutation) SetBookKind(dk downloadrecord.BookKind) {
+	m.book_kind = &dk
+}
+
+// BookKind returns the value of the "book_kind" field in the mutation.
+func (m *DownloadRecordMutation) BookKind() (r downloadrecord.BookKind, exists bool) {
+	v := m.book_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBookKind returns the old "book_kind" field's value of the DownloadRecord entity.
+// If the DownloadRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DownloadRecordMutation) OldBookKind(ctx context.Context) (v downloadrecord.BookKind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBookKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBookKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBookKind: %w", err)
+	}
+	return oldValue.BookKind, nil
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (m *DownloadRecordMutation) ClearBookKind() {
+	m.book_kind = nil
+	m.clearedFields[downloadrecord.FieldBookKind] = struct{}{}
+}
+
+// BookKindCleared returns if the "book_kind" field was cleared in this mutation.
+func (m *DownloadRecordMutation) BookKindCleared() bool {
+	_, ok := m.clearedFields[downloadrecord.FieldBookKind]
+	return ok
+}
+
+// ResetBookKind resets all changes to the "book_kind" field.
+func (m *DownloadRecordMutation) ResetBookKind() {
+	m.book_kind = nil
+	delete(m.clearedFields, downloadrecord.FieldBookKind)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *DownloadRecordMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -7738,6 +7792,84 @@ func (m *DownloadRecordMutation) MovieIDs() (ids []uint32) {
 func (m *DownloadRecordMutation) ResetMovie() {
 	m.movie = nil
 	m.clearedmovie = false
+}
+
+// SetAlbumID sets the "album" edge to the Album entity by id.
+func (m *DownloadRecordMutation) SetAlbumID(id uint32) {
+	m.album = &id
+}
+
+// ClearAlbum clears the "album" edge to the Album entity.
+func (m *DownloadRecordMutation) ClearAlbum() {
+	m.clearedalbum = true
+}
+
+// AlbumCleared reports if the "album" edge to the Album entity was cleared.
+func (m *DownloadRecordMutation) AlbumCleared() bool {
+	return m.clearedalbum
+}
+
+// AlbumID returns the "album" edge ID in the mutation.
+func (m *DownloadRecordMutation) AlbumID() (id uint32, exists bool) {
+	if m.album != nil {
+		return *m.album, true
+	}
+	return
+}
+
+// AlbumIDs returns the "album" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AlbumID instead. It exists only for internal usage by the builders.
+func (m *DownloadRecordMutation) AlbumIDs() (ids []uint32) {
+	if id := m.album; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAlbum resets all changes to the "album" edge.
+func (m *DownloadRecordMutation) ResetAlbum() {
+	m.album = nil
+	m.clearedalbum = false
+}
+
+// SetBookID sets the "book" edge to the Book entity by id.
+func (m *DownloadRecordMutation) SetBookID(id uint32) {
+	m.book = &id
+}
+
+// ClearBook clears the "book" edge to the Book entity.
+func (m *DownloadRecordMutation) ClearBook() {
+	m.clearedbook = true
+}
+
+// BookCleared reports if the "book" edge to the Book entity was cleared.
+func (m *DownloadRecordMutation) BookCleared() bool {
+	return m.clearedbook
+}
+
+// BookID returns the "book" edge ID in the mutation.
+func (m *DownloadRecordMutation) BookID() (id uint32, exists bool) {
+	if m.book != nil {
+		return *m.book, true
+	}
+	return
+}
+
+// BookIDs returns the "book" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BookID instead. It exists only for internal usage by the builders.
+func (m *DownloadRecordMutation) BookIDs() (ids []uint32) {
+	if id := m.book; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBook resets all changes to the "book" edge.
+func (m *DownloadRecordMutation) ResetBook() {
+	m.book = nil
+	m.clearedbook = false
 }
 
 // SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by id.
@@ -7867,7 +7999,7 @@ func (m *DownloadRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DownloadRecordMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, downloadrecord.FieldCreateTime)
 	}
@@ -7928,6 +8060,9 @@ func (m *DownloadRecordMutation) Fields() []string {
 	if m.selection_state != nil {
 		fields = append(fields, downloadrecord.FieldSelectionState)
 	}
+	if m.book_kind != nil {
+		fields = append(fields, downloadrecord.FieldBookKind)
+	}
 	return fields
 }
 
@@ -7976,6 +8111,8 @@ func (m *DownloadRecordMutation) Field(name string) (ent.Value, bool) {
 		return m.SelectedBytes()
 	case downloadrecord.FieldSelectionState:
 		return m.SelectionState()
+	case downloadrecord.FieldBookKind:
+		return m.BookKind()
 	}
 	return nil, false
 }
@@ -8025,6 +8162,8 @@ func (m *DownloadRecordMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldSelectedBytes(ctx)
 	case downloadrecord.FieldSelectionState:
 		return m.OldSelectionState(ctx)
+	case downloadrecord.FieldBookKind:
+		return m.OldBookKind(ctx)
 	}
 	return nil, fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -8174,6 +8313,13 @@ func (m *DownloadRecordMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSelectionState(v)
 		return nil
+	case downloadrecord.FieldBookKind:
+		v, ok := value.(downloadrecord.BookKind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBookKind(v)
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
@@ -8279,6 +8425,9 @@ func (m *DownloadRecordMutation) ClearedFields() []string {
 	if m.FieldCleared(downloadrecord.FieldSelectedBytes) {
 		fields = append(fields, downloadrecord.FieldSelectedBytes)
 	}
+	if m.FieldCleared(downloadrecord.FieldBookKind) {
+		fields = append(fields, downloadrecord.FieldBookKind)
+	}
 	return fields
 }
 
@@ -8328,6 +8477,9 @@ func (m *DownloadRecordMutation) ClearField(name string) error {
 		return nil
 	case downloadrecord.FieldSelectedBytes:
 		m.ClearSelectedBytes()
+		return nil
+	case downloadrecord.FieldBookKind:
+		m.ClearBookKind()
 		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord nullable field %s", name)
@@ -8397,15 +8549,24 @@ func (m *DownloadRecordMutation) ResetField(name string) error {
 	case downloadrecord.FieldSelectionState:
 		m.ResetSelectionState()
 		return nil
+	case downloadrecord.FieldBookKind:
+		m.ResetBookKind()
+		return nil
 	}
 	return fmt.Errorf("unknown DownloadRecord field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DownloadRecordMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.movie != nil {
 		edges = append(edges, downloadrecord.EdgeMovie)
+	}
+	if m.album != nil {
+		edges = append(edges, downloadrecord.EdgeAlbum)
+	}
+	if m.book != nil {
+		edges = append(edges, downloadrecord.EdgeBook)
 	}
 	if m.anchor_episode != nil {
 		edges = append(edges, downloadrecord.EdgeAnchorEpisode)
@@ -8424,6 +8585,14 @@ func (m *DownloadRecordMutation) AddedIDs(name string) []ent.Value {
 		if id := m.movie; id != nil {
 			return []ent.Value{*id}
 		}
+	case downloadrecord.EdgeAlbum:
+		if id := m.album; id != nil {
+			return []ent.Value{*id}
+		}
+	case downloadrecord.EdgeBook:
+		if id := m.book; id != nil {
+			return []ent.Value{*id}
+		}
 	case downloadrecord.EdgeAnchorEpisode:
 		if id := m.anchor_episode; id != nil {
 			return []ent.Value{*id}
@@ -8440,7 +8609,7 @@ func (m *DownloadRecordMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DownloadRecordMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.removedepisodes != nil {
 		edges = append(edges, downloadrecord.EdgeEpisodes)
 	}
@@ -8463,9 +8632,15 @@ func (m *DownloadRecordMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DownloadRecordMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.clearedmovie {
 		edges = append(edges, downloadrecord.EdgeMovie)
+	}
+	if m.clearedalbum {
+		edges = append(edges, downloadrecord.EdgeAlbum)
+	}
+	if m.clearedbook {
+		edges = append(edges, downloadrecord.EdgeBook)
 	}
 	if m.clearedanchor_episode {
 		edges = append(edges, downloadrecord.EdgeAnchorEpisode)
@@ -8482,6 +8657,10 @@ func (m *DownloadRecordMutation) EdgeCleared(name string) bool {
 	switch name {
 	case downloadrecord.EdgeMovie:
 		return m.clearedmovie
+	case downloadrecord.EdgeAlbum:
+		return m.clearedalbum
+	case downloadrecord.EdgeBook:
+		return m.clearedbook
 	case downloadrecord.EdgeAnchorEpisode:
 		return m.clearedanchor_episode
 	case downloadrecord.EdgeEpisodes:
@@ -8497,6 +8676,12 @@ func (m *DownloadRecordMutation) ClearEdge(name string) error {
 	case downloadrecord.EdgeMovie:
 		m.ClearMovie()
 		return nil
+	case downloadrecord.EdgeAlbum:
+		m.ClearAlbum()
+		return nil
+	case downloadrecord.EdgeBook:
+		m.ClearBook()
+		return nil
 	case downloadrecord.EdgeAnchorEpisode:
 		m.ClearAnchorEpisode()
 		return nil
@@ -8510,6 +8695,12 @@ func (m *DownloadRecordMutation) ResetEdge(name string) error {
 	switch name {
 	case downloadrecord.EdgeMovie:
 		m.ResetMovie()
+		return nil
+	case downloadrecord.EdgeAlbum:
+		m.ResetAlbum()
+		return nil
+	case downloadrecord.EdgeBook:
+		m.ResetBook()
 		return nil
 	case downloadrecord.EdgeAnchorEpisode:
 		m.ResetAnchorEpisode()

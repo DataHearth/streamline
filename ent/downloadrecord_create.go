@@ -10,6 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
@@ -279,6 +281,20 @@ func (_c *DownloadRecordCreate) SetNillableSelectionState(v *downloadrecord.Sele
 	return _c
 }
 
+// SetBookKind sets the "book_kind" field.
+func (_c *DownloadRecordCreate) SetBookKind(v downloadrecord.BookKind) *DownloadRecordCreate {
+	_c.mutation.SetBookKind(v)
+	return _c
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableBookKind(v *downloadrecord.BookKind) *DownloadRecordCreate {
+	if v != nil {
+		_c.SetBookKind(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DownloadRecordCreate) SetID(v uint32) *DownloadRecordCreate {
 	_c.mutation.SetID(v)
@@ -302,6 +318,44 @@ func (_c *DownloadRecordCreate) SetNillableMovieID(id *uint32) *DownloadRecordCr
 // SetMovie sets the "movie" edge to the Movie entity.
 func (_c *DownloadRecordCreate) SetMovie(v *Movie) *DownloadRecordCreate {
 	return _c.SetMovieID(v.ID)
+}
+
+// SetAlbumID sets the "album" edge to the Album entity by ID.
+func (_c *DownloadRecordCreate) SetAlbumID(id uint32) *DownloadRecordCreate {
+	_c.mutation.SetAlbumID(id)
+	return _c
+}
+
+// SetNillableAlbumID sets the "album" edge to the Album entity by ID if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableAlbumID(id *uint32) *DownloadRecordCreate {
+	if id != nil {
+		_c = _c.SetAlbumID(*id)
+	}
+	return _c
+}
+
+// SetAlbum sets the "album" edge to the Album entity.
+func (_c *DownloadRecordCreate) SetAlbum(v *Album) *DownloadRecordCreate {
+	return _c.SetAlbumID(v.ID)
+}
+
+// SetBookID sets the "book" edge to the Book entity by ID.
+func (_c *DownloadRecordCreate) SetBookID(id uint32) *DownloadRecordCreate {
+	_c.mutation.SetBookID(id)
+	return _c
+}
+
+// SetNillableBookID sets the "book" edge to the Book entity by ID if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableBookID(id *uint32) *DownloadRecordCreate {
+	if id != nil {
+		_c = _c.SetBookID(*id)
+	}
+	return _c
+}
+
+// SetBook sets the "book" edge to the Book entity.
+func (_c *DownloadRecordCreate) SetBook(v *Book) *DownloadRecordCreate {
+	return _c.SetBookID(v.ID)
 }
 
 // SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
@@ -449,6 +503,11 @@ func (_c *DownloadRecordCreate) check() error {
 			return &ValidationError{Name: "selection_state", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.selection_state": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.BookKind(); ok {
+		if err := downloadrecord.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "DownloadRecord.book_kind": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -561,6 +620,10 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 		_spec.SetField(downloadrecord.FieldSelectionState, field.TypeEnum, value)
 		_node.SelectionState = value
 	}
+	if value, ok := _c.mutation.BookKind(); ok {
+		_spec.SetField(downloadrecord.FieldBookKind, field.TypeEnum, value)
+		_node.BookKind = value
+	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -576,6 +639,40 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.movie_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.AlbumTable,
+			Columns: []string{downloadrecord.AlbumColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.album_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.BookTable,
+			Columns: []string{downloadrecord.BookColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.book_download_records = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AnchorEpisodeIDs(); len(nodes) > 0 {

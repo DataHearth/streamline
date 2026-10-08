@@ -62,6 +62,7 @@ func (DownloadRecord) Fields() []ent.Field {
 		field.Enum("selection_state").
 			Values("pending", "applied", "unsupported", "skipped").
 			Default("skipped"),
+		field.Enum("book_kind").Values("ebook", "audiobook").Optional(),
 	}
 }
 
@@ -90,6 +91,8 @@ func (DownloadRecord) Indexes() []ent.Index {
 func (DownloadRecord) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("movie", Movie.Type).Ref("download_records").Unique(),
+		edge.From("album", Album.Type).Ref("download_records").Unique(),
+		edge.From("book", Book.Type).Ref("download_records").Unique(),
 		// The one episode the record is filed under: what the importer resolves
 		// the show from and what grab failures are counted against. Always a
 		// member of episodes.
