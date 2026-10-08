@@ -1,4 +1,4 @@
-// Package audiotags reads embedded audio metadata and never mutates files.
+// Package audiotags reads embedded audio metadata; Write is the only mutation.
 package audiotags
 
 import (
