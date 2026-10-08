@@ -6,6 +6,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
@@ -250,8 +252,8 @@ type BulkDecisionParams struct {
 }
 
 // BulkDecide applies one decision across a scan's rows and returns how many
-// changed. It dispatches on the scan's kind, so one call serves both movie
-// files and series shows — reviewing a 465-file scan through the per-row
+// changed. It dispatches on the scan's kind, so one call serves movie
+// files, series shows, albums and books — reviewing a 465-file scan through the per-row
 // endpoint took 465 requests.
 func (s *Service) BulkDecide(
 	ctx context.Context,
@@ -276,14 +278,29 @@ func (s *Service) BulkDecide(
 	}
 
 	var n int
-	if scan.Kind == entimportscan.KindSeries {
+	switch scan.Kind {
+	case entimportscan.KindSeries:
 		n, err = s.store.BulkUpdateImportScanShowDecisions(
 			ctx, p.ScanID,
 			entimportscanshow.Decision(p.Decision),
 			entimportscanshow.Classification(p.Classification),
 			p.IDs,
 		)
-	} else {
+	case entimportscan.KindMusic:
+		n, err = s.store.BulkUpdateImportScanAlbumDecisions(
+			ctx, p.ScanID,
+			entimportscanalbum.Decision(p.Decision),
+			entimportscanalbum.Classification(p.Classification),
+			p.IDs,
+		)
+	case entimportscan.KindBook:
+		n, err = s.store.BulkUpdateImportScanBookDecisions(
+			ctx, p.ScanID,
+			entimportscanbook.Decision(p.Decision),
+			entimportscanbook.Classification(p.Classification),
+			p.IDs,
+		)
+	default:
 		n, err = s.store.BulkUpdateImportScanFileDecisions(
 			ctx, p.ScanID,
 			entimportscanfile.Decision(p.Decision),

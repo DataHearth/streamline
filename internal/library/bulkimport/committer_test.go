@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -57,6 +58,17 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 			Once()
 		err := svc.Commit(ctx, 1)
 		Expect(err).To(MatchError(ErrScanNotReviewable))
+	})
+
+	It("refuses a book scan when Hardcover is not configured", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(4)).
+			Return(&ent.ImportScan{
+				ID:     4,
+				Kind:   entimportscan.KindBook,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+
+		Expect(svc.Commit(ctx, 4)).To(MatchError(book.ErrNotConfigured))
 	})
 
 	It("returns ErrScanNotFound when scan does not exist", func() {

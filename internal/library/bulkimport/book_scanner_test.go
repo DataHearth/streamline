@@ -254,6 +254,22 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		Expect(rows[0].ParsedAuthor).To(Equal("Brandon Sanderson"))
 	})
 
+	It("fails the scan when the source root cannot be walked", func() {
+		sc, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+			SourcePath: filepath.Join(ebookRoot, "missing"),
+			Kind:       entimportscan.KindBook,
+			Mode:       entimportscan.ModeInPlace,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		svc.runScanBooks(ctx, sc)
+
+		cur, err := store.FindImportScan(ctx, sc.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+		Expect(cur.FailureReason).To(ContainSubstring("walk source path"))
+	})
+
 	Describe("StartScan dispatch", func() {
 		It("rejects a kind with no scanner before writing a scan row", func() {
 			_, err := svc.StartScan(ctx, StartScanParams{

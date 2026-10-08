@@ -9,6 +9,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
@@ -235,6 +237,48 @@ var _ = Describe("Service.BulkDecide", Label("unit", "bulkimport"), func() {
 
 		n, err := svc.BulkDecide(ctx, BulkDecisionParams{
 			ScanID: 2, Decision: "skip", IDs: []uint32{7, 9},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(2))
+	})
+
+	It("routes a music scan to the album rows", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(4)).
+			Return(&ent.ImportScan{
+				ID:     4,
+				Kind:   entimportscan.KindMusic,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+		store.EXPECT().BulkUpdateImportScanAlbumDecisions(
+			mock.Anything, uint32(4),
+			entimportscanalbum.DecisionAccept,
+			entimportscanalbum.ClassificationAmbiguous,
+			[]uint32(nil),
+		).Return(3, nil).Once()
+
+		n, err := svc.BulkDecide(ctx, BulkDecisionParams{
+			ScanID: 4, Decision: "accept", Classification: "ambiguous",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(3))
+	})
+
+	It("routes a book scan to the book rows", func() {
+		store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
+			Return(&ent.ImportScan{
+				ID:     5,
+				Kind:   entimportscan.KindBook,
+				Status: entimportscan.StatusAwaitingReview,
+			}, nil).Once()
+		store.EXPECT().BulkUpdateImportScanBookDecisions(
+			mock.Anything, uint32(5),
+			entimportscanbook.DecisionSkip,
+			entimportscanbook.Classification(""),
+			[]uint32{2, 8},
+		).Return(2, nil).Once()
+
+		n, err := svc.BulkDecide(ctx, BulkDecisionParams{
+			ScanID: 5, Decision: "skip", IDs: []uint32{2, 8},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(n).To(Equal(2))

@@ -250,6 +250,31 @@ var _ = Describe("Music import scan store", Label("integration", "db"), func() {
 			}
 		})
 
+		It("never moves an album out of downloading", func() {
+			a := seedAlbum()
+			Expect(client.Album.UpdateOneID(a.ID).
+				SetStatus(album.StatusDownloading).Exec(ctx)).To(Succeed())
+
+			Expect(store.AdoptAlbumFiles(ctx, a.ID, []AdoptAlbumFile{
+				{
+					TrackID: a.Edges.Tracks[0].ID,
+					Path:    "/music/01.flac",
+					Format:  "flac",
+					Size:    1,
+				},
+				{
+					TrackID: a.Edges.Tracks[1].ID,
+					Path:    "/music/02.flac",
+					Format:  "flac",
+					Size:    1,
+				},
+			})).To(Succeed())
+
+			got, err := client.Album.Get(ctx, a.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(album.StatusDownloading))
+		})
+
 		It("rolls everything back when one file fails", func() {
 			a := seedAlbum()
 			err := store.AdoptAlbumFiles(ctx, a.ID, []AdoptAlbumFile{

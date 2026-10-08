@@ -230,6 +230,53 @@ var _ = Describe(
 			Expect(alb.Status).To(Equal(album.StatusWanted))
 		})
 
+		It(
+			"adopts one file per track when two files resolve to the same track",
+			func() {
+				expectDiscography("a-1", map[string][]string{
+					"rg-1": {"Smells Like Teen Spirit"},
+				})
+				dir := folder("Nevermind", "tagged.mp3", "tagged.mp3")
+
+				commit(confirmed(dir, "rg-1", "a-1"))
+
+				row := outcomeOf(dir)
+				Expect(row.Outcome).To(Equal(entimportscanalbum.OutcomeCreated))
+				Expect(row.OutcomeMessage).To(Equal("1 files unmatched"))
+				n, err := client.MediaFile.Query().Count(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(1))
+				alb, err := client.Album.Query().Where(album.Mbid("rg-1")).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(alb.Status).To(Equal(album.StatusAvailable))
+			},
+		)
+
+		It("counts a track with no file once, not once per missing file", func() {
+			expectDiscography("a-1", map[string][]string{
+				"rg-1": {"Smells Like Teen Spirit", "In Bloom"},
+			})
+			dir := folder("Nevermind", "tagged.mp3", "tagged.mp3")
+
+			commit(confirmed(dir, "rg-1", "a-1"))
+
+			Expect(outcomeOf(dir).OutcomeMessage).To(
+				Equal("1 files unmatched; 1 of 2 tracks have no file"))
+		})
+
+		It("keeps one file per track when a copy is committed twice", func() {
+			expectDiscography("a-1", map[string][]string{
+				"rg-1": {"Smells Like Teen Spirit"},
+			})
+			dir := folder("Nevermind", "tagged.mp3", "tagged.mp3")
+			commit(confirmed(dir, "rg-1", "a-1"))
+			commit(confirmed(dir, "rg-1", "a-1"))
+
+			n, err := client.MediaFile.Query().Count(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(1))
+		})
+
 		It("does not duplicate files on a second commit of the same folder", func() {
 			expectDiscography("a-1", map[string][]string{
 				"rg-1": {"Smells Like Teen Spirit"},

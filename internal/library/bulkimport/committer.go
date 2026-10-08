@@ -21,6 +21,7 @@ import (
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -53,6 +54,9 @@ func (s *Service) Commit(ctx context.Context, id uint32) error {
 		return otelx.RecordSpanError(
 			span, fmt.Errorf("%w: %s", ErrUnsupportedKind, scan.Kind),
 		)
+	}
+	if scan.Kind == entimportscan.KindBook && s.bookmeta == nil {
+		return otelx.RecordSpanError(span, book.ErrNotConfigured)
 	}
 	if err := s.store.UpdateImportScanStatus(
 		ctx,

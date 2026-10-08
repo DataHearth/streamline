@@ -108,6 +108,29 @@ func (db *DB) ListImportScanBooksForCommit(
 		All(ctx)
 }
 
+func (db *DB) BulkUpdateImportScanBookDecisions(
+	ctx context.Context,
+	scanID uint32,
+	decision entimportscanbook.Decision,
+	classification entimportscanbook.Classification,
+	ids []uint32,
+) (int, error) {
+	u := db.client.ImportScanBook.Update().
+		Where(entimportscanbook.HasScanWith(entimportscan.ID(scanID))).
+		SetDecision(decision)
+	if classification != "" {
+		u = u.Where(entimportscanbook.ClassificationEQ(classification))
+	}
+	if len(ids) > 0 {
+		u = u.Where(entimportscanbook.IDIn(ids...))
+	}
+	n, err := u.Save(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("bulk update import scan book decisions: %w", err)
+	}
+	return n, nil
+}
+
 func (db *DB) UpdateImportScanBookOutcome(
 	ctx context.Context, id uint32,
 	outcome entimportscanbook.Outcome, opts UpdateScanBookOutcomeOpts,

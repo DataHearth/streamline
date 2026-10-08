@@ -910,6 +910,90 @@ func (_c *MockTx_BulkUpdateImportScanAlbumDecisions_Call) RunAndReturn(run func(
 	return _c
 }
 
+// BulkUpdateImportScanBookDecisions provides a mock function for the type MockTx
+func (_mock *MockTx) BulkUpdateImportScanBookDecisions(ctx context.Context, scanID uint32, decision importscanbook.Decision, classification importscanbook.Classification, ids []uint32) (int, error) {
+	ret := _mock.Called(ctx, scanID, decision, classification, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkUpdateImportScanBookDecisions")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanbook.Decision, importscanbook.Classification, []uint32) (int, error)); ok {
+		return returnFunc(ctx, scanID, decision, classification, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, importscanbook.Decision, importscanbook.Classification, []uint32) int); ok {
+		r0 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, importscanbook.Decision, importscanbook.Classification, []uint32) error); ok {
+		r1 = returnFunc(ctx, scanID, decision, classification, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_BulkUpdateImportScanBookDecisions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkUpdateImportScanBookDecisions'
+type MockTx_BulkUpdateImportScanBookDecisions_Call struct {
+	*mock.Call
+}
+
+// BulkUpdateImportScanBookDecisions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - decision importscanbook.Decision
+//   - classification importscanbook.Classification
+//   - ids []uint32
+func (_e *MockTx_Expecter) BulkUpdateImportScanBookDecisions(ctx any, scanID any, decision any, classification any, ids any) *MockTx_BulkUpdateImportScanBookDecisions_Call {
+	return &MockTx_BulkUpdateImportScanBookDecisions_Call{Call: _e.mock.On("BulkUpdateImportScanBookDecisions", ctx, scanID, decision, classification, ids)}
+}
+
+func (_c *MockTx_BulkUpdateImportScanBookDecisions_Call) Run(run func(ctx context.Context, scanID uint32, decision importscanbook.Decision, classification importscanbook.Classification, ids []uint32)) *MockTx_BulkUpdateImportScanBookDecisions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 importscanbook.Decision
+		if args[2] != nil {
+			arg2 = args[2].(importscanbook.Decision)
+		}
+		var arg3 importscanbook.Classification
+		if args[3] != nil {
+			arg3 = args[3].(importscanbook.Classification)
+		}
+		var arg4 []uint32
+		if args[4] != nil {
+			arg4 = args[4].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanBookDecisions_Call) Return(n int, err error) *MockTx_BulkUpdateImportScanBookDecisions_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockTx_BulkUpdateImportScanBookDecisions_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, decision importscanbook.Decision, classification importscanbook.Classification, ids []uint32) (int, error)) *MockTx_BulkUpdateImportScanBookDecisions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BulkUpdateImportScanFileDecisions provides a mock function for the type MockTx
 func (_mock *MockTx) BulkUpdateImportScanFileDecisions(ctx context.Context, scanID uint32, decision importscanfile.Decision, classification importscanfile.Classification, ids []uint32) (int, error) {
 	ret := _mock.Called(ctx, scanID, decision, classification, ids)

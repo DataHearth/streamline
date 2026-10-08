@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 const (
@@ -49,11 +50,17 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			otelx.RecordSpanError(span, fmt.Errorf("panic: %v", r))
 			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
 
-	candidates, walkErrors := walkBookSource(ctx, scan.SourcePath)
+	candidates, walkErrors, err := walkBookSource(ctx, scan.SourcePath)
+	if err != nil {
+		otelx.RecordSpanError(span, err)
+		s.markScanFailed(ctx, scan.ID, err.Error())
+		return
+	}
 	total := len(candidates)
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
@@ -119,6 +126,7 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 	}
 
 	if err := s.store.BulkCreateImportScanBooks(ctx, scan.ID, queue); err != nil {
+		otelx.RecordSpanError(span, err)
 		s.markScanFailed(ctx, scan.ID, err.Error())
 		return
 	}
@@ -162,38 +170,48 @@ func existingID(id uint32) *uint32 {
 
 // walkBookSource finds ebook groups and audiobook folders in one pass, in a
 // stable order so a rescan lists rows the same way.
-func walkBookSource(ctx context.Context, root string) ([]scannedBookCandidate, int) {
+func walkBookSource(
+	ctx context.Context, root string,
+) ([]scannedBookCandidate, int, error) {
 	type groupKey struct{ dir, stem string }
 	ebooks := map[groupKey][]string{}
 	audio := map[string][]string{}
 	var walkErrors int
 
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			walkErrors++
-			slog.WarnContext(ctx, "book scan: walk error",
-				"path", path, "error", err)
-			if d != nil && d.IsDir() {
-				return filepath.SkipDir
+	if err := filepath.WalkDir(
+		root,
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				if path == root {
+					return err
+				}
+				walkErrors++
+				slog.WarnContext(ctx, "book scan: walk error",
+					"path", path, "error", err)
+				if d != nil && d.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			ext := strings.ToLower(filepath.Ext(path))
+			dir := filepath.Dir(path)
+			if _, ok := ebookmeta.EbookExtensions[ext]; ok {
+				k := groupKey{
+					dir,
+					strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
+				}
+				ebooks[k] = append(ebooks[k], path)
+			} else if _, ok := ebookmeta.AudiobookExtensions[ext]; ok {
+				audio[dir] = append(audio[dir], path)
 			}
 			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		dir := filepath.Dir(path)
-		if _, ok := ebookmeta.EbookExtensions[ext]; ok {
-			k := groupKey{
-				dir,
-				strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
-			}
-			ebooks[k] = append(ebooks[k], path)
-		} else if _, ok := ebookmeta.AudiobookExtensions[ext]; ok {
-			audio[dir] = append(audio[dir], path)
-		}
-		return nil
-	})
+		},
+	); err != nil {
+		return nil, 0, fmt.Errorf("walk source path: %w", err)
+	}
 
 	out := make([]scannedBookCandidate, 0, len(ebooks)+len(audio))
 	for k, paths := range ebooks {
@@ -217,7 +235,7 @@ func walkBookSource(ctx context.Context, root string) ([]scannedBookCandidate, i
 		}
 		return out[i].paths[0] < out[j].paths[0]
 	})
-	return out, walkErrors
+	return out, walkErrors, nil
 }
 
 // readBookInfo resolves a candidate's title, author and ISBN: a Calibre

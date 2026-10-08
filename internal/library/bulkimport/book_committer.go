@@ -20,6 +20,7 @@ import (
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 // runCommitBooks adopts every reviewed book in a book scan in place: it
@@ -33,12 +34,14 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			otelx.RecordSpanError(span, fmt.Errorf("panic: %v", r))
 			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
 
 	books, err := s.store.ListImportScanBooksForCommit(ctx, scan.ID)
 	if err != nil {
+		otelx.RecordSpanError(span, err)
 		s.markScanFailed(ctx, scan.ID, err.Error())
 		return
 	}
@@ -97,7 +100,7 @@ func (s *Service) commitBook(
 
 	target, err := s.resolveBook(ctx, sc, authors)
 	if err != nil {
-		return commitBookFail("resolve book", err, 0)
+		return commitBookFail(span, "resolve book", err, 0)
 	}
 
 	kind := entmediafile.BookKind(sc.Slot)
@@ -125,12 +128,13 @@ func (s *Service) commitBook(
 			Format:   ext,
 			Source:   entmediafile.SourceOrphan,
 		}); cerr != nil {
-			return commitBookFail("record file "+p, cerr, target.ID)
+			return commitBookFail(span, "record file "+p, cerr, target.ID)
 		}
 		attached++
 	}
 	if attached == 0 {
 		return commitBookFail(
+			span,
 			"attach files",
 			errors.New("no file could be attached"),
 			target.ID,
@@ -142,7 +146,7 @@ func (s *Service) commitBook(
 		target.ID,
 		string(sc.Slot),
 	); err != nil {
-		return commitBookFail("mark slot available", err, target.ID)
+		return commitBookFail(span, "mark slot available", err, target.ID)
 	}
 	return entimportscanbook.OutcomeCreated, "", target.ID
 }
@@ -247,7 +251,8 @@ func knownAuthorID(sc *ent.ImportScanBook, bookHC uint32) uint32 {
 }
 
 func commitBookFail(
-	label string, err error, bookID uint32,
+	span trace.Span, label string, err error, bookID uint32,
 ) (entimportscanbook.Outcome, string, uint32) {
+	otelx.RecordSpanError(span, fmt.Errorf("%s: %w", label, err))
 	return entimportscanbook.OutcomeFailed, fmt.Sprintf("%s: %v", label, err), bookID
 }

@@ -755,6 +755,13 @@ type Store interface {
 		ctx context.Context,
 		scanID uint32,
 	) ([]*ent.ImportScanBook, error)
+	BulkUpdateImportScanBookDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanbook.Decision,
+		classification importscanbook.Classification,
+		ids []uint32,
+	) (int, error)
 	UpdateImportScanBookOutcome(
 		ctx context.Context,
 		id uint32,

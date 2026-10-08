@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -212,6 +213,7 @@ func (s *Service) runScanMusic(ctx context.Context, scan *ent.ImportScan) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			otelx.RecordSpanError(span, fmt.Errorf("panic: %v", r))
 			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
@@ -309,6 +311,7 @@ func (s *Service) runScanMusic(ctx context.Context, scan *ent.ImportScan) {
 			scan.ID,
 			queue,
 		); err != nil {
+			otelx.RecordSpanError(span, err)
 			s.markScanFailed(ctx, scan.ID, err.Error())
 			return
 		}

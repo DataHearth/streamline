@@ -235,8 +235,12 @@ func adoptAlbumFiles(
 	if bare {
 		return nil
 	}
-	if err := c.Album.UpdateOneID(albumID).
-		SetStatus(album.StatusAvailable).Exec(ctx); err != nil {
+	if _, err := c.Album.Update().
+		Where(
+			album.ID(albumID),
+			album.StatusNEQ(album.StatusDownloading),
+		).
+		SetStatus(album.StatusAvailable).Save(ctx); err != nil {
 		return fmt.Errorf("mark album %d available: %w", albumID, err)
 	}
 	return nil

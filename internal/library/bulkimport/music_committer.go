@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/otelx"
 )
 
 // runCommitMusic adopts every reviewed album folder in a music scan in place:
@@ -33,12 +34,14 @@ func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			otelx.RecordSpanError(span, fmt.Errorf("panic: %v", r))
 			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
 
 	albums, err := s.store.ListImportScanAlbumsForCommit(ctx, scan.ID)
 	if err != nil {
+		otelx.RecordSpanError(span, err)
 		s.markScanFailed(ctx, scan.ID, err.Error())
 		return
 	}
@@ -100,31 +103,36 @@ func (s *Service) commitAlbum(
 
 	alb, err := s.resolveAlbum(ctx, sc, artists)
 	if err != nil {
-		return commitAlbumFail("resolve album", err, 0)
+		return commitAlbumFail(span, "resolve album", err, 0)
 	}
 
-	plan, unmatched, adopted, err := planAlbumFiles(ctx, sc.FolderPath, alb)
+	plan, unmatched, adopted, uncovered, err := planAlbumFiles(
+		ctx,
+		sc.FolderPath,
+		alb,
+	)
 	if err != nil {
-		return commitAlbumFail("list folder", err, alb.ID)
+		return commitAlbumFail(span, "list folder", err, alb.ID)
 	}
 	if len(plan) == 0 && adopted == 0 {
 		return commitAlbumFail(
+			span,
 			"adopt files",
 			fmt.Errorf("no file matched a track (%d unmatched)", unmatched),
 			alb.ID,
 		)
 	}
 	if err := s.store.AdoptAlbumFiles(ctx, alb.ID, plan); err != nil {
-		return commitAlbumFail("adopt files", err, alb.ID)
+		return commitAlbumFail(span, "adopt files", err, alb.ID)
 	}
 
 	var notes []string
 	if unmatched > 0 {
 		notes = append(notes, fmt.Sprintf("%d files unmatched", unmatched))
 	}
-	if missing := len(alb.Edges.Tracks) - adopted - len(plan); missing > 0 {
+	if uncovered > 0 {
 		notes = append(notes, fmt.Sprintf(
-			"%d of %d tracks have no file", missing, len(alb.Edges.Tracks)))
+			"%d of %d tracks have no file", uncovered, len(alb.Edges.Tracks)))
 	}
 	slog.InfoContext(ctx, "album adopted",
 		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched)
@@ -204,18 +212,24 @@ func (s *Service) resolveArtist(
 // planAlbumFiles binds the audio files directly in folder to the album's
 // tracks without touching the database. adopted counts files a track already
 // holds at the same path (an idempotent re-scan); unmatched counts files that
-// bind to no track.
+// bind to no track or to a track another file in the folder already claimed;
+// uncovered counts tracks left without any file once the plan lands.
 func planAlbumFiles(
 	ctx context.Context, folder string, alb *ent.Album,
-) ([]db.AdoptAlbumFile, int, int, error) {
+) ([]db.AdoptAlbumFile, int, int, int, error) {
 	entries, err := os.ReadDir(folder)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, 0, err
 	}
 	held := map[string]struct{}{}
+	// A track already holding a file is covered before the walk starts, so a
+	// second copy of it in the folder counts as unmatched on every commit,
+	// not just the first.
+	covered := map[uint32]struct{}{}
 	for _, t := range alb.Edges.Tracks {
 		for _, mf := range t.Edges.MediaFiles {
 			held[mf.Path] = struct{}{}
+			covered[t.ID] = struct{}{}
 		}
 	}
 
@@ -252,6 +266,11 @@ func planAlbumFiles(
 			unmatched++
 			continue
 		}
+		if _, dup := covered[tr.ID]; dup {
+			unmatched++
+			continue
+		}
+		covered[tr.ID] = struct{}{}
 		plan = append(plan, db.AdoptAlbumFile{
 			TrackID: tr.ID,
 			Path:    path,
@@ -260,7 +279,7 @@ func planAlbumFiles(
 			Size:    stat.Size(),
 		})
 	}
-	return plan, unmatched, adopted, nil
+	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
 }
 
 // matchTrack prefers the tagged (disc, track) pair and falls back to the title.
@@ -289,8 +308,9 @@ func matchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 }
 
 func commitAlbumFail(
-	label string, err error, albumID uint32,
+	span trace.Span, label string, err error, albumID uint32,
 ) (entimportscanalbum.Outcome, string, uint32) {
+	otelx.RecordSpanError(span, fmt.Errorf("%s: %w", label, err))
 	return entimportscanalbum.OutcomeFailed, fmt.Sprintf(
 		"%s: %v",
 		label,
