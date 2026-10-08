@@ -65,6 +65,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | Docker images, Helm chart, single binary | ✅ Shipped |
 | Nix flake — package, NixOS module, home-manager module | ✅ Shipped |
 | Import an existing library (scan, match, review, rename) | ✅ Shipped |
+| Migrate from Radarr / Sonarr — titles, monitoring, profiles, files, indexers, clients (REST API; guided UI next) | 🚧 In progress |
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
 | Re-identify a title matched to the wrong movie or show | ✅ Shipped |

@@ -136,9 +136,9 @@ Metadata is Hardcover (GraphQL, `metadata.hardcover_api_key` or `_file`): **the 
 
 ## Release-name parsing & bulk import matching
 
-`library.Parse` and friends turn a release name into facts; `internal/library/bulkimport/` classifies scanned folders against TMDB/TVDB and commits them. Nearly every rule in this area exists because a specific real-world release broke the obvious implementation — do not simplify one without reading why it is shaped that way.
+`library.Parse` and friends turn a release name into facts; `internal/library/bulkimport/` classifies scanned folders against TMDB/TVDB and commits them. An import scan also has a `source` axis (`filesystem | radarr | sonarr`): a Radarr/Sonarr migration fetches identified titles through `internal/arr` instead of classifying files, commits title-only rows and resolves episodes by the source's own numbers, and never stores the API key. Nearly every rule in this area exists because a specific real-world release broke the obvious implementation — do not simplify one without reading why it is shaped that way.
 
-**Parser rules, title normalization, classifier ranking, commit-time re-resolution and the naming-template/path-sanitizing contract: [`docs/agents/bulk-import-matching.md`](docs/agents/bulk-import-matching.md) — read it before touching `internal/library/` parsing, the rename services, or the metadata classifiers.**
+**Parser rules, title normalization, classifier ranking, commit-time re-resolution, the *arr migration and the naming-template/path-sanitizing contract: [`docs/agents/bulk-import-matching.md`](docs/agents/bulk-import-matching.md) — read it before touching `internal/library/` parsing, `internal/arr/`, the rename services, or the metadata classifiers.**
 
 ## API conventions
 - Every list endpoint bounds `limit` to `[1, 100]` (200 for activity) and **400s** a value outside it (`pagination.go` `limitOr` — there is no request-validation middleware, so the spec's bounds are enforced there). The SPA's `apiAllPages` (`web/app/lib/api.ts`) walks pages at `PAGE_LIMIT = 100` against `total`; the handlers used to clamp silently, and asking for `limit=500` — which nine call sites did — showed 100 of 621 movies with no indication anything was missing.

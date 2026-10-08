@@ -381,6 +381,9 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows | 🔒 Admin |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
+| `POST` | `/library/imports/sources/preview` | Read a Radarr/Sonarr instance before migrating it | 🔒 Admin |
+| `POST` | `/library/imports/sources/check-paths` | Check root-folder mappings against this host | 🔒 Admin |
+| `POST` | `/library/imports/sources/apply-config` | Copy indexers and download clients from Radarr/Sonarr | 🔒 Admin |
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
@@ -798,6 +801,13 @@ api -X POST -d '{"decision":"skip","classification":"unmatched"}' \
 
 api -X POST "$SL/api/v1/library/imports/$scan/commit"
 ```
+
+A create body may name a Radarr or Sonarr instance instead of a path
+(`"source": "radarr"`, `source_url`, `api_key`, `root_mappings`,
+`profile_mappings`); the scan then reads the instance rather than walking a
+directory, and review and commit are unchanged. The API key is never stored and
+never echoed. The whole sequence is on
+[Migrating from Radarr and Sonarr](Migrating-from-Radarr-and-Sonarr).
 
 `POST .../decisions` returns `{"updated": N}` and dispatches on the scan's kind,
 so the same call covers movie files and series shows. Omit `classification` to

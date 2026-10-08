@@ -14,7 +14,7 @@ without reading why it is shaped that way.**
 | File | Read before touching |
 |---|---|
 | [`auth-and-oidc.md`](auth-and-oidc.md) | `internal/auth/`, `internal/role/`, auth middleware, `internal/server/web/auth.go`, anything writing a user's role |
-| [`bulk-import-matching.md`](bulk-import-matching.md) | `internal/library/` parsing & naming templates, `internal/library/bulkimport/`, rename services, TMDB/TVDB classifiers |
+| [`bulk-import-matching.md`](bulk-import-matching.md) | `internal/library/` parsing & naming templates, `internal/library/bulkimport/`, `internal/arr/` (Radarr/Sonarr migration), rename services, TMDB/TVDB classifiers |
 | [`config-surface.md`](config-surface.md) | `internal/config/`, `/config/*` handlers, `api/config.schema.json`, config-backed resource CRUD |
 | [`downloads-and-imports.md`](downloads-and-imports.md) | `internal/bittorrent/`, `internal/importer/`, `internal/download/adopt.go`, `internal/mediaserver/` |
 | [`frontend.md`](frontend.md) | `web/app/**`, `web/static/**`, `routify.config.js`, `web/embed.go` |
