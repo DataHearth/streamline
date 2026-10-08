@@ -26,5 +26,6 @@ func (h *Handler) Router() chi.Router {
 	r.Get("/recent", h.recent)
 	r.Get("/search.xml", h.searchDescription)
 	r.Get("/search", h.search)
+	r.Get("/download/{bookID}/{format}", h.download)
 	return r
 }
