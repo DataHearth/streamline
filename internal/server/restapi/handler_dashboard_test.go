@@ -143,6 +143,11 @@ var _ = Describe(
 					Return([]*ent.Episode{ep}, nil).
 					Once()
 
+				app.store.EXPECT().
+					ListUpcomingAlbums(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Album{}, nil).
+					Once()
+
 				q := url.Values{}
 				q.Set("from", now.Format(time.RFC3339))
 				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
@@ -193,6 +198,11 @@ var _ = Describe(
 					Return([]*ent.Episode{ep}, nil).
 					Once()
 
+				app.store.EXPECT().
+					ListUpcomingAlbums(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Album{}, nil).
+					Once()
+
 				q := url.Values{}
 				q.Set("from", now.Format(time.RFC3339))
 				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
@@ -207,6 +217,51 @@ var _ = Describe(
 				Expect(body.Episodes).To(HaveLen(1))
 				Expect(body.Episodes[0].Status).
 					To(Equal(EpisodeStatusDownloading))
+			})
+
+			It("returns monitored albums with their artist", func() {
+				now := time.Now().UTC()
+				future := now.Add(3 * 24 * time.Hour)
+
+				app.store.EXPECT().
+					UpcomingReleases(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Movie{}, nil).
+					Once()
+				app.store.EXPECT().
+					ListUpcomingEpisodes(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Episode{}, nil).
+					Once()
+				al := &ent.Album{
+					ID:          3,
+					Title:       "Nevermind",
+					ReleaseDate: &future,
+					Monitored:   true,
+				}
+				al.Edges.Artist = &ent.Artist{ID: 7, Name: "Nirvana"}
+				app.store.EXPECT().
+					ListUpcomingAlbums(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Album{al}, nil).
+					Once()
+
+				q := url.Values{}
+				q.Set("from", now.Format(time.RFC3339))
+				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
+				resp, err := http.Get(
+					app.srv.URL + "/api/v1/calendar/upcoming?" + q.Encode(),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body UpcomingList
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Movies).NotTo(BeNil())
+				Expect(body.Episodes).NotTo(BeNil())
+				Expect(body.Albums).To(HaveLen(1))
+				Expect(body.Albums[0].Id).To(Equal(uint32(3)))
+				Expect(body.Albums[0].Title).To(Equal("Nevermind"))
+				Expect(body.Albums[0].ArtistId).To(Equal(uint32(7)))
+				Expect(body.Albums[0].ArtistName).To(Equal("Nirvana"))
 			})
 
 			It("400s when from is after to", func() {

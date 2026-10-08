@@ -392,7 +392,7 @@ All four answer `409` while `transcoding.enabled` is false.
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/calendar/upcoming?from=&to=` | Movie releases (digital, or theatrical when TMDB has no digital date — see `release_type`) and episode air dates | Authenticated |
+| `GET` | `/calendar/upcoming?from=&to=` | Movie releases (digital, or theatrical when TMDB has no digital date — see `release_type`) episode air dates and monitored album releases (`albums`: `id`, `title`, `artist_id`, `artist_name`, `release_date`) | Authenticated |
 
 ### Outside `/api/v1`
 

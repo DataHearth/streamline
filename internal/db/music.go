@@ -269,3 +269,18 @@ func (db *DB) SetAlbumMonitored(
 func (db *DB) DeleteArtist(ctx context.Context, id uint32) error {
 	return db.client.Artist.DeleteOneID(id).Exec(ctx)
 }
+
+func (db *DB) ListUpcomingAlbums(
+	ctx context.Context,
+	from, to time.Time,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.Monitored(true),
+			album.ReleaseDateGTE(from),
+			album.ReleaseDateLT(to),
+		).
+		WithArtist().
+		Order(ent.Asc(album.FieldReleaseDate)).
+		All(ctx)
+}

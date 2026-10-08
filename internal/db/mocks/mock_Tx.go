@@ -10556,6 +10556,80 @@ func (_c *MockTx_ListUnprobedMediaFiles_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// ListUpcomingAlbums provides a mock function for the type MockTx
+func (_mock *MockTx) ListUpcomingAlbums(ctx context.Context, from time.Time, to time.Time) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, from, to)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUpcomingAlbums")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, time.Time) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, from, to)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, time.Time) []*ent.Album); ok {
+		r0 = returnFunc(ctx, from, to)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, time.Time) error); ok {
+		r1 = returnFunc(ctx, from, to)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListUpcomingAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUpcomingAlbums'
+type MockTx_ListUpcomingAlbums_Call struct {
+	*mock.Call
+}
+
+// ListUpcomingAlbums is a helper method to define mock.On call
+//   - ctx context.Context
+//   - from time.Time
+//   - to time.Time
+func (_e *MockTx_Expecter) ListUpcomingAlbums(ctx any, from any, to any) *MockTx_ListUpcomingAlbums_Call {
+	return &MockTx_ListUpcomingAlbums_Call{Call: _e.mock.On("ListUpcomingAlbums", ctx, from, to)}
+}
+
+func (_c *MockTx_ListUpcomingAlbums_Call) Run(run func(ctx context.Context, from time.Time, to time.Time)) *MockTx_ListUpcomingAlbums_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListUpcomingAlbums_Call) Return(albums []*ent.Album, err error) *MockTx_ListUpcomingAlbums_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockTx_ListUpcomingAlbums_Call) RunAndReturn(run func(ctx context.Context, from time.Time, to time.Time) ([]*ent.Album, error)) *MockTx_ListUpcomingAlbums_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUpcomingEpisodes provides a mock function for the type MockTx
 func (_mock *MockTx) ListUpcomingEpisodes(ctx context.Context, from time.Time, to time.Time) ([]*ent.Episode, error) {
 	ret := _mock.Called(ctx, from, to)

@@ -4132,7 +4132,7 @@ paths:
   /calendar/upcoming:
     get:
       operationId: listUpcomingReleases
-      summary: Upcoming wanted-movie digital releases in [from, to).
+      summary: Upcoming movie releases, episode air dates and monitored album releases in [from, to).
       parameters:
         - $ref: "#/components/parameters/CalendarFrom"
         - $ref: "#/components/parameters/CalendarTo"
@@ -10545,9 +10545,27 @@ components:
         monitored:
           type: boolean
 
+    UpcomingAlbum:
+      type: object
+      required: [id, title, artist_id, artist_name, release_date]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        artist_name:
+          type: string
+        release_date:
+          type: string
+          format: date-time
+
     UpcomingList:
       type: object
-      required: [movies, episodes]
+      required: [movies, episodes, albums]
       properties:
         movies:
           type: array
@@ -10557,6 +10575,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/UpcomingEpisode"
+        albums:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingAlbum"
 
     SystemInfo:
       type: object
