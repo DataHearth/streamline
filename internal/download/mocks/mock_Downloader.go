@@ -242,6 +242,80 @@ func (_c *MockDownloader_Grab_Call) RunAndReturn(run func(ctx context.Context, r
 	return _c
 }
 
+// GrabAlbum provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) GrabAlbum(ctx context.Context, result indexer.SearchResult, albumID uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, result, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrabAlbum")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, result, albumID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, indexer.SearchResult, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, result, albumID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, indexer.SearchResult, uint32) error); ok {
+		r1 = returnFunc(ctx, result, albumID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDownloader_GrabAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrabAlbum'
+type MockDownloader_GrabAlbum_Call struct {
+	*mock.Call
+}
+
+// GrabAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - result indexer.SearchResult
+//   - albumID uint32
+func (_e *MockDownloader_Expecter) GrabAlbum(ctx any, result any, albumID any) *MockDownloader_GrabAlbum_Call {
+	return &MockDownloader_GrabAlbum_Call{Call: _e.mock.On("GrabAlbum", ctx, result, albumID)}
+}
+
+func (_c *MockDownloader_GrabAlbum_Call) Run(run func(ctx context.Context, result indexer.SearchResult, albumID uint32)) *MockDownloader_GrabAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 indexer.SearchResult
+		if args[1] != nil {
+			arg1 = args[1].(indexer.SearchResult)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_GrabAlbum_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockDownloader_GrabAlbum_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockDownloader_GrabAlbum_Call) RunAndReturn(run func(ctx context.Context, result indexer.SearchResult, albumID uint32) (*ent.DownloadRecord, error)) *MockDownloader_GrabAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GrabEpisode provides a mock function for the type MockDownloader
 func (_mock *MockDownloader) GrabEpisode(ctx context.Context, result indexer.SearchResult, episodeID uint32, wantedEpisodes []uint32) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, result, episodeID, wantedEpisodes)

@@ -253,6 +253,11 @@ type Downloader interface {
 		episodeID uint32,
 		wantedEpisodes []uint32,
 	) (*ent.DownloadRecord, error)
+	GrabAlbum(
+		ctx context.Context,
+		result indexer.SearchResult,
+		albumID uint32,
+	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileEpisodeStatuses(ctx context.Context) error
 	RemoveTorrent(
@@ -578,7 +583,7 @@ func (d *download) Grab(
 	result indexer.SearchResult,
 	movieID uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, movieID, 0, nil)
+	return d.grab(ctx, result, movieID, 0, 0, nil)
 }
 
 // GrabEpisode mirrors Grab for a TV episode. Episode status transitions are
@@ -592,7 +597,17 @@ func (d *download) GrabEpisode(
 	episodeID uint32,
 	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, 0, episodeID, wantedEpisodes)
+	return d.grab(ctx, result, 0, episodeID, 0, wantedEpisodes)
+}
+
+// GrabAlbum mirrors Grab for a music album: one record for the album's
+// tracks. Album status transitions are owned by the caller.
+func (d *download) GrabAlbum(
+	ctx context.Context,
+	result indexer.SearchResult,
+	albumID uint32,
+) (*ent.DownloadRecord, error) {
+	return d.grab(ctx, result, 0, 0, albumID, nil)
 }
 
 // pendingSelection carries Flow A's resolved keep-set from resolveTorrentSource
@@ -608,7 +623,7 @@ type pendingSelection struct {
 func (d *download) grab(
 	ctx context.Context,
 	result indexer.SearchResult,
-	movieID, episodeID uint32,
+	movieID, episodeID, albumID uint32,
 	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
 	spanName, mediaAttr := "download.grab", attribute.Int64(
@@ -619,6 +634,12 @@ func (d *download) grab(
 		spanName, mediaAttr = "download.grab_episode", attribute.Int64(
 			"episode.id",
 			int64(episodeID),
+		)
+	}
+	if albumID != 0 {
+		spanName, mediaAttr = "download.grab_album", attribute.Int64(
+			"album.id",
+			int64(albumID),
 		)
 	}
 	ctx, span := tracer.Start(ctx, spanName,
@@ -828,6 +849,7 @@ func (d *download) grab(
 		Status:             downloadrecord.StatusDownloading,
 		MovieID:            movieID,
 		EpisodeID:          episodeID,
+		AlbumID:            albumID,
 		DownloadClientName: dc.Name,
 		IndexerName:        result.Indexer,
 		EpisodeIDs:         wantedEpisodes,

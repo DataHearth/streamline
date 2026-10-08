@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -55,6 +56,12 @@ type Store interface {
 	// SetArtistMonitored flips the artist and every one of its albums.
 	SetArtistMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
+	SetAlbumStatus(
+		ctx context.Context,
+		id uint32,
+		from []album.Status,
+		to album.Status,
+	) (bool, error)
 	DeleteArtist(ctx context.Context, id uint32) error
 
 	// books

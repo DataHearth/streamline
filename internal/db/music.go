@@ -135,6 +135,7 @@ func (db *DB) FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error
 func (db *DB) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
 	return db.client.Album.Query().
 		Where(album.IDEQ(id)).
+		WithArtist().
 		WithTracks(func(tq *ent.TrackQuery) {
 			tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
 				WithMediaFiles()
@@ -264,6 +265,22 @@ func (db *DB) SetAlbumMonitored(
 	monitored bool,
 ) error {
 	return db.client.Album.UpdateOneID(id).SetMonitored(monitored).Exec(ctx)
+}
+
+// SetAlbumStatus moves the album to `to` only while it is in one of the from
+// statuses, and reports whether it did, so a concurrent change is never
+// overwritten.
+func (db *DB) SetAlbumStatus(
+	ctx context.Context,
+	id uint32,
+	from []album.Status,
+	to album.Status,
+) (bool, error) {
+	n, err := db.client.Album.Update().
+		Where(album.IDEQ(id), album.StatusIn(from...)).
+		SetStatus(to).
+		Save(ctx)
+	return n > 0, err
 }
 
 func (db *DB) DeleteArtist(ctx context.Context, id uint32) error {

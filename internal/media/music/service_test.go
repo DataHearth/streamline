@@ -2,8 +2,10 @@ package music
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,6 +15,9 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/indexer"
+	mockindexer "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -25,6 +30,8 @@ var _ = Describe("Music service", Label("integration", "music"), func() {
 		client   *ent.Client
 		provider *mockmeta.MockMusicProvider
 		posters  *mockposters.MockManager
+		idx      *mockindexer.MockManager
+		dl       *mockdownload.MockDownloader
 		svc      *Service
 	)
 
@@ -36,9 +43,19 @@ var _ = Describe("Music service", Label("integration", "music"), func() {
 		DeferCleanup(func() { client.Close() })
 		provider = mockmeta.NewMockMusicProvider(GinkgoT())
 		posters = mockposters.NewMockManager(GinkgoT())
-		svc = NewService(db.New(client), provider, posters)
+		idx = mockindexer.NewMockManager(GinkgoT())
+		dl = mockdownload.NewMockDownloader(GinkgoT())
+		svc = NewService(db.New(client), provider, posters, idx, dl)
 		configtest.Setup(map[string]any{
 			"library": map[string]any{"music_path": GinkgoT().TempDir()},
+			"music_quality_profiles": []map[string]any{
+				{
+					"name":    "lossless",
+					"formats": []string{"flac-24", "flac", "mp3-320"},
+					"cutoff":  "flac",
+				},
+			},
+			"music_quality_default_profile": "lossless",
 		})
 	})
 
@@ -281,5 +298,117 @@ var _ = Describe("Music service", Label("integration", "music"), func() {
 		It("maps a missing artist to ErrArtistNotFound", func() {
 			Expect(svc.Delete(ctx, 999, false)).To(MatchError(ErrArtistNotFound))
 		})
+	})
+
+	Describe("SearchAlbumReleases", func() {
+		It(
+			"scores, drops rejects and orders best first with seeders as tiebreak",
+			func() {
+				artist := addSeeded()
+				al := artist.Edges.Albums[0]
+				year := time.Date(1991, 9, 24, 0, 0, 0, 0, time.UTC)
+				client.Album.UpdateOneID(al.ID).SetReleaseDate(year).ExecX(ctx)
+
+				idx.EXPECT().
+					SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(1991)).
+					Return([]indexer.SearchResult{
+						{Title: "Nirvana - Nevermind (1991) [MP3 320]", Seeders: 50},
+						{Title: "Nirvana - Nevermind (1991) [FLAC]", Seeders: 3},
+						{Title: "Nirvana - Nevermind (1991) [MP3 192]", Seeders: 99},
+						{
+							Title:   "Nirvana - Nevermind (1991) [FLAC] rip",
+							Seeders: 10,
+						},
+						{
+							Title:   "Nirvana - Nevermind (1991) [24bit FLAC]",
+							Seeders: 1,
+						},
+					}, nil).
+					Once()
+
+				got, err := svc.SearchAlbumReleases(ctx, al.ID)
+				Expect(err).NotTo(HaveOccurred())
+
+				titles := make([]string, len(got))
+				for i, g := range got {
+					titles[i] = g.Result.Title
+				}
+				Expect(titles).To(Equal([]string{
+					"Nirvana - Nevermind (1991) [24bit FLAC]",
+					"Nirvana - Nevermind (1991) [FLAC] rip",
+					"Nirvana - Nevermind (1991) [FLAC]",
+					"Nirvana - Nevermind (1991) [MP3 320]",
+				}))
+				Expect(got[0].Format).To(Equal("flac-24"))
+				Expect(got[0].Score).To(BeNumerically(">", got[3].Score))
+			},
+		)
+
+		It("searches with year 0 when the album has no release date", func() {
+			artist := addSeeded()
+			idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(0)).
+				Return(nil, nil).
+				Once()
+
+			got, err := svc.SearchAlbumReleases(ctx, artist.Edges.Albums[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It("maps a missing album to ErrAlbumNotFound", func() {
+			_, err := svc.SearchAlbumReleases(ctx, 999)
+			Expect(err).To(MatchError(ErrAlbumNotFound))
+		})
+
+		It("errors when no music profile is configured", func() {
+			artist := addSeeded()
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"music_path": GinkgoT().TempDir()},
+			})
+
+			_, err := svc.SearchAlbumReleases(ctx, artist.Edges.Albums[0].ID)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("GrabAlbumRelease", func() {
+		result := indexer.SearchResult{
+			Title:    "Nirvana - Nevermind (1991) [FLAC]",
+			Download: "magnet:?xt=urn:btih:abc",
+		}
+
+		It("grabs the release and marks the album downloading", func() {
+			artist := addSeeded()
+			al := artist.Edges.Albums[0]
+			dl.EXPECT().
+				GrabAlbum(mock.Anything, result, al.ID).
+				Return(&ent.DownloadRecord{}, nil).
+				Once()
+
+			Expect(svc.GrabAlbumRelease(ctx, al.ID, result)).To(Succeed())
+			Expect(client.Album.GetX(ctx, al.ID).Status).
+				To(Equal(album.StatusDownloading))
+		})
+
+		It(
+			"leaves the album wanted and grab_failures at zero when the grab fails",
+			func() {
+				artist := addSeeded()
+				al := artist.Edges.Albums[0]
+				boom := errors.New("client unreachable")
+				dl.EXPECT().
+					GrabAlbum(mock.Anything, result, al.ID).
+					Return(nil, boom).
+					Once()
+
+				err := svc.GrabAlbumRelease(ctx, al.ID, result)
+				Expect(err).To(MatchError(boom))
+				Expect(err).To(MatchError(ContainSubstring("grab album")))
+				after := client.Album.GetX(ctx, al.ID)
+				Expect(after.Status).To(Equal(album.StatusWanted))
+				Expect(after.GrabFailures).To(BeZero())
+			},
+		)
 	})
 })

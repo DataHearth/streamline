@@ -195,7 +195,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	dispatcher := mediaserver.NewDispatcher()
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
-	musicSvc := music.NewService(store, mb, postersSvc)
+	musicSvc := music.NewService(store, mb, postersSvc, indexerSvc, dlManager)
 	bookSvc := book.NewService(store, bookMeta, postersSvc)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title

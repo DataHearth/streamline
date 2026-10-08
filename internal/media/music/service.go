@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -13,8 +14,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
@@ -42,6 +46,12 @@ type Manager interface {
 	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
 	Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error)
+	SearchAlbumReleases(ctx context.Context, albumID uint32) ([]AlbumRelease, error)
+	GrabAlbumRelease(
+		ctx context.Context,
+		albumID uint32,
+		result indexer.SearchResult,
+	) error
 }
 
 var _ Manager = (*Service)(nil)
@@ -50,14 +60,20 @@ type Service struct {
 	db       db.Store
 	metadata metadata.MusicProvider
 	posters  posters.Manager
+	indexer  indexer.Manager
+	download download.Downloader
 }
 
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
 	p posters.Manager,
+	idx indexer.Manager,
+	dl download.Downloader,
 ) *Service {
-	return &Service{db: store, metadata: meta, posters: p}
+	return &Service{
+		db: store, metadata: meta, posters: p, indexer: idx, download: dl,
+	}
 }
 
 // Adder is the slice of the service the request flow approves through.
@@ -392,4 +408,108 @@ func notFound(err error) error {
 		return ErrArtistNotFound
 	}
 	return err
+}
+
+// AlbumRelease is one indexer result that fits the artist's quality profile.
+type AlbumRelease struct {
+	Result indexer.SearchResult
+	Format string
+	Score  int
+}
+
+// SearchAlbumReleases queries the indexers for the album and returns the
+// results the artist's profile accepts, best first.
+func (s *Service) SearchAlbumReleases(
+	ctx context.Context,
+	albumID uint32,
+) ([]AlbumRelease, error) {
+	ctx, span := tracer.Start(ctx, "music.search_album",
+		trace.WithAttributes(attribute.Int("album.id", int(albumID))))
+	defer span.End()
+
+	a, err := s.db.FindAlbumByID(ctx, albumID)
+	if ent.IsNotFound(err) {
+		err = ErrAlbumNotFound
+	}
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	artist := a.Edges.Artist
+	if artist == nil {
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("album %d has no artist", albumID))
+	}
+	profile, ok := config.ResolveMusicQualityProfile(artist.QualityProfile)
+	if !ok {
+		return nil, otelx.RecordSpanError(
+			span, errors.New("no music quality profile configured"))
+	}
+
+	var year uint16
+	if a.ReleaseDate != nil {
+		year = numeric.SaturateU16(a.ReleaseDate.Year())
+	}
+	results, err := s.indexer.SearchAlbum(ctx, artist.Name, a.Title, year)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, fmt.Errorf("search album: %w", err))
+	}
+
+	releases := make([]AlbumRelease, 0, len(results))
+	for _, r := range results {
+		parsed := library.ParseMusicRelease(r.Title)
+		score := library.ScoreMusicRelease(parsed, profile)
+		if score < 0 {
+			continue
+		}
+		releases = append(releases, AlbumRelease{
+			Result: r, Format: parsed.Format, Score: score,
+		})
+	}
+	slices.SortStableFunc(releases, func(x, y AlbumRelease) int {
+		if x.Score != y.Score {
+			return y.Score - x.Score
+		}
+		switch {
+		case x.Result.Seeders > y.Result.Seeders:
+			return -1
+		case x.Result.Seeders < y.Result.Seeders:
+			return 1
+		}
+		return 0
+	})
+	span.SetAttributes(attribute.Int("releases", len(releases)))
+	return releases, nil
+}
+
+// GrabAlbumRelease grabs one release as the album's single download record and
+// marks the album downloading. A failed grab touches no status, and a failed
+// status write is only logged, since the torrent is already added.
+func (s *Service) GrabAlbumRelease(
+	ctx context.Context,
+	albumID uint32,
+	result indexer.SearchResult,
+) error {
+	ctx, span := tracer.Start(ctx, "music.grab_album",
+		trace.WithAttributes(
+			attribute.Int("album.id", int(albumID)),
+			attribute.String("release.title", result.Title),
+		))
+	defer span.End()
+
+	if _, err := s.download.GrabAlbum(ctx, result, albumID); err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("grab album: %w", err))
+	}
+
+	_, err := s.db.SetAlbumStatus(
+		ctx, albumID,
+		[]album.Status{album.StatusWanted, album.StatusPaused},
+		album.StatusDownloading,
+	)
+	if err != nil {
+		slog.WarnContext(ctx, "mark album downloading failed",
+			"album.id", albumID, "error", err)
+	}
+	slog.InfoContext(ctx, "album grabbed",
+		"album.id", albumID, "release", result.Title, "indexer", result.Indexer)
+	return nil
 }
