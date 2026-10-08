@@ -5633,6 +5633,14 @@ type SpecialsMonitoredResult struct {
 	SeasonsUpdated int `json:"seasons_updated"`
 }
 
+// SubsonicPassword defines model for SubsonicPassword.
+type SubsonicPassword struct {
+	Enabled bool `json:"enabled"`
+
+	// Password Empty or absent when disabled.
+	Password *string `json:"password,omitempty"`
+}
+
 // SystemConfigPatch Only provided fields are applied, nested objects included.
 type SystemConfigPatch struct {
 	EventsRetention *string `json:"events_retention,omitempty"`
@@ -7436,6 +7444,15 @@ type ResetUserPasswordJSONRequestBody = ResetPasswordRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DisableSubsonicPassword Disable Subsonic access by clearing the password
+	// (DELETE /account/subsonic-password)
+	DisableSubsonicPassword(w http.ResponseWriter, r *http.Request)
+	// GetSubsonicPassword Whether a Subsonic password is set, and its value
+	// (GET /account/subsonic-password)
+	GetSubsonicPassword(w http.ResponseWriter, r *http.Request)
+	// RotateSubsonicPassword Generate or rotate the Subsonic password
+	// (POST /account/subsonic-password)
+	RotateSubsonicPassword(w http.ResponseWriter, r *http.Request)
 	// ListActivity Library activity events.
 	// (GET /activity)
 	ListActivity(w http.ResponseWriter, r *http.Request, params ListActivityParams)
@@ -8053,6 +8070,24 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// DisableSubsonicPassword Disable Subsonic access by clearing the password
+// (DELETE /account/subsonic-password)
+func (_ Unimplemented) DisableSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSubsonicPassword Whether a Subsonic password is set, and its value
+// (GET /account/subsonic-password)
+func (_ Unimplemented) GetSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RotateSubsonicPassword Generate or rotate the Subsonic password
+// (POST /account/subsonic-password)
+func (_ Unimplemented) RotateSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // ListActivity Library activity events.
 // (GET /activity)
@@ -9276,6 +9311,48 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DisableSubsonicPassword operation middleware
+func (siw *ServerInterfaceWrapper) DisableSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisableSubsonicPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSubsonicPassword operation middleware
+func (siw *ServerInterfaceWrapper) GetSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSubsonicPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RotateSubsonicPassword operation middleware
+func (siw *ServerInterfaceWrapper) RotateSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RotateSubsonicPassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListActivity operation middleware
 func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.Request) {
@@ -15219,6 +15296,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/auth/me/api-keys/{id}", wrapper.DeleteMyApiKey)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/account/subsonic-password", wrapper.DisableSubsonicPassword)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/account/subsonic-password", wrapper.GetSubsonicPassword)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/account/subsonic-password", wrapper.RotateSubsonicPassword)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/me/sessions", wrapper.ListMySessions)
 	})
 	r.Group(func(r chi.Router) {
@@ -15732,6 +15818,105 @@ type UserUnlockedResponse struct {
 type UserUpdatedJSONResponse User
 
 type UsersListJSONResponse UserList
+
+type DisableSubsonicPasswordRequestObject struct {
+}
+
+type DisableSubsonicPasswordResponseObject interface {
+	VisitDisableSubsonicPasswordResponse(w http.ResponseWriter) error
+}
+
+type DisableSubsonicPassword204Response struct {
+}
+
+func (response DisableSubsonicPassword204Response) VisitDisableSubsonicPasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DisableSubsonicPassword401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DisableSubsonicPassword401JSONResponse) VisitDisableSubsonicPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSubsonicPasswordRequestObject struct {
+}
+
+type GetSubsonicPasswordResponseObject interface {
+	VisitGetSubsonicPasswordResponse(w http.ResponseWriter) error
+}
+
+type GetSubsonicPassword200JSONResponse SubsonicPassword
+
+func (response GetSubsonicPassword200JSONResponse) VisitGetSubsonicPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSubsonicPassword401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetSubsonicPassword401JSONResponse) VisitGetSubsonicPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateSubsonicPasswordRequestObject struct {
+}
+
+type RotateSubsonicPasswordResponseObject interface {
+	VisitRotateSubsonicPasswordResponse(w http.ResponseWriter) error
+}
+
+type RotateSubsonicPassword200JSONResponse SubsonicPassword
+
+func (response RotateSubsonicPassword200JSONResponse) VisitRotateSubsonicPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RotateSubsonicPassword401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RotateSubsonicPassword401JSONResponse) VisitRotateSubsonicPasswordResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListActivityRequestObject struct {
 	Params ListActivityParams
@@ -28756,6 +28941,15 @@ func (response UnlockUser404JSONResponse) VisitUnlockUserResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DisableSubsonicPassword Disable Subsonic access by clearing the password
+	// (DELETE /account/subsonic-password)
+	DisableSubsonicPassword(ctx context.Context, request DisableSubsonicPasswordRequestObject) (DisableSubsonicPasswordResponseObject, error)
+	// GetSubsonicPassword Whether a Subsonic password is set, and its value
+	// (GET /account/subsonic-password)
+	GetSubsonicPassword(ctx context.Context, request GetSubsonicPasswordRequestObject) (GetSubsonicPasswordResponseObject, error)
+	// RotateSubsonicPassword Generate or rotate the Subsonic password
+	// (POST /account/subsonic-password)
+	RotateSubsonicPassword(ctx context.Context, request RotateSubsonicPasswordRequestObject) (RotateSubsonicPasswordResponseObject, error)
 	// ListActivity Library activity events.
 	// (GET /activity)
 	ListActivity(ctx context.Context, request ListActivityRequestObject) (ListActivityResponseObject, error)
@@ -29407,6 +29601,78 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DisableSubsonicPassword operation middleware
+func (sh *strictHandler) DisableSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	var request DisableSubsonicPasswordRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DisableSubsonicPassword(ctx, request.(DisableSubsonicPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DisableSubsonicPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DisableSubsonicPasswordResponseObject); ok {
+		if err := validResponse.VisitDisableSubsonicPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSubsonicPassword operation middleware
+func (sh *strictHandler) GetSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	var request GetSubsonicPasswordRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSubsonicPassword(ctx, request.(GetSubsonicPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSubsonicPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSubsonicPasswordResponseObject); ok {
+		if err := validResponse.VisitGetSubsonicPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RotateSubsonicPassword operation middleware
+func (sh *strictHandler) RotateSubsonicPassword(w http.ResponseWriter, r *http.Request) {
+	var request RotateSubsonicPasswordRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RotateSubsonicPassword(ctx, request.(RotateSubsonicPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RotateSubsonicPassword")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RotateSubsonicPasswordResponseObject); ok {
+		if err := validResponse.VisitRotateSubsonicPasswordResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListActivity operation middleware

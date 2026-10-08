@@ -121,6 +121,26 @@ func (_u *UserUpdate) ClearDisplayName() *UserUpdate {
 	return _u
 }
 
+// SetSubsonicPassword sets the "subsonic_password" field.
+func (_u *UserUpdate) SetSubsonicPassword(v string) *UserUpdate {
+	_u.mutation.SetSubsonicPassword(v)
+	return _u
+}
+
+// SetNillableSubsonicPassword sets the "subsonic_password" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicPassword(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicPassword(*v)
+	}
+	return _u
+}
+
+// ClearSubsonicPassword clears the value of the "subsonic_password" field.
+func (_u *UserUpdate) ClearSubsonicPassword() *UserUpdate {
+	_u.mutation.ClearSubsonicPassword()
+	return _u
+}
+
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_u *UserUpdate) SetFailedLoginCount(v uint8) *UserUpdate {
 	_u.mutation.ResetFailedLoginCount()
@@ -429,6 +449,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DisplayNameCleared() {
 		_spec.ClearField(user.FieldDisplayName, field.TypeString)
 	}
+	if value, ok := _u.mutation.SubsonicPassword(); ok {
+		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)
+	}
+	if _u.mutation.SubsonicPasswordCleared() {
+		_spec.ClearField(user.FieldSubsonicPassword, field.TypeString)
+	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)
 	}
@@ -734,6 +760,26 @@ func (_u *UserUpdateOne) SetNillableDisplayName(v *string) *UserUpdateOne {
 // ClearDisplayName clears the value of the "display_name" field.
 func (_u *UserUpdateOne) ClearDisplayName() *UserUpdateOne {
 	_u.mutation.ClearDisplayName()
+	return _u
+}
+
+// SetSubsonicPassword sets the "subsonic_password" field.
+func (_u *UserUpdateOne) SetSubsonicPassword(v string) *UserUpdateOne {
+	_u.mutation.SetSubsonicPassword(v)
+	return _u
+}
+
+// SetNillableSubsonicPassword sets the "subsonic_password" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicPassword(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicPassword(*v)
+	}
+	return _u
+}
+
+// ClearSubsonicPassword clears the value of the "subsonic_password" field.
+func (_u *UserUpdateOne) ClearSubsonicPassword() *UserUpdateOne {
+	_u.mutation.ClearSubsonicPassword()
 	return _u
 }
 
@@ -1074,6 +1120,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.DisplayNameCleared() {
 		_spec.ClearField(user.FieldDisplayName, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubsonicPassword(); ok {
+		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)
+	}
+	if _u.mutation.SubsonicPasswordCleared() {
+		_spec.ClearField(user.FieldSubsonicPassword, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

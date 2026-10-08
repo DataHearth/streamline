@@ -76,6 +76,8 @@ type UpdateUserParams struct {
 	ClearLastFailedLoginAt bool
 	LockedUntil            *time.Time
 	ClearLockedUntil       bool
+	SubsonicPassword       *string
+	ClearSubsonicPassword  bool
 }
 
 func (db *DB) FindUserByEmail(ctx context.Context, email string) (*ent.User, error) {
@@ -284,6 +286,11 @@ func applyUserUpdate(
 		upd = upd.SetLockedUntil(*p.LockedUntil)
 	} else if p.ClearLockedUntil {
 		upd = upd.ClearLockedUntil()
+	}
+	if p.SubsonicPassword != nil {
+		upd = upd.SetSubsonicPassword(*p.SubsonicPassword)
+	} else if p.ClearSubsonicPassword {
+		upd = upd.ClearSubsonicPassword()
 	}
 	return upd
 }

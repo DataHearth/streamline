@@ -279,6 +279,11 @@ var _ = g.Describe("authenticateAPI", g.Label("unit"), func() {
 			g.Entry("key mint", http.MethodPost, "/api/v1/auth/me/api-keys"),
 			g.Entry("key revoke", http.MethodDelete, "/api/v1/auth/me/api-keys/3"),
 			g.Entry(
+				"subsonic password rotate",
+				http.MethodPost,
+				"/api/v1/account/subsonic-password",
+			),
+			g.Entry(
 				"session revoke",
 				http.MethodDelete,
 				"/api/v1/auth/me/sessions/2",

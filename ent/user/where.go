@@ -80,6 +80,11 @@ func DisplayName(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldDisplayName, v))
 }
 
+// SubsonicPassword applies equality check predicate on the "subsonic_password" field. It's identical to SubsonicPasswordEQ.
+func SubsonicPassword(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicPassword, v))
+}
+
 // FailedLoginCount applies equality check predicate on the "failed_login_count" field. It's identical to FailedLoginCountEQ.
 func FailedLoginCount(v uint8) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldFailedLoginCount, v))
@@ -428,6 +433,81 @@ func DisplayNameEqualFold(v string) predicate.User {
 // DisplayNameContainsFold applies the ContainsFold predicate on the "display_name" field.
 func DisplayNameContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldDisplayName, v))
+}
+
+// SubsonicPasswordEQ applies the EQ predicate on the "subsonic_password" field.
+func SubsonicPasswordEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordNEQ applies the NEQ predicate on the "subsonic_password" field.
+func SubsonicPasswordNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordIn applies the In predicate on the "subsonic_password" field.
+func SubsonicPasswordIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSubsonicPassword, vs...))
+}
+
+// SubsonicPasswordNotIn applies the NotIn predicate on the "subsonic_password" field.
+func SubsonicPasswordNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSubsonicPassword, vs...))
+}
+
+// SubsonicPasswordGT applies the GT predicate on the "subsonic_password" field.
+func SubsonicPasswordGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordGTE applies the GTE predicate on the "subsonic_password" field.
+func SubsonicPasswordGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordLT applies the LT predicate on the "subsonic_password" field.
+func SubsonicPasswordLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordLTE applies the LTE predicate on the "subsonic_password" field.
+func SubsonicPasswordLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordContains applies the Contains predicate on the "subsonic_password" field.
+func SubsonicPasswordContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordHasPrefix applies the HasPrefix predicate on the "subsonic_password" field.
+func SubsonicPasswordHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordHasSuffix applies the HasSuffix predicate on the "subsonic_password" field.
+func SubsonicPasswordHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordIsNil applies the IsNil predicate on the "subsonic_password" field.
+func SubsonicPasswordIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldSubsonicPassword))
+}
+
+// SubsonicPasswordNotNil applies the NotNil predicate on the "subsonic_password" field.
+func SubsonicPasswordNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldSubsonicPassword))
+}
+
+// SubsonicPasswordEqualFold applies the EqualFold predicate on the "subsonic_password" field.
+func SubsonicPasswordEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldSubsonicPassword, v))
+}
+
+// SubsonicPasswordContainsFold applies the ContainsFold predicate on the "subsonic_password" field.
+func SubsonicPasswordContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldSubsonicPassword, v))
 }
 
 // FailedLoginCountEQ applies the EQ predicate on the "failed_login_count" field.

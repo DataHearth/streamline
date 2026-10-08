@@ -250,6 +250,45 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 		})
 	})
 
+	Describe("RotateSubsonicPassword", func() {
+		It("stores a 24-char alphanumeric password and returns it", func() {
+			var stored string
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				if p.SubsonicPassword == nil {
+					return false
+				}
+				stored = *p.SubsonicPassword
+				return true
+			})).
+				Return(&ent.User{ID: 1}, nil).
+				Once()
+
+			pw, err := svc.RotateSubsonicPassword(ctx, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pw).To(MatchRegexp(`^[a-zA-Z0-9]{24}$`))
+			Expect(stored).To(Equal(pw))
+		})
+
+		It("wraps store errors", func() {
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(nil, errors.New("update fail")).
+				Once()
+			_, err := svc.RotateSubsonicPassword(ctx, 1)
+			Expect(err).To(MatchError(ContainSubstring("rotate subsonic password")))
+		})
+	})
+
+	Describe("DisableSubsonicPassword", func() {
+		It("sets the clear flag", func() {
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.ClearSubsonicPassword && p.SubsonicPassword == nil
+			})).
+				Return(&ent.User{ID: 1}, nil).
+				Once()
+			Expect(svc.DisableSubsonicPassword(ctx, 1)).To(Succeed())
+		})
+	})
+
 	Describe("ListAPIKeys", func() {
 		It("delegates to the store", func() {
 			rows := []*ent.ApiKey{{ID: 1}}

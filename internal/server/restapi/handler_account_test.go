@@ -305,6 +305,90 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})
 		})
+
+		Describe("/api/v1/account/subsonic-password", func() {
+			const path = "/api/v1/account/subsonic-password"
+			const secret = "abcdefghijklmnopqrstuvwx"
+
+			type state struct {
+				Enabled  bool   `json:"enabled"`
+				Password string `json:"password"`
+			}
+			decode := func(resp *http.Response) state {
+				GinkgoHelper()
+				defer resp.Body.Close()
+				var st state
+				Expect(json.NewDecoder(resp.Body).Decode(&st)).To(Succeed())
+				return st
+			}
+
+			It("POST returns the rotated password", func() {
+				app.auth.EXPECT().
+					RotateSubsonicPassword(mock.Anything, app.adminID).
+					Return(secret, nil).
+					Once()
+				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(
+					decode(resp),
+				).To(Equal(state{Enabled: true, Password: secret}))
+			})
+
+			It("GET reports an enabled password", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{ID: app.adminID, SubsonicPassword: secret}, nil).
+					Once()
+				resp := authGET(app, app.adminKey, path)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(
+					decode(resp),
+				).To(Equal(state{Enabled: true, Password: secret}))
+			})
+
+			It("GET reports disabled when no password is set", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{ID: app.adminID}, nil).
+					Once()
+				resp := authGET(app, app.adminKey, path)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(decode(resp).Enabled).To(BeFalse())
+			})
+
+			It("DELETE disables the password", func() {
+				app.auth.EXPECT().
+					DisableSubsonicPassword(mock.Anything, app.adminID).
+					Return(nil).
+					Once()
+				resp := app.do(app.req(http.MethodDelete, path, app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			DescribeTable("refuses callers without a session",
+				func(method, key string) {
+					resp := app.do(app.req(method, path, key, nil))
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				},
+				Entry("GET without auth", http.MethodGet, "invalid-token"),
+				Entry("POST without auth", http.MethodPost, "invalid-token"),
+				Entry("DELETE without auth", http.MethodDelete, "invalid-token"),
+			)
+
+			It("refuses API-key identities on every verb", func() {
+				for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodDelete} {
+					resp := app.do(app.req(m, path, app.adminAPIKey, nil))
+					resp.Body.Close()
+					Expect(resp.StatusCode).To(
+						BeElementOf(
+							http.StatusUnauthorized,
+							http.StatusForbidden,
+						), m)
+				}
+			})
+		})
 	},
 )
 

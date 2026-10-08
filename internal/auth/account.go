@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/utils/random"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/crypto/bcrypt"
@@ -173,6 +174,54 @@ func (s *auth) RevokeAPIKeyByID(
 	}
 	if n == 0 {
 		return ErrAPIKeyNotFound
+	}
+	return nil
+}
+
+const accountSecretLen = 24
+
+// RotateSubsonicPassword replaces the user's Subsonic password with a fresh
+// generated one and returns it.
+func (s *auth) RotateSubsonicPassword(
+	ctx context.Context,
+	userID uint32,
+) (string, error) {
+	ctx, span := tracer.Start(ctx, "auth.rotate_subsonic_password",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	pw := random.Alphanumeric(accountSecretLen)
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{SubsonicPassword: &pw},
+	); err != nil {
+		return "", otelx.RecordSpanError(
+			span,
+			fmt.Errorf("rotate subsonic password: %w", err),
+		)
+	}
+	return pw, nil
+}
+
+// DisableSubsonicPassword clears the user's Subsonic password, ending Subsonic
+// access.
+func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error {
+	ctx, span := tracer.Start(ctx, "auth.disable_subsonic_password",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{ClearSubsonicPassword: true},
+	); err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("disable subsonic password: %w", err),
+		)
 	}
 	return nil
 }

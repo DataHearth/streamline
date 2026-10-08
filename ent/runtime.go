@@ -726,7 +726,7 @@ func init() {
 	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
 	// userDescFailedLoginCount is the schema descriptor for failed_login_count field.
-	userDescFailedLoginCount := userFields[5].Descriptor()
+	userDescFailedLoginCount := userFields[6].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
 }

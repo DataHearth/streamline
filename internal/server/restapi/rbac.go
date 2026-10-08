@@ -58,6 +58,10 @@ var minRole = map[string]string{
 	"DeleteMySession": roleRequestOnly,
 	"ChangePassword":  roleRequestOnly,
 
+	"GetSubsonicPassword":     roleRequestOnly,
+	"RotateSubsonicPassword":  roleRequestOnly,
+	"DisableSubsonicPassword": roleRequestOnly,
+
 	"ListUpcomingReleases": roleRequestOnly,
 
 	"GetConfigAuth":           roleAdmin,

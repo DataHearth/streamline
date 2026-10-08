@@ -35,3 +35,13 @@ var _ = Describe("Must", Label("unit"), func() {
 		Entry("8 vs 32", 8, 32),
 	)
 })
+
+var _ = Describe("Alphanumeric", Label("unit"), func() {
+	It("returns n characters from [a-zA-Z0-9]", func() {
+		Expect(Alphanumeric(24)).To(MatchRegexp(`^[a-zA-Z0-9]{24}$`))
+	})
+
+	It("returns unique values across calls", func() {
+		Expect(Alphanumeric(24)).NotTo(Equal(Alphanumeric(24)))
+	})
+})

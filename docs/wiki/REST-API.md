@@ -47,7 +47,7 @@ Cookies are ignored on `/api/v1` **except** for same-origin browser requests car
 Failures return `401` with a JSON body. No redirects on the API surface.
 
 > [!WARNING]
-> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, or `/users` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
+> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, or `/users` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
 
 ### Getting an API key
 
@@ -365,6 +365,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `PUT` | `/auth/password` | Change your password | Any |
 | `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | List / create your API keys or sessions | Any |
 | `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
+| `GET` `POST` `DELETE` | `/account/subsonic-password` | Read / generate-or-rotate / disable your Subsonic password | Any, session only |
 | `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |

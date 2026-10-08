@@ -808,6 +808,63 @@ func (_c *MockManager_DeleteUser_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// DisableSubsonicPassword provides a mock function for the type MockManager
+func (_mock *MockManager) DisableSubsonicPassword(ctx context.Context, userID uint32) error {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DisableSubsonicPassword")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_DisableSubsonicPassword_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DisableSubsonicPassword'
+type MockManager_DisableSubsonicPassword_Call struct {
+	*mock.Call
+}
+
+// DisableSubsonicPassword is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+func (_e *MockManager_Expecter) DisableSubsonicPassword(ctx any, userID any) *MockManager_DisableSubsonicPassword_Call {
+	return &MockManager_DisableSubsonicPassword_Call{Call: _e.mock.On("DisableSubsonicPassword", ctx, userID)}
+}
+
+func (_c *MockManager_DisableSubsonicPassword_Call) Run(run func(ctx context.Context, userID uint32)) *MockManager_DisableSubsonicPassword_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_DisableSubsonicPassword_Call) Return(err error) *MockManager_DisableSubsonicPassword_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_DisableSubsonicPassword_Call) RunAndReturn(run func(ctx context.Context, userID uint32) error) *MockManager_DisableSubsonicPassword_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUserByID provides a mock function for the type MockManager
 func (_mock *MockManager) GetUserByID(ctx context.Context, id uint32) (*ent.User, error) {
 	ret := _mock.Called(ctx, id)
@@ -2118,6 +2175,72 @@ func (_c *MockManager_RotateJWTSecret_Call) Return(s string, err error) *MockMan
 }
 
 func (_c *MockManager_RotateJWTSecret_Call) RunAndReturn(run func(ctx context.Context, callerID uint32) (string, error)) *MockManager_RotateJWTSecret_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RotateSubsonicPassword provides a mock function for the type MockManager
+func (_mock *MockManager) RotateSubsonicPassword(ctx context.Context, userID uint32) (string, error) {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RotateSubsonicPassword")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (string, error)); ok {
+		return returnFunc(ctx, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) string); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_RotateSubsonicPassword_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RotateSubsonicPassword'
+type MockManager_RotateSubsonicPassword_Call struct {
+	*mock.Call
+}
+
+// RotateSubsonicPassword is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+func (_e *MockManager_Expecter) RotateSubsonicPassword(ctx any, userID any) *MockManager_RotateSubsonicPassword_Call {
+	return &MockManager_RotateSubsonicPassword_Call{Call: _e.mock.On("RotateSubsonicPassword", ctx, userID)}
+}
+
+func (_c *MockManager_RotateSubsonicPassword_Call) Run(run func(ctx context.Context, userID uint32)) *MockManager_RotateSubsonicPassword_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_RotateSubsonicPassword_Call) Return(s string, err error) *MockManager_RotateSubsonicPassword_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockManager_RotateSubsonicPassword_Call) RunAndReturn(run func(ctx context.Context, userID uint32) (string, error)) *MockManager_RotateSubsonicPassword_Call {
 	_c.Call.Return(run)
 	return _c
 }

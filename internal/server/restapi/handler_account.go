@@ -192,3 +192,81 @@ func (s *Server) DeleteMySession(
 	}
 	return DeleteMySession204Response{}, nil
 }
+
+// GetSubsonicPassword returns the caller's Subsonic password. Session-only:
+// the value is plaintext, and an API key must not be able to read it.
+func (s *Server) GetSubsonicPassword(
+	ctx context.Context,
+	_ GetSubsonicPasswordRequestObject,
+) (GetSubsonicPasswordResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return GetSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return GetSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	u, err := s.auth.GetUserByID(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return GetSubsonicPassword200JSONResponse{
+		Enabled:  u.SubsonicPassword != "",
+		Password: &u.SubsonicPassword,
+	}, nil
+}
+
+// RotateSubsonicPassword generates a new Subsonic password for the caller.
+func (s *Server) RotateSubsonicPassword(
+	ctx context.Context,
+	_ RotateSubsonicPasswordRequestObject,
+) (RotateSubsonicPasswordResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return RotateSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return RotateSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	pw, err := s.auth.RotateSubsonicPassword(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return RotateSubsonicPassword200JSONResponse{Enabled: true, Password: &pw}, nil
+}
+
+// DisableSubsonicPassword clears the caller's Subsonic password.
+func (s *Server) DisableSubsonicPassword(
+	ctx context.Context,
+	_ DisableSubsonicPasswordRequestObject,
+) (DisableSubsonicPasswordResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return DisableSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return DisableSubsonicPassword401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	if err := s.auth.DisableSubsonicPassword(ctx, claims.UserID); err != nil {
+		return nil, err
+	}
+	return DisableSubsonicPassword204Response{}, nil
+}

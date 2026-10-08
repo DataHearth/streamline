@@ -114,6 +114,20 @@ func (_c *UserCreate) SetNillableDisplayName(v *string) *UserCreate {
 	return _c
 }
 
+// SetSubsonicPassword sets the "subsonic_password" field.
+func (_c *UserCreate) SetSubsonicPassword(v string) *UserCreate {
+	_c.mutation.SetSubsonicPassword(v)
+	return _c
+}
+
+// SetNillableSubsonicPassword sets the "subsonic_password" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicPassword(v *string) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicPassword(*v)
+	}
+	return _c
+}
+
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_c *UserCreate) SetFailedLoginCount(v uint8) *UserCreate {
 	_c.mutation.SetFailedLoginCount(v)
@@ -373,6 +387,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DisplayName(); ok {
 		_spec.SetField(user.FieldDisplayName, field.TypeString, value)
 		_node.DisplayName = value
+	}
+	if value, ok := _c.mutation.SubsonicPassword(); ok {
+		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)
+		_node.SubsonicPassword = value
 	}
 	if value, ok := _c.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

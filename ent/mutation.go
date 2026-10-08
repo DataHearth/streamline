@@ -35340,6 +35340,7 @@ type UserMutation struct {
 	role                   *user.Role
 	auth_method            *user.AuthMethod
 	display_name           *string
+	subsonic_password      *string
 	failed_login_count     *uint8
 	addfailed_login_count  *int8
 	last_failed_login_at   *time.Time
@@ -35742,6 +35743,55 @@ func (m *UserMutation) DisplayNameCleared() bool {
 func (m *UserMutation) ResetDisplayName() {
 	m.display_name = nil
 	delete(m.clearedFields, user.FieldDisplayName)
+}
+
+// SetSubsonicPassword sets the "subsonic_password" field.
+func (m *UserMutation) SetSubsonicPassword(s string) {
+	m.subsonic_password = &s
+}
+
+// SubsonicPassword returns the value of the "subsonic_password" field in the mutation.
+func (m *UserMutation) SubsonicPassword() (r string, exists bool) {
+	v := m.subsonic_password
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicPassword returns the old "subsonic_password" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicPassword(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicPassword is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicPassword requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicPassword: %w", err)
+	}
+	return oldValue.SubsonicPassword, nil
+}
+
+// ClearSubsonicPassword clears the value of the "subsonic_password" field.
+func (m *UserMutation) ClearSubsonicPassword() {
+	m.subsonic_password = nil
+	m.clearedFields[user.FieldSubsonicPassword] = struct{}{}
+}
+
+// SubsonicPasswordCleared returns if the "subsonic_password" field was cleared in this mutation.
+func (m *UserMutation) SubsonicPasswordCleared() bool {
+	_, ok := m.clearedFields[user.FieldSubsonicPassword]
+	return ok
+}
+
+// ResetSubsonicPassword resets all changes to the "subsonic_password" field.
+func (m *UserMutation) ResetSubsonicPassword() {
+	m.subsonic_password = nil
+	delete(m.clearedFields, user.FieldSubsonicPassword)
 }
 
 // SetFailedLoginCount sets the "failed_login_count" field.
@@ -36148,7 +36198,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -36169,6 +36219,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.display_name != nil {
 		fields = append(fields, user.FieldDisplayName)
+	}
+	if m.subsonic_password != nil {
+		fields = append(fields, user.FieldSubsonicPassword)
 	}
 	if m.failed_login_count != nil {
 		fields = append(fields, user.FieldFailedLoginCount)
@@ -36201,6 +36254,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.AuthMethod()
 	case user.FieldDisplayName:
 		return m.DisplayName()
+	case user.FieldSubsonicPassword:
+		return m.SubsonicPassword()
 	case user.FieldFailedLoginCount:
 		return m.FailedLoginCount()
 	case user.FieldLastFailedLoginAt:
@@ -36230,6 +36285,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldAuthMethod(ctx)
 	case user.FieldDisplayName:
 		return m.OldDisplayName(ctx)
+	case user.FieldSubsonicPassword:
+		return m.OldSubsonicPassword(ctx)
 	case user.FieldFailedLoginCount:
 		return m.OldFailedLoginCount(ctx)
 	case user.FieldLastFailedLoginAt:
@@ -36293,6 +36350,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDisplayName(v)
+		return nil
+	case user.FieldSubsonicPassword:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicPassword(v)
 		return nil
 	case user.FieldFailedLoginCount:
 		v, ok := value.(uint8)
@@ -36366,6 +36430,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldDisplayName) {
 		fields = append(fields, user.FieldDisplayName)
 	}
+	if m.FieldCleared(user.FieldSubsonicPassword) {
+		fields = append(fields, user.FieldSubsonicPassword)
+	}
 	if m.FieldCleared(user.FieldLastFailedLoginAt) {
 		fields = append(fields, user.FieldLastFailedLoginAt)
 	}
@@ -36391,6 +36458,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldDisplayName:
 		m.ClearDisplayName()
+		return nil
+	case user.FieldSubsonicPassword:
+		m.ClearSubsonicPassword()
 		return nil
 	case user.FieldLastFailedLoginAt:
 		m.ClearLastFailedLoginAt()
@@ -36426,6 +36496,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldDisplayName:
 		m.ResetDisplayName()
+		return nil
+	case user.FieldSubsonicPassword:
+		m.ResetSubsonicPassword()
 		return nil
 	case user.FieldFailedLoginCount:
 		m.ResetFailedLoginCount()

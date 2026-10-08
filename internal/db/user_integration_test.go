@@ -112,6 +112,30 @@ var _ = Describe("User store CRUD", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updated.Role).To(Equal(user.RoleMember))
 		})
+
+		It("sets then clears the subsonic password", func() {
+			u := create("a@example.com", "member")
+			pw := "secretsecretsecretsecret"
+			set, err := store.UpdateUser(
+				ctx,
+				u.ID,
+				UpdateUserParams{SubsonicPassword: &pw},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set.SubsonicPassword).To(Equal(pw))
+
+			read, err := store.FindUserByID(ctx, u.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(read.SubsonicPassword).To(Equal(pw))
+
+			cleared, err := store.UpdateUser(
+				ctx,
+				u.ID,
+				UpdateUserParams{ClearSubsonicPassword: true},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cleared.SubsonicPassword).To(BeEmpty())
+		})
 	})
 
 	Describe("UpdateUserRole", func() {
