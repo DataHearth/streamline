@@ -4191,7 +4191,7 @@ type EpisodeStatus string
 type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
-	// invalid_condition, grab_rejected, worker_unavailable). Present for domain errors
+	// invalid_condition, grab_rejected, rate_limited, worker_unavailable). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
@@ -7248,6 +7248,9 @@ type OIDCProviderList = OIDCProviderListView
 
 // PayloadTooLarge defines model for PayloadTooLarge.
 type PayloadTooLarge = Error
+
+// RateLimited defines model for RateLimited.
+type RateLimited = Error
 
 // RequestCountsResponse defines model for RequestCountsResponse.
 type RequestCountsResponse = RequestCounts
@@ -16885,6 +16888,15 @@ type PendingListJSONResponse PendingList
 
 type PendingPreviewJSONResponse PendingPreview
 
+type RateLimitedResponseHeaders struct {
+	RetryAfter *int
+}
+type RateLimitedJSONResponse struct {
+	Body Error
+
+	Headers RateLimitedResponseHeaders
+}
+
 type ReidentifyResultJSONResponse ReidentifyResult
 
 type ReleaseGrabAcceptedResponse struct {
@@ -19221,6 +19233,23 @@ func (response AddBookAuthor422JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
+type AddBookAuthor429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response AddBookAuthor429JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddBookAuthor500JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
@@ -19498,6 +19527,23 @@ func (response RefreshBookAuthor404JSONResponse) VisitRefreshBookAuthorResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBookAuthor429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response RefreshBookAuthor429JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -19847,6 +19893,23 @@ func (response SearchBookAuthors200JSONResponse) VisitSearchBookAuthorsResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookAuthors429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SearchBookAuthors429JSONResponse) VisitSearchBookAuthorsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -27296,6 +27359,23 @@ func (response ApproveRequest413JSONResponse) VisitApproveRequestResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveRequest429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response ApproveRequest429JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
 	_, err := buf.WriteTo(w)
 	return err
 }

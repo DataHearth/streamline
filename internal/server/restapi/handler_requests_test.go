@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -322,6 +324,27 @@ var _ = Describe("Request handlers", Label("unit", "restapi"), func() {
 			var got map[string]any
 			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
 			Expect(got).To(HaveKeyWithValue("media_mbid", "a-uuid"))
+		})
+
+		It("answers 429 with Retry-After when Hardcover is rate limiting", func() {
+			app.requests.EXPECT().
+				Approve(mock.Anything, uint32(1), app.adminID, "").
+				Return(nil, fmt.Errorf("approve: add book: %w",
+					&metadata.RateLimitedError{RetryAfter: 30 * time.Second})).
+				Once()
+
+			resp, err := http.DefaultClient.Do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/requests/1/approve",
+					app.adminKey,
+					nil,
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+			Expect(resp.Header.Get("Retry-After")).To(Equal("30"))
 		})
 
 		It("approves a book request as admin (200)", func() {

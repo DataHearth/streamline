@@ -3,7 +3,11 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"math"
+
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 // internalErrorMessage is the only 500 body the API hands back. The real error
@@ -112,6 +116,31 @@ const codeNoQualityProfile = "no_quality_profile"
 func errNoQualityProfile(msg string) UnprocessableEntityJSONResponse {
 	code := codeNoQualityProfile
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
+// codeRateLimited marks a 429 raised because Hardcover's rate limit or daily
+// request budget is spent. Retry-After carries the wait; the message names the
+// provider, which the SPA cannot otherwise tell from a rate-limited login.
+const codeRateLimited = "rate_limited"
+
+// errRateLimited builds the shared 429 for an err wrapping
+// metadata.ErrRateLimited, with Retry-After rounded up to whole seconds.
+func errRateLimited(err error) RateLimitedJSONResponse {
+	var wait int
+	if rl, ok := errors.AsType[*metadata.RateLimitedError](err); ok {
+		wait = int(math.Ceil(rl.RetryAfter.Seconds()))
+	}
+	code := codeRateLimited
+	return RateLimitedJSONResponse{
+		Body: Error{
+			Message: fmt.Sprintf(
+				"Hardcover is rate limiting requests; try again in %d seconds.",
+				wait,
+			),
+			Code: &code,
+		},
+		Headers: RateLimitedResponseHeaders{RetryAfter: &wait},
+	}
 }
 
 // codeWorkerUnavailable marks a 409 from POST /transcoding/scan raised because

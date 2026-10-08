@@ -240,6 +240,28 @@ var _ = Describe("Handler: Books", Label("unit", "server", "books"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 		})
 
+		It("answers 429 with Retry-After and a rate_limited code", func() {
+			app.books.EXPECT().Add(mock.Anything, mock.Anything).
+				Return(nil, fmt.Errorf(
+					"get author: %w",
+					&metadata.RateLimitedError{
+						RetryAfter: 61500 * time.Millisecond,
+					},
+				)).Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/authors",
+				app.adminKey,
+				`{"hardcover_id":1}`,
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+			Expect(resp.Header.Get("Retry-After")).To(Equal("62"))
+			var got map[string]any
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got).To(HaveKeyWithValue("code", "rate_limited"))
+		})
+
 		It("answers 503 when Hardcover rejects the key", func() {
 			app.books.EXPECT().Add(mock.Anything, mock.Anything).
 				Return(nil, metadata.ErrHardcoverUnauthorized).Once()
@@ -455,6 +477,21 @@ var _ = Describe("Handler: Books", Label("unit", "server", "books"), func() {
 			)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("answers 429 with Retry-After when Hardcover is rate limiting", func() {
+			app.books.EXPECT().RefreshOne(mock.Anything, uint32(7)).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/books/authors/7/refresh",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+			Expect(resp.Header.Get("Retry-After")).To(Equal("60"))
 		})
 
 		It("answers 503 when the provider is not configured", func() {

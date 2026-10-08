@@ -2,6 +2,7 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -22,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -88,8 +90,18 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 	queue := make([]db.CreateImportScanBookParams, 0, total)
 	tally := map[entimportscanbook.Classification]int{}
 	var lookupErrors int
+	budget, _ := s.bookmeta.(metadata.Budgeter)
 	lastPoll := time.Now()
 	for i, cand := range candidates {
+		if budget != nil && budget.Remaining() <= budget.ScanReserve() {
+			reason := budgetExhaustedReason(
+				ctx,
+				time.Until(nextUTCMidnight(time.Now())),
+			)
+			otelx.RecordSpanError(span, errors.New(reason))
+			s.markScanFailed(ctx, scan.ID, reason)
+			return
+		}
 		if time.Since(lastPoll) > cancellationPollEvery {
 			lastPoll = time.Now()
 			cur, ferr := s.store.FindImportScan(ctx, scan.ID)
@@ -99,7 +111,15 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 		}
 
 		info := readBookInfo(ctx, cand)
-		c, errs := s.classifyBookCandidate(ctx, info, indexed[cand.slot])
+		c, errs, cerr := s.classifyBookCandidate(ctx, info, indexed[cand.slot])
+		if cerr != nil {
+			var rl *metadata.RateLimitedError
+			errors.As(cerr, &rl)
+			reason := rateLimitedReason(ctx, rl)
+			otelx.RecordSpanError(span, errors.New(reason))
+			s.markScanFailed(ctx, scan.ID, reason)
+			return
+		}
 		lookupErrors += errs
 		tally[c.Kind]++
 		queue = append(queue, db.CreateImportScanBookParams{
@@ -159,6 +179,35 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 	}
 	countCommit(ctx, "book", "walk_error", int64(walkErrors))
 	countCommit(ctx, "book", "hardcover_lookup_error", int64(lookupErrors))
+}
+
+func nextUTCMidnight(now time.Time) time.Time {
+	return now.UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)
+}
+
+func budgetExhaustedReason(ctx context.Context, resetsIn time.Duration) string {
+	reason := fmt.Sprintf(
+		"Hardcover's daily request budget is spent (the rest is kept for adds and refreshes); "+
+			"it resets at 00:00 UTC, in about %s. Re-run the scan then.",
+		resetsIn.Round(time.Minute),
+	)
+	slog.WarnContext(ctx, "book scan stopped: hardcover daily budget spent",
+		"resets_in", resetsIn.Round(time.Minute))
+	return reason
+}
+
+func rateLimitedReason(ctx context.Context, rl *metadata.RateLimitedError) string {
+	wait := time.Minute
+	if rl != nil {
+		wait = rl.RetryAfter
+	}
+	reason := fmt.Sprintf(
+		"Hardcover rate limit reached; try again in about %s. Re-run the scan then.",
+		wait.Round(time.Second),
+	)
+	slog.WarnContext(ctx, "book scan stopped: hardcover rate limited",
+		"retry_after", wait.Round(time.Second))
+	return reason
 }
 
 func existingID(id uint32) *uint32 {
@@ -326,23 +375,29 @@ func cleanBookName(name string) string {
 }
 
 // classifyBookCandidate identifies one candidate. The second return is the
-// number of failed Hardcover calls, for the scan's hygiene counters.
+// number of failed Hardcover calls, for the scan's hygiene counters; the third
+// is non-nil only when Hardcover rate-limited the lookup, which ends the scan.
 func (s *Service) classifyBookCandidate(
 	ctx context.Context,
 	info ebookmeta.Info,
 	indexed map[uint32]uint32,
-) (BookClassification, int) {
+) (BookClassification, int, error) {
 	var errs int
 
 	if info.ISBN != "" {
 		id, err := s.bookmeta.BookByISBN(ctx, info.ISBN)
 		switch {
+		case errors.Is(err, metadata.ErrRateLimited):
+			return BookClassification{}, errs, err
 		case err != nil:
 			errs++
 			slog.WarnContext(ctx, "book scan: isbn lookup failed",
 				"isbn", info.ISBN, "error", err)
 		case id != 0:
 			d, gerr := s.bookmeta.GetBook(ctx, id)
+			if errors.Is(gerr, metadata.ErrRateLimited) {
+				return BookClassification{}, errs, gerr
+			}
 			if gerr != nil {
 				errs++
 				slog.WarnContext(ctx, "book scan: hardcover book fetch failed",
@@ -359,19 +414,22 @@ func (s *Service) classifyBookCandidate(
 					Author:            info.Author,
 				},
 				indexed,
-			), errs
+			), errs, nil
 		}
 	}
 
 	if info.Title == "" {
 		return BookClassification{
 			Kind: entimportscanbook.ClassificationUnmatched,
-		}, errs
+		}, errs, nil
 	}
 	hits, err := s.bookmeta.SearchBooks(
 		ctx,
 		strings.TrimSpace(info.Title+" "+info.Author),
 	)
+	if errors.Is(err, metadata.ErrRateLimited) {
+		return BookClassification{}, errs, err
+	}
 	if err != nil {
 		errs++
 		slog.WarnContext(ctx, "book scan: hardcover search failed",
@@ -385,6 +443,9 @@ func (s *Service) classifyBookCandidate(
 	if c.Kind == entimportscanbook.ClassificationConfirmed ||
 		c.Kind == entimportscanbook.ClassificationExisting {
 		d, gerr := s.bookmeta.GetBook(ctx, c.BookHardcoverID)
+		if errors.Is(gerr, metadata.ErrRateLimited) {
+			return BookClassification{}, errs, gerr
+		}
 		if gerr != nil {
 			errs++
 			slog.WarnContext(ctx, "book scan: hardcover book fetch failed",
@@ -394,5 +455,5 @@ func (s *Service) classifyBookCandidate(
 			c.Candidates[0].AuthorHardcoverID = d.AuthorHardcover
 		}
 	}
-	return c, errs
+	return c, errs, nil
 }

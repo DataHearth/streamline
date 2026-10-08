@@ -49,6 +49,10 @@ func (s *Server) SearchBookAuthors(
 	}
 	results, err := s.metadataBook.SearchAuthors(ctx, request.Params.Query)
 	switch {
+	case errors.Is(err, metadata.ErrRateLimited):
+		return SearchBookAuthors429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
+		}, nil
 	case providerUnavailable(err):
 		return SearchBookAuthors503JSONResponse{
 			ServiceUnavailableJSONResponse: errServiceUnavailable(err.Error()),
@@ -153,6 +157,10 @@ func (s *Server) AddBookAuthor(
 	case errors.Is(err, book.ErrAuthorExists):
 		return AddBookAuthor409JSONResponse{
 			ConflictJSONResponse: errConflict(err.Error()),
+		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return AddBookAuthor429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
 		}, nil
 	case providerUnavailable(err):
 		return AddBookAuthor503JSONResponse{
@@ -289,6 +297,10 @@ func (s *Server) RefreshBookAuthor(
 	case errors.Is(err, book.ErrAuthorNotFound):
 		return RefreshBookAuthor404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return RefreshBookAuthor429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
 		}, nil
 	case providerUnavailable(err):
 		return RefreshBookAuthor503JSONResponse{

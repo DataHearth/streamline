@@ -404,6 +404,31 @@ var _ = Describe("Book schedulers", Label("unit", "integration", "book"), func()
 			Expect(client.Author.GetX(ctx, good.ID).LastRefreshedAt).NotTo(BeNil())
 		})
 
+		It("stops the batch at the first rate limit and returns nil", func() {
+			first := makeAuthor(1, nil)
+			second := makeAuthor(2, nil)
+			provider.EXPECT().GetAuthor(mock.Anything, mock.Anything).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+
+			Expect(svc.RefreshStale(ctx)).To(Succeed())
+
+			Expect(client.Author.GetX(ctx, first.ID).LastRefreshedAt).To(BeNil())
+			Expect(client.Author.GetX(ctx, second.ID).LastRefreshedAt).To(BeNil())
+		})
+
+		It("surfaces a rate limit from Add and RefreshOne", func() {
+			limited := &metadata.RateLimitedError{RetryAfter: time.Minute}
+			provider.EXPECT().GetAuthor(mock.Anything, mock.Anything).
+				Return(nil, limited)
+			a := makeAuthor(3, nil)
+
+			_, err := svc.Add(ctx, AddParams{HardcoverID: 9})
+			Expect(err).To(MatchError(metadata.ErrRateLimited))
+			_, err = svc.RefreshOne(ctx, a.ID)
+			Expect(err).To(MatchError(metadata.ErrRateLimited))
+		})
+
 		It("does nothing when Hardcover is not configured", func() {
 			makeAuthor(1, nil)
 			unconfigured := NewService(db.New(client), nil, posters, indexers, dl)

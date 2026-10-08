@@ -1384,6 +1384,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/BookSearchResults"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
         "503":
@@ -1412,8 +1414,10 @@ paths:
       summary: Add an author by Hardcover id
       description: |
         Fetches the author and bibliography from Hardcover and adds them to
-        the library. Answers 503 when no Hardcover API key is configured and
-        422 for an unknown enum value or quality profile name.
+        the library. Answers 503 when no Hardcover API key is configured,
+        429 (`code: rate_limited`, with `Retry-After`) when Hardcover's rate
+        limit or daily request budget is spent, and 422 for an unknown enum
+        value or quality profile name.
       tags: [books]
       requestBody:
         $ref: "#/components/requestBodies/AddBookAuthor"
@@ -1428,6 +1432,8 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
         "503":
@@ -1495,7 +1501,10 @@ paths:
     post:
       operationId: refreshBookAuthor
       summary: Refresh an author from Hardcover
-      description: Re-fetches the bibliography. Answers 503 when no Hardcover API key is configured.
+      description: |
+        Re-fetches the bibliography. Answers 503 when no Hardcover API key is
+        configured and 429 (`code: rate_limited`, with `Retry-After`) when
+        Hardcover's rate limit or daily request budget is spent.
       tags: [books]
       responses:
         "200":
@@ -1504,6 +1513,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
         "503":
@@ -4554,6 +4565,9 @@ paths:
       description: |
         Creates the library item with the chosen quality profile. Omitting
         quality_profile (or sending it empty) uses the server default.
+        Answers 429 (`code: rate_limited`, with `Retry-After`) when approving
+        an author or book request runs into Hardcover's rate limit or daily
+        request budget; the request stays pending.
       tags: [requests]
       requestBody:
         $ref: "#/components/requestBodies/ApproveRequest"
@@ -4566,6 +4580,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5953,6 +5969,22 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
 
+    RateLimited:
+      description: |
+        The upstream provider's rate limit or daily request budget is spent
+        (`code: rate_limited`). Retry after the number of seconds in
+        `Retry-After`.
+      headers:
+        Retry-After:
+          description: Seconds until the request can succeed.
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
     SeriesDeleted:
       description: Series deleted.
 
@@ -6344,7 +6376,7 @@ components:
           description: |
             Stable machine-readable error code (e.g. last_admin,
             self_delete_forbidden, email_exists, connection_failed,
-            invalid_condition, grab_rejected, worker_unavailable). Present for domain errors
+            invalid_condition, grab_rejected, rate_limited, worker_unavailable). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 

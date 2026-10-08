@@ -202,11 +202,11 @@ A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `form
 |--------|------|-------------|------|
 | `GET` | `/books/search?query=` | Search Hardcover for authors; each hit carries `already_added` | Authenticated |
 | `GET` | `/books/authors` | Paginated list (`?page=`, `?limit=` 1-100); items carry `book_count` but no `books` | Authenticated |
-| `POST` | `/books/authors` | Add an author by `hardcover_id` (`monitored` defaults to true, optional `monitor_policy`, `want_kinds`, `ebook_quality_profile`, `audiobook_quality_profile`); `409` if already added, `422` for an unknown profile name or enum value | Member |
+| `POST` | `/books/authors` | Add an author by `hardcover_id` (`monitored` defaults to true, optional `monitor_policy`, `want_kinds`, `ebook_quality_profile`, `audiobook_quality_profile`); `409` if already added, `422` for an unknown profile name or enum value, `429` with `Retry-After` and `code: rate_limited` when Hardcover's rate limit or daily budget is spent | Member |
 | `GET` | `/books/authors/{id}` | Fetch an author with its `books` | Authenticated |
 | `PATCH` | `/books/authors/{id}` | Update `monitored`, `monitor_policy`, `want_kinds` and the two profile names; `422` for an unknown profile name or enum value | Member |
 | `DELETE` | `/books/authors/{id}` | Remove an author; `?delete_files=true` also deletes files from disk | Member |
-| `POST` | `/books/authors/{id}/refresh` | Re-fetch the bibliography from Hardcover | Member |
+| `POST` | `/books/authors/{id}/refresh` | Re-fetch the bibliography from Hardcover; `429` with `Retry-After` and `code: rate_limited` when its rate limit or daily budget is spent | Member |
 | `GET` | `/books/{id}` | Fetch a book with its `ebook` and `audiobook` slots | Authenticated |
 | `PATCH` | `/books/{id}` | Update `ebook_monitored` / `audiobook_monitored` | Member |
 | `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Search the indexers for one slot of a book; returns `{items: [{format, release}]}` ranked, rejected releases kept at the end with `release.rejected` and `release.reject_reason` | Member |
@@ -310,7 +310,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | --- | --- | --- | --- |
 | `GET` `POST` | `/requests` | List / create requests | Any (scoped for `request_only`) |
 | `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata | Any (scoped for `request_only`) |
-| `POST` | `/requests/{id}/approve` | Approve a request | admin, member |
+| `POST` | `/requests/{id}/approve` | Approve a request (`429` with `Retry-After` when an author or book request hits Hardcover's limit; the request stays pending) | admin, member |
 | `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin, member |
 
 ### Config-backed resources

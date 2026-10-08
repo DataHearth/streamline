@@ -10,6 +10,15 @@ Point an import scan at your music or book folders with `kind: music` or `kind: 
 
 **Books** groups ebooks by file name (an `.epub` and a `.mobi` of the same title are one candidate) and every folder of audio files into one audiobook candidate. Identification tries a Calibre `metadata.opf` sidecar first, then the epub's own metadata, then the file name, and resolves through Hardcover by ISBN when one is known. Book scans need a Hardcover key; without one the scan is refused.
 
+### Hardcover limits
+
+Hardcover's free plan allows 60 requests a minute and 5,000 a day. Streamline paces itself at one request a second and keeps its own count of the day (resetting at 00:00 UTC), holding back 500 requests as a reserve so a big scan cannot lock you out of adding authors.
+
+- A book scan checks the budget before every candidate. When only the reserve is left, or Hardcover answers `429`, the scan **fails** with a reason naming the limit and when it clears; re-run it afterwards. Nothing is half-imported.
+- Adding or refreshing an author, and approving an author or book request, answer `429` with a `Retry-After` header when the minute limit or the day's budget is gone. Try again after that many seconds; the request stays pending.
+- The scheduled author refresh stops at the first `429` and carries on at its next run.
+- When a title has an ISBN, a scan resolves it with one request and does not search by title.
+
 ## Listening and reading from other apps
 
 | Protocol | Path | Clients | Credentials |

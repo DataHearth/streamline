@@ -71,6 +71,7 @@ packages:
     interfaces:
       BookProvider: {}
       CoverProvider: {}
+      Budgeter: {}
       MusicProvider: {}
       Provider: {}
       TVProvider: {}

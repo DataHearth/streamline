@@ -179,6 +179,10 @@ func (s *Server) ApproveRequest(
 		return ApproveRequest404JSONResponse{
 			NotFoundJSONResponse: errNotFound("request not found"),
 		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return ApproveRequest429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
+		}, nil
 	case err != nil:
 		return ApproveRequest500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),

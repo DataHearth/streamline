@@ -82,3 +82,12 @@ func recordTVDBRequest(
 		attribute.String("outcome", recordProviderStatus(ctx, status)),
 	))
 }
+
+var hardcoverRequests = otelx.Must(meter.Int64Counter(
+	"streamline.metadata.hardcover.requests",
+	metric.WithDescription("Hardcover API requests by outcome"),
+))
+
+func outcomeAttr(outcome string) metric.AddOption {
+	return metric.WithAttributes(attribute.String("outcome", outcome))
+}

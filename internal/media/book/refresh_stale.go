@@ -2,11 +2,13 @@ package book
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 )
@@ -53,7 +55,13 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	refreshed, skipped := 0, 0
 	for i, a := range rows {
 		scheduler.Progress(ctx, i, len(rows))
-		if _, err := s.RefreshOne(ctx, a.ID); err != nil {
+		_, err := s.RefreshOne(ctx, a.ID)
+		if errors.Is(err, metadata.ErrRateLimited) {
+			slog.WarnContext(ctx, "author refresh stopped: hardcover rate limited",
+				"refreshed", refreshed, "remaining", len(rows)-i, "error", err)
+			break
+		}
+		if err != nil {
 			slog.WarnContext(ctx, "author refresh failed",
 				"author.id", a.ID, "error", err)
 			skipped++

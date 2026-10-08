@@ -270,6 +270,92 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		Expect(cur.FailureReason).To(ContainSubstring("walk source path"))
 	})
 
+	It("never searches by title once the ISBN resolves", func() {
+		dir := filepath.Join(ebookRoot, "Brandon Sanderson", "Elantris (1)")
+		writeEpub(filepath.Join(dir, "Elantris - Brandon Sanderson.epub"), testOPF)
+		bookmeta.EXPECT().BookByISBN(mock.Anything, "9780765311771").
+			Return(uint32(1), nil).Once()
+		bookmeta.EXPECT().GetBook(mock.Anything, uint32(1)).
+			Return(&metadata.BookDetails{AuthorHardcover: 10}, nil).Once()
+
+		rows := scan(ebookRoot)
+		Expect(rows).To(HaveLen(1))
+		bookmeta.AssertNotCalled(
+			GinkgoT(),
+			"SearchBooks",
+			mock.Anything,
+			mock.Anything,
+		)
+	})
+
+	Describe("Hardcover budget", func() {
+		var budget *metamocks.MockBudgeter
+
+		failedScan := func(root string) *ent.ImportScan {
+			GinkgoHelper()
+			sc, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+				SourcePath: root,
+				Kind:       entimportscan.KindBook,
+				Mode:       entimportscan.ModeInPlace,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			svc.runScanBooks(ctx, sc)
+			cur, err := store.FindImportScan(ctx, sc.ID)
+			Expect(err).NotTo(HaveOccurred())
+			return cur
+		}
+
+		BeforeEach(func() {
+			budget = metamocks.NewMockBudgeter(GinkgoT())
+			budget.EXPECT().ScanReserve().Return(500).Maybe()
+			svc.bookmeta = struct {
+				metadata.BookProvider
+				metadata.Budgeter
+			}{bookmeta, budget}
+			touch(filepath.Join(ebookRoot, "Elantris - Brandon Sanderson.epub"))
+		})
+
+		It(
+			"fails a re-runnable scan before looking anything up when only the reserve is left",
+			func() {
+				budget.EXPECT().Remaining().Return(500).Once()
+
+				cur := failedScan(ebookRoot)
+				Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+				Expect(
+					cur.FailureReason,
+				).To(ContainSubstring("daily request budget"))
+				Expect(cur.FailureReason).To(ContainSubstring("resets"))
+				Expect(client.ImportScanBook.Query().CountX(ctx)).To(BeZero())
+			},
+		)
+
+		It("scans while the budget clears the reserve", func() {
+			budget.EXPECT().Remaining().Return(501).Once()
+			bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+
+			cur := failedScan(ebookRoot)
+			Expect(cur.Status).To(Equal(entimportscan.StatusAwaitingReview))
+		})
+
+		It(
+			"fails the scan with the reset time when a lookup is rate limited",
+			func() {
+				budget.EXPECT().Remaining().Return(4000).Once()
+				bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
+					Return(nil, &metadata.RateLimitedError{RetryAfter: 90 * time.Second}).
+					Once()
+
+				cur := failedScan(ebookRoot)
+				Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+				Expect(cur.FailureReason).To(ContainSubstring("rate limit"))
+				Expect(cur.FailureReason).To(ContainSubstring("Re-run the scan"))
+				Expect(client.ImportScanBook.Query().CountX(ctx)).To(BeZero())
+			},
+		)
+	})
+
 	Describe("StartScan dispatch", func() {
 		It("rejects a kind with no scanner before writing a scan row", func() {
 			_, err := svc.StartScan(ctx, StartScanParams{
