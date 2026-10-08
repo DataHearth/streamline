@@ -7,6 +7,10 @@ template: testify
 template-data:
   unroll-variadic: true
 packages:
+  github.com/datahearth/streamline/internal/arr:
+    interfaces:
+      Factory: {}
+      Library: {}
   github.com/datahearth/streamline/internal/auth:
     interfaces:
       Manager: {}
