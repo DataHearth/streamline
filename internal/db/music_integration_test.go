@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 )
 
 var _ = Describe("Music persistence", Label("integration", "db"), func() {
@@ -162,6 +163,127 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(client.Artist.GetX(ctx, a.ID).LastRefreshedAt).NotTo(BeNil())
 		},
 	)
+
+	Describe("backlog search", func() {
+		var (
+			a                               *ent.Artist
+			cutoff                          time.Time
+			eligible, capped, cooled, inFly *ent.Album
+			unmon, hasFile                  *ent.Album
+		)
+
+		BeforeEach(func() {
+			cutoff = time.Now().Add(-time.Hour)
+			var err error
+			a, err = store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-2", Name: "Pixies", Monitored: true,
+				Albums: []AlbumSeed{
+					{MBID: "e", Title: "Eligible"},
+					{MBID: "c", Title: "Capped"},
+					{MBID: "k", Title: "Cooled"},
+					{MBID: "f", Title: "InFlight"},
+					{MBID: "u", Title: "Unmonitored"},
+					{MBID: "h", Title: "Available"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			byMBID := func(m string) *ent.Album {
+				return client.Album.Query().Where(album.MbidEQ(m)).OnlyX(ctx)
+			}
+			eligible, capped, cooled = byMBID("e"), byMBID("c"), byMBID("k")
+			inFly, unmon, hasFile = byMBID("f"), byMBID("u"), byMBID("h")
+			client.Album.UpdateOneID(capped.ID).SetGrabFailures(3).ExecX(ctx)
+			client.Album.UpdateOneID(cooled.ID).
+				SetLastSearchAt(time.Now()).
+				ExecX(ctx)
+			client.Album.UpdateOneID(unmon.ID).SetMonitored(false).ExecX(ctx)
+			client.Album.UpdateOneID(hasFile.ID).
+				SetStatus(album.StatusAvailable).ExecX(ctx)
+			client.DownloadRecord.Create().SetTitle("x").
+				SetStatus("downloading").SetAlbumID(inFly.ID).SaveX(ctx)
+		})
+
+		ids := func(rows []*ent.Album) []uint32 {
+			out := make([]uint32, len(rows))
+			for i, r := range rows {
+				out[i] = r.ID
+			}
+			return out
+		}
+
+		It(
+			"lists only wanted, monitored, under-cap, out-of-cooldown albums with no in-flight record",
+			func() {
+				rows, err := store.ListEligibleAlbumsForSync(ctx, 3, cutoff)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids(rows)).To(Equal([]uint32{eligible.ID}))
+				Expect(rows[0].Edges.Artist).NotTo(BeNil())
+			},
+		)
+
+		It("orders never-searched first, then oldest search, then id", func() {
+			old := client.Album.UpdateOneID(cooled.ID).
+				SetLastSearchAt(time.Now().Add(-5 * time.Hour))
+			old.ExecX(ctx)
+			client.Album.UpdateOneID(eligible.ID).
+				SetLastSearchAt(time.Now().Add(-3 * time.Hour)).ExecX(ctx)
+			client.Album.UpdateOneID(capped.ID).SetGrabFailures(0).ExecX(ctx)
+
+			rows, err := store.ListEligibleAlbumsForSync(ctx, 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(rows)).To(Equal([]uint32{capped.ID, cooled.ID, eligible.ID}))
+		})
+
+		It("counts a finished record as no longer in flight", func() {
+			client.DownloadRecord.Update().
+				Where(downloadrecord.HasAlbumWith(album.IDEQ(inFly.ID))).
+				SetStatus("completed").ExecX(ctx)
+			rows, err := store.ListEligibleAlbumsForSync(ctx, 3, cutoff)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(rows)).To(ConsistOf(eligible.ID, inFly.ID))
+		})
+
+		It("stamps the search time and moves the failure counter", func() {
+			when := time.Now().Truncate(time.Second)
+			Expect(store.SetAlbumLastSearchAt(ctx, eligible.ID, when)).To(Succeed())
+			Expect(client.Album.GetX(ctx, eligible.ID).LastSearchAt).
+				To(HaveValue(BeTemporally("~", when, time.Second)))
+
+			Expect(store.IncrementAlbumGrabFailures(ctx, eligible.ID)).To(Succeed())
+			Expect(store.IncrementAlbumGrabFailures(ctx, eligible.ID)).To(Succeed())
+			Expect(client.Album.GetX(ctx, eligible.ID).GrabFailures).
+				To(Equal(uint8(2)))
+			Expect(store.ResetAlbumGrabFailures(ctx, eligible.ID)).To(Succeed())
+			Expect(client.Album.GetX(ctx, eligible.ID).GrabFailures).
+				To(BeZero())
+		})
+
+		It("lists stale artists oldest first within the limit", func() {
+			fresh, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-3", Name: "Fresh",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			client.Artist.UpdateOneID(fresh.ID).
+				SetLastRefreshedAt(time.Now()).
+				ExecX(ctx)
+			older, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-4", Name: "Older",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			client.Artist.UpdateOneID(older.ID).
+				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).ExecX(ctx)
+
+			rows, err := store.ListArtistsStaleSince(ctx, cutoff, 10)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(2))
+			Expect(rows[0].ID).To(Equal(a.ID))
+			Expect(rows[1].ID).To(Equal(older.ID))
+
+			rows, err = store.ListArtistsStaleSince(ctx, cutoff, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+		})
+	})
 
 	It("cascades the delete to albums and tracks", func() {
 		a := seed()

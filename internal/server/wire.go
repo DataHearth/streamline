@@ -367,12 +367,17 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		{
 			"movie-missing-search",
 			cfg.Schedule.MovieMissingSearch,
-			func(time.Duration) scheduler.JobFunc { return jobs.MissingSearch(missingSearcher) },
+			func(time.Duration) scheduler.JobFunc {
+				return jobs.MissingSearch(
+					missingSearcher,
+					jobs.RunnerFunc(musicSvc.SearchMissing),
+				)
+			},
 		},
 		{
 			"movie-metadata-refresh",
 			cfg.Schedule.MovieMetadataRefresh,
-			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(movieSvc) },
+			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(movieSvc, musicSvc) },
 		},
 		{
 			"tv-missing-search",

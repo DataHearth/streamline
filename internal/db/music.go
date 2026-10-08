@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/track"
 )
 
@@ -299,5 +300,70 @@ func (db *DB) ListUpcomingAlbums(
 		).
 		WithArtist().
 		Order(ent.Asc(album.FieldReleaseDate)).
+		All(ctx)
+}
+
+// ListEligibleAlbumsForSync returns wanted, monitored albums under the failure
+// cap whose cooldown has expired or never started, least recently searched
+// first (never-searched rows lead, SQLite sorts NULL first). Albums with an
+// in-flight download record are excluded so a stale status cannot trigger a
+// second grab.
+func (db *DB) ListEligibleAlbumsForSync(
+	ctx context.Context,
+	maxGrabFailures uint8,
+	notSearchedSince time.Time,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.StatusEQ(album.StatusWanted),
+			album.Monitored(true),
+			album.GrabFailuresLT(maxGrabFailures),
+			album.Or(
+				album.LastSearchAtIsNil(),
+				album.LastSearchAtLT(notSearchedSince),
+			),
+			album.Not(album.HasDownloadRecordsWith(
+				downloadrecord.StatusIn(
+					downloadrecord.StatusDownloading,
+					downloadrecord.StatusImporting,
+				),
+			)),
+		).
+		WithArtist().
+		Order(ent.Asc(album.FieldLastSearchAt), ent.Asc(album.FieldID)).
+		All(ctx)
+}
+
+func (db *DB) SetAlbumLastSearchAt(
+	ctx context.Context,
+	id uint32,
+	when time.Time,
+) error {
+	return db.client.Album.UpdateOneID(id).SetLastSearchAt(when).Exec(ctx)
+}
+
+func (db *DB) IncrementAlbumGrabFailures(ctx context.Context, id uint32) error {
+	return db.client.Album.UpdateOneID(id).AddGrabFailures(1).Exec(ctx)
+}
+
+func (db *DB) ResetAlbumGrabFailures(ctx context.Context, id uint32) error {
+	return db.client.Album.UpdateOneID(id).SetGrabFailures(0).Exec(ctx)
+}
+
+// ListArtistsStaleSince returns at most limit artists never refreshed or last
+// refreshed before cutoff, oldest first. Keyed on last_refreshed_at, not
+// update_time, which moves on every write.
+func (db *DB) ListArtistsStaleSince(
+	ctx context.Context,
+	cutoff time.Time,
+	limit int,
+) ([]*ent.Artist, error) {
+	return db.client.Artist.Query().
+		Where(artist.Or(
+			artist.LastRefreshedAtIsNil(),
+			artist.LastRefreshedAtLT(cutoff),
+		)).
+		Order(ent.Asc(artist.FieldLastRefreshedAt), ent.Asc(artist.FieldID)).
+		Limit(limit).
 		All(ctx)
 }

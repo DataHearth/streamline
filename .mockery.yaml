@@ -53,6 +53,8 @@ packages:
     interfaces:
       Adder: {}
       Manager: {}
+      MetadataRefresher: {}
+      MissingSearcher: {}
   github.com/datahearth/streamline/internal/media/book:
     interfaces:
       Adder: {}

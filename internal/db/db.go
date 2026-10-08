@@ -67,6 +67,24 @@ type Store interface {
 		to album.Status,
 	) (bool, error)
 	DeleteArtist(ctx context.Context, id uint32) error
+	// ListEligibleAlbumsForSync returns wanted, monitored albums under the
+	// failure cap and past cooldown with no in-flight record, least recently
+	// searched first. The artist is eager-loaded.
+	ListEligibleAlbumsForSync(
+		ctx context.Context,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Album, error)
+	SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+	IncrementAlbumGrabFailures(ctx context.Context, id uint32) error
+	ResetAlbumGrabFailures(ctx context.Context, id uint32) error
+	// ListArtistsStaleSince returns at most limit artists never refreshed or
+	// refreshed before cutoff, oldest first.
+	ListArtistsStaleSince(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.Artist, error)
 
 	// books
 	CreateAuthor(ctx context.Context, p CreateAuthorParams) (*ent.Author, error)
@@ -101,7 +119,6 @@ type Store interface {
 		from, to string,
 	) error
 	DeleteAuthor(ctx context.Context, id uint32) error
-
 	// users
 	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
 	FindUserByID(ctx context.Context, id uint32) (*ent.User, error)

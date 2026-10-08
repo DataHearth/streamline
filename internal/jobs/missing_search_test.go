@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
 	rssmocks "github.com/datahearth/streamline/internal/rss/mocks"
 )
 
@@ -31,5 +32,36 @@ var _ = Describe("MissingSearch", Label("unit"), func() {
 		boom := errors.New("sync failed")
 		runner.EXPECT().Run(mock.Anything).Return(boom).Once()
 		Expect(MissingSearch(runner)(ctx)).To(MatchError(boom))
+	})
+
+	It("runs every runner in order", func() {
+		music := musicmocks.NewMockMissingSearcher(GinkgoT())
+		var order []string
+		runner.EXPECT().Run(mock.Anything).
+			RunAndReturn(func(context.Context) error {
+				order = append(order, "movie")
+				return nil
+			}).Once()
+		music.EXPECT().SearchMissing(mock.Anything).
+			RunAndReturn(func(context.Context) error {
+				order = append(order, "music")
+				return nil
+			}).Once()
+
+		Expect(MissingSearch(runner, RunnerFunc(music.SearchMissing))(ctx)).
+			To(Succeed())
+		Expect(order).To(Equal([]string{"movie", "music"}))
+	})
+
+	It("joins errors while the other runners still run", func() {
+		music := musicmocks.NewMockMissingSearcher(GinkgoT())
+		boom := errors.New("movie sync failed")
+		musicBoom := errors.New("music search failed")
+		runner.EXPECT().Run(mock.Anything).Return(boom).Once()
+		music.EXPECT().SearchMissing(mock.Anything).Return(musicBoom).Once()
+
+		err := MissingSearch(runner, RunnerFunc(music.SearchMissing))(ctx)
+		Expect(err).To(MatchError(boom))
+		Expect(err).To(MatchError(musicBoom))
 	})
 })
