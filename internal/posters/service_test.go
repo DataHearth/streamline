@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,7 +45,64 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 		})
 	})
 
+	Describe("Put", func() {
+		It("writes the bytes at the poster path and replaces a cached one", func() {
+			ctx := context.Background()
+			Expect(svc.Fetch(ctx, "albums", 7, src.URL)).To(Succeed())
+
+			Expect(
+				svc.Put(ctx, "albums", 7, strings.NewReader("embedded")),
+			).To(Succeed())
+
+			got, err := os.ReadFile(svc.Path("albums", 7))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(got)).To(Equal("embedded"))
+		})
+
+		It("rejects an invalid kind", func() {
+			err := svc.Put(
+				context.Background(),
+				"../escape",
+				1,
+				strings.NewReader("x"),
+			)
+			Expect(err).To(MatchError(ContainSubstring("kind")))
+		})
+
+		It("refuses a body over the size cap and leaves no file", func() {
+			r := io.LimitReader(zeroReader{}, maxPosterSize+1024)
+			err := svc.Put(context.Background(), "albums", 8, r)
+			Expect(err).To(MatchError(ContainSubstring("exceeds")))
+			_, statErr := os.Stat(svc.Path("albums", 8))
+			Expect(os.IsNotExist(statErr)).To(BeTrue())
+		})
+	})
+
 	Describe("Fetch", func() {
+		It("keeps a poster that appeared while it was downloading", func() {
+			ctx := context.Background()
+			slow := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					Expect(
+						svc.Put(ctx, "albums", 9, strings.NewReader("embedded")),
+					).To(Succeed())
+					w.Header().Set("Content-Type", "image/jpeg")
+					_, _ = w.Write(payload)
+				}),
+			)
+			DeferCleanup(slow.Close)
+
+			Expect(svc.Fetch(ctx, "albums", 9, slow.URL)).To(Succeed())
+			got, err := os.ReadFile(svc.Path("albums", 9))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(got)).To(Equal("embedded"))
+			leftovers, err := filepath.Glob(
+				filepath.Join(filepath.Dir(svc.Path("albums", 9)), "poster-*.tmp"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(leftovers).To(BeEmpty())
+		})
+
 		It("writes poster at deterministic path, idempotent on second call", func() {
 			Expect(
 				svc.Fetch(context.Background(), "movies", 42, src.URL),
@@ -241,3 +299,10 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 		})
 	})
 })
+
+type zeroReader struct{}
+
+func (zeroReader) Read(p []byte) (int, error) {
+	clear(p)
+	return len(p), nil
+}

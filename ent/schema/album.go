@@ -25,6 +25,7 @@ func (Album) Fields() []ent.Field {
 		// release-groups, and the track list comes from one canonical release.
 		field.String("mbid").NotEmpty().Unique(),
 		field.String("release_mbid").Optional(),
+		field.String("barcode").Optional(),
 		field.String("title").NotEmpty(),
 		field.Enum("type").
 			Values("album", "ep", "single", "compilation", "live", "other").

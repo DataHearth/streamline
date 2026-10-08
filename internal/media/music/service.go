@@ -170,6 +170,7 @@ func (s *Service) albumSeeds(
 		seeds = append(seeds, db.AlbumSeed{
 			MBID:        rg.MBID,
 			ReleaseMBID: d.ReleaseMBID,
+			Barcode:     d.Barcode,
 			Title:       rg.Title,
 			Type:        string(rg.Type),
 			ReleaseDate: rg.ReleaseDate,

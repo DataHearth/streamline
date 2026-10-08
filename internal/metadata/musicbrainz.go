@@ -313,7 +313,8 @@ func (m *MusicBrainz) GetReleaseGroup(
 	}
 
 	var rel struct {
-		Media []struct {
+		Barcode string `json:"barcode"`
+		Media   []struct {
 			Position uint8 `json:"position"`
 			Tracks   []struct {
 				Position  uint16 `json:"position"`
@@ -329,6 +330,7 @@ func (m *MusicBrainz) GetReleaseGroup(
 		url.Values{"inc": {"recordings"}}, &rel); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	details.Barcode = rel.Barcode
 	for _, medium := range rel.Media {
 		disc := medium.Position
 		if disc == 0 {

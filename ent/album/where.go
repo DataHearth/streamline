@@ -75,6 +75,11 @@ func ReleaseMbid(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldReleaseMbid, v))
 }
 
+// Barcode applies equality check predicate on the "barcode" field. It's identical to BarcodeEQ.
+func Barcode(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldBarcode, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldTitle, v))
@@ -318,6 +323,81 @@ func ReleaseMbidEqualFold(v string) predicate.Album {
 // ReleaseMbidContainsFold applies the ContainsFold predicate on the "release_mbid" field.
 func ReleaseMbidContainsFold(v string) predicate.Album {
 	return predicate.Album(sql.FieldContainsFold(FieldReleaseMbid, v))
+}
+
+// BarcodeEQ applies the EQ predicate on the "barcode" field.
+func BarcodeEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldBarcode, v))
+}
+
+// BarcodeNEQ applies the NEQ predicate on the "barcode" field.
+func BarcodeNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldBarcode, v))
+}
+
+// BarcodeIn applies the In predicate on the "barcode" field.
+func BarcodeIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldBarcode, vs...))
+}
+
+// BarcodeNotIn applies the NotIn predicate on the "barcode" field.
+func BarcodeNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldBarcode, vs...))
+}
+
+// BarcodeGT applies the GT predicate on the "barcode" field.
+func BarcodeGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldBarcode, v))
+}
+
+// BarcodeGTE applies the GTE predicate on the "barcode" field.
+func BarcodeGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldBarcode, v))
+}
+
+// BarcodeLT applies the LT predicate on the "barcode" field.
+func BarcodeLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldBarcode, v))
+}
+
+// BarcodeLTE applies the LTE predicate on the "barcode" field.
+func BarcodeLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldBarcode, v))
+}
+
+// BarcodeContains applies the Contains predicate on the "barcode" field.
+func BarcodeContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldBarcode, v))
+}
+
+// BarcodeHasPrefix applies the HasPrefix predicate on the "barcode" field.
+func BarcodeHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldBarcode, v))
+}
+
+// BarcodeHasSuffix applies the HasSuffix predicate on the "barcode" field.
+func BarcodeHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldBarcode, v))
+}
+
+// BarcodeIsNil applies the IsNil predicate on the "barcode" field.
+func BarcodeIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldBarcode))
+}
+
+// BarcodeNotNil applies the NotNil predicate on the "barcode" field.
+func BarcodeNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldBarcode))
+}
+
+// BarcodeEqualFold applies the EqualFold predicate on the "barcode" field.
+func BarcodeEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldBarcode, v))
+}
+
+// BarcodeContainsFold applies the ContainsFold predicate on the "barcode" field.
+func BarcodeContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldBarcode, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

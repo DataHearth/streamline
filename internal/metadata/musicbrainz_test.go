@@ -126,6 +126,38 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[0].Disc).To(Equal(uint8(1)))
 		})
 
+		It(
+			"carries the canonical release's barcode, empty when it has none",
+			func() {
+				barcode := `"barcode":"0720642442524",`
+				mb.client.Transport = mbRoundTripper(
+					func(r *http.Request) (*http.Response, error) {
+						switch r.URL.Path {
+						case "/ws/2/release-group/rg-1":
+							return jsonResponse(
+								200,
+								`{"id":"rg-1","title":"X","primary-type":"Album","releases":[{"id":"rel-1","status":"Official","date":"1991-09-24"}]}`,
+							), nil
+						case "/ws/2/release/rel-1":
+							return jsonResponse(
+								200,
+								`{"id":"rel-1",`+barcode+`"media":[]}`,
+							), nil
+						}
+						return jsonResponse(404, `{}`), nil
+					},
+				)
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.Barcode).To(Equal("0720642442524"))
+
+				barcode = ""
+				rg, err = mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.Barcode).To(BeEmpty())
+			},
+		)
+
 		It("carries the credited artist and asks for artist-credits", func() {
 			var gotInc string
 			mb.client.Transport = mbRoundTripper(

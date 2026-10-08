@@ -23,6 +23,8 @@ const (
 	FieldMbid = "mbid"
 	// FieldReleaseMbid holds the string denoting the release_mbid field in the database.
 	FieldReleaseMbid = "release_mbid"
+	// FieldBarcode holds the string denoting the barcode field in the database.
+	FieldBarcode = "barcode"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldType holds the string denoting the type field in the database.
@@ -75,6 +77,7 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldMbid,
 	FieldReleaseMbid,
+	FieldBarcode,
 	FieldTitle,
 	FieldType,
 	FieldReleaseDate,
@@ -207,6 +210,11 @@ func ByMbid(opts ...sql.OrderTermOption) OrderOption {
 // ByReleaseMbid orders the results by the release_mbid field.
 func ByReleaseMbid(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReleaseMbid, opts...).ToFunc()
+}
+
+// ByBarcode orders the results by the barcode field.
+func ByBarcode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBarcode, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	mock "github.com/stretchr/testify/mock"
@@ -169,6 +170,75 @@ func (_c *MockManager_Path_Call) Return(s string) *MockManager_Path_Call {
 }
 
 func (_c *MockManager_Path_Call) RunAndReturn(run func(kind string, id uint32) string) *MockManager_Path_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Put provides a mock function for the type MockManager
+func (_mock *MockManager) Put(ctx context.Context, kind string, id uint32, r io.Reader) error {
+	ret := _mock.Called(ctx, kind, id, r)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Put")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, io.Reader) error); ok {
+		r0 = returnFunc(ctx, kind, id, r)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_Put_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Put'
+type MockManager_Put_Call struct {
+	*mock.Call
+}
+
+// Put is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - id uint32
+//   - r io.Reader
+func (_e *MockManager_Expecter) Put(ctx any, kind any, id any, r any) *MockManager_Put_Call {
+	return &MockManager_Put_Call{Call: _e.mock.On("Put", ctx, kind, id, r)}
+}
+
+func (_c *MockManager_Put_Call) Run(run func(ctx context.Context, kind string, id uint32, r io.Reader)) *MockManager_Put_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 io.Reader
+		if args[3] != nil {
+			arg3 = args[3].(io.Reader)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Put_Call) Return(err error) *MockManager_Put_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_Put_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, r io.Reader) error) *MockManager_Put_Call {
 	_c.Call.Return(run)
 	return _c
 }

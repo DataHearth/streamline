@@ -47,6 +47,8 @@ func init() {
 // metadata provider must not be able to fill the data volume.
 const maxPosterSize = 20 * 1024 * 1024
 
+var errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
+
 // validKinds doubles as a path-traversal guard: any kind outside this set
 // is rejected before touching the filesystem or the HTTP response.
 var validKinds = map[string]struct{}{
@@ -62,6 +64,8 @@ var validKinds = map[string]struct{}{
 // movie add, serve on HTTP request, resolve cache paths.
 type Manager interface {
 	Fetch(ctx context.Context, kind string, id uint32, src string) error
+	// Put stores bytes the caller already holds, replacing any cached poster.
+	Put(ctx context.Context, kind string, id uint32, r io.Reader) error
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
 	Path(kind string, id uint32) string
 	Remove(kind string, id uint32) error
@@ -160,33 +164,11 @@ func (p *posters) Fetch(
 		)
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(dst), "poster-*.tmp")
-	if err != nil {
-		return otelx.RecordSpanError(span, fmt.Errorf("create temp: %w", err))
-	}
-	tmpName := tmp.Name()
-	n, err := io.Copy(tmp, io.LimitReader(resp.Body, maxPosterSize+1))
-	if err != nil {
-		tmp.Close()
-		_ = os.Remove(tmpName)
-		return otelx.RecordSpanError(span, fmt.Errorf("copy body: %w", err))
-	}
-	if n > maxPosterSize {
-		tmp.Close()
-		_ = os.Remove(tmpName)
-		outcome = "too_large"
-		return otelx.RecordSpanError(
-			span,
-			fmt.Errorf("poster exceeds %d byte cap", maxPosterSize),
-		)
-	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpName)
+	if err := store(dst, resp.Body, false); err != nil {
+		if errors.Is(err, errTooLarge) {
+			outcome = "too_large"
+		}
 		return otelx.RecordSpanError(span, err)
-	}
-	if err := os.Rename(tmpName, dst); err != nil {
-		_ = os.Remove(tmpName)
-		return otelx.RecordSpanError(span, fmt.Errorf("rename: %w", err))
 	}
 	slog.InfoContext(
 		ctx,
@@ -200,6 +182,67 @@ func (p *posters) Fetch(
 		"cache.path",
 		dst,
 	)
+	return nil
+}
+
+// Put replaces the cached poster, unlike Fetch, which keeps one that exists:
+// the caller holds the bytes, so there is no network call to save, and a
+// picture embedded in the album's own files outranks a downloaded one.
+func (p *posters) Put(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	r io.Reader,
+) error {
+	if _, ok := validKinds[kind]; !ok {
+		return fmt.Errorf("posters: invalid kind %q", kind)
+	}
+	_, span := tracer.Start(ctx, "posters.put")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("poster.kind", kind),
+		attribute.Int64("poster.id", int64(id)),
+	)
+	return otelx.RecordSpanError(span, store(p.Path(kind, id), r, true))
+}
+
+// store writes r to dst through a temp file in the same directory, so a
+// failed or oversized copy never leaves a partial poster behind. Without
+// replace, a poster that appeared while r was being read wins: an album's
+// own art stored by Put must not be undone by a slower remote fetch.
+func store(dst string, r io.Reader, replace bool) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
+		return fmt.Errorf("mkdir poster dir: %w", err)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "poster-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temp: %w", err)
+	}
+	tmpName := tmp.Name()
+	n, err := io.Copy(tmp, io.LimitReader(r, maxPosterSize+1))
+	if err != nil {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("copy body: %w", err)
+	}
+	if n > maxPosterSize {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return errTooLarge
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if !replace {
+		if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
+			return os.Remove(tmpName)
+		}
+	}
+	if err := os.Rename(tmpName, dst); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("rename: %w", err)
+	}
 	return nil
 }
 

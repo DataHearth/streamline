@@ -58,3 +58,25 @@ func Read(path string) (Info, error) {
 	}
 	return info, nil
 }
+
+// Picture returns the artwork embedded in the file and its MIME type. A file
+// carrying none, or whose tags cannot be parsed, yields nil data and a nil
+// error, like Read: only a failure to open is an error.
+func Picture(path string) ([]byte, string, error) {
+	//nolint:gosec // the caller supplies the path; this package reads library files by design
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+
+	m, err := tag.ReadFrom(f)
+	if err != nil {
+		return nil, "", nil
+	}
+	pic := m.Picture()
+	if pic == nil || len(pic.Data) == 0 {
+		return nil, "", nil
+	}
+	return pic.Data, pic.MIMEType, nil
+}

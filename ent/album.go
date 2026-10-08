@@ -26,6 +26,8 @@ type Album struct {
 	Mbid string `json:"mbid,omitempty"`
 	// ReleaseMbid holds the value of the "release_mbid" field.
 	ReleaseMbid string `json:"release_mbid,omitempty"`
+	// Barcode holds the value of the "barcode" field.
+	Barcode string `json:"barcode,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Type holds the value of the "type" field.
@@ -98,7 +100,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldTitle, album.FieldType, album.FieldStatus:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt:
 			values[i] = new(sql.NullTime)
@@ -148,6 +150,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field release_mbid", values[i])
 			} else if value.Valid {
 				_m.ReleaseMbid = value.String
+			}
+		case album.FieldBarcode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field barcode", values[i])
+			} else if value.Valid {
+				_m.Barcode = value.String
 			}
 		case album.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -262,6 +270,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("release_mbid=")
 	builder.WriteString(_m.ReleaseMbid)
+	builder.WriteString(", ")
+	builder.WriteString("barcode=")
+	builder.WriteString(_m.Barcode)
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

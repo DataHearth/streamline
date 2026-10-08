@@ -22,6 +22,7 @@ type TrackSeed struct {
 type AlbumSeed struct {
 	MBID        string
 	ReleaseMBID string
+	Barcode     string
 	Title       string
 	Type        string
 	ReleaseDate *time.Time
@@ -60,6 +61,7 @@ func createAlbum(
 	b := c.Album.Create().
 		SetMbid(a.MBID).
 		SetReleaseMbid(a.ReleaseMBID).
+		SetBarcode(a.Barcode).
 		SetTitle(a.Title).
 		SetMonitored(monitored).
 		SetArtistID(artistID).

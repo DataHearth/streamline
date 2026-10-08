@@ -232,7 +232,26 @@ type ReleaseGroupDetails struct {
 	ReleaseGroupInfo
 	ArtistMBID  string
 	ReleaseMBID string
-	Tracks      []TrackInfo
+	// Barcode is the canonical release's UPC/EAN, empty when MusicBrainz has none.
+	Barcode string
+	Tracks  []TrackInfo
+}
+
+// CoverHit is one cover-art search result.
+type CoverHit struct {
+	ArtistName string
+	CoverURL   string
+}
+
+// CoverProvider finds album artwork outside MusicBrainz's own archive.
+// Implemented by *Deezer.
+type CoverProvider interface {
+	// CoverByUPC returns the cover URL of the album carrying the barcode, ""
+	// when the provider has none.
+	CoverByUPC(ctx context.Context, barcode string) (string, error)
+	// SearchCover returns the provider's first hit for the artist and album,
+	// nil when there is none. Matching the hit's artist is the caller's job.
+	SearchCover(ctx context.Context, artist, album string) (*CoverHit, error)
 }
 
 // ArtistDetails is the full artist record used to seed an artist and its albums.

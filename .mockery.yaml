@@ -69,6 +69,7 @@ packages:
   github.com/datahearth/streamline/internal/metadata:
     interfaces:
       BookProvider: {}
+      CoverProvider: {}
       MusicProvider: {}
       Provider: {}
       TVProvider: {}

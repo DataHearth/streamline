@@ -71,6 +71,20 @@ func (_c *AlbumCreate) SetNillableReleaseMbid(v *string) *AlbumCreate {
 	return _c
 }
 
+// SetBarcode sets the "barcode" field.
+func (_c *AlbumCreate) SetBarcode(v string) *AlbumCreate {
+	_c.mutation.SetBarcode(v)
+	return _c
+}
+
+// SetNillableBarcode sets the "barcode" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableBarcode(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetBarcode(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *AlbumCreate) SetTitle(v string) *AlbumCreate {
 	_c.mutation.SetTitle(v)
@@ -365,6 +379,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ReleaseMbid(); ok {
 		_spec.SetField(album.FieldReleaseMbid, field.TypeString, value)
 		_node.ReleaseMbid = value
+	}
+	if value, ok := _c.mutation.Barcode(); ok {
+		_spec.SetField(album.FieldBarcode, field.TypeString, value)
+		_node.Barcode = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(album.FieldTitle, field.TypeString, value)
