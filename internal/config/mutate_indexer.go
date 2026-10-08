@@ -22,6 +22,7 @@ type IndexerPatch struct {
 	Protocol *string
 	Priority *uint8
 	Enabled  *bool
+	Private  *bool
 }
 
 func AddIndexer(ctx context.Context, e IndexerEntry) error {
@@ -76,6 +77,9 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 		}
 		if p.Enabled != nil {
 			e.Enabled = *p.Enabled
+		}
+		if p.Private != nil {
+			e.Private = *p.Private
 		}
 		c.Indexers[idx] = e
 		slog.InfoContext(ctx, "indexer updated", "name", name)

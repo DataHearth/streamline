@@ -43,6 +43,7 @@ type prowlarrRelease struct {
 	Indexer     string `json:"indexer"`
 	Protocol    string `json:"protocol"` // "torrent" | "usenet"
 	PublishDate string `json:"publishDate"`
+	InfoHash    string `json:"infoHash"`
 
 	// Provider ids the tracker published on the release, parsed by Prowlarr
 	// out of the torznab attrs and re-emitted here. Absent decodes to 0, which
@@ -195,9 +196,10 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			PublishDate: parsePubDate(r.PublishDate),
 			// The meaningful indexer is the sub-tracker Prowlarr fanned out to,
 			// not the Prowlarr entry; searchAll preserves a non-empty value.
-			Indexer: r.Indexer,
-			TMDBID:  r.TMDBID,
-			TVDBID:  r.TVDBID,
+			Indexer:  r.Indexer,
+			InfoHash: infoHash(r.InfoHash, r.MagnetURL, dl),
+			TMDBID:   r.TMDBID,
+			TVDBID:   r.TVDBID,
 		})
 	}
 	return results

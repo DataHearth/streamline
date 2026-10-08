@@ -4101,15 +4101,18 @@ type ImportScanShowList struct {
 // Indexer defines model for Indexer.
 type Indexer struct {
 	// ApiKeySet True when an API key is stored. The key itself is never returned.
-	ApiKeySet bool            `json:"api_key_set"`
-	Enabled   bool            `json:"enabled"`
-	Host      string          `json:"host"`
-	Name      string          `json:"name"`
-	Path      *string         `json:"path,omitempty"`
-	Port      uint16          `json:"port"`
-	Priority  *uint8          `json:"priority,omitempty"`
-	Protocol  IndexerProtocol `json:"protocol"`
-	UseSsl    *bool           `json:"use_ssl,omitempty"`
+	ApiKeySet bool    `json:"api_key_set"`
+	Enabled   bool    `json:"enabled"`
+	Host      string  `json:"host"`
+	Name      string  `json:"name"`
+	Path      *string `json:"path,omitempty"`
+	Port      uint16  `json:"port"`
+	Priority  *uint8  `json:"priority,omitempty"`
+
+	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
+	Private  bool            `json:"private"`
+	Protocol IndexerProtocol `json:"protocol"`
+	UseSsl   *bool           `json:"use_ssl,omitempty"`
 }
 
 // IndexerProtocol defines model for Indexer.Protocol.
@@ -4117,13 +4120,16 @@ type IndexerProtocol string
 
 // IndexerCreate defines model for IndexerCreate.
 type IndexerCreate struct {
-	ApiKey   string                 `json:"api_key"`
-	Enabled  *bool                  `json:"enabled,omitempty"`
-	Host     string                 `json:"host"`
-	Name     string                 `json:"name"`
-	Path     *string                `json:"path,omitempty"`
-	Port     uint16                 `json:"port"`
-	Priority *uint8                 `json:"priority,omitempty"`
+	ApiKey   string  `json:"api_key"`
+	Enabled  *bool   `json:"enabled,omitempty"`
+	Host     string  `json:"host"`
+	Name     string  `json:"name"`
+	Path     *string `json:"path,omitempty"`
+	Port     uint16  `json:"port"`
+	Priority *uint8  `json:"priority,omitempty"`
+
+	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
+	Private  *bool                  `json:"private,omitempty"`
 	Protocol *IndexerCreateProtocol `json:"protocol,omitempty"`
 	UseSsl   *bool                  `json:"use_ssl,omitempty"`
 }
@@ -5487,13 +5493,19 @@ type SearchResult struct {
 	DownloadUrl string  `json:"download_url"`
 	Indexer     *string `json:"indexer,omitempty"`
 
+	// IndexerPrivate The `private` setting of the configured indexer the release came through — for a tracker behind Prowlarr, the Prowlarr entry's. Absent when that indexer is no longer configured. Ignored on grab request bodies.
+	IndexerPrivate *bool `json:"indexer_private,omitempty"`
+
 	// InfoUrl The indexer's details page, with any query string, fragment and userinfo removed — they can carry the indexer's API key.
 	InfoUrl  *string `json:"info_url,omitempty"`
 	Leechers *uint32 `json:"leechers,omitempty"`
 
 	// MatchedFormats Names of the custom formats that matched, relative to the queried item's quality profile. Ignored on grab request bodies.
-	MatchedFormats *[]string  `json:"matched_formats,omitempty"`
-	PublishedAt    *time.Time `json:"published_at,omitempty"`
+	MatchedFormats *[]string `json:"matched_formats,omitempty"`
+
+	// PreviouslyGrabbedAt When this exact release was last grabbed for the queried item — the movie, or for an episode, season or series search any episode of the show. Matched on info hash when both the release and the download record carry one, otherwise on the release title (case-insensitive). Adoption proposals do not count. Absent when it was never grabbed. Ignored on grab request bodies.
+	PreviouslyGrabbedAt *time.Time `json:"previously_grabbed_at,omitempty"`
+	PublishedAt         *time.Time `json:"published_at,omitempty"`
 
 	// RejectReason Human-readable reason set when rejected is true. Ignored on grab request bodies.
 	RejectReason *string `json:"reject_reason,omitempty"`

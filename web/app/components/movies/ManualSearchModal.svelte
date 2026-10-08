@@ -1,39 +1,26 @@
 <script lang="ts">
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
-	import ReplaceExistingToggle from "@components/shared/ReplaceExistingToggle.svelte";
+	import type { ExistingFile } from "@lib/release-facts";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		open,
 		movieId,
 		scopeLabel,
+		existing = null,
 		onClose,
 	}: {
 		open: boolean;
 		movieId: number;
 		// e.g. "Dune (2021)"; shown in the modal title for context.
 		scopeLabel?: string;
+		// The movie's file on disk, if any: picking a result then asks before
+		// replacing it.
+		existing?: ExistingFile | null;
 		onClose: () => void;
 	} = $props();
-
-	let replaceExisting = $state(false);
-	$effect(() => {
-		if (open) replaceExisting = false;
-	});
 </script>
-
-{#snippet replaceFooter()}
-	<!-- P2: the grab modifier sits under the list, next to where the eye ends
-	     up after picking a row, and stays put while a long list scrolls. The
-	     help text was only ever a title attribute before. -->
-	<div class="flex w-full items-center">
-		<ReplaceExistingToggle
-			checked={replaceExisting}
-			onChange={(v) => (replaceExisting = v)}
-		/>
-	</div>
-{/snippet}
 
 <Modal
 	{open}
@@ -42,13 +29,12 @@
 		: i18n.action_manual_search()}
 	size="4xl"
 	{onClose}
-	footer={replaceFooter}
 >
 	<ReleasesTable
 		searchPath={`/movies/${movieId}/search`}
 		grabPath={`/movies/${movieId}/grab`}
 		queryKey={["releases", "movie", movieId]}
-		{replaceExisting}
+		{existing}
 		enabled={open}
 		onGrabbed={onClose}
 	/>

@@ -3,7 +3,6 @@
 	import { Info } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
-	import ReplaceExistingToggle from "@components/shared/ReplaceExistingToggle.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -17,6 +16,7 @@
 		seasons,
 		initialScope = "series",
 		scopeLabel,
+		fileCounts = {},
 		onClose,
 	}: {
 		open: boolean;
@@ -29,18 +29,17 @@
 		// Scope the modal opens on, so a per-season entry point lands on that
 		// season instead of making the operator re-pick what they just clicked.
 		initialScope?: string;
+		// Episode files already on disk per scope ("series" or a season number as a
+		// string). Above zero, picking a pack asks before replacing them.
+		fileCounts?: Record<string, number>;
 		onClose: () => void;
 	} = $props();
 
 	// scope is "series" (whole show) or a season number as a string.
 	let scope = $state("series");
-	let replaceExisting = $state(false);
 	// Reset to defaults each time the modal reopens.
 	$effect(() => {
-		if (open) {
-			scope = initialScope;
-			replaceExisting = false;
-		}
+		if (open) scope = initialScope;
 	});
 
 	let options = $derived([
@@ -65,18 +64,6 @@
 	);
 </script>
 
-{#snippet replaceFooter()}
-	<!-- P2: the grab modifier sits under the list, next to where the eye ends
-	     up after picking a row, and stays put while a long list scrolls. The
-	     help text was only ever a title attribute before. -->
-	<div class="flex w-full items-center">
-		<ReplaceExistingToggle
-			checked={replaceExisting}
-			onChange={(v) => (replaceExisting = v)}
-		/>
-	</div>
-{/snippet}
-
 <Modal
 	{open}
 	title={scopeLabel
@@ -84,7 +71,6 @@
 		: i18n.action_manual_search()}
 	size="4xl"
 	{onClose}
-	footer={replaceFooter}
 >
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<span class="text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -113,7 +99,7 @@
 			{searchPath}
 			{grabPath}
 			{queryKey}
-			{replaceExisting}
+			existingCount={fileCounts[scope] ?? 0}
 			enabled={open}
 			onGrabbed={onClose}
 		/>

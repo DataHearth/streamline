@@ -190,6 +190,8 @@ API key:  from Jackett
 
 **Test** each one. Priority works like the download clients: lower number is tried first.
 
+Tick **Private** on an indexer that is a private tracker. Neither protocol reports this, so Streamline only knows what you tell it; manual search then labels each release as coming from a private or public tracker. A Prowlarr entry has one setting for every tracker behind it, so if you mix private and public trackers, either leave it off or add the private ones as separate Torznab entries.
+
 ---
 
 ## 6. Check your quality profile

@@ -197,6 +197,43 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 				Expect(results[1].TVDBID).To(BeZero())
 				Expect(results[1].TMDBID).To(BeZero())
 			})
+
+			It("reads the info hash from the attr, then a magnet", func() {
+				const hash = "0123456789abcdef0123456789abcdef01234567"
+				client := newTorznabServer(
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write(torznabXML([]testRSSItem{
+							{
+								Title: "Hashed",
+								ExtraXML: torznabAttrs(map[string]string{
+									"infohash": "0123456789ABCDEF0123456789ABCDEF01234567",
+								}),
+							},
+							{
+								Title: "Magnet attr",
+								ExtraXML: torznabAttrs(map[string]string{
+									"magneturl": "magnet:?xt=urn:btih:" + hash,
+								}),
+							},
+							{
+								Title:     "Torrent link",
+								Enclosure: testEnclosure{URL: "https://idx/dl/1"},
+							},
+						}))
+						Expect(err).NotTo(HaveOccurred())
+					},
+				)
+
+				results, err := client.Search(
+					context.Background(),
+					SearchParams{Query: "x"},
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(3))
+				Expect(results[0].InfoHash).To(Equal(hash))
+				Expect(results[1].InfoHash).To(Equal(hash))
+				Expect(results[2].InfoHash).To(BeEmpty())
+			})
 		})
 
 		When("the feed has no items", func() {

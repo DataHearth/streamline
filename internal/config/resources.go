@@ -62,6 +62,10 @@ type IndexerEntry struct {
 	Protocol   string `koanf:"protocol"     validate:"required,oneof=torznab prowlarr"`
 	Priority   uint8  `koanf:"priority"`
 	Enabled    bool   `koanf:"enabled"`
+	// Private is the operator's word for it: a Torznab feed carries no
+	// privacy flag, and a Prowlarr entry's applies to every sub-tracker
+	// behind it.
+	Private bool `koanf:"private"`
 }
 
 type QualityProfileEntry struct {

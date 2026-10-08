@@ -1,6 +1,6 @@
 import * as v from "valibot";
-import { m as i18n } from "./paraglide/messages.js";
-import type { AudiobookFormat, EbookFormat, MusicFormat } from "./types";
+import { m as i18n } from "@lib/paraglide/messages.js";
+import type { AudiobookFormat, EbookFormat, MusicFormat } from "@lib/types";
 
 export const password = v.pipe(
 	v.string(),
@@ -279,6 +279,7 @@ export const indexerForm = v.object({
 	api_key: v.string(),
 	priority,
 	enabled: v.boolean(),
+	private: v.boolean(),
 });
 
 export const downloadClientType = v.picklist(

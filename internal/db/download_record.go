@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
+
+	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -13,6 +16,8 @@ import (
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/season"
+	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -1135,6 +1140,62 @@ func (db *DB) FindSeedingDownloadRecord(
 		return nil, fmt.Errorf("find seeding download record: %w", err)
 	}
 	return rec, nil
+}
+
+func (db *DB) ListReleaseGrabs(
+	ctx context.Context,
+	movieID, showID uint32,
+	hashes, titles []string,
+) ([]*ent.DownloadRecord, error) {
+	var owner predicate.DownloadRecord
+	switch {
+	case movieID != 0:
+		owner = downloadrecord.HasMovieWith(movie.ID(movieID))
+	case showID != 0:
+		owner = downloadrecord.HasEpisodesWith(
+			episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID))),
+		)
+	default:
+		return nil, nil
+	}
+	if len(hashes) == 0 && len(titles) == 0 {
+		return nil, nil
+	}
+	hashArgs := make([]any, 0, len(hashes))
+	for _, h := range hashes {
+		hashArgs = append(hashArgs, h)
+	}
+	titleArgs := make([]any, 0, len(titles))
+	for _, t := range titles {
+		titleArgs = append(titleArgs, strings.ToLower(t))
+	}
+	recs, err := db.client.DownloadRecord.Query().
+		Where(
+			owner,
+			downloadrecord.StatusNotIn(
+				downloadrecord.StatusPending,
+				downloadrecord.StatusDismissed,
+			),
+			func(s *entsql.Selector) {
+				s.Where(entsql.Or(
+					entsql.In(s.C(downloadrecord.FieldTorrentHash), hashArgs...),
+					entsql.In(
+						entsql.Lower(s.C(downloadrecord.FieldTitle)),
+						titleArgs...,
+					),
+				))
+			},
+		).
+		Select(
+			downloadrecord.FieldTitle,
+			downloadrecord.FieldTorrentHash,
+			downloadrecord.FieldCreateTime,
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list release grabs: %w", err)
+	}
+	return recs, nil
 }
 
 // FindActiveDownloadRecordByID fetches an in-flight record by ID with movie +

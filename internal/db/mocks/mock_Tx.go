@@ -9926,6 +9926,92 @@ func (_c *MockTx_ListPeople_Call) RunAndReturn(run func(ctx context.Context, p d
 	return _c
 }
 
+// ListReleaseGrabs provides a mock function for the type MockTx
+func (_mock *MockTx) ListReleaseGrabs(ctx context.Context, movieID uint32, showID uint32, hashes []string, titles []string) ([]*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, movieID, showID, hashes, titles)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListReleaseGrabs")
+	}
+
+	var r0 []*ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, []string, []string) ([]*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, movieID, showID, hashes, titles)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, []string, []string) []*ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, movieID, showID, hashes, titles)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32, []string, []string) error); ok {
+		r1 = returnFunc(ctx, movieID, showID, hashes, titles)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListReleaseGrabs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListReleaseGrabs'
+type MockTx_ListReleaseGrabs_Call struct {
+	*mock.Call
+}
+
+// ListReleaseGrabs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - movieID uint32
+//   - showID uint32
+//   - hashes []string
+//   - titles []string
+func (_e *MockTx_Expecter) ListReleaseGrabs(ctx any, movieID any, showID any, hashes any, titles any) *MockTx_ListReleaseGrabs_Call {
+	return &MockTx_ListReleaseGrabs_Call{Call: _e.mock.On("ListReleaseGrabs", ctx, movieID, showID, hashes, titles)}
+}
+
+func (_c *MockTx_ListReleaseGrabs_Call) Run(run func(ctx context.Context, movieID uint32, showID uint32, hashes []string, titles []string)) *MockTx_ListReleaseGrabs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		var arg4 []string
+		if args[4] != nil {
+			arg4 = args[4].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListReleaseGrabs_Call) Return(downloadRecords []*ent.DownloadRecord, err error) *MockTx_ListReleaseGrabs_Call {
+	_c.Call.Return(downloadRecords, err)
+	return _c
+}
+
+func (_c *MockTx_ListReleaseGrabs_Call) RunAndReturn(run func(ctx context.Context, movieID uint32, showID uint32, hashes []string, titles []string) ([]*ent.DownloadRecord, error)) *MockTx_ListReleaseGrabs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListRequests provides a mock function for the type MockTx
 func (_mock *MockTx) ListRequests(ctx context.Context, p db.ListRequestsParams) ([]*ent.Request, int, error) {
 	ret := _mock.Called(ctx, p)

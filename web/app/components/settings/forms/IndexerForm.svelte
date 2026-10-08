@@ -24,6 +24,7 @@
 		// "Priority required" check still rejects.
 		priority: number | undefined;
 		enabled: boolean;
+		private: boolean;
 	};
 
 	type Props = {
@@ -194,6 +195,25 @@
 			{/snippet}
 		</form.Field>
 	</div>
+
+	<!-- A Torznab feed does not say whether its tracker is private, so the
+	     operator does. Manual search shows it on every result as Privé / Public. -->
+	<form.Field name="private">
+		{#snippet children(field)}
+			<div class="flex items-start justify-between gap-4 rounded-lg border border-border bg-bg-card px-4 py-3">
+				<div class="min-w-0">
+					<div class="text-sm font-medium text-fg">{i18n.indexer_private()}</div>
+					<p class="mt-0.5 text-xs text-fg-subtle">{i18n.indexer_private_help()}</p>
+				</div>
+				<TogglePill
+					label={field.state.value ? i18n.releases_private() : i18n.releases_public()}
+					name={field.name}
+					checked={field.state.value}
+					onChange={(v) => field.handleChange(v)}
+				/>
+			</div>
+		{/snippet}
+	</form.Field>
 
 	<div class="rounded-lg border border-border bg-bg-card p-5 space-y-4">
 		<div class="grid gap-3 sm:grid-cols-[1fr_6rem_auto] sm:items-end">

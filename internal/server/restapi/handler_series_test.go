@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -407,6 +408,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 					{Title: "BB S01 1080p", Download: "magnet:x", Seeders: 20},
 				}, nil).Once()
 			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			app.store.EXPECT().
 				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
 				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
@@ -644,6 +648,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
 			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			app.store.EXPECT().
 				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
 				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
@@ -660,6 +667,53 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Title).To(Equal("BB Complete 1080p"))
+		})
+	})
+
+	Describe("browse-release history", func() {
+		It("stamps a pack grabbed for any episode of the show", func() {
+			const hash = "cccccccccccccccccccccccccccccccccccccccc"
+			grabbed := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&ent.TVShow{ID: 3, Title: "Breaking Bad", TvdbID: 81189}, nil).
+				Once()
+			app.indexers.EXPECT().
+				SearchSeason(mock.Anything, []string{"Breaking Bad", ""}, mock.Anything,
+					uint32(81189), uint16(1)).
+				Return([]indexer.SearchResult{
+					{Title: "BB S01 1080p", Download: "magnet:x", InfoHash: hash},
+					{Title: "BB S01 720p", Download: "magnet:y"},
+				}, nil).Once()
+			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3),
+					[]string{hash}, []string{"BB S01 1080p", "BB S01 720p"}).
+				Return([]*ent.DownloadRecord{
+					{
+						Title:       "Breaking.Bad.S01.1080p",
+						TorrentHash: hash,
+						CreateTime:  grabbed,
+					},
+				}, nil).Once()
+			app.store.EXPECT().
+				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
+				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/seasons/1/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body SearchResultList
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(2))
+			for _, it := range body.Items {
+				if it.Title == "BB S01 1080p" {
+					Expect(it.PreviouslyGrabbedAt).
+						To(HaveValue(BeTemporally("==", grabbed)))
+				} else {
+					Expect(it.PreviouslyGrabbedAt).To(BeNil())
+				}
+			}
 		})
 	})
 
@@ -732,6 +786,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 					mock.Anything, uint32(81189)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			app.store.EXPECT().
 				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
 				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
 
@@ -748,6 +805,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
 					uint32(81189), uint16(1)).
 				Return(results, nil).Once()
+			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
 			app.store.EXPECT().
 				SeasonEpisodeCounts(mock.Anything, []uint32{3}).
 				Return(map[uint32]map[uint16]int{3: {1: 7}}, nil).Once()
@@ -775,6 +835,9 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
 					uint32(81189), uint16(1), uint16(2)).
 				Return(results, 0, nil).Once()
+			app.store.EXPECT().
+				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
 				"/api/v1/series/3/episodes/100/search", app.adminKey, nil))

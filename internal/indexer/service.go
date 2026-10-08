@@ -749,6 +749,7 @@ func (i *indexer) searchAll(
 					if res[k].Indexer == "" {
 						res[k].Indexer = idx.Name
 					}
+					res[k].ConfiguredIndexer = idx.Name
 				}
 				mu.Lock()
 				results = append(results, res...)
@@ -852,6 +853,7 @@ func (i *indexer) Feed(
 		if results[k].Indexer == "" {
 			results[k].Indexer = row.Name
 		}
+		results[k].ConfiguredIndexer = row.Name
 	}
 	span.SetAttributes(attribute.Int("results.count", len(results)))
 	slog.InfoContext(ctx,

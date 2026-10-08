@@ -48,6 +48,7 @@
 	import EpisodeTable from "@components/series/EpisodeTable.svelte";
 	import SeriesManualSearchModal from "@components/series/SeriesManualSearchModal.svelte";
 	import SeriesReleaseSearchModal from "@components/series/SeriesReleaseSearchModal.svelte";
+	import { existingFromEpisode } from "@lib/release-facts";
 	import SeriesKebabMenu from "@components/series/SeriesKebabMenu.svelte";
 	import DetailCast from "@components/shared/DetailCast.svelte";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
@@ -469,6 +470,13 @@
 				label: s.number === 0 ? i18n.series_specials() : seasonTitle(s.number),
 			})),
 	);
+	// Files a pack search would replace, per scope: the whole show, or a season.
+	let packFileCounts = $derived.by(() => {
+		const counts: Record<string, number> = { series: seriesFileEpisodes.length };
+		for (const s of seasons)
+			counts[String(s.number)] = (s.episodes ?? []).filter((e) => (e.size ?? 0) > 0).length;
+		return counts;
+	});
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles"],
 		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
@@ -1093,6 +1101,7 @@
 		seriesId={show.id}
 		episodeId={manualEpisode?.id ?? 0}
 		scopeLabel={manualScope}
+		existing={manualEpisode ? existingFromEpisode(manualEpisode) : null}
 		onClose={() => (manualOpen = false)}
 	/>
 	<SeriesReleaseSearchModal
@@ -1100,6 +1109,7 @@
 		seriesId={show.id}
 		seasons={searchSeasons}
 		initialScope={packSearchScope}
+		fileCounts={packFileCounts}
 		scopeLabel={show.year ? `${show.title} (${show.year})` : show.title}
 		onClose={() => (packSearchOpen = false)}
 	/>

@@ -374,6 +374,13 @@ export type SearchResult = {
 	rejected?: boolean;
 	reject_reason?: string;
 	matched_formats?: string[];
+	// Stamped from the indexer's own setting (Settings → Indexers): true for a
+	// private tracker, false for a public one, absent when the indexer does not
+	// say. Not derivable from a Torznab feed.
+	indexer_private?: boolean;
+	// When this exact release was last grabbed for the queried item, from its
+	// download history. Absent when it never was.
+	previously_grabbed_at?: string;
 };
 
 export type PlayOnStatus = "resolved" | "fallback" | "unavailable";
@@ -1086,6 +1093,9 @@ export type Indexer = {
 	protocol: IndexerProtocol;
 	priority?: number;
 	enabled: boolean;
+	// The operator's word for it: Torznab carries no privacy flag. Feeds
+	// SearchResult.indexer_private.
+	private?: boolean;
 };
 
 export type DownloadClientType =

@@ -182,6 +182,30 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			Expect(res[1].TVDBID).To(BeZero())
 			Expect(res[1].TMDBID).To(BeZero())
 		})
+
+		It("maps the info hash, falling back to the magnet", func() {
+			const hash = "0123456789abcdef0123456789abcdef01234567"
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					_, _ = w.Write([]byte(`[
+					{"title":"Hashed","downloadUrl":"http://x/a.torrent",
+					 "protocol":"torrent","infoHash":"` + hash + `"},
+					{"title":"Magnet","magnetUrl":"magnet:?xt=urn:btih:` + hash + `",
+					 "protocol":"torrent"},
+					{"title":"Neither","downloadUrl":"http://x/c.torrent",
+					 "protocol":"torrent"}
+				]`))
+				}))
+			DeferCleanup(srv.Close)
+
+			res, err := NewProwlarr(srv.URL, "k").
+				Search(context.Background(), SearchParams{Query: "x"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(HaveLen(3))
+			Expect(res[0].InfoHash).To(Equal(hash))
+			Expect(res[1].InfoHash).To(Equal(hash))
+			Expect(res[2].InfoHash).To(BeEmpty())
+		})
 	})
 
 	Describe("Feed", func() {

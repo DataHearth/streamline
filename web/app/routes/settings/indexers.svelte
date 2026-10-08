@@ -32,6 +32,7 @@
 		// from the 0 that Number("") would otherwise produce.
 		priority: number | undefined;
 		enabled: boolean;
+		private: boolean;
 	};
 
 	// Prowlarr aggregates via its native API; everything else is a Torznab feed
@@ -98,6 +99,7 @@
 		api_key: "",
 		priority: 25,
 		enabled: true,
+		private: false,
 	};
 
 	const form = createForm(() => ({
@@ -124,6 +126,7 @@
 			api_key: "",
 			priority: i.priority ?? 25,
 			enabled: i.enabled,
+			private: i.private ?? false,
 		});
 		modalOpen = true;
 	}
@@ -219,6 +222,13 @@
 										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
 									>
 										{i18n.lc_disabled()}
+									</span>
+								{/if}
+								{#if i.private}
+									<span
+										class="inline-flex items-center rounded-full bg-status-seeding/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-seeding"
+									>
+										{i18n.releases_private()}
 									</span>
 								{/if}
 								{#if i.api_key_set}

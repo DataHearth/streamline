@@ -123,9 +123,11 @@ Automation not finding it? Open the title and click **Search** — this runs a l
 
 [![Manual search](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)
 
-The results list gives you release name, size, seeders, indexer and detected quality, and you can filter by indexer or release group. Click a release to grab it directly, bypassing the quality profile entirely. That's the escape hatch for the case where you want *this specific release* and don't care what the rules say.
+By default the results read in plain words: which language you will hear (**FR + OV**, **FR dub**, **OV + FR subs**, **OV** — read from the release name; hover or tap the chip for what it means), how sharp it is (**4K**, **Full HD**, **HD**, **SD**), **Private** or **Public**, then size, a likely download speed from the seeder count, age and release group. The best match for the title's quality profile with at least ten seeders is pinned on top as **Recommended**, and results the profile rejects are folded away under a count. The **Technical details** switch brings back the full table — release name, language, group, indexer, age, score, size, seeders — with sorting and the indexer and release-group filters; the choice is remembered per browser. Click **Select** to grab a release directly, bypassing the quality profile entirely. That's the escape hatch for the case where you want *this specific release* and don't care what the rules say.
 
-There's a **Replace existing files** toggle on the grab dialog. Off, Streamline refuses to import over a file that's already there. On, it overwrites. Use it when you're deliberately upgrading.
+Each release also says whether its indexer is a private or public tracker — the **Private** setting on the indexer, since trackers don't report it themselves — and whether you have grabbed that exact release before for this title (for TV, for any episode of the show), with when. "That exact release" means the same info hash when both the release and the earlier download have one, and otherwise the same release name. Earlier grabs that failed count too, which is the point: it stops you re-grabbing something that already went wrong.
+
+When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing.
 
 For TV you can search at three levels:
 

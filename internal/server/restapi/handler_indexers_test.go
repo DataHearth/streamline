@@ -70,6 +70,24 @@ var _ = Describe(
 				Expect(items[0].ApiKeySet).To(BeTrue())
 				Expect(items[0].Priority).NotTo(BeNil())
 				Expect(*items[0].Priority).To(Equal(uint8(10)))
+				Expect(items[0].Private).To(BeFalse())
+			})
+
+			It("reports an indexer marked private", func() {
+				configtest.SetupFile(indexerOverride(map[string]any{
+					"name": "tracker", "host": "idx.example", "port": 443,
+					"api_key": "secret", "protocol": "torznab", "private": true,
+				}))
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/indexers")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var items []Indexer
+				Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+				Expect(items).To(HaveLen(1))
+				Expect(items[0].Private).To(BeTrue())
 			})
 		})
 
@@ -93,6 +111,26 @@ var _ = Describe(
 				got, ok := config.FindIndexer("tz")
 				Expect(ok).To(BeTrue())
 				Expect(got.Host).To(Equal("idx"))
+			})
+
+			It("persists private when the body sets it", func() {
+				body := `{"name": "tz", "host": "idx", "port": 9117, "api_key": "k", "protocol": "torznab", "private": true}`
+				resp, err := http.Post(
+					app.srv.URL+"/api/v1/indexers",
+					"application/json",
+					strings.NewReader(body),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+				var idx Indexer
+				Expect(json.NewDecoder(resp.Body).Decode(&idx)).To(Succeed())
+				Expect(idx.Private).To(BeTrue())
+
+				got, ok := config.FindIndexer("tz")
+				Expect(ok).To(BeTrue())
+				Expect(got.Private).To(BeTrue())
 			})
 
 			It("returns 409 on duplicate name", func() {
@@ -267,6 +305,34 @@ var _ = Describe(
 				got, _ := config.FindIndexer("tz")
 				Expect(got.Host).To(Equal("new"))
 				Expect(got.APIKey).To(Equal("keep")) // blank api_key preserves
+			})
+
+			It("sets private when given and leaves it alone when omitted", func() {
+				configtest.SetupFile(indexerOverride(map[string]any{
+					"name": "tz", "host": "h", "port": 9117,
+					"api_key": "keep", "protocol": "torznab",
+				}))
+				put := func(body string) {
+					GinkgoHelper()
+					req := app.req(http.MethodPut, "/api/v1/indexers/tz", "",
+						strings.NewReader(body))
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				}
+
+				put(`{"name": "tz", "host": "h", "port": 9117, "private": true}`)
+				got, _ := config.FindIndexer("tz")
+				Expect(got.Private).To(BeTrue())
+
+				put(`{"name": "tz", "host": "h", "port": 9117}`)
+				got, _ = config.FindIndexer("tz")
+				Expect(got.Private).To(BeTrue())
+
+				put(`{"name": "tz", "host": "h", "port": 9117, "private": false}`)
+				got, _ = config.FindIndexer("tz")
+				Expect(got.Private).To(BeFalse())
 			})
 
 			It("returns 404 for nonexistent indexer", func() {

@@ -7682,6 +7682,23 @@ components:
             Names of the custom formats that matched, relative to the
             queried item's quality profile. Ignored on grab request
             bodies.
+        indexer_private:
+          type: boolean
+          description: >-
+            The `private` setting of the configured indexer the release came
+            through — for a tracker behind Prowlarr, the Prowlarr entry's.
+            Absent when that indexer is no longer configured. Ignored on grab
+            request bodies.
+        previously_grabbed_at:
+          type: string
+          format: date-time
+          description: >-
+            When this exact release was last grabbed for the queried item —
+            the movie, or for an episode, season or series search any episode
+            of the show. Matched on info hash when both the release and the
+            download record carry one, otherwise on the release title
+            (case-insensitive). Adoption proposals do not count. Absent when
+            it was never grabbed. Ignored on grab request bodies.
 
     PlayOnLinkList:
       type: object
@@ -8037,7 +8054,7 @@ components:
 
     Indexer:
       type: object
-      required: [name, host, port, protocol, enabled, api_key_set]
+      required: [name, host, port, protocol, enabled, private, api_key_set]
       properties:
         name:
           type: string
@@ -8061,6 +8078,12 @@ components:
           x-go-type: uint8
         enabled:
           type: boolean
+        private:
+          type: boolean
+          description: >-
+            Whether the tracker is private (invite-only, ratio-tracked). A
+            Torznab feed carries no such flag, so this is the operator's
+            setting; a Prowlarr entry's applies to every tracker behind it.
 
     IndexerCreate:
       type: object
@@ -8087,6 +8110,12 @@ components:
           x-go-type: uint8
         enabled:
           type: boolean
+        private:
+          type: boolean
+          description: >-
+            Whether the tracker is private (invite-only, ratio-tracked). A
+            Torznab feed carries no such flag, so this is the operator's
+            setting; a Prowlarr entry's applies to every tracker behind it.
 
     DownloadClient:
       type: object

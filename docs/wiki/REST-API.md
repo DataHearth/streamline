@@ -605,13 +605,21 @@ Full mental model, condition types and the built-in format library: [Quality Pro
   "seeders": 40,
   "score": 300,
   "rejected": false,
-  "matched_formats": ["remux", "hdr"]
+  "matched_formats": ["remux", "hdr"],
+  "indexer": "my-tracker",
+  "indexer_private": true,
+  "previously_grabbed_at": "2026-09-20T18:04:11Z"
 }
 ```
 
 </details>
 
 Results are sorted `score` descending, ties broken by seeders — not by seeders alone. `rejected: true` releases (resolution outside the profile band, or score below `min_score`) are still returned with a `reject_reason`, so an operator can grab one deliberately; `score`/`rejected`/`reject_reason`/`matched_formats` are all ignored if sent back on a grab request body.
+
+Every browse result also carries two history-and-source facts, both ignored on a grab body:
+
+- **`indexer_private`** — the `private` setting of the configured indexer the release came through. For a tracker behind Prowlarr, `indexer` names that tracker but the flag is the Prowlarr entry's, since Prowlarr does not report privacy on a release. Absent only when that indexer has been removed from the config since.
+- **`previously_grabbed_at`** — when this exact release was last grabbed for the queried item: the movie, or, for an episode, season or series search, any episode of the show. A release matches a download record on info hash when both carry one, and otherwise on title, case-insensitively — so a record whose hash differs is a different upload even under the same name. Failed grabs count; adoption proposals (pending or dismissed) do not. Absent when it was never grabbed.
 
 A result's `download_url` is **not** the indexer's link: that link carries the indexer's API key, so search responses return an opaque handle (`slr1.…`) instead, and `info_url` comes back with its query string stripped. Send the result back unchanged to grab it. Handles stop working when the session secret rotates, so search again after a rotation. A grab body may still carry a plain magnet or a link to one of your configured indexers.
 

@@ -17,6 +17,14 @@ type SearchResult struct {
 	// Indexer is the configured name of the indexer this result came from.
 	// Stamped by the search service during cross-indexer aggregation.
 	Indexer string
+	// ConfiguredIndexer is the config entry the result was fetched through,
+	// stamped alongside Indexer. It differs from Indexer only behind
+	// Prowlarr, where Indexer names the sub-tracker and this the Prowlarr
+	// entry — the one carrying any per-indexer setting.
+	ConfiguredIndexer string
+	// InfoHash is the v1 info hash as lowercase hex, when the indexer
+	// published one or the link is a magnet; empty otherwise.
+	InfoHash string
 
 	// TMDBID/TVDBID are the provider ids the *tracker* published alongside the
 	// release, not anything we asked for: Prowlarr re-emits the torznab attrs

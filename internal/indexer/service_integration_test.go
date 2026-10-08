@@ -130,6 +130,39 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				// Sorted by seeders desc: 200, then 50
 				Expect(results[0].Seeders).To(Equal(uint32(200)))
 				Expect(results[1].Seeders).To(Equal(uint32(50)))
+				Expect(results[0].Indexer).To(Equal("Indexer2"))
+				Expect(results[0].ConfiguredIndexer).To(Equal("Indexer2"))
+			},
+		)
+
+		It(
+			"keeps a Prowlarr sub-tracker's name and records the entry it came through",
+			func() {
+				ts := httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						_, err := w.Write([]byte(`[{"title":"Interstellar 1080p",` +
+							`"downloadUrl":"http://x/a.torrent","protocol":"torrent",` +
+							`"indexer":"SubTracker","seeders":3}]`))
+						Expect(err).NotTo(HaveOccurred())
+					}),
+				)
+				defer ts.Close()
+
+				host, port := splitHostPort(ts.URL)
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name": "prowlarr", "host": host, "port": int(port),
+						"api_key": "k", "protocol": "prowlarr", "enabled": true,
+					}},
+				})
+
+				results, err := New().SearchMovie(
+					context.Background(), []string{"Interstellar"}, nil, 157336,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].Indexer).To(Equal("SubTracker"))
+				Expect(results[0].ConfiguredIndexer).To(Equal("prowlarr"))
 			},
 		)
 

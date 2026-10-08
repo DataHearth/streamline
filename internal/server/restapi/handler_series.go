@@ -537,10 +537,7 @@ func (s *Server) BrowseEpisodeReleases(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	items := make([]SearchResult, 0, len(results))
-	for _, r := range results {
-		items = append(items, toSearchResult(r))
-	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
 	annotateResults(show.QualityProfile, items, singleReleaseEpisodes)
 	out := SearchResultsJSONResponse{Items: items}
 	if hiddenPacks > 0 {
@@ -640,10 +637,7 @@ func (s *Server) BrowseSeasonReleases(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	items := make([]SearchResult, 0, len(results))
-	for _, r := range results {
-		items = append(items, toSearchResult(r))
-	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
 	annotateResults(
 		show.QualityProfile,
 		items,
@@ -775,10 +769,7 @@ func (s *Server) BrowseSeriesReleases(
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	items := make([]SearchResult, 0, len(results))
-	for _, r := range results {
-		items = append(items, toSearchResult(r))
-	}
+	items := s.toSearchResults(ctx, results, 0, show.ID)
 	annotateResults(
 		show.QualityProfile,
 		items,

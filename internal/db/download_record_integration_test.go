@@ -279,6 +279,147 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListReleaseGrabs", func() {
+		grab := func(
+			title, hash string,
+			status downloadrecord.Status,
+			movie, episode uint32,
+		) {
+			GinkgoHelper()
+			_, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: title, Size: 1, TorrentHash: hash, Status: status,
+				MovieID: movie, EpisodeID: episode, DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+		titles := func(recs []*ent.DownloadRecord) []string {
+			out := make([]string, 0, len(recs))
+			for _, r := range recs {
+				out = append(out, r.Title)
+			}
+			return out
+		}
+
+		It("finds the movie's records by title, ignoring case, or by hash", func() {
+			other, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title:         "Arrival",
+				OriginalTitle: "Arrival",
+				Year:          2016,
+				TmdbID:        329865,
+				Status:        entmovie.StatusWanted,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			grab(
+				"Dune.2021.1080p",
+				"aaaa",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+			grab("renamed", "bbbb", downloadrecord.StatusFailed, movieID, 0)
+			grab(
+				"Dune.2021.2160p",
+				"cccc",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+			grab(
+				"Dune.2021.1080p",
+				"dddd",
+				downloadrecord.StatusCompleted,
+				other.ID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(ctx, movieID, 0,
+				[]string{"bbbb"}, []string{"DUNE.2021.1080P"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(recs)).To(ConsistOf("Dune.2021.1080p", "renamed"))
+			for _, r := range recs {
+				Expect(r.CreateTime).NotTo(BeZero())
+			}
+		})
+
+		It("leaves adoption proposals out", func() {
+			grab("Dune.2021.1080p", "aaaa", downloadrecord.StatusPending, movieID, 0)
+			grab(
+				"Dune.2021.1080p",
+				"bbbb",
+				downloadrecord.StatusDismissed,
+				movieID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(ctx, movieID, 0,
+				[]string{"aaaa", "bbbb"}, []string{"Dune.2021.1080p"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+		})
+
+		It("covers every episode of the show and no other show", func() {
+			ad := time.Now()
+			seed := func(title string, tvdb uint32) *ent.TVShow {
+				GinkgoHelper()
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: title, Year: 2024, TvdbID: tvdb,
+					Seasons: []SeasonSeed{
+						{
+							Number:   1,
+							Episodes: []EpisodeSeed{{Number: 1, AirDate: &ad}},
+						},
+						{
+							Number:   2,
+							Episodes: []EpisodeSeed{{Number: 1, AirDate: &ad}},
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				return show
+			}
+			show := seed("The Black Sea", 9001)
+			seasons := show.Edges.Seasons
+			others := seed("The Red Sea", 9002).Edges.Seasons
+
+			grab("BS.S01E01", "aaaa", downloadrecord.StatusCompleted, 0,
+				seasons[0].Edges.Episodes[0].ID)
+			grab("BS.S02", "bbbb", downloadrecord.StatusDownloading, 0,
+				seasons[1].Edges.Episodes[0].ID)
+			grab("BS.S01E01", "cccc", downloadrecord.StatusCompleted, 0,
+				others[0].Edges.Episodes[0].ID)
+
+			recs, err := store.ListReleaseGrabs(ctx, 0, show.ID,
+				[]string{"bbbb", "cccc"}, []string{"bs.s01e01"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(recs)).To(ConsistOf("BS.S01E01", "BS.S02"))
+		})
+
+		It("asks nothing without an item or anything to match", func() {
+			grab(
+				"Dune.2021.1080p",
+				"aaaa",
+				downloadrecord.StatusCompleted,
+				movieID,
+				0,
+			)
+
+			recs, err := store.ListReleaseGrabs(
+				ctx,
+				0,
+				0,
+				nil,
+				[]string{"Dune.2021.1080p"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+
+			recs, err = store.ListReleaseGrabs(ctx, movieID, 0, nil, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+		})
+	})
+
 	Describe("SetDownloadRecordReplaceMode", func() {
 		It("raises none -> upgrades -> all and refuses to lower", func() {
 			rec := createRec("replace-mode", downloadrecord.StatusDownloading)

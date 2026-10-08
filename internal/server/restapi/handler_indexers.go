@@ -49,6 +49,9 @@ func (s *Server) CreateIndexer(
 	if request.Body.Enabled != nil {
 		e.Enabled = *request.Body.Enabled
 	}
+	if request.Body.Private != nil {
+		e.Private = *request.Body.Private
+	}
 	if request.Body.Protocol != nil {
 		e.Protocol = string(*request.Body.Protocol)
 	}
@@ -85,6 +88,7 @@ func (s *Server) UpdateIndexer(
 		APIKey:   &request.Body.ApiKey,
 		Priority: request.Body.Priority,
 		Enabled:  request.Body.Enabled,
+		Private:  request.Body.Private,
 	}
 	if request.Body.Protocol != nil {
 		p := string(*request.Body.Protocol)

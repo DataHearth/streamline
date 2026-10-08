@@ -422,6 +422,16 @@ type Store interface {
 		ctx context.Context,
 		movieID, episodeID uint32,
 	) (*ent.DownloadRecord, error)
+	// ListReleaseGrabs returns the records grabbed for the movie, or for any
+	// episode of the show — set exactly one id — whose torrent hash is one of
+	// hashes or whose title equals one of titles ignoring case. Adoption
+	// proposals (pending, dismissed) were never grabbed and are left out.
+	// Only title, torrent_hash and create_time are loaded.
+	ListReleaseGrabs(
+		ctx context.Context,
+		movieID, showID uint32,
+		hashes, titles []string,
+	) ([]*ent.DownloadRecord, error)
 	ListDownloadHistory(
 		ctx context.Context,
 		limit int,

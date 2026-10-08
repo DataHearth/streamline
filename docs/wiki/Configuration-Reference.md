@@ -491,6 +491,7 @@ The built-in engine treats what a release names as untrusted:
 | `use_ssl` | | |
 | `priority` | | 0–255, lower first |
 | `enabled` | | |
+| `private` | | Default `false`. Marks the tracker as private (invite-only, ratio-tracked); manual search shows it on every release from this indexer. A Torznab feed carries no such flag, so this is your word for it. On a Prowlarr entry it applies to every tracker behind it |
 
 ### quality_profiles
 

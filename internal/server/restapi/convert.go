@@ -491,6 +491,7 @@ func indexerToAPI(e config.IndexerEntry) Indexer {
 		Port:      e.Port,
 		Protocol:  IndexerProtocol(e.Protocol),
 		Enabled:   e.Enabled,
+		Private:   e.Private,
 		ApiKeySet: e.APIKey != "" || e.APIKeyFile != "",
 		UseSsl:    &useSSL,
 		Priority:  &prio,

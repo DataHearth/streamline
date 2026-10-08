@@ -21,6 +21,7 @@
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
 	import MovieKebabMenu from "@components/movies/MovieKebabMenu.svelte";
 	import ManualSearchModal from "@components/movies/ManualSearchModal.svelte";
+	import { existingFromMediaFile } from "@lib/release-facts";
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "@components/movies/RenameMoviePreviewModal.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
@@ -363,6 +364,7 @@
 		open={searchOpen}
 		movieId={movie.id}
 		scopeLabel={movie.year ? `${movie.title} (${movie.year})` : movie.title}
+		existing={movie.media_files?.[0] ? existingFromMediaFile(movie.media_files[0]) : null}
 		onClose={() => (searchOpen = false)}
 	/>
 	<QualityProfileModal

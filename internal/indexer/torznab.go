@@ -134,8 +134,13 @@ func parseItems(items []torznabItem) []SearchResult {
 			Size:        item.Enclosure.Length,
 			PublishDate: parsePubDate(item.PubDate),
 		}
+		var hash, magnet string
 		for _, attr := range item.Attrs {
 			switch attr.Name {
+			case "infohash":
+				hash = attr.Value
+			case "magneturl":
+				magnet = attr.Value
 			case "seeders":
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
 					r.Seeders = uint32(v)
@@ -161,6 +166,7 @@ func parseItems(items []torznabItem) []SearchResult {
 				}
 			}
 		}
+		r.InfoHash = infoHash(hash, magnet, r.Download)
 		results = append(results, r)
 	}
 	return results

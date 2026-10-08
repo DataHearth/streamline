@@ -50,6 +50,39 @@ var _ = Describe("Indexer CRUD", Label("unit", "config"), func() {
 			To(MatchError(config.ErrIndexerNotFound))
 	})
 
+	It("updates private and leaves it alone when the patch omits it", func() {
+		ctx := context.Background()
+		Expect(config.AddIndexer(ctx, entry("tracker"))).To(Succeed())
+		got, _ := config.FindIndexer("tracker")
+		Expect(got.Private).To(BeFalse())
+
+		private := true
+		Expect(config.UpdateIndexer(ctx, "tracker",
+			config.IndexerPatch{Private: &private})).To(Succeed())
+		got, _ = config.FindIndexer("tracker")
+		Expect(got.Private).To(BeTrue())
+
+		host := "elsewhere"
+		Expect(config.UpdateIndexer(ctx, "tracker",
+			config.IndexerPatch{Host: &host})).To(Succeed())
+		got, _ = config.FindIndexer("tracker")
+		Expect(got.Private).To(BeTrue())
+	})
+
+	It("loads private from the config file", func() {
+		configtest.Setup(map[string]any{
+			"indexers": []map[string]any{
+				{
+					"name": "tracker", "host": "h", "port": 9117,
+					"protocol": "torznab", "api_key": "k", "private": true,
+				},
+			},
+		})
+		got, ok := config.FindIndexer("tracker")
+		Expect(ok).To(BeTrue())
+		Expect(got.Private).To(BeTrue())
+	})
+
 	It("rejects setting api_key inline on a file-backed indexer", func() {
 		ctx := context.Background()
 		keyPath := filepath.Join(GinkgoT().TempDir(), "idx.key")

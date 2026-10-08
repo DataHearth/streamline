@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -317,6 +318,9 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0), mock.Anything, mock.Anything).
+					Return(nil, nil).Once()
 
 				req, err := http.NewRequest(
 					http.MethodPost,
@@ -336,6 +340,56 @@ var _ = Describe(
 				Expect(results[0].Seeders).To(Equal(uint32(50)))
 				Expect(results[0].Leechers).NotTo(BeNil())
 				Expect(*results[0].Leechers).To(Equal(uint32(10)))
+			})
+		})
+
+		Describe("SearchMovie release facts", func() {
+			It("stamps indexer privacy and the movie's grab history", func() {
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name": "tracker", "host": "h", "port": 9117,
+						"protocol": "torznab", "api_key": "k", "private": true,
+					}},
+				})
+				grabbed := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+				app.movies.EXPECT().
+					Get(mock.Anything, uint32(5)).
+					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: 550}, nil).
+					Once()
+				app.indexers.EXPECT().
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					Return([]indexer.SearchResult{{
+						Title:             "Fight.Club.1999.1080p.BluRay.x264",
+						Download:          "magnet:a",
+						Seeders:           5,
+						Indexer:           "tracker",
+						ConfiguredIndexer: "tracker",
+					}}, nil).
+					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0),
+						[]string{}, []string{"Fight.Club.1999.1080p.BluRay.x264"}).
+					Return([]*ent.DownloadRecord{{
+						Title:      "fight.club.1999.1080p.bluray.x264",
+						CreateTime: grabbed,
+					}}, nil).
+					Once()
+
+				resp := app.do(app.req(
+					http.MethodPost,
+					"/api/v1/movies/5/search",
+					app.adminKey,
+					nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var results []SearchResult
+				Expect(json.NewDecoder(resp.Body).Decode(&results)).To(Succeed())
+				Expect(results).To(HaveLen(1))
+				Expect(results[0].IndexerPrivate).To(HaveValue(BeTrue()))
+				Expect(results[0].PreviouslyGrabbedAt).
+					To(HaveValue(BeTemporally("==", grabbed)))
 			})
 		})
 
@@ -392,6 +446,9 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					ListReleaseGrabs(mock.Anything, uint32(5), uint32(0), mock.Anything, mock.Anything).
+					Return(nil, nil).Once()
 
 				resp := app.do(app.req(
 					http.MethodPost,
