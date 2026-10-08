@@ -1,4 +1,4 @@
-h1:FLiUSER5wrmhzXKzzELJhDayymkf88ORRJpGp8t5SiA=
+h1:+ykhnNxPvjitUFoXJ3Hr2yKuf5B9fjgMZBn7uvPxH10=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -41,3 +41,4 @@ h1:FLiUSER5wrmhzXKzzELJhDayymkf88ORRJpGp8t5SiA=
 20261007154555_music_entities.up.sql h1:/voZsO1iRjcCCDCR4u8xBCrLeek2UnI3wzx1Pye5eVs=
 20261007193237_book_entities.up.sql h1:QT0wwTh72xml5okvCqV8rK/lshjQAk2o50Ii2TuTSWg=
 20261008093206_music_import_scan.up.sql h1:v568KDn/09HllGUTYEdNlN4i29IpzwxgsyUXgdpT3Y8=
+20261008093326_book_import_scan.up.sql h1:ntt1e92WXw39DrqvyJb+GaXpye3m9sVwlJjuNsxOr6M=

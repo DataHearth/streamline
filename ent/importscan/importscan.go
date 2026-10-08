@@ -49,6 +49,8 @@ const (
 	EdgeShows = "shows"
 	// EdgeAlbums holds the string denoting the albums edge name in mutations.
 	EdgeAlbums = "albums"
+	// EdgeBooks holds the string denoting the books edge name in mutations.
+	EdgeBooks = "books"
 	// Table holds the table name of the importscan in the database.
 	Table = "import_scans"
 	// FilesTable is the table that holds the files relation/edge.
@@ -72,6 +74,13 @@ const (
 	AlbumsInverseTable = "import_scan_albums"
 	// AlbumsColumn is the table column denoting the albums relation/edge.
 	AlbumsColumn = "import_scan_albums"
+	// BooksTable is the table that holds the books relation/edge.
+	BooksTable = "import_scan_books"
+	// BooksInverseTable is the table name for the ImportScanBook entity.
+	// It exists in this package in order to avoid circular dependency with the "importscanbook" package.
+	BooksInverseTable = "import_scan_books"
+	// BooksColumn is the table column denoting the books relation/edge.
+	BooksColumn = "import_scan_books"
 )
 
 // Columns holds all SQL columns for importscan fields.
@@ -133,6 +142,7 @@ const (
 	KindMovie  Kind = "movie"
 	KindSeries Kind = "series"
 	KindMusic  Kind = "music"
+	KindBook   Kind = "book"
 )
 
 func (k Kind) String() string {
@@ -142,7 +152,7 @@ func (k Kind) String() string {
 // KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
 func KindValidator(k Kind) error {
 	switch k {
-	case KindMovie, KindSeries, KindMusic:
+	case KindMovie, KindSeries, KindMusic, KindBook:
 		return nil
 	default:
 		return fmt.Errorf("importscan: invalid enum value for kind field: %q", k)
@@ -345,6 +355,20 @@ func ByAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByBooksCount orders the results by books count.
+func ByBooksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBooksStep(), opts...)
+	}
+}
+
+// ByBooks orders the results by books terms.
+func ByBooks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBooksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newFilesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -364,5 +388,12 @@ func newAlbumsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AlbumsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AlbumsTable, AlbumsColumn),
+	)
+}
+func newBooksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BooksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BooksTable, BooksColumn),
 	)
 }

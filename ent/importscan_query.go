@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -29,6 +30,7 @@ type ImportScanQuery struct {
 	withFiles  *ImportScanFileQuery
 	withShows  *ImportScanShowQuery
 	withAlbums *ImportScanAlbumQuery
+	withBooks  *ImportScanBookQuery
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -125,6 +127,28 @@ func (_q *ImportScanQuery) QueryAlbums() *ImportScanAlbumQuery {
 			sqlgraph.From(importscan.Table, importscan.FieldID, selector),
 			sqlgraph.To(importscanalbum.Table, importscanalbum.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, importscan.AlbumsTable, importscan.AlbumsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBooks chains the current query on the "books" edge.
+func (_q *ImportScanQuery) QueryBooks() *ImportScanBookQuery {
+	query := (&ImportScanBookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(importscan.Table, importscan.FieldID, selector),
+			sqlgraph.To(importscanbook.Table, importscanbook.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, importscan.BooksTable, importscan.BooksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,6 +351,7 @@ func (_q *ImportScanQuery) Clone() *ImportScanQuery {
 		withFiles:  _q.withFiles.Clone(),
 		withShows:  _q.withShows.Clone(),
 		withAlbums: _q.withAlbums.Clone(),
+		withBooks:  _q.withBooks.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -364,6 +389,17 @@ func (_q *ImportScanQuery) WithAlbums(opts ...func(*ImportScanAlbumQuery)) *Impo
 		opt(query)
 	}
 	_q.withAlbums = query
+	return _q
+}
+
+// WithBooks tells the query-builder to eager-load the nodes that are connected to
+// the "books" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ImportScanQuery) WithBooks(opts ...func(*ImportScanBookQuery)) *ImportScanQuery {
+	query := (&ImportScanBookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBooks = query
 	return _q
 }
 
@@ -445,10 +481,11 @@ func (_q *ImportScanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*I
 	var (
 		nodes       = []*ImportScan{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withFiles != nil,
 			_q.withShows != nil,
 			_q.withAlbums != nil,
+			_q.withBooks != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -490,6 +527,13 @@ func (_q *ImportScanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*I
 		if err := _q.loadAlbums(ctx, query, nodes,
 			func(n *ImportScan) { n.Edges.Albums = []*ImportScanAlbum{} },
 			func(n *ImportScan, e *ImportScanAlbum) { n.Edges.Albums = append(n.Edges.Albums, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBooks; query != nil {
+		if err := _q.loadBooks(ctx, query, nodes,
+			func(n *ImportScan) { n.Edges.Books = []*ImportScanBook{} },
+			func(n *ImportScan, e *ImportScanBook) { n.Edges.Books = append(n.Edges.Books, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -584,6 +628,37 @@ func (_q *ImportScanQuery) loadAlbums(ctx context.Context, query *ImportScanAlbu
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "import_scan_albums" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ImportScanQuery) loadBooks(ctx context.Context, query *ImportScanBookQuery, nodes []*ImportScan, init func(*ImportScan), assign func(*ImportScan, *ImportScanBook)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*ImportScan)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ImportScanBook(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(importscan.BooksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.import_scan_books
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "import_scan_books" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "import_scan_books" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

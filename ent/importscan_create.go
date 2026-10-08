@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 )
@@ -252,6 +253,21 @@ func (_c *ImportScanCreate) AddAlbums(v ...*ImportScanAlbum) *ImportScanCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddAlbumIDs(ids...)
+}
+
+// AddBookIDs adds the "books" edge to the ImportScanBook entity by IDs.
+func (_c *ImportScanCreate) AddBookIDs(ids ...uint32) *ImportScanCreate {
+	_c.mutation.AddBookIDs(ids...)
+	return _c
+}
+
+// AddBooks adds the "books" edges to the ImportScanBook entity.
+func (_c *ImportScanCreate) AddBooks(v ...*ImportScanBook) *ImportScanCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddBookIDs(ids...)
 }
 
 // Mutation returns the ImportScanMutation object of the builder.
@@ -509,6 +525,22 @@ func (_c *ImportScanCreate) createSpec() (*ImportScan, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BooksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

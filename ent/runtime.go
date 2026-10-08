@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -309,6 +310,21 @@ func init() {
 	importscanalbumDescFileCount := importscanalbumFields[8].Descriptor()
 	// importscanalbum.DefaultFileCount holds the default value on creation for the file_count field.
 	importscanalbum.DefaultFileCount = importscanalbumDescFileCount.Default.(uint16)
+	importscanbookMixin := schema.ImportScanBook{}.Mixin()
+	importscanbookMixinFields1 := importscanbookMixin[1].Fields()
+	_ = importscanbookMixinFields1
+	importscanbookFields := schema.ImportScanBook{}.Fields()
+	_ = importscanbookFields
+	// importscanbookDescCreateTime is the schema descriptor for create_time field.
+	importscanbookDescCreateTime := importscanbookMixinFields1[0].Descriptor()
+	// importscanbook.DefaultCreateTime holds the default value on creation for the create_time field.
+	importscanbook.DefaultCreateTime = importscanbookDescCreateTime.Default.(func() time.Time)
+	// importscanbookDescUpdateTime is the schema descriptor for update_time field.
+	importscanbookDescUpdateTime := importscanbookMixinFields1[1].Descriptor()
+	// importscanbook.DefaultUpdateTime holds the default value on creation for the update_time field.
+	importscanbook.DefaultUpdateTime = importscanbookDescUpdateTime.Default.(func() time.Time)
+	// importscanbook.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	importscanbook.UpdateDefaultUpdateTime = importscanbookDescUpdateTime.UpdateDefault.(func() time.Time)
 	importscanfileMixin := schema.ImportScanFile{}.Mixin()
 	importscanfileMixinFields1 := importscanfileMixin[1].Fields()
 	_ = importscanfileMixinFields1

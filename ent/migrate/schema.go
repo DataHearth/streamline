@@ -367,7 +367,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "source_path", Type: field.TypeString},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"movie", "series", "music"}, Default: "movie"},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"movie", "series", "music", "book"}, Default: "movie"},
 		{Name: "mode", Type: field.TypeEnum, Enums: []string{"in_place", "rename"}},
 		{Name: "import_mode", Type: field.TypeEnum, Nullable: true, Enums: []string{"hardlink", "copy", "move"}},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"running", "awaiting_review", "committing", "completed", "cancelled", "failed"}, Default: "running"},
@@ -451,6 +451,59 @@ var (
 				Name:    "importscanalbum_folder_path",
 				Unique:  false,
 				Columns: []*schema.Column{ImportScanAlbumsColumns[3]},
+			},
+		},
+	}
+	// ImportScanBooksColumns holds the columns for the "import_scan_books" table.
+	ImportScanBooksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "file_paths", Type: field.TypeJSON},
+		{Name: "slot", Type: field.TypeEnum, Enums: []string{"ebook", "audiobook"}},
+		{Name: "parsed_title", Type: field.TypeString, Nullable: true},
+		{Name: "parsed_author", Type: field.TypeString, Nullable: true},
+		{Name: "parsed_isbn", Type: field.TypeString, Nullable: true},
+		{Name: "classification", Type: field.TypeEnum, Enums: []string{"confirmed", "ambiguous", "unmatched", "existing"}, Default: "unmatched"},
+		{Name: "book_hardcover_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "author_hardcover_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "candidates", Type: field.TypeJSON, Nullable: true},
+		{Name: "existing_book_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
+		{Name: "decision_book_hardcover_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "failed"}, Default: "pending"},
+		{Name: "outcome_message", Type: field.TypeString, Nullable: true},
+		{Name: "created_book_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "import_scan_books", Type: field.TypeUint32},
+	}
+	// ImportScanBooksTable holds the schema information for the "import_scan_books" table.
+	ImportScanBooksTable = &schema.Table{
+		Name:       "import_scan_books",
+		Columns:    ImportScanBooksColumns,
+		PrimaryKey: []*schema.Column{ImportScanBooksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "import_scan_books_import_scans_books",
+				Columns:    []*schema.Column{ImportScanBooksColumns[18]},
+				RefColumns: []*schema.Column{ImportScansColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "importscanbook_classification",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanBooksColumns[8]},
+			},
+			{
+				Name:    "importscanbook_decision",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanBooksColumns[13]},
+			},
+			{
+				Name:    "importscanbook_import_scan_books",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanBooksColumns[18]},
 			},
 		},
 	}
@@ -1231,6 +1284,7 @@ var (
 		EpisodesTable,
 		ImportScansTable,
 		ImportScanAlbumsTable,
+		ImportScanBooksTable,
 		ImportScanFilesTable,
 		ImportScanShowsTable,
 		InvitesTable,
@@ -1265,6 +1319,7 @@ func init() {
 	DownloadRecordsTable.ForeignKeys[3].RefTable = MoviesTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
+	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanShowsTable.ForeignKeys[0].RefTable = ImportScansTable
 	InvitesTable.ForeignKeys[0].RefTable = UsersTable

@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -61,6 +62,7 @@ const (
 	TypeEpisode         = "Episode"
 	TypeImportScan      = "ImportScan"
 	TypeImportScanAlbum = "ImportScanAlbum"
+	TypeImportScanBook  = "ImportScanBook"
 	TypeImportScanFile  = "ImportScanFile"
 	TypeImportScanShow  = "ImportScanShow"
 	TypeInvite          = "Invite"
@@ -10027,6 +10029,9 @@ type ImportScanMutation struct {
 	albums                  map[uint32]struct{}
 	removedalbums           map[uint32]struct{}
 	clearedalbums           bool
+	books                   map[uint32]struct{}
+	removedbooks            map[uint32]struct{}
+	clearedbooks            bool
 	done                    bool
 	oldValue                func(context.Context) (*ImportScan, error)
 	predicates              []predicate.ImportScan
@@ -10934,6 +10939,60 @@ func (m *ImportScanMutation) ResetAlbums() {
 	m.removedalbums = nil
 }
 
+// AddBookIDs adds the "books" edge to the ImportScanBook entity by ids.
+func (m *ImportScanMutation) AddBookIDs(ids ...uint32) {
+	if m.books == nil {
+		m.books = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.books[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBooks clears the "books" edge to the ImportScanBook entity.
+func (m *ImportScanMutation) ClearBooks() {
+	m.clearedbooks = true
+}
+
+// BooksCleared reports if the "books" edge to the ImportScanBook entity was cleared.
+func (m *ImportScanMutation) BooksCleared() bool {
+	return m.clearedbooks
+}
+
+// RemoveBookIDs removes the "books" edge to the ImportScanBook entity by IDs.
+func (m *ImportScanMutation) RemoveBookIDs(ids ...uint32) {
+	if m.removedbooks == nil {
+		m.removedbooks = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.books, ids[i])
+		m.removedbooks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBooks returns the removed IDs of the "books" edge to the ImportScanBook entity.
+func (m *ImportScanMutation) RemovedBooksIDs() (ids []uint32) {
+	for id := range m.removedbooks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BooksIDs returns the "books" edge IDs in the mutation.
+func (m *ImportScanMutation) BooksIDs() (ids []uint32) {
+	for id := range m.books {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBooks resets all changes to the "books" edge.
+func (m *ImportScanMutation) ResetBooks() {
+	m.books = nil
+	m.clearedbooks = false
+	m.removedbooks = nil
+}
+
 // Where appends a list predicates to the ImportScanMutation builder.
 func (m *ImportScanMutation) Where(ps ...predicate.ImportScan) {
 	m.predicates = append(m.predicates, ps...)
@@ -11366,7 +11425,7 @@ func (m *ImportScanMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ImportScanMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.files != nil {
 		edges = append(edges, importscan.EdgeFiles)
 	}
@@ -11375,6 +11434,9 @@ func (m *ImportScanMutation) AddedEdges() []string {
 	}
 	if m.albums != nil {
 		edges = append(edges, importscan.EdgeAlbums)
+	}
+	if m.books != nil {
+		edges = append(edges, importscan.EdgeBooks)
 	}
 	return edges
 }
@@ -11401,13 +11463,19 @@ func (m *ImportScanMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case importscan.EdgeBooks:
+		ids := make([]ent.Value, 0, len(m.books))
+		for id := range m.books {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ImportScanMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedfiles != nil {
 		edges = append(edges, importscan.EdgeFiles)
 	}
@@ -11416,6 +11484,9 @@ func (m *ImportScanMutation) RemovedEdges() []string {
 	}
 	if m.removedalbums != nil {
 		edges = append(edges, importscan.EdgeAlbums)
+	}
+	if m.removedbooks != nil {
+		edges = append(edges, importscan.EdgeBooks)
 	}
 	return edges
 }
@@ -11442,13 +11513,19 @@ func (m *ImportScanMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case importscan.EdgeBooks:
+		ids := make([]ent.Value, 0, len(m.removedbooks))
+		for id := range m.removedbooks {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ImportScanMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedfiles {
 		edges = append(edges, importscan.EdgeFiles)
 	}
@@ -11457,6 +11534,9 @@ func (m *ImportScanMutation) ClearedEdges() []string {
 	}
 	if m.clearedalbums {
 		edges = append(edges, importscan.EdgeAlbums)
+	}
+	if m.clearedbooks {
+		edges = append(edges, importscan.EdgeBooks)
 	}
 	return edges
 }
@@ -11471,6 +11551,8 @@ func (m *ImportScanMutation) EdgeCleared(name string) bool {
 		return m.clearedshows
 	case importscan.EdgeAlbums:
 		return m.clearedalbums
+	case importscan.EdgeBooks:
+		return m.clearedbooks
 	}
 	return false
 }
@@ -11495,6 +11577,9 @@ func (m *ImportScanMutation) ResetEdge(name string) error {
 		return nil
 	case importscan.EdgeAlbums:
 		m.ResetAlbums()
+		return nil
+	case importscan.EdgeBooks:
+		m.ResetBooks()
 		return nil
 	}
 	return fmt.Errorf("unknown ImportScan edge %s", name)
@@ -13002,6 +13087,1668 @@ func (m *ImportScanAlbumMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ImportScanAlbum edge %s", name)
+}
+
+// ImportScanBookMutation represents an operation that mutates the ImportScanBook nodes in the graph.
+type ImportScanBookMutation struct {
+	config
+	op                            Op
+	typ                           string
+	id                            *uint32
+	create_time                   *time.Time
+	update_time                   *time.Time
+	file_paths                    *[]string
+	appendfile_paths              []string
+	slot                          *importscanbook.Slot
+	parsed_title                  *string
+	parsed_author                 *string
+	parsed_isbn                   *string
+	classification                *importscanbook.Classification
+	book_hardcover_id             *uint32
+	addbook_hardcover_id          *int32
+	author_hardcover_id           *uint32
+	addauthor_hardcover_id        *int32
+	candidates                    *[]schema.ScannedBookCandidate
+	appendcandidates              []schema.ScannedBookCandidate
+	existing_book_id              *uint32
+	addexisting_book_id           *int32
+	decision                      *importscanbook.Decision
+	decision_book_hardcover_id    *uint32
+	adddecision_book_hardcover_id *int32
+	outcome                       *importscanbook.Outcome
+	outcome_message               *string
+	created_book_id               *uint32
+	addcreated_book_id            *int32
+	clearedFields                 map[string]struct{}
+	scan                          *uint32
+	clearedscan                   bool
+	done                          bool
+	oldValue                      func(context.Context) (*ImportScanBook, error)
+	predicates                    []predicate.ImportScanBook
+}
+
+var _ ent.Mutation = (*ImportScanBookMutation)(nil)
+
+// importscanbookOption allows management of the mutation configuration using functional options.
+type importscanbookOption func(*ImportScanBookMutation)
+
+// newImportScanBookMutation creates new mutation for the ImportScanBook entity.
+func newImportScanBookMutation(c config, op Op, opts ...importscanbookOption) *ImportScanBookMutation {
+	m := &ImportScanBookMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImportScanBook,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImportScanBookID sets the ID field of the mutation.
+func withImportScanBookID(id uint32) importscanbookOption {
+	return func(m *ImportScanBookMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImportScanBook
+		)
+		m.oldValue = func(ctx context.Context) (*ImportScanBook, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImportScanBook.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImportScanBook sets the old ImportScanBook of the mutation.
+func withImportScanBook(node *ImportScanBook) importscanbookOption {
+	return func(m *ImportScanBookMutation) {
+		m.oldValue = func(context.Context) (*ImportScanBook, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImportScanBookMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImportScanBookMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ImportScanBook entities.
+func (m *ImportScanBookMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImportScanBookMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImportScanBookMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImportScanBook.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *ImportScanBookMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *ImportScanBookMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *ImportScanBookMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *ImportScanBookMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *ImportScanBookMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *ImportScanBookMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetFilePaths sets the "file_paths" field.
+func (m *ImportScanBookMutation) SetFilePaths(s []string) {
+	m.file_paths = &s
+	m.appendfile_paths = nil
+}
+
+// FilePaths returns the value of the "file_paths" field in the mutation.
+func (m *ImportScanBookMutation) FilePaths() (r []string, exists bool) {
+	v := m.file_paths
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFilePaths returns the old "file_paths" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldFilePaths(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFilePaths is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFilePaths requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFilePaths: %w", err)
+	}
+	return oldValue.FilePaths, nil
+}
+
+// AppendFilePaths adds s to the "file_paths" field.
+func (m *ImportScanBookMutation) AppendFilePaths(s []string) {
+	m.appendfile_paths = append(m.appendfile_paths, s...)
+}
+
+// AppendedFilePaths returns the list of values that were appended to the "file_paths" field in this mutation.
+func (m *ImportScanBookMutation) AppendedFilePaths() ([]string, bool) {
+	if len(m.appendfile_paths) == 0 {
+		return nil, false
+	}
+	return m.appendfile_paths, true
+}
+
+// ResetFilePaths resets all changes to the "file_paths" field.
+func (m *ImportScanBookMutation) ResetFilePaths() {
+	m.file_paths = nil
+	m.appendfile_paths = nil
+}
+
+// SetSlot sets the "slot" field.
+func (m *ImportScanBookMutation) SetSlot(i importscanbook.Slot) {
+	m.slot = &i
+}
+
+// Slot returns the value of the "slot" field in the mutation.
+func (m *ImportScanBookMutation) Slot() (r importscanbook.Slot, exists bool) {
+	v := m.slot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSlot returns the old "slot" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldSlot(ctx context.Context) (v importscanbook.Slot, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSlot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSlot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSlot: %w", err)
+	}
+	return oldValue.Slot, nil
+}
+
+// ResetSlot resets all changes to the "slot" field.
+func (m *ImportScanBookMutation) ResetSlot() {
+	m.slot = nil
+}
+
+// SetParsedTitle sets the "parsed_title" field.
+func (m *ImportScanBookMutation) SetParsedTitle(s string) {
+	m.parsed_title = &s
+}
+
+// ParsedTitle returns the value of the "parsed_title" field in the mutation.
+func (m *ImportScanBookMutation) ParsedTitle() (r string, exists bool) {
+	v := m.parsed_title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedTitle returns the old "parsed_title" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldParsedTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedTitle: %w", err)
+	}
+	return oldValue.ParsedTitle, nil
+}
+
+// ClearParsedTitle clears the value of the "parsed_title" field.
+func (m *ImportScanBookMutation) ClearParsedTitle() {
+	m.parsed_title = nil
+	m.clearedFields[importscanbook.FieldParsedTitle] = struct{}{}
+}
+
+// ParsedTitleCleared returns if the "parsed_title" field was cleared in this mutation.
+func (m *ImportScanBookMutation) ParsedTitleCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldParsedTitle]
+	return ok
+}
+
+// ResetParsedTitle resets all changes to the "parsed_title" field.
+func (m *ImportScanBookMutation) ResetParsedTitle() {
+	m.parsed_title = nil
+	delete(m.clearedFields, importscanbook.FieldParsedTitle)
+}
+
+// SetParsedAuthor sets the "parsed_author" field.
+func (m *ImportScanBookMutation) SetParsedAuthor(s string) {
+	m.parsed_author = &s
+}
+
+// ParsedAuthor returns the value of the "parsed_author" field in the mutation.
+func (m *ImportScanBookMutation) ParsedAuthor() (r string, exists bool) {
+	v := m.parsed_author
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedAuthor returns the old "parsed_author" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldParsedAuthor(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedAuthor is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedAuthor requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedAuthor: %w", err)
+	}
+	return oldValue.ParsedAuthor, nil
+}
+
+// ClearParsedAuthor clears the value of the "parsed_author" field.
+func (m *ImportScanBookMutation) ClearParsedAuthor() {
+	m.parsed_author = nil
+	m.clearedFields[importscanbook.FieldParsedAuthor] = struct{}{}
+}
+
+// ParsedAuthorCleared returns if the "parsed_author" field was cleared in this mutation.
+func (m *ImportScanBookMutation) ParsedAuthorCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldParsedAuthor]
+	return ok
+}
+
+// ResetParsedAuthor resets all changes to the "parsed_author" field.
+func (m *ImportScanBookMutation) ResetParsedAuthor() {
+	m.parsed_author = nil
+	delete(m.clearedFields, importscanbook.FieldParsedAuthor)
+}
+
+// SetParsedIsbn sets the "parsed_isbn" field.
+func (m *ImportScanBookMutation) SetParsedIsbn(s string) {
+	m.parsed_isbn = &s
+}
+
+// ParsedIsbn returns the value of the "parsed_isbn" field in the mutation.
+func (m *ImportScanBookMutation) ParsedIsbn() (r string, exists bool) {
+	v := m.parsed_isbn
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedIsbn returns the old "parsed_isbn" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldParsedIsbn(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedIsbn is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedIsbn requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedIsbn: %w", err)
+	}
+	return oldValue.ParsedIsbn, nil
+}
+
+// ClearParsedIsbn clears the value of the "parsed_isbn" field.
+func (m *ImportScanBookMutation) ClearParsedIsbn() {
+	m.parsed_isbn = nil
+	m.clearedFields[importscanbook.FieldParsedIsbn] = struct{}{}
+}
+
+// ParsedIsbnCleared returns if the "parsed_isbn" field was cleared in this mutation.
+func (m *ImportScanBookMutation) ParsedIsbnCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldParsedIsbn]
+	return ok
+}
+
+// ResetParsedIsbn resets all changes to the "parsed_isbn" field.
+func (m *ImportScanBookMutation) ResetParsedIsbn() {
+	m.parsed_isbn = nil
+	delete(m.clearedFields, importscanbook.FieldParsedIsbn)
+}
+
+// SetClassification sets the "classification" field.
+func (m *ImportScanBookMutation) SetClassification(i importscanbook.Classification) {
+	m.classification = &i
+}
+
+// Classification returns the value of the "classification" field in the mutation.
+func (m *ImportScanBookMutation) Classification() (r importscanbook.Classification, exists bool) {
+	v := m.classification
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClassification returns the old "classification" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldClassification(ctx context.Context) (v importscanbook.Classification, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClassification is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClassification requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClassification: %w", err)
+	}
+	return oldValue.Classification, nil
+}
+
+// ResetClassification resets all changes to the "classification" field.
+func (m *ImportScanBookMutation) ResetClassification() {
+	m.classification = nil
+}
+
+// SetBookHardcoverID sets the "book_hardcover_id" field.
+func (m *ImportScanBookMutation) SetBookHardcoverID(u uint32) {
+	m.book_hardcover_id = &u
+	m.addbook_hardcover_id = nil
+}
+
+// BookHardcoverID returns the value of the "book_hardcover_id" field in the mutation.
+func (m *ImportScanBookMutation) BookHardcoverID() (r uint32, exists bool) {
+	v := m.book_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBookHardcoverID returns the old "book_hardcover_id" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldBookHardcoverID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBookHardcoverID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBookHardcoverID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBookHardcoverID: %w", err)
+	}
+	return oldValue.BookHardcoverID, nil
+}
+
+// AddBookHardcoverID adds u to the "book_hardcover_id" field.
+func (m *ImportScanBookMutation) AddBookHardcoverID(u int32) {
+	if m.addbook_hardcover_id != nil {
+		*m.addbook_hardcover_id += u
+	} else {
+		m.addbook_hardcover_id = &u
+	}
+}
+
+// AddedBookHardcoverID returns the value that was added to the "book_hardcover_id" field in this mutation.
+func (m *ImportScanBookMutation) AddedBookHardcoverID() (r int32, exists bool) {
+	v := m.addbook_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearBookHardcoverID clears the value of the "book_hardcover_id" field.
+func (m *ImportScanBookMutation) ClearBookHardcoverID() {
+	m.book_hardcover_id = nil
+	m.addbook_hardcover_id = nil
+	m.clearedFields[importscanbook.FieldBookHardcoverID] = struct{}{}
+}
+
+// BookHardcoverIDCleared returns if the "book_hardcover_id" field was cleared in this mutation.
+func (m *ImportScanBookMutation) BookHardcoverIDCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldBookHardcoverID]
+	return ok
+}
+
+// ResetBookHardcoverID resets all changes to the "book_hardcover_id" field.
+func (m *ImportScanBookMutation) ResetBookHardcoverID() {
+	m.book_hardcover_id = nil
+	m.addbook_hardcover_id = nil
+	delete(m.clearedFields, importscanbook.FieldBookHardcoverID)
+}
+
+// SetAuthorHardcoverID sets the "author_hardcover_id" field.
+func (m *ImportScanBookMutation) SetAuthorHardcoverID(u uint32) {
+	m.author_hardcover_id = &u
+	m.addauthor_hardcover_id = nil
+}
+
+// AuthorHardcoverID returns the value of the "author_hardcover_id" field in the mutation.
+func (m *ImportScanBookMutation) AuthorHardcoverID() (r uint32, exists bool) {
+	v := m.author_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorHardcoverID returns the old "author_hardcover_id" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldAuthorHardcoverID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorHardcoverID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorHardcoverID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorHardcoverID: %w", err)
+	}
+	return oldValue.AuthorHardcoverID, nil
+}
+
+// AddAuthorHardcoverID adds u to the "author_hardcover_id" field.
+func (m *ImportScanBookMutation) AddAuthorHardcoverID(u int32) {
+	if m.addauthor_hardcover_id != nil {
+		*m.addauthor_hardcover_id += u
+	} else {
+		m.addauthor_hardcover_id = &u
+	}
+}
+
+// AddedAuthorHardcoverID returns the value that was added to the "author_hardcover_id" field in this mutation.
+func (m *ImportScanBookMutation) AddedAuthorHardcoverID() (r int32, exists bool) {
+	v := m.addauthor_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAuthorHardcoverID clears the value of the "author_hardcover_id" field.
+func (m *ImportScanBookMutation) ClearAuthorHardcoverID() {
+	m.author_hardcover_id = nil
+	m.addauthor_hardcover_id = nil
+	m.clearedFields[importscanbook.FieldAuthorHardcoverID] = struct{}{}
+}
+
+// AuthorHardcoverIDCleared returns if the "author_hardcover_id" field was cleared in this mutation.
+func (m *ImportScanBookMutation) AuthorHardcoverIDCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldAuthorHardcoverID]
+	return ok
+}
+
+// ResetAuthorHardcoverID resets all changes to the "author_hardcover_id" field.
+func (m *ImportScanBookMutation) ResetAuthorHardcoverID() {
+	m.author_hardcover_id = nil
+	m.addauthor_hardcover_id = nil
+	delete(m.clearedFields, importscanbook.FieldAuthorHardcoverID)
+}
+
+// SetCandidates sets the "candidates" field.
+func (m *ImportScanBookMutation) SetCandidates(sbc []schema.ScannedBookCandidate) {
+	m.candidates = &sbc
+	m.appendcandidates = nil
+}
+
+// Candidates returns the value of the "candidates" field in the mutation.
+func (m *ImportScanBookMutation) Candidates() (r []schema.ScannedBookCandidate, exists bool) {
+	v := m.candidates
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCandidates returns the old "candidates" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldCandidates(ctx context.Context) (v []schema.ScannedBookCandidate, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCandidates is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCandidates requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCandidates: %w", err)
+	}
+	return oldValue.Candidates, nil
+}
+
+// AppendCandidates adds sbc to the "candidates" field.
+func (m *ImportScanBookMutation) AppendCandidates(sbc []schema.ScannedBookCandidate) {
+	m.appendcandidates = append(m.appendcandidates, sbc...)
+}
+
+// AppendedCandidates returns the list of values that were appended to the "candidates" field in this mutation.
+func (m *ImportScanBookMutation) AppendedCandidates() ([]schema.ScannedBookCandidate, bool) {
+	if len(m.appendcandidates) == 0 {
+		return nil, false
+	}
+	return m.appendcandidates, true
+}
+
+// ClearCandidates clears the value of the "candidates" field.
+func (m *ImportScanBookMutation) ClearCandidates() {
+	m.candidates = nil
+	m.appendcandidates = nil
+	m.clearedFields[importscanbook.FieldCandidates] = struct{}{}
+}
+
+// CandidatesCleared returns if the "candidates" field was cleared in this mutation.
+func (m *ImportScanBookMutation) CandidatesCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldCandidates]
+	return ok
+}
+
+// ResetCandidates resets all changes to the "candidates" field.
+func (m *ImportScanBookMutation) ResetCandidates() {
+	m.candidates = nil
+	m.appendcandidates = nil
+	delete(m.clearedFields, importscanbook.FieldCandidates)
+}
+
+// SetExistingBookID sets the "existing_book_id" field.
+func (m *ImportScanBookMutation) SetExistingBookID(u uint32) {
+	m.existing_book_id = &u
+	m.addexisting_book_id = nil
+}
+
+// ExistingBookID returns the value of the "existing_book_id" field in the mutation.
+func (m *ImportScanBookMutation) ExistingBookID() (r uint32, exists bool) {
+	v := m.existing_book_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExistingBookID returns the old "existing_book_id" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldExistingBookID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExistingBookID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExistingBookID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExistingBookID: %w", err)
+	}
+	return oldValue.ExistingBookID, nil
+}
+
+// AddExistingBookID adds u to the "existing_book_id" field.
+func (m *ImportScanBookMutation) AddExistingBookID(u int32) {
+	if m.addexisting_book_id != nil {
+		*m.addexisting_book_id += u
+	} else {
+		m.addexisting_book_id = &u
+	}
+}
+
+// AddedExistingBookID returns the value that was added to the "existing_book_id" field in this mutation.
+func (m *ImportScanBookMutation) AddedExistingBookID() (r int32, exists bool) {
+	v := m.addexisting_book_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearExistingBookID clears the value of the "existing_book_id" field.
+func (m *ImportScanBookMutation) ClearExistingBookID() {
+	m.existing_book_id = nil
+	m.addexisting_book_id = nil
+	m.clearedFields[importscanbook.FieldExistingBookID] = struct{}{}
+}
+
+// ExistingBookIDCleared returns if the "existing_book_id" field was cleared in this mutation.
+func (m *ImportScanBookMutation) ExistingBookIDCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldExistingBookID]
+	return ok
+}
+
+// ResetExistingBookID resets all changes to the "existing_book_id" field.
+func (m *ImportScanBookMutation) ResetExistingBookID() {
+	m.existing_book_id = nil
+	m.addexisting_book_id = nil
+	delete(m.clearedFields, importscanbook.FieldExistingBookID)
+}
+
+// SetDecision sets the "decision" field.
+func (m *ImportScanBookMutation) SetDecision(i importscanbook.Decision) {
+	m.decision = &i
+}
+
+// Decision returns the value of the "decision" field in the mutation.
+func (m *ImportScanBookMutation) Decision() (r importscanbook.Decision, exists bool) {
+	v := m.decision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecision returns the old "decision" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldDecision(ctx context.Context) (v importscanbook.Decision, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecision: %w", err)
+	}
+	return oldValue.Decision, nil
+}
+
+// ResetDecision resets all changes to the "decision" field.
+func (m *ImportScanBookMutation) ResetDecision() {
+	m.decision = nil
+}
+
+// SetDecisionBookHardcoverID sets the "decision_book_hardcover_id" field.
+func (m *ImportScanBookMutation) SetDecisionBookHardcoverID(u uint32) {
+	m.decision_book_hardcover_id = &u
+	m.adddecision_book_hardcover_id = nil
+}
+
+// DecisionBookHardcoverID returns the value of the "decision_book_hardcover_id" field in the mutation.
+func (m *ImportScanBookMutation) DecisionBookHardcoverID() (r uint32, exists bool) {
+	v := m.decision_book_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecisionBookHardcoverID returns the old "decision_book_hardcover_id" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldDecisionBookHardcoverID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecisionBookHardcoverID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecisionBookHardcoverID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecisionBookHardcoverID: %w", err)
+	}
+	return oldValue.DecisionBookHardcoverID, nil
+}
+
+// AddDecisionBookHardcoverID adds u to the "decision_book_hardcover_id" field.
+func (m *ImportScanBookMutation) AddDecisionBookHardcoverID(u int32) {
+	if m.adddecision_book_hardcover_id != nil {
+		*m.adddecision_book_hardcover_id += u
+	} else {
+		m.adddecision_book_hardcover_id = &u
+	}
+}
+
+// AddedDecisionBookHardcoverID returns the value that was added to the "decision_book_hardcover_id" field in this mutation.
+func (m *ImportScanBookMutation) AddedDecisionBookHardcoverID() (r int32, exists bool) {
+	v := m.adddecision_book_hardcover_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDecisionBookHardcoverID clears the value of the "decision_book_hardcover_id" field.
+func (m *ImportScanBookMutation) ClearDecisionBookHardcoverID() {
+	m.decision_book_hardcover_id = nil
+	m.adddecision_book_hardcover_id = nil
+	m.clearedFields[importscanbook.FieldDecisionBookHardcoverID] = struct{}{}
+}
+
+// DecisionBookHardcoverIDCleared returns if the "decision_book_hardcover_id" field was cleared in this mutation.
+func (m *ImportScanBookMutation) DecisionBookHardcoverIDCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldDecisionBookHardcoverID]
+	return ok
+}
+
+// ResetDecisionBookHardcoverID resets all changes to the "decision_book_hardcover_id" field.
+func (m *ImportScanBookMutation) ResetDecisionBookHardcoverID() {
+	m.decision_book_hardcover_id = nil
+	m.adddecision_book_hardcover_id = nil
+	delete(m.clearedFields, importscanbook.FieldDecisionBookHardcoverID)
+}
+
+// SetOutcome sets the "outcome" field.
+func (m *ImportScanBookMutation) SetOutcome(i importscanbook.Outcome) {
+	m.outcome = &i
+}
+
+// Outcome returns the value of the "outcome" field in the mutation.
+func (m *ImportScanBookMutation) Outcome() (r importscanbook.Outcome, exists bool) {
+	v := m.outcome
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutcome returns the old "outcome" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldOutcome(ctx context.Context) (v importscanbook.Outcome, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutcome is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutcome requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutcome: %w", err)
+	}
+	return oldValue.Outcome, nil
+}
+
+// ResetOutcome resets all changes to the "outcome" field.
+func (m *ImportScanBookMutation) ResetOutcome() {
+	m.outcome = nil
+}
+
+// SetOutcomeMessage sets the "outcome_message" field.
+func (m *ImportScanBookMutation) SetOutcomeMessage(s string) {
+	m.outcome_message = &s
+}
+
+// OutcomeMessage returns the value of the "outcome_message" field in the mutation.
+func (m *ImportScanBookMutation) OutcomeMessage() (r string, exists bool) {
+	v := m.outcome_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutcomeMessage returns the old "outcome_message" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldOutcomeMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutcomeMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutcomeMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutcomeMessage: %w", err)
+	}
+	return oldValue.OutcomeMessage, nil
+}
+
+// ClearOutcomeMessage clears the value of the "outcome_message" field.
+func (m *ImportScanBookMutation) ClearOutcomeMessage() {
+	m.outcome_message = nil
+	m.clearedFields[importscanbook.FieldOutcomeMessage] = struct{}{}
+}
+
+// OutcomeMessageCleared returns if the "outcome_message" field was cleared in this mutation.
+func (m *ImportScanBookMutation) OutcomeMessageCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldOutcomeMessage]
+	return ok
+}
+
+// ResetOutcomeMessage resets all changes to the "outcome_message" field.
+func (m *ImportScanBookMutation) ResetOutcomeMessage() {
+	m.outcome_message = nil
+	delete(m.clearedFields, importscanbook.FieldOutcomeMessage)
+}
+
+// SetCreatedBookID sets the "created_book_id" field.
+func (m *ImportScanBookMutation) SetCreatedBookID(u uint32) {
+	m.created_book_id = &u
+	m.addcreated_book_id = nil
+}
+
+// CreatedBookID returns the value of the "created_book_id" field in the mutation.
+func (m *ImportScanBookMutation) CreatedBookID() (r uint32, exists bool) {
+	v := m.created_book_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedBookID returns the old "created_book_id" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldCreatedBookID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBookID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBookID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBookID: %w", err)
+	}
+	return oldValue.CreatedBookID, nil
+}
+
+// AddCreatedBookID adds u to the "created_book_id" field.
+func (m *ImportScanBookMutation) AddCreatedBookID(u int32) {
+	if m.addcreated_book_id != nil {
+		*m.addcreated_book_id += u
+	} else {
+		m.addcreated_book_id = &u
+	}
+}
+
+// AddedCreatedBookID returns the value that was added to the "created_book_id" field in this mutation.
+func (m *ImportScanBookMutation) AddedCreatedBookID() (r int32, exists bool) {
+	v := m.addcreated_book_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCreatedBookID clears the value of the "created_book_id" field.
+func (m *ImportScanBookMutation) ClearCreatedBookID() {
+	m.created_book_id = nil
+	m.addcreated_book_id = nil
+	m.clearedFields[importscanbook.FieldCreatedBookID] = struct{}{}
+}
+
+// CreatedBookIDCleared returns if the "created_book_id" field was cleared in this mutation.
+func (m *ImportScanBookMutation) CreatedBookIDCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldCreatedBookID]
+	return ok
+}
+
+// ResetCreatedBookID resets all changes to the "created_book_id" field.
+func (m *ImportScanBookMutation) ResetCreatedBookID() {
+	m.created_book_id = nil
+	m.addcreated_book_id = nil
+	delete(m.clearedFields, importscanbook.FieldCreatedBookID)
+}
+
+// SetScanID sets the "scan" edge to the ImportScan entity by id.
+func (m *ImportScanBookMutation) SetScanID(id uint32) {
+	m.scan = &id
+}
+
+// ClearScan clears the "scan" edge to the ImportScan entity.
+func (m *ImportScanBookMutation) ClearScan() {
+	m.clearedscan = true
+}
+
+// ScanCleared reports if the "scan" edge to the ImportScan entity was cleared.
+func (m *ImportScanBookMutation) ScanCleared() bool {
+	return m.clearedscan
+}
+
+// ScanID returns the "scan" edge ID in the mutation.
+func (m *ImportScanBookMutation) ScanID() (id uint32, exists bool) {
+	if m.scan != nil {
+		return *m.scan, true
+	}
+	return
+}
+
+// ScanIDs returns the "scan" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ScanID instead. It exists only for internal usage by the builders.
+func (m *ImportScanBookMutation) ScanIDs() (ids []uint32) {
+	if id := m.scan; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetScan resets all changes to the "scan" edge.
+func (m *ImportScanBookMutation) ResetScan() {
+	m.scan = nil
+	m.clearedscan = false
+}
+
+// Where appends a list predicates to the ImportScanBookMutation builder.
+func (m *ImportScanBookMutation) Where(ps ...predicate.ImportScanBook) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImportScanBookMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImportScanBookMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImportScanBook, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImportScanBookMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImportScanBookMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImportScanBook).
+func (m *ImportScanBookMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImportScanBookMutation) Fields() []string {
+	fields := make([]string, 0, 17)
+	if m.create_time != nil {
+		fields = append(fields, importscanbook.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, importscanbook.FieldUpdateTime)
+	}
+	if m.file_paths != nil {
+		fields = append(fields, importscanbook.FieldFilePaths)
+	}
+	if m.slot != nil {
+		fields = append(fields, importscanbook.FieldSlot)
+	}
+	if m.parsed_title != nil {
+		fields = append(fields, importscanbook.FieldParsedTitle)
+	}
+	if m.parsed_author != nil {
+		fields = append(fields, importscanbook.FieldParsedAuthor)
+	}
+	if m.parsed_isbn != nil {
+		fields = append(fields, importscanbook.FieldParsedIsbn)
+	}
+	if m.classification != nil {
+		fields = append(fields, importscanbook.FieldClassification)
+	}
+	if m.book_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldBookHardcoverID)
+	}
+	if m.author_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldAuthorHardcoverID)
+	}
+	if m.candidates != nil {
+		fields = append(fields, importscanbook.FieldCandidates)
+	}
+	if m.existing_book_id != nil {
+		fields = append(fields, importscanbook.FieldExistingBookID)
+	}
+	if m.decision != nil {
+		fields = append(fields, importscanbook.FieldDecision)
+	}
+	if m.decision_book_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldDecisionBookHardcoverID)
+	}
+	if m.outcome != nil {
+		fields = append(fields, importscanbook.FieldOutcome)
+	}
+	if m.outcome_message != nil {
+		fields = append(fields, importscanbook.FieldOutcomeMessage)
+	}
+	if m.created_book_id != nil {
+		fields = append(fields, importscanbook.FieldCreatedBookID)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImportScanBookMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case importscanbook.FieldCreateTime:
+		return m.CreateTime()
+	case importscanbook.FieldUpdateTime:
+		return m.UpdateTime()
+	case importscanbook.FieldFilePaths:
+		return m.FilePaths()
+	case importscanbook.FieldSlot:
+		return m.Slot()
+	case importscanbook.FieldParsedTitle:
+		return m.ParsedTitle()
+	case importscanbook.FieldParsedAuthor:
+		return m.ParsedAuthor()
+	case importscanbook.FieldParsedIsbn:
+		return m.ParsedIsbn()
+	case importscanbook.FieldClassification:
+		return m.Classification()
+	case importscanbook.FieldBookHardcoverID:
+		return m.BookHardcoverID()
+	case importscanbook.FieldAuthorHardcoverID:
+		return m.AuthorHardcoverID()
+	case importscanbook.FieldCandidates:
+		return m.Candidates()
+	case importscanbook.FieldExistingBookID:
+		return m.ExistingBookID()
+	case importscanbook.FieldDecision:
+		return m.Decision()
+	case importscanbook.FieldDecisionBookHardcoverID:
+		return m.DecisionBookHardcoverID()
+	case importscanbook.FieldOutcome:
+		return m.Outcome()
+	case importscanbook.FieldOutcomeMessage:
+		return m.OutcomeMessage()
+	case importscanbook.FieldCreatedBookID:
+		return m.CreatedBookID()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImportScanBookMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case importscanbook.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case importscanbook.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case importscanbook.FieldFilePaths:
+		return m.OldFilePaths(ctx)
+	case importscanbook.FieldSlot:
+		return m.OldSlot(ctx)
+	case importscanbook.FieldParsedTitle:
+		return m.OldParsedTitle(ctx)
+	case importscanbook.FieldParsedAuthor:
+		return m.OldParsedAuthor(ctx)
+	case importscanbook.FieldParsedIsbn:
+		return m.OldParsedIsbn(ctx)
+	case importscanbook.FieldClassification:
+		return m.OldClassification(ctx)
+	case importscanbook.FieldBookHardcoverID:
+		return m.OldBookHardcoverID(ctx)
+	case importscanbook.FieldAuthorHardcoverID:
+		return m.OldAuthorHardcoverID(ctx)
+	case importscanbook.FieldCandidates:
+		return m.OldCandidates(ctx)
+	case importscanbook.FieldExistingBookID:
+		return m.OldExistingBookID(ctx)
+	case importscanbook.FieldDecision:
+		return m.OldDecision(ctx)
+	case importscanbook.FieldDecisionBookHardcoverID:
+		return m.OldDecisionBookHardcoverID(ctx)
+	case importscanbook.FieldOutcome:
+		return m.OldOutcome(ctx)
+	case importscanbook.FieldOutcomeMessage:
+		return m.OldOutcomeMessage(ctx)
+	case importscanbook.FieldCreatedBookID:
+		return m.OldCreatedBookID(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImportScanBook field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImportScanBookMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case importscanbook.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case importscanbook.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case importscanbook.FieldFilePaths:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFilePaths(v)
+		return nil
+	case importscanbook.FieldSlot:
+		v, ok := value.(importscanbook.Slot)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSlot(v)
+		return nil
+	case importscanbook.FieldParsedTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedTitle(v)
+		return nil
+	case importscanbook.FieldParsedAuthor:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedAuthor(v)
+		return nil
+	case importscanbook.FieldParsedIsbn:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedIsbn(v)
+		return nil
+	case importscanbook.FieldClassification:
+		v, ok := value.(importscanbook.Classification)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClassification(v)
+		return nil
+	case importscanbook.FieldBookHardcoverID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBookHardcoverID(v)
+		return nil
+	case importscanbook.FieldAuthorHardcoverID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorHardcoverID(v)
+		return nil
+	case importscanbook.FieldCandidates:
+		v, ok := value.([]schema.ScannedBookCandidate)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCandidates(v)
+		return nil
+	case importscanbook.FieldExistingBookID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExistingBookID(v)
+		return nil
+	case importscanbook.FieldDecision:
+		v, ok := value.(importscanbook.Decision)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecision(v)
+		return nil
+	case importscanbook.FieldDecisionBookHardcoverID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecisionBookHardcoverID(v)
+		return nil
+	case importscanbook.FieldOutcome:
+		v, ok := value.(importscanbook.Outcome)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutcome(v)
+		return nil
+	case importscanbook.FieldOutcomeMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutcomeMessage(v)
+		return nil
+	case importscanbook.FieldCreatedBookID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedBookID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImportScanBookMutation) AddedFields() []string {
+	var fields []string
+	if m.addbook_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldBookHardcoverID)
+	}
+	if m.addauthor_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldAuthorHardcoverID)
+	}
+	if m.addexisting_book_id != nil {
+		fields = append(fields, importscanbook.FieldExistingBookID)
+	}
+	if m.adddecision_book_hardcover_id != nil {
+		fields = append(fields, importscanbook.FieldDecisionBookHardcoverID)
+	}
+	if m.addcreated_book_id != nil {
+		fields = append(fields, importscanbook.FieldCreatedBookID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImportScanBookMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case importscanbook.FieldBookHardcoverID:
+		return m.AddedBookHardcoverID()
+	case importscanbook.FieldAuthorHardcoverID:
+		return m.AddedAuthorHardcoverID()
+	case importscanbook.FieldExistingBookID:
+		return m.AddedExistingBookID()
+	case importscanbook.FieldDecisionBookHardcoverID:
+		return m.AddedDecisionBookHardcoverID()
+	case importscanbook.FieldCreatedBookID:
+		return m.AddedCreatedBookID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImportScanBookMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case importscanbook.FieldBookHardcoverID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBookHardcoverID(v)
+		return nil
+	case importscanbook.FieldAuthorHardcoverID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAuthorHardcoverID(v)
+		return nil
+	case importscanbook.FieldExistingBookID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExistingBookID(v)
+		return nil
+	case importscanbook.FieldDecisionBookHardcoverID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDecisionBookHardcoverID(v)
+		return nil
+	case importscanbook.FieldCreatedBookID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedBookID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImportScanBookMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(importscanbook.FieldParsedTitle) {
+		fields = append(fields, importscanbook.FieldParsedTitle)
+	}
+	if m.FieldCleared(importscanbook.FieldParsedAuthor) {
+		fields = append(fields, importscanbook.FieldParsedAuthor)
+	}
+	if m.FieldCleared(importscanbook.FieldParsedIsbn) {
+		fields = append(fields, importscanbook.FieldParsedIsbn)
+	}
+	if m.FieldCleared(importscanbook.FieldBookHardcoverID) {
+		fields = append(fields, importscanbook.FieldBookHardcoverID)
+	}
+	if m.FieldCleared(importscanbook.FieldAuthorHardcoverID) {
+		fields = append(fields, importscanbook.FieldAuthorHardcoverID)
+	}
+	if m.FieldCleared(importscanbook.FieldCandidates) {
+		fields = append(fields, importscanbook.FieldCandidates)
+	}
+	if m.FieldCleared(importscanbook.FieldExistingBookID) {
+		fields = append(fields, importscanbook.FieldExistingBookID)
+	}
+	if m.FieldCleared(importscanbook.FieldDecisionBookHardcoverID) {
+		fields = append(fields, importscanbook.FieldDecisionBookHardcoverID)
+	}
+	if m.FieldCleared(importscanbook.FieldOutcomeMessage) {
+		fields = append(fields, importscanbook.FieldOutcomeMessage)
+	}
+	if m.FieldCleared(importscanbook.FieldCreatedBookID) {
+		fields = append(fields, importscanbook.FieldCreatedBookID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImportScanBookMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImportScanBookMutation) ClearField(name string) error {
+	switch name {
+	case importscanbook.FieldParsedTitle:
+		m.ClearParsedTitle()
+		return nil
+	case importscanbook.FieldParsedAuthor:
+		m.ClearParsedAuthor()
+		return nil
+	case importscanbook.FieldParsedIsbn:
+		m.ClearParsedIsbn()
+		return nil
+	case importscanbook.FieldBookHardcoverID:
+		m.ClearBookHardcoverID()
+		return nil
+	case importscanbook.FieldAuthorHardcoverID:
+		m.ClearAuthorHardcoverID()
+		return nil
+	case importscanbook.FieldCandidates:
+		m.ClearCandidates()
+		return nil
+	case importscanbook.FieldExistingBookID:
+		m.ClearExistingBookID()
+		return nil
+	case importscanbook.FieldDecisionBookHardcoverID:
+		m.ClearDecisionBookHardcoverID()
+		return nil
+	case importscanbook.FieldOutcomeMessage:
+		m.ClearOutcomeMessage()
+		return nil
+	case importscanbook.FieldCreatedBookID:
+		m.ClearCreatedBookID()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImportScanBookMutation) ResetField(name string) error {
+	switch name {
+	case importscanbook.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case importscanbook.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case importscanbook.FieldFilePaths:
+		m.ResetFilePaths()
+		return nil
+	case importscanbook.FieldSlot:
+		m.ResetSlot()
+		return nil
+	case importscanbook.FieldParsedTitle:
+		m.ResetParsedTitle()
+		return nil
+	case importscanbook.FieldParsedAuthor:
+		m.ResetParsedAuthor()
+		return nil
+	case importscanbook.FieldParsedIsbn:
+		m.ResetParsedIsbn()
+		return nil
+	case importscanbook.FieldClassification:
+		m.ResetClassification()
+		return nil
+	case importscanbook.FieldBookHardcoverID:
+		m.ResetBookHardcoverID()
+		return nil
+	case importscanbook.FieldAuthorHardcoverID:
+		m.ResetAuthorHardcoverID()
+		return nil
+	case importscanbook.FieldCandidates:
+		m.ResetCandidates()
+		return nil
+	case importscanbook.FieldExistingBookID:
+		m.ResetExistingBookID()
+		return nil
+	case importscanbook.FieldDecision:
+		m.ResetDecision()
+		return nil
+	case importscanbook.FieldDecisionBookHardcoverID:
+		m.ResetDecisionBookHardcoverID()
+		return nil
+	case importscanbook.FieldOutcome:
+		m.ResetOutcome()
+		return nil
+	case importscanbook.FieldOutcomeMessage:
+		m.ResetOutcomeMessage()
+		return nil
+	case importscanbook.FieldCreatedBookID:
+		m.ResetCreatedBookID()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImportScanBookMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.scan != nil {
+		edges = append(edges, importscanbook.EdgeScan)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImportScanBookMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case importscanbook.EdgeScan:
+		if id := m.scan; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImportScanBookMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImportScanBookMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImportScanBookMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedscan {
+		edges = append(edges, importscanbook.EdgeScan)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImportScanBookMutation) EdgeCleared(name string) bool {
+	switch name {
+	case importscanbook.EdgeScan:
+		return m.clearedscan
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImportScanBookMutation) ClearEdge(name string) error {
+	switch name {
+	case importscanbook.EdgeScan:
+		m.ClearScan()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImportScanBookMutation) ResetEdge(name string) error {
+	switch name {
+	case importscanbook.EdgeScan:
+		m.ResetScan()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanBook edge %s", name)
 }
 
 // ImportScanFileMutation represents an operation that mutates the ImportScanFile nodes in the graph.

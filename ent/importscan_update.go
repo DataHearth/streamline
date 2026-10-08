@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -303,6 +304,21 @@ func (_u *ImportScanUpdate) AddAlbums(v ...*ImportScanAlbum) *ImportScanUpdate {
 	return _u.AddAlbumIDs(ids...)
 }
 
+// AddBookIDs adds the "books" edge to the ImportScanBook entity by IDs.
+func (_u *ImportScanUpdate) AddBookIDs(ids ...uint32) *ImportScanUpdate {
+	_u.mutation.AddBookIDs(ids...)
+	return _u
+}
+
+// AddBooks adds the "books" edges to the ImportScanBook entity.
+func (_u *ImportScanUpdate) AddBooks(v ...*ImportScanBook) *ImportScanUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookIDs(ids...)
+}
+
 // Mutation returns the ImportScanMutation object of the builder.
 func (_u *ImportScanUpdate) Mutation() *ImportScanMutation {
 	return _u.mutation
@@ -369,6 +385,27 @@ func (_u *ImportScanUpdate) RemoveAlbums(v ...*ImportScanAlbum) *ImportScanUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAlbumIDs(ids...)
+}
+
+// ClearBooks clears all "books" edges to the ImportScanBook entity.
+func (_u *ImportScanUpdate) ClearBooks() *ImportScanUpdate {
+	_u.mutation.ClearBooks()
+	return _u
+}
+
+// RemoveBookIDs removes the "books" edge to ImportScanBook entities by IDs.
+func (_u *ImportScanUpdate) RemoveBookIDs(ids ...uint32) *ImportScanUpdate {
+	_u.mutation.RemoveBookIDs(ids...)
+	return _u
+}
+
+// RemoveBooks removes "books" edges to ImportScanBook entities.
+func (_u *ImportScanUpdate) RemoveBooks(v ...*ImportScanBook) *ImportScanUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -646,6 +683,51 @@ func (_u *ImportScanUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BooksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBooksIDs(); len(nodes) > 0 && !_u.mutation.BooksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BooksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -946,6 +1028,21 @@ func (_u *ImportScanUpdateOne) AddAlbums(v ...*ImportScanAlbum) *ImportScanUpdat
 	return _u.AddAlbumIDs(ids...)
 }
 
+// AddBookIDs adds the "books" edge to the ImportScanBook entity by IDs.
+func (_u *ImportScanUpdateOne) AddBookIDs(ids ...uint32) *ImportScanUpdateOne {
+	_u.mutation.AddBookIDs(ids...)
+	return _u
+}
+
+// AddBooks adds the "books" edges to the ImportScanBook entity.
+func (_u *ImportScanUpdateOne) AddBooks(v ...*ImportScanBook) *ImportScanUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookIDs(ids...)
+}
+
 // Mutation returns the ImportScanMutation object of the builder.
 func (_u *ImportScanUpdateOne) Mutation() *ImportScanMutation {
 	return _u.mutation
@@ -1012,6 +1109,27 @@ func (_u *ImportScanUpdateOne) RemoveAlbums(v ...*ImportScanAlbum) *ImportScanUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAlbumIDs(ids...)
+}
+
+// ClearBooks clears all "books" edges to the ImportScanBook entity.
+func (_u *ImportScanUpdateOne) ClearBooks() *ImportScanUpdateOne {
+	_u.mutation.ClearBooks()
+	return _u
+}
+
+// RemoveBookIDs removes the "books" edge to ImportScanBook entities by IDs.
+func (_u *ImportScanUpdateOne) RemoveBookIDs(ids ...uint32) *ImportScanUpdateOne {
+	_u.mutation.RemoveBookIDs(ids...)
+	return _u
+}
+
+// RemoveBooks removes "books" edges to ImportScanBook entities.
+func (_u *ImportScanUpdateOne) RemoveBooks(v ...*ImportScanBook) *ImportScanUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookIDs(ids...)
 }
 
 // Where appends a list predicates to the ImportScanUpdate builder.
@@ -1319,6 +1437,51 @@ func (_u *ImportScanUpdateOne) sqlSave(ctx context.Context) (_node *ImportScan, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BooksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBooksIDs(); len(nodes) > 0 && !_u.mutation.BooksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BooksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.BooksTable,
+			Columns: []string{importscan.BooksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanbook.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
 	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -109,6 +110,7 @@ func checkColumn(t, c string) error {
 			episode.Table:         episode.ValidColumn,
 			importscan.Table:      importscan.ValidColumn,
 			importscanalbum.Table: importscanalbum.ValidColumn,
+			importscanbook.Table:  importscanbook.ValidColumn,
 			importscanfile.Table:  importscanfile.ValidColumn,
 			importscanshow.Table:  importscanshow.ValidColumn,
 			invite.Table:          invite.ValidColumn,
