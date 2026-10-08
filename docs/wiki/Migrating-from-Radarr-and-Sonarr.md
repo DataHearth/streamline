@@ -56,6 +56,8 @@ SRC='"app":"radarr","url":"http://radarr:7878","api_key":"<radarr key>"'
 
 **Imports → New scan**, then pick **Radarr** or **Sonarr** as the source. Five steps follow:
 
+[![The migration wizard, from connecting to Radarr to the committed library](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/arr-migration/radarr-flow.gif)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/arr-migration/radarr-flow.gif)
+
 | Step | What you do |
 | --- | --- |
 | **Connect** | The instance's URL and API key, then **Test connection**. A wrong key, an unreachable address, or a Sonarr where you picked Radarr is reported right there |
