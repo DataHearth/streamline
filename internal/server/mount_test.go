@@ -29,7 +29,11 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 		client = dbtest.SetupTestDB(ctx)
 		configtest.Setup(map[string]any{"auth": map[string]any{"mode": "full"}})
 
-		authMW := middleware.NewAuth(mwmocks.NewMockAuthenticator(GinkgoT()), nil, authExcludePaths)
+		authMW := middleware.NewAuth(
+			mwmocks.NewMockAuthenticator(GinkgoT()),
+			nil,
+			authExcludePaths,
+		)
 		srv := New(Config{
 			Ent:            client,
 			Posters:        posmocks.NewMockManager(GinkgoT()),
@@ -75,10 +79,58 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 		})
 	})
 
+	Describe("/opds", func() {
+		const realm = `Basic realm="Streamline OPDS"`
+
+		get := func(path string, user, pass string) *http.Response {
+			GinkgoHelper()
+			req, err := http.NewRequest(http.MethodGet, ts.URL+path, nil)
+			Expect(err).NotTo(HaveOccurred())
+			if user != "" {
+				req.SetBasicAuth(user, pass)
+			}
+			resp, err := hc.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(resp.Body.Close)
+			return resp
+		}
+
+		DescribeTable("challenges instead of redirecting to login",
+			func(path string) {
+				resp := get(path, "", "")
+				Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				Expect(resp.Header.Get("WWW-Authenticate")).To(Equal(realm))
+			},
+			Entry("bare", "/opds"),
+			Entry("slash", "/opds/"),
+			Entry("deeper path", "/opds/recent"),
+		)
+
+		It("rejects wrong credentials", func() {
+			Expect(
+				get("/opds/", "nobody@example.com", "x").StatusCode,
+			).To(Equal(http.StatusUnauthorized))
+		})
+
+		It("serves the catalog to a user with an OPDS token", func() {
+			client.User.Create().
+				SetEmail("reader@example.com").
+				SetOpdsToken("sesame").
+				SaveX(context.Background())
+			resp := get("/opds/", "reader@example.com", "sesame")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(
+				resp.Header.Get("Content-Type"),
+			).To(ContainSubstring("application/atom+xml"))
+		})
+	})
+
 	It("keeps the exclude list narrow", func() {
 		resp, err := hc.Get(ts.URL + "/movies")
 		Expect(err).NotTo(HaveOccurred())
 		defer resp.Body.Close()
-		Expect(resp.StatusCode).To(Or(Equal(http.StatusFound), Equal(http.StatusUnauthorized)))
+		Expect(
+			resp.StatusCode,
+		).To(Or(Equal(http.StatusFound), Equal(http.StatusUnauthorized)))
 	})
 })

@@ -566,4 +566,6 @@ var authExcludePaths = []string{
 	"/auth/invite/",
 	"/auth/oidc/",
 	"/rest/",
+	"/opds",
+	"/opds/",
 }
