@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -174,8 +175,8 @@ func (s *Service) runCommit(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count",
 		failedCount,
 	)
-	countCommit(ctx, "movie", "success", int64(successCount))
-	countCommit(ctx, "movie", "failed", int64(failedCount))
+	countCommit(ctx, "movie", scan.Source, "success", int64(successCount))
+	countCommit(ctx, "movie", scan.Source, "failed", int64(failedCount))
 	if successCount > 0 {
 		mediaserver.RefreshInBackground(ctx, s.ms, "movie", s.moviePath)
 	}
@@ -194,41 +195,171 @@ func (s *Service) commitOne(
 		))
 	defer span.End()
 
+	if isMigration(scan) {
+		return s.commitMigrated(ctx, scan, f)
+	}
 	switch f.Classification {
 	case entimportscanfile.ClassificationExisting:
 		return s.commitAttach(ctx, scan, f)
 	default:
-		tmdbID := f.DecisionTmdbID
-		if tmdbID == 0 {
-			tmdbID = f.TmdbID
-		}
-		if scan.Mode == entimportscan.ModeInPlace {
-			return s.commitAdoptInPlace(ctx, f, tmdbID)
-		}
-		return s.commitRename(ctx, scan, f, tmdbID)
+		return s.commitNew(ctx, scan, f, "")
 	}
+}
+
+func (s *Service) commitNew(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	f *ent.ImportScanFile,
+	profile string,
+) (entimportscanfile.Outcome, string, uint32) {
+	tmdbID := f.DecisionTmdbID
+	if tmdbID == 0 {
+		tmdbID = f.TmdbID
+	}
+	if scan.Mode == entimportscan.ModeInPlace {
+		return s.commitAdoptInPlace(ctx, f, tmdbID, profile)
+	}
+	return s.commitRename(ctx, scan, f, tmdbID, profile)
+}
+
+func isMigration(scan *ent.ImportScan) bool {
+	return scan.Source != "" && scan.Source != entimportscan.SourceFilesystem
+}
+
+// commitMigrated commits one Radarr row. The file arms are the filesystem
+// scan's, wrapped: the source's profile goes into Add, and its monitored flag
+// and profile are applied afterwards, since an existing movie keeps its own
+// profile through Add and monitored is not an Add parameter at all.
+func (s *Service) commitMigrated(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	f *ent.ImportScanFile,
+) (entimportscanfile.Outcome, string, uint32) {
+	profile, note := migratedProfile(f.QualityProfile)
+
+	var (
+		outcome entimportscanfile.Outcome
+		msg     string
+		movieID uint32
+	)
+	switch {
+	case f.SourcePath == "":
+		outcome, msg, movieID = s.commitTitleOnly(ctx, f, profile)
+	case !s.fileUsable(scan, f.SourcePath):
+		// The scan flagged this row for review; accepting it must not record a
+		// file this process cannot open or one outside the library it walks.
+		outcome, msg, movieID = s.commitTitleOnly(ctx, f, profile)
+		note = joinNotes(note, fmt.Sprintf(
+			"the file at %s is missing or outside the library; the title was added without it",
+			f.SourcePath,
+		))
+	case f.Classification == entimportscanfile.ClassificationExisting:
+		outcome, msg, movieID = s.commitAttach(ctx, scan, f)
+		if movieID == 0 && outcome != entimportscanfile.OutcomeFailed {
+			movieID = f.ExistingMovieID
+		}
+	default:
+		outcome, msg, movieID = s.commitNew(ctx, scan, f, profile)
+	}
+	if outcome == entimportscanfile.OutcomeFailed || movieID == 0 {
+		return outcome, msg, movieID
+	}
+	return outcome, joinNotes(
+		msg,
+		note,
+		s.applyMovieState(ctx, movieID, f, profile),
+	), movieID
+}
+
+// migratedProfile checks the profile the operator mapped at review time
+// still exists. A name that resolves to nothing would be stored verbatim and
+// silently read as the default forever; a deleted profile must not fail a
+// real title either, so it falls back to the default and says so.
+func migratedProfile(name string) (string, string) {
+	if name == "" {
+		return "", ""
+	}
+	if e, ok := config.ResolveQualityProfile(name); ok && e.Name == name {
+		return name, ""
+	}
+	return "", fmt.Sprintf(
+		"quality profile %q no longer exists; the default was used", name,
+	)
+}
+
+func joinNotes(notes ...string) string {
+	var out []string
+	for _, n := range notes {
+		if n != "" {
+			out = append(out, n)
+		}
+	}
+	return strings.Join(out, "; ")
+}
+
+// applyMovieState carries the source's monitored flag and profile onto the
+// movie. The returned string is empty on success and otherwise says what
+// could not be applied — the title itself is already committed.
+func (s *Service) applyMovieState(
+	ctx context.Context, movieID uint32, f *ent.ImportScanFile, profile string,
+) string {
+	monitored := f.Monitored
+	params := movie.UpdateParams{Monitored: &monitored}
+	if profile != "" {
+		params.QualityProfile = &profile
+	}
+	if _, err := s.movieSvc.Update(ctx, movieID, params); err != nil {
+		slog.WarnContext(ctx, "migration: movie flags not applied",
+			"movie.id", movieID, "error", err)
+		return fmt.Sprintf("could not apply monitoring and profile: %v", err)
+	}
+	return ""
+}
+
+// commitTitleOnly handles a row the source tracks without a usable file.
+// There is nothing to link and nothing to move: the title exists, and the
+// missing search finds it if it is monitored.
+func (s *Service) commitTitleOnly(
+	ctx context.Context, f *ent.ImportScanFile, profile string,
+) (entimportscanfile.Outcome, string, uint32) {
+	tmdbID := f.DecisionTmdbID
+	if tmdbID == 0 {
+		tmdbID = f.TmdbID
+	}
+	m, existed, err := s.addOrFindMovie(ctx, tmdbID, profile)
+	if err != nil {
+		return commitFail("add movie", err, 0)
+	}
+	if existed {
+		return entimportscanfile.OutcomeAttached, "", m.ID
+	}
+	return entimportscanfile.OutcomeCreated, "", m.ID
 }
 
 // addOrFindMovie adds the movie, or returns the existing row when another scan
 // (or another file in this one) added it while this scan sat in review. The
 // desired end state — the movie is in the library — is already true, so
 // failing the file would strand a real file over a race.
+//
+// existed reports the second case. profile is only applied to a movie Add
+// creates; an existing one keeps its own.
 func (s *Service) addOrFindMovie(
 	ctx context.Context,
 	tmdbID uint32,
-) (*ent.Movie, error) {
-	m, _, err := s.movieSvc.Add(ctx, tmdbID, "")
+	profile string,
+) (*ent.Movie, bool, error) {
+	m, _, err := s.movieSvc.Add(ctx, tmdbID, profile)
 	if err == nil {
-		return m, nil
+		return m, false, nil
 	}
 	if !errors.Is(err, movie.ErrMovieExists) {
-		return nil, err
+		return nil, false, err
 	}
 	existing, ferr := s.store.FindMovieByTMDBID(ctx, tmdbID)
-	if ferr != nil {
-		return nil, err
+	if ferr != nil || existing == nil {
+		return nil, false, err
 	}
-	return existing, nil
+	return existing, true, nil
 }
 
 func (s *Service) markScanFailed(ctx context.Context, scanID uint32, reason string) {
@@ -378,8 +509,9 @@ func (s *Service) commitAdoptInPlace(
 	ctx context.Context,
 	f *ent.ImportScanFile,
 	tmdbID uint32,
+	profile string,
 ) (entimportscanfile.Outcome, string, uint32) {
-	m, err := s.addOrFindMovie(ctx, tmdbID)
+	m, _, err := s.addOrFindMovie(ctx, tmdbID, profile)
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}
@@ -402,8 +534,9 @@ func (s *Service) commitRename(
 	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
 	tmdbID uint32,
+	profile string,
 ) (entimportscanfile.Outcome, string, uint32) {
-	m, err := s.addOrFindMovie(ctx, tmdbID)
+	m, _, err := s.addOrFindMovie(ctx, tmdbID, profile)
 	if err != nil {
 		return commitFail("add movie", err, 0)
 	}

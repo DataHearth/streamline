@@ -92,8 +92,8 @@ func (s *Service) runCommitSeries(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count",
 		failed,
 	)
-	countCommit(ctx, "series", "success", int64(success))
-	countCommit(ctx, "series", "failed", int64(failed))
+	countCommit(ctx, "series", scan.Source, "success", int64(success))
+	countCommit(ctx, "series", scan.Source, "failed", int64(failed))
 	if success > 0 {
 		mediaserver.RefreshInBackground(ctx, s.ms, "series", s.seriesPath)
 	}

@@ -148,8 +148,8 @@ func (s *Service) runScanSeries(ctx context.Context, scan *ent.ImportScan) {
 			attribute.String("kind", "series"),
 		))
 	}
-	countCommit(ctx, "series", "walk_error", int64(walkErrors))
-	countCommit(ctx, "series", "tvdb_lookup_error", int64(lookupErrors))
+	countCommit(ctx, "series", scan.Source, "walk_error", int64(walkErrors))
+	countCommit(ctx, "series", scan.Source, "tvdb_lookup_error", int64(lookupErrors))
 }
 
 // trackedShowsByTVDB maps tvdb_id → tracked tvshow id so the classifier can flag

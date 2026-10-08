@@ -86,7 +86,7 @@ type Service struct {
 	bookmeta    metadata.BookProvider
 	bookAdder   BookAdder
 	importSvc   *library.ImportService
-	movieSvc    *movie.Service
+	movieSvc    movie.Manager
 	seriesAdder SeriesAdder
 	ms          mediaserver.Refresher
 	moviePath   string
@@ -119,7 +119,7 @@ func NewService(
 	meta metadata.Provider,
 	tvmeta metadata.TVProvider,
 	importSvc *library.ImportService,
-	movieSvc *movie.Service,
+	movieSvc movie.Manager,
 	seriesAdder SeriesAdder,
 	ms mediaserver.Refresher,
 	moviePath string,

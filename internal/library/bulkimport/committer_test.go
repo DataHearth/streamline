@@ -488,8 +488,9 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 		store.EXPECT().FindMovieByTMDBID(mock.Anything, tmdbID).
 			Return(&ent.Movie{ID: 3, TmdbID: tmdbID}, nil).Once()
 
-		m, err := svc.addOrFindMovie(ctx, tmdbID)
+		m, existed, err := svc.addOrFindMovie(ctx, tmdbID, "")
 		Expect(err).NotTo(HaveOccurred())
+		Expect(existed).To(BeTrue())
 		Expect(m.ID).To(Equal(uint32(3)))
 	})
 })
@@ -578,7 +579,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				Return(nil).
 				Once()
 
-			outcome, msg, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+			outcome, msg, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID, "")
 			Expect(msg).To(BeEmpty())
 			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
 			Expect(movieID).To(Equal(uint32(42)))
@@ -634,7 +635,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 			Return(nil).
 			Once()
 
-		outcome, _, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID)
+		outcome, _, movieID := svc.commitAdoptInPlace(ctx, f, tmdbID, "")
 		Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
 		Expect(movieID).To(Equal(uint32(43)))
 	})
@@ -727,7 +728,7 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 				Return(nil).
 				Once()
 
-			outcome, msg, movieID := svc.commitRename(ctx, scan, f, tmdbID)
+			outcome, msg, movieID := svc.commitRename(ctx, scan, f, tmdbID, "")
 			Expect(msg).To(BeEmpty())
 			Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
 			Expect(movieID).To(Equal(uint32(42)))
