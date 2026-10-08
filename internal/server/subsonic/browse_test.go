@@ -1,6 +1,7 @@
 package subsonic
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5" //nolint:gosec // the Subsonic token scheme is defined as md5(password+salt)
 	"encoding/hex"
@@ -133,6 +134,20 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 
 	g.BeforeEach(func() {
 		f = newFixture(context.Background())
+	})
+
+	g.It("logs a store failure and answers the generic error", func() {
+		var logs bytes.Buffer
+		g.GinkgoWriter.TeeTo(&logs)
+		g.DeferCleanup(g.GinkgoWriter.ClearTeeWriters)
+		Expect(f.client.Close()).To(Succeed())
+
+		resp := f.call("getArtists", nil)
+
+		Expect(errCode(resp)).To(BeEquivalentTo(errGeneric))
+		Expect(resp["error"].(map[string]any)["message"]).To(Equal("Internal error"))
+		Expect(logs.String()).To(ContainSubstring("subsonic request failed"))
+		Expect(logs.String()).To(ContainSubstring("database is closed"))
 	})
 
 	g.It("groups getArtists by the first letter of sort_name", func() {

@@ -4,6 +4,7 @@ import (
 	"crypto/md5" //nolint:gosec // the Subsonic token scheme is defined as md5(password+salt)
 	"crypto/subtle"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -58,7 +59,7 @@ func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
 		}
 	}
 	if err != nil {
-		return nil, &apiError{Code: errGeneric, Message: "Internal error"}
+		return nil, fmt.Errorf("look up user: %w", err)
 	}
 	if !checkCredentials(u.SubsonicPassword, r.URL.Query()) {
 		return nil, &apiError{

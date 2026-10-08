@@ -4,6 +4,7 @@ package subsonic
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -69,5 +70,6 @@ func fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, r, apiErr.Code, apiErr.Message)
 		return
 	}
+	slog.ErrorContext(r.Context(), "subsonic request failed", "error", err)
 	writeError(w, r, errGeneric, "Internal error")
 }
