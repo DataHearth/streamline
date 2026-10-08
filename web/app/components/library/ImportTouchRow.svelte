@@ -1,24 +1,53 @@
+<script lang="ts" module>
+	import type { TouchEntry } from "@lib/imports-touch";
+
+	// What a migrated row is created with, carried beside the shared touch
+	// entry: the route fills it only for a Radarr/Sonarr scan.
+	export type MigrationFacts = {
+		qualityProfile?: string | undefined;
+		monitored: boolean;
+		seriesType?: string | undefined;
+	};
+	export type ReviewEntry = TouchEntry & { migration?: MigrationFacts };
+</script>
+
 <script lang="ts">
-	import { ChevronRight } from "@lucide/svelte";
+	import { ChevronRight, Eye, EyeOff } from "@lucide/svelte";
+	import { appLabel } from "@lib/arr-import";
 	import { cn } from "@lib/cn";
-	import { outcomeWord, type TouchEntry } from "@lib/imports-touch";
-	import type { ImportScanKind } from "@lib/types";
+	import { isTitleOnly } from "@lib/imports";
+	import { outcomeWord } from "@lib/imports-touch";
+	import type { ArrApp, ImportScanKind } from "@lib/types";
+	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { seriesTypeLabel } from "./ImportShowRow.svelte";
 
 	let {
 		entry,
 		kind = "movie",
 		wide = false,
+		migratedFrom,
 		onOpen,
 	}: {
-		entry: TouchEntry;
+		entry: ReviewEntry;
 		kind?: ImportScanKind;
 		// From md up the row keeps its shape and gains two trailing columns
 		// instead of the chevron — same component at 390 and at 834.
 		wide?: boolean;
-		onOpen: (entry: TouchEntry) => void;
+		migratedFrom?: ArrApp | undefined;
+		onOpen: (entry: ReviewEntry) => void;
 	} = $props();
 
 	let word = $derived(outcomeWord(entry, kind === "series"));
+	// fileEntry leaves `path` empty for a title the source tracks without a
+	// file; the sub line then carries the badge instead of a filename.
+	let titleOnly = $derived(isTitleOnly({ source_path: entry.path }));
+	let migration = $derived(entry.migration);
+	let monitoredLabel = $derived(
+		migration?.monitored
+			? i18n.imports_monitored()
+			: i18n.imports_not_monitored(),
+	);
+	let seriesType = $derived(seriesTypeLabel(migration?.seriesType));
 	const TONE: Record<string, string> = {
 		need: "text-status-wanted",
 		ok: "text-status-available",
@@ -54,8 +83,46 @@
 		>
 			{entry.heading}
 		</span>
-		<span class="mt-0.5 block truncate font-mono text-[11px] text-fg-subtle">
-			{#if entry.flag}<span class="font-sans font-medium text-accent-text">{entry.flag}</span>{" · "}{/if}{entry.sub}
+		<span
+			class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-fg-subtle"
+		>
+			{#if titleOnly}
+				<span
+					class="shrink-0 rounded-sm border border-status-wanted/30 bg-status-wanted/10 px-1 py-px text-[10px] font-medium uppercase tracking-wide text-status-wanted"
+					title={migratedFrom
+						? i18n.imports_title_only_help({ app: appLabel(migratedFrom) })
+						: undefined}
+				>
+					{i18n.imports_title_only()}
+				</span>
+			{:else}
+				<span class="min-w-0 truncate font-mono">{#if entry.flag}<span class="font-sans font-medium text-accent-text">{entry.flag}</span>{" · "}{/if}{entry.sub}</span>
+			{/if}
+			{#if migration}
+				<span
+					role="img"
+					aria-label={monitoredLabel}
+					class={cn(
+						"inline-flex shrink-0",
+						migration.monitored ? "text-fg-muted" : "text-fg-faint",
+					)}
+				>
+					{#if migration.monitored}
+						<Eye size={12} aria-hidden="true" />
+					{:else}
+						<EyeOff size={12} aria-hidden="true" />
+					{/if}
+				</span>
+				{#if migration.qualityProfile}
+					<span class="min-w-0 truncate text-fg-muted">
+						{migration.qualityProfile}
+					</span>
+				{/if}
+				{#if seriesType}
+					<span aria-hidden="true" class="shrink-0 text-fg-faint">·</span>
+					<span class="shrink-0 text-fg-muted">{seriesType}</span>
+				{/if}
+			{/if}
 		</span>
 	</span>
 

@@ -8,7 +8,12 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { formatDateTime, formatRelative } from "@lib/dates";
-	import { importModeLabel, importStatusMeta } from "@lib/imports";
+	import {
+		importModeLabel,
+		importSourceLabel,
+		importStatusMeta,
+		scanLocation,
+	} from "@lib/imports";
 	import type { ImportScan } from "@lib/types";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -28,6 +33,9 @@
 	let Icon = $derived(ICONS[scan.status]);
 
 	let modeLabel = $derived(importModeLabel(scan.mode, scan.import_mode));
+	// A migration is "of" the instance it read, not a directory.
+	let location = $derived(scanLocation(scan));
+	let sourceApp = $derived(importSourceLabel(scan));
 
 	let live = $derived(scan.status === "running");
 	let progress = $derived(
@@ -54,13 +62,21 @@
 	<span class="min-w-0">
 		<span
 			class="block truncate font-mono text-sm text-fg"
-			title={scan.source_path}
+			title={location}
 		>
-			{scan.source_path}
+			{location}
 		</span>
 		<span
 			class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-fg-subtle"
 		>
+			{#if sourceApp}
+				<span
+					class="rounded-sm border border-accent-line bg-accent-soft px-1.5 py-px text-[10px] font-medium tracking-wide text-accent-text"
+					title={i18n.imports_migrated_from({ app: sourceApp })}
+				>
+					{sourceApp}
+				</span>
+			{/if}
 			<span
 				class="rounded-sm border border-border bg-surface px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-fg-muted"
 			>

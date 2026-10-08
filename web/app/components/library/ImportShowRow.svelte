@@ -1,3 +1,25 @@
+<script lang="ts" module>
+	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// seriesTypeLabel names a migrated show's Sonarr series type, or null for
+	// standard — the default, which is not worth a word on every row. A value
+	// this build does not know is shown as sent.
+	export function seriesTypeLabel(t: string | undefined): string | null {
+		switch (t) {
+			case undefined:
+			case "":
+			case "standard":
+				return null;
+			case "anime":
+				return i18n.lc_anime();
+			case "daily":
+				return i18n.lc_daily();
+			default:
+				return t;
+		}
+	}
+</script>
+
 <script lang="ts">
 	import { NOUN_FILE } from "@lib/nouns";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
@@ -6,6 +28,8 @@
 		Check,
 		CircleCheckBig,
 		CircleHelp,
+		Eye,
+		EyeOff,
 		Link2,
 		Minus,
 		Pencil,
@@ -14,17 +38,29 @@
 	import { api, errorText } from "@lib/api";
 	import { cn } from "@lib/cn";
 	import { toast } from "@lib/toast";
-	import type { ImportFileDecision, ImportScanShow } from "@lib/types";
-	import { m as i18n } from "@lib/paraglide/messages.js";
+	import type {
+		ArrApp,
+		ImportFileDecision,
+		ImportScanShow,
+	} from "@lib/types";
 
 	type Props = {
 		show: ImportScanShow;
 		scanId: number;
 		reviewing: boolean;
+		// Set on a Sonarr migration: the row then carries the profile, the
+		// monitored flag and the series type the show is created with.
+		migratedFrom?: ArrApp | undefined;
 		onChooseMatch: (show: ImportScanShow) => void;
 	};
 
-	let { show, scanId, reviewing, onChooseMatch }: Props = $props();
+	let { show, scanId, reviewing, migratedFrom, onChooseMatch }: Props =
+		$props();
+
+	let monitoredLabel = $derived(
+		show.monitored ? i18n.imports_monitored() : i18n.imports_not_monitored(),
+	);
+	let seriesType = $derived(seriesTypeLabel(show.series_type));
 
 	const qc = useQueryClient();
 
@@ -127,6 +163,34 @@
 			<span class="font-mono tabular-nums">
 				{NOUN_FILE.count(show.file_count)}
 			</span>
+			{#if migratedFrom}
+				<span aria-hidden="true" class="text-fg-faint">·</span>
+				{#if show.quality_profile}
+					<span class="text-fg-muted" title={i18n.quality_profile()}>
+						{show.quality_profile}
+					</span>
+					<span aria-hidden="true" class="text-fg-faint">·</span>
+				{/if}
+				{#if seriesType}
+					<span class="text-fg-muted">{seriesType}</span>
+					<span aria-hidden="true" class="text-fg-faint">·</span>
+				{/if}
+				<span
+					role="img"
+					aria-label={monitoredLabel}
+					title={monitoredLabel}
+					class={cn(
+						"inline-flex",
+						show.monitored ? "text-fg-muted" : "text-fg-faint",
+					)}
+				>
+					{#if show.monitored}
+						<Eye size={13} aria-hidden="true" />
+					{:else}
+						<EyeOff size={13} aria-hidden="true" />
+					{/if}
+				</span>
+			{/if}
 		</p>
 		<span
 			class="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold md:hidden"
