@@ -142,7 +142,15 @@
 			source_url: url,
 			api_key: apiKey,
 			mode,
-			root_mappings: $state.snapshot(roots),
+			// A root holding no titles maps nothing, and the server refuses any
+			// mapping whose target does not exist on this host — so an empty
+			// root the operator left at its identity default would block the
+			// whole migration over a folder it never reads.
+			root_mappings: $state.snapshot(roots).filter(
+				(r) =>
+					(preview?.root_folders.find((f) => f.path === r.from)?.title_count ??
+						0) > 0,
+			),
 			profile_mappings: profileMappings(preview, choices),
 		};
 		if (mode === "rename" && importMode) body.import_mode = importMode;

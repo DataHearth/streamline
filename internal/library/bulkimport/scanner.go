@@ -180,20 +180,33 @@ func (s *Service) validateArrScanParams(p StartScanParams) error {
 		return err
 	}
 	for _, m := range p.Mappings.Roots {
+		// The message names the mapping: a migration carries several, and the
+		// bare sentinel reads as a filesystem scan's source_path.
+		invalid := fmt.Errorf(
+			"%w: root folder %s maps to %s",
+			ErrInvalidPath,
+			m.From,
+			m.To,
+		)
 		if !filepath.IsAbs(m.From) || !filepath.IsAbs(m.To) {
-			return ErrInvalidPath
+			return invalid
 		}
 		resolved, err := filepath.EvalSymlinks(m.To)
 		if err != nil {
-			return ErrInvalidPath
+			return invalid
 		}
 		info, err := os.Stat(resolved)
 		if err != nil || !info.IsDir() {
-			return ErrInvalidPath
+			return invalid
 		}
 		inside := insideRoot(resolved, libAbs)
 		if (p.Mode == entimportscan.ModeInPlace) != inside {
-			return ErrRootOutsideLibrary
+			return fmt.Errorf(
+				"%w: root folder %s maps to %s",
+				ErrRootOutsideLibrary,
+				m.From,
+				m.To,
+			)
 		}
 	}
 	return nil
