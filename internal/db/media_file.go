@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -278,6 +279,23 @@ func (db *DB) ListMediaFilesByMovieID(
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list media_files for movie %d: %w", movieID, err)
+	}
+	return rows, nil
+}
+
+func (db *DB) ListMediaFilesByBook(
+	ctx context.Context,
+	bookID uint32,
+	kind mediafile.BookKind,
+) ([]*ent.MediaFile, error) {
+	rows, err := db.client.MediaFile.Query().
+		Where(
+			mediafile.HasBookWith(book.ID(bookID)),
+			mediafile.BookKindEQ(kind),
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list media_files for book %d: %w", bookID, err)
 	}
 	return rows, nil
 }

@@ -380,3 +380,18 @@ var _ = Describe("SanitizePath", Label("unit", "library"), func() {
 		Entry("plain title is untouched", "Breaking Bad", "Breaking Bad"),
 	)
 })
+
+var _ = Describe("BuildBookVars", Label("unit", "library"), func() {
+	It("renders the default book template", func() {
+		vars := BuildBookVars("Brandon Sanderson", "Elantris", 2005)
+		Expect(ApplyTemplate("{Author}/{Title} ({Year})", vars)).
+			To(Equal("Brandon Sanderson/Elantris (2005)"))
+	})
+
+	It("collapses the bracketed year when it is unknown", func() {
+		vars := BuildBookVars("Brandon Sanderson", "Elantris", 0)
+		Expect(vars).NotTo(HaveKey("Year"))
+		Expect(ApplyTemplate("{Author}/{Title} ({Year})", vars)).
+			To(Equal("Brandon Sanderson/Elantris"))
+	})
+})

@@ -18,6 +18,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
@@ -253,12 +254,14 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 		return w.importMovieRecord(ctx, span, rec, libCfg)
 	case rec.Edges.AnchorEpisode != nil:
 		return w.importEpisodeRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Book != nil:
+		return w.importBookRecord(ctx, span, rec, libCfg)
 	case rec.Edges.Album != nil:
 		return w.importAlbumRecord(ctx, span, rec, libCfg)
 	default:
 		return otelx.RecordSpanError(
 			span,
-			fmt.Errorf("record %d has no movie, episode or album", recordID),
+			fmt.Errorf("record %d has no movie, episode, album or book", recordID),
 		)
 	}
 }
@@ -947,6 +950,10 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	}
 	if rec.Edges.Album != nil {
 		params.AlbumID = rec.Edges.Album.ID
+	}
+	if rec.Edges.Book != nil {
+		params.BookID = rec.Edges.Book.ID
+		params.BookKind = mediafile.BookKind(rec.BookKind)
 	}
 	if isTerminal {
 		params.Reason = strings.TrimSpace(runErr.Error())

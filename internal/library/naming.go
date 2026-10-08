@@ -254,3 +254,17 @@ func SanitizePath(s string) string {
 	s = pathSpaceRun.ReplaceAllString(s, " ")
 	return strings.TrimSpace(s)
 }
+
+// BuildBookVars creates template variables for ebook and audiobook naming.
+// Keys are capitalised to match the default `{Author}/{Title} ({Year})`
+// templates; renderToken is case-sensitive.
+func BuildBookVars(author, title string, year uint16) map[string]string {
+	vars := map[string]string{
+		"Author": author,
+		"Title":  title,
+	}
+	if year > 0 {
+		vars["Year"] = strconv.FormatUint(uint64(year), 10)
+	}
+	return vars
+}

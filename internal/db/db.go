@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
@@ -404,6 +405,10 @@ type Store interface {
 		ctx context.Context,
 		p RecordEpisodeImportSuccessParams,
 	) error
+	RecordBookImportSuccess(
+		ctx context.Context,
+		p RecordBookImportSuccessParams,
+	) error
 	RecordAlbumImportSuccess(
 		ctx context.Context,
 		p RecordAlbumImportSuccessParams,
@@ -544,6 +549,13 @@ type Store interface {
 	ListMediaFilesByMovieID(
 		ctx context.Context,
 		movieID uint32,
+	) ([]*ent.MediaFile, error)
+	// ListMediaFilesByBook returns the MediaFiles filling one slot (ebook or
+	// audiobook) of a book. Empty slice (no error) when the slot has none.
+	ListMediaFilesByBook(
+		ctx context.Context,
+		bookID uint32,
+		kind mediafile.BookKind,
 	) ([]*ent.MediaFile, error)
 	// BumpMediaFilesLastSeen sets last_seen_at = now and clears any
 	// missing_since stamp for the given rows, in a bounded number of UPDATE

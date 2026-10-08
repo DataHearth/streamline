@@ -14,4 +14,8 @@ var (
 	// ErrNoAlbumTracks is returned when no audio file under an album record's
 	// save path matched a track the import was allowed to fill.
 	ErrNoAlbumTracks = errors.New("no audio file matched an album track")
+	// ErrNoBookProfile is returned when an ebook record has no quality profile
+	// to choose its format by: none is configured for the author or as the
+	// default.
+	ErrNoBookProfile = errors.New("no quality profile configured for this book")
 )

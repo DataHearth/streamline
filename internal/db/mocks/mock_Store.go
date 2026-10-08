@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
@@ -10204,6 +10205,80 @@ func (_c *MockStore_ListInvites_Call) RunAndReturn(run func(ctx context.Context)
 	return _c
 }
 
+// ListMediaFilesByBook provides a mock function for the type MockStore
+func (_mock *MockStore) ListMediaFilesByBook(ctx context.Context, bookID uint32, kind mediafile.BookKind) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMediaFilesByBook")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, mediafile.BookKind) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, bookID, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, mediafile.BookKind) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, bookID, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, mediafile.BookKind) error); ok {
+		r1 = returnFunc(ctx, bookID, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListMediaFilesByBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMediaFilesByBook'
+type MockStore_ListMediaFilesByBook_Call struct {
+	*mock.Call
+}
+
+// ListMediaFilesByBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind mediafile.BookKind
+func (_e *MockStore_Expecter) ListMediaFilesByBook(ctx any, bookID any, kind any) *MockStore_ListMediaFilesByBook_Call {
+	return &MockStore_ListMediaFilesByBook_Call{Call: _e.mock.On("ListMediaFilesByBook", ctx, bookID, kind)}
+}
+
+func (_c *MockStore_ListMediaFilesByBook_Call) Run(run func(ctx context.Context, bookID uint32, kind mediafile.BookKind)) *MockStore_ListMediaFilesByBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 mediafile.BookKind
+		if args[2] != nil {
+			arg2 = args[2].(mediafile.BookKind)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesByBook_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockStore_ListMediaFilesByBook_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesByBook_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind mediafile.BookKind) ([]*ent.MediaFile, error)) *MockStore_ListMediaFilesByBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListMediaFilesByMovieID provides a mock function for the type MockStore
 func (_mock *MockStore) ListMediaFilesByMovieID(ctx context.Context, movieID uint32) ([]*ent.MediaFile, error) {
 	ret := _mock.Called(ctx, movieID)
@@ -13407,6 +13482,63 @@ func (_c *MockStore_RecordAlbumImportSuccess_Call) Return(err error) *MockStore_
 }
 
 func (_c *MockStore_RecordAlbumImportSuccess_Call) RunAndReturn(run func(ctx context.Context, p db.RecordAlbumImportSuccessParams) error) *MockStore_RecordAlbumImportSuccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RecordBookImportSuccess provides a mock function for the type MockStore
+func (_mock *MockStore) RecordBookImportSuccess(ctx context.Context, p db.RecordBookImportSuccessParams) error {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecordBookImportSuccess")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.RecordBookImportSuccessParams) error); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_RecordBookImportSuccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecordBookImportSuccess'
+type MockStore_RecordBookImportSuccess_Call struct {
+	*mock.Call
+}
+
+// RecordBookImportSuccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.RecordBookImportSuccessParams
+func (_e *MockStore_Expecter) RecordBookImportSuccess(ctx any, p any) *MockStore_RecordBookImportSuccess_Call {
+	return &MockStore_RecordBookImportSuccess_Call{Call: _e.mock.On("RecordBookImportSuccess", ctx, p)}
+}
+
+func (_c *MockStore_RecordBookImportSuccess_Call) Run(run func(ctx context.Context, p db.RecordBookImportSuccessParams)) *MockStore_RecordBookImportSuccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.RecordBookImportSuccessParams
+		if args[1] != nil {
+			arg1 = args[1].(db.RecordBookImportSuccessParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_RecordBookImportSuccess_Call) Return(err error) *MockStore_RecordBookImportSuccess_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_RecordBookImportSuccess_Call) RunAndReturn(run func(ctx context.Context, p db.RecordBookImportSuccessParams) error) *MockStore_RecordBookImportSuccess_Call {
 	_c.Call.Return(run)
 	return _c
 }

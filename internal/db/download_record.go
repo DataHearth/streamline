@@ -11,6 +11,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -36,6 +37,8 @@ func withEpisodeContext(q *ent.EpisodeQuery) {
 		})
 	})
 }
+
+func withBookAuthor(q *ent.BookQuery) { q.WithAuthor() }
 
 // withAlbumContext eager-loads an album record's artist and its tracks in disc
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
@@ -523,10 +526,15 @@ type RecordImportFailureParams struct {
 	// downloading album back to wanted, unless it already holds a file.
 	MovieID   uint32
 	EpisodeID uint32
-	AlbumID   uint32
-	Terminal  bool
-	Reason    string
-	Attempts  uint8
+	// BookID / BookKind identify the book slot a book record imports. On
+	// terminal failure the slot goes back to wanted unless it still holds a
+	// file of that kind.
+	BookID   uint32
+	BookKind mediafile.BookKind
+	AlbumID  uint32
+	Terminal bool
+	Reason   string
+	Attempts uint8
 }
 
 // ListImportingDownloadRecords returns records currently in status=importing.
@@ -538,6 +546,7 @@ func (db *DB) ListImportingDownloadRecords(
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		WithBook(withBookAuthor).
 		WithAlbum(withAlbumContext).
 		All(ctx)
 }
@@ -557,6 +566,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		WithBook(withBookAuthor).
 		WithAlbum(withAlbumContext).
 		Only(ctx)
 }
@@ -850,6 +860,75 @@ func (db *DB) RecordAlbumImportSuccess(
 	return tx.Commit()
 }
 
+type RecordBookImportSuccessParams struct {
+	RecordID uint32
+	BookID   uint32
+	Kind     mediafile.BookKind
+	Files    []MediaFileRow
+	// ReplacedFileIDs are the slot's prior MediaFile rows, deleted in the same
+	// tx that records their replacements.
+	ReplacedFileIDs []uint32
+}
+
+// RecordBookImportSuccess deletes the replaced rows, writes one MediaFile per
+// placed file, completes the DownloadRecord and marks the book's slot
+// available — all in one tx. No probe and no transcode job: books carry
+// neither.
+func (db *DB) RecordBookImportSuccess(
+	ctx context.Context,
+	p RecordBookImportSuccessParams,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if len(p.ReplacedFileIDs) > 0 {
+		if _, err := tx.MediaFile.Delete().
+			Where(mediafile.IDIn(p.ReplacedFileIDs...)).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("delete replaced media files: %w", err)
+		}
+	}
+	for _, f := range p.Files {
+		if _, err := applyParsed(tx.MediaFile.Create().
+			SetPath(f.Path).
+			SetSize(f.Size).
+			SetQuality(f.Quality).
+			SetFormat(f.Format).
+			SetReleaseGroup(f.ReleaseGroup).
+			SetBookID(p.BookID).
+			SetBookKind(p.Kind), f.Parsed, f.Path).
+			Save(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("create media file: %w", err)
+		}
+	}
+	if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
+		SetStatus(downloadrecord.StatusCompleted).
+		SetImportedAt(time.Now()).
+		SetFailureReason("").
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	u := tx.Book.UpdateOneID(p.BookID)
+	switch p.Kind {
+	case mediafile.BookKindEbook:
+		u = u.SetEbookStatus(book.EbookStatusAvailable)
+	case mediafile.BookKindAudiobook:
+		u = u.SetAudiobookStatus(book.AudiobookStatusAvailable)
+	default:
+		tx.Rollback()
+		return fmt.Errorf("unknown book kind %q", p.Kind)
+	}
+	if err := u.Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update book: %w", err)
+	}
+	return tx.Commit()
+}
+
 // RecordImportFailure writes attempt counter on retryable; on terminal also
 // flips DownloadRecord + Movie to failed with reason.
 func (db *DB) RecordImportFailure(
@@ -921,6 +1000,33 @@ func (db *DB) RecordImportFailure(
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("update album: %w", err)
+			}
+		}
+	}
+	if p.Terminal && p.BookID != 0 {
+		hasFile, err := tx.MediaFile.Query().
+			Where(
+				mediafile.HasBookWith(book.ID(p.BookID)),
+				mediafile.BookKindEQ(p.BookKind),
+			).
+			Exist(ctx)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("check book media files: %w", err)
+		}
+		if !hasFile {
+			u := tx.Book.Update().Where(book.ID(p.BookID))
+			switch p.BookKind {
+			case mediafile.BookKindEbook:
+				u = u.Where(book.EbookStatusEQ(book.EbookStatusDownloading)).
+					SetEbookStatus(book.EbookStatusWanted)
+			case mediafile.BookKindAudiobook:
+				u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusDownloading)).
+					SetAudiobookStatus(book.AudiobookStatusWanted)
+			}
+			if err := u.Exec(ctx); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("update book: %w", err)
 			}
 		}
 	}
