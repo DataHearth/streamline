@@ -492,6 +492,9 @@ func (s *Server) ApplyImportSourceConfig(
 				ForbiddenJSONResponse: forbiddenResp(err.Error()),
 			}, nil
 		}
+		if !migrationWriteRejected(err) {
+			return nil, err
+		}
 		return refuse(errMigrationRejected(err.Error()))
 	}
 	for _, e := range idxEntries {
@@ -607,4 +610,15 @@ func selectClients(
 		out = append(out, dc.Entry)
 	}
 	return out, ""
+}
+
+// migrationWriteRejected reports whether a config.AddResources failure is the
+// caller's to fix: a name already taken, or an entry the config refuses.
+// Anything else is a server fault and answers 500.
+func migrationWriteRejected(err error) bool {
+	_, invalid := errors.AsType[*config.ValidationError](err)
+	return invalid ||
+		errors.Is(err, config.ErrQualityProfileExists) ||
+		errors.Is(err, config.ErrIndexerExists) ||
+		errors.Is(err, config.ErrDownloadClientExists)
 }

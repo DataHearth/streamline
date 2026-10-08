@@ -501,6 +501,9 @@ var _ = Describe("Handler: StartImport from a source",
 			resp := postSourceJSON(app, "/api/v1/library/imports", "", b)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			code := decodeBody[Error](resp).Code
+			Expect(code).NotTo(BeNil())
+			Expect(*code).To(Equal(codeMigrationRejected))
 		})
 
 		It("422s a filesystem scan without a source path", func() {
@@ -510,6 +513,54 @@ var _ = Describe("Handler: StartImport from a source",
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 			Expect(decodeBody[Error](resp).Code).To(BeNil())
 		})
+
+		DescribeTable("codes a StartScan refusal only for a migration",
+			func(sentinel error) {
+				idle()
+				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
+					Return(nil, sentinel).Twice()
+
+				resp := postSourceJSON(
+					app,
+					"/api/v1/library/imports",
+					"",
+					body(false),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				code := decodeBody[Error](resp).Code
+				Expect(code).NotTo(BeNil())
+				Expect(*code).To(Equal(codeMigrationRejected))
+
+				fs := postSourceJSON(app, "/api/v1/library/imports", "",
+					map[string]any{"mode": "in_place", "source_path": "/srv/x"})
+				defer fs.Body.Close()
+				Expect(fs.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				Expect(decodeBody[Error](fs).Code).To(BeNil())
+			},
+			Entry("invalid path", bulkimport.ErrInvalidPath),
+			Entry("missing source url", bulkimport.ErrMissingSourceURL),
+			Entry("library path missing", bulkimport.ErrLibraryPathMissing),
+		)
+
+		It(
+			"answers 500, not a coded 422, when the profile write fails on the server",
+			func() {
+				idle()
+				// Removing the directory, not chmod-ing it: root ignores the mode,
+				// and the write must fail however the suite is run.
+				Expect(os.RemoveAll(filepath.Dir(config.Path()))).To(Succeed())
+
+				resp := postSourceJSON(
+					app,
+					"/api/v1/library/imports",
+					"",
+					body(true),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+			},
+		)
 
 		It("maps a root outside the library onto a 422", func() {
 			idle()
@@ -670,7 +721,10 @@ var _ = Describe("Handler: ApplyImportSourceConfig",
 				)
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-				Expect(decodeBody[Error](resp).Message).To(ContainSubstring("Nyaa"))
+				got := decodeBody[Error](resp)
+				Expect(got.Message).To(ContainSubstring("Nyaa"))
+				Expect(got.Code).NotTo(BeNil())
+				Expect(*got.Code).To(Equal(codeMigrationRejected))
 
 				providers([]arr.Provider{masked}, nil)
 				resp2 := postSourceJSON(
@@ -701,6 +755,9 @@ var _ = Describe("Handler: ApplyImportSourceConfig",
 			)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-			Expect(decodeBody[Error](resp).Message).To(ContainSubstring("usenet"))
+			got := decodeBody[Error](resp)
+			Expect(got.Message).To(ContainSubstring("usenet"))
+			Expect(got.Code).NotTo(BeNil())
+			Expect(*got.Code).To(Equal(codeMigrationRejected))
 		})
 	})

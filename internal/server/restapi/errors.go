@@ -158,9 +158,10 @@ func errRateLimited(err error) RateLimitedJSONResponse {
 // "some of those values weren't accepted" and the operator cannot tell which.
 const codeMigrationRejected = "migration_rejected"
 
-// errMigrationRejected is errUnprocessable for a refused migration step. The
-// message is composed here or by the arr/bulkimport/config packages from the
-// caller's own selections, so it is safe to show verbatim.
+// errMigrationRejected is errUnprocessable for a refused migration step. Only
+// messages built from the caller's own input reach it — a config write is
+// first sorted by migrationWriteRejected, since a write fault's text names
+// the server's config path.
 func errMigrationRejected(msg string) UnprocessableEntityJSONResponse {
 	code := codeMigrationRejected
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}

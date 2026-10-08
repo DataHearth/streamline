@@ -100,6 +100,9 @@ func (s *Server) StartImport(
 						ForbiddenJSONResponse: forbiddenResp(err.Error()),
 					}, nil
 				}
+				if !migrationWriteRejected(err) {
+					return nil, err
+				}
 				return rejected(err.Error())
 			}
 		}
