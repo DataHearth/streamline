@@ -294,6 +294,10 @@ type Store interface {
 		ctx context.Context,
 		from, to time.Time,
 	) ([]*ent.Album, error)
+	ListUpcomingBooks(
+		ctx context.Context,
+		from, to time.Time,
+	) ([]*ent.Book, error)
 
 	// download records — used by the download manager
 	CreateDownloadRecord(

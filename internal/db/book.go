@@ -311,3 +311,21 @@ func (db *DB) SetBookSlot(
 func (db *DB) DeleteAuthor(ctx context.Context, id uint32) error {
 	return db.client.Author.DeleteOneID(id).Exec(ctx)
 }
+
+func (db *DB) ListUpcomingBooks(
+	ctx context.Context,
+	from, to time.Time,
+) ([]*ent.Book, error) {
+	return db.client.Book.Query().
+		Where(
+			book.Or(
+				book.EbookMonitored(true),
+				book.AudiobookMonitored(true),
+			),
+			book.ReleaseDateGTE(from),
+			book.ReleaseDateLT(to),
+		).
+		WithAuthor().
+		Order(ent.Asc(book.FieldReleaseDate)).
+		All(ctx)
+}

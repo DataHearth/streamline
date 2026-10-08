@@ -103,10 +103,19 @@ func (s *Server) ListUpcomingReleases(
 	if err != nil {
 		return nil, err
 	}
+	books, err := s.store.ListUpcomingBooks(
+		ctx,
+		req.Params.From,
+		req.Params.To,
+	)
+	if err != nil {
+		return nil, err
+	}
 	out := UpcomingList{
 		Movies:   make([]UpcomingMovie, 0, len(movies)),
 		Episodes: make([]UpcomingEpisode, 0, len(episodes)),
 		Albums:   make([]UpcomingAlbum, 0, len(albums)),
+		Books:    make([]UpcomingBook, 0, len(books)),
 	}
 	for _, m := range movies {
 		out.Movies = append(out.Movies, toUpcomingMovie(m))
@@ -117,6 +126,9 @@ func (s *Server) ListUpcomingReleases(
 	}
 	for _, a := range albums {
 		out.Albums = append(out.Albums, toUpcomingAlbum(a))
+	}
+	for _, b := range books {
+		out.Books = append(out.Books, toUpcomingBook(b))
 	}
 	return ListUpcomingReleases200JSONResponse{
 		UpcomingListJSONResponse: UpcomingListJSONResponse(out),

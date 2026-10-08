@@ -6313,6 +6313,15 @@ type UpcomingAlbum struct {
 	Title       string    `json:"title"`
 }
 
+// UpcomingBook defines model for UpcomingBook.
+type UpcomingBook struct {
+	AuthorId    uint32    `json:"author_id"`
+	AuthorName  string    `json:"author_name"`
+	Id          uint32    `json:"id"`
+	ReleaseDate time.Time `json:"release_date"`
+	Title       string    `json:"title"`
+}
+
 // UpcomingEpisode defines model for UpcomingEpisode.
 type UpcomingEpisode struct {
 	AirDate     time.Time `json:"air_date"`
@@ -6330,6 +6339,7 @@ type UpcomingEpisode struct {
 // UpcomingList defines model for UpcomingList.
 type UpcomingList struct {
 	Albums   []UpcomingAlbum   `json:"albums"`
+	Books    []UpcomingBook    `json:"books"`
 	Episodes []UpcomingEpisode `json:"episodes"`
 	Movies   []UpcomingMovie   `json:"movies"`
 }
@@ -7615,7 +7625,7 @@ type ServerInterface interface {
 	// PatchBook Patch a book
 	// (PATCH /books/{id})
 	PatchBook(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// ListUpcomingReleases Upcoming movie releases, episode air dates and monitored album releases in [from, to).
+	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
 	// GetConfigAuth Get auth configuration (admin)
@@ -8404,7 +8414,7 @@ func (_ Unimplemented) PatchBook(w http.ResponseWriter, r *http.Request, id Reso
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// ListUpcomingReleases Upcoming movie releases, episode air dates and monitored album releases in [from, to).
+// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 // (GET /calendar/upcoming)
 func (_ Unimplemented) ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -29289,7 +29299,7 @@ type StrictServerInterface interface {
 	// PatchBook Patch a book
 	// (PATCH /books/{id})
 	PatchBook(ctx context.Context, request PatchBookRequestObject) (PatchBookResponseObject, error)
-	// ListUpcomingReleases Upcoming movie releases, episode air dates and monitored album releases in [from, to).
+	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
 	// GetConfigAuth Get auth configuration (admin)

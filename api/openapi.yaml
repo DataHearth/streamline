@@ -4132,7 +4132,7 @@ paths:
   /calendar/upcoming:
     get:
       operationId: listUpcomingReleases
-      summary: Upcoming movie releases, episode air dates and monitored album releases in [from, to).
+      summary: Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
       parameters:
         - $ref: "#/components/parameters/CalendarFrom"
         - $ref: "#/components/parameters/CalendarTo"
@@ -10563,9 +10563,27 @@ components:
           type: string
           format: date-time
 
+    UpcomingBook:
+      type: object
+      required: [id, title, author_id, author_name, release_date]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        author_id:
+          type: integer
+          x-go-type: uint32
+        author_name:
+          type: string
+        release_date:
+          type: string
+          format: date-time
+
     UpcomingList:
       type: object
-      required: [movies, episodes, albums]
+      required: [movies, episodes, albums, books]
       properties:
         movies:
           type: array
@@ -10579,6 +10597,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/UpcomingAlbum"
+        books:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpcomingBook"
 
     SystemInfo:
       type: object

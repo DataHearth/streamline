@@ -611,6 +611,18 @@ func toUpcomingAlbum(a *ent.Album) UpcomingAlbum {
 	return out
 }
 
+func toUpcomingBook(b *ent.Book) UpcomingBook {
+	out := UpcomingBook{Id: b.ID, Title: b.Title}
+	if b.ReleaseDate != nil {
+		out.ReleaseDate = *b.ReleaseDate
+	}
+	if au := b.Edges.Author; au != nil {
+		out.AuthorId = au.ID
+		out.AuthorName = au.Name
+	}
+	return out
+}
+
 func toUpcomingMovie(m *ent.Movie) UpcomingMovie {
 	out := UpcomingMovie{
 		Id:     m.ID,

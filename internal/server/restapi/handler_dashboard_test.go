@@ -148,6 +148,11 @@ var _ = Describe(
 					Return([]*ent.Album{}, nil).
 					Once()
 
+				app.store.EXPECT().
+					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Book{}, nil).
+					Once()
+
 				q := url.Values{}
 				q.Set("from", now.Format(time.RFC3339))
 				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
@@ -203,6 +208,11 @@ var _ = Describe(
 					Return([]*ent.Album{}, nil).
 					Once()
 
+				app.store.EXPECT().
+					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Book{}, nil).
+					Once()
+
 				q := url.Values{}
 				q.Set("from", now.Format(time.RFC3339))
 				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
@@ -242,6 +252,10 @@ var _ = Describe(
 					ListUpcomingAlbums(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
 					Return([]*ent.Album{al}, nil).
 					Once()
+				app.store.EXPECT().
+					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Book{}, nil).
+					Once()
 
 				q := url.Values{}
 				q.Set("from", now.Format(time.RFC3339))
@@ -262,6 +276,53 @@ var _ = Describe(
 				Expect(body.Albums[0].Title).To(Equal("Nevermind"))
 				Expect(body.Albums[0].ArtistId).To(Equal(uint32(7)))
 				Expect(body.Albums[0].ArtistName).To(Equal("Nirvana"))
+			})
+
+			It("returns monitored books with their author", func() {
+				now := time.Now().UTC()
+				future := now.Add(3 * 24 * time.Hour)
+
+				app.store.EXPECT().
+					UpcomingReleases(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Movie{}, nil).
+					Once()
+				app.store.EXPECT().
+					ListUpcomingEpisodes(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Episode{}, nil).
+					Once()
+				app.store.EXPECT().
+					ListUpcomingAlbums(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Album{}, nil).
+					Once()
+				bk := &ent.Book{
+					ID:             4,
+					Title:          "Dune",
+					ReleaseDate:    &future,
+					EbookMonitored: true,
+				}
+				bk.Edges.Author = &ent.Author{ID: 9, Name: "Frank Herbert"}
+				app.store.EXPECT().
+					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
+					Return([]*ent.Book{bk}, nil).
+					Once()
+
+				q := url.Values{}
+				q.Set("from", now.Format(time.RFC3339))
+				q.Set("to", now.Add(7*24*time.Hour).Format(time.RFC3339))
+				resp, err := http.Get(
+					app.srv.URL + "/api/v1/calendar/upcoming?" + q.Encode(),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body UpcomingList
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Books).To(HaveLen(1))
+				Expect(body.Books[0].Id).To(Equal(uint32(4)))
+				Expect(body.Books[0].Title).To(Equal("Dune"))
+				Expect(body.Books[0].AuthorId).To(Equal(uint32(9)))
+				Expect(body.Books[0].AuthorName).To(Equal("Frank Herbert"))
 			})
 
 			It("400s when from is after to", func() {
