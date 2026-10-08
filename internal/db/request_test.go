@@ -223,6 +223,65 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			Expect(r.BookKind).To(Equal(request.BookKindEbook))
 		})
 
+		It("persists the MBID and book kind through the store", func() {
+			a, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType:   "artist",
+				MediaMBID:   mbidA,
+				Title:       "A",
+				RequesterID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(a.MediaMbid).To(Equal(mbidA))
+			Expect(a.MediaID).To(BeZero())
+
+			b, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType:   "book",
+				MediaID:     4,
+				BookKind:    "both",
+				Title:       "B",
+				RequesterID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(b.BookKind).To(Equal(request.BookKindBoth))
+		})
+
+		It("finds an active request by MBID and ignores a denied one", func() {
+			row, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType:   "artist",
+				MediaMBID:   mbidA,
+				Title:       "A",
+				RequesterID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			found, err := store.FindActiveRequestByMBID(ctx, "artist", mbidA)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(found.ID).To(Equal(row.ID))
+
+			none, err := store.FindActiveRequestByMBID(ctx, "album", mbidA)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(none).To(BeNil())
+
+			Expect(store.DenyRequest(ctx, row.ID, userID, "no")).To(Succeed())
+			none, err = store.FindActiveRequestByMBID(ctx, "artist", mbidA)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(none).To(BeNil())
+		})
+
+		It("marks one request available by id", func() {
+			row, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType:   "artist",
+				MediaMBID:   mbidA,
+				Title:       "A",
+				RequesterID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.MarkRequestAvailable(ctx, row.ID)).To(Succeed())
+			got, err := store.GetRequest(ctx, row.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(request.StatusAvailable))
+		})
+
 		It("allows active artist requests with different MBIDs", func() {
 			Expect(artist(mbidA)).To(Succeed())
 			Expect(artist(mbidB)).To(Succeed())

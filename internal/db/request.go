@@ -9,8 +9,10 @@ import (
 )
 
 type CreateRequestParams struct {
-	MediaType      string // "movie" | "tvshow"
+	MediaType      string
 	MediaID        uint32
+	MediaMBID      string
+	BookKind       string
 	Title          string
 	RequesterID    uint32
 	QualityProfile string // "" = no preference
@@ -28,13 +30,48 @@ func (db *DB) CreateRequest(
 	ctx context.Context,
 	p CreateRequestParams,
 ) (*ent.Request, error) {
-	return db.client.Request.Create().
+	c := db.client.Request.Create().
 		SetMediaType(request.MediaType(p.MediaType)).
 		SetMediaID(p.MediaID).
 		SetTitle(p.Title).
 		SetRequesterID(p.RequesterID).
-		SetQualityProfile(p.QualityProfile).
-		Save(ctx)
+		SetQualityProfile(p.QualityProfile)
+	if p.MediaMBID != "" {
+		c = c.SetMediaMbid(p.MediaMBID)
+	}
+	if p.BookKind != "" {
+		c = c.SetBookKind(request.BookKind(p.BookKind))
+	}
+	return c.Save(ctx)
+}
+
+// FindActiveRequestByMBID is FindActiveRequest for the MusicBrainz-keyed types.
+func (db *DB) FindActiveRequestByMBID(
+	ctx context.Context,
+	mediaType, mbid string,
+) (*ent.Request, error) {
+	row, err := db.client.Request.Query().
+		Where(
+			request.MediaTypeEQ(request.MediaType(mediaType)),
+			request.MediaMbidEQ(mbid),
+			request.StatusIn(
+				request.StatusPending,
+				request.StatusApproved,
+				request.StatusAvailable,
+			),
+		).First(ctx)
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	return row, err
+}
+
+// MarkRequestAvailable flips one request, for rows MarkRequestsAvailable's
+// media_id key cannot reach.
+func (db *DB) MarkRequestAvailable(ctx context.Context, id uint32) error {
+	return db.client.Request.UpdateOneID(id).
+		SetStatus(request.StatusAvailable).
+		Exec(ctx)
 }
 
 // FindActiveRequest returns an existing pending/approved/available request for

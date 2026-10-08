@@ -928,6 +928,11 @@ type Store interface {
 		mediaType string,
 		mediaID uint32,
 	) (*ent.Request, error)
+	FindActiveRequestByMBID(
+		ctx context.Context,
+		mediaType, mbid string,
+	) (*ent.Request, error)
+	MarkRequestAvailable(ctx context.Context, id uint32) error
 	ListRequests(
 		ctx context.Context,
 		p ListRequestsParams,

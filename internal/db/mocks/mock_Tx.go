@@ -5279,6 +5279,80 @@ func (_c *MockTx_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// FindActiveRequestByMBID provides a mock function for the type MockTx
+func (_mock *MockTx) FindActiveRequestByMBID(ctx context.Context, mediaType string, mbid string) (*ent.Request, error) {
+	ret := _mock.Called(ctx, mediaType, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindActiveRequestByMBID")
+	}
+
+	var r0 *ent.Request
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.Request, error)); ok {
+		return returnFunc(ctx, mediaType, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.Request); ok {
+		r0 = returnFunc(ctx, mediaType, mbid)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Request)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, mediaType, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindActiveRequestByMBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindActiveRequestByMBID'
+type MockTx_FindActiveRequestByMBID_Call struct {
+	*mock.Call
+}
+
+// FindActiveRequestByMBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaType string
+//   - mbid string
+func (_e *MockTx_Expecter) FindActiveRequestByMBID(ctx any, mediaType any, mbid any) *MockTx_FindActiveRequestByMBID_Call {
+	return &MockTx_FindActiveRequestByMBID_Call{Call: _e.mock.On("FindActiveRequestByMBID", ctx, mediaType, mbid)}
+}
+
+func (_c *MockTx_FindActiveRequestByMBID_Call) Run(run func(ctx context.Context, mediaType string, mbid string)) *MockTx_FindActiveRequestByMBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindActiveRequestByMBID_Call) Return(request1 *ent.Request, err error) *MockTx_FindActiveRequestByMBID_Call {
+	_c.Call.Return(request1, err)
+	return _c
+}
+
+func (_c *MockTx_FindActiveRequestByMBID_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mbid string) (*ent.Request, error)) *MockTx_FindActiveRequestByMBID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindAlbumByID provides a mock function for the type MockTx
 func (_mock *MockTx) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
 	ret := _mock.Called(ctx, id)
@@ -11291,6 +11365,63 @@ func (_c *MockTx_MarkRecordEpisodesImporting_Call) Return(err error) *MockTx_Mar
 }
 
 func (_c *MockTx_MarkRecordEpisodesImporting_Call) RunAndReturn(run func(ctx context.Context, recordID uint32) error) *MockTx_MarkRecordEpisodesImporting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkRequestAvailable provides a mock function for the type MockTx
+func (_mock *MockTx) MarkRequestAvailable(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkRequestAvailable")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_MarkRequestAvailable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkRequestAvailable'
+type MockTx_MarkRequestAvailable_Call struct {
+	*mock.Call
+}
+
+// MarkRequestAvailable is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockTx_Expecter) MarkRequestAvailable(ctx any, id any) *MockTx_MarkRequestAvailable_Call {
+	return &MockTx_MarkRequestAvailable_Call{Call: _e.mock.On("MarkRequestAvailable", ctx, id)}
+}
+
+func (_c *MockTx_MarkRequestAvailable_Call) Run(run func(ctx context.Context, id uint32)) *MockTx_MarkRequestAvailable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_MarkRequestAvailable_Call) Return(err error) *MockTx_MarkRequestAvailable_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_MarkRequestAvailable_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_MarkRequestAvailable_Call {
 	_c.Call.Return(run)
 	return _c
 }

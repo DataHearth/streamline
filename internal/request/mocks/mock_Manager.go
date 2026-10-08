@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/request"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -129,8 +130,8 @@ func (_c *MockManager_Approve_Call) RunAndReturn(run func(ctx context.Context, i
 }
 
 // Create provides a mock function for the type MockManager
-func (_mock *MockManager) Create(ctx context.Context, mediaType string, mediaID uint32, title string, requesterID uint32, qualityProfile string) (*ent.Request, error) {
-	ret := _mock.Called(ctx, mediaType, mediaID, title, requesterID, qualityProfile)
+func (_mock *MockManager) Create(ctx context.Context, p request.CreateParams) (*ent.Request, error) {
+	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
@@ -138,18 +139,18 @@ func (_mock *MockManager) Create(ctx context.Context, mediaType string, mediaID 
 
 	var r0 *ent.Request
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint32, string) (*ent.Request, error)); ok {
-		return returnFunc(ctx, mediaType, mediaID, title, requesterID, qualityProfile)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, request.CreateParams) (*ent.Request, error)); ok {
+		return returnFunc(ctx, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string, uint32, string) *ent.Request); ok {
-		r0 = returnFunc(ctx, mediaType, mediaID, title, requesterID, qualityProfile)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, request.CreateParams) *ent.Request); ok {
+		r0 = returnFunc(ctx, p)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.Request)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32, string, uint32, string) error); ok {
-		r1 = returnFunc(ctx, mediaType, mediaID, title, requesterID, qualityProfile)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, request.CreateParams) error); ok {
+		r1 = returnFunc(ctx, p)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -163,59 +164,35 @@ type MockManager_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - ctx context.Context
-//   - mediaType string
-//   - mediaID uint32
-//   - title string
-//   - requesterID uint32
-//   - qualityProfile string
-func (_e *MockManager_Expecter) Create(ctx any, mediaType any, mediaID any, title any, requesterID any, qualityProfile any) *MockManager_Create_Call {
-	return &MockManager_Create_Call{Call: _e.mock.On("Create", ctx, mediaType, mediaID, title, requesterID, qualityProfile)}
+//   - p request.CreateParams
+func (_e *MockManager_Expecter) Create(ctx any, p any) *MockManager_Create_Call {
+	return &MockManager_Create_Call{Call: _e.mock.On("Create", ctx, p)}
 }
 
-func (_c *MockManager_Create_Call) Run(run func(ctx context.Context, mediaType string, mediaID uint32, title string, requesterID uint32, qualityProfile string)) *MockManager_Create_Call {
+func (_c *MockManager_Create_Call) Run(run func(ctx context.Context, p request.CreateParams)) *MockManager_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 request.CreateParams
 		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uint32
-		if args[2] != nil {
-			arg2 = args[2].(uint32)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 uint32
-		if args[4] != nil {
-			arg4 = args[4].(uint32)
-		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
+			arg1 = args[1].(request.CreateParams)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_Create_Call) Return(request *ent.Request, err error) *MockManager_Create_Call {
-	_c.Call.Return(request, err)
+func (_c *MockManager_Create_Call) Return(request1 *ent.Request, err error) *MockManager_Create_Call {
+	_c.Call.Return(request1, err)
 	return _c
 }
 
-func (_c *MockManager_Create_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mediaID uint32, title string, requesterID uint32, qualityProfile string) (*ent.Request, error)) *MockManager_Create_Call {
+func (_c *MockManager_Create_Call) RunAndReturn(run func(ctx context.Context, p request.CreateParams) (*ent.Request, error)) *MockManager_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -290,8 +267,8 @@ func (_c *MockManager_Deny_Call) Run(run func(ctx context.Context, id uint32, ad
 	return _c
 }
 
-func (_c *MockManager_Deny_Call) Return(request *ent.Request, err error) *MockManager_Deny_Call {
-	_c.Call.Return(request, err)
+func (_c *MockManager_Deny_Call) Return(request1 *ent.Request, err error) *MockManager_Deny_Call {
+	_c.Call.Return(request1, err)
 	return _c
 }
 
@@ -358,8 +335,8 @@ func (_c *MockManager_Get_Call) Run(run func(ctx context.Context, id uint32)) *M
 	return _c
 }
 
-func (_c *MockManager_Get_Call) Return(request *ent.Request, err error) *MockManager_Get_Call {
-	_c.Call.Return(request, err)
+func (_c *MockManager_Get_Call) Return(request1 *ent.Request, err error) *MockManager_Get_Call {
+	_c.Call.Return(request1, err)
 	return _c
 }
 
@@ -500,8 +477,8 @@ func (_c *MockManager_Reopen_Call) Run(run func(ctx context.Context, id uint32))
 	return _c
 }
 
-func (_c *MockManager_Reopen_Call) Return(request *ent.Request, err error) *MockManager_Reopen_Call {
-	_c.Call.Return(request, err)
+func (_c *MockManager_Reopen_Call) Return(request1 *ent.Request, err error) *MockManager_Reopen_Call {
+	_c.Call.Return(request1, err)
 	return _c
 }
 

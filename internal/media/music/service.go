@@ -60,6 +60,15 @@ func NewService(
 	return &Service{db: store, metadata: meta, posters: p}
 }
 
+// Adder is the slice of the service the request flow approves through.
+type Adder interface {
+	Add(ctx context.Context, p AddParams) (*ent.Artist, error)
+	Get(ctx context.Context, id uint32) (*ent.Artist, error)
+	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
+}
+
+var _ Adder = (*Service)(nil)
+
 type AddParams struct {
 	MBID           string
 	Monitored      bool

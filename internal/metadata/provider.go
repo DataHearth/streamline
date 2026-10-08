@@ -230,6 +230,7 @@ type TrackInfo struct {
 // ReleaseGroupDetails carries the canonical release pick and its track list.
 type ReleaseGroupDetails struct {
 	ReleaseGroupInfo
+	ArtistMBID  string
 	ReleaseMBID string
 	Tracks      []TrackInfo
 }

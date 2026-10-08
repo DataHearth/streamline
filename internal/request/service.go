@@ -12,6 +12,8 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +26,9 @@ var (
 	// ErrDuplicate is returned when the media is already requested (active) or
 	// already in the library.
 	ErrDuplicate = errors.New("request: already requested or in library")
+	// ErrInvalidRequest is returned by Create when the media identity does not
+	// fit the type: music types are keyed by MBID, every other type by id.
+	ErrInvalidRequest = errors.New("request: invalid request")
 	// ErrRequestNotFound is returned by Approve/Deny/Reopen for an unknown id
 	// so callers can answer 404 instead of 500.
 	ErrRequestNotFound = errors.New("request not found")
@@ -49,53 +54,125 @@ type ShowAdder interface {
 }
 
 type Service struct {
-	db     db.Store
-	movies MovieAdder
-	shows  ShowAdder
+	db        db.Store
+	movies    MovieAdder
+	shows     ShowAdder
+	music     music.Adder
+	musicMeta metadata.MusicProvider
 }
 
-func NewService(store db.Store, movies MovieAdder, shows ShowAdder) *Service {
-	return &Service{db: store, movies: movies, shows: shows}
+func NewService(
+	store db.Store,
+	movies MovieAdder,
+	shows ShowAdder,
+	music music.Adder,
+	musicMeta metadata.MusicProvider,
+) *Service {
+	return &Service{
+		db:        store,
+		movies:    movies,
+		shows:     shows,
+		music:     music,
+		musicMeta: musicMeta,
+	}
+}
+
+type CreateParams struct {
+	MediaType      string
+	MediaID        uint32
+	MediaMBID      string
+	BookKind       string
+	Title          string
+	RequesterID    uint32
+	QualityProfile string
+}
+
+func isMusicType(mediaType string) bool {
+	return mediaType == "artist" || mediaType == "album"
+}
+
+func validate(p CreateParams) error {
+	if isMusicType(p.MediaType) {
+		if p.MediaMBID == "" || p.MediaID != 0 {
+			return fmt.Errorf(
+				"%w: %s needs a media_mbid and no media_id",
+				ErrInvalidRequest, p.MediaType,
+			)
+		}
+	} else if p.MediaID == 0 || p.MediaMBID != "" {
+		return fmt.Errorf(
+			"%w: %s needs a media_id and no media_mbid",
+			ErrInvalidRequest, p.MediaType,
+		)
+	}
+	if p.BookKind != "" && p.MediaType != "book" {
+		return fmt.Errorf(
+			"%w: book_kind only applies to a book", ErrInvalidRequest,
+		)
+	}
+	return nil
 }
 
 func (s *Service) Create(
 	ctx context.Context,
-	mediaType string,
-	mediaID uint32,
-	title string,
-	requesterID uint32,
-	qualityProfile string,
+	p CreateParams,
 ) (*ent.Request, error) {
 	ctx, span := tracer.Start(ctx, "request.create",
 		trace.WithAttributes(
-			attribute.String("media.type", mediaType),
-			attribute.Int("media.id", int(mediaID)),
+			attribute.String("media.type", p.MediaType),
+			attribute.Int("media.id", int(p.MediaID)),
+			attribute.String("media.mbid", p.MediaMBID),
 		))
 	defer span.End()
 
-	existing, err := s.db.FindActiveRequest(ctx, mediaType, mediaID)
+	if err := validate(p); err != nil {
+		return nil, err
+	}
+
+	var (
+		existing *ent.Request
+		err      error
+	)
+	if isMusicType(p.MediaType) {
+		existing, err = s.db.FindActiveRequestByMBID(
+			ctx, p.MediaType, p.MediaMBID,
+		)
+	} else {
+		existing, err = s.db.FindActiveRequest(ctx, p.MediaType, p.MediaID)
+	}
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	if existing != nil {
 		return nil, ErrDuplicate
 	}
-	if mediaType == "movie" {
-		if m, err := s.movies.GetByTMDBID(ctx, mediaID); err == nil && m != nil {
+	switch p.MediaType {
+	case "movie":
+		if m, err := s.movies.GetByTMDBID(ctx, p.MediaID); err == nil && m != nil {
 			return nil, ErrDuplicate
 		}
-	} else {
-		if sh, err := s.db.FindTVShowByTVDBID(ctx, mediaID); err == nil &&
+	case "tvshow":
+		if sh, err := s.db.FindTVShowByTVDBID(ctx, p.MediaID); err == nil &&
 			sh != nil {
+			return nil, ErrDuplicate
+		}
+	case "artist":
+		a, err := s.db.FindArtistByMBID(ctx, p.MediaMBID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if a != nil {
 			return nil, ErrDuplicate
 		}
 	}
 	row, err := s.db.CreateRequest(ctx, db.CreateRequestParams{
-		MediaType:      mediaType,
-		MediaID:        mediaID,
-		Title:          title,
-		RequesterID:    requesterID,
-		QualityProfile: qualityProfile,
+		MediaType:      p.MediaType,
+		MediaID:        p.MediaID,
+		MediaMBID:      p.MediaMBID,
+		BookKind:       p.BookKind,
+		Title:          p.Title,
+		RequesterID:    p.RequesterID,
+		QualityProfile: p.QualityProfile,
 	})
 	if err != nil {
 		// The partial unique index over active (media_type, media_id) is the
@@ -112,9 +189,10 @@ func (s *Service) Create(
 	// unanswerable from the log stream.
 	slog.InfoContext(ctx, "media requested",
 		"request.id", row.ID,
-		"media.type", mediaType,
-		"media.id", mediaID,
-		"user.id", requesterID)
+		"media.type", p.MediaType,
+		"media.id", p.MediaID,
+		"media.mbid", p.MediaMBID,
+		"user.id", p.RequesterID)
 	return row, nil
 }
 
@@ -140,8 +218,9 @@ func (s *Service) Approve(
 	// hook. This one is the half the hook cannot see: that the addition came
 	// from a request, and which one.
 	var (
-		scope   events.Scope
-		ownerID uint32
+		scope            events.Scope
+		ownerID          uint32
+		alreadyInLibrary bool
 	)
 	switch req.MediaType {
 	case "movie":
@@ -160,9 +239,33 @@ func (s *Service) Approve(
 			)
 		}
 		scope, ownerID = events.ScopeSeries, show.ID
+	case "artist":
+		_, err := s.music.Add(ctx, music.AddParams{
+			MBID:           req.MediaMbid,
+			Monitored:      true,
+			QualityProfile: qualityProfile,
+		})
+		if errors.Is(err, music.ErrArtistExists) {
+			alreadyInLibrary = true
+		} else if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add artist: %w", err),
+			)
+		}
+	case "album":
+		if err := s.approveAlbum(ctx, req.MediaMbid, qualityProfile); err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add album: %w", err),
+			)
+		}
 	}
 	if err := s.db.ApproveRequest(ctx, id, adminID); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
+	}
+	if alreadyInLibrary {
+		if err := s.db.MarkRequestAvailable(ctx, id); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
 	}
 	if ownerID != 0 {
 		if err := events.Record(
@@ -179,6 +282,42 @@ func (s *Service) Approve(
 	slog.InfoContext(ctx, "request approved",
 		"request.id", id, "media.type", req.MediaType, "user.id", adminID)
 	return s.db.GetRequest(ctx, id)
+}
+
+// approveAlbum makes exactly one album monitored, and so wanted (status
+// defaults to wanted). An absent artist is added with every album unmonitored
+// so the rest of its discography stays out of the want list.
+func (s *Service) approveAlbum(
+	ctx context.Context,
+	albumMBID, qualityProfile string,
+) error {
+	rg, err := s.musicMeta.GetReleaseGroup(ctx, albumMBID)
+	if err != nil {
+		return fmt.Errorf("get release group: %w", err)
+	}
+	row, err := s.db.FindArtistByMBID(ctx, rg.ArtistMBID)
+	if err != nil {
+		return err
+	}
+	var artist *ent.Artist
+	if row == nil {
+		artist, err = s.music.Add(ctx, music.AddParams{
+			MBID:           rg.ArtistMBID,
+			Monitored:      false,
+			QualityProfile: qualityProfile,
+		})
+	} else {
+		artist, err = s.music.Get(ctx, row.ID)
+	}
+	if err != nil {
+		return err
+	}
+	for _, a := range artist.Edges.Albums {
+		if a.Mbid == albumMBID {
+			return s.music.SetAlbumMonitored(ctx, a.ID, true)
+		}
+	}
+	return fmt.Errorf("album %s not in artist %s", albumMBID, rg.ArtistMBID)
 }
 
 // Deny and Reopen are the negative half of the same workflow as Approve, and
@@ -232,14 +371,7 @@ func (s *Service) Get(ctx context.Context, id uint32) (*ent.Request, error) {
 
 // Manager is the request service surface consumed by REST handlers.
 type Manager interface {
-	Create(
-		ctx context.Context,
-		mediaType string,
-		mediaID uint32,
-		title string,
-		requesterID uint32,
-		qualityProfile string,
-	) (*ent.Request, error)
+	Create(ctx context.Context, p CreateParams) (*ent.Request, error)
 	Approve(
 		ctx context.Context,
 		id, adminID uint32,

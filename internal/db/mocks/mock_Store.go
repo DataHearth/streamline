@@ -5235,6 +5235,80 @@ func (_c *MockStore_FindActiveRequest_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// FindActiveRequestByMBID provides a mock function for the type MockStore
+func (_mock *MockStore) FindActiveRequestByMBID(ctx context.Context, mediaType string, mbid string) (*ent.Request, error) {
+	ret := _mock.Called(ctx, mediaType, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindActiveRequestByMBID")
+	}
+
+	var r0 *ent.Request
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*ent.Request, error)); ok {
+		return returnFunc(ctx, mediaType, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *ent.Request); ok {
+		r0 = returnFunc(ctx, mediaType, mbid)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Request)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, mediaType, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindActiveRequestByMBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindActiveRequestByMBID'
+type MockStore_FindActiveRequestByMBID_Call struct {
+	*mock.Call
+}
+
+// FindActiveRequestByMBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mediaType string
+//   - mbid string
+func (_e *MockStore_Expecter) FindActiveRequestByMBID(ctx any, mediaType any, mbid any) *MockStore_FindActiveRequestByMBID_Call {
+	return &MockStore_FindActiveRequestByMBID_Call{Call: _e.mock.On("FindActiveRequestByMBID", ctx, mediaType, mbid)}
+}
+
+func (_c *MockStore_FindActiveRequestByMBID_Call) Run(run func(ctx context.Context, mediaType string, mbid string)) *MockStore_FindActiveRequestByMBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindActiveRequestByMBID_Call) Return(request1 *ent.Request, err error) *MockStore_FindActiveRequestByMBID_Call {
+	_c.Call.Return(request1, err)
+	return _c
+}
+
+func (_c *MockStore_FindActiveRequestByMBID_Call) RunAndReturn(run func(ctx context.Context, mediaType string, mbid string) (*ent.Request, error)) *MockStore_FindActiveRequestByMBID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindAlbumByID provides a mock function for the type MockStore
 func (_mock *MockStore) FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error) {
 	ret := _mock.Called(ctx, id)
@@ -11247,6 +11321,63 @@ func (_c *MockStore_MarkRecordEpisodesImporting_Call) Return(err error) *MockSto
 }
 
 func (_c *MockStore_MarkRecordEpisodesImporting_Call) RunAndReturn(run func(ctx context.Context, recordID uint32) error) *MockStore_MarkRecordEpisodesImporting_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkRequestAvailable provides a mock function for the type MockStore
+func (_mock *MockStore) MarkRequestAvailable(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkRequestAvailable")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_MarkRequestAvailable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkRequestAvailable'
+type MockStore_MarkRequestAvailable_Call struct {
+	*mock.Call
+}
+
+// MarkRequestAvailable is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) MarkRequestAvailable(ctx any, id any) *MockStore_MarkRequestAvailable_Call {
+	return &MockStore_MarkRequestAvailable_Call{Call: _e.mock.On("MarkRequestAvailable", ctx, id)}
+}
+
+func (_c *MockStore_MarkRequestAvailable_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_MarkRequestAvailable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_MarkRequestAvailable_Call) Return(err error) *MockStore_MarkRequestAvailable_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_MarkRequestAvailable_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_MarkRequestAvailable_Call {
 	_c.Call.Return(run)
 	return _c
 }

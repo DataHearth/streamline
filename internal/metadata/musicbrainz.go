@@ -290,15 +290,23 @@ func (m *MusicBrainz) GetReleaseGroup(
 
 	var rg struct {
 		mbReleaseGroup
-		Releases []mbRelease `json:"releases"`
+		Releases     []mbRelease `json:"releases"`
+		ArtistCredit []struct {
+			Artist struct {
+				ID string `json:"id"`
+			} `json:"artist"`
+		} `json:"artist-credit"`
 	}
 	if err := m.get(ctx, "/release-group/"+url.PathEscape(mbid),
-		url.Values{"inc": {"releases"}}, &rg); err != nil {
+		url.Values{"inc": {"releases+artist-credits"}}, &rg); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      canonicalRelease(rg.Releases),
+	}
+	if len(rg.ArtistCredit) > 0 {
+		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
 	}
 	if details.ReleaseMBID == "" {
 		return details, nil

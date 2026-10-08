@@ -126,6 +126,26 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[0].Disc).To(Equal(uint8(1)))
 		})
 
+		It("carries the credited artist and asks for artist-credits", func() {
+			var gotInc string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					if r.URL.Path == "/ws/2/release-group/rg-1" {
+						gotInc = r.URL.Query().Get("inc")
+						return jsonResponse(
+							200,
+							`{"id":"rg-1","title":"Nevermind","primary-type":"Album","artist-credit":[{"artist":{"id":"artist-1","name":"Nirvana"}}],"releases":[]}`,
+						), nil
+					}
+					return jsonResponse(404, `{}`), nil
+				},
+			)
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.ArtistMBID).To(Equal("artist-1"))
+			Expect(gotInc).To(Equal("releases+artist-credits"))
+		})
+
 		It("ranks an undated official release after a dated one", func() {
 			mb.client.Transport = mbRoundTripper(
 				func(r *http.Request) (*http.Response, error) {

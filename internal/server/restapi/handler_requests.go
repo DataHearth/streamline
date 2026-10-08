@@ -81,14 +81,13 @@ func (s *Server) CreateRequest(
 	if req.Body.QualityProfile != nil {
 		qualityProfile = *req.Body.QualityProfile
 	}
-	r, err := s.requests.Create(
-		ctx,
-		string(req.Body.MediaType),
-		req.Body.MediaId,
-		req.Body.Title,
-		claims.UserID,
-		qualityProfile,
-	)
+	r, err := s.requests.Create(ctx, requestsvc.CreateParams{
+		MediaType:      string(req.Body.MediaType),
+		MediaID:        req.Body.MediaId,
+		Title:          req.Body.Title,
+		RequesterID:    claims.UserID,
+		QualityProfile: qualityProfile,
+	})
 	if errors.Is(err, requestsvc.ErrDuplicate) {
 		return CreateRequest409JSONResponse{
 			ConflictJSONResponse: conflictResp(
