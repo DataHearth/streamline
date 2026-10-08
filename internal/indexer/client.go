@@ -61,6 +61,7 @@ const (
 	KindUnknown MediaKind = iota
 	KindMovie
 	KindTV
+	KindMusic
 )
 
 type SearchParams struct {

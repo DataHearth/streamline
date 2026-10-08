@@ -23,7 +23,86 @@ func splitHostPort(rawURL string) (string, uint16) {
 	return u.Hostname(), uint16(port)
 }
 
+type recordedSearch struct {
+	mu   sync.Mutex
+	qs   []string
+	cats []string
+}
+
+func (r *recordedSearch) queries() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.qs...)
+}
+
+func (r *recordedSearch) categories() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.cats...)
+}
+
+// recordingIndexer serves two releases of different seeder counts through one
+// torznab indexer and records every q and cat it is asked for.
+func recordingIndexer() *recordedSearch {
+	GinkgoHelper()
+	rec := &recordedSearch{}
+	item := func(n int, seeders string) testRSSItem {
+		u := "https://idx.com/dl/" + strconv.Itoa(n)
+		return testRSSItem{
+			Title: "Release " + strconv.Itoa(n),
+			GUID:  u,
+			Link:  u,
+			Size:  1000,
+			Enclosure: testEnclosure{
+				URL: u, Length: 1000, Type: "application/x-bittorrent",
+			},
+			ExtraXML: torznabAttrs(map[string]string{"seeders": seeders, "peers": "1"}),
+		}
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec.mu.Lock()
+		rec.qs = append(rec.qs, r.URL.Query().Get("q"))
+		rec.cats = append(rec.cats, r.URL.Query().Get("cat"))
+		rec.mu.Unlock()
+		Expect(r.URL.Query().Get("t")).To(Equal("search"))
+		w.Header().Set("Content-Type", "application/xml")
+		_, err := w.Write(torznabXML([]testRSSItem{item(1, "5"), item(2, "90")}))
+		Expect(err).NotTo(HaveOccurred())
+	}))
+	DeferCleanup(ts.Close)
+	host, port := splitHostPort(ts.URL)
+	configtest.Setup(map[string]any{
+		"indexers": []map[string]any{{
+			"name": "Idx", "host": host, "port": int(port),
+			"api_key": "k", "protocol": "torznab", "enabled": true,
+		}},
+	})
+	return rec
+}
+
 var _ = Describe("Service", Label("integration", "indexers"), func() {
+	Describe("SearchAlbum", func() {
+		It("queries the music category with and without the year", func() {
+			rec := recordingIndexer()
+			results, err := New().SearchAlbum(
+				context.Background(), "Nirvana", "Nevermind", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.queries()).To(ConsistOf(
+				"Nirvana Nevermind", "Nirvana Nevermind 1991"))
+			Expect(rec.categories()).To(HaveEach("3000"))
+			Expect(results).NotTo(BeEmpty())
+			Expect(results[0].Seeders).To(Equal(uint32(90)))
+		})
+
+		It("issues only the bare query without a year", func() {
+			rec := recordingIndexer()
+			_, err := New().SearchAlbum(
+				context.Background(), "Nirvana", "Nevermind", 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rec.queries()).To(Equal([]string{"Nirvana Nevermind"}))
+		})
+	})
+
 	Describe("SearchMovie", func() {
 		It(
 			"searches all enabled indexers in parallel and merges results sorted by seeders",

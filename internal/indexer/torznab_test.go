@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -94,6 +95,31 @@ func newTorznabServer(handler http.HandlerFunc) Client {
 	DeferCleanup(func() { ts.Close() })
 	return NewTorznab(ts.URL, "test-key")
 }
+
+var _ = Describe("Torznab category", Label("unit", "indexers"), func() {
+	DescribeTable("sends cat= off the media kind",
+		func(kind MediaKind, want string) {
+			var got url.Values
+			client := newTorznabServer(func(w http.ResponseWriter, r *http.Request) {
+				got = r.URL.Query()
+				_, _ = w.Write(torznabXML(nil))
+			})
+			_, err := client.Search(context.Background(),
+				SearchParams{Query: "Nirvana Nevermind", Kind: kind})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Get("q")).To(Equal("Nirvana Nevermind"))
+			Expect(got.Get("t")).To(Equal("search"))
+			if want == "" {
+				Expect(got).NotTo(HaveKey("cat"))
+			} else {
+				Expect(got.Get("cat")).To(Equal(want))
+			}
+		},
+		Entry("music", KindMusic, "3000"),
+		Entry("movie sends none", KindMovie, ""),
+		Entry("tv sends none", KindTV, ""),
+	)
+})
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 

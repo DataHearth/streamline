@@ -59,6 +59,7 @@ type prowlarrRelease struct {
 const (
 	catMovies = "2000"
 	catTV     = "5000"
+	catMusic  = "3000"
 )
 
 func newznabCategory(kind MediaKind) string {
@@ -67,6 +68,8 @@ func newznabCategory(kind MediaKind) string {
 		return catMovies
 	case KindTV:
 		return catTV
+	case KindMusic:
+		return catMusic
 	default:
 		return ""
 	}
@@ -82,6 +85,8 @@ func prowlarrSearchType(kind MediaKind) string {
 		return "movie"
 	case KindTV:
 		return "tvsearch"
+	case KindMusic:
+		return "music"
 	default:
 		return "search"
 	}

@@ -65,6 +65,17 @@ func NewTorznab(baseURL, apiKey string) *Torznab {
 	}
 }
 
+// torznabCategories is what a kind sends as cat=. Movie and TV send none,
+// as before; only the kinds added later are scoped here.
+func torznabCategories(kind MediaKind) string {
+	switch kind {
+	case KindMusic:
+		return "3000"
+	default:
+		return ""
+	}
+}
+
 func (t *Torznab) Search(
 	ctx context.Context,
 	params SearchParams,
@@ -90,6 +101,9 @@ func (t *Torznab) Search(
 	}
 	if params.Episode > 0 {
 		q.Set("ep", strconv.FormatUint(uint64(params.Episode), 10))
+	}
+	if cat := torznabCategories(params.Kind); cat != "" {
+		q.Set("cat", cat)
 	}
 
 	var rss torznabRSS

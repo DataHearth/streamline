@@ -50,6 +50,22 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		})
 	})
 
+	Describe("SearchAlbum", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchAlbum(ctx, "Nirvana", "Nevermind", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil when artist and album are both empty", func() {
+			configtest.Setup()
+			results, err := svc.SearchAlbum(ctx, "", "", 1991)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+	})
+
 	Describe("SearchSeason", func() {
 		When("no indexers are enabled", func() {
 			It(

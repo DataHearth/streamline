@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -117,7 +118,9 @@ func init() {
 // per indexer — and aliases is not: it only widens what the results are matched
 // against. Passing an alias list as titles multiplies every search by its
 // length against rate-limited trackers, which is the whole reason the two are
-// separate parameters rather than one slice.
+// separate parameters rather than one slice. SearchAlbum and SearchBook are the
+// exception: they take a structured artist/author and title instead, since
+// neither has aliases.
 type Manager interface {
 	Test(ctx context.Context, p TestParams) error
 	TestByName(ctx context.Context, name string) error
@@ -146,6 +149,14 @@ type Manager interface {
 		tvdbID uint32,
 		season, episode uint16,
 	) ([]SearchResult, int, error)
+	// SearchAlbum queries every enabled indexer for an album release. The
+	// music newznab root is 3000 (Audio); q is "<artist> <album>", then
+	// "<artist> <album> <year>" when year > 0.
+	SearchAlbum(
+		ctx context.Context,
+		artist, album string,
+		year uint16,
+	) ([]SearchResult, error)
 	Feed(ctx context.Context, indexerName string) ([]SearchResult, error)
 }
 
@@ -338,6 +349,53 @@ func (i *indexer) SearchSeason(
 		attribute.Int("results.total", len(filtered)),
 	)
 	return filtered, nil
+}
+
+func (i *indexer) SearchAlbum(
+	ctx context.Context,
+	artist, album string,
+	year uint16,
+) ([]SearchResult, error) {
+	queries := nameQueries(artist, album, year)
+	ctx, span := tracer.Start(ctx, "indexer.search_album",
+		trace.WithAttributes(
+			attribute.String("album.artist", artist),
+			attribute.String("album.title", album),
+			attribute.Int("album.year", int(year)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	if len(queries) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no query after dedup",
+			"album.title", album)
+		return nil, nil
+	}
+
+	results := i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic})
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+// nameQueries builds the "<first> <second>" query and, when year > 0, the same
+// with the year appended. Title matching is deliberately not applied to these
+// searches: preferTitleMatches is built around movie and TV release names.
+func nameQueries(first, second string, year uint16) []string {
+	if strings.TrimSpace(first+second) == "" {
+		return nil
+	}
+	base := strings.TrimSpace(first + " " + second)
+	out := []string{base}
+	if year > 0 {
+		out = append(out, fmt.Sprintf("%s %d", base, year))
+	}
+	return dedupTitles(out)
 }
 
 // A fansub tag survives extractTitle and would make every tagged release read
