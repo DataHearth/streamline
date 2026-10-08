@@ -117,6 +117,18 @@ func (f ImportScanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImportScanMutation", m)
 }
 
+// The ImportScanAlbumFunc type is an adapter to allow the use of ordinary
+// function as ImportScanAlbum mutator.
+type ImportScanAlbumFunc func(context.Context, *ent.ImportScanAlbumMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ImportScanAlbumFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ImportScanAlbumMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImportScanAlbumMutation", m)
+}
+
 // The ImportScanFileFunc type is an adapter to allow the use of ordinary
 // function as ImportScanFile mutator.
 type ImportScanFileFunc func(context.Context, *ent.ImportScanFileMutation) (ent.Value, error)

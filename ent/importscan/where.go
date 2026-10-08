@@ -721,6 +721,29 @@ func HasShowsWith(preds ...predicate.ImportScanShow) predicate.ImportScan {
 	})
 }
 
+// HasAlbums applies the HasEdge predicate on the "albums" edge.
+func HasAlbums() predicate.ImportScan {
+	return predicate.ImportScan(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AlbumsTable, AlbumsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlbumsWith applies the HasEdge predicate on the "albums" edge with a given conditions (other predicates).
+func HasAlbumsWith(preds ...predicate.ImportScanAlbum) predicate.ImportScan {
+	return predicate.ImportScan(func(s *sql.Selector) {
+		step := newAlbumsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.ImportScan) predicate.ImportScan {
 	return predicate.ImportScan(sql.AndPredicates(predicates...))

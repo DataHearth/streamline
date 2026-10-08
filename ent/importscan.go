@@ -57,9 +57,11 @@ type ImportScanEdges struct {
 	Files []*ImportScanFile `json:"files,omitempty"`
 	// Shows holds the value of the shows edge.
 	Shows []*ImportScanShow `json:"shows,omitempty"`
+	// Albums holds the value of the albums edge.
+	Albums []*ImportScanAlbum `json:"albums,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // FilesOrErr returns the Files value or an error if the edge
@@ -78,6 +80,15 @@ func (e ImportScanEdges) ShowsOrErr() ([]*ImportScanShow, error) {
 		return e.Shows, nil
 	}
 	return nil, &NotLoadedError{edge: "shows"}
+}
+
+// AlbumsOrErr returns the Albums value or an error if the edge
+// was not loaded in eager-loading.
+func (e ImportScanEdges) AlbumsOrErr() ([]*ImportScanAlbum, error) {
+	if e.loadedTypes[2] {
+		return e.Albums, nil
+	}
+	return nil, &NotLoadedError{edge: "albums"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -219,6 +230,11 @@ func (_m *ImportScan) QueryFiles() *ImportScanFileQuery {
 // QueryShows queries the "shows" edge of the ImportScan entity.
 func (_m *ImportScan) QueryShows() *ImportScanShowQuery {
 	return NewImportScanClient(_m.config).QueryShows(_m)
+}
+
+// QueryAlbums queries the "albums" edge of the ImportScan entity.
+func (_m *ImportScan) QueryAlbums() *ImportScanAlbumQuery {
+	return NewImportScanClient(_m.config).QueryAlbums(_m)
 }
 
 // Update returns a builder for updating this ImportScan.

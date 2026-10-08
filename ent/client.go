@@ -24,6 +24,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -66,6 +67,8 @@ type Client struct {
 	Episode *EpisodeClient
 	// ImportScan is the client for interacting with the ImportScan builders.
 	ImportScan *ImportScanClient
+	// ImportScanAlbum is the client for interacting with the ImportScanAlbum builders.
+	ImportScanAlbum *ImportScanAlbumClient
 	// ImportScanFile is the client for interacting with the ImportScanFile builders.
 	ImportScanFile *ImportScanFileClient
 	// ImportScanShow is the client for interacting with the ImportScanShow builders.
@@ -120,6 +123,7 @@ func (c *Client) init() {
 	c.DownloadRecord = NewDownloadRecordClient(c.config)
 	c.Episode = NewEpisodeClient(c.config)
 	c.ImportScan = NewImportScanClient(c.config)
+	c.ImportScanAlbum = NewImportScanAlbumClient(c.config)
 	c.ImportScanFile = NewImportScanFileClient(c.config)
 	c.ImportScanShow = NewImportScanShowClient(c.config)
 	c.Invite = NewInviteClient(c.config)
@@ -227,34 +231,35 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		Album:          NewAlbumClient(cfg),
-		ApiKey:         NewApiKeyClient(cfg),
-		Artist:         NewArtistClient(cfg),
-		Author:         NewAuthorClient(cfg),
-		Book:           NewBookClient(cfg),
-		Credit:         NewCreditClient(cfg),
-		DownloadRecord: NewDownloadRecordClient(cfg),
-		Episode:        NewEpisodeClient(cfg),
-		ImportScan:     NewImportScanClient(cfg),
-		ImportScanFile: NewImportScanFileClient(cfg),
-		ImportScanShow: NewImportScanShowClient(cfg),
-		Invite:         NewInviteClient(cfg),
-		MediaEvent:     NewMediaEventClient(cfg),
-		MediaFile:      NewMediaFileClient(cfg),
-		Movie:          NewMovieClient(cfg),
-		OIDCIdentity:   NewOIDCIdentityClient(cfg),
-		Person:         NewPersonClient(cfg),
-		Request:        NewRequestClient(cfg),
-		ScheduledJob:   NewScheduledJobClient(cfg),
-		Season:         NewSeasonClient(cfg),
-		Session:        NewSessionClient(cfg),
-		TVShow:         NewTVShowClient(cfg),
-		TorrentSession: NewTorrentSessionClient(cfg),
-		Track:          NewTrackClient(cfg),
-		TranscodeJob:   NewTranscodeJobClient(cfg),
-		User:           NewUserClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Album:           NewAlbumClient(cfg),
+		ApiKey:          NewApiKeyClient(cfg),
+		Artist:          NewArtistClient(cfg),
+		Author:          NewAuthorClient(cfg),
+		Book:            NewBookClient(cfg),
+		Credit:          NewCreditClient(cfg),
+		DownloadRecord:  NewDownloadRecordClient(cfg),
+		Episode:         NewEpisodeClient(cfg),
+		ImportScan:      NewImportScanClient(cfg),
+		ImportScanAlbum: NewImportScanAlbumClient(cfg),
+		ImportScanFile:  NewImportScanFileClient(cfg),
+		ImportScanShow:  NewImportScanShowClient(cfg),
+		Invite:          NewInviteClient(cfg),
+		MediaEvent:      NewMediaEventClient(cfg),
+		MediaFile:       NewMediaFileClient(cfg),
+		Movie:           NewMovieClient(cfg),
+		OIDCIdentity:    NewOIDCIdentityClient(cfg),
+		Person:          NewPersonClient(cfg),
+		Request:         NewRequestClient(cfg),
+		ScheduledJob:    NewScheduledJobClient(cfg),
+		Season:          NewSeasonClient(cfg),
+		Session:         NewSessionClient(cfg),
+		TVShow:          NewTVShowClient(cfg),
+		TorrentSession:  NewTorrentSessionClient(cfg),
+		Track:           NewTrackClient(cfg),
+		TranscodeJob:    NewTranscodeJobClient(cfg),
+		User:            NewUserClient(cfg),
 	}, nil
 }
 
@@ -272,34 +277,35 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:            ctx,
-		config:         cfg,
-		Album:          NewAlbumClient(cfg),
-		ApiKey:         NewApiKeyClient(cfg),
-		Artist:         NewArtistClient(cfg),
-		Author:         NewAuthorClient(cfg),
-		Book:           NewBookClient(cfg),
-		Credit:         NewCreditClient(cfg),
-		DownloadRecord: NewDownloadRecordClient(cfg),
-		Episode:        NewEpisodeClient(cfg),
-		ImportScan:     NewImportScanClient(cfg),
-		ImportScanFile: NewImportScanFileClient(cfg),
-		ImportScanShow: NewImportScanShowClient(cfg),
-		Invite:         NewInviteClient(cfg),
-		MediaEvent:     NewMediaEventClient(cfg),
-		MediaFile:      NewMediaFileClient(cfg),
-		Movie:          NewMovieClient(cfg),
-		OIDCIdentity:   NewOIDCIdentityClient(cfg),
-		Person:         NewPersonClient(cfg),
-		Request:        NewRequestClient(cfg),
-		ScheduledJob:   NewScheduledJobClient(cfg),
-		Season:         NewSeasonClient(cfg),
-		Session:        NewSessionClient(cfg),
-		TVShow:         NewTVShowClient(cfg),
-		TorrentSession: NewTorrentSessionClient(cfg),
-		Track:          NewTrackClient(cfg),
-		TranscodeJob:   NewTranscodeJobClient(cfg),
-		User:           NewUserClient(cfg),
+		ctx:             ctx,
+		config:          cfg,
+		Album:           NewAlbumClient(cfg),
+		ApiKey:          NewApiKeyClient(cfg),
+		Artist:          NewArtistClient(cfg),
+		Author:          NewAuthorClient(cfg),
+		Book:            NewBookClient(cfg),
+		Credit:          NewCreditClient(cfg),
+		DownloadRecord:  NewDownloadRecordClient(cfg),
+		Episode:         NewEpisodeClient(cfg),
+		ImportScan:      NewImportScanClient(cfg),
+		ImportScanAlbum: NewImportScanAlbumClient(cfg),
+		ImportScanFile:  NewImportScanFileClient(cfg),
+		ImportScanShow:  NewImportScanShowClient(cfg),
+		Invite:          NewInviteClient(cfg),
+		MediaEvent:      NewMediaEventClient(cfg),
+		MediaFile:       NewMediaFileClient(cfg),
+		Movie:           NewMovieClient(cfg),
+		OIDCIdentity:    NewOIDCIdentityClient(cfg),
+		Person:          NewPersonClient(cfg),
+		Request:         NewRequestClient(cfg),
+		ScheduledJob:    NewScheduledJobClient(cfg),
+		Season:          NewSeasonClient(cfg),
+		Session:         NewSessionClient(cfg),
+		TVShow:          NewTVShowClient(cfg),
+		TorrentSession:  NewTorrentSessionClient(cfg),
+		Track:           NewTrackClient(cfg),
+		TranscodeJob:    NewTranscodeJobClient(cfg),
+		User:            NewUserClient(cfg),
 	}, nil
 }
 
@@ -330,10 +336,10 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Album, c.ApiKey, c.Artist, c.Author, c.Book, c.Credit, c.DownloadRecord,
-		c.Episode, c.ImportScan, c.ImportScanFile, c.ImportScanShow, c.Invite,
-		c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity, c.Person, c.Request,
-		c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanFile, c.ImportScanShow,
+		c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity, c.Person,
+		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -344,10 +350,10 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Album, c.ApiKey, c.Artist, c.Author, c.Book, c.Credit, c.DownloadRecord,
-		c.Episode, c.ImportScan, c.ImportScanFile, c.ImportScanShow, c.Invite,
-		c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity, c.Person, c.Request,
-		c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanFile, c.ImportScanShow,
+		c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity, c.Person,
+		c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -374,6 +380,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Episode.mutate(ctx, m)
 	case *ImportScanMutation:
 		return c.ImportScan.mutate(ctx, m)
+	case *ImportScanAlbumMutation:
+		return c.ImportScanAlbum.mutate(ctx, m)
 	case *ImportScanFileMutation:
 		return c.ImportScanFile.mutate(ctx, m)
 	case *ImportScanShowMutation:
@@ -1937,6 +1945,22 @@ func (c *ImportScanClient) QueryShows(_m *ImportScan) *ImportScanShowQuery {
 	return query
 }
 
+// QueryAlbums queries the albums edge of a ImportScan.
+func (c *ImportScanClient) QueryAlbums(_m *ImportScan) *ImportScanAlbumQuery {
+	query := (&ImportScanAlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(importscan.Table, importscan.FieldID, id),
+			sqlgraph.To(importscanalbum.Table, importscanalbum.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, importscan.AlbumsTable, importscan.AlbumsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ImportScanClient) Hooks() []Hook {
 	return c.hooks.ImportScan
@@ -1959,6 +1983,155 @@ func (c *ImportScanClient) mutate(ctx context.Context, m *ImportScanMutation) (V
 		return (&ImportScanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ImportScan mutation op: %q", m.Op())
+	}
+}
+
+// ImportScanAlbumClient is a client for the ImportScanAlbum schema.
+type ImportScanAlbumClient struct {
+	config
+}
+
+// NewImportScanAlbumClient returns a client for the ImportScanAlbum from the given config.
+func NewImportScanAlbumClient(c config) *ImportScanAlbumClient {
+	return &ImportScanAlbumClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `importscanalbum.Hooks(f(g(h())))`.
+func (c *ImportScanAlbumClient) Use(hooks ...Hook) {
+	c.hooks.ImportScanAlbum = append(c.hooks.ImportScanAlbum, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `importscanalbum.Intercept(f(g(h())))`.
+func (c *ImportScanAlbumClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ImportScanAlbum = append(c.inters.ImportScanAlbum, interceptors...)
+}
+
+// Create returns a builder for creating a ImportScanAlbum entity.
+func (c *ImportScanAlbumClient) Create() *ImportScanAlbumCreate {
+	mutation := newImportScanAlbumMutation(c.config, OpCreate)
+	return &ImportScanAlbumCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ImportScanAlbum entities.
+func (c *ImportScanAlbumClient) CreateBulk(builders ...*ImportScanAlbumCreate) *ImportScanAlbumCreateBulk {
+	return &ImportScanAlbumCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ImportScanAlbumClient) MapCreateBulk(slice any, setFunc func(*ImportScanAlbumCreate, int)) *ImportScanAlbumCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ImportScanAlbumCreateBulk{err: fmt.Errorf("calling to ImportScanAlbumClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ImportScanAlbumCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ImportScanAlbumCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ImportScanAlbum.
+func (c *ImportScanAlbumClient) Update() *ImportScanAlbumUpdate {
+	mutation := newImportScanAlbumMutation(c.config, OpUpdate)
+	return &ImportScanAlbumUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ImportScanAlbumClient) UpdateOne(_m *ImportScanAlbum) *ImportScanAlbumUpdateOne {
+	mutation := newImportScanAlbumMutation(c.config, OpUpdateOne, withImportScanAlbum(_m))
+	return &ImportScanAlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ImportScanAlbumClient) UpdateOneID(id uint32) *ImportScanAlbumUpdateOne {
+	mutation := newImportScanAlbumMutation(c.config, OpUpdateOne, withImportScanAlbumID(id))
+	return &ImportScanAlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ImportScanAlbum.
+func (c *ImportScanAlbumClient) Delete() *ImportScanAlbumDelete {
+	mutation := newImportScanAlbumMutation(c.config, OpDelete)
+	return &ImportScanAlbumDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ImportScanAlbumClient) DeleteOne(_m *ImportScanAlbum) *ImportScanAlbumDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ImportScanAlbumClient) DeleteOneID(id uint32) *ImportScanAlbumDeleteOne {
+	builder := c.Delete().Where(importscanalbum.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ImportScanAlbumDeleteOne{builder}
+}
+
+// Query returns a query builder for ImportScanAlbum.
+func (c *ImportScanAlbumClient) Query() *ImportScanAlbumQuery {
+	return &ImportScanAlbumQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeImportScanAlbum},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ImportScanAlbum entity by its id.
+func (c *ImportScanAlbumClient) Get(ctx context.Context, id uint32) (*ImportScanAlbum, error) {
+	return c.Query().Where(importscanalbum.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ImportScanAlbumClient) GetX(ctx context.Context, id uint32) *ImportScanAlbum {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryScan queries the scan edge of a ImportScanAlbum.
+func (c *ImportScanAlbumClient) QueryScan(_m *ImportScanAlbum) *ImportScanQuery {
+	query := (&ImportScanClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(importscanalbum.Table, importscanalbum.FieldID, id),
+			sqlgraph.To(importscan.Table, importscan.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, importscanalbum.ScanTable, importscanalbum.ScanColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ImportScanAlbumClient) Hooks() []Hook {
+	return c.hooks.ImportScanAlbum
+}
+
+// Interceptors returns the client interceptors.
+func (c *ImportScanAlbumClient) Interceptors() []Interceptor {
+	return c.inters.ImportScanAlbum
+}
+
+func (c *ImportScanAlbumClient) mutate(ctx context.Context, m *ImportScanAlbumMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ImportScanAlbumCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ImportScanAlbumUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ImportScanAlbumUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ImportScanAlbumDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ImportScanAlbum mutation op: %q", m.Op())
 	}
 }
 
@@ -4755,14 +4928,15 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		Album, ApiKey, Artist, Author, Book, Credit, DownloadRecord, Episode,
-		ImportScan, ImportScanFile, ImportScanShow, Invite, MediaEvent, MediaFile,
-		Movie, OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
-		TorrentSession, Track, TranscodeJob, User []ent.Hook
+		ImportScan, ImportScanAlbum, ImportScanFile, ImportScanShow, Invite,
+		MediaEvent, MediaFile, Movie, OIDCIdentity, Person, Request, ScheduledJob,
+		Season, Session, TVShow, TorrentSession, Track, TranscodeJob, User []ent.Hook
 	}
 	inters struct {
 		Album, ApiKey, Artist, Author, Book, Credit, DownloadRecord, Episode,
-		ImportScan, ImportScanFile, ImportScanShow, Invite, MediaEvent, MediaFile,
-		Movie, OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
-		TorrentSession, Track, TranscodeJob, User []ent.Interceptor
+		ImportScan, ImportScanAlbum, ImportScanFile, ImportScanShow, Invite,
+		MediaEvent, MediaFile, Movie, OIDCIdentity, Person, Request, ScheduledJob,
+		Season, Session, TVShow, TorrentSession, Track, TranscodeJob,
+		User []ent.Interceptor
 	}
 )

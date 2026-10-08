@@ -33,6 +33,9 @@ type Episode func(*sql.Selector)
 // ImportScan is the predicate function for importscan builders.
 type ImportScan func(*sql.Selector)
 
+// ImportScanAlbum is the predicate function for importscanalbum builders.
+type ImportScanAlbum func(*sql.Selector)
+
 // ImportScanFile is the predicate function for importscanfile builders.
 type ImportScanFile func(*sql.Selector)
 

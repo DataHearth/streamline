@@ -367,7 +367,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "source_path", Type: field.TypeString},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"movie", "series"}, Default: "movie"},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"movie", "series", "music"}, Default: "movie"},
 		{Name: "mode", Type: field.TypeEnum, Enums: []string{"in_place", "rename"}},
 		{Name: "import_mode", Type: field.TypeEnum, Nullable: true, Enums: []string{"hardlink", "copy", "move"}},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"running", "awaiting_review", "committing", "completed", "cancelled", "failed"}, Default: "running"},
@@ -394,6 +394,63 @@ var (
 				Name:    "importscan_kind",
 				Unique:  false,
 				Columns: []*schema.Column{ImportScansColumns[4]},
+			},
+		},
+	}
+	// ImportScanAlbumsColumns holds the columns for the "import_scan_albums" table.
+	ImportScanAlbumsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "folder_path", Type: field.TypeString},
+		{Name: "tagged_artist", Type: field.TypeString, Nullable: true},
+		{Name: "tagged_album", Type: field.TypeString, Nullable: true},
+		{Name: "classification", Type: field.TypeEnum, Enums: []string{"confirmed", "ambiguous", "unmatched", "existing"}, Default: "unmatched"},
+		{Name: "release_group_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "artist_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "candidates", Type: field.TypeJSON, Nullable: true},
+		{Name: "existing_album_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "file_count", Type: field.TypeUint16, Default: 0},
+		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
+		{Name: "decision_release_group_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "outcome", Type: field.TypeEnum, Enums: []string{"pending", "created", "failed"}, Default: "pending"},
+		{Name: "outcome_message", Type: field.TypeString, Nullable: true},
+		{Name: "created_album_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "import_scan_albums", Type: field.TypeUint32},
+	}
+	// ImportScanAlbumsTable holds the schema information for the "import_scan_albums" table.
+	ImportScanAlbumsTable = &schema.Table{
+		Name:       "import_scan_albums",
+		Columns:    ImportScanAlbumsColumns,
+		PrimaryKey: []*schema.Column{ImportScanAlbumsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "import_scan_albums_import_scans_albums",
+				Columns:    []*schema.Column{ImportScanAlbumsColumns[17]},
+				RefColumns: []*schema.Column{ImportScansColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "importscanalbum_classification",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanAlbumsColumns[6]},
+			},
+			{
+				Name:    "importscanalbum_decision",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanAlbumsColumns[12]},
+			},
+			{
+				Name:    "importscanalbum_import_scan_albums",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanAlbumsColumns[17]},
+			},
+			{
+				Name:    "importscanalbum_folder_path",
+				Unique:  false,
+				Columns: []*schema.Column{ImportScanAlbumsColumns[3]},
 			},
 		},
 	}
@@ -1173,6 +1230,7 @@ var (
 		DownloadRecordsTable,
 		EpisodesTable,
 		ImportScansTable,
+		ImportScanAlbumsTable,
 		ImportScanFilesTable,
 		ImportScanShowsTable,
 		InvitesTable,
@@ -1206,6 +1264,7 @@ func init() {
 	DownloadRecordsTable.ForeignKeys[2].RefTable = EpisodesTable
 	DownloadRecordsTable.ForeignKeys[3].RefTable = MoviesTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
+	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanFilesTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanShowsTable.ForeignKeys[0].RefTable = ImportScansTable
 	InvitesTable.ForeignKeys[0].RefTable = UsersTable

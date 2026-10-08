@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 )
@@ -236,6 +237,21 @@ func (_c *ImportScanCreate) AddShows(v ...*ImportScanShow) *ImportScanCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddShowIDs(ids...)
+}
+
+// AddAlbumIDs adds the "albums" edge to the ImportScanAlbum entity by IDs.
+func (_c *ImportScanCreate) AddAlbumIDs(ids ...uint32) *ImportScanCreate {
+	_c.mutation.AddAlbumIDs(ids...)
+	return _c
+}
+
+// AddAlbums adds the "albums" edges to the ImportScanAlbum entity.
+func (_c *ImportScanCreate) AddAlbums(v ...*ImportScanAlbum) *ImportScanCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAlbumIDs(ids...)
 }
 
 // Mutation returns the ImportScanMutation object of the builder.
@@ -477,6 +493,22 @@ func (_c *ImportScanCreate) createSpec() (*ImportScan, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanshow.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

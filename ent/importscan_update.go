@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -287,6 +288,21 @@ func (_u *ImportScanUpdate) AddShows(v ...*ImportScanShow) *ImportScanUpdate {
 	return _u.AddShowIDs(ids...)
 }
 
+// AddAlbumIDs adds the "albums" edge to the ImportScanAlbum entity by IDs.
+func (_u *ImportScanUpdate) AddAlbumIDs(ids ...uint32) *ImportScanUpdate {
+	_u.mutation.AddAlbumIDs(ids...)
+	return _u
+}
+
+// AddAlbums adds the "albums" edges to the ImportScanAlbum entity.
+func (_u *ImportScanUpdate) AddAlbums(v ...*ImportScanAlbum) *ImportScanUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlbumIDs(ids...)
+}
+
 // Mutation returns the ImportScanMutation object of the builder.
 func (_u *ImportScanUpdate) Mutation() *ImportScanMutation {
 	return _u.mutation
@@ -332,6 +348,27 @@ func (_u *ImportScanUpdate) RemoveShows(v ...*ImportScanShow) *ImportScanUpdate 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveShowIDs(ids...)
+}
+
+// ClearAlbums clears all "albums" edges to the ImportScanAlbum entity.
+func (_u *ImportScanUpdate) ClearAlbums() *ImportScanUpdate {
+	_u.mutation.ClearAlbums()
+	return _u
+}
+
+// RemoveAlbumIDs removes the "albums" edge to ImportScanAlbum entities by IDs.
+func (_u *ImportScanUpdate) RemoveAlbumIDs(ids ...uint32) *ImportScanUpdate {
+	_u.mutation.RemoveAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveAlbums removes "albums" edges to ImportScanAlbum entities.
+func (_u *ImportScanUpdate) RemoveAlbums(v ...*ImportScanAlbum) *ImportScanUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlbumIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -564,6 +601,51 @@ func (_u *ImportScanUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanshow.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlbumsIDs(); len(nodes) > 0 && !_u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -849,6 +931,21 @@ func (_u *ImportScanUpdateOne) AddShows(v ...*ImportScanShow) *ImportScanUpdateO
 	return _u.AddShowIDs(ids...)
 }
 
+// AddAlbumIDs adds the "albums" edge to the ImportScanAlbum entity by IDs.
+func (_u *ImportScanUpdateOne) AddAlbumIDs(ids ...uint32) *ImportScanUpdateOne {
+	_u.mutation.AddAlbumIDs(ids...)
+	return _u
+}
+
+// AddAlbums adds the "albums" edges to the ImportScanAlbum entity.
+func (_u *ImportScanUpdateOne) AddAlbums(v ...*ImportScanAlbum) *ImportScanUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlbumIDs(ids...)
+}
+
 // Mutation returns the ImportScanMutation object of the builder.
 func (_u *ImportScanUpdateOne) Mutation() *ImportScanMutation {
 	return _u.mutation
@@ -894,6 +991,27 @@ func (_u *ImportScanUpdateOne) RemoveShows(v ...*ImportScanShow) *ImportScanUpda
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveShowIDs(ids...)
+}
+
+// ClearAlbums clears all "albums" edges to the ImportScanAlbum entity.
+func (_u *ImportScanUpdateOne) ClearAlbums() *ImportScanUpdateOne {
+	_u.mutation.ClearAlbums()
+	return _u
+}
+
+// RemoveAlbumIDs removes the "albums" edge to ImportScanAlbum entities by IDs.
+func (_u *ImportScanUpdateOne) RemoveAlbumIDs(ids ...uint32) *ImportScanUpdateOne {
+	_u.mutation.RemoveAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveAlbums removes "albums" edges to ImportScanAlbum entities.
+func (_u *ImportScanUpdateOne) RemoveAlbums(v ...*ImportScanAlbum) *ImportScanUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlbumIDs(ids...)
 }
 
 // Where appends a list predicates to the ImportScanUpdate builder.
@@ -1156,6 +1274,51 @@ func (_u *ImportScanUpdateOne) sqlSave(ctx context.Context) (_node *ImportScan, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(importscanshow.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlbumsIDs(); len(nodes) > 0 && !_u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   importscan.AlbumsTable,
+			Columns: []string{importscan.AlbumsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(importscanalbum.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -21,7 +21,7 @@ func (ImportScan) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("source_path").NotEmpty(),
 		field.Enum("kind").
-			Values("movie", "series").
+			Values("movie", "series", "music").
 			Default("movie"),
 		field.Enum("mode").Values("in_place", "rename"),
 		field.Enum("import_mode").
@@ -45,6 +45,8 @@ func (ImportScan) Edges() []ent.Edge {
 		edge.To("files", ImportScanFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("shows", ImportScanShow.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("albums", ImportScanAlbum.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

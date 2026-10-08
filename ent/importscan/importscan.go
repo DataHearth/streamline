@@ -47,6 +47,8 @@ const (
 	EdgeFiles = "files"
 	// EdgeShows holds the string denoting the shows edge name in mutations.
 	EdgeShows = "shows"
+	// EdgeAlbums holds the string denoting the albums edge name in mutations.
+	EdgeAlbums = "albums"
 	// Table holds the table name of the importscan in the database.
 	Table = "import_scans"
 	// FilesTable is the table that holds the files relation/edge.
@@ -63,6 +65,13 @@ const (
 	ShowsInverseTable = "import_scan_shows"
 	// ShowsColumn is the table column denoting the shows relation/edge.
 	ShowsColumn = "import_scan_shows"
+	// AlbumsTable is the table that holds the albums relation/edge.
+	AlbumsTable = "import_scan_albums"
+	// AlbumsInverseTable is the table name for the ImportScanAlbum entity.
+	// It exists in this package in order to avoid circular dependency with the "importscanalbum" package.
+	AlbumsInverseTable = "import_scan_albums"
+	// AlbumsColumn is the table column denoting the albums relation/edge.
+	AlbumsColumn = "import_scan_albums"
 )
 
 // Columns holds all SQL columns for importscan fields.
@@ -123,6 +132,7 @@ const DefaultKind = KindMovie
 const (
 	KindMovie  Kind = "movie"
 	KindSeries Kind = "series"
+	KindMusic  Kind = "music"
 )
 
 func (k Kind) String() string {
@@ -132,7 +142,7 @@ func (k Kind) String() string {
 // KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
 func KindValidator(k Kind) error {
 	switch k {
-	case KindMovie, KindSeries:
+	case KindMovie, KindSeries, KindMusic:
 		return nil
 	default:
 		return fmt.Errorf("importscan: invalid enum value for kind field: %q", k)
@@ -321,6 +331,20 @@ func ByShows(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newShowsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAlbumsCount orders the results by albums count.
+func ByAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlbumsStep(), opts...)
+	}
+}
+
+// ByAlbums orders the results by albums terms.
+func ByAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newFilesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -333,5 +357,12 @@ func newShowsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ShowsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ShowsTable, ShowsColumn),
+	)
+}
+func newAlbumsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlbumsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AlbumsTable, AlbumsColumn),
 	)
 }

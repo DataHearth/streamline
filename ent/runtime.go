@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -285,6 +286,29 @@ func init() {
 	importscanDescCommitFailedCount := importscanFields[8].Descriptor()
 	// importscan.DefaultCommitFailedCount holds the default value on creation for the commit_failed_count field.
 	importscan.DefaultCommitFailedCount = importscanDescCommitFailedCount.Default.(uint32)
+	importscanalbumMixin := schema.ImportScanAlbum{}.Mixin()
+	importscanalbumMixinFields1 := importscanalbumMixin[1].Fields()
+	_ = importscanalbumMixinFields1
+	importscanalbumFields := schema.ImportScanAlbum{}.Fields()
+	_ = importscanalbumFields
+	// importscanalbumDescCreateTime is the schema descriptor for create_time field.
+	importscanalbumDescCreateTime := importscanalbumMixinFields1[0].Descriptor()
+	// importscanalbum.DefaultCreateTime holds the default value on creation for the create_time field.
+	importscanalbum.DefaultCreateTime = importscanalbumDescCreateTime.Default.(func() time.Time)
+	// importscanalbumDescUpdateTime is the schema descriptor for update_time field.
+	importscanalbumDescUpdateTime := importscanalbumMixinFields1[1].Descriptor()
+	// importscanalbum.DefaultUpdateTime holds the default value on creation for the update_time field.
+	importscanalbum.DefaultUpdateTime = importscanalbumDescUpdateTime.Default.(func() time.Time)
+	// importscanalbum.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	importscanalbum.UpdateDefaultUpdateTime = importscanalbumDescUpdateTime.UpdateDefault.(func() time.Time)
+	// importscanalbumDescFolderPath is the schema descriptor for folder_path field.
+	importscanalbumDescFolderPath := importscanalbumFields[0].Descriptor()
+	// importscanalbum.FolderPathValidator is a validator for the "folder_path" field. It is called by the builders before save.
+	importscanalbum.FolderPathValidator = importscanalbumDescFolderPath.Validators[0].(func(string) error)
+	// importscanalbumDescFileCount is the schema descriptor for file_count field.
+	importscanalbumDescFileCount := importscanalbumFields[8].Descriptor()
+	// importscanalbum.DefaultFileCount holds the default value on creation for the file_count field.
+	importscanalbum.DefaultFileCount = importscanalbumDescFileCount.Default.(uint16)
 	importscanfileMixin := schema.ImportScanFile{}.Mixin()
 	importscanfileMixinFields1 := importscanfileMixin[1].Fields()
 	_ = importscanfileMixinFields1

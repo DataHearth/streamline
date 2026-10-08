@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/invite"
@@ -50,32 +51,33 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAlbum          = "Album"
-	TypeApiKey         = "ApiKey"
-	TypeArtist         = "Artist"
-	TypeAuthor         = "Author"
-	TypeBook           = "Book"
-	TypeCredit         = "Credit"
-	TypeDownloadRecord = "DownloadRecord"
-	TypeEpisode        = "Episode"
-	TypeImportScan     = "ImportScan"
-	TypeImportScanFile = "ImportScanFile"
-	TypeImportScanShow = "ImportScanShow"
-	TypeInvite         = "Invite"
-	TypeMediaEvent     = "MediaEvent"
-	TypeMediaFile      = "MediaFile"
-	TypeMovie          = "Movie"
-	TypeOIDCIdentity   = "OIDCIdentity"
-	TypePerson         = "Person"
-	TypeRequest        = "Request"
-	TypeScheduledJob   = "ScheduledJob"
-	TypeSeason         = "Season"
-	TypeSession        = "Session"
-	TypeTVShow         = "TVShow"
-	TypeTorrentSession = "TorrentSession"
-	TypeTrack          = "Track"
-	TypeTranscodeJob   = "TranscodeJob"
-	TypeUser           = "User"
+	TypeAlbum           = "Album"
+	TypeApiKey          = "ApiKey"
+	TypeArtist          = "Artist"
+	TypeAuthor          = "Author"
+	TypeBook            = "Book"
+	TypeCredit          = "Credit"
+	TypeDownloadRecord  = "DownloadRecord"
+	TypeEpisode         = "Episode"
+	TypeImportScan      = "ImportScan"
+	TypeImportScanAlbum = "ImportScanAlbum"
+	TypeImportScanFile  = "ImportScanFile"
+	TypeImportScanShow  = "ImportScanShow"
+	TypeInvite          = "Invite"
+	TypeMediaEvent      = "MediaEvent"
+	TypeMediaFile       = "MediaFile"
+	TypeMovie           = "Movie"
+	TypeOIDCIdentity    = "OIDCIdentity"
+	TypePerson          = "Person"
+	TypeRequest         = "Request"
+	TypeScheduledJob    = "ScheduledJob"
+	TypeSeason          = "Season"
+	TypeSession         = "Session"
+	TypeTVShow          = "TVShow"
+	TypeTorrentSession  = "TorrentSession"
+	TypeTrack           = "Track"
+	TypeTranscodeJob    = "TranscodeJob"
+	TypeUser            = "User"
 )
 
 // AlbumMutation represents an operation that mutates the Album nodes in the graph.
@@ -10022,6 +10024,9 @@ type ImportScanMutation struct {
 	shows                   map[uint32]struct{}
 	removedshows            map[uint32]struct{}
 	clearedshows            bool
+	albums                  map[uint32]struct{}
+	removedalbums           map[uint32]struct{}
+	clearedalbums           bool
 	done                    bool
 	oldValue                func(context.Context) (*ImportScan, error)
 	predicates              []predicate.ImportScan
@@ -10875,6 +10880,60 @@ func (m *ImportScanMutation) ResetShows() {
 	m.removedshows = nil
 }
 
+// AddAlbumIDs adds the "albums" edge to the ImportScanAlbum entity by ids.
+func (m *ImportScanMutation) AddAlbumIDs(ids ...uint32) {
+	if m.albums == nil {
+		m.albums = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.albums[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAlbums clears the "albums" edge to the ImportScanAlbum entity.
+func (m *ImportScanMutation) ClearAlbums() {
+	m.clearedalbums = true
+}
+
+// AlbumsCleared reports if the "albums" edge to the ImportScanAlbum entity was cleared.
+func (m *ImportScanMutation) AlbumsCleared() bool {
+	return m.clearedalbums
+}
+
+// RemoveAlbumIDs removes the "albums" edge to the ImportScanAlbum entity by IDs.
+func (m *ImportScanMutation) RemoveAlbumIDs(ids ...uint32) {
+	if m.removedalbums == nil {
+		m.removedalbums = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.albums, ids[i])
+		m.removedalbums[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAlbums returns the removed IDs of the "albums" edge to the ImportScanAlbum entity.
+func (m *ImportScanMutation) RemovedAlbumsIDs() (ids []uint32) {
+	for id := range m.removedalbums {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AlbumsIDs returns the "albums" edge IDs in the mutation.
+func (m *ImportScanMutation) AlbumsIDs() (ids []uint32) {
+	for id := range m.albums {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAlbums resets all changes to the "albums" edge.
+func (m *ImportScanMutation) ResetAlbums() {
+	m.albums = nil
+	m.clearedalbums = false
+	m.removedalbums = nil
+}
+
 // Where appends a list predicates to the ImportScanMutation builder.
 func (m *ImportScanMutation) Where(ps ...predicate.ImportScan) {
 	m.predicates = append(m.predicates, ps...)
@@ -11307,12 +11366,15 @@ func (m *ImportScanMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ImportScanMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.files != nil {
 		edges = append(edges, importscan.EdgeFiles)
 	}
 	if m.shows != nil {
 		edges = append(edges, importscan.EdgeShows)
+	}
+	if m.albums != nil {
+		edges = append(edges, importscan.EdgeAlbums)
 	}
 	return edges
 }
@@ -11333,18 +11395,27 @@ func (m *ImportScanMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case importscan.EdgeAlbums:
+		ids := make([]ent.Value, 0, len(m.albums))
+		for id := range m.albums {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ImportScanMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedfiles != nil {
 		edges = append(edges, importscan.EdgeFiles)
 	}
 	if m.removedshows != nil {
 		edges = append(edges, importscan.EdgeShows)
+	}
+	if m.removedalbums != nil {
+		edges = append(edges, importscan.EdgeAlbums)
 	}
 	return edges
 }
@@ -11365,18 +11436,27 @@ func (m *ImportScanMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case importscan.EdgeAlbums:
+		ids := make([]ent.Value, 0, len(m.removedalbums))
+		for id := range m.removedalbums {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ImportScanMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedfiles {
 		edges = append(edges, importscan.EdgeFiles)
 	}
 	if m.clearedshows {
 		edges = append(edges, importscan.EdgeShows)
+	}
+	if m.clearedalbums {
+		edges = append(edges, importscan.EdgeAlbums)
 	}
 	return edges
 }
@@ -11389,6 +11469,8 @@ func (m *ImportScanMutation) EdgeCleared(name string) bool {
 		return m.clearedfiles
 	case importscan.EdgeShows:
 		return m.clearedshows
+	case importscan.EdgeAlbums:
+		return m.clearedalbums
 	}
 	return false
 }
@@ -11411,8 +11493,1515 @@ func (m *ImportScanMutation) ResetEdge(name string) error {
 	case importscan.EdgeShows:
 		m.ResetShows()
 		return nil
+	case importscan.EdgeAlbums:
+		m.ResetAlbums()
+		return nil
 	}
 	return fmt.Errorf("unknown ImportScan edge %s", name)
+}
+
+// ImportScanAlbumMutation represents an operation that mutates the ImportScanAlbum nodes in the graph.
+type ImportScanAlbumMutation struct {
+	config
+	op                          Op
+	typ                         string
+	id                          *uint32
+	create_time                 *time.Time
+	update_time                 *time.Time
+	folder_path                 *string
+	tagged_artist               *string
+	tagged_album                *string
+	classification              *importscanalbum.Classification
+	release_group_mbid          *string
+	artist_mbid                 *string
+	candidates                  *[]schema.ScannedAlbumCandidate
+	appendcandidates            []schema.ScannedAlbumCandidate
+	existing_album_id           *uint32
+	addexisting_album_id        *int32
+	file_count                  *uint16
+	addfile_count               *int16
+	decision                    *importscanalbum.Decision
+	decision_release_group_mbid *string
+	outcome                     *importscanalbum.Outcome
+	outcome_message             *string
+	created_album_id            *uint32
+	addcreated_album_id         *int32
+	clearedFields               map[string]struct{}
+	scan                        *uint32
+	clearedscan                 bool
+	done                        bool
+	oldValue                    func(context.Context) (*ImportScanAlbum, error)
+	predicates                  []predicate.ImportScanAlbum
+}
+
+var _ ent.Mutation = (*ImportScanAlbumMutation)(nil)
+
+// importscanalbumOption allows management of the mutation configuration using functional options.
+type importscanalbumOption func(*ImportScanAlbumMutation)
+
+// newImportScanAlbumMutation creates new mutation for the ImportScanAlbum entity.
+func newImportScanAlbumMutation(c config, op Op, opts ...importscanalbumOption) *ImportScanAlbumMutation {
+	m := &ImportScanAlbumMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeImportScanAlbum,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withImportScanAlbumID sets the ID field of the mutation.
+func withImportScanAlbumID(id uint32) importscanalbumOption {
+	return func(m *ImportScanAlbumMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ImportScanAlbum
+		)
+		m.oldValue = func(ctx context.Context) (*ImportScanAlbum, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ImportScanAlbum.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withImportScanAlbum sets the old ImportScanAlbum of the mutation.
+func withImportScanAlbum(node *ImportScanAlbum) importscanalbumOption {
+	return func(m *ImportScanAlbumMutation) {
+		m.oldValue = func(context.Context) (*ImportScanAlbum, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ImportScanAlbumMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ImportScanAlbumMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ImportScanAlbum entities.
+func (m *ImportScanAlbumMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ImportScanAlbumMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ImportScanAlbumMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ImportScanAlbum.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *ImportScanAlbumMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *ImportScanAlbumMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *ImportScanAlbumMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *ImportScanAlbumMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *ImportScanAlbumMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *ImportScanAlbumMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetFolderPath sets the "folder_path" field.
+func (m *ImportScanAlbumMutation) SetFolderPath(s string) {
+	m.folder_path = &s
+}
+
+// FolderPath returns the value of the "folder_path" field in the mutation.
+func (m *ImportScanAlbumMutation) FolderPath() (r string, exists bool) {
+	v := m.folder_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFolderPath returns the old "folder_path" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldFolderPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFolderPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFolderPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFolderPath: %w", err)
+	}
+	return oldValue.FolderPath, nil
+}
+
+// ResetFolderPath resets all changes to the "folder_path" field.
+func (m *ImportScanAlbumMutation) ResetFolderPath() {
+	m.folder_path = nil
+}
+
+// SetTaggedArtist sets the "tagged_artist" field.
+func (m *ImportScanAlbumMutation) SetTaggedArtist(s string) {
+	m.tagged_artist = &s
+}
+
+// TaggedArtist returns the value of the "tagged_artist" field in the mutation.
+func (m *ImportScanAlbumMutation) TaggedArtist() (r string, exists bool) {
+	v := m.tagged_artist
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaggedArtist returns the old "tagged_artist" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldTaggedArtist(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaggedArtist is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaggedArtist requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaggedArtist: %w", err)
+	}
+	return oldValue.TaggedArtist, nil
+}
+
+// ClearTaggedArtist clears the value of the "tagged_artist" field.
+func (m *ImportScanAlbumMutation) ClearTaggedArtist() {
+	m.tagged_artist = nil
+	m.clearedFields[importscanalbum.FieldTaggedArtist] = struct{}{}
+}
+
+// TaggedArtistCleared returns if the "tagged_artist" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) TaggedArtistCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldTaggedArtist]
+	return ok
+}
+
+// ResetTaggedArtist resets all changes to the "tagged_artist" field.
+func (m *ImportScanAlbumMutation) ResetTaggedArtist() {
+	m.tagged_artist = nil
+	delete(m.clearedFields, importscanalbum.FieldTaggedArtist)
+}
+
+// SetTaggedAlbum sets the "tagged_album" field.
+func (m *ImportScanAlbumMutation) SetTaggedAlbum(s string) {
+	m.tagged_album = &s
+}
+
+// TaggedAlbum returns the value of the "tagged_album" field in the mutation.
+func (m *ImportScanAlbumMutation) TaggedAlbum() (r string, exists bool) {
+	v := m.tagged_album
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaggedAlbum returns the old "tagged_album" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldTaggedAlbum(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaggedAlbum is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaggedAlbum requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaggedAlbum: %w", err)
+	}
+	return oldValue.TaggedAlbum, nil
+}
+
+// ClearTaggedAlbum clears the value of the "tagged_album" field.
+func (m *ImportScanAlbumMutation) ClearTaggedAlbum() {
+	m.tagged_album = nil
+	m.clearedFields[importscanalbum.FieldTaggedAlbum] = struct{}{}
+}
+
+// TaggedAlbumCleared returns if the "tagged_album" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) TaggedAlbumCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldTaggedAlbum]
+	return ok
+}
+
+// ResetTaggedAlbum resets all changes to the "tagged_album" field.
+func (m *ImportScanAlbumMutation) ResetTaggedAlbum() {
+	m.tagged_album = nil
+	delete(m.clearedFields, importscanalbum.FieldTaggedAlbum)
+}
+
+// SetClassification sets the "classification" field.
+func (m *ImportScanAlbumMutation) SetClassification(i importscanalbum.Classification) {
+	m.classification = &i
+}
+
+// Classification returns the value of the "classification" field in the mutation.
+func (m *ImportScanAlbumMutation) Classification() (r importscanalbum.Classification, exists bool) {
+	v := m.classification
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClassification returns the old "classification" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldClassification(ctx context.Context) (v importscanalbum.Classification, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClassification is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClassification requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClassification: %w", err)
+	}
+	return oldValue.Classification, nil
+}
+
+// ResetClassification resets all changes to the "classification" field.
+func (m *ImportScanAlbumMutation) ResetClassification() {
+	m.classification = nil
+}
+
+// SetReleaseGroupMbid sets the "release_group_mbid" field.
+func (m *ImportScanAlbumMutation) SetReleaseGroupMbid(s string) {
+	m.release_group_mbid = &s
+}
+
+// ReleaseGroupMbid returns the value of the "release_group_mbid" field in the mutation.
+func (m *ImportScanAlbumMutation) ReleaseGroupMbid() (r string, exists bool) {
+	v := m.release_group_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleaseGroupMbid returns the old "release_group_mbid" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldReleaseGroupMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleaseGroupMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleaseGroupMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleaseGroupMbid: %w", err)
+	}
+	return oldValue.ReleaseGroupMbid, nil
+}
+
+// ClearReleaseGroupMbid clears the value of the "release_group_mbid" field.
+func (m *ImportScanAlbumMutation) ClearReleaseGroupMbid() {
+	m.release_group_mbid = nil
+	m.clearedFields[importscanalbum.FieldReleaseGroupMbid] = struct{}{}
+}
+
+// ReleaseGroupMbidCleared returns if the "release_group_mbid" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) ReleaseGroupMbidCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldReleaseGroupMbid]
+	return ok
+}
+
+// ResetReleaseGroupMbid resets all changes to the "release_group_mbid" field.
+func (m *ImportScanAlbumMutation) ResetReleaseGroupMbid() {
+	m.release_group_mbid = nil
+	delete(m.clearedFields, importscanalbum.FieldReleaseGroupMbid)
+}
+
+// SetArtistMbid sets the "artist_mbid" field.
+func (m *ImportScanAlbumMutation) SetArtistMbid(s string) {
+	m.artist_mbid = &s
+}
+
+// ArtistMbid returns the value of the "artist_mbid" field in the mutation.
+func (m *ImportScanAlbumMutation) ArtistMbid() (r string, exists bool) {
+	v := m.artist_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistMbid returns the old "artist_mbid" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldArtistMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistMbid: %w", err)
+	}
+	return oldValue.ArtistMbid, nil
+}
+
+// ClearArtistMbid clears the value of the "artist_mbid" field.
+func (m *ImportScanAlbumMutation) ClearArtistMbid() {
+	m.artist_mbid = nil
+	m.clearedFields[importscanalbum.FieldArtistMbid] = struct{}{}
+}
+
+// ArtistMbidCleared returns if the "artist_mbid" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) ArtistMbidCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldArtistMbid]
+	return ok
+}
+
+// ResetArtistMbid resets all changes to the "artist_mbid" field.
+func (m *ImportScanAlbumMutation) ResetArtistMbid() {
+	m.artist_mbid = nil
+	delete(m.clearedFields, importscanalbum.FieldArtistMbid)
+}
+
+// SetCandidates sets the "candidates" field.
+func (m *ImportScanAlbumMutation) SetCandidates(sac []schema.ScannedAlbumCandidate) {
+	m.candidates = &sac
+	m.appendcandidates = nil
+}
+
+// Candidates returns the value of the "candidates" field in the mutation.
+func (m *ImportScanAlbumMutation) Candidates() (r []schema.ScannedAlbumCandidate, exists bool) {
+	v := m.candidates
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCandidates returns the old "candidates" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldCandidates(ctx context.Context) (v []schema.ScannedAlbumCandidate, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCandidates is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCandidates requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCandidates: %w", err)
+	}
+	return oldValue.Candidates, nil
+}
+
+// AppendCandidates adds sac to the "candidates" field.
+func (m *ImportScanAlbumMutation) AppendCandidates(sac []schema.ScannedAlbumCandidate) {
+	m.appendcandidates = append(m.appendcandidates, sac...)
+}
+
+// AppendedCandidates returns the list of values that were appended to the "candidates" field in this mutation.
+func (m *ImportScanAlbumMutation) AppendedCandidates() ([]schema.ScannedAlbumCandidate, bool) {
+	if len(m.appendcandidates) == 0 {
+		return nil, false
+	}
+	return m.appendcandidates, true
+}
+
+// ClearCandidates clears the value of the "candidates" field.
+func (m *ImportScanAlbumMutation) ClearCandidates() {
+	m.candidates = nil
+	m.appendcandidates = nil
+	m.clearedFields[importscanalbum.FieldCandidates] = struct{}{}
+}
+
+// CandidatesCleared returns if the "candidates" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) CandidatesCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldCandidates]
+	return ok
+}
+
+// ResetCandidates resets all changes to the "candidates" field.
+func (m *ImportScanAlbumMutation) ResetCandidates() {
+	m.candidates = nil
+	m.appendcandidates = nil
+	delete(m.clearedFields, importscanalbum.FieldCandidates)
+}
+
+// SetExistingAlbumID sets the "existing_album_id" field.
+func (m *ImportScanAlbumMutation) SetExistingAlbumID(u uint32) {
+	m.existing_album_id = &u
+	m.addexisting_album_id = nil
+}
+
+// ExistingAlbumID returns the value of the "existing_album_id" field in the mutation.
+func (m *ImportScanAlbumMutation) ExistingAlbumID() (r uint32, exists bool) {
+	v := m.existing_album_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExistingAlbumID returns the old "existing_album_id" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldExistingAlbumID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExistingAlbumID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExistingAlbumID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExistingAlbumID: %w", err)
+	}
+	return oldValue.ExistingAlbumID, nil
+}
+
+// AddExistingAlbumID adds u to the "existing_album_id" field.
+func (m *ImportScanAlbumMutation) AddExistingAlbumID(u int32) {
+	if m.addexisting_album_id != nil {
+		*m.addexisting_album_id += u
+	} else {
+		m.addexisting_album_id = &u
+	}
+}
+
+// AddedExistingAlbumID returns the value that was added to the "existing_album_id" field in this mutation.
+func (m *ImportScanAlbumMutation) AddedExistingAlbumID() (r int32, exists bool) {
+	v := m.addexisting_album_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearExistingAlbumID clears the value of the "existing_album_id" field.
+func (m *ImportScanAlbumMutation) ClearExistingAlbumID() {
+	m.existing_album_id = nil
+	m.addexisting_album_id = nil
+	m.clearedFields[importscanalbum.FieldExistingAlbumID] = struct{}{}
+}
+
+// ExistingAlbumIDCleared returns if the "existing_album_id" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) ExistingAlbumIDCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldExistingAlbumID]
+	return ok
+}
+
+// ResetExistingAlbumID resets all changes to the "existing_album_id" field.
+func (m *ImportScanAlbumMutation) ResetExistingAlbumID() {
+	m.existing_album_id = nil
+	m.addexisting_album_id = nil
+	delete(m.clearedFields, importscanalbum.FieldExistingAlbumID)
+}
+
+// SetFileCount sets the "file_count" field.
+func (m *ImportScanAlbumMutation) SetFileCount(u uint16) {
+	m.file_count = &u
+	m.addfile_count = nil
+}
+
+// FileCount returns the value of the "file_count" field in the mutation.
+func (m *ImportScanAlbumMutation) FileCount() (r uint16, exists bool) {
+	v := m.file_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileCount returns the old "file_count" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldFileCount(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileCount: %w", err)
+	}
+	return oldValue.FileCount, nil
+}
+
+// AddFileCount adds u to the "file_count" field.
+func (m *ImportScanAlbumMutation) AddFileCount(u int16) {
+	if m.addfile_count != nil {
+		*m.addfile_count += u
+	} else {
+		m.addfile_count = &u
+	}
+}
+
+// AddedFileCount returns the value that was added to the "file_count" field in this mutation.
+func (m *ImportScanAlbumMutation) AddedFileCount() (r int16, exists bool) {
+	v := m.addfile_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFileCount resets all changes to the "file_count" field.
+func (m *ImportScanAlbumMutation) ResetFileCount() {
+	m.file_count = nil
+	m.addfile_count = nil
+}
+
+// SetDecision sets the "decision" field.
+func (m *ImportScanAlbumMutation) SetDecision(i importscanalbum.Decision) {
+	m.decision = &i
+}
+
+// Decision returns the value of the "decision" field in the mutation.
+func (m *ImportScanAlbumMutation) Decision() (r importscanalbum.Decision, exists bool) {
+	v := m.decision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecision returns the old "decision" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldDecision(ctx context.Context) (v importscanalbum.Decision, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecision: %w", err)
+	}
+	return oldValue.Decision, nil
+}
+
+// ResetDecision resets all changes to the "decision" field.
+func (m *ImportScanAlbumMutation) ResetDecision() {
+	m.decision = nil
+}
+
+// SetDecisionReleaseGroupMbid sets the "decision_release_group_mbid" field.
+func (m *ImportScanAlbumMutation) SetDecisionReleaseGroupMbid(s string) {
+	m.decision_release_group_mbid = &s
+}
+
+// DecisionReleaseGroupMbid returns the value of the "decision_release_group_mbid" field in the mutation.
+func (m *ImportScanAlbumMutation) DecisionReleaseGroupMbid() (r string, exists bool) {
+	v := m.decision_release_group_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecisionReleaseGroupMbid returns the old "decision_release_group_mbid" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldDecisionReleaseGroupMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecisionReleaseGroupMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecisionReleaseGroupMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecisionReleaseGroupMbid: %w", err)
+	}
+	return oldValue.DecisionReleaseGroupMbid, nil
+}
+
+// ClearDecisionReleaseGroupMbid clears the value of the "decision_release_group_mbid" field.
+func (m *ImportScanAlbumMutation) ClearDecisionReleaseGroupMbid() {
+	m.decision_release_group_mbid = nil
+	m.clearedFields[importscanalbum.FieldDecisionReleaseGroupMbid] = struct{}{}
+}
+
+// DecisionReleaseGroupMbidCleared returns if the "decision_release_group_mbid" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) DecisionReleaseGroupMbidCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldDecisionReleaseGroupMbid]
+	return ok
+}
+
+// ResetDecisionReleaseGroupMbid resets all changes to the "decision_release_group_mbid" field.
+func (m *ImportScanAlbumMutation) ResetDecisionReleaseGroupMbid() {
+	m.decision_release_group_mbid = nil
+	delete(m.clearedFields, importscanalbum.FieldDecisionReleaseGroupMbid)
+}
+
+// SetOutcome sets the "outcome" field.
+func (m *ImportScanAlbumMutation) SetOutcome(i importscanalbum.Outcome) {
+	m.outcome = &i
+}
+
+// Outcome returns the value of the "outcome" field in the mutation.
+func (m *ImportScanAlbumMutation) Outcome() (r importscanalbum.Outcome, exists bool) {
+	v := m.outcome
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutcome returns the old "outcome" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldOutcome(ctx context.Context) (v importscanalbum.Outcome, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutcome is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutcome requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutcome: %w", err)
+	}
+	return oldValue.Outcome, nil
+}
+
+// ResetOutcome resets all changes to the "outcome" field.
+func (m *ImportScanAlbumMutation) ResetOutcome() {
+	m.outcome = nil
+}
+
+// SetOutcomeMessage sets the "outcome_message" field.
+func (m *ImportScanAlbumMutation) SetOutcomeMessage(s string) {
+	m.outcome_message = &s
+}
+
+// OutcomeMessage returns the value of the "outcome_message" field in the mutation.
+func (m *ImportScanAlbumMutation) OutcomeMessage() (r string, exists bool) {
+	v := m.outcome_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutcomeMessage returns the old "outcome_message" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldOutcomeMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutcomeMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutcomeMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutcomeMessage: %w", err)
+	}
+	return oldValue.OutcomeMessage, nil
+}
+
+// ClearOutcomeMessage clears the value of the "outcome_message" field.
+func (m *ImportScanAlbumMutation) ClearOutcomeMessage() {
+	m.outcome_message = nil
+	m.clearedFields[importscanalbum.FieldOutcomeMessage] = struct{}{}
+}
+
+// OutcomeMessageCleared returns if the "outcome_message" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) OutcomeMessageCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldOutcomeMessage]
+	return ok
+}
+
+// ResetOutcomeMessage resets all changes to the "outcome_message" field.
+func (m *ImportScanAlbumMutation) ResetOutcomeMessage() {
+	m.outcome_message = nil
+	delete(m.clearedFields, importscanalbum.FieldOutcomeMessage)
+}
+
+// SetCreatedAlbumID sets the "created_album_id" field.
+func (m *ImportScanAlbumMutation) SetCreatedAlbumID(u uint32) {
+	m.created_album_id = &u
+	m.addcreated_album_id = nil
+}
+
+// CreatedAlbumID returns the value of the "created_album_id" field in the mutation.
+func (m *ImportScanAlbumMutation) CreatedAlbumID() (r uint32, exists bool) {
+	v := m.created_album_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAlbumID returns the old "created_album_id" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldCreatedAlbumID(ctx context.Context) (v *uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAlbumID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAlbumID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAlbumID: %w", err)
+	}
+	return oldValue.CreatedAlbumID, nil
+}
+
+// AddCreatedAlbumID adds u to the "created_album_id" field.
+func (m *ImportScanAlbumMutation) AddCreatedAlbumID(u int32) {
+	if m.addcreated_album_id != nil {
+		*m.addcreated_album_id += u
+	} else {
+		m.addcreated_album_id = &u
+	}
+}
+
+// AddedCreatedAlbumID returns the value that was added to the "created_album_id" field in this mutation.
+func (m *ImportScanAlbumMutation) AddedCreatedAlbumID() (r int32, exists bool) {
+	v := m.addcreated_album_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCreatedAlbumID clears the value of the "created_album_id" field.
+func (m *ImportScanAlbumMutation) ClearCreatedAlbumID() {
+	m.created_album_id = nil
+	m.addcreated_album_id = nil
+	m.clearedFields[importscanalbum.FieldCreatedAlbumID] = struct{}{}
+}
+
+// CreatedAlbumIDCleared returns if the "created_album_id" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) CreatedAlbumIDCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldCreatedAlbumID]
+	return ok
+}
+
+// ResetCreatedAlbumID resets all changes to the "created_album_id" field.
+func (m *ImportScanAlbumMutation) ResetCreatedAlbumID() {
+	m.created_album_id = nil
+	m.addcreated_album_id = nil
+	delete(m.clearedFields, importscanalbum.FieldCreatedAlbumID)
+}
+
+// SetScanID sets the "scan" edge to the ImportScan entity by id.
+func (m *ImportScanAlbumMutation) SetScanID(id uint32) {
+	m.scan = &id
+}
+
+// ClearScan clears the "scan" edge to the ImportScan entity.
+func (m *ImportScanAlbumMutation) ClearScan() {
+	m.clearedscan = true
+}
+
+// ScanCleared reports if the "scan" edge to the ImportScan entity was cleared.
+func (m *ImportScanAlbumMutation) ScanCleared() bool {
+	return m.clearedscan
+}
+
+// ScanID returns the "scan" edge ID in the mutation.
+func (m *ImportScanAlbumMutation) ScanID() (id uint32, exists bool) {
+	if m.scan != nil {
+		return *m.scan, true
+	}
+	return
+}
+
+// ScanIDs returns the "scan" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ScanID instead. It exists only for internal usage by the builders.
+func (m *ImportScanAlbumMutation) ScanIDs() (ids []uint32) {
+	if id := m.scan; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetScan resets all changes to the "scan" edge.
+func (m *ImportScanAlbumMutation) ResetScan() {
+	m.scan = nil
+	m.clearedscan = false
+}
+
+// Where appends a list predicates to the ImportScanAlbumMutation builder.
+func (m *ImportScanAlbumMutation) Where(ps ...predicate.ImportScanAlbum) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ImportScanAlbumMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ImportScanAlbumMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ImportScanAlbum, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ImportScanAlbumMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ImportScanAlbumMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ImportScanAlbum).
+func (m *ImportScanAlbumMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ImportScanAlbumMutation) Fields() []string {
+	fields := make([]string, 0, 16)
+	if m.create_time != nil {
+		fields = append(fields, importscanalbum.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, importscanalbum.FieldUpdateTime)
+	}
+	if m.folder_path != nil {
+		fields = append(fields, importscanalbum.FieldFolderPath)
+	}
+	if m.tagged_artist != nil {
+		fields = append(fields, importscanalbum.FieldTaggedArtist)
+	}
+	if m.tagged_album != nil {
+		fields = append(fields, importscanalbum.FieldTaggedAlbum)
+	}
+	if m.classification != nil {
+		fields = append(fields, importscanalbum.FieldClassification)
+	}
+	if m.release_group_mbid != nil {
+		fields = append(fields, importscanalbum.FieldReleaseGroupMbid)
+	}
+	if m.artist_mbid != nil {
+		fields = append(fields, importscanalbum.FieldArtistMbid)
+	}
+	if m.candidates != nil {
+		fields = append(fields, importscanalbum.FieldCandidates)
+	}
+	if m.existing_album_id != nil {
+		fields = append(fields, importscanalbum.FieldExistingAlbumID)
+	}
+	if m.file_count != nil {
+		fields = append(fields, importscanalbum.FieldFileCount)
+	}
+	if m.decision != nil {
+		fields = append(fields, importscanalbum.FieldDecision)
+	}
+	if m.decision_release_group_mbid != nil {
+		fields = append(fields, importscanalbum.FieldDecisionReleaseGroupMbid)
+	}
+	if m.outcome != nil {
+		fields = append(fields, importscanalbum.FieldOutcome)
+	}
+	if m.outcome_message != nil {
+		fields = append(fields, importscanalbum.FieldOutcomeMessage)
+	}
+	if m.created_album_id != nil {
+		fields = append(fields, importscanalbum.FieldCreatedAlbumID)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ImportScanAlbumMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case importscanalbum.FieldCreateTime:
+		return m.CreateTime()
+	case importscanalbum.FieldUpdateTime:
+		return m.UpdateTime()
+	case importscanalbum.FieldFolderPath:
+		return m.FolderPath()
+	case importscanalbum.FieldTaggedArtist:
+		return m.TaggedArtist()
+	case importscanalbum.FieldTaggedAlbum:
+		return m.TaggedAlbum()
+	case importscanalbum.FieldClassification:
+		return m.Classification()
+	case importscanalbum.FieldReleaseGroupMbid:
+		return m.ReleaseGroupMbid()
+	case importscanalbum.FieldArtistMbid:
+		return m.ArtistMbid()
+	case importscanalbum.FieldCandidates:
+		return m.Candidates()
+	case importscanalbum.FieldExistingAlbumID:
+		return m.ExistingAlbumID()
+	case importscanalbum.FieldFileCount:
+		return m.FileCount()
+	case importscanalbum.FieldDecision:
+		return m.Decision()
+	case importscanalbum.FieldDecisionReleaseGroupMbid:
+		return m.DecisionReleaseGroupMbid()
+	case importscanalbum.FieldOutcome:
+		return m.Outcome()
+	case importscanalbum.FieldOutcomeMessage:
+		return m.OutcomeMessage()
+	case importscanalbum.FieldCreatedAlbumID:
+		return m.CreatedAlbumID()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ImportScanAlbumMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case importscanalbum.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case importscanalbum.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case importscanalbum.FieldFolderPath:
+		return m.OldFolderPath(ctx)
+	case importscanalbum.FieldTaggedArtist:
+		return m.OldTaggedArtist(ctx)
+	case importscanalbum.FieldTaggedAlbum:
+		return m.OldTaggedAlbum(ctx)
+	case importscanalbum.FieldClassification:
+		return m.OldClassification(ctx)
+	case importscanalbum.FieldReleaseGroupMbid:
+		return m.OldReleaseGroupMbid(ctx)
+	case importscanalbum.FieldArtistMbid:
+		return m.OldArtistMbid(ctx)
+	case importscanalbum.FieldCandidates:
+		return m.OldCandidates(ctx)
+	case importscanalbum.FieldExistingAlbumID:
+		return m.OldExistingAlbumID(ctx)
+	case importscanalbum.FieldFileCount:
+		return m.OldFileCount(ctx)
+	case importscanalbum.FieldDecision:
+		return m.OldDecision(ctx)
+	case importscanalbum.FieldDecisionReleaseGroupMbid:
+		return m.OldDecisionReleaseGroupMbid(ctx)
+	case importscanalbum.FieldOutcome:
+		return m.OldOutcome(ctx)
+	case importscanalbum.FieldOutcomeMessage:
+		return m.OldOutcomeMessage(ctx)
+	case importscanalbum.FieldCreatedAlbumID:
+		return m.OldCreatedAlbumID(ctx)
+	}
+	return nil, fmt.Errorf("unknown ImportScanAlbum field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImportScanAlbumMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case importscanalbum.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case importscanalbum.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case importscanalbum.FieldFolderPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFolderPath(v)
+		return nil
+	case importscanalbum.FieldTaggedArtist:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaggedArtist(v)
+		return nil
+	case importscanalbum.FieldTaggedAlbum:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaggedAlbum(v)
+		return nil
+	case importscanalbum.FieldClassification:
+		v, ok := value.(importscanalbum.Classification)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClassification(v)
+		return nil
+	case importscanalbum.FieldReleaseGroupMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleaseGroupMbid(v)
+		return nil
+	case importscanalbum.FieldArtistMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistMbid(v)
+		return nil
+	case importscanalbum.FieldCandidates:
+		v, ok := value.([]schema.ScannedAlbumCandidate)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCandidates(v)
+		return nil
+	case importscanalbum.FieldExistingAlbumID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExistingAlbumID(v)
+		return nil
+	case importscanalbum.FieldFileCount:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileCount(v)
+		return nil
+	case importscanalbum.FieldDecision:
+		v, ok := value.(importscanalbum.Decision)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecision(v)
+		return nil
+	case importscanalbum.FieldDecisionReleaseGroupMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecisionReleaseGroupMbid(v)
+		return nil
+	case importscanalbum.FieldOutcome:
+		v, ok := value.(importscanalbum.Outcome)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutcome(v)
+		return nil
+	case importscanalbum.FieldOutcomeMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutcomeMessage(v)
+		return nil
+	case importscanalbum.FieldCreatedAlbumID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAlbumID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ImportScanAlbumMutation) AddedFields() []string {
+	var fields []string
+	if m.addexisting_album_id != nil {
+		fields = append(fields, importscanalbum.FieldExistingAlbumID)
+	}
+	if m.addfile_count != nil {
+		fields = append(fields, importscanalbum.FieldFileCount)
+	}
+	if m.addcreated_album_id != nil {
+		fields = append(fields, importscanalbum.FieldCreatedAlbumID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ImportScanAlbumMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case importscanalbum.FieldExistingAlbumID:
+		return m.AddedExistingAlbumID()
+	case importscanalbum.FieldFileCount:
+		return m.AddedFileCount()
+	case importscanalbum.FieldCreatedAlbumID:
+		return m.AddedCreatedAlbumID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ImportScanAlbumMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case importscanalbum.FieldExistingAlbumID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExistingAlbumID(v)
+		return nil
+	case importscanalbum.FieldFileCount:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileCount(v)
+		return nil
+	case importscanalbum.FieldCreatedAlbumID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedAlbumID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ImportScanAlbumMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(importscanalbum.FieldTaggedArtist) {
+		fields = append(fields, importscanalbum.FieldTaggedArtist)
+	}
+	if m.FieldCleared(importscanalbum.FieldTaggedAlbum) {
+		fields = append(fields, importscanalbum.FieldTaggedAlbum)
+	}
+	if m.FieldCleared(importscanalbum.FieldReleaseGroupMbid) {
+		fields = append(fields, importscanalbum.FieldReleaseGroupMbid)
+	}
+	if m.FieldCleared(importscanalbum.FieldArtistMbid) {
+		fields = append(fields, importscanalbum.FieldArtistMbid)
+	}
+	if m.FieldCleared(importscanalbum.FieldCandidates) {
+		fields = append(fields, importscanalbum.FieldCandidates)
+	}
+	if m.FieldCleared(importscanalbum.FieldExistingAlbumID) {
+		fields = append(fields, importscanalbum.FieldExistingAlbumID)
+	}
+	if m.FieldCleared(importscanalbum.FieldDecisionReleaseGroupMbid) {
+		fields = append(fields, importscanalbum.FieldDecisionReleaseGroupMbid)
+	}
+	if m.FieldCleared(importscanalbum.FieldOutcomeMessage) {
+		fields = append(fields, importscanalbum.FieldOutcomeMessage)
+	}
+	if m.FieldCleared(importscanalbum.FieldCreatedAlbumID) {
+		fields = append(fields, importscanalbum.FieldCreatedAlbumID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ImportScanAlbumMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ImportScanAlbumMutation) ClearField(name string) error {
+	switch name {
+	case importscanalbum.FieldTaggedArtist:
+		m.ClearTaggedArtist()
+		return nil
+	case importscanalbum.FieldTaggedAlbum:
+		m.ClearTaggedAlbum()
+		return nil
+	case importscanalbum.FieldReleaseGroupMbid:
+		m.ClearReleaseGroupMbid()
+		return nil
+	case importscanalbum.FieldArtistMbid:
+		m.ClearArtistMbid()
+		return nil
+	case importscanalbum.FieldCandidates:
+		m.ClearCandidates()
+		return nil
+	case importscanalbum.FieldExistingAlbumID:
+		m.ClearExistingAlbumID()
+		return nil
+	case importscanalbum.FieldDecisionReleaseGroupMbid:
+		m.ClearDecisionReleaseGroupMbid()
+		return nil
+	case importscanalbum.FieldOutcomeMessage:
+		m.ClearOutcomeMessage()
+		return nil
+	case importscanalbum.FieldCreatedAlbumID:
+		m.ClearCreatedAlbumID()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ImportScanAlbumMutation) ResetField(name string) error {
+	switch name {
+	case importscanalbum.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case importscanalbum.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case importscanalbum.FieldFolderPath:
+		m.ResetFolderPath()
+		return nil
+	case importscanalbum.FieldTaggedArtist:
+		m.ResetTaggedArtist()
+		return nil
+	case importscanalbum.FieldTaggedAlbum:
+		m.ResetTaggedAlbum()
+		return nil
+	case importscanalbum.FieldClassification:
+		m.ResetClassification()
+		return nil
+	case importscanalbum.FieldReleaseGroupMbid:
+		m.ResetReleaseGroupMbid()
+		return nil
+	case importscanalbum.FieldArtistMbid:
+		m.ResetArtistMbid()
+		return nil
+	case importscanalbum.FieldCandidates:
+		m.ResetCandidates()
+		return nil
+	case importscanalbum.FieldExistingAlbumID:
+		m.ResetExistingAlbumID()
+		return nil
+	case importscanalbum.FieldFileCount:
+		m.ResetFileCount()
+		return nil
+	case importscanalbum.FieldDecision:
+		m.ResetDecision()
+		return nil
+	case importscanalbum.FieldDecisionReleaseGroupMbid:
+		m.ResetDecisionReleaseGroupMbid()
+		return nil
+	case importscanalbum.FieldOutcome:
+		m.ResetOutcome()
+		return nil
+	case importscanalbum.FieldOutcomeMessage:
+		m.ResetOutcomeMessage()
+		return nil
+	case importscanalbum.FieldCreatedAlbumID:
+		m.ResetCreatedAlbumID()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ImportScanAlbumMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.scan != nil {
+		edges = append(edges, importscanalbum.EdgeScan)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ImportScanAlbumMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case importscanalbum.EdgeScan:
+		if id := m.scan; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ImportScanAlbumMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ImportScanAlbumMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ImportScanAlbumMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedscan {
+		edges = append(edges, importscanalbum.EdgeScan)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ImportScanAlbumMutation) EdgeCleared(name string) bool {
+	switch name {
+	case importscanalbum.EdgeScan:
+		return m.clearedscan
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ImportScanAlbumMutation) ClearEdge(name string) error {
+	switch name {
+	case importscanalbum.EdgeScan:
+		m.ClearScan()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ImportScanAlbumMutation) ResetEdge(name string) error {
+	switch name {
+	case importscanalbum.EdgeScan:
+		m.ResetScan()
+		return nil
+	}
+	return fmt.Errorf("unknown ImportScanAlbum edge %s", name)
 }
 
 // ImportScanFileMutation represents an operation that mutates the ImportScanFile nodes in the graph.

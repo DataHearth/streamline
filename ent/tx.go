@@ -30,6 +30,8 @@ type Tx struct {
 	Episode *EpisodeClient
 	// ImportScan is the client for interacting with the ImportScan builders.
 	ImportScan *ImportScanClient
+	// ImportScanAlbum is the client for interacting with the ImportScanAlbum builders.
+	ImportScanAlbum *ImportScanAlbumClient
 	// ImportScanFile is the client for interacting with the ImportScanFile builders.
 	ImportScanFile *ImportScanFileClient
 	// ImportScanShow is the client for interacting with the ImportScanShow builders.
@@ -204,6 +206,7 @@ func (tx *Tx) init() {
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
 	tx.ImportScan = NewImportScanClient(tx.config)
+	tx.ImportScanAlbum = NewImportScanAlbumClient(tx.config)
 	tx.ImportScanFile = NewImportScanFileClient(tx.config)
 	tx.ImportScanShow = NewImportScanShowClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
