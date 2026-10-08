@@ -47,12 +47,18 @@ var _ = Describe(
 			store = db.New(client)
 			mb = metamocks.NewMockMusicProvider(GinkgoT())
 			covers := postersmocks.NewMockManager(GinkgoT())
+			covers.EXPECT().Path("albums", mock.Anything).
+				Return(filepath.Join(root, "no-cover")).Maybe()
+			covers.EXPECT().
+				Put(mock.Anything, "albums", mock.Anything, mock.Anything).
+				Return(nil).
+				Maybe()
 			covers.EXPECT().
 				Fetch(mock.Anything, "albums", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			svc = NewService(
 				store, nil, nil, nil, nil, nil, nil, root, root,
-				mb, music.NewService(store, mb, covers, nil, nil),
+				mb, music.NewService(store, mb, covers, nil, nil, nil),
 				nil,
 				nil,
 			)

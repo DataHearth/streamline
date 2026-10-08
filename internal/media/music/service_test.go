@@ -33,6 +33,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 		idx      *mockindexer.MockManager
 		dl       *mockdownload.MockDownloader
 		svc      *Service
+		cache    func(id uint32)
 	)
 
 	BeforeEach(func() {
@@ -45,7 +46,8 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 		posters = mockposters.NewMockManager(GinkgoT())
 		idx = mockindexer.NewMockManager(GinkgoT())
 		dl = mockdownload.NewMockDownloader(GinkgoT())
-		svc = NewService(db.New(client), provider, posters, idx, dl)
+		cache = stubCoverPaths(posters)
+		svc = NewService(db.New(client), provider, posters, nil, idx, dl)
 		configtest.Setup(map[string]any{
 			"library": map[string]any{"music_path": GinkgoT().TempDir()},
 			"music_quality_profiles": []map[string]any{
@@ -82,6 +84,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 				MBID:        "rg-1",
 				Title:       "Nevermind",
 				ReleaseMBID: "rel-1",
+				Barcode:     "0720642442524",
 				Tracks: []metadata.TrackInfo{
 					{
 						MBID:     "rec-1",
@@ -113,6 +116,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			).To(Equal(filepath.Join(config.Get().Library.MusicPath, "Nirvana")))
 			Expect(artist.Edges.Albums).To(HaveLen(1))
 			Expect(artist.Edges.Albums[0].Edges.Tracks).To(HaveLen(1))
+			Expect(artist.Edges.Albums[0].Barcode).To(Equal("0720642442524"))
 		})
 
 		It("rejects a duplicate mbid", func() {
@@ -135,6 +139,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			func() {
 				artist := addSeeded()
 				rg1 := artist.Edges.Albums[0]
+				cache(rg1.ID)
 				client.Album.UpdateOneID(rg1.ID).
 					SetMonitored(false).SetStatus(album.StatusSkipped).ExecX(ctx)
 

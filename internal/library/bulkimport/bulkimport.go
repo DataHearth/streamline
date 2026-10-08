@@ -61,10 +61,12 @@ type SeriesAdder interface {
 	) (*ent.TVShow, error)
 }
 
-// MusicAdder creates an artist with its discography from a MusicBrainz id.
-// Satisfied by *music.Service; used to seed artists on music-scan commit.
+// MusicAdder creates an artist with its discography from a MusicBrainz id and
+// resolves the cover of an adopted album. Satisfied by *music.Service; used on
+// music-scan commit.
 type MusicAdder interface {
 	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
+	music.CoverResolver
 }
 
 // BookAdder creates an author and its bibliography from a Hardcover id.

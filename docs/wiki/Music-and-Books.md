@@ -29,6 +29,18 @@ A stock install has no music or book quality profiles, so searches answer with `
 
 When a download completes, music is imported with corrected tags and MusicBrainz ids written into the library copy, renamed per `library.music_naming`. Because tags are written, music imports copy instead of hardlinking (and instead of moving when seeding is kept on), or the torrent you are still seeding would be corrupted. Books are never modified: an ebook is placed as one file named per `library.ebook_naming`, an audiobook as one folder per `library.audiobook_naming` with its original file names.
 
+## Album covers
+
+Streamline stores one cover per album, taken from the first of these that has an image:
+
+1. A picture embedded in one of the album's audio files.
+2. A `cover`, `folder` or `front` image (`.jpg`, `.jpeg` or `.png`, any case) in the folder of the album's first file.
+3. Deezer, looked up by the album's barcode as MusicBrainz records it.
+4. Deezer, searched by artist and title; the result is used only when Deezer's artist matches yours.
+5. The Cover Art Archive front cover for the release group.
+
+Deezer needs no account or key. The first two sources apply once the album's files are on disk, after an adoption or an import, and they replace a cover fetched earlier, since your own artwork wins. The other three only run while an album has no cover, and an artist refresh retries the albums that still have none. Albums added before barcodes were stored skip step 3 and go straight to the search.
+
 ## Automation
 
 RSS sync, the missing search and the metadata refresh ([Scheduled Jobs](Scheduled-Jobs)) cover albums and book slots alongside movies and episodes. Feed items are routed by indexer category: 3000-range for music, 3030 for audiobooks and 7000-range for ebooks. Artists and authors are refreshed a few at a time per run to respect the upstream rate limits, and new releases inherit the artist's monitoring or the author's monitor policy.

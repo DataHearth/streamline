@@ -200,6 +200,9 @@ func (w *Worker) importAlbumRecord(
 		)
 	}
 	dropAside(ctx, aside)
+	if w.covers != nil {
+		w.covers.ResolveCoversInBackground(ctx, alb.ID)
+	}
 
 	if gaps := missingTracks(alb, rows); gaps > 0 {
 		slog.WarnContext(ctx, "album imported with tracks still missing",

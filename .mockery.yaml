@@ -51,6 +51,7 @@ packages:
       Manager: {}
   github.com/datahearth/streamline/internal/media/music:
     interfaces:
+      CoverResolver: {}
       Adder: {}
       Manager: {}
       MetadataRefresher: {}

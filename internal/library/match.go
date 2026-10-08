@@ -39,6 +39,14 @@ func normalizeTitle(s string) string {
 // TitleMatches reports whether two titles are equal after normalization.
 func TitleMatches(a, b string) bool { return normalizeTitle(a) == normalizeTitle(b) }
 
+// TitleMatchesStrict is TitleMatches for callers deciding whether two names
+// denote the same thing: a name that normalizes to nothing (non-Latin script,
+// "!!!") matches nothing, where TitleMatches would call two of them equal.
+func TitleMatchesStrict(a, b string) bool {
+	na, nb := normalizeTitle(a), normalizeTitle(b)
+	return na != "" && na == nb
+}
+
 // TitleMatchesAny reports whether title equals name or any of alts after
 // normalization. alts are alternate names for the same work (TVDB aliases and
 // translations), which is the only way a romaji folder name reaches an entry

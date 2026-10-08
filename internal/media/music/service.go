@@ -21,7 +21,6 @@ import (
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -62,6 +61,7 @@ type Service struct {
 	db       db.Store
 	metadata metadata.MusicProvider
 	posters  posters.Manager
+	covers   metadata.CoverProvider
 	indexer  indexer.Manager
 	download download.Downloader
 }
@@ -70,11 +70,13 @@ func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
 	p posters.Manager,
+	covers metadata.CoverProvider,
 	idx indexer.Manager,
 	dl download.Downloader,
 ) *Service {
 	return &Service{
-		db: store, metadata: meta, posters: p, indexer: idx, download: dl,
+		db: store, metadata: meta, posters: p, covers: covers,
+		indexer: idx, download: dl,
 	}
 }
 
@@ -94,7 +96,7 @@ type AddParams struct {
 }
 
 // Add fetches the artist and its discography, creates the Artist, Album and
-// Track rows in one transaction, then fetches album cover art in the
+// Track rows in one transaction, then resolves album cover art in the
 // background. MusicBrainz is limited to one request per second, so a large
 // discography makes this slow by design.
 func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
@@ -140,7 +142,11 @@ func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 	}
 	span.SetAttributes(attribute.Int("artist.id", int(artist.ID)))
 
-	s.fetchPosters(ctx, artist.Edges.Albums)
+	ids := make([]uint32, len(artist.Edges.Albums))
+	for i, a := range artist.Edges.Albums {
+		ids[i] = a.ID
+	}
+	s.ResolveCoversInBackground(ctx, ids...)
 	slog.InfoContext(ctx, "artist added",
 		"artist.id", artist.ID, "mbid", artist.Mbid,
 		"albums", len(artist.Edges.Albums))
@@ -178,28 +184,6 @@ func (s *Service) albumSeeds(
 		})
 	}
 	return seeds, nil
-}
-
-// fetchPosters is best-effort and runs after the commit: a Cover Art Archive
-// 404 is routine and must not fail the add.
-func (s *Service) fetchPosters(ctx context.Context, albums []*ent.Album) {
-	if len(albums) == 0 {
-		return
-	}
-	bg := context.WithoutCancel(ctx)
-	go func() {
-		defer observability.RecoverPanic(bg, "music.fetch_posters", nil)
-		for _, a := range albums {
-			src := metadata.CoverArtURL(a.Mbid)
-			if src == "" {
-				continue
-			}
-			if err := s.posters.Fetch(bg, "albums", a.ID, src); err != nil {
-				slog.WarnContext(bg, "album cover fetch failed",
-					"album.id", a.ID, "error", err)
-			}
-		}
-	}()
 }
 
 func (s *Service) List(
@@ -396,13 +380,13 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	var added []*ent.Album
+	var uncovered []uint32
 	for _, a := range updated.Edges.Albums {
-		if !known[a.Mbid] {
-			added = append(added, a)
+		if !s.hasCover(a.ID) {
+			uncovered = append(uncovered, a.ID)
 		}
 	}
-	s.fetchPosters(ctx, added)
+	s.ResolveCoversInBackground(ctx, uncovered...)
 	return updated, nil
 }
 

@@ -134,6 +134,7 @@ func (s *Service) commitAlbum(
 		notes = append(notes, fmt.Sprintf(
 			"%d of %d tracks have no file", uncovered, len(alb.Edges.Tracks)))
 	}
+	s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
 	slog.InfoContext(ctx, "album adopted",
 		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched)
 	return entimportscanalbum.OutcomeCreated, strings.Join(notes, "; "), alb.ID

@@ -19,6 +19,7 @@ import (
 	mockdl "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -181,6 +182,24 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		Expect(info.Title).To(Equal(albumTracks[0].title))
 		Expect(info.Track).To(Equal(uint16(1)))
 		Expect(logs.String()).To(ContainSubstring("tracks still missing"))
+	})
+
+	It("resolves the album's cover once its files are recorded", func() {
+		covers := musicmocks.NewMockCoverResolver(GinkgoT())
+		w.covers = covers
+		for i, t := range albumTracks {
+			seedTrackFile(
+				dlDir, string(rune('a'+i))+".mp3", "tagged.mp3", t.position, t.title,
+			)
+		}
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		storeMk.EXPECT().
+			RecordAlbumImportSuccess(mock.Anything, mock.Anything).Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+		covers.EXPECT().ResolveCoversInBackground(mock.Anything, uint32(5)).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
 	It("imports a full album without reporting a gap", func() {

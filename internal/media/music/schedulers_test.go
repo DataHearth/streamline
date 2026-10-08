@@ -106,7 +106,8 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 		posters = mockposters.NewMockManager(GinkgoT())
 		idx = mockindexer.NewMockManager(GinkgoT())
 		dl = mockdownload.NewMockDownloader(GinkgoT())
-		svc = NewService(db.New(client), provider, posters, idx, dl)
+		stubCoverPaths(posters)
+		svc = NewService(db.New(client), provider, posters, nil, idx, dl)
 		setupConfig(true)
 	})
 

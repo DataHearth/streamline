@@ -27,6 +27,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -53,6 +54,8 @@ type Deps struct {
 	Download    download.Downloader
 	MediaServer mediaserver.Refresher
 	Prober      ffmpeg.Prober
+	// Covers is optional: without it an imported album gets no cover resolved.
+	Covers music.CoverResolver
 }
 
 const (
@@ -61,11 +64,12 @@ const (
 )
 
 type Worker struct {
-	db    db.Store
-	lib   *library.ImportService
-	dl    download.Downloader
-	ms    mediaserver.Refresher
-	probe ffmpeg.Prober
+	db     db.Store
+	lib    *library.ImportService
+	dl     download.Downloader
+	ms     mediaserver.Refresher
+	probe  ffmpeg.Prober
+	covers music.CoverResolver
 
 	ch   chan uint32
 	stop chan struct{}
@@ -97,6 +101,7 @@ func NewWorker(d Deps) *Worker {
 		dl:       d.Download,
 		ms:       d.MediaServer,
 		probe:    d.Prober,
+		covers:   d.Covers,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
