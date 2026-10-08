@@ -20,5 +20,11 @@ func New(client *ent.Client) *Handler {
 func (h *Handler) Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(h.requireAuth)
+	r.Get("/", h.root)
+	r.Get("/authors", h.authors)
+	r.Get("/authors/{id}", h.authorBooks)
+	r.Get("/recent", h.recent)
+	r.Get("/search.xml", h.searchDescription)
+	r.Get("/search", h.search)
 	return r
 }
