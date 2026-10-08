@@ -298,3 +298,188 @@ var _ = Describe("Music import scan store", Label("integration", "db"), func() {
 		})
 	})
 })
+
+var _ = Describe("Music import scan listing", Label("integration", "db"), func() {
+	var (
+		ctx   context.Context
+		store *DB
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { client.Close() })
+		store = New(client)
+	})
+
+	newScan := func() *ent.ImportScan {
+		GinkgoHelper()
+		scan, err := store.CreateImportScan(ctx, CreateImportScanParams{
+			SourcePath: "/music",
+			Mode:       entimportscan.ModeInPlace,
+			Kind:       entimportscan.KindMusic,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		return scan
+	}
+
+	seed := func(scanID uint32, albums ...CreateImportScanAlbumParams) {
+		GinkgoHelper()
+		Expect(store.BulkCreateImportScanAlbums(ctx, scanID, albums)).To(Succeed())
+	}
+
+	It("filters by classification and query and reports the total", func() {
+		scan := newScan()
+		seed(scan.ID,
+			CreateImportScanAlbumParams{
+				FolderPath:     "/music/nirvana/nevermind",
+				TaggedArtist:   "Nirvana",
+				TaggedAlbum:    "Nevermind",
+				Classification: entimportscanalbum.ClassificationConfirmed,
+			},
+			CreateImportScanAlbumParams{
+				FolderPath:     "/music/nirvana/in-utero",
+				TaggedArtist:   "Nirvana",
+				TaggedAlbum:    "In Utero",
+				Classification: entimportscanalbum.ClassificationAmbiguous,
+			},
+			CreateImportScanAlbumParams{
+				FolderPath:     "/music/other/x",
+				TaggedArtist:   "Other",
+				TaggedAlbum:    "Zed",
+				Classification: entimportscanalbum.ClassificationUnmatched,
+			},
+		)
+
+		rows, total, err := store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{ScanID: scan.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(Equal(uint32(3)))
+		Expect(rows[0].TaggedAlbum).To(Equal("In Utero"))
+
+		rows, total, err = store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{
+				ScanID:         scan.ID,
+				Classification: entimportscanalbum.ClassificationAmbiguous,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(Equal(uint32(1)))
+		Expect(rows).To(HaveLen(1))
+
+		_, total, err = store.ListImportScanAlbums(ctx, ListImportScanAlbumsParams{
+			ScanID: scan.ID, Query: "NIRVANA",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(Equal(uint32(2)))
+
+		_, total, err = store.ListImportScanAlbums(ctx, ListImportScanAlbumsParams{
+			ScanID: scan.ID, Query: "zed",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(Equal(uint32(1)))
+	})
+
+	It("paginates while keeping the full total", func() {
+		scan := newScan()
+		seed(
+			scan.ID,
+			CreateImportScanAlbumParams{
+				FolderPath:     "/a",
+				TaggedAlbum:    "A",
+				Classification: entimportscanalbum.ClassificationConfirmed,
+			},
+			CreateImportScanAlbumParams{
+				FolderPath:     "/b",
+				TaggedAlbum:    "B",
+				Classification: entimportscanalbum.ClassificationConfirmed,
+			},
+			CreateImportScanAlbumParams{
+				FolderPath:     "/c",
+				TaggedAlbum:    "C",
+				Classification: entimportscanalbum.ClassificationConfirmed,
+			},
+		)
+		rows, total, err := store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{
+				ScanID: scan.ID, Offset: 1, Limit: 1,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(total).To(Equal(uint32(3)))
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].TaggedAlbum).To(Equal("B"))
+	})
+
+	It("scopes list, find and decision update to the scan", func() {
+		scanA, scanB := newScan(), newScan()
+		seed(scanA.ID, CreateImportScanAlbumParams{
+			FolderPath:     "/a",
+			TaggedAlbum:    "A",
+			Classification: entimportscanalbum.ClassificationAmbiguous,
+		})
+		seed(scanB.ID, CreateImportScanAlbumParams{
+			FolderPath:     "/b",
+			TaggedAlbum:    "B",
+			Classification: entimportscanalbum.ClassificationAmbiguous,
+		})
+		inA, _, err := store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{ScanID: scanA.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(inA).To(HaveLen(1))
+		inB, _, err := store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{ScanID: scanB.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = store.FindImportScanAlbum(ctx, scanA.ID, inB[0].ID)
+		Expect(err).To(HaveOccurred())
+
+		err = store.UpdateImportScanAlbumDecision(
+			ctx, scanA.ID, inB[0].ID, entimportscanalbum.DecisionAccept, nil,
+		)
+		Expect(err).To(MatchError(ErrImportScanAlbumNotFound))
+		unchanged, err := store.FindImportScanAlbum(ctx, scanB.ID, inB[0].ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(unchanged.Decision).To(Equal(entimportscanalbum.DecisionPending))
+	})
+
+	It("records a decision with a release group and clears it on nil", func() {
+		scan := newScan()
+		seed(scan.ID, CreateImportScanAlbumParams{
+			FolderPath:     "/a",
+			TaggedAlbum:    "A",
+			Classification: entimportscanalbum.ClassificationAmbiguous,
+		})
+		rows, _, err := store.ListImportScanAlbums(
+			ctx,
+			ListImportScanAlbumsParams{ScanID: scan.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		id := rows[0].ID
+
+		mbid := "rg-9"
+		Expect(store.UpdateImportScanAlbumDecision(
+			ctx, scan.ID, id, entimportscanalbum.DecisionAccept, &mbid,
+		)).To(Succeed())
+		got, err := store.FindImportScanAlbum(ctx, scan.ID, id)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.Decision).To(Equal(entimportscanalbum.DecisionAccept))
+		Expect(got.DecisionReleaseGroupMbid).To(Equal("rg-9"))
+
+		Expect(store.UpdateImportScanAlbumDecision(
+			ctx, scan.ID, id, entimportscanalbum.DecisionSkip, nil,
+		)).To(Succeed())
+		got, err = store.FindImportScanAlbum(ctx, scan.ID, id)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.DecisionReleaseGroupMbid).To(BeEmpty())
+	})
+})

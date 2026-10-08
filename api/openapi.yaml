@@ -3506,6 +3506,9 @@ paths:
           $ref: "#/components/responses/Forbidden"
     post:
       operationId: StartImport
+      description: |
+        Answers 503 when a `book` scan is requested without a Hardcover API
+        key.
       tags: [library]
       requestBody:
         $ref: "#/components/requestBodies/StartImport"
@@ -3520,6 +3523,8 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /library/imports/{id}:
     parameters:
@@ -3568,6 +3573,9 @@ paths:
       - $ref: "#/components/parameters/ResourceID"
     post:
       operationId: CommitImport
+      description: |
+        Answers 503 when a `book` scan is committed without a Hardcover API
+        key.
       tags: [library]
       responses:
         "202":
@@ -3578,6 +3586,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /library/imports/{id}/files:
     parameters:
@@ -3659,6 +3669,84 @@ paths:
 
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+  /library/imports/{id}/albums:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: ListImportAlbums
+      tags: [library]
+      parameters:
+        - $ref: "#/components/parameters/ImportClassification"
+        - $ref: "#/components/parameters/ImportQuery"
+        - $ref: "#/components/parameters/ImportPage"
+        - $ref: "#/components/parameters/ImportFileLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanAlbumList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/imports/{id}/albums/{albumId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/ImportScanAlbumID"
+    patch:
+      operationId: UpdateImportAlbumDecision
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateImportAlbumDecision"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanAlbum"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+  /library/imports/{id}/books:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: ListImportBooks
+      tags: [library]
+      parameters:
+        - $ref: "#/components/parameters/ImportClassification"
+        - $ref: "#/components/parameters/ImportQuery"
+        - $ref: "#/components/parameters/ImportPage"
+        - $ref: "#/components/parameters/ImportFileLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanBookList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /library/imports/{id}/books/{bookId}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/ImportScanBookID"
+    patch:
+      operationId: UpdateImportBookDecision
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateImportBookDecision"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImportScanBook"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /library/imports/{id}/decisions:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -3668,7 +3756,8 @@ paths:
       description: |
         Sets `decision` on every row of the scan, optionally narrowed by
         `classification` and/or an explicit `ids` list. Dispatches on the
-        scan's kind, so it covers movie files and series shows alike.
+        scan's kind, so it covers movie files, series shows, albums and
+        books alike.
 
         With neither filter it applies to the whole scan. This is the bulk
         form of the per-row PATCH endpoints, which otherwise cost one
@@ -4633,6 +4722,22 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    ImportScanAlbumID:
+      name: albumId
+      in: path
+      required: true
+      description: Target ImportScanAlbum ID scoped to the parent scan.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ImportScanBookID:
+      name: bookId
+      in: path
+      required: true
+      description: Target ImportScanBook ID scoped to the parent scan.
+      schema:
+        type: integer
+        x-go-type: uint32
     ImportPage:
       name: page
       in: query
@@ -5269,6 +5374,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanShowDecisionRequest"
+
+    UpdateImportAlbumDecision:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanAlbumDecisionRequest"
+
+    UpdateImportBookDecision:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanBookDecisionRequest"
 
     BulkUpdateImportDecisions:
       required: true
@@ -5914,6 +6033,34 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ImportScanShowList"
+
+    ImportScanAlbum:
+      description: A single import scan album row.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanAlbum"
+
+    ImportScanAlbumList:
+      description: Paginated list of import scan albums.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanAlbumList"
+
+    ImportScanBook:
+      description: A single import scan book row.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanBook"
+
+    ImportScanBookList:
+      description: Paginated list of import scan books.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImportScanBookList"
 
     PathMigration:
       description: State of a library path migration.
@@ -9854,8 +10001,10 @@ components:
           type: string
         kind:
           type: string
-          enum: [movie, series]
-          description: Whether this scan reviews movie files or series folders.
+          enum: [movie, series, music, book]
+          description: |
+            Whether this scan reviews movie files, series folders, album
+            folders or book items.
         mode:
           type: string
           enum: [in_place, rename]
@@ -9973,11 +10122,14 @@ components:
           type: string
         kind:
           type: string
-          enum: [movie, series]
+          enum: [movie, series, music, book]
           default: movie
           description: |
             Media type to scan for. `movie` matches each file against TMDB;
-            `series` matches each top-level folder against TVDB.
+            `series` matches each top-level folder against TVDB; `music`
+            scans album folders against MusicBrainz; `book` scans ebook and
+            audiobook items against Hardcover. `mode=rename` is rejected for
+            `music`.
         mode:
           type: string
           enum: [in_place, rename]
@@ -10257,6 +10409,196 @@ components:
           type: string
           enum: [pending, accept, skip]
         tvdb_id:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanAlbumCandidate:
+      type: object
+      required: [release_group_mbid, title]
+      properties:
+        release_group_mbid:
+          type: string
+        artist_mbid:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+
+    ImportScanAlbum:
+      type: object
+      required: [id, folder_path, classification, file_count, decision, outcome]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        folder_path:
+          type: string
+        tagged_artist:
+          type: string
+        tagged_album:
+          type: string
+        classification:
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        release_group_mbid:
+          type: string
+        artist_mbid:
+          type: string
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanAlbumCandidate"
+        existing_album_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        file_count:
+          type: integer
+          x-go-type: uint16
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        decision_release_group_mbid:
+          type: string
+        outcome:
+          type: string
+          enum: [pending, created, failed]
+        outcome_message:
+          type: string
+        created_album_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ImportScanAlbumList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanAlbum"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanAlbumDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        release_group_mbid:
+          type: string
+
+    ImportScanBookCandidate:
+      type: object
+      required: [book_hardcover_id, author_hardcover_id, title]
+      properties:
+        book_hardcover_id:
+          type: integer
+          x-go-type: uint32
+        author_hardcover_id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        author:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+
+    ImportScanBook:
+      type: object
+      required: [id, file_paths, slot, classification, decision, outcome]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        file_paths:
+          type: array
+          items:
+            type: string
+        slot:
+          type: string
+          enum: [ebook, audiobook]
+        parsed_title:
+          type: string
+        parsed_author:
+          type: string
+        parsed_isbn:
+          type: string
+        classification:
+          type: string
+          enum: [confirmed, ambiguous, unmatched, existing]
+        book_hardcover_id:
+          type: integer
+          x-go-type: uint32
+        author_hardcover_id:
+          type: integer
+          x-go-type: uint32
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanBookCandidate"
+        existing_book_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        decision_book_hardcover_id:
+          type: integer
+          x-go-type: uint32
+        outcome:
+          type: string
+          enum: [pending, created, failed]
+        outcome_message:
+          type: string
+        created_book_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ImportScanBookList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportScanBook"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    ImportScanBookDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [pending, accept, skip]
+        book_hardcover_id:
           type: integer
           x-go-type: uint32
 

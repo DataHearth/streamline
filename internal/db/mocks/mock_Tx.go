@@ -6523,6 +6523,154 @@ func (_c *MockTx_FindImportScan_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// FindImportScanAlbum provides a mock function for the type MockTx
+func (_mock *MockTx) FindImportScanAlbum(ctx context.Context, scanID uint32, albumID uint32) (*ent.ImportScanAlbum, error) {
+	ret := _mock.Called(ctx, scanID, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindImportScanAlbum")
+	}
+
+	var r0 *ent.ImportScanAlbum
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.ImportScanAlbum, error)); ok {
+		return returnFunc(ctx, scanID, albumID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.ImportScanAlbum); ok {
+		r0 = returnFunc(ctx, scanID, albumID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.ImportScanAlbum)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, scanID, albumID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindImportScanAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindImportScanAlbum'
+type MockTx_FindImportScanAlbum_Call struct {
+	*mock.Call
+}
+
+// FindImportScanAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - albumID uint32
+func (_e *MockTx_Expecter) FindImportScanAlbum(ctx any, scanID any, albumID any) *MockTx_FindImportScanAlbum_Call {
+	return &MockTx_FindImportScanAlbum_Call{Call: _e.mock.On("FindImportScanAlbum", ctx, scanID, albumID)}
+}
+
+func (_c *MockTx_FindImportScanAlbum_Call) Run(run func(ctx context.Context, scanID uint32, albumID uint32)) *MockTx_FindImportScanAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindImportScanAlbum_Call) Return(importScanAlbum *ent.ImportScanAlbum, err error) *MockTx_FindImportScanAlbum_Call {
+	_c.Call.Return(importScanAlbum, err)
+	return _c
+}
+
+func (_c *MockTx_FindImportScanAlbum_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, albumID uint32) (*ent.ImportScanAlbum, error)) *MockTx_FindImportScanAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindImportScanBook provides a mock function for the type MockTx
+func (_mock *MockTx) FindImportScanBook(ctx context.Context, scanID uint32, bookID uint32) (*ent.ImportScanBook, error) {
+	ret := _mock.Called(ctx, scanID, bookID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindImportScanBook")
+	}
+
+	var r0 *ent.ImportScanBook
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*ent.ImportScanBook, error)); ok {
+		return returnFunc(ctx, scanID, bookID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) *ent.ImportScanBook); ok {
+		r0 = returnFunc(ctx, scanID, bookID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.ImportScanBook)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, scanID, bookID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_FindImportScanBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindImportScanBook'
+type MockTx_FindImportScanBook_Call struct {
+	*mock.Call
+}
+
+// FindImportScanBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - bookID uint32
+func (_e *MockTx_Expecter) FindImportScanBook(ctx any, scanID any, bookID any) *MockTx_FindImportScanBook_Call {
+	return &MockTx_FindImportScanBook_Call{Call: _e.mock.On("FindImportScanBook", ctx, scanID, bookID)}
+}
+
+func (_c *MockTx_FindImportScanBook_Call) Run(run func(ctx context.Context, scanID uint32, bookID uint32)) *MockTx_FindImportScanBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_FindImportScanBook_Call) Return(importScanBook *ent.ImportScanBook, err error) *MockTx_FindImportScanBook_Call {
+	_c.Call.Return(importScanBook, err)
+	return _c
+}
+
+func (_c *MockTx_FindImportScanBook_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, bookID uint32) (*ent.ImportScanBook, error)) *MockTx_FindImportScanBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindImportScanFile provides a mock function for the type MockTx
 func (_mock *MockTx) FindImportScanFile(ctx context.Context, scanID uint32, fileID uint32) (*ent.ImportScanFile, error) {
 	ret := _mock.Called(ctx, scanID, fileID)
@@ -9402,6 +9550,80 @@ func (_c *MockTx_ListEligibleMoviesForSync_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ListImportScanAlbums provides a mock function for the type MockTx
+func (_mock *MockTx) ListImportScanAlbums(ctx context.Context, p db.ListImportScanAlbumsParams) ([]*ent.ImportScanAlbum, uint32, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListImportScanAlbums")
+	}
+
+	var r0 []*ent.ImportScanAlbum
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanAlbumsParams) ([]*ent.ImportScanAlbum, uint32, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanAlbumsParams) []*ent.ImportScanAlbum); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.ImportScanAlbum)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListImportScanAlbumsParams) uint32); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Get(1).(uint32)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListImportScanAlbumsParams) error); ok {
+		r2 = returnFunc(ctx, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockTx_ListImportScanAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListImportScanAlbums'
+type MockTx_ListImportScanAlbums_Call struct {
+	*mock.Call
+}
+
+// ListImportScanAlbums is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.ListImportScanAlbumsParams
+func (_e *MockTx_Expecter) ListImportScanAlbums(ctx any, p any) *MockTx_ListImportScanAlbums_Call {
+	return &MockTx_ListImportScanAlbums_Call{Call: _e.mock.On("ListImportScanAlbums", ctx, p)}
+}
+
+func (_c *MockTx_ListImportScanAlbums_Call) Run(run func(ctx context.Context, p db.ListImportScanAlbumsParams)) *MockTx_ListImportScanAlbums_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListImportScanAlbumsParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListImportScanAlbumsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListImportScanAlbums_Call) Return(importScanAlbums []*ent.ImportScanAlbum, v uint32, err error) *MockTx_ListImportScanAlbums_Call {
+	_c.Call.Return(importScanAlbums, v, err)
+	return _c
+}
+
+func (_c *MockTx_ListImportScanAlbums_Call) RunAndReturn(run func(ctx context.Context, p db.ListImportScanAlbumsParams) ([]*ent.ImportScanAlbum, uint32, error)) *MockTx_ListImportScanAlbums_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListImportScanAlbumsForCommit provides a mock function for the type MockTx
 func (_mock *MockTx) ListImportScanAlbumsForCommit(ctx context.Context, scanID uint32) ([]*ent.ImportScanAlbum, error) {
 	ret := _mock.Called(ctx, scanID)
@@ -9466,6 +9688,80 @@ func (_c *MockTx_ListImportScanAlbumsForCommit_Call) Return(importScanAlbums []*
 }
 
 func (_c *MockTx_ListImportScanAlbumsForCommit_Call) RunAndReturn(run func(ctx context.Context, scanID uint32) ([]*ent.ImportScanAlbum, error)) *MockTx_ListImportScanAlbumsForCommit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListImportScanBooks provides a mock function for the type MockTx
+func (_mock *MockTx) ListImportScanBooks(ctx context.Context, p db.ListImportScanBooksParams) ([]*ent.ImportScanBook, uint32, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListImportScanBooks")
+	}
+
+	var r0 []*ent.ImportScanBook
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanBooksParams) ([]*ent.ImportScanBook, uint32, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListImportScanBooksParams) []*ent.ImportScanBook); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.ImportScanBook)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListImportScanBooksParams) uint32); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Get(1).(uint32)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ListImportScanBooksParams) error); ok {
+		r2 = returnFunc(ctx, p)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockTx_ListImportScanBooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListImportScanBooks'
+type MockTx_ListImportScanBooks_Call struct {
+	*mock.Call
+}
+
+// ListImportScanBooks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.ListImportScanBooksParams
+func (_e *MockTx_Expecter) ListImportScanBooks(ctx any, p any) *MockTx_ListImportScanBooks_Call {
+	return &MockTx_ListImportScanBooks_Call{Call: _e.mock.On("ListImportScanBooks", ctx, p)}
+}
+
+func (_c *MockTx_ListImportScanBooks_Call) Run(run func(ctx context.Context, p db.ListImportScanBooksParams)) *MockTx_ListImportScanBooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListImportScanBooksParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListImportScanBooksParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListImportScanBooks_Call) Return(importScanBooks []*ent.ImportScanBook, v uint32, err error) *MockTx_ListImportScanBooks_Call {
+	_c.Call.Return(importScanBooks, v, err)
+	return _c
+}
+
+func (_c *MockTx_ListImportScanBooks_Call) RunAndReturn(run func(ctx context.Context, p db.ListImportScanBooksParams) ([]*ent.ImportScanBook, uint32, error)) *MockTx_ListImportScanBooks_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -17286,6 +17582,81 @@ func (_c *MockTx_UpdateDownloadRecordStatus_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// UpdateImportScanAlbumDecision provides a mock function for the type MockTx
+func (_mock *MockTx) UpdateImportScanAlbumDecision(ctx context.Context, scanID uint32, albumID uint32, decision importscanalbum.Decision, releaseGroupMBID *string) error {
+	ret := _mock.Called(ctx, scanID, albumID, decision, releaseGroupMBID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateImportScanAlbumDecision")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanalbum.Decision, *string) error); ok {
+		r0 = returnFunc(ctx, scanID, albumID, decision, releaseGroupMBID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_UpdateImportScanAlbumDecision_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateImportScanAlbumDecision'
+type MockTx_UpdateImportScanAlbumDecision_Call struct {
+	*mock.Call
+}
+
+// UpdateImportScanAlbumDecision is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - albumID uint32
+//   - decision importscanalbum.Decision
+//   - releaseGroupMBID *string
+func (_e *MockTx_Expecter) UpdateImportScanAlbumDecision(ctx any, scanID any, albumID any, decision any, releaseGroupMBID any) *MockTx_UpdateImportScanAlbumDecision_Call {
+	return &MockTx_UpdateImportScanAlbumDecision_Call{Call: _e.mock.On("UpdateImportScanAlbumDecision", ctx, scanID, albumID, decision, releaseGroupMBID)}
+}
+
+func (_c *MockTx_UpdateImportScanAlbumDecision_Call) Run(run func(ctx context.Context, scanID uint32, albumID uint32, decision importscanalbum.Decision, releaseGroupMBID *string)) *MockTx_UpdateImportScanAlbumDecision_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 importscanalbum.Decision
+		if args[3] != nil {
+			arg3 = args[3].(importscanalbum.Decision)
+		}
+		var arg4 *string
+		if args[4] != nil {
+			arg4 = args[4].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_UpdateImportScanAlbumDecision_Call) Return(err error) *MockTx_UpdateImportScanAlbumDecision_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_UpdateImportScanAlbumDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, albumID uint32, decision importscanalbum.Decision, releaseGroupMBID *string) error) *MockTx_UpdateImportScanAlbumDecision_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateImportScanAlbumOutcome provides a mock function for the type MockTx
 func (_mock *MockTx) UpdateImportScanAlbumOutcome(ctx context.Context, id uint32, outcome importscanalbum.Outcome, opts db.UpdateScanAlbumOutcomeOpts) error {
 	ret := _mock.Called(ctx, id, outcome, opts)
@@ -17351,6 +17722,81 @@ func (_c *MockTx_UpdateImportScanAlbumOutcome_Call) Return(err error) *MockTx_Up
 }
 
 func (_c *MockTx_UpdateImportScanAlbumOutcome_Call) RunAndReturn(run func(ctx context.Context, id uint32, outcome importscanalbum.Outcome, opts db.UpdateScanAlbumOutcomeOpts) error) *MockTx_UpdateImportScanAlbumOutcome_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateImportScanBookDecision provides a mock function for the type MockTx
+func (_mock *MockTx) UpdateImportScanBookDecision(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32) error {
+	ret := _mock.Called(ctx, scanID, bookID, decision, hardcoverID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateImportScanBookDecision")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, importscanbook.Decision, *uint32) error); ok {
+		r0 = returnFunc(ctx, scanID, bookID, decision, hardcoverID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_UpdateImportScanBookDecision_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateImportScanBookDecision'
+type MockTx_UpdateImportScanBookDecision_Call struct {
+	*mock.Call
+}
+
+// UpdateImportScanBookDecision is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - bookID uint32
+//   - decision importscanbook.Decision
+//   - hardcoverID *uint32
+func (_e *MockTx_Expecter) UpdateImportScanBookDecision(ctx any, scanID any, bookID any, decision any, hardcoverID any) *MockTx_UpdateImportScanBookDecision_Call {
+	return &MockTx_UpdateImportScanBookDecision_Call{Call: _e.mock.On("UpdateImportScanBookDecision", ctx, scanID, bookID, decision, hardcoverID)}
+}
+
+func (_c *MockTx_UpdateImportScanBookDecision_Call) Run(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32)) *MockTx_UpdateImportScanBookDecision_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 importscanbook.Decision
+		if args[3] != nil {
+			arg3 = args[3].(importscanbook.Decision)
+		}
+		var arg4 *uint32
+		if args[4] != nil {
+			arg4 = args[4].(*uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_UpdateImportScanBookDecision_Call) Return(err error) *MockTx_UpdateImportScanBookDecision_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_UpdateImportScanBookDecision_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, bookID uint32, decision importscanbook.Decision, hardcoverID *uint32) error) *MockTx_UpdateImportScanBookDecision_Call {
 	_c.Call.Return(run)
 	return _c
 }

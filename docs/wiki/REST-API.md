@@ -350,12 +350,14 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` `POST` | `/library/imports` | List / start an import scan | 🔒 Admin |
 | `GET` `DELETE` | `/library/imports/{id}` | Fetch / delete a scan | 🔒 Admin |
 | `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan | 🔒 Admin |
-| `GET` | `/library/imports/{id}/files` · `/shows` | List scanned rows | 🔒 Admin |
-| `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` | Update a row's match | 🔒 Admin |
+| `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows | 🔒 Admin |
+| `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
+
+An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` scans album folders against MusicBrainz and rejects `mode=rename` with `422`. `book` scans ebook and audiobook items against Hardcover; starting or committing one without a Hardcover API key answers `503`.
 
 ### Auth and users
 

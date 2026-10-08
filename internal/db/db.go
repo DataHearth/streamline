@@ -762,6 +762,22 @@ type Store interface {
 		classification importscanbook.Classification,
 		ids []uint32,
 	) (int, error)
+	ListImportScanBooks(
+		ctx context.Context,
+		p ListImportScanBooksParams,
+	) ([]*ent.ImportScanBook, uint32, error)
+	FindImportScanBook(
+		ctx context.Context,
+		scanID, bookID uint32,
+	) (*ent.ImportScanBook, error)
+	// UpdateImportScanBookDecision reports ErrImportScanBookNotFound when
+	// bookID is unknown or belongs to another scan.
+	UpdateImportScanBookDecision(
+		ctx context.Context,
+		scanID, bookID uint32,
+		decision importscanbook.Decision,
+		hardcoverID *uint32,
+	) error
 	UpdateImportScanBookOutcome(
 		ctx context.Context,
 		id uint32,
@@ -828,6 +844,22 @@ type Store interface {
 		ctx context.Context,
 		scanID uint32,
 	) ([]*ent.ImportScanAlbum, error)
+	ListImportScanAlbums(
+		ctx context.Context,
+		p ListImportScanAlbumsParams,
+	) ([]*ent.ImportScanAlbum, uint32, error)
+	FindImportScanAlbum(
+		ctx context.Context,
+		scanID, albumID uint32,
+	) (*ent.ImportScanAlbum, error)
+	// UpdateImportScanAlbumDecision reports ErrImportScanAlbumNotFound when
+	// albumID is unknown or belongs to another scan.
+	UpdateImportScanAlbumDecision(
+		ctx context.Context,
+		scanID, albumID uint32,
+		decision importscanalbum.Decision,
+		releaseGroupMBID *string,
+	) error
 	UpdateImportScanAlbumOutcome(
 		ctx context.Context,
 		id uint32,

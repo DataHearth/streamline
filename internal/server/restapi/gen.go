@@ -941,14 +941,20 @@ func (e ImportScanImportMode) Valid() bool {
 
 // Defines values for ImportScanKind.
 const (
+	ImportScanKindBook   ImportScanKind = "book"
 	ImportScanKindMovie  ImportScanKind = "movie"
+	ImportScanKindMusic  ImportScanKind = "music"
 	ImportScanKindSeries ImportScanKind = "series"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanKind enum.
 func (e ImportScanKind) Valid() bool {
 	switch e {
+	case ImportScanKindBook:
+		return true
 	case ImportScanKindMovie:
+		return true
+	case ImportScanKindMusic:
 		return true
 	case ImportScanKindSeries:
 		return true
@@ -1005,6 +1011,198 @@ func (e ImportScanStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImportScanAlbumClassification.
+const (
+	ImportScanAlbumClassificationAmbiguous ImportScanAlbumClassification = "ambiguous"
+	ImportScanAlbumClassificationConfirmed ImportScanAlbumClassification = "confirmed"
+	ImportScanAlbumClassificationExisting  ImportScanAlbumClassification = "existing"
+	ImportScanAlbumClassificationUnmatched ImportScanAlbumClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanAlbumClassification enum.
+func (e ImportScanAlbumClassification) Valid() bool {
+	switch e {
+	case ImportScanAlbumClassificationAmbiguous:
+		return true
+	case ImportScanAlbumClassificationConfirmed:
+		return true
+	case ImportScanAlbumClassificationExisting:
+		return true
+	case ImportScanAlbumClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanAlbumDecision.
+const (
+	ImportScanAlbumDecisionAccept  ImportScanAlbumDecision = "accept"
+	ImportScanAlbumDecisionPending ImportScanAlbumDecision = "pending"
+	ImportScanAlbumDecisionSkip    ImportScanAlbumDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanAlbumDecision enum.
+func (e ImportScanAlbumDecision) Valid() bool {
+	switch e {
+	case ImportScanAlbumDecisionAccept:
+		return true
+	case ImportScanAlbumDecisionPending:
+		return true
+	case ImportScanAlbumDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanAlbumOutcome.
+const (
+	ImportScanAlbumOutcomeCreated ImportScanAlbumOutcome = "created"
+	ImportScanAlbumOutcomeFailed  ImportScanAlbumOutcome = "failed"
+	ImportScanAlbumOutcomePending ImportScanAlbumOutcome = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanAlbumOutcome enum.
+func (e ImportScanAlbumOutcome) Valid() bool {
+	switch e {
+	case ImportScanAlbumOutcomeCreated:
+		return true
+	case ImportScanAlbumOutcomeFailed:
+		return true
+	case ImportScanAlbumOutcomePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanAlbumDecisionRequestDecision.
+const (
+	ImportScanAlbumDecisionRequestDecisionAccept  ImportScanAlbumDecisionRequestDecision = "accept"
+	ImportScanAlbumDecisionRequestDecisionPending ImportScanAlbumDecisionRequestDecision = "pending"
+	ImportScanAlbumDecisionRequestDecisionSkip    ImportScanAlbumDecisionRequestDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanAlbumDecisionRequestDecision enum.
+func (e ImportScanAlbumDecisionRequestDecision) Valid() bool {
+	switch e {
+	case ImportScanAlbumDecisionRequestDecisionAccept:
+		return true
+	case ImportScanAlbumDecisionRequestDecisionPending:
+		return true
+	case ImportScanAlbumDecisionRequestDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanBookClassification.
+const (
+	ImportScanBookClassificationAmbiguous ImportScanBookClassification = "ambiguous"
+	ImportScanBookClassificationConfirmed ImportScanBookClassification = "confirmed"
+	ImportScanBookClassificationExisting  ImportScanBookClassification = "existing"
+	ImportScanBookClassificationUnmatched ImportScanBookClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanBookClassification enum.
+func (e ImportScanBookClassification) Valid() bool {
+	switch e {
+	case ImportScanBookClassificationAmbiguous:
+		return true
+	case ImportScanBookClassificationConfirmed:
+		return true
+	case ImportScanBookClassificationExisting:
+		return true
+	case ImportScanBookClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanBookDecision.
+const (
+	ImportScanBookDecisionAccept  ImportScanBookDecision = "accept"
+	ImportScanBookDecisionPending ImportScanBookDecision = "pending"
+	ImportScanBookDecisionSkip    ImportScanBookDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanBookDecision enum.
+func (e ImportScanBookDecision) Valid() bool {
+	switch e {
+	case ImportScanBookDecisionAccept:
+		return true
+	case ImportScanBookDecisionPending:
+		return true
+	case ImportScanBookDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanBookOutcome.
+const (
+	ImportScanBookOutcomeCreated ImportScanBookOutcome = "created"
+	ImportScanBookOutcomeFailed  ImportScanBookOutcome = "failed"
+	ImportScanBookOutcomePending ImportScanBookOutcome = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanBookOutcome enum.
+func (e ImportScanBookOutcome) Valid() bool {
+	switch e {
+	case ImportScanBookOutcomeCreated:
+		return true
+	case ImportScanBookOutcomeFailed:
+		return true
+	case ImportScanBookOutcomePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanBookSlot.
+const (
+	ImportScanBookSlotAudiobook ImportScanBookSlot = "audiobook"
+	ImportScanBookSlotEbook     ImportScanBookSlot = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanBookSlot enum.
+func (e ImportScanBookSlot) Valid() bool {
+	switch e {
+	case ImportScanBookSlotAudiobook:
+		return true
+	case ImportScanBookSlotEbook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanBookDecisionRequestDecision.
+const (
+	ImportScanBookDecisionRequestDecisionAccept  ImportScanBookDecisionRequestDecision = "accept"
+	ImportScanBookDecisionRequestDecisionPending ImportScanBookDecisionRequestDecision = "pending"
+	ImportScanBookDecisionRequestDecisionSkip    ImportScanBookDecisionRequestDecision = "skip"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanBookDecisionRequestDecision enum.
+func (e ImportScanBookDecisionRequestDecision) Valid() bool {
+	switch e {
+	case ImportScanBookDecisionRequestDecisionAccept:
+		return true
+	case ImportScanBookDecisionRequestDecisionPending:
+		return true
+	case ImportScanBookDecisionRequestDecisionSkip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanCreateRequestImportMode.
 const (
 	ImportScanCreateRequestImportModeCopy     ImportScanCreateRequestImportMode = "copy"
@@ -1028,14 +1226,20 @@ func (e ImportScanCreateRequestImportMode) Valid() bool {
 
 // Defines values for ImportScanCreateRequestKind.
 const (
+	ImportScanCreateRequestKindBook   ImportScanCreateRequestKind = "book"
 	ImportScanCreateRequestKindMovie  ImportScanCreateRequestKind = "movie"
+	ImportScanCreateRequestKindMusic  ImportScanCreateRequestKind = "music"
 	ImportScanCreateRequestKindSeries ImportScanCreateRequestKind = "series"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanCreateRequestKind enum.
 func (e ImportScanCreateRequestKind) Valid() bool {
 	switch e {
+	case ImportScanCreateRequestKindBook:
+		return true
 	case ImportScanCreateRequestKindMovie:
+		return true
+	case ImportScanCreateRequestKindMusic:
 		return true
 	case ImportScanCreateRequestKindSeries:
 		return true
@@ -2859,6 +3063,54 @@ func (e UsersSort) Valid() bool {
 	}
 }
 
+// Defines values for ListImportAlbumsParamsClassification.
+const (
+	ListImportAlbumsParamsClassificationAmbiguous ListImportAlbumsParamsClassification = "ambiguous"
+	ListImportAlbumsParamsClassificationConfirmed ListImportAlbumsParamsClassification = "confirmed"
+	ListImportAlbumsParamsClassificationExisting  ListImportAlbumsParamsClassification = "existing"
+	ListImportAlbumsParamsClassificationUnmatched ListImportAlbumsParamsClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ListImportAlbumsParamsClassification enum.
+func (e ListImportAlbumsParamsClassification) Valid() bool {
+	switch e {
+	case ListImportAlbumsParamsClassificationAmbiguous:
+		return true
+	case ListImportAlbumsParamsClassificationConfirmed:
+		return true
+	case ListImportAlbumsParamsClassificationExisting:
+		return true
+	case ListImportAlbumsParamsClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListImportBooksParamsClassification.
+const (
+	ListImportBooksParamsClassificationAmbiguous ListImportBooksParamsClassification = "ambiguous"
+	ListImportBooksParamsClassificationConfirmed ListImportBooksParamsClassification = "confirmed"
+	ListImportBooksParamsClassificationExisting  ListImportBooksParamsClassification = "existing"
+	ListImportBooksParamsClassificationUnmatched ListImportBooksParamsClassification = "unmatched"
+)
+
+// Valid indicates whether the value is a known member of the ListImportBooksParamsClassification enum.
+func (e ListImportBooksParamsClassification) Valid() bool {
+	switch e {
+	case ListImportBooksParamsClassificationAmbiguous:
+		return true
+	case ListImportBooksParamsClassificationConfirmed:
+		return true
+	case ListImportBooksParamsClassificationExisting:
+		return true
+	case ListImportBooksParamsClassificationUnmatched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListImportFilesParamsClassification.
 const (
 	ListImportFilesParamsClassificationAmbiguous ListImportFilesParamsClassification = "ambiguous"
@@ -3941,7 +4193,8 @@ type ImportScan struct {
 	// ImportMode Per-scan transfer-mode override (rename mode only). Empty when using the global default.
 	ImportMode *ImportScanImportMode `json:"import_mode,omitempty"`
 
-	// Kind Whether this scan reviews movie files or series folders.
+	// Kind Whether this scan reviews movie files, series folders, album
+	// folders or book items.
 	Kind           ImportScanKind   `json:"kind"`
 	Mode           ImportScanMode   `json:"mode"`
 	ProcessedCount uint32           `json:"processed_count"`
@@ -3955,7 +4208,8 @@ type ImportScan struct {
 // ImportScanImportMode Per-scan transfer-mode override (rename mode only). Empty when using the global default.
 type ImportScanImportMode string
 
-// ImportScanKind Whether this scan reviews movie files or series folders.
+// ImportScanKind Whether this scan reviews movie files, series folders, album
+// folders or book items.
 type ImportScanKind string
 
 // ImportScanMode defines model for ImportScan.Mode.
@@ -3963,6 +4217,118 @@ type ImportScanMode string
 
 // ImportScanStatus defines model for ImportScan.Status.
 type ImportScanStatus string
+
+// ImportScanAlbum defines model for ImportScanAlbum.
+type ImportScanAlbum struct {
+	ArtistMbid               *string                       `json:"artist_mbid,omitempty"`
+	Candidates               *[]ImportScanAlbumCandidate   `json:"candidates,omitempty"`
+	Classification           ImportScanAlbumClassification `json:"classification"`
+	CreatedAlbumId           *uint32                       `json:"created_album_id,omitempty"`
+	CreatedAt                *time.Time                    `json:"created_at,omitempty"`
+	Decision                 ImportScanAlbumDecision       `json:"decision"`
+	DecisionReleaseGroupMbid *string                       `json:"decision_release_group_mbid,omitempty"`
+	ExistingAlbumId          *uint32                       `json:"existing_album_id,omitempty"`
+	FileCount                uint16                        `json:"file_count"`
+	FolderPath               string                        `json:"folder_path"`
+	Id                       uint32                        `json:"id"`
+	Outcome                  ImportScanAlbumOutcome        `json:"outcome"`
+	OutcomeMessage           *string                       `json:"outcome_message,omitempty"`
+	ReleaseGroupMbid         *string                       `json:"release_group_mbid,omitempty"`
+	TaggedAlbum              *string                       `json:"tagged_album,omitempty"`
+	TaggedArtist             *string                       `json:"tagged_artist,omitempty"`
+	UpdatedAt                *time.Time                    `json:"updated_at,omitempty"`
+}
+
+// ImportScanAlbumClassification defines model for ImportScanAlbum.Classification.
+type ImportScanAlbumClassification string
+
+// ImportScanAlbumDecision defines model for ImportScanAlbum.Decision.
+type ImportScanAlbumDecision string
+
+// ImportScanAlbumOutcome defines model for ImportScanAlbum.Outcome.
+type ImportScanAlbumOutcome string
+
+// ImportScanAlbumCandidate defines model for ImportScanAlbumCandidate.
+type ImportScanAlbumCandidate struct {
+	Artist           *string `json:"artist,omitempty"`
+	ArtistMbid       *string `json:"artist_mbid,omitempty"`
+	ReleaseGroupMbid string  `json:"release_group_mbid"`
+	Title            string  `json:"title"`
+	Year             *uint16 `json:"year,omitempty"`
+}
+
+// ImportScanAlbumDecisionRequest defines model for ImportScanAlbumDecisionRequest.
+type ImportScanAlbumDecisionRequest struct {
+	Decision         ImportScanAlbumDecisionRequestDecision `json:"decision"`
+	ReleaseGroupMbid *string                                `json:"release_group_mbid,omitempty"`
+}
+
+// ImportScanAlbumDecisionRequestDecision defines model for ImportScanAlbumDecisionRequest.Decision.
+type ImportScanAlbumDecisionRequestDecision string
+
+// ImportScanAlbumList defines model for ImportScanAlbumList.
+type ImportScanAlbumList struct {
+	Items []ImportScanAlbum `json:"items"`
+	Total uint32            `json:"total"`
+}
+
+// ImportScanBook defines model for ImportScanBook.
+type ImportScanBook struct {
+	AuthorHardcoverId       *uint32                      `json:"author_hardcover_id,omitempty"`
+	BookHardcoverId         *uint32                      `json:"book_hardcover_id,omitempty"`
+	Candidates              *[]ImportScanBookCandidate   `json:"candidates,omitempty"`
+	Classification          ImportScanBookClassification `json:"classification"`
+	CreatedAt               *time.Time                   `json:"created_at,omitempty"`
+	CreatedBookId           *uint32                      `json:"created_book_id,omitempty"`
+	Decision                ImportScanBookDecision       `json:"decision"`
+	DecisionBookHardcoverId *uint32                      `json:"decision_book_hardcover_id,omitempty"`
+	ExistingBookId          *uint32                      `json:"existing_book_id,omitempty"`
+	FilePaths               []string                     `json:"file_paths"`
+	Id                      uint32                       `json:"id"`
+	Outcome                 ImportScanBookOutcome        `json:"outcome"`
+	OutcomeMessage          *string                      `json:"outcome_message,omitempty"`
+	ParsedAuthor            *string                      `json:"parsed_author,omitempty"`
+	ParsedIsbn              *string                      `json:"parsed_isbn,omitempty"`
+	ParsedTitle             *string                      `json:"parsed_title,omitempty"`
+	Slot                    ImportScanBookSlot           `json:"slot"`
+	UpdatedAt               *time.Time                   `json:"updated_at,omitempty"`
+}
+
+// ImportScanBookClassification defines model for ImportScanBook.Classification.
+type ImportScanBookClassification string
+
+// ImportScanBookDecision defines model for ImportScanBook.Decision.
+type ImportScanBookDecision string
+
+// ImportScanBookOutcome defines model for ImportScanBook.Outcome.
+type ImportScanBookOutcome string
+
+// ImportScanBookSlot defines model for ImportScanBook.Slot.
+type ImportScanBookSlot string
+
+// ImportScanBookCandidate defines model for ImportScanBookCandidate.
+type ImportScanBookCandidate struct {
+	Author            *string `json:"author,omitempty"`
+	AuthorHardcoverId uint32  `json:"author_hardcover_id"`
+	BookHardcoverId   uint32  `json:"book_hardcover_id"`
+	Title             string  `json:"title"`
+	Year              *uint16 `json:"year,omitempty"`
+}
+
+// ImportScanBookDecisionRequest defines model for ImportScanBookDecisionRequest.
+type ImportScanBookDecisionRequest struct {
+	BookHardcoverId *uint32                               `json:"book_hardcover_id,omitempty"`
+	Decision        ImportScanBookDecisionRequestDecision `json:"decision"`
+}
+
+// ImportScanBookDecisionRequestDecision defines model for ImportScanBookDecisionRequest.Decision.
+type ImportScanBookDecisionRequestDecision string
+
+// ImportScanBookList defines model for ImportScanBookList.
+type ImportScanBookList struct {
+	Items []ImportScanBook `json:"items"`
+	Total uint32           `json:"total"`
+}
 
 // ImportScanCandidate defines model for ImportScanCandidate.
 type ImportScanCandidate struct {
@@ -3978,7 +4344,10 @@ type ImportScanCreateRequest struct {
 	ImportMode *ImportScanCreateRequestImportMode `json:"import_mode,omitempty"`
 
 	// Kind Media type to scan for. `movie` matches each file against TMDB;
-	// `series` matches each top-level folder against TVDB.
+	// `series` matches each top-level folder against TVDB; `music`
+	// scans album folders against MusicBrainz; `book` scans ebook and
+	// audiobook items against Hardcover. `mode=rename` is rejected for
+	// `music`.
 	Kind       *ImportScanCreateRequestKind `json:"kind,omitempty"`
 	Mode       ImportScanCreateRequestMode  `json:"mode"`
 	SourcePath string                       `json:"source_path"`
@@ -3989,7 +4358,10 @@ type ImportScanCreateRequest struct {
 type ImportScanCreateRequestImportMode string
 
 // ImportScanCreateRequestKind Media type to scan for. `movie` matches each file against TMDB;
-// `series` matches each top-level folder against TVDB.
+// `series` matches each top-level folder against TVDB; `music`
+// scans album folders against MusicBrainz; `book` scans ebook and
+// audiobook items against Hardcover. `mode=rename` is rejected for
+// `music`.
 type ImportScanCreateRequestKind string
 
 // ImportScanCreateRequestMode defines model for ImportScanCreateRequest.Mode.
@@ -6487,6 +6859,12 @@ type ImportPage = uint16
 // ImportQuery defines model for ImportQuery.
 type ImportQuery = string
 
+// ImportScanAlbumID defines model for ImportScanAlbumID.
+type ImportScanAlbumID = uint32
+
+// ImportScanBookID defines model for ImportScanBookID.
+type ImportScanBookID = uint32
+
 // ImportScanFileID defines model for ImportScanFileID.
 type ImportScanFileID = uint32
 
@@ -6911,6 +7289,12 @@ type UpdateDownloadConfig = DownloadConfigPatch
 // UpdateFFmpegConfig Only provided fields are applied. found and resolved_path are derived and read-only — sending them has no effect.
 type UpdateFFmpegConfig = FFmpegConfigPatch
 
+// UpdateImportAlbumDecision defines model for UpdateImportAlbumDecision.
+type UpdateImportAlbumDecision = ImportScanAlbumDecisionRequest
+
+// UpdateImportBookDecision defines model for UpdateImportBookDecision.
+type UpdateImportBookDecision = ImportScanBookDecisionRequest
+
 // UpdateImportFileDecision defines model for UpdateImportFileDecision.
 type UpdateImportFileDecision = ImportScanFileDecisionRequest
 
@@ -6996,6 +7380,28 @@ type ListImportsParams struct {
 	Page  *ImportPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *ImportLimit `form:"limit,omitempty" json:"limit,omitempty"`
 }
+
+// ListImportAlbumsParams defines parameters for ListImportAlbums.
+type ListImportAlbumsParams struct {
+	Classification *ListImportAlbumsParamsClassification `form:"classification,omitempty" json:"classification,omitempty"`
+	Q              *ImportQuery                          `form:"q,omitempty" json:"q,omitempty"`
+	Page           *ImportPage                           `form:"page,omitempty" json:"page,omitempty"`
+	Limit          *ImportFileLimit                      `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListImportAlbumsParamsClassification defines parameters for ListImportAlbums.
+type ListImportAlbumsParamsClassification string
+
+// ListImportBooksParams defines parameters for ListImportBooks.
+type ListImportBooksParams struct {
+	Classification *ListImportBooksParamsClassification `form:"classification,omitempty" json:"classification,omitempty"`
+	Q              *ImportQuery                         `form:"q,omitempty" json:"q,omitempty"`
+	Page           *ImportPage                          `form:"page,omitempty" json:"page,omitempty"`
+	Limit          *ImportFileLimit                     `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListImportBooksParamsClassification defines parameters for ListImportBooks.
+type ListImportBooksParamsClassification string
 
 // ListImportFilesParams defines parameters for ListImportFiles.
 type ListImportFilesParams struct {
@@ -7349,6 +7755,12 @@ type UpdateIndexerJSONRequestBody = IndexerCreate
 
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
+
+// UpdateImportAlbumDecisionJSONRequestBody defines body for UpdateImportAlbumDecision for application/json ContentType.
+type UpdateImportAlbumDecisionJSONRequestBody = ImportScanAlbumDecisionRequest
+
+// UpdateImportBookDecisionJSONRequestBody defines body for UpdateImportBookDecision for application/json ContentType.
+type UpdateImportBookDecisionJSONRequestBody = ImportScanBookDecisionRequest
 
 // BulkUpdateImportDecisionsJSONRequestBody defines body for BulkUpdateImportDecisions for application/json ContentType.
 type BulkUpdateImportDecisionsJSONRequestBody = ImportBulkDecisionRequest
@@ -7754,6 +8166,18 @@ type ServerInterface interface {
 
 	// (GET /library/imports/{id})
 	GetImport(w http.ResponseWriter, r *http.Request, id ResourceID)
+
+	// (GET /library/imports/{id}/albums)
+	ListImportAlbums(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportAlbumsParams)
+
+	// (PATCH /library/imports/{id}/albums/{albumId})
+	UpdateImportAlbumDecision(w http.ResponseWriter, r *http.Request, id ResourceID, albumId ImportScanAlbumID)
+
+	// (GET /library/imports/{id}/books)
+	ListImportBooks(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportBooksParams)
+
+	// (PATCH /library/imports/{id}/books/{bookId})
+	UpdateImportBookDecision(w http.ResponseWriter, r *http.Request, id ResourceID, bookId ImportScanBookID)
 
 	// (POST /library/imports/{id}/cancel)
 	CancelImport(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -8665,6 +9089,26 @@ func (_ Unimplemented) DeleteImport(w http.ResponseWriter, r *http.Request, id R
 
 // (GET /library/imports/{id})
 func (_ Unimplemented) GetImport(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /library/imports/{id}/albums)
+func (_ Unimplemented) ListImportAlbums(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportAlbumsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PATCH /library/imports/{id}/albums/{albumId})
+func (_ Unimplemented) UpdateImportAlbumDecision(w http.ResponseWriter, r *http.Request, id ResourceID, albumId ImportScanAlbumID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /library/imports/{id}/books)
+func (_ Unimplemented) ListImportBooks(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportBooksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PATCH /library/imports/{id}/books/{bookId})
+func (_ Unimplemented) UpdateImportBookDecision(w http.ResponseWriter, r *http.Request, id ResourceID, bookId ImportScanBookID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -11434,6 +11878,238 @@ func (siw *ServerInterfaceWrapper) GetImport(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImportAlbums operation middleware
+func (siw *ServerInterfaceWrapper) ListImportAlbums(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportAlbumsParams
+
+	// ------------- Optional query parameter "classification" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "classification", r.URL.Query(), &params.Classification, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "classification"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "classification", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportAlbums(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateImportAlbumDecision operation middleware
+func (siw *ServerInterfaceWrapper) UpdateImportAlbumDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "albumId" -------------
+	var albumId ImportScanAlbumID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "albumId", chi.URLParam(r, "albumId"), &albumId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "albumId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateImportAlbumDecision(w, r, id, albumId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListImportBooks operation middleware
+func (siw *ServerInterfaceWrapper) ListImportBooks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportBooksParams
+
+	// ------------- Optional query parameter "classification" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "classification", r.URL.Query(), &params.Classification, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "classification"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "classification", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportBooks(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateImportBookDecision operation middleware
+func (siw *ServerInterfaceWrapper) UpdateImportBookDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "bookId" -------------
+	var bookId ImportScanBookID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bookId", chi.URLParam(r, "bookId"), &bookId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bookId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateImportBookDecision(w, r, id, bookId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -15564,6 +16240,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/library/imports/{id}/shows/{showId}", wrapper.UpdateImportShowDecision)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/imports/{id}/albums", wrapper.ListImportAlbums)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/library/imports/{id}/albums/{albumId}", wrapper.UpdateImportAlbumDecision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/imports/{id}/books", wrapper.ListImportBooks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/library/imports/{id}/books/{bookId}", wrapper.UpdateImportBookDecision)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/library/imports/{id}/decisions", wrapper.BulkUpdateImportDecisions)
 	})
 	r.Group(func(r chi.Router) {
@@ -15733,6 +16421,14 @@ type ImportDeletedResponse struct {
 }
 
 type ImportScanJSONResponse ImportScan
+
+type ImportScanAlbumJSONResponse ImportScanAlbum
+
+type ImportScanAlbumListJSONResponse ImportScanAlbumList
+
+type ImportScanBookJSONResponse ImportScanBook
+
+type ImportScanBookListJSONResponse ImportScanBookList
 
 type ImportScanFileJSONResponse ImportScanFile
 
@@ -21519,6 +22215,20 @@ func (response StartImport422JSONResponse) VisitStartImportResponse(w http.Respo
 	return err
 }
 
+type StartImport503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response StartImport503JSONResponse) VisitStartImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteImportRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -21624,6 +22334,270 @@ func (response GetImport404JSONResponse) VisitGetImportResponse(w http.ResponseW
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportAlbumsRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params ListImportAlbumsParams
+}
+
+type ListImportAlbumsResponseObject interface {
+	VisitListImportAlbumsResponse(w http.ResponseWriter) error
+}
+
+type ListImportAlbums200JSONResponse struct {
+	ImportScanAlbumListJSONResponse
+}
+
+func (response ListImportAlbums200JSONResponse) VisitListImportAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportAlbums400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportAlbums400JSONResponse) VisitListImportAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportAlbums403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListImportAlbums403JSONResponse) VisitListImportAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportAlbums404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListImportAlbums404JSONResponse) VisitListImportAlbumsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportAlbumDecisionRequestObject struct {
+	Id      ResourceID        `json:"id"`
+	AlbumId ImportScanAlbumID `json:"albumId"`
+	Body    *UpdateImportAlbumDecisionJSONRequestBody
+}
+
+type UpdateImportAlbumDecisionResponseObject interface {
+	VisitUpdateImportAlbumDecisionResponse(w http.ResponseWriter) error
+}
+
+type UpdateImportAlbumDecision200JSONResponse struct{ ImportScanAlbumJSONResponse }
+
+func (response UpdateImportAlbumDecision200JSONResponse) VisitUpdateImportAlbumDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportAlbumDecision403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateImportAlbumDecision403JSONResponse) VisitUpdateImportAlbumDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportAlbumDecision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateImportAlbumDecision404JSONResponse) VisitUpdateImportAlbumDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportAlbumDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportAlbumDecision413JSONResponse) VisitUpdateImportAlbumDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportBooksRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params ListImportBooksParams
+}
+
+type ListImportBooksResponseObject interface {
+	VisitListImportBooksResponse(w http.ResponseWriter) error
+}
+
+type ListImportBooks200JSONResponse struct{ ImportScanBookListJSONResponse }
+
+func (response ListImportBooks200JSONResponse) VisitListImportBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportBooks400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListImportBooks400JSONResponse) VisitListImportBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportBooks403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListImportBooks403JSONResponse) VisitListImportBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListImportBooks404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListImportBooks404JSONResponse) VisitListImportBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportBookDecisionRequestObject struct {
+	Id     ResourceID       `json:"id"`
+	BookId ImportScanBookID `json:"bookId"`
+	Body   *UpdateImportBookDecisionJSONRequestBody
+}
+
+type UpdateImportBookDecisionResponseObject interface {
+	VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error
+}
+
+type UpdateImportBookDecision200JSONResponse struct{ ImportScanBookJSONResponse }
+
+func (response UpdateImportBookDecision200JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportBookDecision403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateImportBookDecision403JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportBookDecision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateImportBookDecision404JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateImportBookDecision413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateImportBookDecision413JSONResponse) VisitUpdateImportBookDecisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -21749,6 +22723,20 @@ func (response CommitImport422JSONResponse) VisitCommitImportResponse(w http.Res
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CommitImport503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CommitImport503JSONResponse) VisitCommitImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -29429,6 +30417,18 @@ type StrictServerInterface interface {
 	// (GET /library/imports/{id})
 	GetImport(ctx context.Context, request GetImportRequestObject) (GetImportResponseObject, error)
 
+	// (GET /library/imports/{id}/albums)
+	ListImportAlbums(ctx context.Context, request ListImportAlbumsRequestObject) (ListImportAlbumsResponseObject, error)
+
+	// (PATCH /library/imports/{id}/albums/{albumId})
+	UpdateImportAlbumDecision(ctx context.Context, request UpdateImportAlbumDecisionRequestObject) (UpdateImportAlbumDecisionResponseObject, error)
+
+	// (GET /library/imports/{id}/books)
+	ListImportBooks(ctx context.Context, request ListImportBooksRequestObject) (ListImportBooksResponseObject, error)
+
+	// (PATCH /library/imports/{id}/books/{bookId})
+	UpdateImportBookDecision(ctx context.Context, request UpdateImportBookDecisionRequestObject) (UpdateImportBookDecisionResponseObject, error)
+
 	// (POST /library/imports/{id}/cancel)
 	CancelImport(ctx context.Context, request CancelImportRequestObject) (CancelImportResponseObject, error)
 
@@ -32413,6 +33413,128 @@ func (sh *strictHandler) GetImport(w http.ResponseWriter, r *http.Request, id Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetImportResponseObject); ok {
 		if err := validResponse.VisitGetImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListImportAlbums operation middleware
+func (sh *strictHandler) ListImportAlbums(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportAlbumsParams) {
+	var request ListImportAlbumsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListImportAlbums(ctx, request.(ListImportAlbumsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListImportAlbums")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListImportAlbumsResponseObject); ok {
+		if err := validResponse.VisitListImportAlbumsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateImportAlbumDecision operation middleware
+func (sh *strictHandler) UpdateImportAlbumDecision(w http.ResponseWriter, r *http.Request, id ResourceID, albumId ImportScanAlbumID) {
+	var request UpdateImportAlbumDecisionRequestObject
+
+	request.Id = id
+	request.AlbumId = albumId
+
+	var body UpdateImportAlbumDecisionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateImportAlbumDecision(ctx, request.(UpdateImportAlbumDecisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateImportAlbumDecision")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateImportAlbumDecisionResponseObject); ok {
+		if err := validResponse.VisitUpdateImportAlbumDecisionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListImportBooks operation middleware
+func (sh *strictHandler) ListImportBooks(w http.ResponseWriter, r *http.Request, id ResourceID, params ListImportBooksParams) {
+	var request ListImportBooksRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListImportBooks(ctx, request.(ListImportBooksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListImportBooks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListImportBooksResponseObject); ok {
+		if err := validResponse.VisitListImportBooksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateImportBookDecision operation middleware
+func (sh *strictHandler) UpdateImportBookDecision(w http.ResponseWriter, r *http.Request, id ResourceID, bookId ImportScanBookID) {
+	var request UpdateImportBookDecisionRequestObject
+
+	request.Id = id
+	request.BookId = bookId
+
+	var body UpdateImportBookDecisionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateImportBookDecision(ctx, request.(UpdateImportBookDecisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateImportBookDecision")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateImportBookDecisionResponseObject); ok {
+		if err := validResponse.VisitUpdateImportBookDecisionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
@@ -10,7 +11,19 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
+
+// ErrImportScanBookNotFound is returned when the scan-scoped UPDATE matched no
+// row because the book id is unknown or belongs to a different scan.
+var ErrImportScanBookNotFound = errors.New("import scan book not found")
+
+type ListImportScanBooksParams struct {
+	ScanID         uint32
+	Classification entimportscanbook.Classification // empty = all
+	Query          string
+	Offset, Limit  uint32
+}
 
 type CreateImportScanBookParams struct {
 	FilePaths         []string
@@ -162,4 +175,78 @@ func (db *DB) MarkBookSlotAvailable(
 		return fmt.Errorf("mark book slot available: unknown kind %q", kind)
 	}
 	return u.Exec(ctx)
+}
+
+func (db *DB) ListImportScanBooks(
+	ctx context.Context, p ListImportScanBooksParams,
+) ([]*ent.ImportScanBook, uint32, error) {
+	q := db.client.ImportScanBook.Query().
+		Where(entimportscanbook.HasScanWith(entimportscan.ID(p.ScanID)))
+	if p.Classification != "" {
+		q = q.Where(entimportscanbook.ClassificationEQ(p.Classification))
+	}
+	if p.Query != "" {
+		q = q.Where(entimportscanbook.Or(
+			entimportscanbook.ParsedTitleContainsFold(p.Query),
+			entimportscanbook.ParsedAuthorContainsFold(p.Query),
+		))
+	}
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count import scan books: %w", err)
+	}
+	limit := p.Limit
+	if limit == 0 {
+		limit = 50
+	}
+	rows, err := q.Order(
+		ent.Asc(entimportscanbook.FieldParsedTitle),
+		ent.Asc(entimportscanbook.FieldID),
+	).Offset(int(p.Offset)).Limit(int(limit)).All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list import scan books: %w", err)
+	}
+	return rows, numeric.SaturateU32(total), nil
+}
+
+func (db *DB) FindImportScanBook(
+	ctx context.Context, scanID, bookID uint32,
+) (*ent.ImportScanBook, error) {
+	row, err := db.client.ImportScanBook.Query().
+		Where(
+			entimportscanbook.ID(bookID),
+			entimportscanbook.HasScanWith(entimportscan.ID(scanID)),
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("find import scan book: %w", err)
+	}
+	return row, nil
+}
+
+// UpdateImportScanBookDecision scopes by scan in the UPDATE predicate so a
+// book id from another scan matches nothing instead of being mutated.
+func (db *DB) UpdateImportScanBookDecision(
+	ctx context.Context, scanID, bookID uint32,
+	decision entimportscanbook.Decision, hardcoverID *uint32,
+) error {
+	u := db.client.ImportScanBook.Update().
+		Where(
+			entimportscanbook.ID(bookID),
+			entimportscanbook.HasScanWith(entimportscan.ID(scanID)),
+		).
+		SetDecision(decision)
+	if hardcoverID != nil {
+		u = u.SetDecisionBookHardcoverID(*hardcoverID)
+	} else {
+		u = u.ClearDecisionBookHardcoverID()
+	}
+	n, err := u.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("update import scan book decision: %w", err)
+	}
+	if n == 0 {
+		return ErrImportScanBookNotFound
+	}
+	return nil
 }

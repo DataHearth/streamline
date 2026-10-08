@@ -1473,3 +1473,116 @@ func musicTrackToAPI(t *ent.Track) MusicTrack {
 		Duration: t.Duration,
 	}
 }
+
+func toAPIImportScanAlbum(al *ent.ImportScanAlbum) ImportScanAlbum {
+	out := ImportScanAlbum{
+		Id:              al.ID,
+		FolderPath:      al.FolderPath,
+		Classification:  ImportScanAlbumClassification(al.Classification),
+		FileCount:       al.FileCount,
+		Decision:        ImportScanAlbumDecision(al.Decision),
+		Outcome:         ImportScanAlbumOutcome(al.Outcome),
+		ExistingAlbumId: al.ExistingAlbumID,
+		CreatedAlbumId:  al.CreatedAlbumID,
+	}
+	for dst, src := range map[**string]string{
+		&out.TaggedArtist:             al.TaggedArtist,
+		&out.TaggedAlbum:              al.TaggedAlbum,
+		&out.ReleaseGroupMbid:         al.ReleaseGroupMbid,
+		&out.ArtistMbid:               al.ArtistMbid,
+		&out.DecisionReleaseGroupMbid: al.DecisionReleaseGroupMbid,
+		&out.OutcomeMessage:           al.OutcomeMessage,
+	} {
+		if src != "" {
+			v := src
+			*dst = &v
+		}
+	}
+	if len(al.Candidates) > 0 {
+		cands := make([]ImportScanAlbumCandidate, 0, len(al.Candidates))
+		for _, c := range al.Candidates {
+			cand := ImportScanAlbumCandidate{
+				ReleaseGroupMbid: c.ReleaseGroupMBID,
+				Title:            c.Title,
+			}
+			if c.ArtistMBID != "" {
+				v := c.ArtistMBID
+				cand.ArtistMbid = &v
+			}
+			if c.Artist != "" {
+				v := c.Artist
+				cand.Artist = &v
+			}
+			if c.Year != 0 {
+				y := c.Year
+				cand.Year = &y
+			}
+			cands = append(cands, cand)
+		}
+		out.Candidates = &cands
+	}
+	ct := al.CreateTime
+	out.CreatedAt = &ct
+	ut := al.UpdateTime
+	out.UpdatedAt = &ut
+	return out
+}
+
+func toAPIImportScanBook(b *ent.ImportScanBook) ImportScanBook {
+	out := ImportScanBook{
+		Id:             b.ID,
+		FilePaths:      slices.Clone(b.FilePaths),
+		Slot:           ImportScanBookSlot(b.Slot),
+		Classification: ImportScanBookClassification(b.Classification),
+		Decision:       ImportScanBookDecision(b.Decision),
+		Outcome:        ImportScanBookOutcome(b.Outcome),
+		ExistingBookId: b.ExistingBookID,
+		CreatedBookId:  b.CreatedBookID,
+	}
+	for dst, src := range map[**string]string{
+		&out.ParsedTitle:    b.ParsedTitle,
+		&out.ParsedAuthor:   b.ParsedAuthor,
+		&out.ParsedIsbn:     b.ParsedIsbn,
+		&out.OutcomeMessage: b.OutcomeMessage,
+	} {
+		if src != "" {
+			v := src
+			*dst = &v
+		}
+	}
+	for dst, src := range map[**uint32]uint32{
+		&out.BookHardcoverId:         b.BookHardcoverID,
+		&out.AuthorHardcoverId:       b.AuthorHardcoverID,
+		&out.DecisionBookHardcoverId: b.DecisionBookHardcoverID,
+	} {
+		if src != 0 {
+			v := src
+			*dst = &v
+		}
+	}
+	if len(b.Candidates) > 0 {
+		cands := make([]ImportScanBookCandidate, 0, len(b.Candidates))
+		for _, c := range b.Candidates {
+			cand := ImportScanBookCandidate{
+				BookHardcoverId:   c.BookHardcoverID,
+				AuthorHardcoverId: c.AuthorHardcoverID,
+				Title:             c.Title,
+			}
+			if c.Author != "" {
+				v := c.Author
+				cand.Author = &v
+			}
+			if c.Year != 0 {
+				y := c.Year
+				cand.Year = &y
+			}
+			cands = append(cands, cand)
+		}
+		out.Candidates = &cands
+	}
+	ct := b.CreateTime
+	out.CreatedAt = &ct
+	ut := b.UpdateTime
+	out.UpdatedAt = &ut
+	return out
+}

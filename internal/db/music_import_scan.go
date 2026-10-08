@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
@@ -11,7 +12,19 @@ import (
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
+
+// ErrImportScanAlbumNotFound is returned when the scan-scoped UPDATE matched no
+// row because the album id is unknown or belongs to a different scan.
+var ErrImportScanAlbumNotFound = errors.New("import scan album not found")
+
+type ListImportScanAlbumsParams struct {
+	ScanID         uint32
+	Classification entimportscanalbum.Classification // empty = all
+	Query          string
+	Offset, Limit  uint32
+}
 
 type CreateImportScanAlbumParams struct {
 	FolderPath       string
@@ -242,6 +255,81 @@ func adoptAlbumFiles(
 		).
 		SetStatus(album.StatusAvailable).Save(ctx); err != nil {
 		return fmt.Errorf("mark album %d available: %w", albumID, err)
+	}
+	return nil
+}
+
+func (db *DB) ListImportScanAlbums(
+	ctx context.Context, p ListImportScanAlbumsParams,
+) ([]*ent.ImportScanAlbum, uint32, error) {
+	q := db.client.ImportScanAlbum.Query().
+		Where(entimportscanalbum.HasScanWith(entimportscan.ID(p.ScanID)))
+	if p.Classification != "" {
+		q = q.Where(entimportscanalbum.ClassificationEQ(p.Classification))
+	}
+	if p.Query != "" {
+		q = q.Where(entimportscanalbum.Or(
+			entimportscanalbum.FolderPathContainsFold(p.Query),
+			entimportscanalbum.TaggedAlbumContainsFold(p.Query),
+			entimportscanalbum.TaggedArtistContainsFold(p.Query),
+		))
+	}
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count import scan albums: %w", err)
+	}
+	limit := p.Limit
+	if limit == 0 {
+		limit = 50
+	}
+	rows, err := q.Order(
+		ent.Asc(entimportscanalbum.FieldTaggedAlbum),
+		ent.Asc(entimportscanalbum.FieldID),
+	).Offset(int(p.Offset)).Limit(int(limit)).All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list import scan albums: %w", err)
+	}
+	return rows, numeric.SaturateU32(total), nil
+}
+
+func (db *DB) FindImportScanAlbum(
+	ctx context.Context, scanID, albumID uint32,
+) (*ent.ImportScanAlbum, error) {
+	row, err := db.client.ImportScanAlbum.Query().
+		Where(
+			entimportscanalbum.ID(albumID),
+			entimportscanalbum.HasScanWith(entimportscan.ID(scanID)),
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("find import scan album: %w", err)
+	}
+	return row, nil
+}
+
+// UpdateImportScanAlbumDecision scopes by scan in the UPDATE predicate so an
+// album id from another scan matches nothing instead of being mutated.
+func (db *DB) UpdateImportScanAlbumDecision(
+	ctx context.Context, scanID, albumID uint32,
+	decision entimportscanalbum.Decision, releaseGroupMBID *string,
+) error {
+	u := db.client.ImportScanAlbum.Update().
+		Where(
+			entimportscanalbum.ID(albumID),
+			entimportscanalbum.HasScanWith(entimportscan.ID(scanID)),
+		).
+		SetDecision(decision)
+	if releaseGroupMBID != nil {
+		u = u.SetDecisionReleaseGroupMbid(*releaseGroupMBID)
+	} else {
+		u = u.ClearDecisionReleaseGroupMbid()
+	}
+	n, err := u.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("update import scan album decision: %w", err)
+	}
+	if n == 0 {
+		return ErrImportScanAlbumNotFound
 	}
 	return nil
 }
