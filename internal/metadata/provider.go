@@ -299,9 +299,22 @@ type AuthorDetails struct {
 	Books    []BookInfo
 }
 
+// BookSearchResult is a Hardcover book search hit, used to match scanned
+// files and to power request-time discovery.
+type BookSearchResult struct {
+	HardcoverID       uint32
+	AuthorHardcoverID uint32 // 0 when the search payload omits it
+	Title             string
+	Author            string
+	Year              uint16
+}
+
 // BookProvider fetches book metadata. Implemented by *Hardcover.
 type BookProvider interface {
 	SearchAuthors(ctx context.Context, query string) ([]AuthorResult, error)
+	SearchBooks(ctx context.Context, query string) ([]BookSearchResult, error)
+	// BookByISBN resolves an ISBN-13 to a Hardcover book id; 0 = not found.
+	BookByISBN(ctx context.Context, isbn string) (uint32, error)
 	// GetAuthor returns the author plus the primary-author bibliography
 	// (paginated internally; translations and anthology-only appearances
 	// filtered out).

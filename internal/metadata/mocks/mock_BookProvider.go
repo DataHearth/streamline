@@ -47,6 +47,72 @@ func (_m *MockBookProvider) EXPECT() *MockBookProvider_Expecter {
 	return &MockBookProvider_Expecter{mock: &_m.Mock}
 }
 
+// BookByISBN provides a mock function for the type MockBookProvider
+func (_mock *MockBookProvider) BookByISBN(ctx context.Context, isbn string) (uint32, error) {
+	ret := _mock.Called(ctx, isbn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookByISBN")
+	}
+
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (uint32, error)); ok {
+		return returnFunc(ctx, isbn)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) uint32); ok {
+		r0 = returnFunc(ctx, isbn)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, isbn)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookProvider_BookByISBN_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookByISBN'
+type MockBookProvider_BookByISBN_Call struct {
+	*mock.Call
+}
+
+// BookByISBN is a helper method to define mock.On call
+//   - ctx context.Context
+//   - isbn string
+func (_e *MockBookProvider_Expecter) BookByISBN(ctx any, isbn any) *MockBookProvider_BookByISBN_Call {
+	return &MockBookProvider_BookByISBN_Call{Call: _e.mock.On("BookByISBN", ctx, isbn)}
+}
+
+func (_c *MockBookProvider_BookByISBN_Call) Run(run func(ctx context.Context, isbn string)) *MockBookProvider_BookByISBN_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookProvider_BookByISBN_Call) Return(v uint32, err error) *MockBookProvider_BookByISBN_Call {
+	_c.Call.Return(v, err)
+	return _c
+}
+
+func (_c *MockBookProvider_BookByISBN_Call) RunAndReturn(run func(ctx context.Context, isbn string) (uint32, error)) *MockBookProvider_BookByISBN_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAuthor provides a mock function for the type MockBookProvider
 func (_mock *MockBookProvider) GetAuthor(ctx context.Context, hardcoverID uint32) (*metadata.AuthorDetails, error) {
 	ret := _mock.Called(ctx, hardcoverID)
@@ -247,6 +313,74 @@ func (_c *MockBookProvider_SearchAuthors_Call) Return(authorResults []metadata.A
 }
 
 func (_c *MockBookProvider_SearchAuthors_Call) RunAndReturn(run func(ctx context.Context, query string) ([]metadata.AuthorResult, error)) *MockBookProvider_SearchAuthors_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchBooks provides a mock function for the type MockBookProvider
+func (_mock *MockBookProvider) SearchBooks(ctx context.Context, query string) ([]metadata.BookSearchResult, error) {
+	ret := _mock.Called(ctx, query)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchBooks")
+	}
+
+	var r0 []metadata.BookSearchResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]metadata.BookSearchResult, error)); ok {
+		return returnFunc(ctx, query)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []metadata.BookSearchResult); ok {
+		r0 = returnFunc(ctx, query)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]metadata.BookSearchResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, query)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookProvider_SearchBooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchBooks'
+type MockBookProvider_SearchBooks_Call struct {
+	*mock.Call
+}
+
+// SearchBooks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+func (_e *MockBookProvider_Expecter) SearchBooks(ctx any, query any) *MockBookProvider_SearchBooks_Call {
+	return &MockBookProvider_SearchBooks_Call{Call: _e.mock.On("SearchBooks", ctx, query)}
+}
+
+func (_c *MockBookProvider_SearchBooks_Call) Run(run func(ctx context.Context, query string)) *MockBookProvider_SearchBooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookProvider_SearchBooks_Call) Return(bookSearchResults []metadata.BookSearchResult, err error) *MockBookProvider_SearchBooks_Call {
+	_c.Call.Return(bookSearchResults, err)
+	return _c
+}
+
+func (_c *MockBookProvider_SearchBooks_Call) RunAndReturn(run func(ctx context.Context, query string) ([]metadata.BookSearchResult, error)) *MockBookProvider_SearchBooks_Call {
 	_c.Call.Return(run)
 	return _c
 }

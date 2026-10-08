@@ -161,6 +161,58 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		})
 	})
 
+	Describe("SearchBooks", func() {
+		It("searches by combined title/author query", func() {
+			var gotBody map[string]any
+			hc.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					raw, err := io.ReadAll(r.Body)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.Unmarshal(raw, &gotBody)).To(Succeed())
+					return jsonResponse(
+						200,
+						`{"data":{"search":{"results":{"hits":[{"document":{"id":"1","title":"Elantris","author_names":["Brandon Sanderson"],"release_year":2005}}]}}}}`,
+					), nil
+				},
+			)
+			res, err := hc.SearchBooks(ctx, "Elantris Brandon Sanderson")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(HaveLen(1))
+			Expect(res[0].HardcoverID).To(Equal(uint32(1)))
+			Expect(res[0].Title).To(Equal("Elantris"))
+			Expect(res[0].Author).To(Equal("Brandon Sanderson"))
+			Expect(res[0].Year).To(Equal(uint16(2005)))
+			Expect(gotBody["query"]).To(ContainSubstring(`"Book"`))
+		})
+	})
+
+	Describe("BookByISBN", func() {
+		It("resolves an edition ISBN to its book id", func() {
+			hc.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(
+						200,
+						`{"data":{"editions":[{"book_id":42}]}}`,
+					), nil
+				},
+			)
+			id, err := hc.BookByISBN(ctx, "9780765311771")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(Equal(uint32(42)))
+		})
+
+		It("returns 0 without error when unknown", func() {
+			hc.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"data":{"editions":[]}}`), nil
+				},
+			)
+			id, err := hc.BookByISBN(ctx, "9780000000000")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(BeZero())
+		})
+	})
+
 	Describe("expired token", func() {
 		It("maps a 401 to ErrHardcoverUnauthorized and trips AuthRejected", func() {
 			hc.client.Transport = mbRoundTripper(

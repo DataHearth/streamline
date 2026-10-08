@@ -212,6 +212,87 @@ func (h *Hardcover) SearchAuthors(
 	return results, nil
 }
 
+const hcSearchBooksQuery = `
+query ($q: String!) {
+  search(query: $q, query_type: "Book", per_page: 20, page: 1) { results }
+}`
+
+func (h *Hardcover) SearchBooks(
+	ctx context.Context,
+	query string,
+) ([]BookSearchResult, error) {
+	ctx, span := tracer.Start(ctx, "metadata.hardcover.search_books")
+	defer span.End()
+
+	var payload struct {
+		Search struct {
+			Results struct {
+				Hits []struct {
+					Document struct {
+						ID          string   `json:"id"`
+						Title       string   `json:"title"`
+						AuthorNames []string `json:"author_names"`
+						ReleaseYear uint16   `json:"release_year"`
+					} `json:"document"`
+				} `json:"hits"`
+			} `json:"results"`
+		} `json:"search"`
+	}
+	if err := h.query(
+		ctx,
+		hcSearchBooksQuery,
+		map[string]any{"q": query},
+		&payload,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	results := make([]BookSearchResult, 0, len(payload.Search.Results.Hits))
+	for _, hit := range payload.Search.Results.Hits {
+		id, err := strconv.ParseUint(hit.Document.ID, 10, 32)
+		if err != nil {
+			continue
+		}
+		r := BookSearchResult{
+			HardcoverID: uint32(id),
+			Title:       hit.Document.Title,
+			Year:        hit.Document.ReleaseYear,
+		}
+		if len(hit.Document.AuthorNames) > 0 {
+			r.Author = hit.Document.AuthorNames[0]
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+const hcBookByISBNQuery = `
+query ($isbn: String!) {
+  editions(where: {isbn_13: {_eq: $isbn}}, limit: 1) { book_id }
+}`
+
+func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error) {
+	ctx, span := tracer.Start(ctx, "metadata.hardcover.book_by_isbn")
+	defer span.End()
+
+	var payload struct {
+		Editions []struct {
+			BookID uint32 `json:"book_id"`
+		} `json:"editions"`
+	}
+	if err := h.query(
+		ctx,
+		hcBookByISBNQuery,
+		map[string]any{"isbn": isbn},
+		&payload,
+	); err != nil {
+		return 0, otelx.RecordSpanError(span, err)
+	}
+	if len(payload.Editions) == 0 {
+		return 0, nil
+	}
+	return payload.Editions[0].BookID, nil
+}
+
 const hcAuthorQuery = `
 query ($id: Int!) {
   authors(where: {id: {_eq: $id}}) {
