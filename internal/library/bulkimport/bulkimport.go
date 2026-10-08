@@ -10,6 +10,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -93,6 +94,7 @@ type Service struct {
 	musicmeta   metadata.MusicProvider
 	musicAdder  MusicAdder
 	prober      ffmpeg.Prober
+	arrClients  arr.Factory
 }
 
 // Option tunes optional collaborators of the bulk-import service.
@@ -103,6 +105,12 @@ type Option func(*Service)
 // ffmpeg disabled, adoption falls back to what the extension says.
 func WithProber(p ffmpeg.Prober) Option {
 	return func(s *Service) { s.prober = p }
+}
+
+// WithArrClients replaces how a Radarr/Sonarr migration reaches its source;
+// tests hand in a fake instead of dialling one.
+func WithArrClients(f arr.Factory) Option {
+	return func(s *Service) { s.arrClients = f }
 }
 
 // NewService constructs the bulk-import service.
@@ -136,6 +144,7 @@ func NewService(
 		musicAdder:  musicAdder,
 		bookmeta:    bookmeta,
 		bookAdder:   bookAdder,
+		arrClients:  arr.NewFactory(),
 	}
 	for _, o := range opts {
 		o(s)
