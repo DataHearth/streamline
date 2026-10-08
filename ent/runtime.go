@@ -528,8 +528,12 @@ func init() {
 	request.DefaultUpdateTime = requestDescUpdateTime.Default.(func() time.Time)
 	// request.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	request.UpdateDefaultUpdateTime = requestDescUpdateTime.UpdateDefault.(func() time.Time)
+	// requestDescMediaID is the schema descriptor for media_id field.
+	requestDescMediaID := requestFields[1].Descriptor()
+	// request.DefaultMediaID holds the default value on creation for the media_id field.
+	request.DefaultMediaID = requestDescMediaID.Default.(uint32)
 	// requestDescTitle is the schema descriptor for title field.
-	requestDescTitle := requestFields[2].Descriptor()
+	requestDescTitle := requestFields[4].Descriptor()
 	// request.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	request.TitleValidator = requestDescTitle.Validators[0].(func(string) error)
 	scheduledjobFields := schema.ScheduledJob{}.Fields()

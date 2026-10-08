@@ -959,8 +959,10 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "media_type", Type: field.TypeEnum, Enums: []string{"movie", "tvshow"}},
-		{Name: "media_id", Type: field.TypeUint32},
+		{Name: "media_type", Type: field.TypeEnum, Enums: []string{"movie", "tvshow", "artist", "album", "author", "book"}},
+		{Name: "media_id", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "media_mbid", Type: field.TypeString, Nullable: true},
+		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook", "both"}},
 		{Name: "title", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "denied", "available"}, Default: "pending"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
@@ -976,13 +978,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_users_approved_by",
-				Columns:    []*schema.Column{RequestsColumns[9]},
+				Columns:    []*schema.Column{RequestsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[10]},
+				Columns:    []*schema.Column{RequestsColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -993,18 +995,26 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{RequestsColumns[3], RequestsColumns[4]},
 				Annotation: &entsql.IndexAnnotation{
-					Where: "status IN ('pending', 'approved', 'available')",
+					Where: "status IN ('pending', 'approved', 'available') AND media_id <> 0",
+				},
+			},
+			{
+				Name:    "request_media_type_media_mbid",
+				Unique:  true,
+				Columns: []*schema.Column{RequestsColumns[3], RequestsColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status IN ('pending', 'approved', 'available') AND media_mbid <> ''",
 				},
 			},
 			{
 				Name:    "request_user_requests",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[10]},
+				Columns: []*schema.Column{RequestsColumns[12]},
 			},
 			{
 				Name:    "request_request_approved_by",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[9]},
+				Columns: []*schema.Column{RequestsColumns[11]},
 			},
 		},
 	}

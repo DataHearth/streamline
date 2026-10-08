@@ -23,6 +23,10 @@ const (
 	FieldMediaType = "media_type"
 	// FieldMediaID holds the string denoting the media_id field in the database.
 	FieldMediaID = "media_id"
+	// FieldMediaMbid holds the string denoting the media_mbid field in the database.
+	FieldMediaMbid = "media_mbid"
+	// FieldBookKind holds the string denoting the book_kind field in the database.
+	FieldBookKind = "book_kind"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -60,6 +64,8 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldMediaType,
 	FieldMediaID,
+	FieldMediaMbid,
+	FieldBookKind,
 	FieldTitle,
 	FieldStatus,
 	FieldReason,
@@ -95,6 +101,8 @@ var (
 	DefaultUpdateTime func() time.Time
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
+	// DefaultMediaID holds the default value on creation for the "media_id" field.
+	DefaultMediaID uint32
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
 )
@@ -106,6 +114,10 @@ type MediaType string
 const (
 	MediaTypeMovie  MediaType = "movie"
 	MediaTypeTvshow MediaType = "tvshow"
+	MediaTypeArtist MediaType = "artist"
+	MediaTypeAlbum  MediaType = "album"
+	MediaTypeAuthor MediaType = "author"
+	MediaTypeBook   MediaType = "book"
 )
 
 func (mt MediaType) String() string {
@@ -115,10 +127,34 @@ func (mt MediaType) String() string {
 // MediaTypeValidator is a validator for the "media_type" field enum values. It is called by the builders before save.
 func MediaTypeValidator(mt MediaType) error {
 	switch mt {
-	case MediaTypeMovie, MediaTypeTvshow:
+	case MediaTypeMovie, MediaTypeTvshow, MediaTypeArtist, MediaTypeAlbum, MediaTypeAuthor, MediaTypeBook:
 		return nil
 	default:
 		return fmt.Errorf("request: invalid enum value for media_type field: %q", mt)
+	}
+}
+
+// BookKind defines the type for the "book_kind" enum field.
+type BookKind string
+
+// BookKind values.
+const (
+	BookKindEbook     BookKind = "ebook"
+	BookKindAudiobook BookKind = "audiobook"
+	BookKindBoth      BookKind = "both"
+)
+
+func (bk BookKind) String() string {
+	return string(bk)
+}
+
+// BookKindValidator is a validator for the "book_kind" field enum values. It is called by the builders before save.
+func BookKindValidator(bk BookKind) error {
+	switch bk {
+	case BookKindEbook, BookKindAudiobook, BookKindBoth:
+		return nil
+	default:
+		return fmt.Errorf("request: invalid enum value for book_kind field: %q", bk)
 	}
 }
 
@@ -176,6 +212,16 @@ func ByMediaType(opts ...sql.OrderTermOption) OrderOption {
 // ByMediaID orders the results by the media_id field.
 func ByMediaID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMediaID, opts...).ToFunc()
+}
+
+// ByMediaMbid orders the results by the media_mbid field.
+func ByMediaMbid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMediaMbid, opts...).ToFunc()
+}
+
+// ByBookKind orders the results by the book_kind field.
+func ByBookKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBookKind, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

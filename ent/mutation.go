@@ -26758,6 +26758,8 @@ type RequestMutation struct {
 	media_type         *request.MediaType
 	media_id           *uint32
 	addmedia_id        *int32
+	media_mbid         *string
+	book_kind          *request.BookKind
 	title              *string
 	status             *request.Status
 	reason             *string
@@ -27034,10 +27036,122 @@ func (m *RequestMutation) AddedMediaID() (r int32, exists bool) {
 	return *v, true
 }
 
+// ClearMediaID clears the value of the "media_id" field.
+func (m *RequestMutation) ClearMediaID() {
+	m.media_id = nil
+	m.addmedia_id = nil
+	m.clearedFields[request.FieldMediaID] = struct{}{}
+}
+
+// MediaIDCleared returns if the "media_id" field was cleared in this mutation.
+func (m *RequestMutation) MediaIDCleared() bool {
+	_, ok := m.clearedFields[request.FieldMediaID]
+	return ok
+}
+
 // ResetMediaID resets all changes to the "media_id" field.
 func (m *RequestMutation) ResetMediaID() {
 	m.media_id = nil
 	m.addmedia_id = nil
+	delete(m.clearedFields, request.FieldMediaID)
+}
+
+// SetMediaMbid sets the "media_mbid" field.
+func (m *RequestMutation) SetMediaMbid(s string) {
+	m.media_mbid = &s
+}
+
+// MediaMbid returns the value of the "media_mbid" field in the mutation.
+func (m *RequestMutation) MediaMbid() (r string, exists bool) {
+	v := m.media_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMediaMbid returns the old "media_mbid" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldMediaMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMediaMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMediaMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMediaMbid: %w", err)
+	}
+	return oldValue.MediaMbid, nil
+}
+
+// ClearMediaMbid clears the value of the "media_mbid" field.
+func (m *RequestMutation) ClearMediaMbid() {
+	m.media_mbid = nil
+	m.clearedFields[request.FieldMediaMbid] = struct{}{}
+}
+
+// MediaMbidCleared returns if the "media_mbid" field was cleared in this mutation.
+func (m *RequestMutation) MediaMbidCleared() bool {
+	_, ok := m.clearedFields[request.FieldMediaMbid]
+	return ok
+}
+
+// ResetMediaMbid resets all changes to the "media_mbid" field.
+func (m *RequestMutation) ResetMediaMbid() {
+	m.media_mbid = nil
+	delete(m.clearedFields, request.FieldMediaMbid)
+}
+
+// SetBookKind sets the "book_kind" field.
+func (m *RequestMutation) SetBookKind(rk request.BookKind) {
+	m.book_kind = &rk
+}
+
+// BookKind returns the value of the "book_kind" field in the mutation.
+func (m *RequestMutation) BookKind() (r request.BookKind, exists bool) {
+	v := m.book_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBookKind returns the old "book_kind" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldBookKind(ctx context.Context) (v request.BookKind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBookKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBookKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBookKind: %w", err)
+	}
+	return oldValue.BookKind, nil
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (m *RequestMutation) ClearBookKind() {
+	m.book_kind = nil
+	m.clearedFields[request.FieldBookKind] = struct{}{}
+}
+
+// BookKindCleared returns if the "book_kind" field was cleared in this mutation.
+func (m *RequestMutation) BookKindCleared() bool {
+	_, ok := m.clearedFields[request.FieldBookKind]
+	return ok
+}
+
+// ResetBookKind resets all changes to the "book_kind" field.
+func (m *RequestMutation) ResetBookKind() {
+	m.book_kind = nil
+	delete(m.clearedFields, request.FieldBookKind)
 }
 
 // SetTitle sets the "title" field.
@@ -27322,7 +27436,7 @@ func (m *RequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 10)
 	if m.create_time != nil {
 		fields = append(fields, request.FieldCreateTime)
 	}
@@ -27334,6 +27448,12 @@ func (m *RequestMutation) Fields() []string {
 	}
 	if m.media_id != nil {
 		fields = append(fields, request.FieldMediaID)
+	}
+	if m.media_mbid != nil {
+		fields = append(fields, request.FieldMediaMbid)
+	}
+	if m.book_kind != nil {
+		fields = append(fields, request.FieldBookKind)
 	}
 	if m.title != nil {
 		fields = append(fields, request.FieldTitle)
@@ -27363,6 +27483,10 @@ func (m *RequestMutation) Field(name string) (ent.Value, bool) {
 		return m.MediaType()
 	case request.FieldMediaID:
 		return m.MediaID()
+	case request.FieldMediaMbid:
+		return m.MediaMbid()
+	case request.FieldBookKind:
+		return m.BookKind()
 	case request.FieldTitle:
 		return m.Title()
 	case request.FieldStatus:
@@ -27388,6 +27512,10 @@ func (m *RequestMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldMediaType(ctx)
 	case request.FieldMediaID:
 		return m.OldMediaID(ctx)
+	case request.FieldMediaMbid:
+		return m.OldMediaMbid(ctx)
+	case request.FieldBookKind:
+		return m.OldBookKind(ctx)
 	case request.FieldTitle:
 		return m.OldTitle(ctx)
 	case request.FieldStatus:
@@ -27432,6 +27560,20 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMediaID(v)
+		return nil
+	case request.FieldMediaMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMediaMbid(v)
+		return nil
+	case request.FieldBookKind:
+		v, ok := value.(request.BookKind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBookKind(v)
 		return nil
 	case request.FieldTitle:
 		v, ok := value.(string)
@@ -27506,6 +27648,15 @@ func (m *RequestMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *RequestMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(request.FieldMediaID) {
+		fields = append(fields, request.FieldMediaID)
+	}
+	if m.FieldCleared(request.FieldMediaMbid) {
+		fields = append(fields, request.FieldMediaMbid)
+	}
+	if m.FieldCleared(request.FieldBookKind) {
+		fields = append(fields, request.FieldBookKind)
+	}
 	if m.FieldCleared(request.FieldReason) {
 		fields = append(fields, request.FieldReason)
 	}
@@ -27526,6 +27677,15 @@ func (m *RequestMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *RequestMutation) ClearField(name string) error {
 	switch name {
+	case request.FieldMediaID:
+		m.ClearMediaID()
+		return nil
+	case request.FieldMediaMbid:
+		m.ClearMediaMbid()
+		return nil
+	case request.FieldBookKind:
+		m.ClearBookKind()
+		return nil
 	case request.FieldReason:
 		m.ClearReason()
 		return nil
@@ -27551,6 +27711,12 @@ func (m *RequestMutation) ResetField(name string) error {
 		return nil
 	case request.FieldMediaID:
 		m.ResetMediaID()
+		return nil
+	case request.FieldMediaMbid:
+		m.ResetMediaMbid()
+		return nil
+	case request.FieldBookKind:
+		m.ResetBookKind()
 		return nil
 	case request.FieldTitle:
 		m.ResetTitle()

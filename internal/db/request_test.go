@@ -14,6 +14,7 @@ import (
 
 var _ = Describe("Request store", Label("unit", "db"), func() {
 	var (
+		client  *ent.Client
 		store   Store
 		ctx     context.Context
 		userID  uint32
@@ -22,7 +23,8 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		client, err := Open(ctx, ":memory:")
+		var err error
+		client, err = Open(ctx, ":memory:")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { Expect(client.Close()).To(Succeed()) })
 		store = New(client)
@@ -169,5 +171,82 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 		n, err = store.CountRequestsByStatus(ctx, request.StatusPending, userID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(n).To(Equal(1))
+	})
+
+	Describe("music and book media types", func() {
+		const (
+			mbidA = "11111111-1111-1111-1111-111111111111"
+			mbidB = "22222222-2222-2222-2222-222222222222"
+		)
+
+		create := func(t request.MediaType, mut func(*ent.RequestCreate)) error {
+			c := client.Request.Create().
+				SetMediaType(t).
+				SetTitle("T").
+				SetRequesterID(userID)
+			mut(c)
+			_, err := c.Save(ctx)
+			return err
+		}
+		artist := func(mbid string) error {
+			return create(request.MediaTypeArtist, func(c *ent.RequestCreate) {
+				c.SetMediaMbid(mbid)
+			})
+		}
+		author := func(id uint32) error {
+			return create(request.MediaTypeAuthor, func(c *ent.RequestCreate) {
+				c.SetMediaID(id)
+			})
+		}
+
+		It("saves an artist request with an MBID and no media_id", func() {
+			r, err := client.Request.Create().
+				SetMediaType(request.MediaTypeArtist).
+				SetMediaMbid(mbidA).
+				SetTitle("Artist").
+				SetRequesterID(userID).
+				Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(r.MediaID).To(BeZero())
+			Expect(r.MediaMbid).To(Equal(mbidA))
+		})
+
+		It("saves a book request with a book kind", func() {
+			r, err := client.Request.Create().
+				SetMediaType(request.MediaTypeBook).
+				SetMediaID(12).
+				SetBookKind(request.BookKindEbook).
+				SetTitle("Book").
+				SetRequesterID(userID).
+				Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(r.BookKind).To(Equal(request.BookKindEbook))
+		})
+
+		It("allows active artist requests with different MBIDs", func() {
+			Expect(artist(mbidA)).To(Succeed())
+			Expect(artist(mbidB)).To(Succeed())
+		})
+
+		It("rejects a second active artist request with the same MBID", func() {
+			Expect(artist(mbidA)).To(Succeed())
+			Expect(ent.IsConstraintError(artist(mbidA))).To(BeTrue())
+		})
+
+		It("dedups author requests on media_id only", func() {
+			Expect(author(1)).To(Succeed())
+			Expect(author(2)).To(Succeed())
+			Expect(ent.IsConstraintError(author(1))).To(BeTrue())
+		})
+
+		It("lets a denied music request be re-requested", func() {
+			Expect(artist(mbidA)).To(Succeed())
+			_, err := client.Request.Update().
+				Where(request.MediaMbid(mbidA)).
+				SetStatus(request.StatusDenied).
+				Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(artist(mbidA)).To(Succeed())
+		})
 	})
 })

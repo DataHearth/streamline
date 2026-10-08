@@ -61,6 +61,42 @@ func (_c *RequestCreate) SetMediaID(v uint32) *RequestCreate {
 	return _c
 }
 
+// SetNillableMediaID sets the "media_id" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableMediaID(v *uint32) *RequestCreate {
+	if v != nil {
+		_c.SetMediaID(*v)
+	}
+	return _c
+}
+
+// SetMediaMbid sets the "media_mbid" field.
+func (_c *RequestCreate) SetMediaMbid(v string) *RequestCreate {
+	_c.mutation.SetMediaMbid(v)
+	return _c
+}
+
+// SetNillableMediaMbid sets the "media_mbid" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableMediaMbid(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetMediaMbid(*v)
+	}
+	return _c
+}
+
+// SetBookKind sets the "book_kind" field.
+func (_c *RequestCreate) SetBookKind(v request.BookKind) *RequestCreate {
+	_c.mutation.SetBookKind(v)
+	return _c
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableBookKind(v *request.BookKind) *RequestCreate {
+	if v != nil {
+		_c.SetBookKind(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *RequestCreate) SetTitle(v string) *RequestCreate {
 	_c.mutation.SetTitle(v)
@@ -188,6 +224,10 @@ func (_c *RequestCreate) defaults() {
 		v := request.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
+	if _, ok := _c.mutation.MediaID(); !ok {
+		v := request.DefaultMediaID
+		_c.mutation.SetMediaID(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := request.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -210,8 +250,10 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "media_type", err: fmt.Errorf(`ent: validator failed for field "Request.media_type": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.MediaID(); !ok {
-		return &ValidationError{Name: "media_id", err: errors.New(`ent: missing required field "Request.media_id"`)}
+	if v, ok := _c.mutation.BookKind(); ok {
+		if err := request.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "Request.book_kind": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Request.title"`)}
@@ -279,6 +321,14 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MediaID(); ok {
 		_spec.SetField(request.FieldMediaID, field.TypeUint32, value)
 		_node.MediaID = value
+	}
+	if value, ok := _c.mutation.MediaMbid(); ok {
+		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
+		_node.MediaMbid = value
+	}
+	if value, ok := _c.mutation.BookKind(); ok {
+		_spec.SetField(request.FieldBookKind, field.TypeEnum, value)
+		_node.BookKind = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)

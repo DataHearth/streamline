@@ -71,6 +71,52 @@ func (_u *RequestUpdate) AddMediaID(v int32) *RequestUpdate {
 	return _u
 }
 
+// ClearMediaID clears the value of the "media_id" field.
+func (_u *RequestUpdate) ClearMediaID() *RequestUpdate {
+	_u.mutation.ClearMediaID()
+	return _u
+}
+
+// SetMediaMbid sets the "media_mbid" field.
+func (_u *RequestUpdate) SetMediaMbid(v string) *RequestUpdate {
+	_u.mutation.SetMediaMbid(v)
+	return _u
+}
+
+// SetNillableMediaMbid sets the "media_mbid" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableMediaMbid(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetMediaMbid(*v)
+	}
+	return _u
+}
+
+// ClearMediaMbid clears the value of the "media_mbid" field.
+func (_u *RequestUpdate) ClearMediaMbid() *RequestUpdate {
+	_u.mutation.ClearMediaMbid()
+	return _u
+}
+
+// SetBookKind sets the "book_kind" field.
+func (_u *RequestUpdate) SetBookKind(v request.BookKind) *RequestUpdate {
+	_u.mutation.SetBookKind(v)
+	return _u
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableBookKind(v *request.BookKind) *RequestUpdate {
+	if v != nil {
+		_u.SetBookKind(*v)
+	}
+	return _u
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (_u *RequestUpdate) ClearBookKind() *RequestUpdate {
+	_u.mutation.ClearBookKind()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *RequestUpdate) SetTitle(v string) *RequestUpdate {
 	_u.mutation.SetTitle(v)
@@ -229,6 +275,11 @@ func (_u *RequestUpdate) check() error {
 			return &ValidationError{Name: "media_type", err: fmt.Errorf(`ent: validator failed for field "Request.media_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BookKind(); ok {
+		if err := request.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "Request.book_kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := request.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
@@ -274,6 +325,21 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedMediaID(); ok {
 		_spec.AddField(request.FieldMediaID, field.TypeUint32, value)
+	}
+	if _u.mutation.MediaIDCleared() {
+		_spec.ClearField(request.FieldMediaID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.MediaMbid(); ok {
+		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
+	}
+	if _u.mutation.MediaMbidCleared() {
+		_spec.ClearField(request.FieldMediaMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.BookKind(); ok {
+		_spec.SetField(request.FieldBookKind, field.TypeEnum, value)
+	}
+	if _u.mutation.BookKindCleared() {
+		_spec.ClearField(request.FieldBookKind, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)
@@ -411,6 +477,52 @@ func (_u *RequestUpdateOne) SetNillableMediaID(v *uint32) *RequestUpdateOne {
 // AddMediaID adds value to the "media_id" field.
 func (_u *RequestUpdateOne) AddMediaID(v int32) *RequestUpdateOne {
 	_u.mutation.AddMediaID(v)
+	return _u
+}
+
+// ClearMediaID clears the value of the "media_id" field.
+func (_u *RequestUpdateOne) ClearMediaID() *RequestUpdateOne {
+	_u.mutation.ClearMediaID()
+	return _u
+}
+
+// SetMediaMbid sets the "media_mbid" field.
+func (_u *RequestUpdateOne) SetMediaMbid(v string) *RequestUpdateOne {
+	_u.mutation.SetMediaMbid(v)
+	return _u
+}
+
+// SetNillableMediaMbid sets the "media_mbid" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableMediaMbid(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetMediaMbid(*v)
+	}
+	return _u
+}
+
+// ClearMediaMbid clears the value of the "media_mbid" field.
+func (_u *RequestUpdateOne) ClearMediaMbid() *RequestUpdateOne {
+	_u.mutation.ClearMediaMbid()
+	return _u
+}
+
+// SetBookKind sets the "book_kind" field.
+func (_u *RequestUpdateOne) SetBookKind(v request.BookKind) *RequestUpdateOne {
+	_u.mutation.SetBookKind(v)
+	return _u
+}
+
+// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableBookKind(v *request.BookKind) *RequestUpdateOne {
+	if v != nil {
+		_u.SetBookKind(*v)
+	}
+	return _u
+}
+
+// ClearBookKind clears the value of the "book_kind" field.
+func (_u *RequestUpdateOne) ClearBookKind() *RequestUpdateOne {
+	_u.mutation.ClearBookKind()
 	return _u
 }
 
@@ -585,6 +697,11 @@ func (_u *RequestUpdateOne) check() error {
 			return &ValidationError{Name: "media_type", err: fmt.Errorf(`ent: validator failed for field "Request.media_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.BookKind(); ok {
+		if err := request.BookKindValidator(v); err != nil {
+			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "Request.book_kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Title(); ok {
 		if err := request.TitleValidator(v); err != nil {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Request.title": %w`, err)}
@@ -647,6 +764,21 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if value, ok := _u.mutation.AddedMediaID(); ok {
 		_spec.AddField(request.FieldMediaID, field.TypeUint32, value)
+	}
+	if _u.mutation.MediaIDCleared() {
+		_spec.ClearField(request.FieldMediaID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.MediaMbid(); ok {
+		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
+	}
+	if _u.mutation.MediaMbidCleared() {
+		_spec.ClearField(request.FieldMediaMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.BookKind(); ok {
+		_spec.SetField(request.FieldBookKind, field.TypeEnum, value)
+	}
+	if _u.mutation.BookKindCleared() {
+		_spec.ClearField(request.FieldBookKind, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)

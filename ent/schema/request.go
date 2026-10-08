@@ -21,8 +21,14 @@ func (Request) Mixin() []ent.Mixin {
 
 func (Request) Fields() []ent.Field {
 	return []ent.Field{
-		field.Enum("media_type").Values("movie", "tvshow"),
-		field.Uint32("media_id").Comment("TMDB ID for movies, TVDB ID for TV shows"),
+		field.Enum("media_type").
+			Values("movie", "tvshow", "artist", "album", "author", "book"),
+		field.Uint32("media_id").Optional().Default(0).
+			Comment("TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for authors and books. Zero for artists and albums."),
+		field.String("media_mbid").Optional().
+			Comment("MusicBrainz ID: artist MBID for artist requests, release-group MBID for album requests."),
+		field.Enum("book_kind").Values("ebook", "audiobook", "both").Optional().
+			Comment("Slot a book request asks for. Only set when media_type=book."),
 		field.String("title").NotEmpty(),
 		field.Enum("status").
 			Values("pending", "approved", "denied", "available").
@@ -48,10 +54,20 @@ func (Request) Indexes() []ent.Index {
 		// Partial on purpose: the uniqueness only holds over the statuses
 		// FindActiveRequest treats as active, so a denied or superseded
 		// request never blocks a legitimate re-request of the same media.
+		//
+		// The <> 0 / <> '' guards are load-bearing: music rows carry
+		// media_id = 0, so without the first every second artist would collide
+		// on the placeholder; the second keeps an empty-string MBID, should a
+		// writer ever store one instead of NULL, from colliding the same way.
 		index.Fields("media_type", "media_id").
 			Unique().
 			Annotations(entsql.IndexWhere(
-				"status IN ('pending', 'approved', 'available')",
+				"status IN ('pending', 'approved', 'available') AND media_id <> 0",
+			)),
+		index.Fields("media_type", "media_mbid").
+			Unique().
+			Annotations(entsql.IndexWhere(
+				"status IN ('pending', 'approved', 'available') AND media_mbid <> ''",
 			)),
 		index.Edges("requester"),
 		index.Edges("approved_by"),
