@@ -14,7 +14,6 @@
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref, MOVIES_SEARCH } from "@lib/prefs";
 	import { onRouteQuery } from "@lib/route-query";
-	import { pageMeta } from "@lib/page-meta.svelte";
 	import MoviesToolbar from "@components/movies/MoviesToolbar.svelte";
 	import MovieGrid from "@components/movies/MovieGrid.svelte";
 	import MovieList from "@components/movies/MovieList.svelte";
@@ -271,8 +270,8 @@
 		query = "";
 	}
 
-	// Below md the page gives up its own count line and the topbar carries it
-	// under the title instead; at md and up the line below the toolbar stays.
+	// The heading's count line, below md only: from md the row under the
+	// toolbar carries the same counts and the last scan.
 	let metaLine = $derived.by(() => {
 		const parts = [
 			filtering
@@ -282,11 +281,6 @@
 		if (lastScan)
 			parts.push(i18n.movies_scan_meta({ when: formatRelative(lastScan) }));
 		return parts.join(" · ");
-	});
-
-	$effect(() => {
-		pageMeta.set(metaLine);
-		return () => pageMeta.clear();
 	});
 
 	// ── Selection ────────────────────────────────────────────────────────────
@@ -339,6 +333,12 @@
 </script>
 
 <div class="flex flex-col">
+	<!-- Same heading as every other section, outside the loading branches so it
+	     is in place before the list is. -->
+	<header class="w-full px-4 pb-1 pt-6 md:px-6">
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.movies_label()}</h1>
+		<p class="mt-1 truncate text-sm text-fg-muted md:hidden">{metaLine}</p>
+	</header>
 	{#if moviesQuery.isLoading}
 		<span class="sr-only" role="status">{i18n.common_loading_movies()}</span>
 		<SkeletonToolbar triggers={2} />

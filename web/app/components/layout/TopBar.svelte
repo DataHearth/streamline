@@ -13,9 +13,8 @@
 	} from "@lucide/svelte";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { pageMeta } from "@lib/page-meta.svelte";
 	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
-	import SearchField from "./SearchField.svelte";
+	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -36,21 +35,10 @@
 	);
 
 	type Crumb = { label: string; href?: string };
-	// Sections that own their page heading (h1) and therefore want no title in
-	// the topbar — only breadcrumbs appear when the user is on a detail page.
-	// The operations pages each render a heading of their own ("Torrents",
-	// "Queue & History", "Requests"…), so a topbar title there printed the same
-	// word twice, one above the other. Calendar is not one of them: its heading
-	// is the month, which the topbar's "Calendar" does not repeat.
-	const TITLELESS_PREFIXES = new Set([
-		"/account",
-		"/settings",
-		"/activity",
-		"/torrents",
-		"/transcoding",
-		"/requests",
-		"/imports",
-	]);
+	// No top-level page carries a title in the bar: every section sets its own
+	// h1 in the page, so the bar only ever shows breadcrumbs, on a detail page.
+	// A bar title on some tabs and an in-page h1 on others moved the heading
+	// between tabs.
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/", label: i18n.nav_dashboard() },
 		{ prefix: "/movies", label: i18n.movies_label() },
@@ -97,11 +85,7 @@
 		);
 		if (!root) return [];
 		const rest = pathname.slice(root.prefix.length).replace(/^\//, "");
-		if (!rest) {
-			return TITLELESS_PREFIXES.has(root.prefix)
-				? []
-				: [{ label: root.label }];
-		}
+		if (!rest) return [];
 		const segments = rest.split("/").filter(Boolean);
 		const trail: Crumb[] = [{ label: root.label, href: root.prefix }];
 		let href = root.prefix;
@@ -303,21 +287,9 @@
 <header
 	class="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8"
 >
-	<!-- Two fixed rows, whatever the page hands over: the title row, and below md
-	     the count line's row, rendered empty when there is no line. The header
-	     centres this block, so a block that grew a second row only on Movies and
-	     Series pushed the title up there and let it drop back on every other tab
-	     (#73). The breadcrumb sits in the same 22px row so entering a detail page
-	     does not move it either. -->
 	<div class="min-w-0 flex-1">
 		<div class="flex h-[22px] min-w-0 items-center">
-			{#if crumbs.length === 1}
-				<h1
-					class="whitespace-nowrap text-[22px] font-semibold leading-none tracking-tight text-fg"
-				>
-					{crumbs[0]?.label}
-				</h1>
-			{:else if crumbs.length > 1}
+			{#if crumbs.length > 1}
 				<nav
 					aria-label={i18n.nav_breadcrumb()}
 					class="flex min-w-0 items-center gap-2 text-sm text-fg-muted"
@@ -340,13 +312,6 @@
 				</nav>
 			{/if}
 		</div>
-		<!-- Phone only: below md the page's own count line costs 30px of a 774px
-		     viewport, so it rides here instead. -->
-		<p
-			class="mt-1.5 h-[15px] truncate font-mono text-[10.5px] leading-[15px] text-fg-subtle md:hidden"
-		>
-			{crumbs.length === 1 ? pageMeta.line : ""}
-		</p>
 	</div>
 
 	<button
@@ -365,7 +330,7 @@
 	</button>
 
 	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
-	     a flex-1 here took half the header, truncating the page's count line. -->
+	     a flex-1 here took half the header from the breadcrumbs. -->
 	<div class="flex flex-none items-center justify-end gap-2 lg:flex-1">
 		<SearchField />
 		<button

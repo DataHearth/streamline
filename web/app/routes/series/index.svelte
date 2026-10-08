@@ -14,7 +14,6 @@
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref, SERIES_SEARCH } from "@lib/prefs";
 	import { onRouteQuery } from "@lib/route-query";
-	import { pageMeta } from "@lib/page-meta.svelte";
 	import SeriesToolbar from "@components/series/SeriesToolbar.svelte";
 	import type {
 		SeriesTab,
@@ -337,8 +336,8 @@
 		query = "";
 	}
 
-	// Below md the topbar carries this under the title and the page's own count
-	// line stands down; at md and up nothing changes.
+	// The heading's count line, below md only: from md the row under the
+	// toolbar carries the same counts and the last scan.
 	let metaLine = $derived.by(() => {
 		const parts = [
 			filtering
@@ -355,11 +354,6 @@
 		if (lastScan)
 			parts.push(i18n.series_scan_meta({ when: formatRelative(lastScan) }));
 		return parts.join(" · ");
-	});
-
-	$effect(() => {
-		pageMeta.set(metaLine);
-		return () => pageMeta.clear();
 	});
 
 	// ── Selection ────────────────────────────────────────────────────────────
@@ -406,6 +400,12 @@
 </script>
 
 <div class="flex flex-col">
+	<!-- Same heading as every other section, outside the loading branches so it
+	     is in place before the list is. -->
+	<header class="w-full px-4 pb-1 pt-6 md:px-6">
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_series()}</h1>
+		<p class="mt-1 truncate text-sm text-fg-muted md:hidden">{metaLine}</p>
+	</header>
 	{#if seriesQuery.isLoading}
 		<span class="sr-only" role="status">{i18n.common_loading_series()}</span>
 		<SkeletonToolbar triggers={3} />

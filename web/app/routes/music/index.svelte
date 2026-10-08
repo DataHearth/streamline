@@ -6,7 +6,6 @@
 	import { auth } from "@lib/auth.svelte";
 	import { fold } from "@lib/text";
 	import { initials } from "@lib/people";
-	import { pageMeta } from "@lib/page-meta.svelte";
 	import { INPUT_CLASS } from "@lib/form";
 	import { cn } from "@lib/cn";
 	import Skeleton from "@components/shared/Skeleton.svelte";
@@ -35,13 +34,13 @@
 				? i18n.music_artists_count_one({ count: 1 })
 				: i18n.music_artists_count_other({ count: all.length }),
 	);
-	$effect(() => {
-		pageMeta.set(metaLine);
-		return () => pageMeta.clear();
-	});
 </script>
 
-<div class="flex flex-col gap-4 px-4 py-4 md:px-6">
+<div class="flex flex-col gap-4 px-4 pb-4 pt-6 md:px-6">
+	<header>
+		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.music_label()}</h1>
+		<p class="mt-1 truncate text-sm text-fg-muted">{metaLine}</p>
+	</header>
 	<div class="flex flex-wrap items-center gap-3">
 		<div class="relative min-w-0 flex-1 md:max-w-sm">
 			<Search
