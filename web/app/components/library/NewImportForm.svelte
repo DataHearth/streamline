@@ -12,6 +12,7 @@
 		ImportMode,
 		ImportScan,
 		ImportScanKind,
+		ImportSource,
 		ImportStartRequest,
 		ImportTransferMode,
 	} from "@lib/types";
@@ -19,6 +20,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import RadioCards from "@components/forms/RadioCards.svelte";
 	import ProviderKeyNotice from "@components/shared/ProviderKeyNotice.svelte";
+	import ArrImportWizard from "./arr/ArrImportWizard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
@@ -32,6 +34,30 @@
 	let { onCreated }: Props = $props();
 
 	const qc = useQueryClient();
+
+	// Which kind of import this is. It sits outside the folder form: a Radarr or
+	// Sonarr migration is its own wizard, and the folder form below stays
+	// exactly as it was.
+	let source = $state<ImportSource>("filesystem");
+
+	const SOURCES: { value: ImportSource; label: string; description: string }[] =
+		[
+			{
+				value: "filesystem",
+				label: i18n.imports_source_folder(),
+				description: i18n.imports_source_folder_desc(),
+			},
+			{
+				value: "radarr",
+				label: "Radarr",
+				description: i18n.imports_source_radarr_desc(),
+			},
+			{
+				value: "sonarr",
+				label: "Sonarr",
+				description: i18n.imports_source_sonarr_desc(),
+			},
+		];
 
 	// get(goto) inside the onSuccess callback throws "derived() expects stores
 	// as input" — goto is a derived store and re-subscribing once the mutation
@@ -152,110 +178,129 @@
 	];
 </script>
 
-<form
-	class="space-y-5"
-	onsubmit={(e) => {
-		e.preventDefault();
-		form.handleSubmit();
-	}}
->
-	<form.Field name="kind">
-		{#snippet children(field)}
-			<RadioCards
-				legend={i18n.imports_media_type()}
-				columns={2}
-				name={field.name}
-				value={field.state.value}
-				onChange={(v) => {
-					field.handleChange(v);
-					kind = v;
-				}}
-				options={KINDS.map((k) => ({
-					value: k.v,
-					label: k.label,
-					description: k.desc,
-				}))}
-			/>
-		{/snippet}
-	</form.Field>
+<div class="space-y-5">
+	<RadioCards
+		legend={i18n.imports_source_label()}
+		columns={3}
+		name="import-source"
+		value={source}
+		onChange={(v) => (source = v)}
+		options={SOURCES}
+	/>
 
-	<form.Field name="source_path">
-		{#snippet children(field)}
-			<TextField
-				{field}
-				label={i18n.imports_source_path()}
-				placeholder={path.placeholder}
-				autocomplete="off"
-				help={path.help()}
-			/>
-		{/snippet}
-	</form.Field>
-
-	{#if adoptOnly}
-		<div>
-			<p class="mb-2 text-sm font-medium text-fg-muted">{i18n.common_mode()}</p>
-			<div class="flex flex-col gap-1.5 rounded-md border border-border bg-bg-card p-4">
-				<span class="text-sm font-semibold text-fg">{i18n.imports_adopt_in_place()}</span>
-				<span class="text-xs text-fg-muted">
-					{kind === "book" ? i18n.imports_in_place_books() : i18n.imports_in_place_music()}
-				</span>
-			</div>
-		</div>
-	{:else}
-		<form.Field name="mode">
-			{#snippet children(field)}
-				<RadioCards
-					legend={i18n.common_mode()}
-					columns={2}
-					name={field.name}
-					value={field.state.value}
-					onChange={(v) => {
-						field.handleChange(v);
-						mode = v;
-					}}
-					options={MODES.map((m) => ({
-						value: m.v,
-						label: m.label,
-						description: m.desc,
-					}))}
-				/>
-			{/snippet}
-		</form.Field>
-	{/if}
-
-	{#if !adoptOnly && mode === "rename"}
-		<form.Field name="import_mode">
-			{#snippet children(field)}
-				<div>
-					<Select
-						label={i18n.imports_transfer_mode()}
-						value={field.state.value}
-						options={TRANSFER_MODES.map((t) => ({
-							value: t.v,
-							label: t.label,
-						}))}
-						onChange={(v) => field.handleChange(v)}
-					/>
-					<p class="mt-1 text-xs text-fg-muted">
-						{i18n.imports_overrides_global()}
-					</p>
-				</div>
-			{/snippet}
-		</form.Field>
-	{/if}
-
-	{#if keyUnset && kind === "book"}
-		<ProviderKeyNotice reason="unset" onNavigate={onCreated} />
-	{/if}
-
-	<div class="flex justify-end">
-		<button
-			type="submit"
-			disabled={!form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+	{#if source === "filesystem"}
+		<form
+			class="space-y-5"
+			onsubmit={(e) => {
+				e.preventDefault();
+				form.handleSubmit();
+			}}
 		>
-			<Play size={14} aria-hidden="true" />
-			{form.state.isSubmitting ? i18n.common_starting() : i18n.imports_start_scan()}
-		</button>
-	</div>
-</form>
+			<form.Field name="kind">
+				{#snippet children(field)}
+					<RadioCards
+						legend={i18n.imports_media_type()}
+						columns={2}
+						name={field.name}
+						value={field.state.value}
+						onChange={(v) => {
+							field.handleChange(v);
+							kind = v;
+						}}
+						options={KINDS.map((k) => ({
+							value: k.v,
+							label: k.label,
+							description: k.desc,
+						}))}
+					/>
+				{/snippet}
+			</form.Field>
+
+			<form.Field name="source_path">
+				{#snippet children(field)}
+					<TextField
+						{field}
+						label={i18n.imports_source_path()}
+						placeholder={path.placeholder}
+						autocomplete="off"
+						help={path.help()}
+					/>
+				{/snippet}
+			</form.Field>
+
+			{#if adoptOnly}
+				<div>
+					<p class="mb-2 text-sm font-medium text-fg-muted">{i18n.common_mode()}</p>
+					<div class="flex flex-col gap-1.5 rounded-md border border-border bg-bg-card p-4">
+						<span class="text-sm font-semibold text-fg">{i18n.imports_adopt_in_place()}</span>
+						<span class="text-xs text-fg-muted">
+							{kind === "book" ? i18n.imports_in_place_books() : i18n.imports_in_place_music()}
+						</span>
+					</div>
+				</div>
+			{:else}
+				<form.Field name="mode">
+					{#snippet children(field)}
+						<RadioCards
+							legend={i18n.common_mode()}
+							columns={2}
+							name={field.name}
+							value={field.state.value}
+							onChange={(v) => {
+								field.handleChange(v);
+								mode = v;
+							}}
+							options={MODES.map((m) => ({
+								value: m.v,
+								label: m.label,
+								description: m.desc,
+							}))}
+						/>
+					{/snippet}
+				</form.Field>
+			{/if}
+
+			{#if !adoptOnly && mode === "rename"}
+				<form.Field name="import_mode">
+					{#snippet children(field)}
+						<div>
+							<Select
+								label={i18n.imports_transfer_mode()}
+								value={field.state.value}
+								options={TRANSFER_MODES.map((t) => ({
+									value: t.v,
+									label: t.label,
+								}))}
+								onChange={(v) => field.handleChange(v)}
+							/>
+							<p class="mt-1 text-xs text-fg-muted">
+								{i18n.imports_overrides_global()}
+							</p>
+						</div>
+					{/snippet}
+				</form.Field>
+			{/if}
+
+			{#if keyUnset && kind === "book"}
+				<ProviderKeyNotice reason="unset" onNavigate={onCreated} />
+			{/if}
+
+			<div class="flex justify-end">
+				<button
+					type="submit"
+					disabled={!form.state.canSubmit || form.state.isSubmitting}
+					class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					<Play size={14} aria-hidden="true" />
+					{form.state.isSubmitting ? i18n.common_starting() : i18n.imports_start_scan()}
+				</button>
+			</div>
+		</form>
+	{:else}
+		<!-- Keyed on the app: switching between Radarr and Sonarr starts over
+		     rather than carrying one instance's preview into the other. -->
+		{#key source}
+			<ArrImportWizard app={source} {onCreated} />
+		{/key}
+	{/if}
+</div>
