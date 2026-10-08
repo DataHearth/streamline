@@ -2,6 +2,7 @@ package arr
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -93,8 +94,13 @@ var _ = Describe("FieldValue", Label("unit", "arr"), func() {
 })
 
 var _ = Describe("TranslateProfile", Label("unit", "arr"), func() {
-	// known stands in for quality.IsBuiltinName / config.FindCustomFormat.
-	known := func(n string) bool { return n == "Repack" }
+	// known stands in for the caller's builtin/custom-format resolution.
+	known := func(n string) (string, bool) {
+		if strings.EqualFold(n, "repack") {
+			return "Repack", true
+		}
+		return "", false
+	}
 
 	leaf := func(id uint32, name string, res int, allowed bool) QualityItem {
 		return QualityItem{
@@ -193,6 +199,47 @@ var _ = Describe("TranslateProfile", Label("unit", "arr"), func() {
 		Expect(got.Formats[0].Score).To(Equal(5))
 		Expect(notes).To(ContainElement(ContainSubstring("x265 (no HDR)")))
 		Expect(notes).NotTo(ContainElement(ContainSubstring("Unscored")))
+	})
+
+	It("stores a case-folded match under streamline's spelling", func() {
+		got, notes := TranslateProfile(QualityProfile{
+			Name:        "P",
+			Cutoff:      9,
+			Items:       []QualityItem{leaf(9, "Bluray-1080p", 1080, true)},
+			FormatItems: []FormatItem{{Name: "REPACK", Score: 5}},
+		}, known)
+
+		Expect(got.Formats).To(HaveLen(1))
+		Expect(got.Formats[0].Name).To(Equal("Repack"))
+		Expect(notes).NotTo(ContainElement(ContainSubstring("REPACK")))
+	})
+
+	It("keeps the first of two source formats resolving to one name", func() {
+		got, _ := TranslateProfile(QualityProfile{
+			Name:   "P",
+			Cutoff: 9,
+			Items:  []QualityItem{leaf(9, "Bluray-1080p", 1080, true)},
+			FormatItems: []FormatItem{
+				{Name: "Repack", Score: 5},
+				{Name: "REPACK", Score: 50},
+			},
+		}, known)
+
+		Expect(got.Formats).To(HaveLen(1))
+		Expect(got.Formats[0].Score).To(Equal(5))
+	})
+
+	It("notes a minimum upgrade format score it cannot carry", func() {
+		_, notes := TranslateProfile(QualityProfile{
+			Name:   "P",
+			Cutoff: 9,
+			Items: []QualityItem{
+				leaf(9, "Bluray-1080p", 1080, true),
+			},
+			MinUpgradeFormatScore: 50,
+		}, known)
+
+		Expect(notes).To(ContainElement(ContainSubstring("50")))
 	})
 })
 

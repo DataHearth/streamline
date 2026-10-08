@@ -78,7 +78,10 @@ type QualityProfile struct {
 	Items             []QualityItem `json:"items"`
 	MinFormatScore    int           `json:"minFormatScore"`
 	CutoffFormatScore int           `json:"cutoffFormatScore"`
-	FormatItems       []FormatItem  `json:"formatItems"`
+	// MinUpgradeFormatScore is the smallest score gain an upgrade must bring.
+	// Streamline has no such threshold, so it only surfaces as a note.
+	MinUpgradeFormatScore int          `json:"minUpgradeFormatScore"`
+	FormatItems           []FormatItem `json:"formatItems"`
 }
 
 // Field is one provider setting. Every indexer and download-client setting

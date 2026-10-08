@@ -137,13 +137,17 @@ func allowedResolutions(items []QualityItem, inherited bool) []int {
 	return out
 }
 
-// TranslateProfile renders an *arr profile as a streamline one. known reports
-// whether a custom-format name resolves here; the caller passes a closure over
-// quality.IsBuiltinName and config.FindCustomFormat. The second return lists
-// every lossy step, for the operator to read before the profile is created.
+// TranslateProfile renders an *arr profile as a streamline one. resolve maps a
+// source custom-format name onto the name streamline stores it under, or
+// reports it unknown; the caller passes a closure over the builtin table and
+// config.FindCustomFormat. The entry carries streamline's spelling because the
+// config invariants compare format names exactly, so a case-folded match kept
+// in the source's spelling would fail validation on write. The second return
+// lists every lossy step, for the operator to read before the profile is
+// created.
 func TranslateProfile(
 	p QualityProfile,
-	known func(string) bool,
+	resolve func(string) (string, bool),
 ) (config.QualityProfileEntry, []string) {
 	var notes []string
 
@@ -185,22 +189,36 @@ func TranslateProfile(
 	}
 
 	var dropped []string
+	// Two source formats differing only in case collapse onto one name here,
+	// and a profile may score a format once; the first one listed wins.
+	seen := map[string]struct{}{}
 	for _, fi := range p.FormatItems {
 		if fi.Score == 0 {
 			continue
 		}
-		if !known(fi.Name) {
+		name, ok := resolve(fi.Name)
+		if !ok {
 			dropped = append(dropped, fi.Name)
 			continue
 		}
+		if _, dup := seen[name]; dup {
+			continue
+		}
+		seen[name] = struct{}{}
 		entry.Formats = append(entry.Formats, config.QualityProfileFormatScore{
-			Name:  fi.Name,
+			Name:  name,
 			Score: fi.Score,
 		})
 	}
 	if len(dropped) > 0 {
 		notes = append(notes, fmt.Sprintf(
 			"no custom format here matches: %s", strings.Join(dropped, ", ")))
+	}
+	if p.MinUpgradeFormatScore != 0 {
+		notes = append(notes, fmt.Sprintf(
+			"the source's minimum upgrade format score (%d) has no equivalent here",
+			p.MinUpgradeFormatScore,
+		))
 	}
 
 	notes = append(

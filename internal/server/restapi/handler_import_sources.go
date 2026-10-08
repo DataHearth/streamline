@@ -15,14 +15,16 @@ import (
 	"github.com/datahearth/streamline/internal/quality"
 )
 
-// knownFormat is the closure arr.TranslateProfile needs. It keeps that
+// resolveFormat is the closure arr.TranslateProfile needs. It keeps that
 // package free of the builtin table and the config singleton.
-func knownFormat(name string) bool {
+func resolveFormat(name string) (string, bool) {
 	if quality.IsBuiltinName(name) {
-		return true
+		return name, true
 	}
-	_, ok := config.FindCustomFormat(name)
-	return ok
+	if _, ok := config.FindCustomFormat(name); ok {
+		return name, true
+	}
+	return "", false
 }
 
 // arrSource validates the parts of a request that name an instance and opens
@@ -199,7 +201,7 @@ func buildPreview(
 	}
 
 	for _, p := range profiles {
-		entry, notes := arr.TranslateProfile(p, knownFormat)
+		entry, notes := arr.TranslateProfile(p, resolveFormat)
 		t := ArrProfileTranslation{
 			SourceId:   p.ID,
 			SourceName: p.Name,
