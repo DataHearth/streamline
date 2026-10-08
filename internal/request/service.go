@@ -10,8 +10,10 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
+	entrequest "github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -58,7 +60,9 @@ type Service struct {
 	movies    MovieAdder
 	shows     ShowAdder
 	music     music.Adder
+	books     book.Adder
 	musicMeta metadata.MusicProvider
+	bookMeta  metadata.BookProvider
 }
 
 func NewService(
@@ -66,14 +70,18 @@ func NewService(
 	movies MovieAdder,
 	shows ShowAdder,
 	music music.Adder,
+	books book.Adder,
 	musicMeta metadata.MusicProvider,
+	bookMeta metadata.BookProvider,
 ) *Service {
 	return &Service{
 		db:        store,
 		movies:    movies,
 		shows:     shows,
 		music:     music,
+		books:     books,
 		musicMeta: musicMeta,
+		bookMeta:  bookMeta,
 	}
 }
 
@@ -105,12 +113,21 @@ func validate(p CreateParams) error {
 			ErrInvalidRequest, p.MediaType,
 		)
 	}
-	if p.BookKind != "" && p.MediaType != "book" {
-		return fmt.Errorf(
-			"%w: book_kind only applies to a book", ErrInvalidRequest,
-		)
+	if p.MediaType != "book" {
+		if p.BookKind != "" {
+			return fmt.Errorf(
+				"%w: book_kind only applies to a book", ErrInvalidRequest,
+			)
+		}
+		return nil
 	}
-	return nil
+	switch p.BookKind {
+	case "ebook", "audiobook", "both":
+		return nil
+	}
+	return fmt.Errorf(
+		"%w: book_kind must be ebook, audiobook or both", ErrInvalidRequest,
+	)
 }
 
 func (s *Service) Create(
@@ -164,6 +181,14 @@ func (s *Service) Create(
 		if a != nil {
 			return nil, ErrDuplicate
 		}
+	case "author":
+		a, err := s.db.FindAuthorByHardcoverID(ctx, p.MediaID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if a != nil {
+			return nil, ErrDuplicate
+		}
 	}
 	row, err := s.db.CreateRequest(ctx, db.CreateRequestParams{
 		MediaType:      p.MediaType,
@@ -175,9 +200,10 @@ func (s *Service) Create(
 		QualityProfile: p.QualityProfile,
 	})
 	if err != nil {
-		// The partial unique index over active (media_type, media_id) is the
-		// real dedup gate — the lookups above only save a round-trip and lose
-		// to a concurrent request that inserts between them and this write.
+		// The partial unique indexes over active (media_type, media_id) and
+		// (media_type, media_mbid) are the real dedup gate — the lookups above
+		// only save a round-trip and lose to a concurrent request that inserts
+		// between them and this write.
 		if ent.IsConstraintError(err) {
 			return nil, ErrDuplicate
 		}
@@ -252,6 +278,24 @@ func (s *Service) Approve(
 				span, fmt.Errorf("approve: add artist: %w", err),
 			)
 		}
+	case "author":
+		_, err := s.books.Add(ctx, book.AddParams{
+			HardcoverID: req.MediaID,
+			Monitored:   true,
+		})
+		if errors.Is(err, book.ErrAuthorExists) {
+			alreadyInLibrary = true
+		} else if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add author: %w", err),
+			)
+		}
+	case "book":
+		if err := s.approveBook(ctx, req.MediaID, req.BookKind); err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("approve: add book: %w", err),
+			)
+		}
 	case "album":
 		if err := s.approveAlbum(ctx, req.MediaMbid, qualityProfile); err != nil {
 			return nil, otelx.RecordSpanError(
@@ -318,6 +362,62 @@ func (s *Service) approveAlbum(
 		}
 	}
 	return fmt.Errorf("album %s not in artist %s", albumMBID, rg.ArtistMBID)
+}
+
+// approveBook makes exactly the requested slot(s) of one book wanted. An
+// absent author is added with monitor policy none so the rest of its
+// bibliography stays out of the want list.
+func (s *Service) approveBook(
+	ctx context.Context,
+	hardcoverID uint32,
+	kind entrequest.BookKind,
+) error {
+	if s.bookMeta == nil {
+		return book.ErrNotConfigured
+	}
+	details, err := s.bookMeta.GetBook(ctx, hardcoverID)
+	if err != nil {
+		return fmt.Errorf("get book: %w", err)
+	}
+	row, err := s.db.FindAuthorByHardcoverID(ctx, details.AuthorHardcover)
+	if err != nil {
+		return err
+	}
+	var author *ent.Author
+	if row == nil {
+		author, err = s.books.Add(ctx, book.AddParams{
+			HardcoverID:   details.AuthorHardcover,
+			Monitored:     true,
+			MonitorPolicy: "none",
+		})
+	} else {
+		author, err = s.books.Get(ctx, row.ID)
+	}
+	if err != nil {
+		return err
+	}
+	var target *ent.Book
+	for _, b := range author.Edges.Books {
+		if b.HardcoverID == hardcoverID {
+			target = b
+			break
+		}
+	}
+	if target == nil {
+		return fmt.Errorf(
+			"book %d not in author %d", hardcoverID, details.AuthorHardcover,
+		)
+	}
+	kinds := []string{string(kind)}
+	if kind == entrequest.BookKindBoth {
+		kinds = []string{"ebook", "audiobook"}
+	}
+	for _, k := range kinds {
+		if err := s.books.SetBookSlot(ctx, target.ID, k, true); err != nil {
+			return fmt.Errorf("set %s slot: %w", k, err)
+		}
+	}
+	return nil
 }
 
 // Deny and Reopen are the negative half of the same workflow as Approve, and

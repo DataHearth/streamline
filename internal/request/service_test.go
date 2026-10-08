@@ -7,9 +7,12 @@ import (
 	"sync"
 
 	"github.com/datahearth/streamline/ent"
+	entrequest "github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/media/book"
+	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
 	"github.com/datahearth/streamline/internal/media/music"
 	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -41,13 +44,15 @@ func (s barrierStore) CreateRequest(
 
 var _ = Describe("Request service", Label("unit", "request"), func() {
 	var (
-		ctx     context.Context
-		storeMk *dbmocks.MockStore_Expecter
-		movieMk *reqmocks.MockMovieAdder_Expecter
-		showMk  *reqmocks.MockShowAdder_Expecter
-		musicMk *musicmocks.MockAdder_Expecter
-		metaMk  *metadatamocks.MockMusicProvider_Expecter
-		svc     *request.Service
+		ctx        context.Context
+		storeMk    *dbmocks.MockStore_Expecter
+		movieMk    *reqmocks.MockMovieAdder_Expecter
+		showMk     *reqmocks.MockShowAdder_Expecter
+		musicMk    *musicmocks.MockAdder_Expecter
+		metaMk     *metadatamocks.MockMusicProvider_Expecter
+		bookMk     *bookmocks.MockAdder_Expecter
+		bookMetaMk *metadatamocks.MockBookProvider_Expecter
+		svc        *request.Service
 	)
 
 	BeforeEach(func() {
@@ -62,7 +67,13 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		musicMk = musicAdder.EXPECT()
 		musicMeta := metadatamocks.NewMockMusicProvider(GinkgoT())
 		metaMk = musicMeta.EXPECT()
-		svc = request.NewService(store, movies, shows, musicAdder, musicMeta)
+		bookAdder := bookmocks.NewMockAdder(GinkgoT())
+		bookMk = bookAdder.EXPECT()
+		bookMeta := metadatamocks.NewMockBookProvider(GinkgoT())
+		bookMetaMk = bookMeta.EXPECT()
+		svc = request.NewService(
+			store, movies, shows, musicAdder, bookAdder, musicMeta, bookMeta,
+		)
 	})
 
 	Describe("Create", func() {
@@ -432,6 +443,206 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		})
 	})
 
+	Describe("Create book requests", func() {
+		It("persists an author request", func() {
+			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
+				Return(nil, nil).Once()
+			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
+				Return(nil, nil).Once()
+			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
+				return p.MediaType == "author" && p.MediaID == 30
+			})).
+				Return(&ent.Request{ID: 1}, nil).
+				Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("rejects a duplicate active author request", func() {
+			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
+				Return(&ent.Request{ID: 7}, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
+			})
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+
+		It("rejects an author already in the library", func() {
+			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
+				Return(nil, nil).Once()
+			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
+				Return(&ent.Author{ID: 2}, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
+			})
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+
+		It("persists a book request with its kind", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+				Return(nil, nil).Once()
+			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
+				return p.MediaType == "book" && p.MediaID == 40 &&
+					p.BookKind == "ebook"
+			})).
+				Return(&ent.Request{ID: 3}, nil).
+				Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "book", MediaID: 40, BookKind: "ebook",
+				Title: "B", RequesterID: 9,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("rejects a book without a valid kind",
+			func(kind string) {
+				_, err := svc.Create(ctx, request.CreateParams{
+					MediaType: "book", MediaID: 40, BookKind: kind, Title: "B",
+				})
+				Expect(err).To(MatchError(request.ErrInvalidRequest))
+			},
+			Entry("missing", ""),
+			Entry("unknown", "paperback"),
+		)
+
+		// The dedup index ignores book_kind, so a second kind for a book
+		// with an active request is refused rather than widening the first.
+		It("refuses a different kind for an already-requested book", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+				Return(&ent.Request{ID: 3, BookKind: "ebook"}, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "book", MediaID: 40, BookKind: "audiobook",
+				Title: "B", RequesterID: 9,
+			})
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+	})
+
+	Describe("Approve book requests", func() {
+		bookReq := func(kind string) *ent.Request {
+			return &ent.Request{
+				ID:        5,
+				MediaType: "book",
+				MediaID:   40,
+				BookKind:  entrequest.BookKind(kind),
+			}
+		}
+
+		It("adds a monitored author with the default policy", func() {
+			storeMk.GetRequest(mock.Anything, uint32(4)).
+				Return(&ent.Request{ID: 4, MediaType: "author", MediaID: 30}, nil).
+				Twice()
+			bookMk.Add(mock.Anything, book.AddParams{
+				HardcoverID: 30, Monitored: true,
+			}).Return(&ent.Author{ID: 8}, nil).Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(4), uint32(9)).
+				Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 4, 9, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("marks the request available when the author already exists", func() {
+			storeMk.GetRequest(mock.Anything, uint32(4)).
+				Return(&ent.Request{ID: 4, MediaType: "author", MediaID: 30}, nil).
+				Twice()
+			bookMk.Add(mock.Anything, mock.Anything).
+				Return(nil, fmt.Errorf("%w: id", book.ErrAuthorExists)).Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(4), uint32(9)).
+				Return(nil).Once()
+			storeMk.MarkRequestAvailable(mock.Anything, uint32(4)).
+				Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 4, 9, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It(
+			"adds an absent author with policy none and wants the ebook slot",
+			func() {
+				storeMk.GetRequest(mock.Anything, uint32(5)).
+					Return(bookReq("ebook"), nil).Twice()
+				bookMetaMk.GetBook(mock.Anything, uint32(40)).
+					Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
+				storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
+					Return(nil, nil).Once()
+				bookMk.Add(mock.Anything, book.AddParams{
+					HardcoverID: 30, Monitored: true, MonitorPolicy: "none",
+				}).Return(&ent.Author{ID: 8, Edges: ent.AuthorEdges{Books: []*ent.Book{
+					{ID: 20, HardcoverID: 41}, {ID: 21, HardcoverID: 40},
+				}}}, nil).Once()
+				bookMk.SetBookSlot(mock.Anything, uint32(21), "ebook", true).
+					Return(nil).Once()
+				storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
+					Return(nil).Once()
+
+				_, err := svc.Approve(ctx, 5, 9, "")
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
+
+		It("wants both slots in order for a both request", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).
+				Return(bookReq("both"), nil).Twice()
+			bookMetaMk.GetBook(mock.Anything, uint32(40)).
+				Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
+			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
+				Return(&ent.Author{ID: 8}, nil).Once()
+			bookMk.Get(mock.Anything, uint32(8)).
+				Return(&ent.Author{ID: 8, Edges: ent.AuthorEdges{Books: []*ent.Book{
+					{ID: 21, HardcoverID: 40},
+				}}}, nil).Once()
+			bookMk.SetBookSlot(mock.Anything, uint32(21), "ebook", true).
+				Return(nil).Once()
+			bookMk.SetBookSlot(mock.Anything, uint32(21), "audiobook", true).
+				Return(nil).Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
+				Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 5, 9, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("fails without approving when the book is not in the author", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).
+				Return(bookReq("ebook"), nil).Once()
+			bookMetaMk.GetBook(mock.Anything, uint32(40)).
+				Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
+			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
+				Return(&ent.Author{ID: 8}, nil).Once()
+			bookMk.Get(mock.Anything, uint32(8)).
+				Return(&ent.Author{ID: 8}, nil).Once()
+
+			_, err := svc.Approve(ctx, 5, 9, "")
+			Expect(err).To(MatchError(ContainSubstring("approve: add book")))
+		})
+
+		It("fails before any store write when hardcover is not configured", func() {
+			store := dbmocks.NewMockStore(GinkgoT())
+			store.EXPECT().GetRequest(mock.Anything, uint32(5)).
+				Return(bookReq("ebook"), nil).Once()
+			noMeta := request.NewService(
+				store,
+				reqmocks.NewMockMovieAdder(GinkgoT()),
+				reqmocks.NewMockShowAdder(GinkgoT()),
+				musicmocks.NewMockAdder(GinkgoT()),
+				bookmocks.NewMockAdder(GinkgoT()),
+				metadatamocks.NewMockMusicProvider(GinkgoT()),
+				nil,
+			)
+
+			_, err := noMeta.Approve(ctx, 5, 9, "")
+			Expect(err).To(MatchError(book.ErrNotConfigured))
+		})
+	})
+
 	Describe("Create against a real store", func() {
 		It("lets only one of two concurrent creates through", func() {
 			client, err := db.Open(ctx, ":memory:")
@@ -455,7 +666,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				movies,
 				reqmocks.NewMockShowAdder(GinkgoT()),
 				musicmocks.NewMockAdder(GinkgoT()),
+				bookmocks.NewMockAdder(GinkgoT()),
 				metadatamocks.NewMockMusicProvider(GinkgoT()),
+				metadatamocks.NewMockBookProvider(GinkgoT()),
 			)
 
 			errs := make([]error, 2)

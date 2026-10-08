@@ -55,6 +55,7 @@ packages:
       Manager: {}
   github.com/datahearth/streamline/internal/media/book:
     interfaces:
+      Adder: {}
       Manager: {}
   github.com/datahearth/streamline/internal/mediaserver:
     interfaces:

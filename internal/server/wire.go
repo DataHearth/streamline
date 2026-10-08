@@ -333,7 +333,15 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	missingSearcher := rss.NewMissingSearcher(store, indexerSvc, dlManager)
 	feedScanner := rss.NewFeedScanner(store, indexerSvc, dlManager)
 
-	reqSvc := request.NewService(store, movieSvc, tvSvc, musicSvc, mb)
+	reqSvc := request.NewService(
+		store,
+		movieSvc,
+		tvSvc,
+		musicSvc,
+		bookSvc,
+		mb,
+		bookMeta,
+	)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)
 
