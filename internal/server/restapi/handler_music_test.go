@@ -2,6 +2,8 @@ package restapi
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -387,6 +391,219 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
+	Describe("SearchMusicAlbumReleases", func() {
+		It("returns the ranked releases with sealed handles", func() {
+			app.music.EXPECT().SearchAlbumReleases(mock.Anything, uint32(3)).
+				Return([]music.AlbumRelease{
+					{
+						Result: indexer.SearchResult{
+							Title:    "Nirvana - Nevermind FLAC",
+							Download: "magnet:?xt=urn:btih:aaaa",
+							Size:     100,
+							Seeders:  9,
+						},
+						Format: "flac",
+						Score:  40,
+					},
+					{
+						Result: indexer.SearchResult{
+							Title:    "Nirvana - Nevermind MP3",
+							Download: "magnet:?xt=urn:btih:bbbb",
+							Size:     50,
+							Seeders:  3,
+						},
+						Format: "mp3-320",
+						Score:  10,
+					},
+				}, nil).Once()
+			resp := send(
+				http.MethodPost, "/api/v1/music/albums/3/search", app.memberKey, "",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body AlbumReleaseList
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(2))
+			Expect(body.Items[0].Format).To(Equal("flac"))
+			Expect(body.Items[0].Release.Title).To(Equal("Nirvana - Nevermind FLAC"))
+			Expect(body.Items[0].Release.Score).To(HaveValue(Equal(40)))
+			Expect(body.Items[0].Release.DownloadUrl).To(HavePrefix("slr1."))
+			Expect(body.Items[1].Format).To(Equal("mp3-320"))
+			Expect(body.Items[1].Release.Score).To(HaveValue(Equal(10)))
+		})
+
+		It("404s for an unknown album", func() {
+			app.music.EXPECT().SearchAlbumReleases(mock.Anything, uint32(99)).
+				Return(nil, music.ErrAlbumNotFound).Once()
+			resp := send(
+				http.MethodPost, "/api/v1/music/albums/99/search", app.memberKey, "",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("422s with no_quality_profile when the album has none", func() {
+			app.music.EXPECT().SearchAlbumReleases(mock.Anything, uint32(3)).
+				Return(nil, music.ErrNoQualityProfile).Once()
+			resp := send(
+				http.MethodPost, "/api/v1/music/albums/3/search", app.memberKey, "",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			var body struct {
+				Code string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).To(Equal("no_quality_profile"))
+		})
+
+		It("500s on a generic error", func() {
+			app.music.EXPECT().SearchAlbumReleases(mock.Anything, uint32(3)).
+				Return(nil, errors.New("boom")).Once()
+			resp := send(
+				http.MethodPost, "/api/v1/music/albums/3/search", app.memberKey, "",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+		})
+
+		It("answers 403 to a request-only caller", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/albums/3/search",
+				app.requestOnlyKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
+	Describe("GrabMusicAlbumRelease", func() {
+		grabBody := func(link string) string {
+			b, err := json.Marshal(map[string]any{
+				"title":        "Nirvana - Nevermind FLAC",
+				"download_url": link,
+				"size":         100,
+				"seeders":      9,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			return string(b)
+		}
+		grab := func(body string) *http.Response {
+			GinkgoHelper()
+			return send(
+				http.MethodPost, "/api/v1/music/albums/3/grab", app.memberKey, body,
+			)
+		}
+		decode := func(resp *http.Response) (string, string) {
+			GinkgoHelper()
+			var body struct {
+				Message string `json:"message"`
+				Code    string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			return body.Message, body.Code
+		}
+
+		It("opens the handle and dispatches the grab", func() {
+			app.music.EXPECT().
+				GrabAlbumRelease(mock.Anything, uint32(3), mock.MatchedBy(
+					func(r indexer.SearchResult) bool {
+						return r.Download == "magnet:?xt=urn:btih:aaaa" &&
+							r.Title == "Nirvana - Nevermind FLAC"
+					},
+				)).
+				Return(nil).Once()
+			resp := grab(grabBody(sealReleaseLink("magnet:?xt=urn:btih:aaaa")))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+
+		It("accepts a plain magnet", func() {
+			app.music.EXPECT().
+				GrabAlbumRelease(mock.Anything, uint32(3), mock.Anything).
+				Return(nil).Once()
+			resp := grab(grabBody("magnet:?xt=urn:btih:aaaa"))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+
+		It("tells the caller to search again on a bad handle", func() {
+			resp := grab(grabBody("slr1.bm90LWEtaGFuZGxl"))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			msg, code := decode(resp)
+			Expect(code).To(Equal("grab_rejected"))
+			Expect(msg).To(ContainSubstring("search again"))
+		})
+
+		It("422s a body missing its title or url", func() {
+			resp := grab(`{"title":"","download_url":"","size":1,"seeders":1}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			_, code := decode(resp)
+			Expect(code).To(BeEmpty())
+		})
+
+		DescribeTable("maps a refused grab to grab_rejected",
+			func(sentinel error) {
+				app.music.EXPECT().
+					GrabAlbumRelease(mock.Anything, uint32(3), mock.Anything).
+					Return(fmt.Errorf("grab album: %w", sentinel)).Once()
+				resp := grab(grabBody("magnet:?xt=urn:btih:aaaa"))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				_, code := decode(resp)
+				Expect(code).To(Equal("grab_rejected"))
+			},
+			Entry("untrusted source", download.ErrUntrustedSource),
+			Entry("client full", download.ErrClientFull),
+			Entry("unsafe torrent name", download.ErrUnsafeTorrentName),
+		)
+
+		It("404s for an unknown album", func() {
+			app.music.EXPECT().
+				GrabAlbumRelease(mock.Anything, uint32(3), mock.Anything).
+				Return(fmt.Errorf("grab album: %w", music.ErrAlbumNotFound)).Once()
+			resp := grab(grabBody("magnet:?xt=urn:btih:aaaa"))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("422s with no_quality_profile", func() {
+			app.music.EXPECT().
+				GrabAlbumRelease(mock.Anything, uint32(3), mock.Anything).
+				Return(music.ErrNoQualityProfile).Once()
+			resp := grab(grabBody("magnet:?xt=urn:btih:aaaa"))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			_, code := decode(resp)
+			Expect(code).To(Equal("no_quality_profile"))
+		})
+
+		It("500s on a generic error", func() {
+			app.music.EXPECT().
+				GrabAlbumRelease(mock.Anything, uint32(3), mock.Anything).
+				Return(errors.New("boom")).Once()
+			resp := grab(grabBody("magnet:?xt=urn:btih:aaaa"))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+		})
+
+		It("answers 403 to a request-only caller", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/albums/3/grab",
+				app.requestOnlyKey,
+				grabBody("magnet:?xt=urn:btih:aaaa"),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		})
 	})
 })

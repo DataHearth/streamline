@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/media/music"
 )
 
@@ -315,4 +316,89 @@ func patchMusicAlbumErr(
 	return PatchMusicAlbum500JSONResponse{
 		InternalErrorJSONResponse: errInternal(ctx, err),
 	}
+}
+
+func (s *Server) SearchMusicAlbumReleases(
+	ctx context.Context,
+	request SearchMusicAlbumReleasesRequestObject,
+) (SearchMusicAlbumReleasesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return SearchMusicAlbumReleases403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	releases, err := s.music.SearchAlbumReleases(ctx, request.Id)
+	switch {
+	case errors.Is(err, music.ErrAlbumNotFound):
+		return SearchMusicAlbumReleases404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, music.ErrNoQualityProfile):
+		return SearchMusicAlbumReleases422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	case err != nil:
+		return SearchMusicAlbumReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	private := indexerPrivacy()
+	items := make([]AlbumRelease, 0, len(releases))
+	for _, r := range releases {
+		item := toSearchResult(r.Result)
+		score := r.Score
+		item.Score = &score
+		if p, ok := private[r.Result.ConfiguredIndexer]; ok {
+			item.IndexerPrivate = &p
+		}
+		items = append(items, AlbumRelease{Format: r.Format, Release: item})
+	}
+	out := AlbumReleaseListJSONResponse{Items: items}
+	return SearchMusicAlbumReleases200JSONResponse{
+		AlbumReleaseListJSONResponse: out,
+	}, nil
+}
+
+func (s *Server) GrabMusicAlbumRelease(
+	ctx context.Context,
+	request GrabMusicAlbumReleaseRequestObject,
+) (GrabMusicAlbumReleaseResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GrabMusicAlbumRelease403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GrabMusicAlbumRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabMusicAlbumRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	err = s.music.GrabAlbumRelease(ctx, request.Id, sr)
+	switch {
+	case errors.Is(err, music.ErrAlbumNotFound):
+		return GrabMusicAlbumRelease404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, music.ErrNoQualityProfile):
+		return GrabMusicAlbumRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errNoQualityProfile(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrUntrustedSource),
+		errors.Is(err, download.ErrClientFull),
+		errors.Is(err, download.ErrUnsafeTorrentName):
+		return GrabMusicAlbumRelease422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GrabMusicAlbumRelease500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GrabMusicAlbumRelease202Response{}, nil
 }

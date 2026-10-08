@@ -101,6 +101,19 @@ func errGrabRejected(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// codeNoQualityProfile marks a 422 raised because the album or book slot has
+// no quality profile to judge releases against. Nothing in the request is
+// wrong, and a diagnostic 422 without a code falls to the SPA's generic
+// "some of those values weren't accepted".
+const codeNoQualityProfile = "no_quality_profile"
+
+// errNoQualityProfile is errUnprocessable for a title with no usable quality
+// profile.
+func errNoQualityProfile(msg string) UnprocessableEntityJSONResponse {
+	code := codeNoQualityProfile
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
 // codeWorkerUnavailable marks a 409 from POST /transcoding/scan raised because
 // the worker cannot run (ffmpeg disabled or not found), as opposed to the
 // plain 409 for a scan already in flight. The SPA reads both scan 409s as

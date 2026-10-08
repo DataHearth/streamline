@@ -185,10 +185,14 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/artists/{id}/refresh` | Re-fetch the discography from MusicBrainz | Member |
 | `GET` | `/music/albums/{id}` | Fetch an album with its `tracks` | Authenticated |
 | `PATCH` | `/music/albums/{id}` | Update `monitored` | Member |
+| `POST` | `/music/albums/{id}/search` | Search the indexers for one album; returns `{items: [{format, release}]}` ranked, rejected releases dropped | Member |
+| `POST` | `/music/albums/{id}/grab` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
 | `GET` `POST` | `/music/quality-profiles` | List / create music quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/music/quality-profiles/{name}` | Update / delete a music quality profile | 🔒 Admin |
 
 Adding an artist fetches its whole discography from MusicBrainz, which allows one request per second, so a large catalogue makes `POST /music/artists` slow. Poster URLs are not in the payloads: clients build `/posters/artists/{id}/poster.jpg` and `/posters/albums/{id}/poster.jpg` themselves.
+
+An album search answers `422` with `code: no_quality_profile` when the album has no usable profile; a refused grab answers `422` with `code: grab_rejected`. The grab flips the album to `downloading`.
 
 A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `formats` and `cutoff` drawn from `flac-24`, `flac`, `mp3-320`, `mp3-v0`, `mp3-256`, `mp3-192`, `other`. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`. `PUT` takes the same body as `POST` and ignores the name in the body.
 

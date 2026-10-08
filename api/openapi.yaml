@@ -1239,6 +1239,62 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/albums/{id}/search:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMusicAlbumReleases
+      summary: Search indexers for one album's releases
+      description: |
+        Interactive search across enabled indexers for a single album.
+        Releases the album's music quality profile rejects are dropped; the
+        rest come back ranked, each with its parsed `format` and `release.score`.
+        POST the chosen `release` object back unchanged to `.../grab`, handle
+        included. A 422 with `code: no_quality_profile` means the album has no
+        usable quality profile.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/AlbumReleaseList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: grabMusicAlbumRelease
+      summary: Grab a specific release for this album
+      description: |
+        Dispatches the chosen release to the highest-priority download client
+        and marks the album downloading. The body is the `release` object of
+        an item from the search response, unchanged (its `download_url` is a
+        sealed handle). A refused grab answers 422 with `code: grab_rejected`;
+        an album with no usable quality profile answers 422 with
+        `code: no_quality_profile`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabAlbumRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/ReleaseGrabAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/quality-profiles:
     get:
       operationId: listMusicQualityProfiles
@@ -5158,6 +5214,13 @@ components:
           schema:
             $ref: "#/components/schemas/PatchBookAuthorRequest"
 
+    GrabAlbumRelease:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResult"
+
     PatchBook:
       required: true
       content:
@@ -5715,6 +5778,16 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MusicAlbum"
+
+    AlbumReleaseList:
+      description: Ranked indexer releases for one album.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AlbumReleaseList"
+
+    ReleaseGrabAccepted:
+      description: Release grab dispatched.
 
     MusicQualityProfileResponse:
       description: A music quality profile.
@@ -7197,6 +7270,25 @@ components:
           description: Populated by the detail, patch and refresh responses.
           items:
             $ref: "#/components/schemas/MusicAlbum"
+
+    AlbumRelease:
+      type: object
+      required: [format, release]
+      properties:
+        format:
+          type: string
+          description: Audio format parsed from the release title.
+        release:
+          $ref: "#/components/schemas/SearchResult"
+
+    AlbumReleaseList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlbumRelease"
 
     MusicAlbum:
       type: object
