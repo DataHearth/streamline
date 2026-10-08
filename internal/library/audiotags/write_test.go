@@ -6,6 +6,8 @@ import (
 
 	"github.com/bogem/id3v2/v2"
 	"github.com/dhowden/tag"
+	"github.com/go-flac/flacvorbis/v2"
+	flac "github.com/go-flac/go-flac/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -83,7 +85,6 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		Expect(info.Year).To(Equal(uint16(1991)))
 
 		raw := rawTags(path)
-		GinkgoWriter.Printf("RAW %#v\n", raw)
 		Expect(raw).To(HaveKeyWithValue("musicbrainz_artistid", "mbid-1"))
 		Expect(raw).To(HaveKeyWithValue("musicbrainz_releasegroupid", "rg-1"))
 		Expect(raw).To(HaveKeyWithValue("musicbrainz_trackid", "rec-5"))
@@ -91,11 +92,30 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 
 	It("replaces rather than appends on a second write", func() {
 		path := copyFixture("testdata/tagged.flac")
+		first := tags
+		first.Title = "Breed"
+		first.MBArtistID = "mbid-old"
+		Expect(Write(path, first)).To(Succeed())
 		Expect(Write(path, tags)).To(Succeed())
-		Expect(Write(path, tags)).To(Succeed())
-		info, err := Read(path)
+
+		f, err := flac.ParseFile(path)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(info.Title).To(Equal("Lithium"))
+		DeferCleanup(f.Close)
+		var cmt *flacvorbis.MetaDataBlockVorbisComment
+		for _, blk := range f.Meta {
+			if blk.Type == flac.VorbisComment {
+				cmt, err = flacvorbis.ParseFromMetaDataBlock(*blk)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
+		Expect(cmt).NotTo(BeNil())
+
+		title, err := cmt.Get("TITLE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(title).To(Equal([]string{"Lithium"}))
+		artist, err := cmt.Get("MUSICBRAINZ_ARTISTID")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(artist).To(Equal([]string{"mbid-1"}))
 	})
 
 	It("returns ErrUnsupportedFormat for other extensions", func() {

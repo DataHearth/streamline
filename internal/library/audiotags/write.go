@@ -101,8 +101,8 @@ func writeFLAC(path string, t WriteTags) error {
 	if err != nil {
 		return err
 	}
-	// Save closes the file-backed stream itself, so this Close is a no-op
-	// whose error carries nothing.
+	// Save closes the stream itself, so after it this Close is harmless; the
+	// early returns before Save are where this Close releases the fd.
 	defer f.Close()
 
 	cmt := flacvorbis.New()
