@@ -60,18 +60,26 @@ const (
 	catMovies = "2000"
 	catTV     = "5000"
 	catMusic  = "3000"
+
+	catBooks     = "7000"
+	catEbook     = "7020"
+	catAudiobook = "3030"
 )
 
-func newznabCategory(kind MediaKind) string {
+func newznabCategory(kind MediaKind) []string {
 	switch kind {
 	case KindMovie:
-		return catMovies
+		return []string{catMovies}
 	case KindTV:
-		return catTV
+		return []string{catTV}
 	case KindMusic:
-		return catMusic
+		return []string{catMusic}
+	case KindEbook:
+		return []string{catBooks, catEbook}
+	case KindAudiobook:
+		return []string{catAudiobook}
 	default:
-		return ""
+		return nil
 	}
 }
 
@@ -87,6 +95,8 @@ func prowlarrSearchType(kind MediaKind) string {
 		return "tvsearch"
 	case KindMusic:
 		return "music"
+	case KindEbook:
+		return "book"
 	default:
 		return "search"
 	}
@@ -151,8 +161,8 @@ func (p *Prowlarr) Search(
 	// whose caps don't cover the root from the fan-out entirely
 	// (ReleaseSearchService.Dispatch) and expands it into each tracker's own
 	// children, so the root is the useful granularity.
-	if cat := newznabCategory(params.Kind); cat != "" {
-		q.Set("categories", cat)
+	for _, cat := range newznabCategory(params.Kind) {
+		q.Add("categories", cat)
 	}
 
 	var releases []prowlarrRelease

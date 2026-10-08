@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -56,19 +57,23 @@ func recordingIndexer() *recordedSearch {
 			Enclosure: testEnclosure{
 				URL: u, Length: 1000, Type: "application/x-bittorrent",
 			},
-			ExtraXML: torznabAttrs(map[string]string{"seeders": seeders, "peers": "1"}),
+			ExtraXML: torznabAttrs(
+				map[string]string{"seeders": seeders, "peers": "1"},
+			),
 		}
 	}
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rec.mu.Lock()
-		rec.qs = append(rec.qs, r.URL.Query().Get("q"))
-		rec.cats = append(rec.cats, r.URL.Query().Get("cat"))
-		rec.mu.Unlock()
-		Expect(r.URL.Query().Get("t")).To(Equal("search"))
-		w.Header().Set("Content-Type", "application/xml")
-		_, err := w.Write(torznabXML([]testRSSItem{item(1, "5"), item(2, "90")}))
-		Expect(err).NotTo(HaveOccurred())
-	}))
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec.mu.Lock()
+			rec.qs = append(rec.qs, r.URL.Query().Get("q"))
+			rec.cats = append(rec.cats, r.URL.Query().Get("cat"))
+			rec.mu.Unlock()
+			Expect(r.URL.Query().Get("t")).To(Equal("search"))
+			w.Header().Set("Content-Type", "application/xml")
+			_, err := w.Write(torznabXML([]testRSSItem{item(1, "5"), item(2, "90")}))
+			Expect(err).NotTo(HaveOccurred())
+		}),
+	)
 	DeferCleanup(ts.Close)
 	host, port := splitHostPort(ts.URL)
 	configtest.Setup(map[string]any{
@@ -81,6 +86,24 @@ func recordingIndexer() *recordedSearch {
 }
 
 var _ = Describe("Service", Label("integration", "indexers"), func() {
+	Describe("SearchBook", func() {
+		DescribeTable("queries the slot's categories with and without the year",
+			func(kind mediafile.BookKind, wantCat string) {
+				rec := recordingIndexer()
+				results, err := New().SearchBook(
+					context.Background(),
+					"Brandon Sanderson", "Elantris", 2005, kind)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.queries()).To(ConsistOf(
+					"Brandon Sanderson Elantris", "Brandon Sanderson Elantris 2005"))
+				Expect(rec.categories()).To(HaveEach(wantCat))
+				Expect(results).NotTo(BeEmpty())
+			},
+			Entry("ebook", mediafile.BookKindEbook, "7000,7020"),
+			Entry("audiobook", mediafile.BookKindAudiobook, "3030"),
+		)
+	})
+
 	Describe("SearchAlbum", func() {
 		It("queries the music category with and without the year", func() {
 			rec := recordingIndexer()

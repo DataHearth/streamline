@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -63,6 +64,42 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			results, err := svc.SearchAlbum(ctx, "", "", 1991)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(BeNil())
+		})
+	})
+
+	Describe("SearchBook", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchBook(
+				ctx, "Brandon Sanderson", "Elantris", 2005, mediafile.BookKindEbook)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil when author and title are both empty", func() {
+			configtest.Setup()
+			results, err := svc.SearchBook(
+				ctx,
+				"",
+				"",
+				2005,
+				mediafile.BookKindEbook,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+
+		It("rejects an unknown kind without contacting any indexer", func() {
+			rec := recordingIndexer()
+			_, err := svc.SearchBook(
+				ctx,
+				"Brandon Sanderson",
+				"Elantris",
+				2005,
+				mediafile.BookKind("comic"),
+			)
+			Expect(err).To(MatchError(ContainSubstring("unknown book kind")))
+			Expect(rec.queries()).To(BeEmpty())
 		})
 	})
 

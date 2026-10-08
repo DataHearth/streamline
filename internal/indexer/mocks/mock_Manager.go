@@ -7,6 +7,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/indexer"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -111,6 +112,172 @@ func (_c *MockManager_Feed_Call) Return(searchResults []indexer.SearchResult, er
 }
 
 func (_c *MockManager_Feed_Call) RunAndReturn(run func(ctx context.Context, indexerName string) ([]indexer.SearchResult, error)) *MockManager_Feed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchAlbum provides a mock function for the type MockManager
+func (_mock *MockManager) SearchAlbum(ctx context.Context, artist string, album string, year uint16) ([]indexer.SearchResult, error) {
+	ret := _mock.Called(ctx, artist, album, year)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchAlbum")
+	}
+
+	var r0 []indexer.SearchResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, uint16) ([]indexer.SearchResult, error)); ok {
+		return returnFunc(ctx, artist, album, year)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, uint16) []indexer.SearchResult); ok {
+		r0 = returnFunc(ctx, artist, album, year)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]indexer.SearchResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, uint16) error); ok {
+		r1 = returnFunc(ctx, artist, album, year)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SearchAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchAlbum'
+type MockManager_SearchAlbum_Call struct {
+	*mock.Call
+}
+
+// SearchAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artist string
+//   - album string
+//   - year uint16
+func (_e *MockManager_Expecter) SearchAlbum(ctx any, artist any, album any, year any) *MockManager_SearchAlbum_Call {
+	return &MockManager_SearchAlbum_Call{Call: _e.mock.On("SearchAlbum", ctx, artist, album, year)}
+}
+
+func (_c *MockManager_SearchAlbum_Call) Run(run func(ctx context.Context, artist string, album string, year uint16)) *MockManager_SearchAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uint16
+		if args[3] != nil {
+			arg3 = args[3].(uint16)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchAlbum_Call) Return(searchResults []indexer.SearchResult, err error) *MockManager_SearchAlbum_Call {
+	_c.Call.Return(searchResults, err)
+	return _c
+}
+
+func (_c *MockManager_SearchAlbum_Call) RunAndReturn(run func(ctx context.Context, artist string, album string, year uint16) ([]indexer.SearchResult, error)) *MockManager_SearchAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchBook provides a mock function for the type MockManager
+func (_mock *MockManager) SearchBook(ctx context.Context, author string, title string, year uint16, kind mediafile.BookKind) ([]indexer.SearchResult, error) {
+	ret := _mock.Called(ctx, author, title, year, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchBook")
+	}
+
+	var r0 []indexer.SearchResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, uint16, mediafile.BookKind) ([]indexer.SearchResult, error)); ok {
+		return returnFunc(ctx, author, title, year, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, uint16, mediafile.BookKind) []indexer.SearchResult); ok {
+		r0 = returnFunc(ctx, author, title, year, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]indexer.SearchResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, uint16, mediafile.BookKind) error); ok {
+		r1 = returnFunc(ctx, author, title, year, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SearchBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchBook'
+type MockManager_SearchBook_Call struct {
+	*mock.Call
+}
+
+// SearchBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - author string
+//   - title string
+//   - year uint16
+//   - kind mediafile.BookKind
+func (_e *MockManager_Expecter) SearchBook(ctx any, author any, title any, year any, kind any) *MockManager_SearchBook_Call {
+	return &MockManager_SearchBook_Call{Call: _e.mock.On("SearchBook", ctx, author, title, year, kind)}
+}
+
+func (_c *MockManager_SearchBook_Call) Run(run func(ctx context.Context, author string, title string, year uint16, kind mediafile.BookKind)) *MockManager_SearchBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uint16
+		if args[3] != nil {
+			arg3 = args[3].(uint16)
+		}
+		var arg4 mediafile.BookKind
+		if args[4] != nil {
+			arg4 = args[4].(mediafile.BookKind)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchBook_Call) Return(searchResults []indexer.SearchResult, err error) *MockManager_SearchBook_Call {
+	_c.Call.Return(searchResults, err)
+	return _c
+}
+
+func (_c *MockManager_SearchBook_Call) RunAndReturn(run func(ctx context.Context, author string, title string, year uint16, kind mediafile.BookKind) ([]indexer.SearchResult, error)) *MockManager_SearchBook_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -62,6 +62,8 @@ const (
 	KindMovie
 	KindTV
 	KindMusic
+	KindEbook
+	KindAudiobook
 )
 
 type SearchParams struct {

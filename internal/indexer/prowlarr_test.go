@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -63,10 +64,11 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			// categories at all and keyword-searched every indexer's whole
 			// catalogue.
 			func(params SearchParams, wantCat, wantType string) {
-				var gotCat, gotType string
+				var gotCat []string
+				var gotType string
 				srv := httptest.NewServer(http.HandlerFunc(
 					func(w http.ResponseWriter, r *http.Request) {
-						gotCat = r.URL.Query().Get("categories")
+						gotCat = r.URL.Query()["categories"]
 						gotType = r.URL.Query().Get("type")
 						_, _ = w.Write([]byte(`[]`))
 					}))
@@ -75,7 +77,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				_, err := NewProwlarr(srv.URL, "k").
 					Search(context.Background(), params)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(gotCat).To(Equal(wantCat))
+				Expect(strings.Join(gotCat, ",")).To(Equal(wantCat))
 				Expect(gotType).To(Equal(wantType))
 			},
 			Entry("a series search",
@@ -93,6 +95,12 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			Entry("an album search",
 				SearchParams{Query: "x", Kind: KindMusic},
 				"3000", "music"),
+			Entry("an ebook search",
+				SearchParams{Query: "x", Kind: KindEbook},
+				"7000,7020", "book"),
+			Entry("an audiobook search",
+				SearchParams{Query: "x", Kind: KindAudiobook},
+				"3030", "search"),
 			Entry("an unscoped search",
 				SearchParams{Query: "x"},
 				"", "search"),

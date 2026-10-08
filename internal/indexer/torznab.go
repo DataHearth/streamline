@@ -71,6 +71,10 @@ func torznabCategories(kind MediaKind) string {
 	switch kind {
 	case KindMusic:
 		return "3000"
+	case KindEbook:
+		return "7000,7020"
+	case KindAudiobook:
+		return "3030"
 	default:
 		return ""
 	}

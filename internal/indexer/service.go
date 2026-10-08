@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -156,6 +157,16 @@ type Manager interface {
 		ctx context.Context,
 		artist, album string,
 		year uint16,
+	) ([]SearchResult, error)
+	// SearchBook queries every enabled indexer for one slot of a book.
+	// kind is ebook (newznab 7000 Books + 7020 Books/EBook) or audiobook
+	// (3030 Audio/Audiobook); q is "<author> <title>", then
+	// "<author> <title> <year>" when year > 0.
+	SearchBook(
+		ctx context.Context,
+		author, title string,
+		year uint16,
+		kind mediafile.BookKind,
 	) ([]SearchResult, error)
 	Feed(ctx context.Context, indexerName string) ([]SearchResult, error)
 }
@@ -379,6 +390,51 @@ func (i *indexer) SearchAlbum(
 	}
 
 	results := i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic})
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+func (i *indexer) SearchBook(
+	ctx context.Context,
+	author, title string,
+	year uint16,
+	kind mediafile.BookKind,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.search_book",
+		trace.WithAttributes(
+			attribute.String("book.author", author),
+			attribute.String("book.title", title),
+			attribute.Int("book.year", int(year)),
+			attribute.String("book.kind", string(kind)),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	var mk MediaKind
+	switch kind {
+	case mediafile.BookKindEbook:
+		mk = KindEbook
+	case mediafile.BookKindAudiobook:
+		mk = KindAudiobook
+	default:
+		return nil, otelx.RecordSpanError(span,
+			fmt.Errorf("indexer: unknown book kind %q", kind))
+	}
+
+	queries := nameQueries(author, title, year)
+	if len(queries) == 0 {
+		slog.WarnContext(ctx, "indexer search skipped: no query after dedup",
+			"book.title", title)
+		return nil, nil
+	}
+
+	results := i.searchAll(ctx, span, queries, SearchParams{Kind: mk})
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }

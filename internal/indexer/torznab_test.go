@@ -116,6 +116,8 @@ var _ = Describe("Torznab category", Label("unit", "indexers"), func() {
 			}
 		},
 		Entry("music", KindMusic, "3000"),
+		Entry("ebook", KindEbook, "7000,7020"),
+		Entry("audiobook", KindAudiobook, "3030"),
 		Entry("movie sends none", KindMovie, ""),
 		Entry("tv sends none", KindTV, ""),
 	)
