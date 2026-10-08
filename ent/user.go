@@ -33,6 +33,8 @@ type User struct {
 	DisplayName string `json:"display_name,omitempty"`
 	// SubsonicPassword holds the value of the "subsonic_password" field.
 	SubsonicPassword string `json:"-"`
+	// OpdsToken holds the value of the "opds_token" field.
+	OpdsToken string `json:"-"`
 	// FailedLoginCount holds the value of the "failed_login_count" field.
 	FailedLoginCount uint8 `json:"failed_login_count,omitempty"`
 	// LastFailedLoginAt holds the value of the "last_failed_login_at" field.
@@ -103,7 +105,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldID, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldSubsonicPassword:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldSubsonicPassword, user.FieldOpdsToken:
 			values[i] = new(sql.NullString)
 		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
 			values[i] = new(sql.NullTime)
@@ -175,6 +177,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field subsonic_password", values[i])
 			} else if value.Valid {
 				_m.SubsonicPassword = value.String
+			}
+		case user.FieldOpdsToken:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field opds_token", values[i])
+			} else if value.Valid {
+				_m.OpdsToken = value.String
 			}
 		case user.FieldFailedLoginCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -273,6 +281,8 @@ func (_m *User) String() string {
 	builder.WriteString(_m.DisplayName)
 	builder.WriteString(", ")
 	builder.WriteString("subsonic_password=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("opds_token=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("failed_login_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FailedLoginCount))

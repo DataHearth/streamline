@@ -2617,6 +2617,49 @@ paths:
           description: Disabled
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /account/opds-token:
+    get:
+      operationId: getOpdsToken
+      summary: Whether an OPDS token is set, and its value
+      description: >-
+        Requires session authentication (JWT); a request authenticated with an
+        API key is rejected, because the response carries the plaintext.
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OPDS token state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OpdsToken" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: rotateOpdsToken
+      summary: Generate or rotate the OPDS token
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: The new token, which is also readable via GET
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OpdsToken" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: disableOpdsToken
+      summary: Disable OPDS access by clearing the token
+      tags: [account]
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Disabled
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /auth/me/sessions:
     get:
       operationId: listMySessions
@@ -8619,6 +8662,16 @@ components:
         enabled:
           type: boolean
         password:
+          type: string
+          description: Empty or absent when disabled.
+
+    OpdsToken:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+        token:
           type: string
           description: Empty or absent when disabled.
 

@@ -389,6 +389,90 @@ var _ = Describe(
 				}
 			})
 		})
+
+		Describe("/api/v1/account/opds-token", func() {
+			const path = "/api/v1/account/opds-token"
+			const secret = "abcdefghijklmnopqrstuvwx"
+
+			type state struct {
+				Enabled bool   `json:"enabled"`
+				Token   string `json:"token"`
+			}
+			decode := func(resp *http.Response) state {
+				GinkgoHelper()
+				defer resp.Body.Close()
+				var st state
+				Expect(json.NewDecoder(resp.Body).Decode(&st)).To(Succeed())
+				return st
+			}
+
+			It("POST returns the rotated token", func() {
+				app.auth.EXPECT().
+					RotateOPDSToken(mock.Anything, app.adminID).
+					Return(secret, nil).
+					Once()
+				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(
+					decode(resp),
+				).To(Equal(state{Enabled: true, Token: secret}))
+			})
+
+			It("GET reports an enabled token", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{ID: app.adminID, OpdsToken: secret}, nil).
+					Once()
+				resp := authGET(app, app.adminKey, path)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(
+					decode(resp),
+				).To(Equal(state{Enabled: true, Token: secret}))
+			})
+
+			It("GET reports disabled when no token is set", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{ID: app.adminID}, nil).
+					Once()
+				resp := authGET(app, app.adminKey, path)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(decode(resp).Enabled).To(BeFalse())
+			})
+
+			It("DELETE disables the token", func() {
+				app.auth.EXPECT().
+					DisableOPDSToken(mock.Anything, app.adminID).
+					Return(nil).
+					Once()
+				resp := app.do(app.req(http.MethodDelete, path, app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			DescribeTable("refuses callers without a session",
+				func(method, key string) {
+					resp := app.do(app.req(method, path, key, nil))
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+				},
+				Entry("GET without auth", http.MethodGet, "invalid-token"),
+				Entry("POST without auth", http.MethodPost, "invalid-token"),
+				Entry("DELETE without auth", http.MethodDelete, "invalid-token"),
+			)
+
+			It("refuses API-key identities on every verb", func() {
+				for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodDelete} {
+					resp := app.do(app.req(m, path, app.adminAPIKey, nil))
+					resp.Body.Close()
+					Expect(resp.StatusCode).To(
+						BeElementOf(
+							http.StatusUnauthorized,
+							http.StatusForbidden,
+						), m)
+				}
+			})
+		})
 	},
 )
 

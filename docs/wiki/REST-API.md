@@ -366,6 +366,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | List / create your API keys or sessions | Any |
 | `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
 | `GET` `POST` `DELETE` | `/account/subsonic-password` | Read / generate-or-rotate / disable your Subsonic password | Any, session only |
+| `GET` `POST` `DELETE` | `/account/opds-token` | Read / generate-or-rotate / disable your OPDS token | Any, session only |
 | `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |

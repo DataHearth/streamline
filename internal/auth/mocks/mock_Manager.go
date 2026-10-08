@@ -808,6 +808,63 @@ func (_c *MockManager_DeleteUser_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// DisableOPDSToken provides a mock function for the type MockManager
+func (_mock *MockManager) DisableOPDSToken(ctx context.Context, userID uint32) error {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DisableOPDSToken")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_DisableOPDSToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DisableOPDSToken'
+type MockManager_DisableOPDSToken_Call struct {
+	*mock.Call
+}
+
+// DisableOPDSToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+func (_e *MockManager_Expecter) DisableOPDSToken(ctx any, userID any) *MockManager_DisableOPDSToken_Call {
+	return &MockManager_DisableOPDSToken_Call{Call: _e.mock.On("DisableOPDSToken", ctx, userID)}
+}
+
+func (_c *MockManager_DisableOPDSToken_Call) Run(run func(ctx context.Context, userID uint32)) *MockManager_DisableOPDSToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_DisableOPDSToken_Call) Return(err error) *MockManager_DisableOPDSToken_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_DisableOPDSToken_Call) RunAndReturn(run func(ctx context.Context, userID uint32) error) *MockManager_DisableOPDSToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DisableSubsonicPassword provides a mock function for the type MockManager
 func (_mock *MockManager) DisableSubsonicPassword(ctx context.Context, userID uint32) error {
 	ret := _mock.Called(ctx, userID)
@@ -2175,6 +2232,72 @@ func (_c *MockManager_RotateJWTSecret_Call) Return(s string, err error) *MockMan
 }
 
 func (_c *MockManager_RotateJWTSecret_Call) RunAndReturn(run func(ctx context.Context, callerID uint32) (string, error)) *MockManager_RotateJWTSecret_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RotateOPDSToken provides a mock function for the type MockManager
+func (_mock *MockManager) RotateOPDSToken(ctx context.Context, userID uint32) (string, error) {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RotateOPDSToken")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (string, error)); ok {
+		return returnFunc(ctx, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) string); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_RotateOPDSToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RotateOPDSToken'
+type MockManager_RotateOPDSToken_Call struct {
+	*mock.Call
+}
+
+// RotateOPDSToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+func (_e *MockManager_Expecter) RotateOPDSToken(ctx any, userID any) *MockManager_RotateOPDSToken_Call {
+	return &MockManager_RotateOPDSToken_Call{Call: _e.mock.On("RotateOPDSToken", ctx, userID)}
+}
+
+func (_c *MockManager_RotateOPDSToken_Call) Run(run func(ctx context.Context, userID uint32)) *MockManager_RotateOPDSToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_RotateOPDSToken_Call) Return(s string, err error) *MockManager_RotateOPDSToken_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockManager_RotateOPDSToken_Call) RunAndReturn(run func(ctx context.Context, userID uint32) (string, error)) *MockManager_RotateOPDSToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

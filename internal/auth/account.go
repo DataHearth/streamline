@@ -225,3 +225,42 @@ func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error
 	}
 	return nil
 }
+
+// RotateOPDSToken replaces the user's OPDS token with a fresh generated one
+// and returns it.
+func (s *auth) RotateOPDSToken(ctx context.Context, userID uint32) (string, error) {
+	ctx, span := tracer.Start(ctx, "auth.rotate_opds_token",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	token := random.Alphanumeric(accountSecretLen)
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{OPDSToken: &token},
+	); err != nil {
+		return "", otelx.RecordSpanError(
+			span,
+			fmt.Errorf("rotate opds token: %w", err),
+		)
+	}
+	return token, nil
+}
+
+// DisableOPDSToken clears the user's OPDS token, ending OPDS access.
+func (s *auth) DisableOPDSToken(ctx context.Context, userID uint32) error {
+	ctx, span := tracer.Start(ctx, "auth.disable_opds_token",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{ClearOPDSToken: true},
+	); err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("disable opds token: %w", err))
+	}
+	return nil
+}

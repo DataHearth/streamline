@@ -61,6 +61,9 @@ var minRole = map[string]string{
 	"GetSubsonicPassword":     roleRequestOnly,
 	"RotateSubsonicPassword":  roleRequestOnly,
 	"DisableSubsonicPassword": roleRequestOnly,
+	"GetOpdsToken":            roleRequestOnly,
+	"RotateOpdsToken":         roleRequestOnly,
+	"DisableOpdsToken":        roleRequestOnly,
 
 	"ListUpcomingReleases": roleRequestOnly,
 

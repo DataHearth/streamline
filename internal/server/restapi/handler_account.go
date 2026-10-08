@@ -270,3 +270,81 @@ func (s *Server) DisableSubsonicPassword(
 	}
 	return DisableSubsonicPassword204Response{}, nil
 }
+
+// GetOpdsToken returns the caller's OPDS token. Session-only:
+// the value is plaintext, and an API key must not be able to read it.
+func (s *Server) GetOpdsToken(
+	ctx context.Context,
+	_ GetOpdsTokenRequestObject,
+) (GetOpdsTokenResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return GetOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return GetOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	u, err := s.auth.GetUserByID(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return GetOpdsToken200JSONResponse{
+		Enabled: u.OpdsToken != "",
+		Token:   &u.OpdsToken,
+	}, nil
+}
+
+// RotateOpdsToken generates a new OPDS token for the caller.
+func (s *Server) RotateOpdsToken(
+	ctx context.Context,
+	_ RotateOpdsTokenRequestObject,
+) (RotateOpdsTokenResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return RotateOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return RotateOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	token, err := s.auth.RotateOPDSToken(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return RotateOpdsToken200JSONResponse{Enabled: true, Token: &token}, nil
+}
+
+// DisableOpdsToken clears the caller's OPDS token.
+func (s *Server) DisableOpdsToken(
+	ctx context.Context,
+	_ DisableOpdsTokenRequestObject,
+) (DisableOpdsTokenResponseObject, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.UserID == 0 {
+		return DisableOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
+		}, nil
+	}
+	if claims.JTI == "" {
+		return DisableOpdsToken401JSONResponse{
+			UnauthorizedJSONResponse: unauthorizedResp(
+				"session authentication required",
+			),
+		}, nil
+	}
+	if err := s.auth.DisableOPDSToken(ctx, claims.UserID); err != nil {
+		return nil, err
+	}
+	return DisableOpdsToken204Response{}, nil
+}

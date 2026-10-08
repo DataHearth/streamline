@@ -289,6 +289,45 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 		})
 	})
 
+	Describe("RotateOPDSToken", func() {
+		It("stores a 24-char alphanumeric token and returns it", func() {
+			var stored string
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				if p.OPDSToken == nil {
+					return false
+				}
+				stored = *p.OPDSToken
+				return true
+			})).
+				Return(&ent.User{ID: 1}, nil).
+				Once()
+
+			token, err := svc.RotateOPDSToken(ctx, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(token).To(MatchRegexp(`^[a-zA-Z0-9]{24}$`))
+			Expect(stored).To(Equal(token))
+		})
+
+		It("wraps store errors", func() {
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
+				Return(nil, errors.New("update fail")).
+				Once()
+			_, err := svc.RotateOPDSToken(ctx, 1)
+			Expect(err).To(MatchError(ContainSubstring("rotate opds token")))
+		})
+	})
+
+	Describe("DisableOPDSToken", func() {
+		It("sets the clear flag", func() {
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.ClearOPDSToken && p.OPDSToken == nil
+			})).
+				Return(&ent.User{ID: 1}, nil).
+				Once()
+			Expect(svc.DisableOPDSToken(ctx, 1)).To(Succeed())
+		})
+	})
+
 	Describe("ListAPIKeys", func() {
 		It("delegates to the store", func() {
 			rows := []*ent.ApiKey{{ID: 1}}

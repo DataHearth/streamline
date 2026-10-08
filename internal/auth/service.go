@@ -114,6 +114,8 @@ type Manager interface {
 	RevokeAPIKeyByID(ctx context.Context, userID, keyID uint32) error
 	RotateSubsonicPassword(ctx context.Context, userID uint32) (string, error)
 	DisableSubsonicPassword(ctx context.Context, userID uint32) error
+	RotateOPDSToken(ctx context.Context, userID uint32) (string, error)
+	DisableOPDSToken(ctx context.Context, userID uint32) error
 
 	// OIDC
 	LoginOIDC(

@@ -141,6 +141,26 @@ func (_u *UserUpdate) ClearSubsonicPassword() *UserUpdate {
 	return _u
 }
 
+// SetOpdsToken sets the "opds_token" field.
+func (_u *UserUpdate) SetOpdsToken(v string) *UserUpdate {
+	_u.mutation.SetOpdsToken(v)
+	return _u
+}
+
+// SetNillableOpdsToken sets the "opds_token" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableOpdsToken(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetOpdsToken(*v)
+	}
+	return _u
+}
+
+// ClearOpdsToken clears the value of the "opds_token" field.
+func (_u *UserUpdate) ClearOpdsToken() *UserUpdate {
+	_u.mutation.ClearOpdsToken()
+	return _u
+}
+
 // SetFailedLoginCount sets the "failed_login_count" field.
 func (_u *UserUpdate) SetFailedLoginCount(v uint8) *UserUpdate {
 	_u.mutation.ResetFailedLoginCount()
@@ -454,6 +474,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.SubsonicPasswordCleared() {
 		_spec.ClearField(user.FieldSubsonicPassword, field.TypeString)
+	}
+	if value, ok := _u.mutation.OpdsToken(); ok {
+		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
+	}
+	if _u.mutation.OpdsTokenCleared() {
+		_spec.ClearField(user.FieldOpdsToken, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)
@@ -780,6 +806,26 @@ func (_u *UserUpdateOne) SetNillableSubsonicPassword(v *string) *UserUpdateOne {
 // ClearSubsonicPassword clears the value of the "subsonic_password" field.
 func (_u *UserUpdateOne) ClearSubsonicPassword() *UserUpdateOne {
 	_u.mutation.ClearSubsonicPassword()
+	return _u
+}
+
+// SetOpdsToken sets the "opds_token" field.
+func (_u *UserUpdateOne) SetOpdsToken(v string) *UserUpdateOne {
+	_u.mutation.SetOpdsToken(v)
+	return _u
+}
+
+// SetNillableOpdsToken sets the "opds_token" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableOpdsToken(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetOpdsToken(*v)
+	}
+	return _u
+}
+
+// ClearOpdsToken clears the value of the "opds_token" field.
+func (_u *UserUpdateOne) ClearOpdsToken() *UserUpdateOne {
+	_u.mutation.ClearOpdsToken()
 	return _u
 }
 
@@ -1126,6 +1172,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.SubsonicPasswordCleared() {
 		_spec.ClearField(user.FieldSubsonicPassword, field.TypeString)
+	}
+	if value, ok := _u.mutation.OpdsToken(); ok {
+		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
+	}
+	if _u.mutation.OpdsTokenCleared() {
+		_spec.ClearField(user.FieldOpdsToken, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

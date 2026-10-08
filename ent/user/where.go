@@ -85,6 +85,11 @@ func SubsonicPassword(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldSubsonicPassword, v))
 }
 
+// OpdsToken applies equality check predicate on the "opds_token" field. It's identical to OpdsTokenEQ.
+func OpdsToken(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
+}
+
 // FailedLoginCount applies equality check predicate on the "failed_login_count" field. It's identical to FailedLoginCountEQ.
 func FailedLoginCount(v uint8) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldFailedLoginCount, v))
@@ -508,6 +513,81 @@ func SubsonicPasswordEqualFold(v string) predicate.User {
 // SubsonicPasswordContainsFold applies the ContainsFold predicate on the "subsonic_password" field.
 func SubsonicPasswordContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldSubsonicPassword, v))
+}
+
+// OpdsTokenEQ applies the EQ predicate on the "opds_token" field.
+func OpdsTokenEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
+}
+
+// OpdsTokenNEQ applies the NEQ predicate on the "opds_token" field.
+func OpdsTokenNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldOpdsToken, v))
+}
+
+// OpdsTokenIn applies the In predicate on the "opds_token" field.
+func OpdsTokenIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldOpdsToken, vs...))
+}
+
+// OpdsTokenNotIn applies the NotIn predicate on the "opds_token" field.
+func OpdsTokenNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldOpdsToken, vs...))
+}
+
+// OpdsTokenGT applies the GT predicate on the "opds_token" field.
+func OpdsTokenGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldOpdsToken, v))
+}
+
+// OpdsTokenGTE applies the GTE predicate on the "opds_token" field.
+func OpdsTokenGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldOpdsToken, v))
+}
+
+// OpdsTokenLT applies the LT predicate on the "opds_token" field.
+func OpdsTokenLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldOpdsToken, v))
+}
+
+// OpdsTokenLTE applies the LTE predicate on the "opds_token" field.
+func OpdsTokenLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldOpdsToken, v))
+}
+
+// OpdsTokenContains applies the Contains predicate on the "opds_token" field.
+func OpdsTokenContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldOpdsToken, v))
+}
+
+// OpdsTokenHasPrefix applies the HasPrefix predicate on the "opds_token" field.
+func OpdsTokenHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldOpdsToken, v))
+}
+
+// OpdsTokenHasSuffix applies the HasSuffix predicate on the "opds_token" field.
+func OpdsTokenHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldOpdsToken, v))
+}
+
+// OpdsTokenIsNil applies the IsNil predicate on the "opds_token" field.
+func OpdsTokenIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldOpdsToken))
+}
+
+// OpdsTokenNotNil applies the NotNil predicate on the "opds_token" field.
+func OpdsTokenNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldOpdsToken))
+}
+
+// OpdsTokenEqualFold applies the EqualFold predicate on the "opds_token" field.
+func OpdsTokenEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldOpdsToken, v))
+}
+
+// OpdsTokenContainsFold applies the ContainsFold predicate on the "opds_token" field.
+func OpdsTokenContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldOpdsToken, v))
 }
 
 // FailedLoginCountEQ applies the EQ predicate on the "failed_login_count" field.

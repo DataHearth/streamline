@@ -30,6 +30,10 @@ func (User) Fields() []ent.Field {
 		// Recoverable on purpose: the Subsonic token scheme (t=md5(pass+salt))
 		// needs the plaintext. Never valid for web or REST auth.
 		field.String("subsonic_password").Optional().Sensitive(),
+		// Recoverable on purpose, so the user can re-read it from settings.
+		// Used as the HTTP Basic password for the OPDS catalog; never valid
+		// for web or REST auth.
+		field.String("opds_token").Optional().Sensitive(),
 		field.Uint8("failed_login_count").Default(0),
 		field.Time("last_failed_login_at").Optional().Nillable(),
 		field.Time("locked_until").Optional().Nillable(),

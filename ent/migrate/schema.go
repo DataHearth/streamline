@@ -1249,6 +1249,7 @@ var (
 		{Name: "auth_method", Type: field.TypeEnum, Enums: []string{"local", "oidc", "both"}, Default: "local"},
 		{Name: "display_name", Type: field.TypeString, Nullable: true},
 		{Name: "subsonic_password", Type: field.TypeString, Nullable: true},
+		{Name: "opds_token", Type: field.TypeString, Nullable: true},
 		{Name: "failed_login_count", Type: field.TypeUint8, Default: 0},
 		{Name: "last_failed_login_at", Type: field.TypeTime, Nullable: true},
 		{Name: "locked_until", Type: field.TypeTime, Nullable: true},

@@ -78,6 +78,8 @@ type UpdateUserParams struct {
 	ClearLockedUntil       bool
 	SubsonicPassword       *string
 	ClearSubsonicPassword  bool
+	OPDSToken              *string
+	ClearOPDSToken         bool
 }
 
 func (db *DB) FindUserByEmail(ctx context.Context, email string) (*ent.User, error) {
@@ -291,6 +293,11 @@ func applyUserUpdate(
 		upd = upd.SetSubsonicPassword(*p.SubsonicPassword)
 	} else if p.ClearSubsonicPassword {
 		upd = upd.ClearSubsonicPassword()
+	}
+	if p.OPDSToken != nil {
+		upd = upd.SetOpdsToken(*p.OPDSToken)
+	} else if p.ClearOPDSToken {
+		upd = upd.ClearOpdsToken()
 	}
 	return upd
 }

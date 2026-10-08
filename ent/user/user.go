@@ -31,6 +31,8 @@ const (
 	FieldDisplayName = "display_name"
 	// FieldSubsonicPassword holds the string denoting the subsonic_password field in the database.
 	FieldSubsonicPassword = "subsonic_password"
+	// FieldOpdsToken holds the string denoting the opds_token field in the database.
+	FieldOpdsToken = "opds_token"
 	// FieldFailedLoginCount holds the string denoting the failed_login_count field in the database.
 	FieldFailedLoginCount = "failed_login_count"
 	// FieldLastFailedLoginAt holds the string denoting the last_failed_login_at field in the database.
@@ -88,6 +90,7 @@ var Columns = []string{
 	FieldAuthMethod,
 	FieldDisplayName,
 	FieldSubsonicPassword,
+	FieldOpdsToken,
 	FieldFailedLoginCount,
 	FieldLastFailedLoginAt,
 	FieldLockedUntil,
@@ -216,6 +219,11 @@ func ByDisplayName(opts ...sql.OrderTermOption) OrderOption {
 // BySubsonicPassword orders the results by the subsonic_password field.
 func BySubsonicPassword(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubsonicPassword, opts...).ToFunc()
+}
+
+// ByOpdsToken orders the results by the opds_token field.
+func ByOpdsToken(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOpdsToken, opts...).ToFunc()
 }
 
 // ByFailedLoginCount orders the results by the failed_login_count field.
