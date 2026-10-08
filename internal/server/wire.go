@@ -317,19 +317,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	limiter := auth.NewLimiter(5, 15*time.Minute)
 
 	// 8. Middleware
-	authMW := middleware.NewAuth(authSvc, apiFailureLimiter(), []string{
-		"/health",
-		"/api/docs",
-		"/api/v1/openapi.yaml",
-		"/static/",
-		"/login",
-		"/register",
-		"/auth/login",
-		"/auth/register",
-		"/auth/config",
-		"/auth/invite/",
-		"/auth/oidc/",
-	})
+	authMW := middleware.NewAuth(authSvc, apiFailureLimiter(), authExcludePaths)
 
 	// 9. Scheduler
 	sched := scheduler.New(scheduler.WithStateHook(jobsstate.NewHook(dbClient)))
@@ -563,4 +551,19 @@ func generateSessionSecret() (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(b), nil
+}
+
+var authExcludePaths = []string{
+	"/health",
+	"/api/docs",
+	"/api/v1/openapi.yaml",
+	"/static/",
+	"/login",
+	"/register",
+	"/auth/login",
+	"/auth/register",
+	"/auth/config",
+	"/auth/invite/",
+	"/auth/oidc/",
+	"/rest/",
 }

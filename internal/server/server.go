@@ -30,6 +30,7 @@ import (
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	"github.com/datahearth/streamline/internal/server/restapi"
+	"github.com/datahearth/streamline/internal/server/subsonic"
 	"github.com/datahearth/streamline/internal/server/web"
 	"github.com/datahearth/streamline/internal/transcoding"
 	"github.com/datahearth/streamline/internal/utils/httputil"
@@ -182,6 +183,8 @@ func New(cfg Config) *Server {
 
 	restapi.Mount(s.router, s.api)
 	web.Mount(s.router, s.web)
+
+	s.router.Mount("/rest", subsonic.New(subsonic.Deps{Ent: cfg.Ent, Posters: cfg.Posters}).Routes())
 
 	s.router.Get(
 		"/posters/{kind}/{id}/poster.jpg",
