@@ -83,6 +83,7 @@ packages:
   github.com/datahearth/streamline/internal/rss:
     interfaces:
       AlbumGrabber: {}
+      BookGrabber: {}
       Downloader: {}
       EpisodeGrabber: {}
       FeedRunner: {}

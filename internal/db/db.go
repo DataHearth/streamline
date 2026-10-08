@@ -116,6 +116,10 @@ type Store interface {
 	// holding a file stays available, otherwise skipped and wanted follow the
 	// flag.
 	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	// ListWantedBooks returns books of monitored authors with at least one
+	// monitored, wanted slot under the grab-failure cap and with no live
+	// download record, author loaded.
+	ListWantedBooks(ctx context.Context, maxGrabFailures uint8) ([]*ent.Book, error)
 	// SetBookSlotStatus moves one slot's status from `from` to `to` and
 	// writes nothing when the slot has already left `from`.
 	SetBookSlotStatus(

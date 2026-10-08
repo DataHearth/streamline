@@ -54,6 +54,8 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 			Return(nil, nil).Once()
 		store.EXPECT().ListWantedAlbums(mock.Anything, uint8(3)).
 			Return(wanted, nil).Once()
+		store.EXPECT().ListWantedBooks(mock.Anything, uint8(3)).
+			Return(nil, nil).Once()
 		feeder.EXPECT().Feed(mock.Anything, "idx").Return(items, nil).Once()
 		Expect(scanner.Run(ctx)).To(Succeed())
 	}
@@ -72,7 +74,7 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		grabber = mocks.NewMockDownloader(GinkgoT())
 		albums = mocks.NewMockAlbumGrabber(GinkgoT())
 		configtest.Setup(musicConfig("idx"))
-		scanner = NewFeedScanner(store, feeder, grabber, albums)
+		scanner = NewFeedScanner(store, feeder, grabber, albums, nil)
 	})
 
 	flacItem := indexer.SearchResult{

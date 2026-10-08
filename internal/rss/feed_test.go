@@ -146,7 +146,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	)
 
 	newScanner := func() {
-		scanner = NewFeedScanner(store, feeder, grabber, nil)
+		scanner = NewFeedScanner(store, feeder, grabber, nil, nil)
 	}
 
 	noUpgrades := func() {
@@ -168,6 +168,8 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		feeder = mocks.NewMockIndexerFeeder(GinkgoT())
 		grabber = mocks.NewMockDownloader(GinkgoT())
 		store.EXPECT().ListWantedAlbums(mock.Anything, mock.Anything).
+			Return(nil, nil).Maybe()
+		store.EXPECT().ListWantedBooks(mock.Anything, mock.Anything).
 			Return(nil, nil).Maybe()
 	})
 

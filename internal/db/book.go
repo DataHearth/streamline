@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/predicate"
 )
 
 type BookSeed struct {
@@ -467,5 +468,45 @@ func (db *DB) ListAuthorsStaleSince(
 		)).
 		Order(ent.Asc(author.FieldLastRefreshedAt), ent.Asc(author.FieldID)).
 		Limit(limit).
+		All(ctx)
+}
+
+// ListWantedBooks returns the books of monitored authors with at least one
+// slot that is monitored, wanted, under the grab-failure cap and not covered
+// by a live download record, author loaded. The query only says some slot is
+// eligible; the caller re-checks each slot. The cooldown is not applied: the
+// feed scanner already holds the release.
+func (db *DB) ListWantedBooks(
+	ctx context.Context,
+	maxGrabFailures uint8,
+) ([]*ent.Book, error) {
+	inFlight := func(kind downloadrecord.BookKind) predicate.Book {
+		return book.Not(book.HasDownloadRecordsWith(
+			downloadrecord.BookKindEQ(kind),
+			downloadrecord.StatusIn(
+				downloadrecord.StatusDownloading,
+				downloadrecord.StatusImporting,
+			),
+		))
+	}
+	return db.client.Book.Query().
+		Where(
+			book.HasAuthorWith(author.Monitored(true)),
+			book.Or(
+				book.And(
+					book.EbookMonitored(true),
+					book.EbookStatusEQ(book.EbookStatusWanted),
+					book.EbookGrabFailuresLT(maxGrabFailures),
+					inFlight(downloadrecord.BookKindEbook),
+				),
+				book.And(
+					book.AudiobookMonitored(true),
+					book.AudiobookStatusEQ(book.AudiobookStatusWanted),
+					book.AudiobookGrabFailuresLT(maxGrabFailures),
+					inFlight(downloadrecord.BookKindAudiobook),
+				),
+			),
+		).
+		WithAuthor().
 		All(ctx)
 }

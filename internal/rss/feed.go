@@ -37,6 +37,7 @@ type FeedScanner struct {
 	indexers IndexerFeeder
 	grabber  Downloader
 	albums   AlbumGrabber
+	books    BookGrabber
 }
 
 func NewFeedScanner(
@@ -44,12 +45,14 @@ func NewFeedScanner(
 	indexers IndexerFeeder,
 	grabber Downloader,
 	albums AlbumGrabber,
+	books BookGrabber,
 ) *FeedScanner {
 	return &FeedScanner{
 		store:    store,
 		indexers: indexers,
 		grabber:  grabber,
 		albums:   albums,
+		books:    books,
 	}
 }
 
@@ -103,7 +106,11 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	var matched, albumsMatched int
+	bookPass, err := s.newBookPass(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	var matched, albumsMatched, booksMatched int
 	for _, idx := range indexers {
 		items, err := s.indexers.Feed(ctx, idx.Name)
 		if err != nil {
@@ -113,6 +120,7 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 		}
 		matched += s.processItems(ctx, items, pass)
 		albumsMatched += s.processMusicItems(ctx, items, musicPass)
+		booksMatched += s.processBookItems(ctx, items, bookPass)
 	}
 
 	span.SetAttributes(
@@ -120,6 +128,7 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 		attribute.Int("rss.feed_scan.upgrade_candidates", len(upgradable)),
 		attribute.Int("rss.feed_scan.matched", matched),
 		attribute.Int("rss.feed_scan.albums_matched", albumsMatched),
+		attribute.Int("rss.feed_scan.books_matched", booksMatched),
 	)
 	slog.InfoContext(ctx, "feed-scan complete",
 		"indexers", len(indexers), "matched", matched)

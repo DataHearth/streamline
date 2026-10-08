@@ -8,6 +8,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/media/book"
 )
 
 // IndexerSearcher is the subset of indexer.Service that rss.MissingSearcher
@@ -113,13 +114,7 @@ type AlbumGrabber interface {
 	) error
 }
 
-// MusicFeedStore is what the album pass needs from db.Store.
-type MusicFeedStore interface {
-	ListWantedAlbums(
-		ctx context.Context,
-		maxGrabFailures uint8,
-	) ([]*ent.Album, error)
-	IncrementAlbumGrabFailures(ctx context.Context, id uint32) error
-	ResetAlbumGrabFailures(ctx context.Context, id uint32) error
-	SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+// BookGrabber is the subset of book.Service the feed scanner needs.
+type BookGrabber interface {
+	GrabBookRelease(ctx context.Context, bookID uint32, p book.GrabParams) error
 }

@@ -67,6 +67,70 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 		Expect(row).To(BeNil())
 	})
 
+	Describe("ListWantedBooks", func() {
+		ids := func(rows []*ent.Book) []uint32 {
+			out := make([]uint32, len(rows))
+			for i, r := range rows {
+				out[i] = r.ID
+			}
+			return out
+		}
+
+		It("returns books with an eligible slot, author loaded", func() {
+			seed()
+			got, err := store.ListWantedBooks(ctx, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids(got)).To(ConsistOf(bookByHC(1).ID, bookByHC(2).ID))
+			Expect(got[0].Edges.Author).NotTo(BeNil())
+			Expect(got[0].Edges.Author.Name).To(Equal("Sanderson"))
+		})
+
+		It("drops a slot at the failure cap and one with a live record", func() {
+			seed()
+			client.Book.UpdateOne(bookByHC(1)).SetEbookGrabFailures(3).ExecX(ctx)
+			client.DownloadRecord.Create().
+				SetTitle("Warbreaker").
+				SetStatus(downloadrecord.StatusDownloading).
+				SetBookKind(downloadrecord.BookKindAudiobook).
+				SetBookID(bookByHC(2).ID).ExecX(ctx)
+			got, err := store.ListWantedBooks(ctx, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It("drops the books of an unmonitored author", func() {
+			a := seed()
+			Expect(store.SetAuthorMonitored(ctx, a.ID, false)).To(Succeed())
+			got, err := store.ListWantedBooks(ctx, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
+		It("bumps, resets and stamps one slot only", func() {
+			seed()
+			b := bookByHC(1)
+			Expect(
+				store.IncrementBookSlotGrabFailures(ctx, b.ID, "ebook"),
+			).To(Succeed())
+			Expect(
+				store.IncrementBookSlotGrabFailures(ctx, b.ID, "ebook"),
+			).To(Succeed())
+			Expect(store.SetBookSlotLastSearchAt(
+				ctx, b.ID, "audiobook", time.Now(),
+			)).To(Succeed())
+			got := bookByHC(1)
+			Expect(got.EbookGrabFailures).To(BeEquivalentTo(2))
+			Expect(got.AudiobookGrabFailures).To(BeZero())
+			Expect(got.EbookLastSearchAt).To(BeNil())
+			Expect(got.AudiobookLastSearchAt).NotTo(BeNil())
+
+			Expect(store.ResetBookSlotGrabFailures(ctx, b.ID, "ebook")).To(Succeed())
+			Expect(bookByHC(1).EbookGrabFailures).To(BeZero())
+			Expect(store.IncrementBookSlotGrabFailures(ctx, b.ID, "x")).
+				To(MatchError(ContainSubstring("unknown book slot kind")))
+		})
+	})
+
 	Describe("SetBookSlotStatus", func() {
 		It("moves the named slot only when it is in the from status", func() {
 			seed()
