@@ -16,7 +16,10 @@ import (
 )
 
 // resolveFormat is the closure arr.TranslateProfile needs. It keeps that
-// package free of the builtin table and the config singleton.
+// package free of the builtin table and the config singleton. The *arr apps
+// spell formats their own way ("REMUX", "Repack") and a profile entry is
+// validated against the exact name, so a case-folded match answers with
+// streamline's spelling, not the source's.
 func resolveFormat(name string) (string, bool) {
 	if quality.IsBuiltinName(name) {
 		return name, true
@@ -24,7 +27,29 @@ func resolveFormat(name string) (string, bool) {
 	if _, ok := config.FindCustomFormat(name); ok {
 		return name, true
 	}
+	for _, f := range quality.Builtins() {
+		if strings.EqualFold(f.Name, name) {
+			return f.Name, true
+		}
+	}
+	if c := config.Get(); c != nil {
+		for _, e := range c.CustomFormats {
+			if strings.EqualFold(e.Name, name) {
+				return e.Name, true
+			}
+		}
+	}
 	return "", false
+}
+
+// quoteNames renders names for a message listing every collision at once, so
+// the operator fixes them in one pass instead of one 422 at a time.
+func quoteNames(names []string) string {
+	q := make([]string, len(names))
+	for i, n := range names {
+		q[i] = fmt.Sprintf("%q", n)
+	}
+	return strings.Join(q, ", ")
 }
 
 // arrSource validates the parts of a request that name an instance and opens
@@ -135,6 +160,7 @@ func buildPreview(
 	for i, r := range roots {
 		out.RootFolders[i] = ArrRootFolder{Path: r.Path, Accessible: r.Accessible}
 	}
+	inUse := map[uint32]uint32{}
 	setSample := func(i int, path string) {
 		if i >= 0 && out.RootFolders[i].SamplePath == nil && path != "" {
 			p := path
@@ -152,6 +178,7 @@ func buildPreview(
 		sampled := map[int]bool{}
 		for _, sh := range shows {
 			out.Counts.Titles++
+			inUse[sh.QualityProfileID]++
 			if sh.Monitored {
 				out.Counts.Monitored++
 			}
@@ -185,6 +212,7 @@ func buildPreview(
 		}
 		for _, m := range movies {
 			out.Counts.Titles++
+			inUse[m.QualityProfileID]++
 			if m.Monitored {
 				out.Counts.Monitored++
 			}
@@ -203,17 +231,17 @@ func buildPreview(
 	for _, p := range profiles {
 		entry, notes := arr.TranslateProfile(p, resolveFormat)
 		t := ArrProfileTranslation{
-			SourceId:   p.ID,
-			SourceName: p.Name,
-			Translated: qualityProfileCreateFromEntry(entry),
-			Notes:      notes,
+			Id:          p.ID,
+			Name:        p.Name,
+			InUse:       inUse[p.ID],
+			Translation: qualityProfileCreateFromEntry(entry),
+			Notes:       notes,
 		}
 		if t.Notes == nil {
 			t.Notes = []string{}
 		}
 		if _, ok := config.LookupQualityProfile(p.Name); ok {
-			name := p.Name
-			t.Existing = &name
+			t.Existing = p.Name
 		}
 		out.QualityProfiles = append(out.QualityProfiles, t)
 	}
@@ -239,6 +267,7 @@ func buildPreview(
 	for _, dc := range arr.TranslateDownloadClients(clients) {
 		opt := ArrClientOption{
 			Name:        dc.Name,
+			ClientType:  ArrClientOptionClientTypeUnsupported,
 			NeedsSecret: dc.NeedsSecret,
 			Enabled:     dc.Entry.Enabled,
 		}
@@ -246,8 +275,7 @@ func buildPreview(
 			reason := dc.Reason
 			opt.Reason = &reason
 		} else {
-			ct := ArrClientOptionClientType(dc.Entry.ClientType)
-			opt.ClientType = &ct
+			opt.ClientType = ArrClientOptionClientType(dc.Entry.ClientType)
 			_, opt.Conflict = config.FindDownloadClient(dc.Name)
 		}
 		out.DownloadClients = append(out.DownloadClients, opt)
@@ -343,6 +371,7 @@ func profilesToCreate(
 		return nil, ""
 	}
 	var out []config.QualityProfileEntry
+	var taken []string
 	seen := map[string]bool{}
 	for _, p := range *body.ProfileMappings {
 		if p.Create == nil || seen[p.Target] {
@@ -353,20 +382,30 @@ func profilesToCreate(
 		create.Name = p.Target
 		entry := qualityProfileFromCreate(create)
 		if existing, ok := config.LookupQualityProfile(p.Target); ok {
-			if reflect.DeepEqual(
+			if !reflect.DeepEqual(
 				normalizeProfile(existing),
 				normalizeProfile(entry),
 			) {
-				continue
+				taken = append(taken, p.Target)
 			}
-			return nil, fmt.Sprintf(
-				"a quality profile named %q already exists; map onto it or pick another name",
-				p.Target,
-			)
+			continue
 		}
 		out = append(out, entry)
 	}
-	return out, ""
+	switch len(taken) {
+	case 0:
+		return out, ""
+	case 1:
+		return nil, fmt.Sprintf(
+			"a quality profile named %q already exists — map onto it or pick another name",
+			taken[0],
+		)
+	default:
+		return nil, fmt.Sprintf(
+			"quality profiles already exist: %s — map onto them or pick other names",
+			quoteNames(taken),
+		)
+	}
 }
 
 // normalizeProfile folds the nil-versus-empty slice difference a YAML round
@@ -437,11 +476,14 @@ func (s *Server) ApplyImportSourceConfig(
 
 	idxEntries, msg := selectIndexers(arr.TranslateIndexers(indexers), wantIdx)
 	if msg != "" {
-		return refuse(errUnprocessable(msg))
+		return refuse(errMigrationRejected(msg))
 	}
 	dcEntries, msg := selectClients(arr.TranslateDownloadClients(clients), wantDC)
 	if msg != "" {
-		return refuse(errUnprocessable(msg))
+		return refuse(errMigrationRejected(msg))
+	}
+	if msg := configCollisions(idxEntries, dcEntries); msg != "" {
+		return refuse(errMigrationRejected(msg))
 	}
 
 	if err := config.AddResources(ctx, nil, idxEntries, dcEntries); err != nil {
@@ -450,7 +492,7 @@ func (s *Server) ApplyImportSourceConfig(
 				ForbiddenJSONResponse: forbiddenResp(err.Error()),
 			}, nil
 		}
-		return refuse(errUnprocessable(err.Error()))
+		return refuse(errMigrationRejected(err.Error()))
 	}
 	for _, e := range idxEntries {
 		out.Indexers = append(out.Indexers, e.Name)
@@ -463,6 +505,37 @@ func (s *Server) ApplyImportSourceConfig(
 			out,
 		),
 	}, nil
+}
+
+// configCollisions names every selection whose name is already taken. The
+// write's own duplicate check stops at the first, which leaves the operator
+// renaming one entry per attempt.
+func configCollisions(
+	idx []config.IndexerEntry, dcs []config.DownloadClientEntry,
+) string {
+	var takenIdx, takenDC []string
+	for _, e := range idx {
+		if _, ok := config.FindIndexer(e.Name); ok {
+			takenIdx = append(takenIdx, e.Name)
+		}
+	}
+	for _, e := range dcs {
+		if _, ok := config.FindDownloadClient(e.Name); ok {
+			takenDC = append(takenDC, e.Name)
+		}
+	}
+	var parts []string
+	if len(takenIdx) > 0 {
+		parts = append(parts, "indexers "+quoteNames(takenIdx))
+	}
+	if len(takenDC) > 0 {
+		parts = append(parts, "download clients "+quoteNames(takenDC))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "already configured: " + strings.Join(parts, "; ") +
+		" — deselect them or rename the existing entries"
 }
 
 func selectIndexers(

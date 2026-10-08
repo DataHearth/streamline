@@ -48,9 +48,14 @@ func (s *Server) StartImport(
 			params.Kind = entimportscan.Kind(*req.Body.Kind)
 		}
 	} else {
+		rejected := func(msg string) (StartImportResponseObject, error) {
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errMigrationRejected(msg),
+			}, nil
+		}
 		if req.Body.SourceUrl == nil || *req.Body.SourceUrl == "" ||
 			req.Body.ApiKey == nil || *req.Body.ApiKey == "" {
-			return unprocessable("a migration needs source_url and api_key")
+			return rejected("a migration needs source_url and api_key")
 		}
 		if draftTargetRefused(ctx, *req.Body.SourceUrl) {
 			return StartImport422JSONResponse{
@@ -61,18 +66,32 @@ func (s *Server) StartImport(
 		}
 		mappings, msg := migrationMappings(req.Body)
 		if msg != "" {
-			return unprocessable(msg)
+			return rejected(msg)
 		}
 		params.Source = source
 		params.SourceURL = *req.Body.SourceUrl
 		params.APIKey = *req.Body.ApiKey
 		params.Mappings = mappings
 
+		// StartScan checks this too, but only after the profiles below are
+		// written: a refused start would otherwise leave them behind.
+		running, err := s.store.CountActiveImportScans(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if running > 0 {
+			return StartImport409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					bulkimport.ErrScanRunning.Error(),
+				),
+			}, nil
+		}
+
 		// Profiles land before the scan row so a commit weeks later finds
 		// them, in one config write so half a set never does.
 		profiles, msg := profilesToCreate(req.Body)
 		if msg != "" {
-			return unprocessable(msg)
+			return rejected(msg)
 		}
 		if len(profiles) > 0 {
 			if err := config.AddResources(ctx, profiles, nil, nil); err != nil {
@@ -81,7 +100,7 @@ func (s *Server) StartImport(
 						ForbiddenJSONResponse: forbiddenResp(err.Error()),
 					}, nil
 				}
-				return unprocessable(err.Error())
+				return rejected(err.Error())
 			}
 		}
 	}
@@ -95,9 +114,14 @@ func (s *Server) StartImport(
 			errors.Is(err, bulkimport.ErrRenameUnsupported),
 			errors.Is(err, bulkimport.ErrRootOutsideLibrary),
 			errors.Is(err, bulkimport.ErrMissingSourceURL):
-			return StartImport422JSONResponse{
-				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
-			}, nil
+			if source != entimportscan.SourceFilesystem {
+				return StartImport422JSONResponse{
+					UnprocessableEntityJSONResponse: errMigrationRejected(
+						err.Error(),
+					),
+				}, nil
+			}
+			return unprocessable(err.Error())
 		case errors.Is(err, bulkimport.ErrScanRunning):
 			return StartImport409JSONResponse{
 				ConflictJSONResponse: errConflict(err.Error()),

@@ -188,6 +188,7 @@ const (
 	ArrClientOptionClientTypeDeluge       ArrClientOptionClientType = "deluge"
 	ArrClientOptionClientTypeQbittorrent  ArrClientOptionClientType = "qbittorrent"
 	ArrClientOptionClientTypeTransmission ArrClientOptionClientType = "transmission"
+	ArrClientOptionClientTypeUnsupported  ArrClientOptionClientType = "unsupported"
 )
 
 // Valid indicates whether the value is a known member of the ArrClientOptionClientType enum.
@@ -198,6 +199,8 @@ func (e ArrClientOptionClientType) Valid() bool {
 	case ArrClientOptionClientTypeQbittorrent:
 		return true
 	case ArrClientOptionClientTypeTransmission:
+		return true
+	case ArrClientOptionClientTypeUnsupported:
 		return true
 	default:
 		return false
@@ -4062,8 +4065,9 @@ type ApproveRequestRequest struct {
 
 // ArrClientOption defines model for ArrClientOption.
 type ArrClientOption struct {
-	// ClientType Absent for a client that cannot be carried across.
-	ClientType *ArrClientOptionClientType `json:"client_type,omitempty"`
+	// ClientType `unsupported` for a client that cannot be carried across; `reason`
+	// then says why.
+	ClientType ArrClientOptionClientType `json:"client_type"`
 
 	// Conflict A download client of this name already exists.
 	Conflict bool   `json:"conflict"`
@@ -4078,7 +4082,8 @@ type ArrClientOption struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
-// ArrClientOptionClientType Absent for a client that cannot be carried across.
+// ArrClientOptionClientType `unsupported` for a client that cannot be carried across; `reason`
+// then says why.
 type ArrClientOptionClientType string
 
 // ArrConfigSelection defines model for ArrConfigSelection.
@@ -4093,14 +4098,14 @@ type ArrConfigSelection struct {
 
 // ArrCounts defines model for ArrCounts.
 type ArrCounts struct {
-	Monitored int `json:"monitored"`
+	Monitored uint32 `json:"monitored"`
 
 	// Titles Movies or series the instance tracks.
-	Titles int `json:"titles"`
+	Titles uint32 `json:"titles"`
 
 	// WithFile Movies with a file, or series with at least one episode file
 	// (Sonarr's own statistics).
-	WithFile int `json:"with_file"`
+	WithFile uint32 `json:"with_file"`
 }
 
 // ArrIndexerOption defines model for ArrIndexerOption.
@@ -4155,15 +4160,23 @@ type ArrProfileMapping struct {
 
 // ArrProfileTranslation defines model for ArrProfileTranslation.
 type ArrProfileTranslation struct {
-	// Existing Set when a streamline profile of the same name already exists;
-	// mapping onto it is usually what the operator wants.
-	Existing *string `json:"existing,omitempty"`
+	// Existing The name of the streamline profile spelled exactly like this one,
+	// or empty when there is none; mapping onto it is usually what the
+	// operator wants.
+	Existing string `json:"existing"`
+
+	// Id The profile's id on the instance.
+	Id uint32 `json:"id"`
+
+	// InUse How many of the instance's titles use this profile.
+	InUse uint32 `json:"in_use"`
+
+	// Name The profile's name on the instance.
+	Name string `json:"name"`
 
 	// Notes Every step of the translation that lost information.
-	Notes      []string             `json:"notes"`
-	SourceId   uint32               `json:"source_id"`
-	SourceName string               `json:"source_name"`
-	Translated QualityProfileCreate `json:"translated"`
+	Notes       []string             `json:"notes"`
+	Translation QualityProfileCreate `json:"translation"`
 }
 
 // ArrRootCheck defines model for ArrRootCheck.
@@ -4189,7 +4202,7 @@ type ArrRootFolder struct {
 	// SamplePath One file under this folder, for `check-paths`. Empty when no title
 	// under it has a file.
 	SamplePath *string `json:"sample_path,omitempty"`
-	TitleCount int     `json:"title_count"`
+	TitleCount uint32  `json:"title_count"`
 }
 
 // ArrRootMapping defines model for ArrRootMapping.
@@ -5078,7 +5091,7 @@ type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
-	// hardcover_not_configured, hardcover_key_rejected). Present for domain errors
+	// hardcover_not_configured, hardcover_key_rejected, migration_rejected). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`

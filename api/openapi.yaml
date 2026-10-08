@@ -4178,10 +4178,17 @@ paths:
           $ref: "#/components/responses/Forbidden"
     post:
       operationId: StartImport
-      description: |
-        Answers 503 when a `book` scan is requested without a Hardcover API
-        key.
       tags: [library]
+      description: |
+        Starts a filesystem scan, or a Radarr/Sonarr migration when `source`
+        names one. For a migration a running scan answers 409 before any
+        quality profile is created. A migration's diagnostic 422s — a
+        missing `source_url` or `api_key`, a root mapping whose sample does
+        not resolve, a profile name already taken by a different profile
+        (every such name is listed), a root outside the library — carry
+        `code: migration_rejected` and a message safe to show verbatim. A
+        filesystem scan's 422s carry no code. A `book` scan requested
+        without a Hardcover API key answers 503.
       requestBody:
         $ref: "#/components/requestBodies/StartImport"
       responses:
@@ -4507,7 +4514,9 @@ paths:
         of them land or none do. A selection that is unsupported, collides
         with an existing name, or needs a secret the instance did not return
         (`needs_secret` in the preview) and was sent without one answers 422
-        and writes nothing.
+        with `code: migration_rejected` and writes nothing. Every colliding
+        name is listed in the one answer. A connection failure answers 422
+        with `code: connection_failed`.
       tags: [library]
       requestBody:
         $ref: "#/components/requestBodies/ApplySourceConfig"
@@ -7304,7 +7313,7 @@ components:
             Stable machine-readable error code (e.g. last_admin,
             self_delete_forbidden, email_exists, connection_failed,
             invalid_condition, grab_rejected, rate_limited, worker_unavailable,
-            hardcover_not_configured, hardcover_key_rejected). Present for domain errors
+            hardcover_not_configured, hardcover_key_rejected, migration_rejected). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 
@@ -12366,14 +12375,17 @@ components:
       properties:
         titles:
           type: integer
+          x-go-type: uint32
           description: Movies or series the instance tracks.
         with_file:
           type: integer
+          x-go-type: uint32
           description: |
             Movies with a file, or series with at least one episode file
             (Sonarr's own statistics).
         monitored:
           type: integer
+          x-go-type: uint32
 
     ArrRootFolder:
       type: object
@@ -12386,6 +12398,7 @@ components:
           description: Whether the instance itself can reach the folder.
         title_count:
           type: integer
+          x-go-type: uint32
         sample_path:
           type: string
           description: |
@@ -12394,19 +12407,26 @@ components:
 
     ArrProfileTranslation:
       type: object
-      required: [source_id, source_name, translated, notes]
+      required: [id, name, in_use, existing, translation, notes]
       properties:
-        source_id:
+        id:
           type: integer
           x-go-type: uint32
-        source_name:
+          description: The profile's id on the instance.
+        name:
           type: string
+          description: The profile's name on the instance.
+        in_use:
+          type: integer
+          x-go-type: uint32
+          description: How many of the instance's titles use this profile.
         existing:
           type: string
           description: |
-            Set when a streamline profile of the same name already exists;
-            mapping onto it is usually what the operator wants.
-        translated:
+            The name of the streamline profile spelled exactly like this one,
+            or empty when there is none; mapping onto it is usually what the
+            operator wants.
+        translation:
           $ref: "#/components/schemas/QualityProfileCreate"
         notes:
           type: array
@@ -12446,14 +12466,16 @@ components:
 
     ArrClientOption:
       type: object
-      required: [name, needs_secret, enabled, conflict]
+      required: [name, client_type, needs_secret, enabled, conflict]
       properties:
         name:
           type: string
         client_type:
           type: string
-          enum: [qbittorrent, transmission, deluge]
-          description: Absent for a client that cannot be carried across.
+          enum: [qbittorrent, transmission, deluge, unsupported]
+          description: |
+            `unsupported` for a client that cannot be carried across; `reason`
+            then says why.
         reason:
           type: string
           description: Why the client cannot be carried across.

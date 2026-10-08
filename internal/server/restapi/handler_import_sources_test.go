@@ -177,12 +177,14 @@ var _ = Describe("Handler: PreviewImportSource",
 				Expect(
 					*got.RootFolders[1].SamplePath,
 				).To(Equal("/media/movies-4k/A/a.mkv"))
-				Expect(got.RootFolders[1].TitleCount).To(Equal(2))
+				Expect(got.RootFolders[1].TitleCount).To(Equal(uint32(2)))
 
 				Expect(got.QualityProfiles).To(HaveLen(1))
-				Expect(*got.QualityProfiles[0].Existing).To(Equal("HD-1080p"))
+				Expect(got.QualityProfiles[0].Id).To(Equal(uint32(4)))
+				Expect(got.QualityProfiles[0].Name).To(Equal("HD-1080p"))
+				Expect(got.QualityProfiles[0].Existing).To(Equal("HD-1080p"))
 				Expect(
-					string(got.QualityProfiles[0].Translated.PreferredResolution),
+					string(got.QualityProfiles[0].Translation.PreferredResolution),
 				).
 					To(Equal("1080p"))
 
@@ -192,9 +194,90 @@ var _ = Describe("Handler: PreviewImportSource",
 				).To(Equal(ArrIndexerOptionKind("unsupported")))
 				Expect(got.DownloadClients).To(HaveLen(1))
 				Expect(got.DownloadClients[0].NeedsSecret).To(BeTrue())
+				Expect(
+					got.DownloadClients[0].ClientType,
+				).To(Equal(ArrClientOptionClientTypeQbittorrent))
+			},
+		)
+
+		It(
+			"counts titles per profile, leaves existing empty without a same-named profile, and marks an unsupported client",
+			func() {
+				configtest.Setup()
+				lib := connected(app, arr.Radarr)
+				lib.EXPECT().Status(mock.Anything).
+					Return(arr.Status{Version: "5.14.0"}, nil).Once()
+				lib.EXPECT().RootFolders(mock.Anything).
+					Return([]arr.RootFolder{}, nil).Once()
+				lib.EXPECT().QualityProfiles(mock.Anything).
+					Return([]arr.QualityProfile{
+						{ID: 4, Name: "Nobody Has This"},
+						{ID: 7, Name: "Unused"},
+					}, nil).Once()
+				lib.EXPECT().Indexers(mock.Anything).
+					Return([]arr.Provider{}, nil).Once()
+				lib.EXPECT().DownloadClients(mock.Anything).
+					Return([]arr.Provider{{
+						Name: "sab", Implementation: "Sabnzbd", Protocol: "usenet",
+					}}, nil).Once()
+				lib.EXPECT().Movies(mock.Anything).Return([]arr.Movie{
+					{TMDBID: 1, QualityProfileID: 4},
+					{TMDBID: 2, QualityProfileID: 4},
+					{TMDBID: 3, QualityProfileID: 9},
+				}, nil).Once()
+
+				resp := postSourceJSON(
+					app, "/api/v1/library/imports/sources/preview", "",
+					arrSourceBody,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				got := decodeBody[ArrPreview](resp)
+
+				Expect(got.QualityProfiles).To(HaveLen(2))
+				Expect(got.QualityProfiles[0].InUse).To(Equal(uint32(2)))
+				Expect(got.QualityProfiles[0].Existing).To(BeEmpty())
+				Expect(got.QualityProfiles[1].InUse).To(BeZero())
+
+				Expect(got.DownloadClients).To(HaveLen(1))
+				Expect(
+					got.DownloadClients[0].ClientType,
+				).To(Equal(ArrClientOptionClientTypeUnsupported))
+				Expect(got.DownloadClients[0].Reason).NotTo(BeNil())
 			},
 		)
 	})
+
+var _ = Describe("resolveFormat", Label("unit", "server", "imports"), func() {
+	BeforeEach(func() {
+		configtest.Setup(map[string]any{
+			"custom_formats": []map[string]any{{
+				"name": "Repack",
+				"conditions": []map[string]any{{
+					"type": "release_title", "pattern": "(?i)repack",
+					"required": true,
+				}},
+			}},
+		})
+	})
+
+	It("answers a case-folded builtin with streamline's spelling", func() {
+		name, ok := resolveFormat("REMUX")
+		Expect(ok).To(BeTrue())
+		Expect(name).To(Equal("remux"))
+	})
+
+	It("answers a case-folded custom format with its stored spelling", func() {
+		name, ok := resolveFormat("repack")
+		Expect(ok).To(BeTrue())
+		Expect(name).To(Equal("Repack"))
+	})
+
+	It("misses a name nothing spells", func() {
+		_, ok := resolveFormat("nope")
+		Expect(ok).To(BeFalse())
+	})
+})
 
 var _ = Describe("Handler: CheckImportSourcePaths",
 	Label("unit", "server", "imports"), func() {
@@ -257,6 +340,11 @@ var _ = Describe("Handler: StartImport from a source",
 			app = newAPIKeyApp()
 		})
 
+		idle := func() {
+			app.store.EXPECT().CountActiveImportScans(mock.Anything).
+				Return(0, nil).Once()
+		}
+
 		body := func(create bool) map[string]any {
 			pm := map[string]any{"source_id": 4, "target": "HD"}
 			if create {
@@ -277,6 +365,7 @@ var _ = Describe("Handler: StartImport from a source",
 		}
 
 		It("creates the mapped profile, then starts the scan with the key", func() {
+			idle()
 			var seen bulkimport.StartScanParams
 			app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
 				Run(func(_ context.Context, p bulkimport.StartScanParams) { seen = p }).
@@ -307,6 +396,7 @@ var _ = Describe("Handler: StartImport from a source",
 		It(
 			"is idempotent over a profile an earlier attempt already created",
 			func() {
+				idle()
 				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
 					Return(nil, bulkimport.ErrScanRunning).Once()
 				resp := postSourceJSON(
@@ -318,6 +408,7 @@ var _ = Describe("Handler: StartImport from a source",
 				resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 
+				idle()
 				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
 					Return(&ent.ImportScan{ID: 2}, nil).Once()
 				resp = postSourceJSON(app, "/api/v1/library/imports", "", body(true))
@@ -327,6 +418,7 @@ var _ = Describe("Handler: StartImport from a source",
 		)
 
 		It("422s a name collision and starts no scan", func() {
+			idle()
 			Expect(config.AddQualityProfile(context.Background(),
 				config.QualityProfileEntry{
 					Name: "HD", MinResolution: "2160p", PreferredResolution: "2160p",
@@ -336,7 +428,56 @@ var _ = Describe("Handler: StartImport from a source",
 			resp := postSourceJSON(app, "/api/v1/library/imports", "", body(true))
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-			Expect(decodeBody[Error](resp).Message).To(ContainSubstring(`"HD"`))
+			got := decodeBody[Error](resp)
+			Expect(got.Message).To(ContainSubstring(`"HD"`))
+			Expect(got.Code).NotTo(BeNil())
+			Expect(*got.Code).To(Equal(codeMigrationRejected))
+		})
+
+		It("names every colliding profile in one 422", func() {
+			idle()
+			for _, n := range []string{"HD", "UHD"} {
+				Expect(config.AddQualityProfile(context.Background(),
+					config.QualityProfileEntry{
+						Name:                n,
+						MinResolution:       "2160p",
+						PreferredResolution: "2160p",
+					})).To(Succeed())
+			}
+			create := map[string]any{
+				"name": "x", "min_resolution": "720p",
+				"preferred_resolution": "1080p",
+			}
+			b := body(false)
+			b["profile_mappings"] = []map[string]any{
+				{"source_id": 4, "target": "HD", "create": create},
+				{"source_id": 5, "target": "UHD", "create": create},
+			}
+
+			resp := postSourceJSON(app, "/api/v1/library/imports", "", b)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			got := decodeBody[Error](resp)
+			Expect(got.Message).To(ContainSubstring(`"HD"`))
+			Expect(got.Message).To(ContainSubstring(`"UHD"`))
+			Expect(got.Code).NotTo(BeNil())
+			Expect(*got.Code).To(Equal(codeMigrationRejected))
+		})
+
+		It("409s a running scan before creating any profile", func() {
+			app.store.EXPECT().CountActiveImportScans(mock.Anything).
+				Return(1, nil).Once()
+
+			// No StartScan expectation: the mock fails the spec if called.
+			resp := postSourceJSON(app, "/api/v1/library/imports", "", body(true))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			Expect(
+				decodeBody[Error](resp).Message,
+			).To(Equal(bulkimport.ErrScanRunning.Error()))
+
+			_, ok := config.LookupQualityProfile("HD")
+			Expect(ok).To(BeFalse())
 		})
 
 		It("422s a root mapping whose sample does not resolve", func() {
@@ -348,9 +489,10 @@ var _ = Describe("Handler: StartImport from a source",
 			resp := postSourceJSON(app, "/api/v1/library/imports", "", b)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-			Expect(
-				decodeBody[Error](resp).Message,
-			).To(ContainSubstring("/media/movies"))
+			got := decodeBody[Error](resp)
+			Expect(got.Message).To(ContainSubstring("/media/movies"))
+			Expect(got.Code).NotTo(BeNil())
+			Expect(*got.Code).To(Equal(codeMigrationRejected))
 		})
 
 		It("422s a migration without an API key", func() {
@@ -366,14 +508,19 @@ var _ = Describe("Handler: StartImport from a source",
 				map[string]any{"mode": "in_place"})
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			Expect(decodeBody[Error](resp).Code).To(BeNil())
 		})
 
 		It("maps a root outside the library onto a 422", func() {
+			idle()
 			app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
 				Return(nil, bulkimport.ErrRootOutsideLibrary).Once()
 			resp := postSourceJSON(app, "/api/v1/library/imports", "", body(false))
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			code := decodeBody[Error](resp).Code
+			Expect(code).NotTo(BeNil())
+			Expect(*code).To(Equal(codeMigrationRejected))
 		})
 	})
 
@@ -471,6 +618,37 @@ var _ = Describe("Handler: ApplyImportSourceConfig",
 			// Half a config is worse than none: the client must not have landed.
 			_, ok := config.FindDownloadClient("qbit")
 			Expect(ok).To(BeFalse())
+		})
+
+		It("names every collision in one 422", func() {
+			configtest.SetupFile(map[string]any{
+				"indexers": []map[string]any{{
+					"name": "Nyaa", "host": "h", "port": 1,
+					"api_key": "x", "protocol": "torznab",
+				}},
+				"download_clients": []map[string]any{{
+					"name": "qbit", "client_type": "qbittorrent",
+					"host": "h", "port": 8080, "auth_method": "password",
+				}},
+			})
+			providers([]arr.Provider{torznab}, []arr.Provider{qbit})
+
+			resp := postSourceJSON(
+				app,
+				"/api/v1/library/imports/sources/apply-config",
+				"",
+				req(
+					[]map[string]any{{"name": "Nyaa"}},
+					[]map[string]any{{"name": "qbit"}},
+				),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			got := decodeBody[Error](resp)
+			Expect(got.Message).To(ContainSubstring(`"Nyaa"`))
+			Expect(got.Message).To(ContainSubstring(`"qbit"`))
+			Expect(got.Code).NotTo(BeNil())
+			Expect(*got.Code).To(Equal(codeMigrationRejected))
 		})
 
 		It(
