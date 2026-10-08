@@ -126,6 +126,10 @@ You can also **Discard** a scan under review, which throws away every decision y
 
 ---
 
+## Music and books
+
+A scan with `kind: music` or `kind: book` adopts an existing music or book collection in place. Music scans group album folders and match their tags against MusicBrainz; book scans group ebook files and audiobook folders and match through Hardcover, so they need a Hardcover key. Rename mode is not available for music. Details are on the [Music and Books](Music-and-Books) page.
+
 ## Ongoing orphan scans
 
 Import scans are the manual, deliberate route. Streamline also watches for files that appear in your library without going through it.

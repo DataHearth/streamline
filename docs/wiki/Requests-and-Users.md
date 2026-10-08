@@ -81,6 +81,8 @@ Their **Requests** page lists what they've asked for and where each one stands. 
 
 ---
 
+Music and books can be requested too: an artist or a single album, an author or a single book with the wanted kind (ebook, audiobook or both). Approving a single album or book adds its artist or author unmonitored and monitors only what was requested. See [Music and Books](Music-and-Books).
+
 ## Reviewing requests
 
 **Requests**, for admins and members. *"Review and approve what your household asks for."*
