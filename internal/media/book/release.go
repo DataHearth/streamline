@@ -3,7 +3,6 @@ package book
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -21,7 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
-var errNoQualityProfile = errors.New("no quality profile configured for this slot")
+const slotDownloading = "downloading"
 
 type ReleaseResult struct {
 	indexer.SearchResult
@@ -77,7 +76,7 @@ func (s *Service) SearchBookReleases(
 	if kind == string(mediafile.BookKindEbook) {
 		profile, ok := config.ResolveEbookQualityProfile(author.EbookQualityProfile)
 		if !ok {
-			return nil, otelx.RecordSpanError(span, errNoQualityProfile)
+			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
 		score = func(p library.ParsedBookRelease) int {
 			return library.ScoreEbookRelease(p, profile)
@@ -87,7 +86,7 @@ func (s *Service) SearchBookReleases(
 			author.AudiobookQualityProfile,
 		)
 		if !ok {
-			return nil, otelx.RecordSpanError(span, errNoQualityProfile)
+			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
 		score = func(p library.ParsedBookRelease) int {
 			return library.ScoreAudiobookRelease(p, profile)
@@ -166,11 +165,9 @@ func (s *Service) GrabBookRelease(
 		return otelx.RecordSpanError(span, fmt.Errorf("grab book: %w", err))
 	}
 
-	if from := slotStatus(b, p.Kind); from == string(entbook.EbookStatusWanted) ||
-		from == string(entbook.EbookStatusSkipped) ||
-		from == string(entbook.EbookStatusPaused) {
+	if from := slotStatus(b, p.Kind); grabbableSlotStatus(p.Kind, from) {
 		if err := s.db.SetBookSlotStatus(
-			ctx, bookID, p.Kind, from, string(entbook.EbookStatusDownloading),
+			ctx, bookID, p.Kind, from, slotDownloading,
 		); err != nil {
 			slog.WarnContext(ctx, "grab book: set slot status failed",
 				"book.id", bookID, "book.kind", p.Kind, "error", err)
@@ -186,4 +183,15 @@ func slotStatus(b *ent.Book, kind string) string {
 		return string(b.EbookStatus)
 	}
 	return string(b.AudiobookStatus)
+}
+
+func grabbableSlotStatus(kind, status string) bool {
+	if kind == string(mediafile.BookKindEbook) {
+		return status == string(entbook.EbookStatusWanted) ||
+			status == string(entbook.EbookStatusSkipped) ||
+			status == string(entbook.EbookStatusPaused)
+	}
+	return status == string(entbook.AudiobookStatusWanted) ||
+		status == string(entbook.AudiobookStatusSkipped) ||
+		status == string(entbook.AudiobookStatusPaused)
 }

@@ -636,9 +636,11 @@ type pendingSelection struct {
 	bytes int64
 }
 
-// grab is the shared torrent-grab path. Exactly one of movieID/episodeID is
-// non-zero; it drives the span/log naming, which DownloadRecord field links the
-// record, and (movies only) whether the Movie status is flipped.
+// grab is the shared torrent-grab path. Exactly one of
+// movieID/episodeID/albumID/bookID is non-zero; it drives the span/log naming,
+// which DownloadRecord edge links the record (albumID sets the album edge,
+// bookID the book edge with bookKind as its slot), and (movies only) whether
+// the Movie status is flipped.
 func (d *download) grab(
 	ctx context.Context,
 	result indexer.SearchResult,

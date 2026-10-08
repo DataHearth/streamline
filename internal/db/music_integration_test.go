@@ -65,6 +65,29 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		).To(Equal("Smells Like Teen Spirit"))
 	})
 
+	Describe("SetAlbumStatus", func() {
+		It("moves only from the listed statuses and reports whether it did", func() {
+			a := seed()
+			id := a.Edges.Albums[0].ID
+			Expect(client.Album.GetX(ctx, id).Status).To(Equal(album.StatusWanted))
+
+			moved, err := store.SetAlbumStatus(ctx, id,
+				[]album.Status{album.StatusPaused, album.StatusSkipped},
+				album.StatusDownloading)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeFalse())
+			Expect(client.Album.GetX(ctx, id).Status).To(Equal(album.StatusWanted))
+
+			moved, err = store.SetAlbumStatus(ctx, id,
+				[]album.Status{album.StatusPaused, album.StatusWanted},
+				album.StatusDownloading)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(moved).To(BeTrue())
+			Expect(client.Album.GetX(ctx, id).Status).
+				To(Equal(album.StatusDownloading))
+		})
+	})
+
 	It("loads an album with its tracks ordered by disc and position", func() {
 		a := seed()
 		var id uint32

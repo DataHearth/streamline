@@ -56,6 +56,59 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		return rec
 	}
 
+	Describe("CreateDownloadRecord media edges", func() {
+		It("links the album edge and no movie or anchor episode", func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID:      "a-1",
+				Name:      "Nirvana",
+				Monitored: true,
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID := a.Edges.Albums[0].ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "album-hash",
+				Status: downloadrecord.StatusDownloading, AlbumID: albumID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(rec.QueryAlbum().OnlyIDX(ctx)).To(Equal(albumID))
+			Expect(rec.QueryMovie().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryAnchorEpisode().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryBook().ExistX(ctx)).To(BeFalse())
+		})
+
+		It("links the book edge and stores the slot kind", func() {
+			a, err := store.CreateAuthor(ctx, CreateAuthorParams{
+				HardcoverID: 10, Name: "Sanderson", Monitored: true,
+				MonitorPolicy: "all", WantKinds: "both",
+				Books: []BookSeed{{HardcoverID: 1, Title: "Elantris"}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			bookID := a.Edges.Books[0].ID
+
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title:              "t",
+				Size:               1,
+				TorrentHash:        "book-hash",
+				Status:             downloadrecord.StatusDownloading,
+				BookID:             bookID,
+				BookKind:           downloadrecord.BookKindAudiobook,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(rec.QueryBook().OnlyIDX(ctx)).To(Equal(bookID))
+			Expect(rec.BookKind).To(Equal(downloadrecord.BookKindAudiobook))
+			Expect(rec.QueryAlbum().ExistX(ctx)).To(BeFalse())
+			Expect(rec.QueryMovie().ExistX(ctx)).To(BeFalse())
+		})
+	})
+
 	Describe("CountLiveDownloadRecords", func() {
 		It("counts in-flight and pending rows, not terminal ones", func() {
 			createRec("live-dl", downloadrecord.StatusDownloading)

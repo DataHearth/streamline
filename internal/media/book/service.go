@@ -28,11 +28,12 @@ import (
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/book")
 
 var (
-	ErrAuthorExists    = errors.New("author already exists")
-	ErrAuthorNotFound  = errors.New("author not found")
-	ErrBookNotFound    = errors.New("book not found")
-	ErrInvalidSlotKind = errors.New("slot kind must be ebook or audiobook")
-	ErrNotConfigured   = errors.New("hardcover is not configured")
+	ErrAuthorExists     = errors.New("author already exists")
+	ErrAuthorNotFound   = errors.New("author not found")
+	ErrBookNotFound     = errors.New("book not found")
+	ErrInvalidSlotKind  = errors.New("slot kind must be ebook or audiobook")
+	ErrNoQualityProfile = errors.New("no quality profile configured for this slot")
+	ErrNotConfigured    = errors.New("hardcover is not configured")
 )
 
 // Manager is the surface the REST handlers use.

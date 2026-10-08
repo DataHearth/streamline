@@ -26,7 +26,7 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
-var _ = Describe("Book service", Label("integration", "book"), func() {
+var _ = Describe("Book service", Label("unit", "integration", "book"), func() {
 	var (
 		ctx      context.Context
 		client   *ent.Client
@@ -419,6 +419,20 @@ var _ = Describe("Book service", Label("integration", "book"), func() {
 				Expect(err).To(MatchError(ErrBookNotFound))
 			})
 
+			It("returns ErrNoQualityProfile without calling an indexer", func() {
+				configtest.Setup(map[string]any{
+					"library": map[string]any{
+						"ebook_path":     GinkgoT().TempDir(),
+						"audiobook_path": GinkgoT().TempDir(),
+					},
+				})
+
+				for _, kind := range []string{"ebook", "audiobook"} {
+					_, err := svc.SearchBookReleases(ctx, bookID, kind)
+					Expect(err).To(MatchError(ErrNoQualityProfile))
+				}
+			})
+
 			It("rejects an invalid kind without searching", func() {
 				_, err := svc.SearchBookReleases(ctx, bookID, "comic")
 				Expect(err).To(MatchError(ErrInvalidSlotKind))
@@ -443,6 +457,21 @@ var _ = Describe("Book service", Label("integration", "book"), func() {
 				Expect(b.EbookStatus).To(Equal(entbook.EbookStatusDownloading))
 				Expect(b.AudiobookStatus).To(Equal(entbook.AudiobookStatusWanted))
 				Expect(b.AudiobookMonitored).To(BeTrue())
+			})
+
+			It("grabs the audiobook slot and leaves the ebook slot alone", func() {
+				dl.EXPECT().
+					GrabBook(mock.Anything, result, bookID, mediafile.BookKindAudiobook).
+					Return(&ent.DownloadRecord{}, nil).Once()
+
+				Expect(svc.GrabBookRelease(ctx, bookID,
+					GrabParams{Kind: "audiobook", Result: result})).To(Succeed())
+
+				b := client.Book.GetX(ctx, bookID)
+				Expect(
+					b.AudiobookStatus,
+				).To(Equal(entbook.AudiobookStatusDownloading))
+				Expect(b.EbookStatus).To(Equal(entbook.EbookStatusWanted))
 			})
 
 			It("does not demote an available slot", func() {

@@ -66,6 +66,50 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 		Expect(row).To(BeNil())
 	})
 
+	Describe("SetBookSlotStatus", func() {
+		It("moves the named slot only when it is in the from status", func() {
+			seed()
+			b := bookByHC(1)
+			Expect(b.EbookStatus).To(Equal(book.EbookStatusWanted))
+
+			Expect(store.SetBookSlotStatus(
+				ctx, b.ID, "ebook", "paused", "downloading")).To(Succeed())
+			Expect(client.Book.GetX(ctx, b.ID).EbookStatus).
+				To(Equal(book.EbookStatusWanted))
+
+			Expect(store.SetBookSlotStatus(
+				ctx, b.ID, "ebook", "wanted", "downloading")).To(Succeed())
+			got := client.Book.GetX(ctx, b.ID)
+			Expect(got.EbookStatus).To(Equal(book.EbookStatusDownloading))
+			Expect(got.AudiobookStatus).To(Equal(book.AudiobookStatusSkipped))
+		})
+
+		It("moves the audiobook slot and leaves the ebook slot untouched", func() {
+			seed()
+			b := bookByHC(2)
+			Expect(store.SetBookSlotStatus(
+				ctx, b.ID, "audiobook", "wanted", "downloading")).To(Succeed())
+			got := client.Book.GetX(ctx, b.ID)
+			Expect(got.AudiobookStatus).To(Equal(book.AudiobookStatusDownloading))
+			Expect(got.EbookStatus).To(Equal(book.EbookStatusSkipped))
+		})
+
+		It("rejects an unknown kind", func() {
+			seed()
+			b := bookByHC(1)
+			err := store.SetBookSlotStatus(
+				ctx,
+				b.ID,
+				"comic",
+				"wanted",
+				"downloading",
+			)
+			Expect(err).To(MatchError(ContainSubstring("unknown book slot kind")))
+			Expect(client.Book.GetX(ctx, b.ID).EbookStatus).
+				To(Equal(book.EbookStatusWanted))
+		})
+	})
+
 	It("flips an empty slot on monitor and unmonitor", func() {
 		seed()
 		b := bookByHC(3)

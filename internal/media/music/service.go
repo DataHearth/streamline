@@ -33,6 +33,8 @@ var (
 	ErrArtistExists   = errors.New("artist already exists")
 	ErrArtistNotFound = errors.New("artist not found")
 	ErrAlbumNotFound  = errors.New("album not found")
+
+	ErrNoQualityProfile = errors.New("no music quality profile configured")
 )
 
 // Manager is the surface the REST handlers use.
@@ -441,8 +443,7 @@ func (s *Service) SearchAlbumReleases(
 	}
 	profile, ok := config.ResolveMusicQualityProfile(artist.QualityProfile)
 	if !ok {
-		return nil, otelx.RecordSpanError(
-			span, errors.New("no music quality profile configured"))
+		return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 	}
 
 	var year uint16

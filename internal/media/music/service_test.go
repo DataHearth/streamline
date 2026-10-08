@@ -24,7 +24,7 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
-var _ = Describe("Music service", Label("integration", "music"), func() {
+var _ = Describe("Music service", Label("unit", "integration", "music"), func() {
 	var (
 		ctx      context.Context
 		client   *ent.Client
@@ -368,7 +368,7 @@ var _ = Describe("Music service", Label("integration", "music"), func() {
 			})
 
 			_, err := svc.SearchAlbumReleases(ctx, artist.Edges.Albums[0].ID)
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ErrNoQualityProfile))
 		})
 	})
 

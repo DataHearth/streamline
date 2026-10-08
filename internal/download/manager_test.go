@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -726,6 +727,64 @@ func (stubClient) ListFiles(context.Context, string) ([]TorrentFile, error) {
 }
 
 func (stubClient) SetWantedFiles(context.Context, string, []int) error { return nil }
+
+var _ = Describe("GrabAlbum and GrabBook", Label("unit", "downloads"), func() {
+	var (
+		ctx    context.Context
+		store  *dbmocks.MockStore
+		mgr    Downloader
+		client *fakeSelectiveClient
+	)
+
+	result := indexer.SearchResult{
+		Title:    "Release",
+		Download: "magnet:?xt=urn:btih:deadbeef",
+	}
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		store = dbmocks.NewMockStore(GinkgoT())
+		client = &fakeSelectiveClient{addHash: "abc123"}
+		mgr = New(store, client)
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": "/downloads", "enabled": true,
+			}},
+		})
+	})
+
+	It("GrabAlbum files the record under the album only", func() {
+		store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+			func(p db.CreateDownloadRecordParams) bool {
+				return p.AlbumID == 7 && p.MovieID == 0 && p.EpisodeID == 0 &&
+					len(p.EpisodeIDs) == 0 && p.BookID == 0 && p.BookKind == ""
+			},
+		)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+
+		rec, err := mgr.GrabAlbum(ctx, result, 7)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rec.ID).To(BeEquivalentTo(42))
+		Expect(client.addTorrentCalls).To(Equal(1))
+	})
+
+	It("GrabBook files the record under the book with the slot kind", func() {
+		store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+			func(p db.CreateDownloadRecordParams) bool {
+				return p.BookID == 9 &&
+					p.BookKind == downloadrecord.BookKindAudiobook &&
+					p.MovieID == 0 && p.EpisodeID == 0 && p.AlbumID == 0
+			},
+		)).Return(&ent.DownloadRecord{ID: 43}, nil).Once()
+
+		rec, err := mgr.GrabBook(ctx, result, 9, mediafile.BookKindAudiobook)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rec.ID).To(BeEquivalentTo(43))
+		Expect(client.addTorrentCalls).To(Equal(1))
+	})
+})
 
 var _ = Describe("buildClient builtin", Label("unit", "downloads"), func() {
 	It("returns the injected engine", func() {
