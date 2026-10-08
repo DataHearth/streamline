@@ -4,16 +4,15 @@ Streamline can read a running Radarr or Sonarr and take its library over: every 
 
 A migration is an [import scan](Importing-an-Existing-Library) whose titles come from the *arr instead of from a directory walk, so the review and commit steps are the ones you already know. Migrations are **admin-only**.
 
-> [!NOTE]
-> In this release a migration is driven through the [REST API](REST-API); the guided screen in the web UI is coming next. Everything below is a `curl` sequence you can paste.
-
 - [What comes across](#what-comes-across)
 - [Before you start](#before-you-start)
-- [1. Preview the instance](#1-preview-the-instance)
-- [2. Check your paths](#2-check-your-paths)
-- [3. Copy indexers and download clients (optional)](#3-copy-indexers-and-download-clients-optional)
-- [4. Start the migration](#4-start-the-migration)
-- [5. Review and commit](#5-review-and-commit)
+- [In the web UI](#in-the-web-ui)
+- **Over the REST API:**
+  - [1. Preview the instance](#1-preview-the-instance)
+  - [2. Check your paths](#2-check-your-paths)
+  - [3. Copy indexers and download clients (optional)](#3-copy-indexers-and-download-clients-optional)
+  - [4. Start the migration](#4-start-the-migration)
+  - [5. Review and commit](#5-review-and-commit)
 - [How quality profiles translate](#how-quality-profiles-translate)
 
 ---
@@ -50,6 +49,24 @@ SL=https://streamline.example.com
 api() { curl -fsS -H "X-API-Key: $STREAMLINE_KEY" -H "Content-Type: application/json" "$@"; }
 SRC='"app":"radarr","url":"http://radarr:7878","api_key":"<radarr key>"'
 ```
+
+---
+
+## In the web UI
+
+**Imports → New scan**, then pick **Radarr** or **Sonarr** as the source. Five steps follow:
+
+| Step | What you do |
+| --- | --- |
+| **Connect** | The instance's URL and API key, then **Test connection**. A wrong key, an unreachable address, or a Sonarr where you picked Radarr is reported right there |
+| **Paths** | For each root folder, where it lives *on this server* — prefilled with the same path. Each row with files is checked live and shows **Found** or why not; **Next** waits until every one is found. A root holding no titles is shown but not sent |
+| **Profiles** | For each profile: create it (with a **What changes** list of everything the translation loses), map it onto one of your profiles, or use the default. A profile you already have under the same name is preselected |
+| **Indexers & clients** | Optional. Tick what to copy, type any key or password the instance did not return, **Add selected**, then **Test** each one. Skip it if Streamline is already set up |
+| **Mode** | Adopt in place or import & rename, as for a folder scan, then **Start migration** |
+
+The API key only lives in the open form: it is never stored, and closing the sheet forgets it. You land on the scan page, where review and commit work exactly as described in [5. Review and commit](#5-review-and-commit) — migrated rows show their profile, a monitored icon, and **Title only** for a title with no file.
+
+The rest of this page is the same flow over the REST API, for scripting it.
 
 ---
 
