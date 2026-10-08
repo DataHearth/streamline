@@ -10,6 +10,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -22,15 +23,67 @@ func (s *Server) StartImport(
 	if err := requireAdmin(ctx); err != nil {
 		return StartImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	params := bulkimport.StartScanParams{
-		SourcePath: req.Body.SourcePath,
-		Mode:       entimportscan.Mode(req.Body.Mode),
+	unprocessable := func(msg string) (StartImportResponseObject, error) {
+		return StartImport422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(msg),
+		}, nil
 	}
-	if req.Body.Kind != nil {
-		params.Kind = entimportscan.Kind(*req.Body.Kind)
+	params := bulkimport.StartScanParams{
+		Mode: entimportscan.Mode(req.Body.Mode),
 	}
 	if req.Body.ImportMode != nil {
 		params.ImportMode = entimportscan.ImportMode(*req.Body.ImportMode)
+	}
+	source := entimportscan.SourceFilesystem
+	if req.Body.Source != nil {
+		source = entimportscan.Source(*req.Body.Source)
+	}
+
+	if source == entimportscan.SourceFilesystem {
+		if req.Body.SourcePath == nil || *req.Body.SourcePath == "" {
+			return unprocessable("source_path is required for a filesystem scan")
+		}
+		params.SourcePath = *req.Body.SourcePath
+		if req.Body.Kind != nil {
+			params.Kind = entimportscan.Kind(*req.Body.Kind)
+		}
+	} else {
+		if req.Body.SourceUrl == nil || *req.Body.SourceUrl == "" ||
+			req.Body.ApiKey == nil || *req.Body.ApiKey == "" {
+			return unprocessable("a migration needs source_url and api_key")
+		}
+		if draftTargetRefused(ctx, *req.Body.SourceUrl) {
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errConnectionFailed(
+					draftTargetRefusedMessage,
+				),
+			}, nil
+		}
+		mappings, msg := migrationMappings(req.Body)
+		if msg != "" {
+			return unprocessable(msg)
+		}
+		params.Source = source
+		params.SourceURL = *req.Body.SourceUrl
+		params.APIKey = *req.Body.ApiKey
+		params.Mappings = mappings
+
+		// Profiles land before the scan row so a commit weeks later finds
+		// them, in one config write so half a set never does.
+		profiles, msg := profilesToCreate(req.Body)
+		if msg != "" {
+			return unprocessable(msg)
+		}
+		if len(profiles) > 0 {
+			if err := config.AddResources(ctx, profiles, nil, nil); err != nil {
+				if configLocked(err) {
+					return StartImport403JSONResponse{
+						ForbiddenJSONResponse: forbiddenResp(err.Error()),
+					}, nil
+				}
+				return unprocessable(err.Error())
+			}
+		}
 	}
 	scan, err := s.bulkImports.StartScan(ctx, params)
 	if err != nil {
@@ -39,7 +92,9 @@ func (s *Server) StartImport(
 			errors.Is(err, bulkimport.ErrPathOutsideLibrary),
 			errors.Is(err, bulkimport.ErrLibraryPathMissing),
 			errors.Is(err, bulkimport.ErrUnsupportedKind),
-			errors.Is(err, bulkimport.ErrRenameUnsupported):
+			errors.Is(err, bulkimport.ErrRenameUnsupported),
+			errors.Is(err, bulkimport.ErrRootOutsideLibrary),
+			errors.Is(err, bulkimport.ErrMissingSourceURL):
 			return StartImport422JSONResponse{
 				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 			}, nil

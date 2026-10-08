@@ -4449,6 +4449,78 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /library/imports/sources/preview:
+    post:
+      operationId: PreviewImportSource
+      summary: Read a Radarr or Sonarr instance before migrating it
+      description: |
+        Connects to the instance with the given API key and reports what a
+        migration would carry over: its root folders (each with one sample
+        file path, for `check-paths`), its quality profiles translated into
+        streamline profiles with every lossy step listed in `notes`, and its
+        indexers and download clients with the reason any of them cannot be
+        carried across. Nothing is written, and the key is not stored.
+
+        A connection failure — unreachable, a rejected key, or an instance
+        that is not the application named in `app` — answers 422 with
+        `code: connection_failed` and a message safe to show verbatim.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/ArrSource"
+      responses:
+        "200":
+          $ref: "#/components/responses/ArrPreview"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /library/imports/sources/check-paths:
+    post:
+      operationId: CheckImportSourcePaths
+      summary: Check root-folder mappings against this host's filesystem
+      description: |
+        Rewrites each sample path through its `from` → `to` mapping and
+        reports whether the result exists here. `reason` names only the class
+        of failure (`not found`, `permission denied`, `unreadable`). A
+        mapping with no sample path is reported found.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/CheckPaths"
+      responses:
+        "200":
+          $ref: "#/components/responses/CheckPathsResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+  /library/imports/sources/apply-config:
+    post:
+      operationId: ApplyImportSourceConfig
+      summary: Copy indexers and download clients from Radarr or Sonarr
+      description: |
+        Fetches the instance's indexers and download clients again, translates
+        them, and adds the named ones to the config in one write — either all
+        of them land or none do. A selection that is unsupported, collides
+        with an existing name, or needs a secret the instance did not return
+        (`needs_secret` in the preview) and was sent without one answers 422
+        and writes nothing.
+      tags: [library]
+      requestBody:
+        $ref: "#/components/requestBodies/ApplySourceConfig"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApplySourceConfigResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /library/path-migration:
     get:
       operationId: GetPathMigration
@@ -6263,6 +6335,27 @@ components:
           schema:
             $ref: "#/components/schemas/ScheduleUpdate"
 
+    ArrSource:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ArrSourceRequest"
+
+    CheckPaths:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CheckPathsRequest"
+
+    ApplySourceConfig:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApplySourceConfigRequest"
+
     StartImport:
       required: true
       content:
@@ -6991,6 +7084,27 @@ components:
         text/event-stream:
           schema:
             type: string
+
+    ArrPreview:
+      description: What a migration from this instance would carry over.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ArrPreview"
+
+    CheckPathsResult:
+      description: Each mapping's sample, rewritten and checked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CheckPathsResponse"
+
+    ApplySourceConfigResult:
+      description: The indexers and download clients that were added.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApplySourceConfigResponse"
 
     ImportScan:
       description: A single import scan.
@@ -11998,6 +12112,7 @@ components:
         [
           id,
           source_path,
+          source,
           kind,
           mode,
           status,
@@ -12013,6 +12128,14 @@ components:
           x-go-type: uint32
         source_path:
           type: string
+          description: The scanned directory. Empty for a Radarr or Sonarr source.
+        source:
+          type: string
+          enum: [filesystem, radarr, sonarr]
+          description: Where the scan's titles came from.
+        source_url:
+          type: string
+          description: The Radarr or Sonarr instance a migration read from.
         kind:
           type: string
           enum: [movie, series, music, book]
@@ -12083,16 +12206,28 @@ components:
 
     ImportScanFile:
       type: object
-      required: [id, source_path, size, classification, decision, outcome]
+      required:
+        [id, source_path, size, monitored, classification, decision, outcome]
       properties:
         id:
           type: integer
           x-go-type: uint32
         source_path:
           type: string
+          description: |
+            Empty for a title a Radarr source tracks without a file; it
+            commits as a library entry with no media file.
         size:
           type: integer
           format: int64
+        quality_profile:
+          type: string
+          description: |
+            The streamline profile a migrated title is created with. Empty
+            means the default.
+        monitored:
+          type: boolean
+          description: The monitored flag a migrated title is created with.
         parsed_title:
           type: string
         parsed_year:
@@ -12137,12 +12272,344 @@ components:
           type: string
           format: date-time
 
+    ArrSourceRequest:
+      type: object
+      required: [app, url, api_key]
+      properties:
+        app:
+          type: string
+          enum: [radarr, sonarr]
+        url:
+          type: string
+          description: The instance's base URL, e.g. `http://radarr:7878`.
+        api_key:
+          type: string
+          writeOnly: true
+
+    ArrRootMapping:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+          description: The root folder as the instance reports it.
+        to:
+          type: string
+          description: The same folder as this host sees it.
+        sample_path:
+          type: string
+          description: |
+            A file path under `from`, as the preview reported it. Checked
+            after rewriting; omit to skip the check.
+
+    ArrProfileMapping:
+      type: object
+      required: [source_id, target]
+      properties:
+        source_id:
+          type: integer
+          x-go-type: uint32
+        source_name:
+          type: string
+        target:
+          type: string
+          description: The streamline profile name titles on this profile get.
+        create:
+          $ref: "#/components/schemas/QualityProfileCreate"
+          description: |
+            When set, this profile is created (named `target`) before the scan
+            starts. A profile already holding that name answers 422, unless it
+            is identical to this one.
+
+    ArrPreview:
+      type: object
+      required:
+        [
+          app,
+          version,
+          root_folders,
+          quality_profiles,
+          indexers,
+          download_clients,
+          counts,
+        ]
+      properties:
+        app:
+          type: string
+          enum: [radarr, sonarr]
+        version:
+          type: string
+        instance_name:
+          type: string
+        root_folders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArrRootFolder"
+        quality_profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArrProfileTranslation"
+        indexers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArrIndexerOption"
+        download_clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArrClientOption"
+        counts:
+          $ref: "#/components/schemas/ArrCounts"
+
+    ArrCounts:
+      type: object
+      required: [titles, with_file, monitored]
+      properties:
+        titles:
+          type: integer
+          description: Movies or series the instance tracks.
+        with_file:
+          type: integer
+          description: |
+            Movies with a file, or series with at least one episode file
+            (Sonarr's own statistics).
+        monitored:
+          type: integer
+
+    ArrRootFolder:
+      type: object
+      required: [path, accessible, title_count]
+      properties:
+        path:
+          type: string
+        accessible:
+          type: boolean
+          description: Whether the instance itself can reach the folder.
+        title_count:
+          type: integer
+        sample_path:
+          type: string
+          description: |
+            One file under this folder, for `check-paths`. Empty when no title
+            under it has a file.
+
+    ArrProfileTranslation:
+      type: object
+      required: [source_id, source_name, translated, notes]
+      properties:
+        source_id:
+          type: integer
+          x-go-type: uint32
+        source_name:
+          type: string
+        existing:
+          type: string
+          description: |
+            Set when a streamline profile of the same name already exists;
+            mapping onto it is usually what the operator wants.
+        translated:
+          $ref: "#/components/schemas/QualityProfileCreate"
+        notes:
+          type: array
+          items:
+            type: string
+          description: Every step of the translation that lost information.
+
+    ArrIndexerOption:
+      type: object
+      required: [name, kind, needs_secret, enabled, collapses, conflict]
+      properties:
+        name:
+          type: string
+          description: The name the indexer would be created under.
+        kind:
+          type: string
+          enum: [torznab, prowlarr, unsupported]
+        reason:
+          type: string
+          description: Why an unsupported indexer cannot be carried across.
+        collapses:
+          type: integer
+          x-go-type: uint32
+          description: |
+            How many of the instance's indexers a `prowlarr` entry stands for:
+            every indexer Prowlarr synced becomes one Prowlarr entry here.
+        needs_secret:
+          type: boolean
+          description: |
+            The instance did not return the API key; `apply-config` needs it
+            in the selection's `secret`.
+        enabled:
+          type: boolean
+        conflict:
+          type: boolean
+          description: An indexer of this name already exists.
+
+    ArrClientOption:
+      type: object
+      required: [name, needs_secret, enabled, conflict]
+      properties:
+        name:
+          type: string
+        client_type:
+          type: string
+          enum: [qbittorrent, transmission, deluge]
+          description: Absent for a client that cannot be carried across.
+        reason:
+          type: string
+          description: Why the client cannot be carried across.
+        needs_secret:
+          type: boolean
+          description: |
+            The instance did not return the password; `apply-config` needs it
+            in the selection's `secret`.
+        enabled:
+          type: boolean
+        conflict:
+          type: boolean
+          description: A download client of this name already exists.
+
+    ArrRootMappingCheck:
+      type: object
+      required: [from, to]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        sample_path:
+          type: string
+
+    CheckPathsRequest:
+      type: object
+      required: [roots]
+      properties:
+        roots:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ArrRootMappingCheck"
+
+    ArrRootCheck:
+      type: object
+      required: [from, to, resolved, found]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        resolved:
+          type: string
+          description: The sample path rewritten through the mapping.
+        found:
+          type: boolean
+        reason:
+          type: string
+          enum: [not found, permission denied, unreadable]
+
+    CheckPathsResponse:
+      type: object
+      required: [roots]
+      properties:
+        roots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArrRootCheck"
+
+    ArrConfigSelection:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: The `name` the preview reported.
+        secret:
+          type: string
+          writeOnly: true
+          description: |
+            The API key or password, for an entry the preview marked
+            `needs_secret`. Overrides what the instance returned.
+
+    ApplySourceConfigRequest:
+      type: object
+      required: [app, url, api_key]
+      properties:
+        app:
+          type: string
+          enum: [radarr, sonarr]
+        url:
+          type: string
+        api_key:
+          type: string
+          writeOnly: true
+        indexers:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ArrConfigSelection"
+        download_clients:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ArrConfigSelection"
+
+    ApplySourceConfigResponse:
+      type: object
+      required: [indexers, download_clients]
+      properties:
+        indexers:
+          type: array
+          items:
+            type: string
+        download_clients:
+          type: array
+          items:
+            type: string
+
     ImportScanCreateRequest:
       type: object
-      required: [source_path, mode]
+      required: [mode]
       properties:
+        source:
+          type: string
+          enum: [filesystem, radarr, sonarr]
+          default: filesystem
+          description: |
+            Where the titles come from. `filesystem` scans `source_path`;
+            `radarr` and `sonarr` read a live instance, in which case
+            `source_path` and `kind` are ignored and `source_url` and
+            `api_key` are required. A Radarr source is a movie scan and a
+            Sonarr source a series scan.
         source_path:
           type: string
+          description: The directory to scan. Required for a filesystem source.
+        source_url:
+          type: string
+          description: The instance's base URL, e.g. `http://radarr:7878`.
+        api_key:
+          type: string
+          writeOnly: true
+          description: |
+            The instance's API key. Used by the fetch and never stored, so a
+            scan cannot be re-fetched later without sending it again.
+        root_mappings:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ArrRootMapping"
+          description: |
+            How each of the instance's root folders appears on this host.
+            Send `from` equal to `to` when the paths match. For `in_place`
+            every `to` must sit inside the library path, for `rename` outside
+            it. A mapping carrying `sample_path` must resolve to an existing
+            file, or the request is refused before any scan starts.
+        profile_mappings:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ArrProfileMapping"
+          description: |
+            Which streamline profile each of the instance's quality profiles
+            becomes. A title whose profile is not mapped gets the default.
         kind:
           type: string
           enum: [movie, series, music, book]
@@ -12358,13 +12825,27 @@ components:
 
     ImportScanShow:
       type: object
-      required: [id, folder_path, classification, file_count, decision, outcome]
+      required:
+        [id, folder_path, monitored, classification, file_count, decision, outcome]
       properties:
         id:
           type: integer
           x-go-type: uint32
         folder_path:
           type: string
+        quality_profile:
+          type: string
+          description: |
+            The streamline profile a migrated show is created with. Empty
+            means the default.
+        monitored:
+          type: boolean
+          description: The monitored flag a migrated show is created with.
+        series_type:
+          type: string
+          description: |
+            The Sonarr series type (standard, daily, anime) a migrated show
+            is set to before its episodes are matched.
         parsed_title:
           type: string
         parsed_year:

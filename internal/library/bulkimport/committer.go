@@ -235,7 +235,7 @@ func (s *Service) commitMigrated(
 	scan *ent.ImportScan,
 	f *ent.ImportScanFile,
 ) (entimportscanfile.Outcome, string, uint32) {
-	profile, note := migratedProfile(config.MediaMovie, f.QualityProfile)
+	profile, note := migratedProfile(f.QualityProfile)
 
 	var (
 		outcome entimportscanfile.Outcome
@@ -275,11 +275,11 @@ func (s *Service) commitMigrated(
 // still exists. A name that resolves to nothing would be stored verbatim and
 // silently read as the default forever; a deleted profile must not fail a
 // real title either, so it falls back to the default and says so.
-func migratedProfile(media config.Media, name string) (string, string) {
+func migratedProfile(name string) (string, string) {
 	if name == "" {
 		return "", ""
 	}
-	if e, ok := config.ResolveQualityProfile(media, name); ok && e.Name == name {
+	if _, ok := config.LookupQualityProfile(name); ok {
 		return name, ""
 	}
 	return "", fmt.Sprintf(

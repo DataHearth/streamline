@@ -118,7 +118,7 @@ func (s *Service) commitShow(
 	migration := isMigration(scan)
 	profile, profileNote := "", ""
 	if migration {
-		profile, profileNote = migratedProfile(config.MediaSeries, sc.QualityProfile)
+		profile, profileNote = migratedProfile(sc.QualityProfile)
 	}
 	show, reused, outcome, msg, id := s.resolveShow(ctx, sc, profile)
 	if show == nil {

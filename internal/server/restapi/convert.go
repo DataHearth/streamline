@@ -506,6 +506,7 @@ func toAPIImportScan(s *ent.ImportScan) ImportScan {
 	out := ImportScan{
 		Id:                 s.ID,
 		SourcePath:         s.SourcePath,
+		Source:             ImportScanSource(s.Source),
 		Kind:               ImportScanKind(s.Kind),
 		Mode:               ImportScanMode(s.Mode),
 		Status:             ImportScanStatus(s.Status),
@@ -528,6 +529,10 @@ func toAPIImportScan(s *ent.ImportScan) ImportScan {
 	if s.FailureCode != "" {
 		fc := s.FailureCode
 		out.FailureCode = &fc
+	}
+	if s.SourceURL != "" {
+		u := s.SourceURL
+		out.SourceUrl = &u
 	}
 	if s.ScannedAt != nil {
 		out.ScannedAt = s.ScannedAt
@@ -683,6 +688,7 @@ func toAPIImportScanFile(f *ent.ImportScanFile) ImportScanFile {
 		Id:             f.ID,
 		SourcePath:     f.SourcePath,
 		Size:           f.Size,
+		Monitored:      f.Monitored,
 		Classification: ImportScanFileClassification(f.Classification),
 		Decision:       ImportScanFileDecision(f.Decision),
 		Outcome:        ImportScanFileOutcome(f.Outcome),
@@ -690,6 +696,10 @@ func toAPIImportScanFile(f *ent.ImportScanFile) ImportScanFile {
 	if f.ParsedTitle != "" {
 		pt := f.ParsedTitle
 		out.ParsedTitle = &pt
+	}
+	if f.QualityProfile != "" {
+		qp := f.QualityProfile
+		out.QualityProfile = &qp
 	}
 	if f.ParsedYear != nil {
 		out.ParsedYear = f.ParsedYear
@@ -744,6 +754,7 @@ func toAPIImportScanShow(sh *ent.ImportScanShow) ImportScanShow {
 	out := ImportScanShow{
 		Id:             sh.ID,
 		FolderPath:     sh.FolderPath,
+		Monitored:      sh.Monitored,
 		Classification: ImportScanShowClassification(sh.Classification),
 		FileCount:      sh.FileCount,
 		Decision:       ImportScanShowDecision(sh.Decision),
@@ -752,6 +763,14 @@ func toAPIImportScanShow(sh *ent.ImportScanShow) ImportScanShow {
 	if sh.ParsedTitle != "" {
 		pt := sh.ParsedTitle
 		out.ParsedTitle = &pt
+	}
+	if sh.QualityProfile != "" {
+		qp := sh.QualityProfile
+		out.QualityProfile = &qp
+	}
+	if sh.SeriesType != "" {
+		st := sh.SeriesType
+		out.SeriesType = &st
 	}
 	out.ParsedYear = sh.ParsedYear
 	out.TvdbId = sh.TvdbID

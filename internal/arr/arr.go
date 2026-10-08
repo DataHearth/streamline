@@ -130,16 +130,21 @@ type Season struct {
 }
 
 type Series struct {
-	ID               uint32   `json:"id"`
-	TVDBID           uint32   `json:"tvdbId"`
-	Title            string   `json:"title"`
-	Year             uint16   `json:"year"`
-	Monitored        bool     `json:"monitored"`
-	QualityProfileID uint32   `json:"qualityProfileId"`
-	Path             string   `json:"path"`
-	RootFolderPath   string   `json:"rootFolderPath"`
-	SeriesType       string   `json:"seriesType"` // standard|daily|anime
-	Seasons          []Season `json:"seasons"`
+	ID               uint32            `json:"id"`
+	TVDBID           uint32            `json:"tvdbId"`
+	Title            string            `json:"title"`
+	Year             uint16            `json:"year"`
+	Monitored        bool              `json:"monitored"`
+	QualityProfileID uint32            `json:"qualityProfileId"`
+	Path             string            `json:"path"`
+	RootFolderPath   string            `json:"rootFolderPath"`
+	SeriesType       string            `json:"seriesType"` // standard|daily|anime
+	Seasons          []Season          `json:"seasons"`
+	Statistics       *SeriesStatistics `json:"statistics"`
+}
+
+type SeriesStatistics struct {
+	EpisodeFileCount int `json:"episodeFileCount"`
 }
 
 type EpisodeFile struct {
