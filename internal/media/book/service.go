@@ -15,6 +15,8 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
@@ -44,6 +46,12 @@ type Manager interface {
 	UpdateAuthor(ctx context.Context, id uint32, p UpdateAuthorParams) error
 	Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Author, error)
+	SearchBookReleases(
+		ctx context.Context,
+		bookID uint32,
+		kind string,
+	) ([]ReleaseResult, error)
+	GrabBookRelease(ctx context.Context, bookID uint32, p GrabParams) error
 }
 
 var _ Manager = (*Service)(nil)
@@ -52,14 +60,20 @@ type Service struct {
 	db       db.Store
 	metadata metadata.BookProvider
 	posters  posters.Manager
+	indexers indexer.Manager
+	download download.Downloader
 }
 
 func NewService(
 	store db.Store,
 	meta metadata.BookProvider,
 	p posters.Manager,
+	idx indexer.Manager,
+	dl download.Downloader,
 ) *Service {
-	return &Service{db: store, metadata: meta, posters: p}
+	return &Service{
+		db: store, metadata: meta, posters: p, indexers: idx, download: dl,
+	}
 }
 
 // Adder is the slice of the service the request flow approves through.

@@ -2,6 +2,7 @@ package book
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,6 +16,10 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
+	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/indexer"
+	mockindexer "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
@@ -27,6 +32,8 @@ var _ = Describe("Book service", Label("integration", "book"), func() {
 		client   *ent.Client
 		provider *mockmeta.MockBookProvider
 		posters  *mockposters.MockManager
+		indexers *mockindexer.MockManager
+		dl       *mockdownload.MockDownloader
 		svc      *Service
 	)
 
@@ -38,8 +45,22 @@ var _ = Describe("Book service", Label("integration", "book"), func() {
 		DeferCleanup(func() { client.Close() })
 		provider = mockmeta.NewMockBookProvider(GinkgoT())
 		posters = mockposters.NewMockManager(GinkgoT())
-		svc = NewService(db.New(client), provider, posters)
+		indexers = mockindexer.NewMockManager(GinkgoT())
+		dl = mockdownload.NewMockDownloader(GinkgoT())
+		svc = NewService(db.New(client), provider, posters, indexers, dl)
 		configtest.Setup(map[string]any{
+			"ebook_quality_profiles": []map[string]any{
+				{
+					"name":    "std",
+					"formats": []string{"epub", "azw3"},
+					"cutoff":  "epub",
+				},
+			},
+			"ebook_quality_default_profile": "std",
+			"audiobook_quality_profiles": []map[string]any{
+				{"name": "std", "formats": []string{"m4b", "mp3"}, "cutoff": "m4b"},
+			},
+			"audiobook_quality_default_profile": "std",
 			"library": map[string]any{
 				"ebook_path":     GinkgoT().TempDir(),
 				"audiobook_path": GinkgoT().TempDir(),
@@ -309,6 +330,157 @@ var _ = Describe("Book service", Label("integration", "book"), func() {
 			Expect(svc.Delete(ctx, a.ID, true)).To(Succeed())
 			Expect(ebook).NotTo(BeAnExistingFile())
 			Expect(audio).NotTo(BeAnExistingFile())
+		})
+	})
+	Describe("release search and grab", func() {
+		var bookID uint32
+
+		BeforeEach(func() {
+			a := add(AddParams{
+				HardcoverID: 219851, Monitored: true,
+				MonitorPolicy: "all", WantKinds: "both",
+			}, details(two...))
+			bookID = a.Edges.Books[0].ID
+			for _, b := range a.Edges.Books {
+				if b.Title == "Elantris" {
+					bookID = b.ID
+				}
+			}
+		})
+
+		Describe("SearchBookReleases", func() {
+			It("scores ebook releases, flags rejects and sorts best first", func() {
+				indexers.EXPECT().
+					SearchBook(mock.Anything, "Brandon Sanderson", "Elantris", uint16(0), mediafile.BookKindEbook).
+					Return([]indexer.SearchResult{
+						{
+							Title:   "Brandon Sanderson - Elantris (2005) AZW3",
+							Seeders: 5,
+						},
+						{
+							Title:   "Brandon Sanderson - Elantris (2005) EPUB",
+							Seeders: 2,
+						},
+						{
+							Title:   "Brandon Sanderson - Elantris (2005) PDF",
+							Seeders: 99,
+						},
+						{Title: "Brandon Sanderson Collection EPUB", Seeders: 50},
+						{Title: "Brandon Sanderson - Elantris EPUB", Seeders: 9},
+					}, nil).Once()
+
+				got, err := svc.SearchBookReleases(ctx, bookID, "ebook")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveLen(5))
+				Expect(got[0].Format).To(Equal("epub"))
+				Expect(got[0].Seeders).To(BeEquivalentTo(9))
+				Expect(got[1].Format).To(Equal("epub"))
+				Expect(got[2].Format).To(Equal("azw3"))
+				for _, r := range got[:3] {
+					Expect(r.Rejected).To(BeFalse())
+				}
+				for _, r := range got[3:] {
+					Expect(r.Rejected).To(BeTrue())
+					Expect(r.Reason).NotTo(BeEmpty())
+				}
+			})
+
+			It(
+				"rejects an audiobook search result without audiobook context",
+				func() {
+					indexers.EXPECT().
+						SearchBook(mock.Anything, "Brandon Sanderson", "Elantris", uint16(0), mediafile.BookKindAudiobook).
+						Return([]indexer.SearchResult{
+							{Title: "Brandon Sanderson - Elantris MP3"},
+							{Title: "Brandon Sanderson - Elantris (Audiobook) M4B"},
+						}, nil).Once()
+
+					got, err := svc.SearchBookReleases(ctx, bookID, "audiobook")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(got).To(HaveLen(2))
+					Expect(got[0].Format).To(Equal("m4b"))
+					Expect(got[0].Rejected).To(BeFalse())
+					Expect(got[1].Rejected).To(BeTrue())
+				},
+			)
+
+			It("passes the release year when the book has one", func() {
+				rel := time.Date(2005, 4, 21, 0, 0, 0, 0, time.UTC)
+				client.Book.UpdateOneID(bookID).SetReleaseDate(rel).ExecX(ctx)
+				indexers.EXPECT().
+					SearchBook(mock.Anything, "Brandon Sanderson", "Elantris", uint16(2005), mediafile.BookKindEbook).
+					Return(nil, nil).Once()
+				_, err := svc.SearchBookReleases(ctx, bookID, "ebook")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("maps an unknown book to ErrBookNotFound", func() {
+				_, err := svc.SearchBookReleases(ctx, 9999, "ebook")
+				Expect(err).To(MatchError(ErrBookNotFound))
+			})
+
+			It("rejects an invalid kind without searching", func() {
+				_, err := svc.SearchBookReleases(ctx, bookID, "comic")
+				Expect(err).To(MatchError(ErrInvalidSlotKind))
+			})
+		})
+
+		Describe("GrabBookRelease", func() {
+			result := indexer.SearchResult{
+				Title:    "Elantris EPUB",
+				Download: "https://idx/dl",
+			}
+
+			It("grabs the ebook slot and leaves the audiobook slot alone", func() {
+				dl.EXPECT().
+					GrabBook(mock.Anything, result, bookID, mediafile.BookKindEbook).
+					Return(&ent.DownloadRecord{}, nil).Once()
+
+				Expect(svc.GrabBookRelease(ctx, bookID,
+					GrabParams{Kind: "ebook", Result: result})).To(Succeed())
+
+				b := client.Book.GetX(ctx, bookID)
+				Expect(b.EbookStatus).To(Equal(entbook.EbookStatusDownloading))
+				Expect(b.AudiobookStatus).To(Equal(entbook.AudiobookStatusWanted))
+				Expect(b.AudiobookMonitored).To(BeTrue())
+			})
+
+			It("does not demote an available slot", func() {
+				client.Book.UpdateOneID(bookID).
+					SetAudiobookStatus(entbook.AudiobookStatusAvailable).ExecX(ctx)
+				dl.EXPECT().
+					GrabBook(mock.Anything, result, bookID, mediafile.BookKindAudiobook).
+					Return(&ent.DownloadRecord{}, nil).Once()
+
+				Expect(svc.GrabBookRelease(ctx, bookID,
+					GrabParams{Kind: "audiobook", Result: result})).To(Succeed())
+				Expect(client.Book.GetX(ctx, bookID).AudiobookStatus).
+					To(Equal(entbook.AudiobookStatusAvailable))
+			})
+
+			It("maps an unknown book to ErrBookNotFound", func() {
+				err := svc.GrabBookRelease(ctx, 9999,
+					GrabParams{Kind: "ebook", Result: result})
+				Expect(err).To(MatchError(ErrBookNotFound))
+			})
+
+			It("rejects an invalid kind without grabbing", func() {
+				err := svc.GrabBookRelease(ctx, bookID,
+					GrabParams{Kind: "comic", Result: result})
+				Expect(err).To(MatchError(ErrInvalidSlotKind))
+			})
+
+			It("wraps a download error and leaves the status unchanged", func() {
+				dl.EXPECT().
+					GrabBook(mock.Anything, result, bookID, mediafile.BookKindEbook).
+					Return(nil, download.ErrUntrustedSource).Once()
+
+				err := svc.GrabBookRelease(ctx, bookID,
+					GrabParams{Kind: "ebook", Result: result})
+				Expect(errors.Is(err, download.ErrUntrustedSource)).To(BeTrue())
+				Expect(client.Book.GetX(ctx, bookID).EbookStatus).
+					To(Equal(entbook.EbookStatusWanted))
+			})
 		})
 	})
 })

@@ -21,6 +21,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -257,6 +258,12 @@ type Downloader interface {
 		ctx context.Context,
 		result indexer.SearchResult,
 		albumID uint32,
+	) (*ent.DownloadRecord, error)
+	GrabBook(
+		ctx context.Context,
+		result indexer.SearchResult,
+		bookID uint32,
+		kind mediafile.BookKind,
 	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 	ReconcileEpisodeStatuses(ctx context.Context) error
@@ -583,7 +590,7 @@ func (d *download) Grab(
 	result indexer.SearchResult,
 	movieID uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, movieID, 0, 0, nil)
+	return d.grab(ctx, result, movieID, 0, 0, 0, "", nil)
 }
 
 // GrabEpisode mirrors Grab for a TV episode. Episode status transitions are
@@ -597,7 +604,7 @@ func (d *download) GrabEpisode(
 	episodeID uint32,
 	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, 0, episodeID, 0, wantedEpisodes)
+	return d.grab(ctx, result, 0, episodeID, 0, 0, "", wantedEpisodes)
 }
 
 // GrabAlbum mirrors Grab for a music album: one record for the album's
@@ -607,7 +614,19 @@ func (d *download) GrabAlbum(
 	result indexer.SearchResult,
 	albumID uint32,
 ) (*ent.DownloadRecord, error) {
-	return d.grab(ctx, result, 0, 0, albumID, nil)
+	return d.grab(ctx, result, 0, 0, albumID, 0, "", nil)
+}
+
+// GrabBook mirrors Grab for one slot of a book: the record carries the slot
+// kind so the importer files the download into the right one. Slot status
+// transitions are owned by the caller.
+func (d *download) GrabBook(
+	ctx context.Context,
+	result indexer.SearchResult,
+	bookID uint32,
+	kind mediafile.BookKind,
+) (*ent.DownloadRecord, error) {
+	return d.grab(ctx, result, 0, 0, 0, bookID, kind, nil)
 }
 
 // pendingSelection carries Flow A's resolved keep-set from resolveTorrentSource
@@ -623,7 +642,8 @@ type pendingSelection struct {
 func (d *download) grab(
 	ctx context.Context,
 	result indexer.SearchResult,
-	movieID, episodeID, albumID uint32,
+	movieID, episodeID, albumID, bookID uint32,
+	bookKind mediafile.BookKind,
 	wantedEpisodes []uint32,
 ) (*ent.DownloadRecord, error) {
 	spanName, mediaAttr := "download.grab", attribute.Int64(
@@ -640,6 +660,12 @@ func (d *download) grab(
 		spanName, mediaAttr = "download.grab_album", attribute.Int64(
 			"album.id",
 			int64(albumID),
+		)
+	}
+	if bookID != 0 {
+		spanName, mediaAttr = "download.grab_book", attribute.Int64(
+			"book.id",
+			int64(bookID),
 		)
 	}
 	ctx, span := tracer.Start(ctx, spanName,
@@ -850,6 +876,8 @@ func (d *download) grab(
 		MovieID:            movieID,
 		EpisodeID:          episodeID,
 		AlbumID:            albumID,
+		BookID:             bookID,
+		BookKind:           downloadrecord.BookKind(bookKind),
 		DownloadClientName: dc.Name,
 		IndexerName:        result.Indexer,
 		EpisodeIDs:         wantedEpisodes,

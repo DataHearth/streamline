@@ -43,6 +43,8 @@ type CreateDownloadRecordParams struct {
 	MovieID            uint32
 	EpisodeID          uint32
 	AlbumID            uint32
+	BookID             uint32
+	BookKind           downloadrecord.BookKind
 	DownloadClientName string
 	IndexerName        string
 	// Adoption proposals persist these so the pending queue and a later
@@ -92,6 +94,9 @@ func (db *DB) CreateDownloadRecord(
 	}
 	if p.AlbumID != 0 {
 		b = b.SetAlbumID(p.AlbumID)
+	}
+	if p.BookID != 0 {
+		b = b.SetBookID(p.BookID).SetBookKind(p.BookKind)
 	}
 	if p.EpisodeID != 0 {
 		b = b.SetAnchorEpisodeID(p.EpisodeID).AddEpisodeIDs(p.EpisodeID)

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -251,6 +252,26 @@ func (db *DB) UpdateAuthor(
 	}
 	if p.AudiobookQualityProfile != nil {
 		u = u.SetAudiobookQualityProfile(*p.AudiobookQualityProfile)
+	}
+	return u.Exec(ctx)
+}
+
+func (db *DB) SetBookSlotStatus(
+	ctx context.Context,
+	id uint32,
+	kind string,
+	from, to string,
+) error {
+	u := db.client.Book.Update().Where(book.IDEQ(id))
+	switch kind {
+	case string(mediafile.BookKindEbook):
+		u = u.Where(book.EbookStatusEQ(book.EbookStatus(from))).
+			SetEbookStatus(book.EbookStatus(to))
+	case string(mediafile.BookKindAudiobook):
+		u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatus(from))).
+			SetAudiobookStatus(book.AudiobookStatus(to))
+	default:
+		return fmt.Errorf("unknown book slot kind %q", kind)
 	}
 	return u.Exec(ctx)
 }

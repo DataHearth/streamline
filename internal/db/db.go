@@ -88,6 +88,14 @@ type Store interface {
 	// holding a file stays available, otherwise skipped and wanted follow the
 	// flag.
 	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	// SetBookSlotStatus moves one slot's status from `from` to `to` and
+	// writes nothing when the slot has already left `from`.
+	SetBookSlotStatus(
+		ctx context.Context,
+		id uint32,
+		kind string,
+		from, to string,
+	) error
 	DeleteAuthor(ctx context.Context, id uint32) error
 
 	// users

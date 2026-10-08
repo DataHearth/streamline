@@ -315,6 +315,69 @@ func (_c *MockManager_GetBook_Call) RunAndReturn(run func(ctx context.Context, i
 	return _c
 }
 
+// GrabBookRelease provides a mock function for the type MockManager
+func (_mock *MockManager) GrabBookRelease(ctx context.Context, bookID uint32, p book.GrabParams) error {
+	ret := _mock.Called(ctx, bookID, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrabBookRelease")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.GrabParams) error); ok {
+		r0 = returnFunc(ctx, bookID, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_GrabBookRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrabBookRelease'
+type MockManager_GrabBookRelease_Call struct {
+	*mock.Call
+}
+
+// GrabBookRelease is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - p book.GrabParams
+func (_e *MockManager_Expecter) GrabBookRelease(ctx any, bookID any, p any) *MockManager_GrabBookRelease_Call {
+	return &MockManager_GrabBookRelease_Call{Call: _e.mock.On("GrabBookRelease", ctx, bookID, p)}
+}
+
+func (_c *MockManager_GrabBookRelease_Call) Run(run func(ctx context.Context, bookID uint32, p book.GrabParams)) *MockManager_GrabBookRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 book.GrabParams
+		if args[2] != nil {
+			arg2 = args[2].(book.GrabParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_GrabBookRelease_Call) Return(err error) *MockManager_GrabBookRelease_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_GrabBookRelease_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, p book.GrabParams) error) *MockManager_GrabBookRelease_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type MockManager
 func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.Author, uint32, error) {
 	ret := _mock.Called(ctx, page, limit)
@@ -459,6 +522,80 @@ func (_c *MockManager_RefreshOne_Call) Return(author *ent.Author, err error) *Mo
 }
 
 func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Author, error)) *MockManager_RefreshOne_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchBookReleases provides a mock function for the type MockManager
+func (_mock *MockManager) SearchBookReleases(ctx context.Context, bookID uint32, kind string) ([]book.ReleaseResult, error) {
+	ret := _mock.Called(ctx, bookID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchBookReleases")
+	}
+
+	var r0 []book.ReleaseResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) ([]book.ReleaseResult, error)); ok {
+		return returnFunc(ctx, bookID, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) []book.ReleaseResult); ok {
+		r0 = returnFunc(ctx, bookID, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]book.ReleaseResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, bookID, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SearchBookReleases_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchBookReleases'
+type MockManager_SearchBookReleases_Call struct {
+	*mock.Call
+}
+
+// SearchBookReleases is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookID uint32
+//   - kind string
+func (_e *MockManager_Expecter) SearchBookReleases(ctx any, bookID any, kind any) *MockManager_SearchBookReleases_Call {
+	return &MockManager_SearchBookReleases_Call{Call: _e.mock.On("SearchBookReleases", ctx, bookID, kind)}
+}
+
+func (_c *MockManager_SearchBookReleases_Call) Run(run func(ctx context.Context, bookID uint32, kind string)) *MockManager_SearchBookReleases_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchBookReleases_Call) Return(releaseResults []book.ReleaseResult, err error) *MockManager_SearchBookReleases_Call {
+	_c.Call.Return(releaseResults, err)
+	return _c
+}
+
+func (_c *MockManager_SearchBookReleases_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind string) ([]book.ReleaseResult, error)) *MockManager_SearchBookReleases_Call {
 	_c.Call.Return(run)
 	return _c
 }

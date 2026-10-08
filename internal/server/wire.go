@@ -196,7 +196,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
 	musicSvc := music.NewService(store, mb, postersSvc, indexerSvc, dlManager)
-	bookSvc := book.NewService(store, bookMeta, postersSvc)
+	bookSvc := book.NewService(store, bookMeta, postersSvc, indexerSvc, dlManager)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
 	// subfolders, so on a fresh install they'd first appear after an import that
