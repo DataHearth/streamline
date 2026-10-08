@@ -505,6 +505,74 @@ func (_c *MockTx_AttachMediaFileToEpisode_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// BookHardcoverIndex provides a mock function for the type MockTx
+func (_mock *MockTx) BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error) {
+	ret := _mock.Called(ctx, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BookHardcoverIndex")
+	}
+
+	var r0 map[uint32]uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (map[uint32]uint32, error)); ok {
+		return returnFunc(ctx, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) map[uint32]uint32); ok {
+		r0 = returnFunc(ctx, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]uint32)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_BookHardcoverIndex_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookHardcoverIndex'
+type MockTx_BookHardcoverIndex_Call struct {
+	*mock.Call
+}
+
+// BookHardcoverIndex is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+func (_e *MockTx_Expecter) BookHardcoverIndex(ctx any, kind any) *MockTx_BookHardcoverIndex_Call {
+	return &MockTx_BookHardcoverIndex_Call{Call: _e.mock.On("BookHardcoverIndex", ctx, kind)}
+}
+
+func (_c *MockTx_BookHardcoverIndex_Call) Run(run func(ctx context.Context, kind string)) *MockTx_BookHardcoverIndex_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BookHardcoverIndex_Call) Return(uint32ToUint32 map[uint32]uint32, err error) *MockTx_BookHardcoverIndex_Call {
+	_c.Call.Return(uint32ToUint32, err)
+	return _c
+}
+
+func (_c *MockTx_BookHardcoverIndex_Call) RunAndReturn(run func(ctx context.Context, kind string) (map[uint32]uint32, error)) *MockTx_BookHardcoverIndex_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BulkCreateImportScanAlbums provides a mock function for the type MockTx
 func (_mock *MockTx) BulkCreateImportScanAlbums(ctx context.Context, scanID uint32, albums []db.CreateImportScanAlbumParams) error {
 	ret := _mock.Called(ctx, scanID, albums)
@@ -564,6 +632,69 @@ func (_c *MockTx_BulkCreateImportScanAlbums_Call) Return(err error) *MockTx_Bulk
 }
 
 func (_c *MockTx_BulkCreateImportScanAlbums_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, albums []db.CreateImportScanAlbumParams) error) *MockTx_BulkCreateImportScanAlbums_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BulkCreateImportScanBooks provides a mock function for the type MockTx
+func (_mock *MockTx) BulkCreateImportScanBooks(ctx context.Context, scanID uint32, books []db.CreateImportScanBookParams) error {
+	ret := _mock.Called(ctx, scanID, books)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkCreateImportScanBooks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []db.CreateImportScanBookParams) error); ok {
+		r0 = returnFunc(ctx, scanID, books)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_BulkCreateImportScanBooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkCreateImportScanBooks'
+type MockTx_BulkCreateImportScanBooks_Call struct {
+	*mock.Call
+}
+
+// BulkCreateImportScanBooks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - scanID uint32
+//   - books []db.CreateImportScanBookParams
+func (_e *MockTx_Expecter) BulkCreateImportScanBooks(ctx any, scanID any, books any) *MockTx_BulkCreateImportScanBooks_Call {
+	return &MockTx_BulkCreateImportScanBooks_Call{Call: _e.mock.On("BulkCreateImportScanBooks", ctx, scanID, books)}
+}
+
+func (_c *MockTx_BulkCreateImportScanBooks_Call) Run(run func(ctx context.Context, scanID uint32, books []db.CreateImportScanBookParams)) *MockTx_BulkCreateImportScanBooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []db.CreateImportScanBookParams
+		if args[2] != nil {
+			arg2 = args[2].([]db.CreateImportScanBookParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_BulkCreateImportScanBooks_Call) Return(err error) *MockTx_BulkCreateImportScanBooks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_BulkCreateImportScanBooks_Call) RunAndReturn(run func(ctx context.Context, scanID uint32, books []db.CreateImportScanBookParams) error) *MockTx_BulkCreateImportScanBooks_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -69,6 +69,7 @@ type Service struct {
 	store       db.Store
 	metadata    metadata.Provider
 	tvmeta      metadata.TVProvider
+	bookmeta    metadata.BookProvider
 	importSvc   *library.ImportService
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
@@ -92,6 +93,7 @@ func NewService(
 	seriesPath string,
 	musicmeta metadata.MusicProvider,
 	musicAdder MusicAdder,
+	bookmeta metadata.BookProvider,
 ) *Service {
 	return &Service{
 		store:       store,
@@ -105,6 +107,7 @@ func NewService(
 		seriesPath:  seriesPath,
 		musicmeta:   musicmeta,
 		musicAdder:  musicAdder,
+		bookmeta:    bookmeta,
 	}
 }
 

@@ -742,6 +742,14 @@ type Store interface {
 	// "awaiting_review". Used by the orphan_scan dedup gate.
 	ListPendingImportScanFilePaths(ctx context.Context) ([]string, error)
 
+	// book import scans (import_scan_book children)
+	BulkCreateImportScanBooks(
+		ctx context.Context,
+		scanID uint32,
+		books []CreateImportScanBookParams,
+	) error
+	BookHardcoverIndex(ctx context.Context, kind string) (map[uint32]uint32, error)
+
 	// series import scans (import_scan_show children)
 	ListPendingImportScanShowFolders(ctx context.Context) ([]string, error)
 	BulkCreateImportScanShows(

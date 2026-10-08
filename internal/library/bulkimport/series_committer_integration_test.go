@@ -66,6 +66,7 @@ var _ = Describe(
 				tmpDir,
 				nil,
 				nil,
+				nil,
 			)
 		})
 
@@ -320,7 +321,7 @@ var _ = Describe(
 					store, nil, tvmeta, importSvc, nil,
 					tvshow.NewService(store, tvmeta, nil, nil, nil), nil,
 					libDir, libDir,
-					nil, nil,
+					nil, nil, nil,
 				)
 
 				const tvdbID = uint32(81189)
@@ -426,7 +427,7 @@ var _ = Describe(
 					nil,
 					tmpDir,
 					tmpDir,
-					nil, nil,
+					nil, nil, nil,
 				)
 
 				const tvdbID = uint32(99123)

@@ -46,6 +46,7 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 			"/lib-tv",
 			nil,
 			nil,
+			nil,
 		)
 	})
 
@@ -109,6 +110,7 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			ms,
 			"/lib",
 			"/lib-tv",
+			nil,
 			nil,
 			nil,
 		)
@@ -180,6 +182,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			nil,
 			"/lib",
 			"/lib-tv",
+			nil,
 			nil,
 			nil,
 		)
@@ -370,7 +373,7 @@ var _ = Describe(
 				nil,
 				libDir,
 				libDir,
-				nil, nil,
+				nil, nil, nil,
 			)
 		})
 
@@ -454,7 +457,7 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 			nil,
 			"/lib",
 			"/lib-tv",
-			nil, nil,
+			nil, nil, nil,
 		)
 	})
 
@@ -530,7 +533,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				nil,
 				"/lib",
 				"/lib-tv",
-				nil, nil,
+				nil, nil, nil,
 			)
 			f := &ent.ImportScanFile{
 				ID: 7, SourcePath: "/import/Movie.mkv", Size: 1_500_000_000,
@@ -589,7 +592,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 			nil,
 			"/lib",
 			"/lib-tv",
-			nil, nil,
+			nil, nil, nil,
 		)
 		f := &ent.ImportScanFile{
 			ID: 8, SourcePath: "/import/Movie2.mkv", Size: 1_500_000_000,
@@ -672,7 +675,7 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 				store, meta, nil, library.NewImportService(),
 				movie.NewService(store, meta, nil, nil, nil), nil, nil,
 				libDir, libDir,
-				nil, nil,
+				nil, nil, nil,
 			)
 
 			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")

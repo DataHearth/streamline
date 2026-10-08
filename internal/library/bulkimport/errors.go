@@ -12,6 +12,7 @@ var (
 	ErrLibraryPathMissing = errors.New(
 		"configured library path (library.movie_path / library.series_path) does not exist or is not a directory",
 	)
+	ErrUnsupportedKind    = errors.New("no scanner for this scan kind")
 	ErrScanRunning        = errors.New("another scan is already active")
 	ErrScanNotFound       = errors.New("scan not found")
 	ErrScanFileNotFound   = errors.New("scan file not found")

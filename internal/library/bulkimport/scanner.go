@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -50,8 +51,14 @@ func (s *Service) StartScan(
 		if p.Mode == entimportscan.ModeRename {
 			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
 		}
+	case entimportscan.KindBook:
+		if s.bookmeta == nil {
+			return nil, otelx.RecordSpanError(span, book.ErrNotConfigured)
+		}
 	default:
-		return nil, otelx.RecordSpanError(span, ErrUnsupportedKind)
+		return nil, otelx.RecordSpanError(
+			span, fmt.Errorf("%w: %s", ErrUnsupportedKind, p.Kind),
+		)
 	}
 	resolved, err := s.validateScanParams(p)
 	if err != nil {
@@ -94,6 +101,8 @@ func (s *Service) StartScan(
 		go s.runScanSeries(bg, scan)
 	case entimportscan.KindMusic:
 		go s.runScanMusic(bg, scan)
+	case entimportscan.KindBook:
+		go s.runScanBooks(bg, scan)
 	default:
 		go s.runScan(bg, scan)
 	}
@@ -119,19 +128,33 @@ func (s *Service) validateScanParams(p StartScanParams) (string, error) {
 
 	// in_place/rename are defined relative to the library root for the media type
 	// being scanned — a TV folder is "outside" the movie library and vice versa.
-	root := s.moviePath
+	var roots []string
 	switch p.Kind {
 	case entimportscan.KindSeries:
-		root = s.seriesPath
+		roots = []string{s.seriesPath}
 	case entimportscan.KindMusic:
-		root = config.Get().Library.MusicPath
+		roots = []string{config.Get().Library.MusicPath}
+	case entimportscan.KindBook:
+		lib := config.Get().Library
+		roots = []string{lib.EbookPath, lib.AudiobookPath}
+	default:
+		roots = []string{s.moviePath}
 	}
-	libAbs, err := filepath.EvalSymlinks(root)
-	if err != nil {
+	inside, resolvedAny := false, false
+	for _, root := range roots {
+		libAbs, rerr := filepath.EvalSymlinks(root)
+		if rerr != nil {
+			continue
+		}
+		resolvedAny = true
+		if strings.HasPrefix(resolved, libAbs+string(filepath.Separator)) ||
+			resolved == libAbs {
+			inside = true
+		}
+	}
+	if !resolvedAny {
 		return "", ErrLibraryPathMissing
 	}
-	inside := strings.HasPrefix(resolved, libAbs+string(filepath.Separator)) ||
-		resolved == libAbs
 
 	switch p.Mode {
 	case entimportscan.ModeInPlace:
