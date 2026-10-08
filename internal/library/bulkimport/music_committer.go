@@ -88,8 +88,20 @@ func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
 		"scan.id", scan.ID,
 		"commit.success_count", success,
 		"commit.failed_count", failed)
-	countCommit(ctx, "music", "success", int64(success))
-	countCommit(ctx, "music", "failed", int64(failed))
+	countCommit(
+		ctx,
+		"music",
+		entimportscan.SourceFilesystem,
+		"success",
+		int64(success),
+	)
+	countCommit(
+		ctx,
+		"music",
+		entimportscan.SourceFilesystem,
+		"failed",
+		int64(failed),
+	)
 	if success > 0 {
 		mediaserver.RefreshInBackground(
 			ctx, s.ms, mediaserver.KindMusic, config.Get().Library.MusicPath,

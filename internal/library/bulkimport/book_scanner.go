@@ -200,8 +200,20 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 			attribute.String("kind", "book"),
 		))
 	}
-	countCommit(ctx, "book", "walk_error", int64(walkErrors))
-	countCommit(ctx, "book", "hardcover_lookup_error", int64(lookupErrors))
+	countCommit(
+		ctx,
+		"book",
+		entimportscan.SourceFilesystem,
+		"walk_error",
+		int64(walkErrors),
+	)
+	countCommit(
+		ctx,
+		"book",
+		entimportscan.SourceFilesystem,
+		"hardcover_lookup_error",
+		int64(lookupErrors),
+	)
 }
 
 func nextUTCMidnight(now time.Time) time.Time {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -17,11 +18,13 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/schema"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 )
 
@@ -112,26 +115,57 @@ func (s *Service) commitShow(
 			attribute.String("show.folder", sc.FolderPath)))
 	defer span.End()
 
-	show, reused, outcome, msg, id := s.resolveShow(ctx, sc)
+	migration := isMigration(scan)
+	profile, profileNote := "", ""
+	if migration {
+		profile, profileNote = migratedProfile(config.MediaSeries, sc.QualityProfile)
+	}
+	show, reused, outcome, msg, id := s.resolveShow(ctx, sc, profile)
 	if show == nil {
 		return outcome, msg, id
 	}
 
-	files, err := library.ListVideoFilesRecursive(sc.FolderPath)
-	if err != nil {
-		return commitShowFail("list folder", err, show.ID)
-	}
-	// Match the whole folder before anything moves. A folder whose files mostly
-	// fail to match is far more likely bound to the wrong show than to be a show
-	// with missing metadata, and adopting it anyway wrote 7 of 76 files into a
-	// same-named series and counted it a success.
-	plan, unmatched := planEpisodes(show, files)
-	if len(plan) <= unmatched {
-		return entimportscanshow.OutcomeFailed, fmt.Sprintf(
-			"only %d of %d files matched an episode — folder likely belongs to another show",
-			len(plan),
-			len(files),
-		), show.ID
+	var (
+		plan    []episodeMatch
+		skipped int
+		total   int
+	)
+	if migration {
+		// The series type decides absolute-number matching, so it is applied
+		// before anything resolves an episode.
+		show = s.applySeriesType(ctx, show, sc.SeriesType)
+		// The half-match guard below exists because a parsed folder name is
+		// weak evidence for which show a folder belongs to; here the source
+		// states the tvdb id and the episode of every file.
+		files := s.usableSourceFiles(scan, sc.SourceFiles)
+		plan, skipped = planFromSource(show, files)
+		skipped += len(sc.SourceFiles) - len(files)
+		total = len(sc.SourceFiles)
+		if total > 0 && len(plan) == 0 {
+			return entimportscanshow.OutcomeFailed, fmt.Sprintf(
+				"none of the %d files could be adopted (missing, outside the library, or naming an episode this library lacks)",
+				total,
+			), show.ID
+		}
+	} else {
+		files, err := library.ListVideoFilesRecursive(sc.FolderPath)
+		if err != nil {
+			return commitShowFail("list folder", err, show.ID)
+		}
+		// Match the whole folder before anything moves. A folder whose files
+		// mostly fail to match is far more likely bound to the wrong show than
+		// to be a show with missing metadata, and adopting it anyway wrote 7 of
+		// 76 files into a same-named series and counted it a success.
+		var unmatched int
+		plan, unmatched = planEpisodes(show, files)
+		total = len(files)
+		if len(plan) <= unmatched {
+			return entimportscanshow.OutcomeFailed, fmt.Sprintf(
+				"only %d of %d files matched an episode — folder likely belongs to another show",
+				len(plan),
+				total,
+			), show.ID
+		}
 	}
 
 	success := entimportscanshow.OutcomeCreated
@@ -233,7 +267,7 @@ func (s *Service) commitShow(
 		matched++
 	}
 	slog.InfoContext(ctx, "series adopted",
-		"tvshow.id", show.ID, "matched", matched, "files", len(files))
+		"tvshow.id", show.ID, "matched", matched, "files", total)
 	if matched > 0 {
 		seasons := make([]uint16, 0, len(touched))
 		for n := range touched {
@@ -245,14 +279,163 @@ func (s *Service) commitShow(
 			map[string]any{
 				"seasons":  seasons,
 				"episodes": matched,
-				"source":   "bulk_import",
+				"source":   importSource(scan),
 			},
 		); err != nil {
 			slog.WarnContext(ctx, "series adopt: record imported event failed",
 				"tvshow.id", show.ID, "error", err)
 		}
 	}
-	return success, "", show.ID
+	if !migration {
+		return success, "", show.ID
+	}
+	var skippedNote string
+	if skipped > 0 {
+		skippedNote = fmt.Sprintf(
+			"%d of %d files were missing, outside the library, or named an episode this library lacks",
+			skipped,
+			total,
+		)
+	}
+	return success, joinNotes(
+		profileNote, s.applyShowState(ctx, show, sc, profile), skippedNote,
+	), show.ID
+}
+
+func importSource(scan *ent.ImportScan) string {
+	if isMigration(scan) {
+		return string(scan.Source)
+	}
+	return "bulk_import"
+}
+
+// planFromSource resolves files by episode number instead of by filename. The
+// source already identified every one of them, so re-parsing is strictly worse
+// evidence: it re-opens every parser edge case and can fail a folder the
+// source knows perfectly. The second return counts entries naming an episode
+// this library has no row for, which happens when the source's metadata is
+// ahead of TVDB's.
+func planFromSource(
+	show *ent.TVShow, files []schema.SourceEpisodeFile,
+) ([]episodeMatch, int) {
+	byNumber := map[[2]uint16]*ent.Episode{}
+	for _, season := range show.Edges.Seasons {
+		for _, e := range season.Edges.Episodes {
+			byNumber[[2]uint16{season.Number, e.Number}] = e
+		}
+	}
+	var plan []episodeMatch
+	skipped := 0
+	for _, f := range files {
+		ep, ok := byNumber[[2]uint16{f.Season, f.Episode}]
+		if !ok {
+			skipped++
+			continue
+		}
+		plan = append(
+			plan,
+			episodeMatch{path: f.Path, season: f.Season, episode: ep},
+		)
+	}
+	return plan, skipped
+}
+
+func (s *Service) usableSourceFiles(
+	scan *ent.ImportScan, files []schema.SourceEpisodeFile,
+) []schema.SourceEpisodeFile {
+	out := make([]schema.SourceEpisodeFile, 0, len(files))
+	for _, f := range files {
+		if s.fileUsable(scan, f.Path) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+func (s *Service) applySeriesType(
+	ctx context.Context, show *ent.TVShow, seriesType string,
+) *ent.TVShow {
+	if seriesType == "" || seriesType == string(show.Type) {
+		return show
+	}
+	if _, err := s.seriesAdder.Update(
+		ctx, show.ID, tvshow.UpdateParams{Type: &seriesType},
+	); err != nil {
+		slog.WarnContext(ctx, "migration: series type not applied",
+			"tvshow.id", show.ID, "type", seriesType, "error", err)
+		return show
+	}
+	// Update answers the bare row; the planner needs the eager-loaded tree.
+	reloaded, err := s.store.FindTVShowByID(ctx, show.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "migration: reload after series type failed",
+			"tvshow.id", show.ID, "error", err)
+		return show
+	}
+	return reloaded
+}
+
+// applyShowState writes the source's monitored state onto the show. The show
+// flag goes through the tvshow service, which cascades it and records the one
+// series-scope monitoring event; the season and episode exceptions then go
+// straight to the db helpers, since the service would record an event per
+// call and a 200-episode show would write 200 activity rows.
+func (s *Service) applyShowState(
+	ctx context.Context,
+	show *ent.TVShow,
+	sc *ent.ImportScanShow,
+	profile string,
+) string {
+	var problems []string
+
+	monitored := sc.Monitored
+	params := tvshow.UpdateParams{Monitored: &monitored}
+	if profile != "" {
+		params.QualityProfile = &profile
+	}
+	if _, err := s.seriesAdder.Update(ctx, show.ID, params); err != nil {
+		problems = append(problems, fmt.Sprintf("show flags: %v", err))
+	}
+
+	seasonIDs := map[uint16]uint32{}
+	episodeIDs := map[[2]uint16]uint32{}
+	for _, season := range show.Edges.Seasons {
+		seasonIDs[season.Number] = season.ID
+		for _, e := range season.Edges.Episodes {
+			episodeIDs[[2]uint16{season.Number, e.Number}] = e.ID
+		}
+	}
+	numbers := make([]uint16, 0, len(sc.Monitoring.Seasons))
+	for n := range sc.Monitoring.Seasons {
+		numbers = append(numbers, n)
+	}
+	slices.Sort(numbers)
+	for _, n := range numbers {
+		want := sc.Monitoring.Seasons[n]
+		id, ok := seasonIDs[n]
+		if !ok || want == monitored {
+			continue
+		}
+		if _, err := s.store.CascadeSeasonMonitored(ctx, id, want); err != nil {
+			problems = append(problems,
+				fmt.Sprintf("season %d monitoring: %v", n, err))
+		}
+	}
+	for _, f := range sc.Monitoring.Episodes {
+		id, ok := episodeIDs[[2]uint16{f.Season, f.Episode}]
+		if !ok {
+			continue
+		}
+		if err := s.store.SetEpisodeMonitored(ctx, id, f.Monitored); err != nil {
+			problems = append(problems, fmt.Sprintf(
+				"S%02dE%02d monitoring: %v", f.Season, f.Episode, err))
+		}
+	}
+	if len(problems) > 0 {
+		slog.WarnContext(ctx, "migration: show monitoring partly applied",
+			"tvshow.id", show.ID, "problems", len(problems))
+	}
+	return strings.Join(problems, "; ")
 }
 
 // episodeMatch is one folder file bound to the episode it belongs to.
@@ -309,7 +492,7 @@ func matchEpisodePath(
 // already in the library. On failure it returns a nil show plus the outcome
 // triple to record.
 func (s *Service) resolveShow(
-	ctx context.Context, sc *ent.ImportScanShow,
+	ctx context.Context, sc *ent.ImportScanShow, profile string,
 ) (*ent.TVShow, bool, entimportscanshow.Outcome, string, uint32) {
 	if sc.ExistingTvshowID != nil {
 		found, err := s.store.FindTVShowByID(ctx, *sc.ExistingTvshowID)
@@ -351,7 +534,7 @@ func (s *Service) resolveShow(
 		return found, true, "", "", 0
 	}
 
-	created, err := s.seriesAdder.Add(ctx, tvdbID, "")
+	created, err := s.seriesAdder.Add(ctx, tvdbID, profile)
 	if err != nil {
 		o, m, id := commitShowFail("add show", err, 0)
 		return nil, false, o, m, id

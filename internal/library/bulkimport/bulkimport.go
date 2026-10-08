@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -53,13 +54,19 @@ type FilesParams struct {
 	Limit          uint16
 }
 
-// SeriesAdder creates a TV show (with its seasons and episodes) from a TVDB id.
-// Satisfied by *tvshow.Service; used to adopt shows on series-scan commit.
+// SeriesAdder creates a TV show (with its seasons and episodes) from a TVDB id
+// and applies the flags a migration carries. Satisfied by *tvshow.Service;
+// used to adopt shows on series-scan commit.
 type SeriesAdder interface {
 	Add(
 		ctx context.Context,
 		tvdbID uint32,
 		qualityProfile string,
+	) (*ent.TVShow, error)
+	Update(
+		ctx context.Context,
+		id uint32,
+		p tvshow.UpdateParams,
 	) (*ent.TVShow, error)
 }
 

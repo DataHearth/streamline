@@ -95,8 +95,14 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 		"scan.id", scan.ID,
 		"commit.success_count", success,
 		"commit.failed_count", failed)
-	countCommit(ctx, "book", "success", int64(success))
-	countCommit(ctx, "book", "failed", int64(failed))
+	countCommit(
+		ctx,
+		"book",
+		entimportscan.SourceFilesystem,
+		"success",
+		int64(success),
+	)
+	countCommit(ctx, "book", entimportscan.SourceFilesystem, "failed", int64(failed))
 	if success > 0 {
 		lib := config.Get().Library
 		for _, root := range []string{lib.EbookPath, lib.AudiobookPath} {

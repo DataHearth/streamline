@@ -405,6 +405,18 @@ func (s *Service) runScanMusic(ctx context.Context, scan *ent.ImportScan) {
 			attribute.String("kind", "music"),
 		))
 	}
-	countCommit(ctx, "music", "walk_error", int64(walkErrors))
-	countCommit(ctx, "music", "musicbrainz_lookup_error", int64(lookupErrors))
+	countCommit(
+		ctx,
+		"music",
+		entimportscan.SourceFilesystem,
+		"walk_error",
+		int64(walkErrors),
+	)
+	countCommit(
+		ctx,
+		"music",
+		entimportscan.SourceFilesystem,
+		"musicbrainz_lookup_error",
+		int64(lookupErrors),
+	)
 }
