@@ -209,6 +209,15 @@ type ReleaseGroupInfo struct {
 	ReleaseDate *time.Time // nil when MusicBrainz has no first-release-date
 }
 
+// ReleaseGroupSearchResult is a MusicBrainz release-group search hit with its
+// credited artist, used to match scanned album folders.
+type ReleaseGroupSearchResult struct {
+	ReleaseGroupInfo
+	ArtistMBID string
+	ArtistName string
+	Score      uint8
+}
+
 // TrackInfo is one track of the canonical release picked for a release-group.
 type TrackInfo struct {
 	MBID     string // recording MBID
@@ -241,6 +250,10 @@ type MusicProvider interface {
 	// GetReleaseGroup picks the canonical release (earliest official) and
 	// returns its track list.
 	GetReleaseGroup(ctx context.Context, mbid string) (*ReleaseGroupDetails, error)
+	SearchReleaseGroups(
+		ctx context.Context,
+		artist, album string,
+	) ([]ReleaseGroupSearchResult, error)
 }
 
 // AuthorResult is a single Hardcover author search hit.

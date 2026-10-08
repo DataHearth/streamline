@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -136,6 +137,56 @@ func (rg mbReleaseGroup) toInfo() ReleaseGroupInfo {
 		}
 	}
 	return info
+}
+
+func luceneQuote(s string) string {
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
+}
+
+func (m *MusicBrainz) SearchReleaseGroups(
+	ctx context.Context,
+	artist, album string,
+) ([]ReleaseGroupSearchResult, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.search_release_groups",
+		trace.WithAttributes(
+			attribute.String("musicbrainz.artist", artist),
+			attribute.String("musicbrainz.album", album),
+		))
+	defer span.End()
+
+	q := "releasegroup:" + luceneQuote(album)
+	if artist != "" {
+		q += " AND artist:" + luceneQuote(artist)
+	}
+	var payload struct {
+		ReleaseGroups []struct {
+			mbReleaseGroup
+			Score        uint8 `json:"score"`
+			ArtistCredit []struct {
+				Artist struct {
+					ID   string `json:"id"`
+					Name string `json:"name"`
+				} `json:"artist"`
+			} `json:"artist-credit"`
+		} `json:"release-groups"`
+	}
+	params := url.Values{"query": {q}, "limit": {"10"}}
+	if err := m.get(ctx, "/release-group", params, &payload); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	results := make([]ReleaseGroupSearchResult, 0, len(payload.ReleaseGroups))
+	for _, rg := range payload.ReleaseGroups {
+		res := ReleaseGroupSearchResult{
+			ReleaseGroupInfo: rg.toInfo(),
+			Score:            rg.Score,
+		}
+		if len(rg.ArtistCredit) > 0 {
+			res.ArtistMBID = rg.ArtistCredit[0].Artist.ID
+			res.ArtistName = rg.ArtistCredit[0].Artist.Name
+		}
+		results = append(results, res)
+	}
+	return results, nil
 }
 
 func mapAlbumType(rg mbReleaseGroup) AlbumType {

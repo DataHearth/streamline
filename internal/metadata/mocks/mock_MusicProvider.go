@@ -250,3 +250,77 @@ func (_c *MockMusicProvider_SearchArtists_Call) RunAndReturn(run func(ctx contex
 	_c.Call.Return(run)
 	return _c
 }
+
+// SearchReleaseGroups provides a mock function for the type MockMusicProvider
+func (_mock *MockMusicProvider) SearchReleaseGroups(ctx context.Context, artist string, album string) ([]metadata.ReleaseGroupSearchResult, error) {
+	ret := _mock.Called(ctx, artist, album)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchReleaseGroups")
+	}
+
+	var r0 []metadata.ReleaseGroupSearchResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]metadata.ReleaseGroupSearchResult, error)); ok {
+		return returnFunc(ctx, artist, album)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []metadata.ReleaseGroupSearchResult); ok {
+		r0 = returnFunc(ctx, artist, album)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]metadata.ReleaseGroupSearchResult)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, artist, album)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockMusicProvider_SearchReleaseGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchReleaseGroups'
+type MockMusicProvider_SearchReleaseGroups_Call struct {
+	*mock.Call
+}
+
+// SearchReleaseGroups is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artist string
+//   - album string
+func (_e *MockMusicProvider_Expecter) SearchReleaseGroups(ctx any, artist any, album any) *MockMusicProvider_SearchReleaseGroups_Call {
+	return &MockMusicProvider_SearchReleaseGroups_Call{Call: _e.mock.On("SearchReleaseGroups", ctx, artist, album)}
+}
+
+func (_c *MockMusicProvider_SearchReleaseGroups_Call) Run(run func(ctx context.Context, artist string, album string)) *MockMusicProvider_SearchReleaseGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockMusicProvider_SearchReleaseGroups_Call) Return(releaseGroupSearchResults []metadata.ReleaseGroupSearchResult, err error) *MockMusicProvider_SearchReleaseGroups_Call {
+	_c.Call.Return(releaseGroupSearchResults, err)
+	return _c
+}
+
+func (_c *MockMusicProvider_SearchReleaseGroups_Call) RunAndReturn(run func(ctx context.Context, artist string, album string) ([]metadata.ReleaseGroupSearchResult, error)) *MockMusicProvider_SearchReleaseGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}

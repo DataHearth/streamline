@@ -146,4 +146,56 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.ReleaseMBID).To(Equal("dated"))
 		})
 	})
+
+	Describe("SearchReleaseGroups", func() {
+		It("queries by artist and title", func() {
+			var gotQuery, gotPath string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotQuery = r.URL.Query().Get("query")
+					gotPath = r.URL.Path
+					return jsonResponse(
+						200,
+						`{"release-groups":[{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24","artist-credit":[{"artist":{"id":"mbid-1","name":"Nirvana"}}],"score":100}]}`,
+					), nil
+				},
+			)
+			res, err := mb.SearchReleaseGroups(ctx, "Nirvana", "Nevermind")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(HaveLen(1))
+			Expect(res[0].MBID).To(Equal("rg-1"))
+			Expect(res[0].ArtistMBID).To(Equal("mbid-1"))
+			Expect(res[0].ArtistName).To(Equal("Nirvana"))
+			Expect(res[0].Score).To(BeEquivalentTo(100))
+			Expect(gotPath).To(Equal("/ws/2/release-group"))
+			Expect(gotQuery).To(ContainSubstring(`releasegroup:"Nevermind"`))
+			Expect(gotQuery).To(ContainSubstring(`artist:"Nirvana"`))
+		})
+
+		It("searches by title alone when the artist is empty", func() {
+			var gotQuery string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotQuery = r.URL.Query().Get("query")
+					return jsonResponse(200, `{"release-groups":[]}`), nil
+				},
+			)
+			_, err := mb.SearchReleaseGroups(ctx, "", "Nevermind")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gotQuery).To(Equal(`releasegroup:"Nevermind"`))
+		})
+
+		It("escapes embedded quotes", func() {
+			var gotQuery string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotQuery = r.URL.Query().Get("query")
+					return jsonResponse(200, `{"release-groups":[]}`), nil
+				},
+			)
+			_, err := mb.SearchReleaseGroups(ctx, "", `The "Best" Of`)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gotQuery).To(ContainSubstring(`releasegroup:"The \"Best\" Of"`))
+		})
+	})
 })
