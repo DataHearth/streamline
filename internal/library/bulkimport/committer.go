@@ -43,6 +43,14 @@ func (s *Service) Commit(ctx context.Context, id uint32) error {
 	if scan.Status != entimportscan.StatusAwaitingReview {
 		return otelx.RecordSpanError(span, ErrScanNotReviewable)
 	}
+	switch scan.Kind {
+	case "",
+		entimportscan.KindMovie,
+		entimportscan.KindSeries,
+		entimportscan.KindMusic:
+	default:
+		return otelx.RecordSpanError(span, ErrUnsupportedKind)
+	}
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		id,
@@ -53,9 +61,12 @@ func (s *Service) Commit(ctx context.Context, id uint32) error {
 	}
 
 	bg := context.WithoutCancel(ctx)
-	if scan.Kind == entimportscan.KindSeries {
+	switch scan.Kind {
+	case entimportscan.KindSeries:
 		go s.runCommitSeries(bg, scan)
-	} else {
+	case entimportscan.KindMusic:
+		go s.runCommitMusic(bg, scan)
+	default:
 		go s.runCommit(bg, scan)
 	}
 	return nil

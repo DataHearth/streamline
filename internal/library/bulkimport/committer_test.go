@@ -34,7 +34,19 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+		)
 	})
 
 	It("rejects when scan is not in awaiting_review status", func() {
@@ -87,7 +99,19 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
 		ms = msmocks.NewMockRefresher(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, ms, "/lib", "/lib-tv")
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			ms,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+		)
 		scan = &ent.ImportScan{ID: 3, Mode: entimportscan.ModeInPlace}
 		store.EXPECT().
 			UpdateImportScanStatus(mock.Anything, uint32(3), entimportscan.StatusCompleted, mock.Anything).
@@ -146,7 +170,19 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
-		svc = NewService(store, nil, nil, nil, nil, nil, nil, "/lib", "/lib-tv")
+		svc = NewService(
+			store,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			"/lib",
+			"/lib-tv",
+			nil,
+			nil,
+		)
 	})
 
 	It(
@@ -334,6 +370,7 @@ var _ = Describe(
 				nil,
 				libDir,
 				libDir,
+				nil, nil,
 			)
 		})
 
@@ -417,6 +454,7 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 			nil,
 			"/lib",
 			"/lib-tv",
+			nil, nil,
 		)
 	})
 
@@ -492,6 +530,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				nil,
 				"/lib",
 				"/lib-tv",
+				nil, nil,
 			)
 			f := &ent.ImportScanFile{
 				ID: 7, SourcePath: "/import/Movie.mkv", Size: 1_500_000_000,
@@ -550,6 +589,7 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 			nil,
 			"/lib",
 			"/lib-tv",
+			nil, nil,
 		)
 		f := &ent.ImportScanFile{
 			ID: 8, SourcePath: "/import/Movie2.mkv", Size: 1_500_000_000,
@@ -632,6 +672,7 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 				store, meta, nil, library.NewImportService(),
 				movie.NewService(store, meta, nil, nil, nil), nil, nil,
 				libDir, libDir,
+				nil, nil,
 			)
 
 			src := filepath.Join(srcDir, "Fight Club - 1999.mkv")

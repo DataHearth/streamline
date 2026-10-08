@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/movie"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -57,6 +58,12 @@ type SeriesAdder interface {
 	) (*ent.TVShow, error)
 }
 
+// MusicAdder creates an artist with its discography from a MusicBrainz id.
+// Satisfied by *music.Service; used to seed artists on music-scan commit.
+type MusicAdder interface {
+	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
+}
+
 // Service implements Manager.
 type Service struct {
 	store       db.Store
@@ -68,6 +75,8 @@ type Service struct {
 	ms          mediaserver.Refresher
 	moviePath   string
 	seriesPath  string
+	musicmeta   metadata.MusicProvider
+	musicAdder  MusicAdder
 }
 
 // NewService constructs the bulk-import service.
@@ -81,6 +90,8 @@ func NewService(
 	ms mediaserver.Refresher,
 	moviePath string,
 	seriesPath string,
+	musicmeta metadata.MusicProvider,
+	musicAdder MusicAdder,
 ) *Service {
 	return &Service{
 		store:       store,
@@ -92,6 +103,8 @@ func NewService(
 		ms:          ms,
 		moviePath:   moviePath,
 		seriesPath:  seriesPath,
+		musicmeta:   musicmeta,
+		musicAdder:  musicAdder,
 	}
 }
 

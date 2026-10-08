@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -42,6 +43,15 @@ func (s *Service) StartScan(
 
 	if p.Kind == "" {
 		p.Kind = entimportscan.KindMovie
+	}
+	switch p.Kind {
+	case entimportscan.KindMovie, entimportscan.KindSeries:
+	case entimportscan.KindMusic:
+		if p.Mode == entimportscan.ModeRename {
+			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		}
+	default:
+		return nil, otelx.RecordSpanError(span, ErrUnsupportedKind)
 	}
 	resolved, err := s.validateScanParams(p)
 	if err != nil {
@@ -79,9 +89,12 @@ func (s *Service) StartScan(
 	span.SetAttributes(attribute.Int64("scan.id", int64(scan.ID)))
 
 	bg := context.WithoutCancel(ctx)
-	if p.Kind == entimportscan.KindSeries {
+	switch p.Kind {
+	case entimportscan.KindSeries:
 		go s.runScanSeries(bg, scan)
-	} else {
+	case entimportscan.KindMusic:
+		go s.runScanMusic(bg, scan)
+	default:
 		go s.runScan(bg, scan)
 	}
 	slog.InfoContext(ctx, "bulk import scan started",
@@ -107,8 +120,11 @@ func (s *Service) validateScanParams(p StartScanParams) (string, error) {
 	// in_place/rename are defined relative to the library root for the media type
 	// being scanned — a TV folder is "outside" the movie library and vice versa.
 	root := s.moviePath
-	if p.Kind == entimportscan.KindSeries {
+	switch p.Kind {
+	case entimportscan.KindSeries:
 		root = s.seriesPath
+	case entimportscan.KindMusic:
+		root = config.Get().Library.MusicPath
 	}
 	libAbs, err := filepath.EvalSymlinks(root)
 	if err != nil {

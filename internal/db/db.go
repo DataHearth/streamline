@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/movie"
@@ -785,6 +786,44 @@ type Store interface {
 		opts UpdateScanShowOutcomeOpts,
 	) error
 	ListAllEpisodeMediaFilePaths(ctx context.Context) ([]string, error)
+
+	// music import scans (import_scan_album children)
+	ListPendingImportScanAlbumFolders(ctx context.Context) ([]string, error)
+	BulkCreateImportScanAlbums(
+		ctx context.Context,
+		scanID uint32,
+		albums []CreateImportScanAlbumParams,
+	) error
+	ListImportScanAlbumsForCommit(
+		ctx context.Context,
+		scanID uint32,
+	) ([]*ent.ImportScanAlbum, error)
+	UpdateImportScanAlbumOutcome(
+		ctx context.Context,
+		id uint32,
+		outcome importscanalbum.Outcome,
+		opts UpdateScanAlbumOutcomeOpts,
+	) error
+	BulkUpdateImportScanAlbumDecisions(
+		ctx context.Context,
+		scanID uint32,
+		decision importscanalbum.Decision,
+		classification importscanalbum.Classification,
+		ids []uint32,
+	) (int, error)
+	// AlbumMBIDIndex maps release-group mbid to album id.
+	AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error)
+	// FindAlbumByMBID returns nil, nil on a miss; tracks are eager-loaded
+	// (disc, then position) with their media files.
+	FindAlbumByMBID(ctx context.Context, mbid string) (*ent.Album, error)
+	// AdoptAlbumFiles attaches existing files to the album's tracks in one
+	// transaction and marks the album available only when every track is
+	// covered.
+	AdoptAlbumFiles(
+		ctx context.Context,
+		albumID uint32,
+		files []AdoptAlbumFile,
+	) error
 
 	// tv shows / seasons / episodes
 	CreateTVShow(ctx context.Context, p CreateTVShowParams) (*ent.TVShow, error)

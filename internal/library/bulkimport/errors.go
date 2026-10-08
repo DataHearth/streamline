@@ -18,4 +18,6 @@ var (
 	ErrScanNotReviewable  = errors.New("scan is not in awaiting_review state")
 	ErrScanNotCancellable = errors.New("scan is not in a cancellable state")
 	ErrScanNotDeletable   = errors.New("scan must be cancelled before delete")
+	ErrUnsupportedKind    = errors.New("import scan kind is not supported")
+	ErrRenameUnsupported  = errors.New("rename mode is not supported for music")
 )

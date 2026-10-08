@@ -53,6 +53,7 @@ var _ = Describe(
 				nil,
 				libRoot,
 				libRoot,
+				nil, nil,
 			)
 		})
 
@@ -92,6 +93,7 @@ var _ = Describe(
 			svc = NewService(
 				store, metaProv, nil, nil, nil, nil, nil,
 				"/nonexistent/library/root", "/nonexistent/library/root",
+				nil, nil,
 			)
 			_, err := svc.StartScan(
 				ctx,
@@ -106,6 +108,7 @@ var _ = Describe(
 			svc = NewService(
 				store, metaProv, nil, nil, nil, nil, nil,
 				"/nonexistent/movie/root", seriesRoot,
+				nil, nil,
 			)
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
