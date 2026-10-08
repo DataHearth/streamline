@@ -404,6 +404,10 @@ type Store interface {
 		ctx context.Context,
 		p RecordEpisodeImportSuccessParams,
 	) error
+	RecordAlbumImportSuccess(
+		ctx context.Context,
+		p RecordAlbumImportSuccessParams,
+	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	RetryFailedDownloadRecord(ctx context.Context, id uint32) error
 	SetDownloadRecordSavePath(ctx context.Context, id uint32, path string) error

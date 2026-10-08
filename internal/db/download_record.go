@@ -10,6 +10,7 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -17,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -32,6 +34,16 @@ func withEpisodeContext(q *ent.EpisodeQuery) {
 		sq.WithTvShow(func(tq *ent.TVShowQuery) {
 			tq.WithSeasons(func(ssq *ent.SeasonQuery) { ssq.WithEpisodes() })
 		})
+	})
+}
+
+// withAlbumContext eager-loads an album record's artist and its tracks in disc
+// order, each with the files it already holds. Mirrors FindAlbumByID: the
+// album importer matches downloaded files to tracks and skips covered ones.
+func withAlbumContext(q *ent.AlbumQuery) {
+	q.WithArtist().WithTracks(func(tq *ent.TrackQuery) {
+		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
+			WithMediaFiles()
 	})
 }
 
@@ -507,8 +519,11 @@ type RecordImportFailureParams struct {
 	// episode flips back to wanted so the next search re-grabs it — unless it
 	// already holds a media file, in which case "wanted" would be a lie and
 	// the episode is left as-is.
+	// An album record sets AlbumID instead: a terminal failure walks a
+	// downloading album back to wanted, unless it already holds a file.
 	MovieID   uint32
 	EpisodeID uint32
+	AlbumID   uint32
 	Terminal  bool
 	Reason    string
 	Attempts  uint8
@@ -523,6 +538,7 @@ func (db *DB) ListImportingDownloadRecords(
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
 		All(ctx)
 }
 
@@ -541,6 +557,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
 		Only(ctx)
 }
 
@@ -580,6 +597,7 @@ func (db *DB) FindHeldDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		WithAlbum(withAlbumContext).
 		Only(ctx)
 }
 
@@ -763,6 +781,75 @@ func (db *DB) RecordEpisodeImportSuccess(
 	return tx.Commit()
 }
 
+type RecordAlbumImportSuccessParams struct {
+	RecordID uint32
+	AlbumID  uint32
+	Files    []AdoptAlbumFile
+}
+
+// RecordAlbumImportSuccess is the album twin of RecordEpisodeImportSuccess:
+// one MediaFile per imported track, the record completed, and the album
+// available once every track holds a file. Otherwise it goes back to wanted,
+// leaving downloading so the missing tracks are searchable again.
+//
+// Not adoptAlbumFiles: that writes source=orphan and refuses to move an album
+// out of downloading.
+func (db *DB) RecordAlbumImportSuccess(
+	ctx context.Context,
+	p RecordAlbumImportSuccessParams,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	for _, f := range p.Files {
+		if err := tx.MediaFile.Create().
+			SetPath(f.Path).
+			SetSize(f.Size).
+			SetQuality(f.Quality).
+			SetFormat(f.Format).
+			SetSource(mediafile.SourceAuto).
+			SetTrackID(f.TrackID).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("create media file %s: %w", f.Path, err)
+		}
+	}
+	if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
+		SetStatus(downloadrecord.StatusCompleted).
+		SetImportedAt(time.Now()).
+		SetFailureReason("").
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	bare, err := tx.Track.Query().
+		Where(
+			track.HasAlbumWith(album.ID(p.AlbumID)),
+			track.Not(track.HasMediaFiles()),
+		).
+		Exist(ctx)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("check album %d coverage: %w", p.AlbumID, err)
+	}
+	status := album.StatusAvailable
+	if bare {
+		status = album.StatusWanted
+	}
+	if err := tx.Album.Update().
+		Where(
+			album.ID(p.AlbumID),
+			album.StatusIn(album.StatusDownloading, album.StatusWanted),
+		).
+		SetStatus(status).
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update album: %w", err)
+	}
+	return tx.Commit()
+}
+
 // RecordImportFailure writes attempt counter on retryable; on terminal also
 // flips DownloadRecord + Movie to failed with reason.
 func (db *DB) RecordImportFailure(
@@ -810,6 +897,30 @@ func (db *DB) RecordImportFailure(
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("update episode: %w", err)
+			}
+		}
+	}
+	if p.Terminal && p.AlbumID != 0 {
+		hasFile, err := tx.Track.Query().
+			Where(
+				track.HasAlbumWith(album.ID(p.AlbumID)),
+				track.HasMediaFiles(),
+			).
+			Exist(ctx)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("check album media files: %w", err)
+		}
+		if !hasFile {
+			if err := tx.Album.Update().
+				Where(
+					album.ID(p.AlbumID),
+					album.StatusEQ(album.StatusDownloading),
+				).
+				SetStatus(album.StatusWanted).
+				Exec(ctx); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("update album: %w", err)
 			}
 		}
 	}

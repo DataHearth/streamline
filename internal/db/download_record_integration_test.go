@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	entalbum "github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -700,6 +701,156 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			n, err := client.TranscodeJob.Query().Count(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(Equal(0))
+		})
+	})
+
+	Describe("album imports", func() {
+		var (
+			albumID  uint32
+			trackIDs []uint32
+			recID    uint32
+		)
+
+		BeforeEach(func() {
+			a, err := store.CreateArtist(ctx, CreateArtistParams{
+				MBID: "a-1", Name: "Nirvana", Monitored: true,
+				Albums: []AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID = a.Edges.Albums[0].ID
+			trackIDs = make([]uint32, 0, 2)
+			for i, title := range []string{"One", "Two"} {
+				tr, err := client.Track.Create().
+					SetMbid(fmt.Sprintf("t-%d", i)).
+					SetTitle(title).
+					SetDisc(1).
+					SetPosition(uint16(i + 1)).
+					SetAlbumID(albumID).
+					Save(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				trackIDs = append(trackIDs, tr.ID)
+			}
+			Expect(client.Album.UpdateOneID(albumID).
+				SetStatus(entalbum.StatusDownloading).Exec(ctx)).To(Succeed())
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "album-import",
+				Status: downloadrecord.StatusImporting, AlbumID: albumID,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			recID = rec.ID
+		})
+
+		albumStatus := func() entalbum.Status {
+			GinkgoHelper()
+			return client.Album.GetX(ctx, albumID).Status
+		}
+
+		file := func(i int) AdoptAlbumFile {
+			return AdoptAlbumFile{
+				TrackID: trackIDs[i], Path: fmt.Sprintf("/music/%d.flac", i),
+				Quality: "flac", Format: "flac", Size: 10,
+			}
+		}
+
+		It(
+			"eager-loads the album, its artist and tracks onto the importing record",
+			func() {
+				rec, err := store.FindImportingDownloadRecordByID(ctx, recID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.Edges.Album).NotTo(BeNil())
+				Expect(rec.Edges.Album.Edges.Artist).NotTo(BeNil())
+				Expect(rec.Edges.Album.Edges.Tracks).To(HaveLen(2))
+				Expect(rec.Edges.Album.Edges.Tracks[0].Title).To(Equal("One"))
+			},
+		)
+
+		It("completes the record and makes a fully covered album available", func() {
+			Expect(
+				store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0), file(1)},
+				}),
+			).To(Succeed())
+
+			rec := client.DownloadRecord.GetX(ctx, recID)
+			Expect(rec.Status).To(Equal(downloadrecord.StatusCompleted))
+			Expect(rec.ImportedAt).NotTo(BeNil())
+			Expect(albumStatus()).To(Equal(entalbum.StatusAvailable))
+			files := client.MediaFile.Query().AllX(ctx)
+			Expect(files).To(HaveLen(2))
+			for _, f := range files {
+				Expect(f.Source).To(Equal(mediafile.SourceAuto))
+			}
+		})
+
+		It("sends a partially covered album back to wanted", func() {
+			Expect(
+				store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0)},
+				}),
+			).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusWanted))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusCompleted))
+		})
+
+		It("rolls everything back when a file cannot be recorded", func() {
+			bad := file(1)
+			bad.TrackID = 9999
+			err := store.RecordAlbumImportSuccess(
+				ctx,
+				RecordAlbumImportSuccessParams{
+					RecordID: recID, AlbumID: albumID,
+					Files: []AdoptAlbumFile{file(0), bad},
+				},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(0))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusImporting))
+		})
+
+		It("walks a downloading album back to wanted on a terminal failure", func() {
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: recID, AlbumID: albumID, Terminal: true,
+				Reason: "no audio", Attempts: 1,
+			})).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusWanted))
+			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
+				To(Equal(downloadrecord.StatusFailed))
+		})
+
+		It(
+			"leaves an album that holds a file as it is on a terminal failure",
+			func() {
+				client.MediaFile.Create().
+					SetPath("/music/kept.flac").SetSize(1).SetQuality("flac").
+					SetFormat("flac").SetSource(mediafile.SourceAuto).
+					SetTrackID(trackIDs[0]).SaveX(ctx)
+				Expect(client.Album.UpdateOneID(albumID).
+					SetStatus(entalbum.StatusAvailable).Exec(ctx)).To(Succeed())
+
+				Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+					RecordID: recID, AlbumID: albumID, Terminal: true,
+					Reason: "no audio", Attempts: 1,
+				})).To(Succeed())
+
+				Expect(albumStatus()).To(Equal(entalbum.StatusAvailable))
+			},
+		)
+
+		It("does not touch the album on a retryable failure", func() {
+			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+				RecordID: recID, AlbumID: albumID, Attempts: 1,
+			})).To(Succeed())
+
+			Expect(albumStatus()).To(Equal(entalbum.StatusDownloading))
 		})
 	})
 

@@ -145,6 +145,34 @@ func BuildEpisodeVars(
 	return vars
 }
 
+// BuildAlbumTrackVars creates template variables for music track naming. The
+// keys are capitalised because the music template is: ApplyTemplate looks a
+// key up verbatim. Disc renders as "<n>-" for a multi-disc album and is absent
+// otherwise, so a single-disc file name carries no disc prefix.
+func BuildAlbumTrackVars(
+	artist, album string,
+	year uint16,
+	disc uint8,
+	multiDisc bool,
+	track uint16,
+	title, ext string,
+) map[string]string {
+	vars := map[string]string{
+		"Artist": artist,
+		"Album":  album,
+		"Title":  title,
+		"Track":  strconv.FormatUint(uint64(track), 10),
+		"ext":    ext,
+	}
+	if year > 0 {
+		vars["Year"] = strconv.FormatUint(uint64(year), 10)
+	}
+	if multiDisc {
+		vars["Disc"] = strconv.FormatUint(uint64(disc), 10) + "-"
+	}
+	return vars
+}
+
 // ParsedFromMediaFile builds the naming inputs for a file already in the
 // library, off the columns the importer stored rather than off its path.
 //

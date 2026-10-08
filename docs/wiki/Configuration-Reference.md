@@ -245,7 +245,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.movie_path` | path | `/media/movies` | Movie library root |
 | `library.series_path` | path | `/media/series` | TV library root |
 | `library.music_path` | path | `/data/music` | Music library root. File-only |
-| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:00} - {Title}` | File-only |
+| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}` | File-only |
 | `library.ebook_path` | path | `/data/books` | Ebook library root. File-only |
 | `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | File-only |
 | `library.audiobook_path` | path | `/data/audiobooks` | Audiobook library root. File-only |
@@ -253,7 +253,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.download_path` | path | `/downloads` | Where Streamline reads finished torrents from. Combined with the torrent name: `<download_path>/<torrent.Name>` |
 | `library.movie_naming` | template | `{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}` | See [Quality Profiles and Naming](Quality-Profiles-and-Naming#file-naming) |
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
-| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed |
+| `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music always copies instead of hardlinking, and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |

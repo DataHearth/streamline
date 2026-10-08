@@ -22,7 +22,8 @@ func classify(err error) classification {
 		errors.Is(err, library.ErrUnsafePath),
 		errors.Is(err, ErrPathNotAllowed),
 		errors.Is(err, ErrMovieHasFile),
-		errors.Is(err, ErrEpisodeHasFile):
+		errors.Is(err, ErrEpisodeHasFile),
+		errors.Is(err, ErrNoAlbumTracks):
 		return terminal
 	default:
 		return retryable

@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -261,7 +261,7 @@ func planAlbumFiles(
 			unmatched++
 			continue
 		}
-		tr := matchTrack(alb.Edges.Tracks, info)
+		tr := library.MatchTrack(alb.Edges.Tracks, info)
 		if tr == nil {
 			unmatched++
 			continue
@@ -280,31 +280,6 @@ func planAlbumFiles(
 		})
 	}
 	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
-}
-
-// matchTrack prefers the tagged (disc, track) pair and falls back to the title.
-func matchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
-	disc := info.Disc
-	if disc == 0 {
-		disc = 1
-	}
-	if info.Track > 0 {
-		if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
-			return t.Disc == disc && t.Position == info.Track
-		}); i >= 0 {
-			return tracks[i]
-		}
-	}
-	title := strings.TrimSpace(info.Title)
-	if title == "" {
-		return nil
-	}
-	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
-		return strings.EqualFold(strings.TrimSpace(t.Title), title)
-	}); i >= 0 {
-		return tracks[i]
-	}
-	return nil
 }
 
 func commitAlbumFail(

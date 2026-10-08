@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -351,6 +352,91 @@ var _ = Describe("ImportService", Label("unit", "library"), func() {
 			Expect(importCount(rm, "episode", "success")).To(Equal(int64(1)))
 			Expect(importCount(rm, "episode", "no_media")).To(Equal(int64(1)))
 		})
+	})
+})
+
+var _ = Describe("ImportAlbumTrack", Label("unit", "library"), func() {
+	var (
+		musicDir string
+		srcDir   string
+		artist   *ent.Artist
+		alb      *ent.Album
+		tr       *ent.Track
+	)
+
+	BeforeEach(func() {
+		tmp := GinkgoT().TempDir()
+		musicDir = filepath.Join(tmp, "music")
+		srcDir = filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
+		configtest.Setup(map[string]any{
+			"library": map[string]any{
+				"music_path":   musicDir,
+				"music_naming": "{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title}.{ext}",
+				"import_mode":  "copy",
+			},
+		})
+		released := time.Date(1991, 9, 24, 0, 0, 0, 0, time.UTC)
+		artist = &ent.Artist{ID: 1, Name: "Nirvana"}
+		alb = &ent.Album{ID: 2, Title: "Nevermind", ReleaseDate: &released}
+		tr = &ent.Track{ID: 3, Title: "Lithium", Disc: 2, Position: 5}
+	})
+
+	It("places an audio file below the video size floor", func() {
+		src := writeSizedFile(srcDir, "whatever.flac", 1024)
+		got, err := NewImportService().
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, true, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got.Path).To(Equal(filepath.Join(
+			musicDir, "Nirvana", "Nevermind (1991)", "2-05 - Lithium.flac",
+		)))
+		Expect(got.Size).To(Equal(int64(1024)))
+		Expect(got.Parsed.Extension).To(Equal("flac"))
+	})
+
+	It("drops the disc prefix on a single-disc album", func() {
+		src := writeSizedFile(srcDir, "a.mp3", 10)
+		got, err := NewImportService().
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(filepath.Base(got.Path)).To(Equal("05 - Lithium.mp3"))
+	})
+
+	It("honours the mode override over the configured one", func() {
+		src := writeSizedFile(srcDir, "a.mp3", 10)
+		got, err := NewImportService().
+			ImportAlbumTrack(context.Background(), src, artist, alb, tr, false, "hardlink")
+		Expect(err).NotTo(HaveOccurred())
+		srcInfo, err := os.Stat(src)
+		Expect(err).NotTo(HaveOccurred())
+		dstInfo, err := os.Stat(got.Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.SameFile(srcInfo, dstInfo)).To(BeTrue())
+	})
+
+	It("refuses an existing destination", func() {
+		src := writeSizedFile(srcDir, "a.mp3", 10)
+		svc := NewImportService()
+		_, err := svc.ImportAlbumTrack(
+			context.Background(),
+			src,
+			artist,
+			alb,
+			tr,
+			false,
+			"",
+		)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = svc.ImportAlbumTrack(
+			context.Background(),
+			src,
+			artist,
+			alb,
+			tr,
+			false,
+			"",
+		)
+		Expect(err).To(MatchError(ErrDestExists))
 	})
 })
 

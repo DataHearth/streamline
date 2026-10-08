@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -275,6 +276,61 @@ func (s *ImportService) ImportEpisodeWithMode(
 	})
 }
 
+// ImportAlbumTrack places one audio file into the music library as the given
+// track. srcFile is a concrete file the caller already matched to tr, so
+// nothing here searches or filters. multiDisc is the album's, not the track's:
+// the caller knows every track, this method does not. Empty mode falls back to
+// the live config's ImportMode. Does not touch the DB.
+func (s *ImportService) ImportAlbumTrack(
+	ctx context.Context,
+	srcFile string,
+	artist *ent.Artist,
+	alb *ent.Album,
+	tr *ent.Track,
+	multiDisc bool,
+	mode string,
+) (ImportedFile, error) {
+	lib := config.Get().Library
+	if mode == "" {
+		mode = lib.ImportMode
+	}
+	ctx, span := tracer.Start(ctx, "library.import_album_track",
+		trace.WithAttributes(
+			attribute.Int64("album.id", int64(alb.ID)),
+			attribute.Int64("track.id", int64(tr.ID)),
+			attribute.String("import.mode", mode),
+		),
+	)
+	defer span.End()
+
+	var year uint16
+	if alb.ReleaseDate != nil {
+		year = numeric.SaturateU16(alb.ReleaseDate.Year())
+	}
+	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFile)), ".")
+	return placeFile(ctx, span, placement{
+		kind:    "track",
+		src:     srcFile,
+		root:    lib.MusicPath,
+		naming:  lib.MusicNaming,
+		mode:    mode,
+		resolve: func(p string) (string, error) { return p, nil },
+		buildVars: func(ParseResult) map[string]string {
+			return BuildAlbumTrackVars(
+				artist.Name,
+				alb.Title,
+				year,
+				tr.Disc,
+				multiDisc,
+				tr.Position,
+				tr.Title,
+				ext,
+			)
+		},
+		owner: []any{"album.id", alb.ID, "track.id", tr.ID},
+	})
+}
+
 // placement describes one file placement: where to look for the source, how to
 // render the destination, and how to move the bytes there.
 type placement struct {
@@ -287,6 +343,10 @@ type placement struct {
 	buildVars func(ParseResult) map[string]string
 	// owner identifies the movie/episode as slog key/value pairs.
 	owner []any
+	// resolve replaces the video-only findMediaFile for kinds whose source is
+	// not video. Its result is also exempt from release-name parsing: the
+	// ParseResult then carries the file extension and nothing else.
+	resolve func(string) (string, error)
 }
 
 // placeFile resolves the media file under p.src, renders its destination from
@@ -310,12 +370,27 @@ func placeFile(
 		imports.Add(ctx, 1, attrs)
 	}()
 
-	srcFile, err := findMediaFile(p.src, p.minSize)
+	var (
+		srcFile string
+		parsed  ParseResult
+		err     error
+	)
+	if p.resolve != nil {
+		srcFile, err = p.resolve(p.src)
+		parsed.Extension = strings.TrimPrefix(
+			strings.ToLower(filepath.Ext(srcFile)),
+			".",
+		)
+	} else {
+		srcFile, err = findMediaFile(p.src, p.minSize)
+		if err == nil {
+			parsed = Parse(filepath.Base(srcFile))
+		}
+	}
 	if err != nil {
 		outcome = "no_media"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
 	}
-	parsed := Parse(filepath.Base(srcFile))
 
 	segments := strings.Split(ApplyTemplate(p.naming, p.buildVars(parsed)), "/")
 	for i, seg := range segments {

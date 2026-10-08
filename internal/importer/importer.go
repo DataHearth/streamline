@@ -253,10 +253,12 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 		return w.importMovieRecord(ctx, span, rec, libCfg)
 	case rec.Edges.AnchorEpisode != nil:
 		return w.importEpisodeRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Album != nil:
+		return w.importAlbumRecord(ctx, span, rec, libCfg)
 	default:
 		return otelx.RecordSpanError(
 			span,
-			fmt.Errorf("record %d has neither movie nor episode", recordID),
+			fmt.Errorf("record %d has no movie, episode or album", recordID),
 		)
 	}
 }
@@ -942,6 +944,9 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	}
 	if rec.Edges.AnchorEpisode != nil {
 		params.EpisodeID = rec.Edges.AnchorEpisode.ID
+	}
+	if rec.Edges.Album != nil {
+		params.AlbumID = rec.Edges.Album.ID
 	}
 	if isTerminal {
 		params.Reason = strings.TrimSpace(runErr.Error())

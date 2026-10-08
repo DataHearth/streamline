@@ -11,4 +11,7 @@ var (
 	ErrMovieHasFile = errors.New("movie already has a media file")
 	// ErrEpisodeHasFile is the episode-grab equivalent of ErrMovieHasFile.
 	ErrEpisodeHasFile = errors.New("episode already has a media file")
+	// ErrNoAlbumTracks is returned when no audio file under an album record's
+	// save path matched a track the import was allowed to fill.
+	ErrNoAlbumTracks = errors.New("no audio file matched an album track")
 )

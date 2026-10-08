@@ -13398,6 +13398,63 @@ func (_c *MockTx_ReconcileEpisodes_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// RecordAlbumImportSuccess provides a mock function for the type MockTx
+func (_mock *MockTx) RecordAlbumImportSuccess(ctx context.Context, p db.RecordAlbumImportSuccessParams) error {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecordAlbumImportSuccess")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.RecordAlbumImportSuccessParams) error); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_RecordAlbumImportSuccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecordAlbumImportSuccess'
+type MockTx_RecordAlbumImportSuccess_Call struct {
+	*mock.Call
+}
+
+// RecordAlbumImportSuccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.RecordAlbumImportSuccessParams
+func (_e *MockTx_Expecter) RecordAlbumImportSuccess(ctx any, p any) *MockTx_RecordAlbumImportSuccess_Call {
+	return &MockTx_RecordAlbumImportSuccess_Call{Call: _e.mock.On("RecordAlbumImportSuccess", ctx, p)}
+}
+
+func (_c *MockTx_RecordAlbumImportSuccess_Call) Run(run func(ctx context.Context, p db.RecordAlbumImportSuccessParams)) *MockTx_RecordAlbumImportSuccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.RecordAlbumImportSuccessParams
+		if args[1] != nil {
+			arg1 = args[1].(db.RecordAlbumImportSuccessParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RecordAlbumImportSuccess_Call) Return(err error) *MockTx_RecordAlbumImportSuccess_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_RecordAlbumImportSuccess_Call) RunAndReturn(run func(ctx context.Context, p db.RecordAlbumImportSuccessParams) error) *MockTx_RecordAlbumImportSuccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecordEpisodeImportSuccess provides a mock function for the type MockTx
 func (_mock *MockTx) RecordEpisodeImportSuccess(ctx context.Context, p db.RecordEpisodeImportSuccessParams) error {
 	ret := _mock.Called(ctx, p)

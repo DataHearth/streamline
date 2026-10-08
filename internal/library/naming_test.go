@@ -8,7 +8,42 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
+
+var _ = Describe("BuildAlbumTrackVars", Label("unit", "library"), func() {
+	const tpl = "{Disc}{Track:02} - {Title}.{ext}"
+
+	It("renders every token the music template uses", func() {
+		vars := BuildAlbumTrackVars(
+			"Nirvana",
+			"Nevermind",
+			1991,
+			1,
+			false,
+			3,
+			"X",
+			"flac",
+		)
+		Expect(ApplyTemplate("{Artist}/{Album} ({Year})/"+tpl, vars)).
+			To(Equal("Nirvana/Nevermind (1991)/03 - X.flac"))
+	})
+
+	It("prefixes the disc on a multi-disc album only", func() {
+		multi := BuildAlbumTrackVars("A", "B", 2000, 2, true, 3, "X", "flac")
+		Expect(ApplyTemplate(tpl, multi)).To(Equal("2-03 - X.flac"))
+		single := BuildAlbumTrackVars("A", "B", 2000, 1, false, 3, "X", "flac")
+		Expect(ApplyTemplate(tpl, single)).To(Equal("03 - X.flac"))
+	})
+
+	It("pads the track with the shipped default template", func() {
+		configtest.Setup()
+		vars := BuildAlbumTrackVars("A", "B", 2000, 1, false, 1, "Song", "mp3")
+		Expect(ApplyTemplate(config.Get().Library.MusicNaming, vars)).
+			To(Equal("A/B (2000)/01 - Song.mp3"))
+	})
+})
 
 var _ = Describe("Naming Templates", Label("unit", "library"), func() {
 	Describe("ApplyTemplate", func() {
