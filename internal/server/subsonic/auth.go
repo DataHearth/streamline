@@ -44,7 +44,7 @@ func checkCredentials(stored string, params url.Values) bool {
 // login email. An unknown user and bad credentials answer the same error so
 // the response does not reveal which emails exist.
 func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
-	login := r.URL.Query().Get("u")
+	login := r.FormValue("u")
 	if login == "" {
 		return nil, &apiError{
 			Code:    errMissingParam,
@@ -61,7 +61,7 @@ func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("look up user: %w", err)
 	}
-	if !checkCredentials(u.SubsonicPassword, r.URL.Query()) {
+	if !checkCredentials(u.SubsonicPassword, r.Form) {
 		return nil, &apiError{
 			Code:    errWrongCredentials,
 			Message: wrongCredentialsMsg,

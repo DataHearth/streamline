@@ -49,6 +49,22 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 		return client.Book.Query().Where(book.HardcoverIDEQ(hc)).OnlyX(ctx)
 	}
 
+	It("leaves a title shared with another author under the first author", func() {
+		first := seed()
+		second, err := store.CreateAuthor(ctx, CreateAuthorParams{
+			HardcoverID: 11, Name: "Co-author", Monitored: true,
+			MonitorPolicy: "all", WantKinds: "ebook",
+			Books: []BookSeed{
+				{HardcoverID: 1, Title: "Elantris", EbookMonitored: true},
+				{HardcoverID: 4, Title: "Solo", EbookMonitored: true},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(second.Edges.Books).To(HaveLen(1))
+		Expect(second.Edges.Books[0].HardcoverID).To(Equal(uint32(4)))
+		Expect(bookByHC(1).QueryAuthor().OnlyIDX(ctx)).To(Equal(first.ID))
+	})
+
 	It("seeds slot statuses from the flags each seed carries", func() {
 		a := seed()
 		Expect(a.Edges.Books).To(HaveLen(3))

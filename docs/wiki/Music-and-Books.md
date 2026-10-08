@@ -64,3 +64,5 @@ Users can request an artist (its whole discography), a single album, an author (
 - Adopting music or books does not trigger a media-server library refresh.
 - Multi-disc albums split into `CD1`, `CD2` folders are adopted as separate candidates.
 - OPDS covers need a web session, so readers show no thumbnails.
+- A book Hardcover credits to several authors (anthologies, co-written titles) is listed under whichever of them you added first.
+- Music and book quality profiles have no "make default" action yet: set a profile on each artist or author, or set `music_quality_default_profile` / `ebook_quality_default_profile` / `audiobook_quality_default_profile` in the config file.

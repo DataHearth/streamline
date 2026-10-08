@@ -48,6 +48,12 @@ func (h *Handler) Routes() http.Handler {
 
 	r := chi.NewRouter()
 	r.HandleFunc("/{endpoint}", func(w http.ResponseWriter, r *http.Request) {
+		// Clients such as DSub and Symfonium send the parameters as a POST
+		// form body; ParseForm merges that with the query into r.Form.
+		if err := r.ParseForm(); err != nil {
+			writeError(w, r, errGeneric, "Malformed request")
+			return
+		}
 		if _, err := h.authenticate(r); err != nil {
 			fail(w, r, err)
 			return

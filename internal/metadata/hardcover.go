@@ -388,12 +388,13 @@ query ($id: Int!) {
   }
 }`
 
-// contribution is null for primary authorship; translators, narrators and
-// illustrators carry their role there.
+// Hardcover stores primary authorship as the literal role "Author" (never
+// null, as its docs suggest); editors, translators, narrators and
+// "Contributor" (anthology pieces) carry their own role.
 const hcBibliographyQuery = `
 query ($id: Int!, $limit: Int!, $offset: Int!) {
   books(
-    where: {contributions: {author_id: {_eq: $id}, contribution: {_is_null: true}}}
+    where: {contributions: {author_id: {_eq: $id}, contribution: {_eq: "Author"}}}
     order_by: {release_date: asc_nulls_last}
     limit: $limit
     offset: $offset

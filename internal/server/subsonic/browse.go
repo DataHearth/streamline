@@ -66,7 +66,7 @@ func parseID(s string) (string, uint32, error) {
 }
 
 func idParam(r *http.Request, wantKind string) (uint32, error) {
-	raw := r.URL.Query().Get("id")
+	raw := r.FormValue("id")
 	if raw == "" {
 		return 0, &apiError{
 			Code:    errMissingParam,
@@ -93,7 +93,7 @@ func lookupErr(err error) error {
 }
 
 func intParam(r *http.Request, name string, def, lo, hi int) int {
-	n, err := strconv.Atoi(r.URL.Query().Get(name))
+	n, err := strconv.Atoi(r.FormValue(name))
 	if err != nil {
 		return def
 	}
@@ -346,7 +346,7 @@ func (h *Handler) getAlbumList2(w http.ResponseWriter, r *http.Request) error {
 		Limit(intParam(r, "size", defaultListSize, 1, maxListSize)).
 		Offset(intParam(r, "offset", 0, 0, 1<<30))
 
-	switch r.URL.Query().Get("type") {
+	switch r.FormValue("type") {
 	case "newest":
 		q.Order(album.ByCreateTime(sql.OrderDesc()), album.ByID(sql.OrderDesc()))
 	case "random":
@@ -365,7 +365,7 @@ func (h *Handler) getAlbumList2(w http.ResponseWriter, r *http.Request) error {
 
 func (h *Handler) search3(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	query := r.URL.Query().Get("query")
+	query := r.FormValue("query")
 	out := &search3{Artist: []artistID3{}, Album: []albumID3{}, Song: []child{}}
 
 	if n := intParam(r, "artistCount", defaultPageSize, 0, maxPageSize); n > 0 {

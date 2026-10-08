@@ -68,7 +68,7 @@ func write(w http.ResponseWriter, r *http.Request, resp response) {
 		err         error
 		contentType string
 	)
-	if r.URL.Query().Get("f") == "json" {
+	if r.FormValue("f") == "json" {
 		contentType = "application/json; charset=utf-8"
 		out, err = json.Marshal(map[string]response{"subsonic-response": resp})
 	} else {

@@ -64,6 +64,15 @@ func createBook(
 	authorID uint32,
 	b BookSeed,
 ) error {
+	// Hardcover credits an anthology to every contributor with the Author
+	// role, and a book has one author edge here, so the title stays under
+	// whichever author reached the library first.
+	// ponytail: single author edge; an author<->book many-to-many is the
+	// upgrade path if shared titles need to show under both.
+	taken, err := c.Book.Query().Where(book.HardcoverIDEQ(b.HardcoverID)).Exist(ctx)
+	if err != nil || taken {
+		return err
+	}
 	ebook, audiobook := book.EbookStatusSkipped, book.AudiobookStatusSkipped
 	if b.EbookMonitored {
 		ebook = book.EbookStatusWanted
