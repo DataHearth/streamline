@@ -285,6 +285,37 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		})
 	})
 
+	Describe("ListWantedAlbums", func() {
+		It(
+			"returns only monitored wanted albums under the cap with no live record",
+			func() {
+				a := seed()
+				nevermind, inUtero := a.Edges.Albums[0], a.Edges.Albums[1]
+				bleach := client.Album.Create().
+					SetMbid("rg-3").SetTitle("Bleach").SetArtistID(a.ID).SaveX(ctx)
+				client.Album.Create().
+					SetMbid("rg-4").SetTitle("Incesticide").SetArtistID(a.ID).
+					SetGrabFailures(3).ExecX(ctx)
+				client.Album.Create().
+					SetMbid("rg-5").SetTitle("Hormoaning").SetArtistID(a.ID).
+					SetMonitored(false).ExecX(ctx)
+				client.DownloadRecord.Create().
+					SetTitle("Nirvana - In Utero").
+					SetStatus(downloadrecord.StatusDownloading).
+					SetAlbumID(inUtero.ID).ExecX(ctx)
+				client.Album.UpdateOneID(bleach.ID).
+					SetStatus(album.StatusAvailable).ExecX(ctx)
+
+				got, err := store.ListWantedAlbums(ctx, 3)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveLen(1))
+				Expect(got[0].ID).To(Equal(nevermind.ID))
+				Expect(got[0].Edges.Artist).NotTo(BeNil())
+				Expect(got[0].Edges.Artist.Name).To(Equal("Nirvana"))
+			},
+		)
+	})
+
 	It("cascades the delete to albums and tracks", func() {
 		a := seed()
 		Expect(store.DeleteArtist(ctx, a.ID)).To(Succeed())

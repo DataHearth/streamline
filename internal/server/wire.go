@@ -323,7 +323,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	sched := scheduler.New(scheduler.WithStateHook(jobsstate.NewHook(dbClient)))
 
 	missingSearcher := rss.NewMissingSearcher(store, indexerSvc, dlManager)
-	feedScanner := rss.NewFeedScanner(store, indexerSvc, dlManager)
+	feedScanner := rss.NewFeedScanner(store, indexerSvc, dlManager, musicSvc)
 
 	reqSvc := request.NewService(
 		store,

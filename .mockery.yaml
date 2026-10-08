@@ -82,6 +82,7 @@ packages:
       ShowAdder: {}
   github.com/datahearth/streamline/internal/rss:
     interfaces:
+      AlbumGrabber: {}
       Downloader: {}
       EpisodeGrabber: {}
       FeedRunner: {}

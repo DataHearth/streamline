@@ -27,25 +27,29 @@ type FeedRunner interface {
 }
 
 // FeedScanner pulls each indexer's RSS forward-feed once per tick, matches
-// items against wanted movies by title+year, and grabs anything that passes
-// the quality filter. Movies that already have a file are matched too, and
+// items against wanted movies by title+year, wanted albums by artist+title
+// and wanted book slots by author+title, and grabs anything that passes the
+// quality filter. Movies that already have a file are matched too, and
 // grabbed as an upgrade when the release outscores what is on disk.
 // Opportunistic — bypasses the missing-search cooldown.
 type FeedScanner struct {
 	store    db.Store
 	indexers IndexerFeeder
 	grabber  Downloader
+	albums   AlbumGrabber
 }
 
 func NewFeedScanner(
 	store db.Store,
 	indexers IndexerFeeder,
 	grabber Downloader,
+	albums AlbumGrabber,
 ) *FeedScanner {
 	return &FeedScanner{
 		store:    store,
 		indexers: indexers,
 		grabber:  grabber,
+		albums:   albums,
 	}
 }
 
@@ -95,7 +99,11 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 		profiles: resolveProfiles(ctx, wanted, upgradable),
 		grabbed:  make(map[uint32]struct{}, len(wanted)+len(upgradable)),
 	}
-	var matched int
+	musicPass, err := s.newMusicPass(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	var matched, albumsMatched int
 	for _, idx := range indexers {
 		items, err := s.indexers.Feed(ctx, idx.Name)
 		if err != nil {
@@ -104,12 +112,14 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 			continue
 		}
 		matched += s.processItems(ctx, items, pass)
+		albumsMatched += s.processMusicItems(ctx, items, musicPass)
 	}
 
 	span.SetAttributes(
 		attribute.Int("rss.feed_scan.indexers", len(indexers)),
 		attribute.Int("rss.feed_scan.upgrade_candidates", len(upgradable)),
 		attribute.Int("rss.feed_scan.matched", matched),
+		attribute.Int("rss.feed_scan.albums_matched", albumsMatched),
 	)
 	slog.InfoContext(ctx, "feed-scan complete",
 		"indexers", len(indexers), "matched", matched)

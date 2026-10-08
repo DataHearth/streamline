@@ -8434,6 +8434,126 @@ func (_c *MockStore_IdentifyDownloadRecord_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// IncrementAlbumGrabFailures provides a mock function for the type MockStore
+func (_mock *MockStore) IncrementAlbumGrabFailures(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementAlbumGrabFailures")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_IncrementAlbumGrabFailures_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncrementAlbumGrabFailures'
+type MockStore_IncrementAlbumGrabFailures_Call struct {
+	*mock.Call
+}
+
+// IncrementAlbumGrabFailures is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) IncrementAlbumGrabFailures(ctx any, id any) *MockStore_IncrementAlbumGrabFailures_Call {
+	return &MockStore_IncrementAlbumGrabFailures_Call{Call: _e.mock.On("IncrementAlbumGrabFailures", ctx, id)}
+}
+
+func (_c *MockStore_IncrementAlbumGrabFailures_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_IncrementAlbumGrabFailures_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_IncrementAlbumGrabFailures_Call) Return(err error) *MockStore_IncrementAlbumGrabFailures_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_IncrementAlbumGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_IncrementAlbumGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IncrementBookSlotGrabFailures provides a mock function for the type MockStore
+func (_mock *MockStore) IncrementBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error {
+	ret := _mock.Called(ctx, id, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementBookSlotGrabFailures")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, kind)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_IncrementBookSlotGrabFailures_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncrementBookSlotGrabFailures'
+type MockStore_IncrementBookSlotGrabFailures_Call struct {
+	*mock.Call
+}
+
+// IncrementBookSlotGrabFailures is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - kind string
+func (_e *MockStore_Expecter) IncrementBookSlotGrabFailures(ctx any, id any, kind any) *MockStore_IncrementBookSlotGrabFailures_Call {
+	return &MockStore_IncrementBookSlotGrabFailures_Call{Call: _e.mock.On("IncrementBookSlotGrabFailures", ctx, id, kind)}
+}
+
+func (_c *MockStore_IncrementBookSlotGrabFailures_Call) Run(run func(ctx context.Context, id uint32, kind string)) *MockStore_IncrementBookSlotGrabFailures_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_IncrementBookSlotGrabFailures_Call) Return(err error) *MockStore_IncrementBookSlotGrabFailures_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_IncrementBookSlotGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string) error) *MockStore_IncrementBookSlotGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IncrementEpisodeGrabFailures provides a mock function for the type MockStore
 func (_mock *MockStore) IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)
@@ -9075,6 +9195,80 @@ func (_c *MockStore_ListArtists_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// ListArtistsStaleSince provides a mock function for the type MockStore
+func (_mock *MockStore) ListArtistsStaleSince(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Artist, error) {
+	ret := _mock.Called(ctx, cutoff, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArtistsStaleSince")
+	}
+
+	var r0 []*ent.Artist
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) ([]*ent.Artist, error)); ok {
+		return returnFunc(ctx, cutoff, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) []*ent.Artist); ok {
+		r0 = returnFunc(ctx, cutoff, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Artist)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, int) error); ok {
+		r1 = returnFunc(ctx, cutoff, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListArtistsStaleSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArtistsStaleSince'
+type MockStore_ListArtistsStaleSince_Call struct {
+	*mock.Call
+}
+
+// ListArtistsStaleSince is a helper method to define mock.On call
+//   - ctx context.Context
+//   - cutoff time.Time
+//   - limit int
+func (_e *MockStore_Expecter) ListArtistsStaleSince(ctx any, cutoff any, limit any) *MockStore_ListArtistsStaleSince_Call {
+	return &MockStore_ListArtistsStaleSince_Call{Call: _e.mock.On("ListArtistsStaleSince", ctx, cutoff, limit)}
+}
+
+func (_c *MockStore_ListArtistsStaleSince_Call) Run(run func(ctx context.Context, cutoff time.Time, limit int)) *MockStore_ListArtistsStaleSince_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListArtistsStaleSince_Call) Return(artists []*ent.Artist, err error) *MockStore_ListArtistsStaleSince_Call {
+	_c.Call.Return(artists, err)
+	return _c
+}
+
+func (_c *MockStore_ListArtistsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Artist, error)) *MockStore_ListArtistsStaleSince_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListAuthors provides a mock function for the type MockStore
 func (_mock *MockStore) ListAuthors(ctx context.Context, offset uint32, limit uint32) ([]*ent.Author, error) {
 	ret := _mock.Called(ctx, offset, limit)
@@ -9145,6 +9339,80 @@ func (_c *MockStore_ListAuthors_Call) Return(authors []*ent.Author, err error) *
 }
 
 func (_c *MockStore_ListAuthors_Call) RunAndReturn(run func(ctx context.Context, offset uint32, limit uint32) ([]*ent.Author, error)) *MockStore_ListAuthors_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListAuthorsStaleSince provides a mock function for the type MockStore
+func (_mock *MockStore) ListAuthorsStaleSince(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Author, error) {
+	ret := _mock.Called(ctx, cutoff, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAuthorsStaleSince")
+	}
+
+	var r0 []*ent.Author
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) ([]*ent.Author, error)); ok {
+		return returnFunc(ctx, cutoff, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) []*ent.Author); ok {
+		r0 = returnFunc(ctx, cutoff, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Author)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, int) error); ok {
+		r1 = returnFunc(ctx, cutoff, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListAuthorsStaleSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAuthorsStaleSince'
+type MockStore_ListAuthorsStaleSince_Call struct {
+	*mock.Call
+}
+
+// ListAuthorsStaleSince is a helper method to define mock.On call
+//   - ctx context.Context
+//   - cutoff time.Time
+//   - limit int
+func (_e *MockStore_Expecter) ListAuthorsStaleSince(ctx any, cutoff any, limit any) *MockStore_ListAuthorsStaleSince_Call {
+	return &MockStore_ListAuthorsStaleSince_Call{Call: _e.mock.On("ListAuthorsStaleSince", ctx, cutoff, limit)}
+}
+
+func (_c *MockStore_ListAuthorsStaleSince_Call) Run(run func(ctx context.Context, cutoff time.Time, limit int)) *MockStore_ListAuthorsStaleSince_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListAuthorsStaleSince_Call) Return(authors []*ent.Author, err error) *MockStore_ListAuthorsStaleSince_Call {
+	_c.Call.Return(authors, err)
+	return _c
+}
+
+func (_c *MockStore_ListAuthorsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time, limit int) ([]*ent.Author, error)) *MockStore_ListAuthorsStaleSince_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -9349,6 +9617,160 @@ func (_c *MockStore_ListDownloadingRecordsWithMovie_Call) Return(downloadRecords
 }
 
 func (_c *MockStore_ListDownloadingRecordsWithMovie_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.DownloadRecord, error)) *MockStore_ListDownloadingRecordsWithMovie_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListEligibleAlbumsForSync provides a mock function for the type MockStore
+func (_mock *MockStore) ListEligibleAlbumsForSync(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, maxGrabFailures, notSearchedSince)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListEligibleAlbumsForSync")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8, time.Time) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, maxGrabFailures, notSearchedSince)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8, time.Time) []*ent.Album); ok {
+		r0 = returnFunc(ctx, maxGrabFailures, notSearchedSince)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint8, time.Time) error); ok {
+		r1 = returnFunc(ctx, maxGrabFailures, notSearchedSince)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListEligibleAlbumsForSync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListEligibleAlbumsForSync'
+type MockStore_ListEligibleAlbumsForSync_Call struct {
+	*mock.Call
+}
+
+// ListEligibleAlbumsForSync is a helper method to define mock.On call
+//   - ctx context.Context
+//   - maxGrabFailures uint8
+//   - notSearchedSince time.Time
+func (_e *MockStore_Expecter) ListEligibleAlbumsForSync(ctx any, maxGrabFailures any, notSearchedSince any) *MockStore_ListEligibleAlbumsForSync_Call {
+	return &MockStore_ListEligibleAlbumsForSync_Call{Call: _e.mock.On("ListEligibleAlbumsForSync", ctx, maxGrabFailures, notSearchedSince)}
+}
+
+func (_c *MockStore_ListEligibleAlbumsForSync_Call) Run(run func(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time)) *MockStore_ListEligibleAlbumsForSync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint8
+		if args[1] != nil {
+			arg1 = args[1].(uint8)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListEligibleAlbumsForSync_Call) Return(albums []*ent.Album, err error) *MockStore_ListEligibleAlbumsForSync_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockStore_ListEligibleAlbumsForSync_Call) RunAndReturn(run func(ctx context.Context, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Album, error)) *MockStore_ListEligibleAlbumsForSync_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListEligibleBookSlotsForSync provides a mock function for the type MockStore
+func (_mock *MockStore) ListEligibleBookSlotsForSync(ctx context.Context, kind string, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Book, error) {
+	ret := _mock.Called(ctx, kind, maxGrabFailures, notSearchedSince)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListEligibleBookSlotsForSync")
+	}
+
+	var r0 []*ent.Book
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint8, time.Time) ([]*ent.Book, error)); ok {
+		return returnFunc(ctx, kind, maxGrabFailures, notSearchedSince)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint8, time.Time) []*ent.Book); ok {
+		r0 = returnFunc(ctx, kind, maxGrabFailures, notSearchedSince)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Book)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint8, time.Time) error); ok {
+		r1 = returnFunc(ctx, kind, maxGrabFailures, notSearchedSince)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListEligibleBookSlotsForSync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListEligibleBookSlotsForSync'
+type MockStore_ListEligibleBookSlotsForSync_Call struct {
+	*mock.Call
+}
+
+// ListEligibleBookSlotsForSync is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - maxGrabFailures uint8
+//   - notSearchedSince time.Time
+func (_e *MockStore_Expecter) ListEligibleBookSlotsForSync(ctx any, kind any, maxGrabFailures any, notSearchedSince any) *MockStore_ListEligibleBookSlotsForSync_Call {
+	return &MockStore_ListEligibleBookSlotsForSync_Call{Call: _e.mock.On("ListEligibleBookSlotsForSync", ctx, kind, maxGrabFailures, notSearchedSince)}
+}
+
+func (_c *MockStore_ListEligibleBookSlotsForSync_Call) Run(run func(ctx context.Context, kind string, maxGrabFailures uint8, notSearchedSince time.Time)) *MockStore_ListEligibleBookSlotsForSync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint8
+		if args[2] != nil {
+			arg2 = args[2].(uint8)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListEligibleBookSlotsForSync_Call) Return(books []*ent.Book, err error) *MockStore_ListEligibleBookSlotsForSync_Call {
+	_c.Call.Return(books, err)
+	return _c
+}
+
+func (_c *MockStore_ListEligibleBookSlotsForSync_Call) RunAndReturn(run func(ctx context.Context, kind string, maxGrabFailures uint8, notSearchedSince time.Time) ([]*ent.Book, error)) *MockStore_ListEligibleBookSlotsForSync_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -12201,6 +12623,74 @@ func (_c *MockStore_ListUsers_Call) RunAndReturn(run func(ctx context.Context, p
 	return _c
 }
 
+// ListWantedAlbums provides a mock function for the type MockStore
+func (_mock *MockStore) ListWantedAlbums(ctx context.Context, maxGrabFailures uint8) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, maxGrabFailures)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListWantedAlbums")
+	}
+
+	var r0 []*ent.Album
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, maxGrabFailures)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8) []*ent.Album); ok {
+		r0 = returnFunc(ctx, maxGrabFailures)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.Album)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint8) error); ok {
+		r1 = returnFunc(ctx, maxGrabFailures)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListWantedAlbums_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListWantedAlbums'
+type MockStore_ListWantedAlbums_Call struct {
+	*mock.Call
+}
+
+// ListWantedAlbums is a helper method to define mock.On call
+//   - ctx context.Context
+//   - maxGrabFailures uint8
+func (_e *MockStore_Expecter) ListWantedAlbums(ctx any, maxGrabFailures any) *MockStore_ListWantedAlbums_Call {
+	return &MockStore_ListWantedAlbums_Call{Call: _e.mock.On("ListWantedAlbums", ctx, maxGrabFailures)}
+}
+
+func (_c *MockStore_ListWantedAlbums_Call) Run(run func(ctx context.Context, maxGrabFailures uint8)) *MockStore_ListWantedAlbums_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint8
+		if args[1] != nil {
+			arg1 = args[1].(uint8)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListWantedAlbums_Call) Return(albums []*ent.Album, err error) *MockStore_ListWantedAlbums_Call {
+	_c.Call.Return(albums, err)
+	return _c
+}
+
+func (_c *MockStore_ListWantedAlbums_Call) RunAndReturn(run func(ctx context.Context, maxGrabFailures uint8) ([]*ent.Album, error)) *MockStore_ListWantedAlbums_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListWantedMovies provides a mock function for the type MockStore
 func (_mock *MockStore) ListWantedMovies(ctx context.Context) ([]*ent.Movie, error) {
 	ret := _mock.Called(ctx)
@@ -14098,6 +14588,126 @@ func (_c *MockStore_ReplaceCast_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// ResetAlbumGrabFailures provides a mock function for the type MockStore
+func (_mock *MockStore) ResetAlbumGrabFailures(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResetAlbumGrabFailures")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ResetAlbumGrabFailures_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetAlbumGrabFailures'
+type MockStore_ResetAlbumGrabFailures_Call struct {
+	*mock.Call
+}
+
+// ResetAlbumGrabFailures is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) ResetAlbumGrabFailures(ctx any, id any) *MockStore_ResetAlbumGrabFailures_Call {
+	return &MockStore_ResetAlbumGrabFailures_Call{Call: _e.mock.On("ResetAlbumGrabFailures", ctx, id)}
+}
+
+func (_c *MockStore_ResetAlbumGrabFailures_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_ResetAlbumGrabFailures_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ResetAlbumGrabFailures_Call) Return(err error) *MockStore_ResetAlbumGrabFailures_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ResetAlbumGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_ResetAlbumGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResetBookSlotGrabFailures provides a mock function for the type MockStore
+func (_mock *MockStore) ResetBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error {
+	ret := _mock.Called(ctx, id, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResetBookSlotGrabFailures")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, kind)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ResetBookSlotGrabFailures_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetBookSlotGrabFailures'
+type MockStore_ResetBookSlotGrabFailures_Call struct {
+	*mock.Call
+}
+
+// ResetBookSlotGrabFailures is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - kind string
+func (_e *MockStore_Expecter) ResetBookSlotGrabFailures(ctx any, id any, kind any) *MockStore_ResetBookSlotGrabFailures_Call {
+	return &MockStore_ResetBookSlotGrabFailures_Call{Call: _e.mock.On("ResetBookSlotGrabFailures", ctx, id, kind)}
+}
+
+func (_c *MockStore_ResetBookSlotGrabFailures_Call) Run(run func(ctx context.Context, id uint32, kind string)) *MockStore_ResetBookSlotGrabFailures_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ResetBookSlotGrabFailures_Call) Return(err error) *MockStore_ResetBookSlotGrabFailures_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ResetBookSlotGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string) error) *MockStore_ResetBookSlotGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetEpisodeGrabFailures provides a mock function for the type MockStore
 func (_mock *MockStore) ResetEpisodeGrabFailures(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)
@@ -14970,6 +15580,69 @@ func (_c *MockStore_SeasonEpisodeCounts_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// SetAlbumLastSearchAt provides a mock function for the type MockStore
+func (_mock *MockStore) SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error {
+	ret := _mock.Called(ctx, id, when)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumLastSearchAt")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, when)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetAlbumLastSearchAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumLastSearchAt'
+type MockStore_SetAlbumLastSearchAt_Call struct {
+	*mock.Call
+}
+
+// SetAlbumLastSearchAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - when time.Time
+func (_e *MockStore_Expecter) SetAlbumLastSearchAt(ctx any, id any, when any) *MockStore_SetAlbumLastSearchAt_Call {
+	return &MockStore_SetAlbumLastSearchAt_Call{Call: _e.mock.On("SetAlbumLastSearchAt", ctx, id, when)}
+}
+
+func (_c *MockStore_SetAlbumLastSearchAt_Call) Run(run func(ctx context.Context, id uint32, when time.Time)) *MockStore_SetAlbumLastSearchAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetAlbumLastSearchAt_Call) Return(err error) *MockStore_SetAlbumLastSearchAt_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetAlbumLastSearchAt_Call) RunAndReturn(run func(ctx context.Context, id uint32, when time.Time) error) *MockStore_SetAlbumLastSearchAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumMonitored provides a mock function for the type MockStore
 func (_mock *MockStore) SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error {
 	ret := _mock.Called(ctx, id, monitored)
@@ -15365,6 +16038,75 @@ func (_c *MockStore_SetBookSlot_Call) Return(err error) *MockStore_SetBookSlot_C
 }
 
 func (_c *MockStore_SetBookSlot_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string, monitored bool) error) *MockStore_SetBookSlot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetBookSlotLastSearchAt provides a mock function for the type MockStore
+func (_mock *MockStore) SetBookSlotLastSearchAt(ctx context.Context, id uint32, kind string, when time.Time) error {
+	ret := _mock.Called(ctx, id, kind, when)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetBookSlotLastSearchAt")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, kind, when)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetBookSlotLastSearchAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetBookSlotLastSearchAt'
+type MockStore_SetBookSlotLastSearchAt_Call struct {
+	*mock.Call
+}
+
+// SetBookSlotLastSearchAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - kind string
+//   - when time.Time
+func (_e *MockStore_Expecter) SetBookSlotLastSearchAt(ctx any, id any, kind any, when any) *MockStore_SetBookSlotLastSearchAt_Call {
+	return &MockStore_SetBookSlotLastSearchAt_Call{Call: _e.mock.On("SetBookSlotLastSearchAt", ctx, id, kind, when)}
+}
+
+func (_c *MockStore_SetBookSlotLastSearchAt_Call) Run(run func(ctx context.Context, id uint32, kind string, when time.Time)) *MockStore_SetBookSlotLastSearchAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetBookSlotLastSearchAt_Call) Return(err error) *MockStore_SetBookSlotLastSearchAt_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetBookSlotLastSearchAt_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string, when time.Time) error) *MockStore_SetBookSlotLastSearchAt_Call {
 	_c.Call.Return(run)
 	return _c
 }

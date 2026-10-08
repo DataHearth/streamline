@@ -146,7 +146,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 	)
 
 	newScanner := func() {
-		scanner = NewFeedScanner(store, feeder, grabber)
+		scanner = NewFeedScanner(store, feeder, grabber, nil)
 	}
 
 	noUpgrades := func() {
@@ -167,6 +167,8 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		store = dbmocks.NewMockStore(GinkgoT())
 		feeder = mocks.NewMockIndexerFeeder(GinkgoT())
 		grabber = mocks.NewMockDownloader(GinkgoT())
+		store.EXPECT().ListWantedAlbums(mock.Anything, mock.Anything).
+			Return(nil, nil).Maybe()
 	})
 
 	It("noops when no indexers are configured", func() {

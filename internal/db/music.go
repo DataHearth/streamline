@@ -367,3 +367,26 @@ func (db *DB) ListArtistsStaleSince(
 		Limit(limit).
 		All(ctx)
 }
+
+// ListWantedAlbums returns the monitored wanted albums under the grab-failure
+// cap that no live download record already covers, with their artist loaded.
+// The cooldown is not applied: the feed scanner already holds the release.
+func (db *DB) ListWantedAlbums(
+	ctx context.Context,
+	maxGrabFailures uint8,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.Monitored(true),
+			album.StatusEQ(album.StatusWanted),
+			album.GrabFailuresLT(maxGrabFailures),
+			album.Not(album.HasDownloadRecordsWith(
+				downloadrecord.StatusIn(
+					downloadrecord.StatusDownloading,
+					downloadrecord.StatusImporting,
+				),
+			)),
+		).
+		WithArtist().
+		All(ctx)
+}

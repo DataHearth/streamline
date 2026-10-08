@@ -66,6 +66,12 @@ type Store interface {
 		from []album.Status,
 		to album.Status,
 	) (bool, error)
+	// ListWantedAlbums returns monitored wanted albums under the grab-failure
+	// cap with no live download record, artist loaded.
+	ListWantedAlbums(
+		ctx context.Context,
+		maxGrabFailures uint8,
+	) ([]*ent.Album, error)
 	DeleteArtist(ctx context.Context, id uint32) error
 	// ListEligibleAlbumsForSync returns wanted, monitored albums under the
 	// failure cap and past cooldown with no in-flight record, least recently

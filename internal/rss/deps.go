@@ -103,3 +103,23 @@ type TVFeedStore interface {
 	EligibleEpisodeLister
 	ListUpgradeCandidateShows(ctx context.Context) ([]*ent.TVShow, error)
 }
+
+// AlbumGrabber is the subset of music.Service the feed scanner needs.
+type AlbumGrabber interface {
+	GrabAlbumRelease(
+		ctx context.Context,
+		albumID uint32,
+		result indexer.SearchResult,
+	) error
+}
+
+// MusicFeedStore is what the album pass needs from db.Store.
+type MusicFeedStore interface {
+	ListWantedAlbums(
+		ctx context.Context,
+		maxGrabFailures uint8,
+	) ([]*ent.Album, error)
+	IncrementAlbumGrabFailures(ctx context.Context, id uint32) error
+	ResetAlbumGrabFailures(ctx context.Context, id uint32) error
+	SetAlbumLastSearchAt(ctx context.Context, id uint32, when time.Time) error
+}
