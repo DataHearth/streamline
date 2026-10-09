@@ -741,6 +741,10 @@ func (s *Server) SearchBookNow(
 	queued, err := s.books.SearchNowBook(ctx, req.Id, derefOr(req.Params.Kind))
 	switch {
 	case err == nil:
+	case errors.Is(err, book.ErrInvalidSlotKind):
+		return SearchBookNow400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(invalidSlotKindMsg),
+		}, nil
 	case errors.Is(err, book.ErrBookNotFound):
 		return SearchBookNow404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),

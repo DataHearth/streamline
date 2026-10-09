@@ -57,16 +57,18 @@ var (
 	volumeRe = regexp.MustCompile(
 		`(?i)(?:\b(?:tome|volume|vol\.?|t|v)|#)[\s._]*0*(\d{1,3}(?:\.\d)?)\b`,
 	)
+	// The two-letter codes match upper case only: "It", "De Niro" and
+	// "Rock en Seine" are titles, not languages.
 	releaseLanguages = []struct {
 		re   *regexp.Regexp
 		code string
 	}{
-		{regexp.MustCompile(`(?i)\b(?:FRENCH|FR|VF)\b`), "fr"},
-		{regexp.MustCompile(`(?i)\b(?:ENGLISH|EN|ENG)\b`), "en"},
-		{regexp.MustCompile(`(?i)\b(?:SPANISH|ES|ESP)\b`), "es"},
-		{regexp.MustCompile(`(?i)\b(?:GERMAN|DE)\b`), "de"},
-		{regexp.MustCompile(`(?i)\b(?:ITALIAN|IT)\b`), "it"},
-		{regexp.MustCompile(`(?i)\b(?:JAPANESE|JP|JA)\b`), "ja"},
+		{regexp.MustCompile(`\b(?:(?i:FRENCH|VF)|FR)\b`), "fr"},
+		{regexp.MustCompile(`\b(?:(?i:ENGLISH|ENG)|EN)\b`), "en"},
+		{regexp.MustCompile(`\b(?:(?i:SPANISH|ESP)|ES)\b`), "es"},
+		{regexp.MustCompile(`\b(?:(?i:GERMAN)|DE)\b`), "de"},
+		{regexp.MustCompile(`\b(?:(?i:ITALIAN)|IT)\b`), "it"},
+		{regexp.MustCompile(`\b(?:(?i:JAPANESE|JP)|JA)\b`), "ja"},
 	}
 )
 

@@ -307,7 +307,7 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			},
 		)
 
-		It("fills a slot that has no edition and leaves one that has", func() {
+		It("fills a slot that has no edition and leaves one holding a file", func() {
 			seed := elantris(now)
 			seed.Editions = seed.Editions[:2]
 			b := create(seed)
@@ -319,6 +319,9 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			if b.Edges.Editions[1].ID == chosen {
 				Skip("fixture picked the same edition")
 			}
+			client.MediaFile.Create().
+				SetPath("/b/x.epub").SetSize(1).SetQuality("EPUB").SetFormat("epub").
+				SetBookID(b.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
 
 			err := store.ApplyBookMetadata(ctx, b.ID, BookMetadata{
 				Title: "Elantris", AuthorName: "Brandon Sanderson",
@@ -333,6 +336,30 @@ var _ = Describe("Book persistence", Label("integration", "db"), func() {
 			Expect(got.Edges.AudiobookEdition).NotTo(BeNil())
 			Expect(got.Edges.EbookEdition.ID).To(Equal(b.Edges.Editions[1].ID))
 		})
+
+		It(
+			"moves a slot without a file to the preferred language's edition",
+			func() {
+				seed := elantris(now)
+				seed.Editions = seed.Editions[:2]
+				seed.PreferredLanguage = "fr"
+				b := create(seed)
+				Expect(b.Edges.EbookEdition.Language).To(Equal("fr"))
+				Expect(store.SetBookPreferredLanguage(ctx, b.ID, "en")).To(Succeed())
+
+				err := store.ApplyBookMetadata(ctx, b.ID, BookMetadata{
+					Title: "Elantris", AuthorName: "Brandon Sanderson",
+					Editions:    elantrisEditions(),
+					Credits:     seed.Credits,
+					RefreshedAt: now,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				got, err := store.FindBookByID(ctx, b.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Edges.EbookEdition.Language).To(Equal("en"))
+			},
+		)
 
 		It("hydrates a stub, setting its kind", func() {
 			stub := create(BookSeed{

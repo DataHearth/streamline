@@ -216,6 +216,55 @@ func (db *DB) FindSeriesByHardcoverID(
 	return row, err
 }
 
+// HeldSeries is a library series with the lowest-position volume, whose poster
+// stands for the series.
+type HeldSeries struct {
+	Series        *ent.BookSeries
+	FirstVolumeID uint32
+}
+
+// FindSeriesByHardcoverIDs returns the library series among the Hardcover ids,
+// keyed by Hardcover id, each with its first volume, in two queries however
+// many ids there are.
+func (db *DB) FindSeriesByHardcoverIDs(
+	ctx context.Context,
+	ids []uint32,
+) (map[uint32]HeldSeries, error) {
+	rows, err := db.client.BookSeries.Query().
+		Where(bookseries.HardcoverIDIn(ids...)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uint32]HeldSeries, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	byRow := make(map[uint32]uint32, len(rows))
+	rowIDs := make([]uint32, 0, len(rows))
+	for _, r := range rows {
+		out[r.HardcoverID] = HeldSeries{Series: r}
+		byRow[r.ID] = r.HardcoverID
+		rowIDs = append(rowIDs, r.ID)
+	}
+	volumes, err := db.client.Book.Query().
+		Where(book.HasSeriesWith(bookseries.IDIn(rowIDs...))).
+		WithSeries().
+		Order(ent.Asc(book.FieldSeriesPosition), ent.Asc(book.FieldID)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range volumes {
+		held := out[byRow[v.Edges.Series.ID]]
+		if held.FirstVolumeID == 0 {
+			held.FirstVolumeID = v.ID
+			out[held.Series.HardcoverID] = held
+		}
+	}
+	return out, nil
+}
+
 // ListStaleSeries returns at most limit series never refreshed or last
 // refreshed before cutoff, oldest first.
 func (db *DB) ListStaleSeries(

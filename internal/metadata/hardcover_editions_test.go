@@ -98,7 +98,7 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 	})
 
 	It(
-		"marks the most popular winner in the earliest edition's language as original",
+		"marks every winner in the earliest edition's language as original",
 		func() {
 			earliest := raw(9, "fr", "Glenat", 1, 1)
 			got, lang := SelectEditions([]RawEdition{
@@ -113,11 +113,11 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 			for _, e := range got {
 				original[e.HardcoverID] = e.Original
 			}
-			// One original per format: the most popular French ebook and audiobook.
+			// Two publishers' French ebooks and the French audiobook are all original.
+			Expect(original[2]).To(BeTrue())
 			Expect(original[3]).To(BeTrue())
 			Expect(original[4]).To(BeTrue())
 			Expect(original[1]).To(BeFalse())
-			Expect(original[2]).To(BeFalse())
 		},
 	)
 

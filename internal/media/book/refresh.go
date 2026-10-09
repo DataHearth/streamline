@@ -187,9 +187,20 @@ func (s *Service) RefreshSeries(
 		freshRec = map[uint32]*metadata.BookRecord{}
 		jobs     []artJob
 	)
+	win := positionWinners(vols, byID)
+	heldAt := map[float64]bool{}
+	for _, v := range vols {
+		if _, ok := held[v.BookHardcoverID]; ok {
+			heldAt[v.Position] = true
+		}
+	}
 	for _, v := range vols {
 		rec := byID[v.BookHardcoverID]
 		if rec == nil || rec.Compilation {
+			continue
+		}
+		_, isHeld := held[v.BookHardcoverID]
+		if !isHeld && (!win[v.BookHardcoverID] || heldAt[v.Position]) {
 			continue
 		}
 		if lead == nil {
@@ -311,8 +322,11 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	span.SetAttributes(attribute.Int("refresh.candidate_count", total))
 
 	done, failed := 0, 0
+	var failures []error
+	defer func() { otelx.RecordSpanError(span, errors.Join(failures...)) }()
 	stop := func(err error) bool {
 		if errors.Is(err, metadata.ErrRateLimited) {
+			span.SetAttributes(attribute.Bool("refresh.rate_limited", true))
 			slog.WarnContext(ctx, "book refresh stopped: hardcover rate limited",
 				"refreshed", done, "error", err)
 			return true
@@ -328,6 +342,7 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 			return true
 		}
 		slog.WarnContext(ctx, "book refresh failed", "step", what, "error", err)
+		failures = append(failures, fmt.Errorf("%s: %w", what, err))
 		failed += n
 		return false
 	}

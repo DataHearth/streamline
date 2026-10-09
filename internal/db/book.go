@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -261,9 +262,10 @@ func createBookTx(
 }
 
 // settleSlots derives a hydrated book's titles from its editions and points
-// each slot at its edition. fill leaves a slot that already has an edition
-// alone, so a choice survives a refresh; a slot holding a file is never
-// touched. A requested slot whose format has no edition is unmonitored, the
+// each slot at its edition. A refresh fills an empty slot and moves a slot
+// holding no file to the picked edition when that one is in another language,
+// so a preferred-language edition that appears later is taken; a choice of
+// publisher within the language, and any slot holding a file, are left alone. A requested slot whose format has no edition is unmonitored, the
 // patch of a book with nothing to download in that format.
 func settleSlots(
 	ctx context.Context,
@@ -284,19 +286,47 @@ func settleSlots(
 		Where(book.IDEQ(row.ID)).
 		WithEbookEdition().
 		WithAudiobookEdition().
+		WithSeries().
 		Only(ctx)
 	if err != nil {
 		return err
 	}
+	moving := !requested && pointed.Edges.Series == nil
 	if ed, ok := pick.Slot(views, "ebook", row.PreferredLanguage); ok {
-		if pointed.Edges.EbookEdition == nil {
+		cur := pointed.Edges.EbookEdition
+		move, err := repoint(
+			ctx,
+			c,
+			row.ID,
+			mediafile.BookKindEbook,
+			cur,
+			ed,
+			moving,
+		)
+		if err != nil {
+			return err
+		}
+		if move {
 			u = u.SetEbookEditionID(ed.ID)
 		}
 	} else if requested && row.EbookMonitored {
 		u = u.SetEbookMonitored(false).SetEbookStatus(book.EbookStatusSkipped)
 	}
 	if ed, ok := pick.Slot(views, "audiobook", row.PreferredLanguage); ok {
-		if pointed.Edges.AudiobookEdition == nil {
+		cur := pointed.Edges.AudiobookEdition
+		move, err := repoint(
+			ctx,
+			c,
+			row.ID,
+			mediafile.BookKindAudiobook,
+			cur,
+			ed,
+			moving,
+		)
+		if err != nil {
+			return err
+		}
+		if move {
 			u = u.SetAudiobookEditionID(ed.ID)
 		}
 	} else if requested && row.AudiobookMonitored {
@@ -304,6 +334,34 @@ func settleSlots(
 			SetAudiobookStatus(book.AudiobookStatusSkipped)
 	}
 	return u.Exec(ctx)
+}
+
+// repoint reports whether a slot should move to the picked edition: it is
+// empty, or moving is set (a refresh of a standalone book) and the slot sits on
+// another language's edition while holding no file. A series volume follows
+// its series' edition choice instead.
+func repoint(
+	ctx context.Context,
+	c *ent.Client,
+	bookID uint32,
+	kind mediafile.BookKind,
+	cur *ent.BookEdition,
+	picked pick.Edition,
+	moving bool,
+) (bool, error) {
+	if cur == nil {
+		return true, nil
+	}
+	if !moving || cur.Language == picked.Language || cur.ID == picked.ID {
+		return false, nil
+	}
+	held, err := c.MediaFile.Query().
+		Where(
+			mediafile.HasBookWith(book.IDEQ(bookID)),
+			mediafile.BookKindEQ(kind),
+		).
+		Exist(ctx)
+	return !held, err
 }
 
 // CreateBook writes a standalone book with its editions, contributions and
@@ -770,7 +828,9 @@ func (db *DB) ListUpcomingBooks(
 			book.ReleaseDateGTE(from),
 			book.ReleaseDateLT(to),
 		).
-		WithContributions(func(cq *ent.BookContributionQuery) { cq.WithAuthor() }).
+		WithContributions(func(cq *ent.BookContributionQuery) {
+			cq.WithAuthor().Order(ent.Asc(bookcontribution.FieldOrder))
+		}).
 		Order(ent.Asc(book.FieldReleaseDate)).
 		All(ctx)
 }
@@ -942,6 +1002,40 @@ func (db *DB) ListHydrationStubs(
 		Order(ent.Asc(book.FieldID)).
 		Limit(limit).
 		All(ctx)
+}
+
+// ListPositionPeers returns the other books of each given book's series that
+// sit at the same position, hydrated or not, with their series loaded. Books
+// without a series or a position have none.
+func (db *DB) ListPositionPeers(
+	ctx context.Context,
+	books []*ent.Book,
+) ([]*ent.Book, error) {
+	held := make([]uint32, 0, len(books))
+	positions := map[uint32][]float64{}
+	for _, b := range books {
+		held = append(held, b.ID)
+		if b.Edges.Series != nil && b.SeriesPosition != nil {
+			id := b.Edges.Series.ID
+			positions[id] = append(positions[id], *b.SeriesPosition)
+		}
+	}
+	var out []*ent.Book
+	for seriesID, at := range positions {
+		rows, err := db.client.Book.Query().
+			Where(
+				book.HasSeriesWith(bookseries.ID(seriesID)),
+				book.SeriesPositionIn(at...),
+				book.IDNotIn(held...),
+			).
+			WithSeries().
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rows...)
+	}
+	return out, nil
 }
 
 // ListStaleStandaloneBooks returns at most limit hydrated standalone books last

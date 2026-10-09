@@ -10,6 +10,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -465,6 +466,31 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 				Expect(f.reloadSeries(s.ID).Edges.Volumes).To(BeEmpty())
 			},
 		)
+
+		It("keeps the most popular stub at a shared position", func() {
+			params := dbSeriesWithStubs()
+			pos := 2.0
+			params.Volumes = append(params.Volumes, db.BookSeed{
+				HardcoverID: 1003, Title: "One Piece #2", Kind: "manga",
+				PreferredLanguage: "fr", SeriesPosition: &pos,
+			})
+			s, _, err := f.store.CreateSeries(f.ctx, params)
+			Expect(err).NotTo(HaveOccurred())
+			lesser, better := volumeRec(1002), volumeRec(1003)
+			lesser.UsersCount, better.UsersCount = 1, 50
+			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002, 1003)).
+				Return([]*metadata.BookRecord{volumeRec(1001), lesser, better}, nil).
+				Once()
+
+			Expect(f.svc.RefreshStale(f.ctx)).To(Succeed())
+
+			vols := f.reloadSeries(s.ID).Edges.Volumes
+			hc := make([]uint32, 0, len(vols))
+			for _, v := range vols {
+				hc = append(hc, v.HardcoverID)
+			}
+			Expect(hc).To(ConsistOf(uint32(1001), uint32(1003)))
+		})
 
 		It("starts one worker however often it is asked", func() {
 			series()

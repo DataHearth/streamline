@@ -282,13 +282,20 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		It(
 			"drops a compilation and keeps the more popular book at a shared position",
 			func() {
-				skeleton(3)
+				sk := seriesRecord("One Piece", 3)
+				sk.Volumes = append(sk.Volumes,
+					metadata.SeriesVolumeRef{Position: 3, BookHardcoverID: 1004},
+					metadata.SeriesVolumeRef{Position: 2, BookHardcoverID: 1005},
+				)
+				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
 				c := volumeRec(1002)
 				c.Compilation = true
-				lesser, better := volumeRec(1003), volumeRec(1003)
+				lesser, better := volumeRec(1003), volumeRec(1004)
 				lesser.UsersCount, better.UsersCount = 1, 50
-				f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002, 1003)).
-					Return([]*metadata.BookRecord{volumeRec(1001), c, lesser}, nil).
+				f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002, 1005, 1003, 1004)).
+					Return([]*metadata.BookRecord{
+						volumeRec(1001), c, volumeRec(1005), lesser, better,
+					}, nil).
 					Once()
 
 				s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
@@ -298,15 +305,13 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 				for _, v := range s.Edges.Volumes {
 					hc = append(hc, v.HardcoverID)
 				}
-				Expect(hc).To(Equal([]uint32{1001, 1003}))
+				Expect(hc).To(ConsistOf(uint32(1001), uint32(1005), uint32(1004)))
 			},
 		)
 
-		It("keeps only the first listing of a volume at a position", func() {
+		It("keeps one listing of a volume listed twice at a position", func() {
 			sk := seriesRecord("One Piece", 2)
-			sk.Volumes = append(sk.Volumes, metadata.SeriesVolumeRef{
-				Position: 2, BookHardcoverID: 9999,
-			})
+			sk.Volumes = append(sk.Volumes, sk.Volumes[1])
 			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
 			f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002)).
 				Return([]*metadata.BookRecord{volumeRec(1001), volumeRec(1002)}, nil).

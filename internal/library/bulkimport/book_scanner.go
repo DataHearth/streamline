@@ -395,11 +395,7 @@ func (s *Service) classifyBookCandidate(
 		case id != 0:
 			return classifyResolvedBook(
 				id,
-				schema.ScannedBookCandidate{
-					BookHardcoverID: id,
-					Title:           info.Title,
-					Author:          info.Author,
-				},
+				schema.ScannedBookCandidate{BookHardcoverID: id},
 				indexed,
 			), errs, nil
 		}

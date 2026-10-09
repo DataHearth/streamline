@@ -117,23 +117,12 @@ func SelectEditions(
 		keep[e.HardcoverID] = true
 	}
 
-	originalByFormat := map[string]uint32{}
-	for _, e := range ranked {
-		if !keep[e.HardcoverID] {
-			continue
-		}
-		if originalLanguage != "" && e.Language == originalLanguage {
-			if _, taken := originalByFormat[e.Format]; !taken {
-				originalByFormat[e.Format] = e.HardcoverID
-			}
-		}
-	}
 	for _, e := range ranked {
 		if !keep[e.HardcoverID] {
 			continue
 		}
 		rec := e.EditionRecord
-		rec.Original = originalByFormat[rec.Format] == rec.HardcoverID
+		rec.Original = originalLanguage != "" && rec.Language == originalLanguage
 		editions = append(editions, rec)
 	}
 	return editions, originalLanguage

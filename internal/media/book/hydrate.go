@@ -50,17 +50,35 @@ func (s *Service) HydrateSeriesInBackground(ctx context.Context) {
 	}
 	bg := context.WithoutCancel(ctx)
 	go func() {
-		defer s.hydrating.Store(false)
+		running := true
+		defer func() {
+			if running {
+				s.hydrating.Store(false)
+			}
+		}()
 		defer observability.RecoverPanic(bg, "book.hydrate_series", nil)
-		s.hydrateAll(bg)
+		for s.hydrateAll(bg) {
+			s.hydrating.Store(false)
+			running = false
+			// A series added between the last empty listing and the flag
+			// clearing found the flag set and started no worker of its own.
+			left, err := s.db.ListHydrationStubs(bg, 1)
+			if err != nil || len(left) == 0 ||
+				!s.hydrating.CompareAndSwap(false, true) {
+				return
+			}
+			running = true
+		}
 	}()
 }
 
-func (s *Service) hydrateAll(ctx context.Context) {
+// hydrateAll drains the stubs and reports whether it ended because none were
+// left, as opposed to a failure, a rate limit or a low budget.
+func (s *Service) hydrateAll(ctx context.Context) bool {
 	ctx, span := tracer.Start(ctx, "book.hydrate_series")
 	defer span.End()
 
-	total := 0
+	total, drained := 0, false
 	for !s.budgetLow() {
 		stubs, err := s.db.ListHydrationStubs(ctx, hydrateBatch)
 		if err != nil {
@@ -76,9 +94,10 @@ func (s *Service) hydrateAll(ctx context.Context) {
 				1,
 				metric.WithAttributes(attribute.String("outcome", "error")),
 			)
-			return
+			return false
 		}
 		if len(stubs) == 0 {
+			drained = true
 			break
 		}
 		done, err := s.hydrateStubs(ctx, stubs)
@@ -102,7 +121,7 @@ func (s *Service) hydrateAll(ctx context.Context) {
 				"error",
 				err,
 			)
-			return
+			return false
 		}
 		if done == 0 {
 			break
@@ -112,20 +131,51 @@ func (s *Service) hydrateAll(ctx context.Context) {
 	if total > 0 {
 		slog.InfoContext(ctx, "series hydration complete", "hydrated", total)
 	}
+	return drained
 }
 
 // hydrateStubs fills up to a batch of never-hydrated books from one Hardcover
-// request and reports how many it settled. A stub Hardcover no longer knows,
-// or that turns out to be a compilation, is deleted when it is a series volume
-// holding no file; any other is stamped so it is not picked again.
+// request and reports how many it settled. Stubs sharing a position with one
+// of the batch join it, so the volume at a position is chosen among all its
+// candidates at once. A stub Hardcover no longer knows, that turns out to be a
+// compilation, or that loses its position to a more popular book, is deleted
+// when it is a series volume holding no file; any other is stamped so it is not
+// picked again.
 func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, error) {
 	prov, err := s.provider()
 	if err != nil {
 		return 0, err
 	}
+	peers, err := s.db.ListPositionPeers(ctx, stubs)
+	if err != nil {
+		return 0, err
+	}
+	type slot struct {
+		series   uint32
+		position float64
+	}
+	stubs = slices.Clone(stubs)
+	taken := map[slot]bool{}
+	for _, p := range peers {
+		if p.LastRefreshedAt == nil {
+			stubs = append(stubs, p)
+		} else {
+			taken[slot{p.Edges.Series.ID, *p.SeriesPosition}] = true
+		}
+	}
 	ids := make([]uint32, 0, len(stubs))
+	candidates := map[uint32][]metadata.SeriesVolumeRef{}
 	for _, b := range stubs {
 		ids = append(ids, b.HardcoverID)
+		if b.Edges.Series != nil && b.SeriesPosition != nil {
+			candidates[b.Edges.Series.ID] = append(
+				candidates[b.Edges.Series.ID],
+				metadata.SeriesVolumeRef{
+					Position:        *b.SeriesPosition,
+					BookHardcoverID: b.HardcoverID,
+				},
+			)
+		}
 	}
 	recs, err := prov.GetBooksFresh(ctx, ids)
 	if err != nil {
@@ -134,6 +184,19 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 	byID := make(map[uint32]*metadata.BookRecord, len(recs))
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
+	}
+	won := map[uint32]bool{}
+	for _, refs := range candidates {
+		for id := range positionWinners(orderedVolumes(refs), byID) {
+			won[id] = true
+		}
+	}
+	losesPosition := func(b *ent.Book) bool {
+		if b.Edges.Series == nil || b.SeriesPosition == nil {
+			return false
+		}
+		return taken[slot{b.Edges.Series.ID, *b.SeriesPosition}] ||
+			!won[b.HardcoverID]
 	}
 
 	var (
@@ -145,7 +208,8 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 	for _, stub := range stubs {
 		rec := byID[stub.HardcoverID]
 		switch {
-		case rec == nil || (rec.Compilation && stub.Edges.Series != nil):
+		case rec == nil || (stub.Edges.Series != nil &&
+			(rec.Compilation || losesPosition(stub))):
 			if stub.Edges.Series != nil {
 				drop = append(drop, stub.ID)
 			} else if err := s.db.MarkBookRefreshed(ctx, stub.ID, now); err != nil {

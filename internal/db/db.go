@@ -145,6 +145,9 @@ type Store interface {
 	// ListHydrationStubs returns up to limit books never hydrated, oldest
 	// first.
 	ListHydrationStubs(ctx context.Context, limit int) ([]*ent.Book, error)
+	// ListPositionPeers returns the other books at the same series position as
+	// each given book, hydrated or not.
+	ListPositionPeers(ctx context.Context, books []*ent.Book) ([]*ent.Book, error)
 	ListStaleStandaloneBooks(
 		ctx context.Context,
 		cutoff time.Time,
@@ -174,6 +177,12 @@ type Store interface {
 		cutoff time.Time,
 		limit int,
 	) ([]*ent.BookSeries, error)
+	// FindSeriesByHardcoverIDs returns the library series among the ids, keyed
+	// by Hardcover id, each with its first volume.
+	FindSeriesByHardcoverIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]HeldSeries, error)
 	// FirstVolumeID is the lowest-position volume of a series, 0 when it has
 	// none.
 	FirstVolumeID(ctx context.Context, seriesID uint32) (uint32, error)

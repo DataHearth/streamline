@@ -105,6 +105,10 @@ var _ = Describe("ParseBookRelease", Label("unit", "library"), func() {
 		Entry("german", "Saga GERMAN EPUB", "de"),
 		Entry("dotted", "Saga.Japanese.CBZ", "ja"),
 		Entry("none", "Saga EPUB", ""),
+		Entry("code in brackets", "Saga [FR] EPUB", "fr"),
+		Entry("title word It", "Stephen King - It (2017) EPUB", ""),
+		Entry("title word De", "Robert De Niro - Biography EPUB", ""),
+		Entry("title word en", "Rock en Seine (2019) EPUB", ""),
 	)
 
 	It("reads a stated audiobook bit rate and no other", func() {

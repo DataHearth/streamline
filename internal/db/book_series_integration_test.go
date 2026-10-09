@@ -196,6 +196,27 @@ var _ = Describe("Book series persistence", Label("integration", "db"), func() {
 		)
 	})
 
+	Describe("FindSeriesByHardcoverIDs", func() {
+		It("returns each known series with its lowest volume", func() {
+			s := create(volumeSeed(2, 2, now), volumeSeed(1, 1, now))
+			empty := params()
+			empty.HardcoverID = 77
+			es, _, err := store.CreateSeries(ctx, empty)
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindSeriesByHardcoverIDs(
+				ctx, []uint32{s.HardcoverID, 77, 404},
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(2))
+			Expect(got[s.HardcoverID].Series.ID).To(Equal(s.ID))
+			Expect(got[s.HardcoverID].FirstVolumeID).To(Equal(volume(s, 1).ID))
+			Expect(got[77].Series.ID).To(Equal(es.ID))
+			Expect(got[77].FirstVolumeID).To(BeZero())
+		})
+	})
+
 	Describe("SetSeriesQualityProfile", func() {
 		It("writes the series and every volume", func() {
 			s := create(volumeSeed(1, 1, now), volumeSeed(2, 2, now))

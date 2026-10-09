@@ -156,8 +156,9 @@ func (s *Service) AddBook(ctx context.Context, p AddBookParams) (*ent.Book, erro
 	return row, nil
 }
 
-// orderedVolumes sorts a skeleton by position and keeps the first book at each
-// position, so a duplicate listing of a volume does not become two rows.
+// orderedVolumes sorts a skeleton by position, then book id, and drops a book
+// listed twice at one position. Every candidate for a position stays: which
+// one is the volume is decided once their records are known.
 func orderedVolumes(in []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
 	out := slices.Clone(in)
 	slices.SortStableFunc(out, func(a, b metadata.SeriesVolumeRef) int {
@@ -166,9 +167,41 @@ func orderedVolumes(in []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
 			cmp.Compare(a.BookHardcoverID, b.BookHardcoverID),
 		)
 	})
-	return slices.CompactFunc(out, func(a, b metadata.SeriesVolumeRef) bool {
-		return a.Position == b.Position
-	})
+	return slices.Compact(out)
+}
+
+// firstPerPosition keeps the lowest book id at each position of an ordered
+// skeleton, for callers that have no records to choose with.
+func firstPerPosition(vols []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
+	return slices.CompactFunc(
+		slices.Clone(vols),
+		func(a, b metadata.SeriesVolumeRef) bool { return a.Position == b.Position },
+	)
+}
+
+// positionWinners picks, at each position of an ordered skeleton, the
+// non-compilation record with the most readers; the lowest book id wins a
+// tie. A position whose candidates are all compilations or unknown has none.
+func positionWinners(
+	vols []metadata.SeriesVolumeRef,
+	byID map[uint32]*metadata.BookRecord,
+) map[uint32]bool {
+	best := map[float64]uint32{}
+	for _, v := range vols {
+		rec := byID[v.BookHardcoverID]
+		if rec == nil || rec.Compilation {
+			continue
+		}
+		if cur, ok := best[v.Position]; !ok ||
+			rec.UsersCount > byID[cur].UsersCount {
+			best[v.Position] = v.BookHardcoverID
+		}
+	}
+	out := make(map[uint32]bool, len(best))
+	for _, id := range best {
+		out[id] = true
+	}
+	return out
 }
 
 // seriesCredits lists a series' people: its author, the makers of its first
@@ -329,6 +362,9 @@ func (s *Service) AddSeries(
 	}
 	vols := orderedVolumes(sk.Volumes)
 	firstN := min(len(vols), hydrateBatch)
+	for firstN < len(vols) && vols[firstN].Position == vols[firstN-1].Position {
+		firstN++
+	}
 	var firstIDs []uint32
 	for _, v := range vols[:firstN] {
 		firstIDs = append(firstIDs, v.BookHardcoverID)
@@ -344,28 +380,16 @@ func (s *Service) AddSeries(
 
 	now := time.Now()
 	lang := config.Get().Library.BookLanguage
+	win := positionWinners(vols[:firstN], byID)
 	var (
 		seeds   []db.BookSeed
 		lead    *metadata.BookRecord
 		covers  = map[uint32]string{}
-		perPos  = map[float64]*metadata.BookRecord{}
-		stubsOf []metadata.SeriesVolumeRef
+		stubsOf = vols[firstN:]
 	)
-	for i, v := range vols {
-		if i >= firstN {
-			stubsOf = append(stubsOf, v)
-			continue
-		}
-		if rec := byID[v.BookHardcoverID]; rec != nil && !rec.Compilation {
-			if cur := perPos[v.Position]; cur == nil ||
-				rec.UsersCount > cur.UsersCount {
-				perPos[v.Position] = rec
-			}
-		}
-	}
 	for _, v := range vols[:firstN] {
 		rec := byID[v.BookHardcoverID]
-		if rec == nil || perPos[v.Position] != rec {
+		if rec == nil || !win[v.BookHardcoverID] {
 			continue
 		}
 		pos := v.Position

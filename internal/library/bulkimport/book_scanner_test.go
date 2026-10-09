@@ -180,6 +180,8 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 					elantris.Classification,
 				).To(Equal(entimportscanbook.ClassificationConfirmed))
 				Expect(elantris.BookHardcoverID).To(Equal(uint32(1)))
+				Expect(elantris.Candidates).To(HaveLen(1))
+				Expect(elantris.Candidates[0].Title).To(BeEmpty())
 			},
 		)
 

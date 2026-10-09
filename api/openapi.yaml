@@ -2203,6 +2203,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/BookSearchAcceptedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":

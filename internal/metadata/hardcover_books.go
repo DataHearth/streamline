@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"slices"
 	"strconv"
@@ -604,7 +605,17 @@ func (h *Hardcover) fetchBooks(
 	}
 	if len(noCredits) > 0 {
 		if err := h.fillCredits(ctx, records, noCredits); err != nil {
-			return nil, err
+			if ctx.Err() != nil || errors.Is(err, ErrRateLimited) {
+				return nil, err
+			}
+			slog.WarnContext(
+				ctx,
+				"hardcover contributors not read; keeping the books without credits",
+				"books",
+				len(noCredits),
+				"error",
+				err,
+			)
 		}
 	}
 	return records, nil

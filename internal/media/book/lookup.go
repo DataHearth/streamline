@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/artwork"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book/pick"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -162,16 +163,27 @@ func rememberCover(hardcoverID uint32, url string) {
 // markAdded fills the library join: whether a hit is already held, under which
 // id, and for a series the poster to show.
 func (s *Service) markAdded(ctx context.Context, hits []LookupHit) error {
-	var bookIDs []uint32
+	var bookIDs, seriesIDs []uint32
 	for _, h := range hits {
-		if h.Type == lookupBook {
+		switch h.Type {
+		case lookupBook:
 			bookIDs = append(bookIDs, h.HardcoverID)
+		case lookupSeries:
+			seriesIDs = append(seriesIDs, h.HardcoverID)
 		}
 	}
-	var held map[uint32]*ent.Book
+	var (
+		held   map[uint32]*ent.Book
+		series map[uint32]db.HeldSeries
+		err    error
+	)
 	if len(bookIDs) > 0 {
-		var err error
 		if held, err = s.db.FindBooksByHardcoverIDs(ctx, bookIDs); err != nil {
+			return err
+		}
+	}
+	if len(seriesIDs) > 0 {
+		if series, err = s.db.FindSeriesByHardcoverIDs(ctx, seriesIDs); err != nil {
 			return err
 		}
 	}
@@ -183,20 +195,15 @@ func (s *Service) markAdded(ctx context.Context, hits []LookupHit) error {
 				h.AlreadyAdded, h.LibraryID = true, b.ID
 			}
 		case lookupSeries:
-			row, err := s.db.FindSeriesByHardcoverID(ctx, h.HardcoverID)
-			if err != nil {
-				return err
-			}
-			if row == nil {
+			row, ok := series[h.HardcoverID]
+			if !ok {
 				continue
 			}
-			h.AlreadyAdded, h.LibraryID = true, row.ID
-			if row.Since != nil {
-				h.Year = *row.Since
+			h.AlreadyAdded, h.LibraryID = true, row.Series.ID
+			if row.Series.Since != nil {
+				h.Year = *row.Series.Since
 			}
-			if h.CoverID, err = s.db.FirstVolumeID(ctx, row.ID); err != nil {
-				return err
-			}
+			h.CoverID = row.FirstVolumeID
 		}
 	}
 	return nil
@@ -319,7 +326,7 @@ func (s *Service) seriesDetail(
 	if skeleton == nil {
 		return nil, ErrHardcoverNotFound
 	}
-	volumes := orderedVolumes(skeleton.Volumes)
+	volumes := firstPerPosition(orderedVolumes(skeleton.Volumes))
 	d := &LookupDetail{
 		HardcoverID: skeleton.HardcoverID,
 		Type:        lookupSeries,

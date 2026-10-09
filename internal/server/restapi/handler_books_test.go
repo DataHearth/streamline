@@ -1377,6 +1377,22 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			Expect(out.Queued).To(Equal(uint32(4)))
 		})
 
+		It("answers 400 for an unknown slot kind", func() {
+			app.books.EXPECT().
+				SearchNowBook(mock.Anything, uint32(7), "paper").
+				Return(uint32(0), book.ErrInvalidSlotKind).
+				Once()
+			Expect(
+				send(
+					http.MethodPost,
+					"/api/v1/books/7/search-now?kind=paper",
+					app.memberKey,
+					"",
+				).StatusCode,
+			).
+				To(Equal(http.StatusBadRequest))
+		})
+
 		It("answers 404", func() {
 			app.books.EXPECT().
 				SearchNowBook(mock.Anything, uint32(404), "").

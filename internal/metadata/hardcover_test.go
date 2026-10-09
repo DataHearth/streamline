@@ -444,6 +444,20 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			},
 		)
 
+		It("keeps the books without credits when the join query fails", func() {
+			bare := `{"id": 5, "title": "Bare", "cached_contributors": [{"author": {"name": "No Id"}, "contribution": null}]}`
+			hc.client.Transport = srv.transport(
+				wrap(bare),
+				`{"errors":[{"message":"field not found"}]}`,
+			)
+
+			recs, err := hc.GetBooks(ctx, []uint32{5})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(HaveLen(1))
+			Expect(recs[0].Credits).To(BeEmpty())
+		})
+
 		It("surfaces a Hardcover error", func() {
 			hc.client.Transport = srv.transport(`{"errors":[{"message":"boom"}]}`)
 			_, err := hc.GetBooks(ctx, []uint32{1})
