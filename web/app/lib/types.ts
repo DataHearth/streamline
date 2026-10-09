@@ -433,9 +433,13 @@ export type AddMovieRequest = {
 	quality_profile?: string;
 };
 
+export type DefaultMedia = "movie" | "series";
+
 export type QualityProfile = {
 	name: string;
 	is_default?: boolean;
+	// The media this profile is the default for.
+	default_for?: DefaultMedia[];
 };
 
 // Requests. UI label "Rejected" maps to status "denied".
@@ -961,9 +965,10 @@ export type QualityProfileFormatScore = {
 
 export type QualityProfileFull = {
 	name: string;
-	// True when quality_default_profile names this profile — the one a movie or
-	// series with an empty quality_profile resolves to.
+	// True when this profile is the default for at least one media.
 	is_default?: boolean;
+	// The media whose empty quality_profile resolves to this profile.
+	default_for?: DefaultMedia[];
 	preferred_resolution: Resolution;
 	min_resolution: Resolution;
 	upgrade_allowed: boolean;

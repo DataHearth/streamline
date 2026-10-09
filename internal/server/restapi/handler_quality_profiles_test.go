@@ -13,15 +13,16 @@ import (
 )
 
 // qualityProfileOverride seeds the config with the given profiles and points
-// quality_default_profile at the first one.
+// both default keys at the first one.
 func qualityProfileOverride(entries ...map[string]any) map[string]any {
 	def := ""
 	if len(entries) > 0 {
 		def, _ = entries[0]["name"].(string)
 	}
 	return map[string]any{
-		"quality_profiles":        entries,
-		"quality_default_profile": def,
+		"quality_profiles":               entries,
+		"movie_quality_default_profile":  def,
+		"series_quality_default_profile": def,
 	}
 }
 
@@ -73,7 +74,7 @@ var _ = Describe(
 				Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
 				Expect(qp.Name).To(Equal("uhd"))
 
-				got, ok := config.ResolveQualityProfile("uhd")
+				got, ok := config.ResolveQualityProfile(config.MediaMovie, "uhd")
 				Expect(ok).To(BeTrue())
 				Expect(got.PreferredResolution).To(Equal("2160p"))
 			})
@@ -97,7 +98,7 @@ var _ = Describe(
 					Expect(qp.AllowedCodecs).NotTo(BeNil())
 					Expect(*qp.AllowedCodecs).To(Equal([]string{"hevc", "av1"}))
 
-					got, _ := config.ResolveQualityProfile("uhd")
+					got, _ := config.ResolveQualityProfile(config.MediaMovie, "uhd")
 					Expect(got.AllowedCodecs).To(Equal([]string{"hevc", "av1"}))
 				},
 			)
@@ -144,7 +145,7 @@ var _ = Describe(
 					Expect(*qp.MinScore).To(Equal(5))
 					Expect(*qp.UpgradeUntilScore).To(Equal(20))
 
-					got, ok := config.ResolveQualityProfile("uhd")
+					got, ok := config.ResolveQualityProfile(config.MediaMovie, "uhd")
 					Expect(ok).To(BeTrue())
 					Expect(got.Formats).To(Equal(
 						[]config.QualityProfileFormatScore{
@@ -200,7 +201,7 @@ var _ = Describe(
 				Expect(*qp.MinScore).To(Equal(3))
 				Expect(*qp.UpgradeUntilScore).To(Equal(12))
 
-				got, _ := config.ResolveQualityProfile("hd")
+				got, _ := config.ResolveQualityProfile(config.MediaMovie, "hd")
 				Expect(got.Formats).To(Equal(
 					[]config.QualityProfileFormatScore{{Name: "hdr", Score: 15}},
 				))
@@ -223,7 +224,7 @@ var _ = Describe(
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				got, _ := config.ResolveQualityProfile("hd")
+				got, _ := config.ResolveQualityProfile(config.MediaMovie, "hd")
 				Expect(got.PreferredResolution).To(Equal("2160p"))
 				Expect(got.UpgradeAllowed).To(BeTrue())
 			})
@@ -258,7 +259,7 @@ var _ = Describe(
 				Expect(json.NewDecoder(resp.Body).Decode(&qp)).To(Succeed())
 				Expect(*qp.AllowedCodecs).To(Equal([]string{"hevc"}))
 
-				got, _ := config.ResolveQualityProfile("hd")
+				got, _ := config.ResolveQualityProfile(config.MediaMovie, "hd")
 				Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
 			})
 
@@ -281,7 +282,7 @@ var _ = Describe(
 					defer resp.Body.Close()
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-					got, _ := config.ResolveQualityProfile("hd")
+					got, _ := config.ResolveQualityProfile(config.MediaMovie, "hd")
 					Expect(got.AllowedCodecs).To(Equal([]string{"hevc"}))
 				},
 			)
@@ -306,10 +307,97 @@ var _ = Describe(
 					defer resp.Body.Close()
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-					got, _ := config.ResolveQualityProfile("hd")
+					got, _ := config.ResolveQualityProfile(config.MediaMovie, "hd")
 					Expect(got.AllowedCodecs).To(BeEmpty())
 				},
 			)
+		})
+
+		Describe("SetDefaultQualityProfile", func() {
+			BeforeEach(func() {
+				configtest.SetupFile(qualityProfileOverride(
+					map[string]any{
+						"name": "hd", "preferred_resolution": "1080p",
+						"min_resolution": "720p",
+					},
+					map[string]any{
+						"name": "uhd", "preferred_resolution": "2160p",
+						"min_resolution": "1080p",
+					}))
+			})
+
+			post := func(query string) *http.Response {
+				path := "/api/v1/quality-profiles/uhd/default"
+				if query != "" {
+					path += "?" + query
+				}
+				return app.do(app.req(http.MethodPost, path, "", nil))
+			}
+
+			It("sets both defaults when media is absent", func() {
+				resp := post("")
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				Expect(config.Get().MovieQualityDefaultProfile).To(Equal("uhd"))
+				Expect(config.Get().SeriesQualityDefaultProfile).To(Equal("uhd"))
+			})
+
+			It("sets only the movie default for media=movie", func() {
+				resp := post("media=movie")
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				Expect(config.Get().MovieQualityDefaultProfile).To(Equal("uhd"))
+				Expect(config.Get().SeriesQualityDefaultProfile).To(Equal("hd"))
+			})
+
+			It("sets only the series default for media=series", func() {
+				resp := post("media=series")
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				Expect(config.Get().MovieQualityDefaultProfile).To(Equal("hd"))
+				Expect(config.Get().SeriesQualityDefaultProfile).To(Equal("uhd"))
+			})
+
+			It("reports default_for and keeps is_default for either media", func() {
+				resp := post("media=series")
+				resp.Body.Close()
+
+				list := app.do(app.req(http.MethodGet,
+					"/api/v1/quality-profiles", "", nil))
+				defer list.Body.Close()
+				var items []QualityProfile
+				Expect(json.NewDecoder(list.Body).Decode(&items)).To(Succeed())
+				Expect(items).To(HaveLen(2))
+				Expect(items[0].Name).To(Equal("hd"))
+				Expect(items[0].DefaultFor).
+					To(Equal([]QualityDefaultMedia{QualityDefaultMediaMovie}))
+				Expect(items[0].IsDefault).To(BeTrue())
+				Expect(items[1].Name).To(Equal("uhd"))
+				Expect(items[1].DefaultFor).
+					To(Equal([]QualityDefaultMedia{QualityDefaultMediaSeries}))
+				Expect(items[1].IsDefault).To(BeTrue())
+			})
+
+			It(
+				"returns 409 deleting a profile that is only the series default",
+				func() {
+					resp := post("media=series")
+					resp.Body.Close()
+
+					del := app.do(app.req(http.MethodDelete,
+						"/api/v1/quality-profiles/uhd", "", nil))
+					defer del.Body.Close()
+					Expect(del.StatusCode).To(Equal(http.StatusConflict))
+				},
+			)
+
+			It("returns 404 for an unknown profile", func() {
+				req := app.req(http.MethodPost,
+					"/api/v1/quality-profiles/ghost/default", "", nil)
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			})
 		})
 
 		Describe("DeleteQualityProfile", func() {
@@ -330,7 +418,7 @@ var _ = Describe(
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-				_, ok := config.ResolveQualityProfile("uhd")
+				_, ok := config.ResolveQualityProfile(config.MediaMovie, "uhd")
 				Expect(ok).To(BeTrue()) // resolves to default now, not "uhd"
 			})
 

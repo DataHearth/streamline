@@ -57,11 +57,12 @@ type Config struct {
 	// reconnect, so it cannot live in a read-only config file.
 	TorrentListenPort uint16 `koanf:"torrent_listen_port" validate:"omitempty,port"`
 
-	DownloadClients       []DownloadClientEntry `koanf:"download_clients"        validate:"unique=Name,dive"`
-	Indexers              []IndexerEntry        `koanf:"indexers"                validate:"unique=Name,dive"`
-	QualityProfiles       []QualityProfileEntry `koanf:"quality_profiles"        validate:"unique=Name,dive"`
-	QualityDefaultProfile string                `koanf:"quality_default_profile"`
-	CustomFormats         []CustomFormatEntry   `koanf:"custom_formats"          validate:"unique=Name,dive"`
+	DownloadClients             []DownloadClientEntry `koanf:"download_clients"               validate:"unique=Name,dive"`
+	Indexers                    []IndexerEntry        `koanf:"indexers"                       validate:"unique=Name,dive"`
+	QualityProfiles             []QualityProfileEntry `koanf:"quality_profiles"               validate:"unique=Name,dive"`
+	MovieQualityDefaultProfile  string                `koanf:"movie_quality_default_profile"`
+	SeriesQualityDefaultProfile string                `koanf:"series_quality_default_profile"`
+	CustomFormats               []CustomFormatEntry   `koanf:"custom_formats"                 validate:"unique=Name,dive"`
 
 	MusicQualityProfiles       []MusicQualityProfileEntry `koanf:"music_quality_profiles"        validate:"unique=Name,dive"`
 	MusicQualityDefaultProfile string                     `koanf:"music_quality_default_profile"`
@@ -598,18 +599,19 @@ func (c *Config) checkInvariants() error {
 		seenOIDC[p.Name] = true
 	}
 	if len(c.QualityProfiles) > 0 {
-		found := false
-		for _, p := range c.QualityProfiles {
-			if p.Name == c.QualityDefaultProfile {
-				found = true
-				break
+		for _, d := range []struct{ key, name string }{
+			{"movie_quality_default_profile", c.MovieQualityDefaultProfile},
+			{"series_quality_default_profile", c.SeriesQualityDefaultProfile},
+		} {
+			if !slices.ContainsFunc(
+				c.QualityProfiles,
+				func(p QualityProfileEntry) bool { return p.Name == d.name },
+			) {
+				errs = append(errs, fmt.Errorf(
+					"%s %q names no profile in quality_profiles",
+					d.key, d.name,
+				))
 			}
-		}
-		if !found {
-			errs = append(errs, fmt.Errorf(
-				"quality_default_profile %q names no profile in quality_profiles",
-				c.QualityDefaultProfile,
-			))
 		}
 	}
 	builtin := 0
@@ -842,7 +844,8 @@ func defaults() map[string]any {
 				"upgrade_allowed":      true,
 			},
 		},
-		"quality_default_profile":             "default",
+		"movie_quality_default_profile":       "default",
+		"series_quality_default_profile":      "default",
 		"custom_formats":                      []any{},
 		"music_quality_profiles":              []any{},
 		"music_quality_default_profile":       "",
@@ -937,11 +940,18 @@ func newDefaultsKoanf() *koanf.Koanf {
 // a value set under the old name has to land on both replacements or the
 // operator's cadence silently changes for one library.
 //
+// quality_default_profile was one default for both media; a v1 file carrying
+// it seeds both new keys.
+//
 // auth.oidc_default_role was briefly here when it became auth.default_role and
 // is deliberately not: that rename is a clean break, so an old config's value
 // is ignored rather than carried over. The map stays general because the next
 // rename should not have to rebuild the mechanism.
 var renamedKeys = map[string][]string{
+	"quality_default_profile": {
+		"movie_quality_default_profile",
+		"series_quality_default_profile",
+	},
 	"schedules.rss_sync": {"schedules.movie_rss_sync"},
 	"schedules.missing_search": {
 		"schedules.movie_missing_search",
@@ -968,6 +978,10 @@ var renamedKeys = map[string][]string{
 // default", which covers both layer shapes this runs against: the merged koanf,
 // where the defaults are always present, and the file-only koanf, where a key
 // the operator did not write is simply absent.
+//
+// The cost is that a replacement set explicitly to its own default value is
+// indistinguishable from an unset one, so a legacy key present alongside it
+// overwrites it.
 func applyRenamedKeys(k *koanf.Koanf) (map[string][]string, error) {
 	d := defaults()
 	applied := map[string][]string{}

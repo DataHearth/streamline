@@ -15,13 +15,17 @@ import (
 )
 
 // qualityFor resolves a quality_profile name into a scored profile, falling
-// back to the configured default when the name is empty or unknown. It is
+// back to media's configured default when the name is empty or unknown. It is
 // resolved per item at search time, so a run picks up profile edits and
 // per-item overrides without a restart. With no profiles configured at all it
 // returns the zero value, whose empty resolution band rejects every release —
 // grabbing at an unknown quality bar is worse than grabbing nothing.
-func qualityFor(ctx context.Context, name string) quality.Profile {
-	p, ok := config.ResolveScoredProfile(name)
+func qualityFor(
+	ctx context.Context,
+	media config.Media,
+	name string,
+) quality.Profile {
+	p, ok := config.ResolveScoredProfile(media, name)
 	if !ok {
 		slog.WarnContext(ctx,
 			"no quality profile configured, rejecting every release",

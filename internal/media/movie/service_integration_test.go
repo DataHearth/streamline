@@ -52,7 +52,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 				"name": profileName, "preferred_resolution": "1080p",
 				"min_resolution": "720p",
 			}},
-			"quality_default_profile": profileName,
+			"movie_quality_default_profile":  profileName,
+			"series_quality_default_profile": profileName,
 		})
 	})
 
@@ -97,8 +98,9 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 
 		It("returns ErrNoQualityProfile when no profile exists", func() {
 			configtest.Setup(map[string]any{
-				"quality_profiles":        []any{},
-				"quality_default_profile": "",
+				"quality_profiles":               []any{},
+				"movie_quality_default_profile":  "",
+				"series_quality_default_profile": "",
 			})
 			_, _, err := svc.Add(ctx, 1, "")
 			Expect(err).To(MatchError(ErrNoQualityProfile))

@@ -107,7 +107,7 @@ var _ = Describe("Config", Label("unit", "config"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cfg.Library.NoMatchCooldown).To(Equal("6h"))
 				Expect(cfg.Library.MaxGrabFailures).To(Equal(uint8(3)))
-				Expect(cfg.QualityDefaultProfile).To(Equal("default"))
+				Expect(cfg.MovieQualityDefaultProfile).To(Equal("default"))
 				Expect(cfg.QualityProfiles).To(HaveLen(1))
 				p := cfg.QualityProfiles[0]
 				Expect(p.Name).To(Equal("default"))

@@ -250,7 +250,8 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 						},
 					},
 				},
-				"quality_default_profile": "HD",
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
 			})
 		})
 

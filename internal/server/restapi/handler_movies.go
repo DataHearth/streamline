@@ -8,6 +8,7 @@ import (
 
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
@@ -158,7 +159,7 @@ func (s *Server) GetMovie(
 		apiFiles := make([]MediaFile, 0, len(files))
 		for _, f := range files {
 			af := mediaFileToAPI(f)
-			af.FileScore = mediaFileScore(m.QualityProfile, f)
+			af.FileScore = mediaFileScore(config.MediaMovie, m.QualityProfile, f)
 			apiFiles = append(apiFiles, af)
 		}
 		result.MediaFiles = &apiFiles
@@ -317,7 +318,12 @@ func (s *Server) SearchMovie(
 	}
 
 	items := s.toSearchResults(ctx, results, m.ID, 0)
-	annotateResults(m.QualityProfile, items, singleReleaseEpisodes)
+	annotateResults(
+		config.MediaMovie,
+		m.QualityProfile,
+		items,
+		singleReleaseEpisodes,
+	)
 
 	return SearchMovie200JSONResponse(items), nil
 }

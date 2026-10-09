@@ -166,8 +166,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("Add rejects the show when no quality profile resolves", func() {
 		configtest.Setup(map[string]any{
-			"quality_profiles":        []any{},
-			"quality_default_profile": "",
+			"quality_profiles":               []any{},
+			"movie_quality_default_profile":  "",
+			"series_quality_default_profile": "",
 		})
 
 		_, err := svc.Add(ctx, 123, "")
@@ -176,8 +177,9 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("Update rejects a profile change when none resolves", func() {
 		configtest.Setup(map[string]any{
-			"quality_profiles":        []any{},
-			"quality_default_profile": "",
+			"quality_profiles":               []any{},
+			"movie_quality_default_profile":  "",
+			"series_quality_default_profile": "",
 		})
 		qp := "gone"
 

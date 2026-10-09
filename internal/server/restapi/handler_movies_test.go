@@ -407,7 +407,8 @@ var _ = Describe(
 							},
 						},
 					},
-					"quality_default_profile": "default",
+					"movie_quality_default_profile":  "default",
+					"series_quality_default_profile": "default",
 				})
 			})
 
@@ -647,7 +648,8 @@ var _ = Describe(
 							},
 						},
 					},
-					"quality_default_profile": "default",
+					"movie_quality_default_profile":  "default",
+					"series_quality_default_profile": "default",
 				})
 			})
 

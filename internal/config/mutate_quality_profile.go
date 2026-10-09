@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 )
 
 var (
@@ -93,31 +94,43 @@ func UpdateQualityProfile(
 	})
 }
 
-// SetDefaultQualityProfile points quality_default_profile at name. It is also
-// the only way to free the current default for deletion — DeleteQualityProfile
-// refuses the profile the key names.
-func SetDefaultQualityProfile(ctx context.Context, name string) error {
+// SetDefaultQualityProfile points the default for each of media at name. It is
+// also the only way to free a current default for deletion —
+// DeleteQualityProfile refuses a profile either default key names.
+func SetDefaultQualityProfile(
+	ctx context.Context,
+	name string,
+	media ...Media,
+) error {
 	return Update(ctx, func(c *Config) error {
-		for _, x := range c.QualityProfiles {
-			if x.Name == name {
-				c.QualityDefaultProfile = name
-				slog.InfoContext(ctx, "default quality profile set", "name", name)
-				return nil
+		if !slices.ContainsFunc(
+			c.QualityProfiles,
+			func(x QualityProfileEntry) bool { return x.Name == name },
+		) {
+			return ErrQualityProfileNotFound
+		}
+		for _, m := range media {
+			if m == MediaSeries {
+				c.SeriesQualityDefaultProfile = name
+			} else {
+				c.MovieQualityDefaultProfile = name
 			}
 		}
-		return ErrQualityProfileNotFound
+		slog.InfoContext(ctx, "default quality profile set",
+			"name", name, "media", media)
+		return nil
 	})
 }
 
 func DeleteQualityProfile(ctx context.Context, name string) error {
 	return Update(ctx, func(c *Config) error {
 		// Also what keeps the list from being emptied while
-		// quality_default_profile still names a profile: checkInvariants only
-		// checks that name against a non-empty list, so a config in that state
+		// a default key still names a profile: checkInvariants only
+		// checks those names against a non-empty list, so a config in that state
 		// validates, saves, loads — and ResolveQualityProfile then matches
 		// nothing at all. Relaxing this into "delete it and clear the default"
 		// needs that check to cover the empty list first.
-		if name == c.QualityDefaultProfile {
+		if len(c.DefaultFor(name)) > 0 {
 			return ErrQualityProfileInUseAsDefault
 		}
 		found := false

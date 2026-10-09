@@ -1105,7 +1105,7 @@ func episodeToAPI(e *ent.Episode, now time.Time, profile string) Episode {
 		out.Path = &f.Path
 		sz := f.Size
 		out.Size = &sz
-		out.FileScore = mediaFileScore(profile, f)
+		out.FileScore = mediaFileScore(config.MediaSeries, profile, f)
 		out.MediaInfo = mediaInfoToAPI(f)
 		out.TranscodedAt, out.SizeBefore = transcodeSavingOf(f)
 		if f.ReleaseGroup != "" {
@@ -1262,11 +1262,12 @@ func spanEpisodes(perSeason map[uint16]int) func(SearchResult) int {
 // since a whole-series pack costs every episode it holds and the release
 // itself only names its scope, never its file count.
 func annotateResults(
+	media config.Media,
 	profileName string,
 	items []SearchResult,
 	episodes func(SearchResult) int,
 ) {
-	p, ok := config.ResolveScoredProfile(profileName)
+	p, ok := config.ResolveScoredProfile(media, profileName)
 	if !ok {
 		return
 	}
@@ -1291,8 +1292,8 @@ func annotateResults(
 // mediaFileScore scores a file already on disk against profileName, for the
 // detail views only. A file outside the profile's resolution band scores 0 —
 // the same number the upgrade decision reads — rather than being hidden.
-func mediaFileScore(profileName string, f *ent.MediaFile) *int {
-	p, ok := config.ResolveScoredProfile(profileName)
+func mediaFileScore(media config.Media, profileName string, f *ent.MediaFile) *int {
+	p, ok := config.ResolveScoredProfile(media, profileName)
 	if !ok {
 		return nil
 	}

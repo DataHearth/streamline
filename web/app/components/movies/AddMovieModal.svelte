@@ -28,6 +28,7 @@
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import { serverDefaultLabel } from "@lib/quality-profiles";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
 
@@ -173,7 +174,7 @@
 	let results = $derived(searchQuery.data ?? []);
 	let qpItems = $derived(qpQuery.data ?? []);
 	let qpOptions = $derived<{ value: string; label: string }[]>([
-		{ value: "", label: canAdd ? i18n.quality_server_default() : i18n.quality_no_preference() },
+		{ value: "", label: canAdd ? serverDefaultLabel(qpItems, "movie") : i18n.quality_no_preference() },
 		...qpItems.map((p) => ({ value: p.name, label: p.name })),
 	]);
 	let qpSelected = $derived(qualityProfileName);

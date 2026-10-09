@@ -192,7 +192,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			src := filepath.Join(tmp, "dl")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
@@ -808,7 +809,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "ep-transcode")
@@ -1058,7 +1060,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			season, eps := buildShow()
 			src := filepath.Join(tmp, "pack-transcode")
@@ -1449,7 +1452,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					"series_path":   libDir,
 					"series_naming": "{title}/{title} S{season}E{episode}.{ext}",
 				},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 				"quality_profiles": []map[string]any{{
 					"name":                 "hd",
 					"preferred_resolution": "1080p",
@@ -1676,7 +1680,8 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 							"required": true,
 						}},
 					}},
-					"quality_default_profile": "hd",
+					"movie_quality_default_profile":  "hd",
+					"series_quality_default_profile": "hd",
 					"quality_profiles": []map[string]any{{
 						"name":                 "hd",
 						"preferred_resolution": "1080p",

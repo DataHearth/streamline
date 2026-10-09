@@ -281,7 +281,11 @@ func resolveProfiles(
 			if _, ok := profiles[m.QualityProfile]; ok {
 				continue
 			}
-			profiles[m.QualityProfile] = qualityFor(ctx, m.QualityProfile)
+			profiles[m.QualityProfile] = qualityFor(
+				ctx,
+				config.MediaMovie,
+				m.QualityProfile,
+			)
 		}
 	}
 	return profiles

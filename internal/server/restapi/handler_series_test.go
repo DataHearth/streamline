@@ -229,7 +229,8 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 						{"name": "x265", "score": 10},
 					},
 				}},
-				"quality_default_profile": "default",
+				"movie_quality_default_profile":  "default",
+				"series_quality_default_profile": "default",
 			})
 			ep := &ent.Episode{
 				ID:        7,
@@ -748,7 +749,8 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 						},
 					},
 				},
-				"quality_default_profile": "default",
+				"movie_quality_default_profile":  "default",
+				"series_quality_default_profile": "default",
 			})
 		})
 

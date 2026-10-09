@@ -87,7 +87,8 @@ var _ = Describe("Worker.Scan", Label("integration", "transcoding"), func() {
 					"transcode":            transcodePolicy("20M"),
 				},
 			},
-			"quality_default_profile": "hevc",
+			"movie_quality_default_profile":  "hevc",
+			"series_quality_default_profile": "hevc",
 		})
 
 		client, err = db.Open(ctx, ":memory:")

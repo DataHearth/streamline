@@ -204,15 +204,18 @@ func (s *Service) commitShow(
 			path, size, parsed = imported.Path, imported.Size, imported.Parsed
 		}
 		if _, err := s.store.CreateMediaFile(ctx, db.CreateMediaFileParams{
-			EpisodeID:      target.ID,
-			Path:           path,
-			Size:           size,
-			Quality:        parsed.Resolution,
-			Format:         parsed.Extension,
-			ReleaseGroup:   parsed.Group,
-			Parsed:         &parsed,
-			Source:         entmediafile.SourceWizard,
-			QueueTranscode: config.TranscodeEligible(show.QualityProfile),
+			EpisodeID:    target.ID,
+			Path:         path,
+			Size:         size,
+			Quality:      parsed.Resolution,
+			Format:       parsed.Extension,
+			ReleaseGroup: parsed.Group,
+			Parsed:       &parsed,
+			Source:       entmediafile.SourceWizard,
+			QueueTranscode: config.TranscodeEligible(
+				config.MediaSeries,
+				show.QualityProfile,
+			),
 		}); err != nil {
 			slog.WarnContext(ctx, "series adopt: create media file failed",
 				"episode.id", target.ID, "error", err)

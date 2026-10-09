@@ -328,13 +328,16 @@ func (s *Service) commitAttach(
 	// attaching this one where it lies would leave the library split across the
 	// source root and the configured one, which only an inode sweep can find.
 	params := db.CreateMediaFileParams{
-		MovieID:        f.ExistingMovieID,
-		Path:           f.SourcePath,
-		Size:           f.Size,
-		Quality:        f.ParsedQuality,
-		ReleaseGroup:   f.ParsedReleaseGroup,
-		Source:         entmediafile.SourceWizard,
-		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
+		MovieID:      f.ExistingMovieID,
+		Path:         f.SourcePath,
+		Size:         f.Size,
+		Quality:      f.ParsedQuality,
+		ReleaseGroup: f.ParsedReleaseGroup,
+		Source:       entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaMovie,
+			m.QualityProfile,
+		),
 	}
 	if scan.Mode == entimportscan.ModeRename {
 		imported, err := s.importSvc.ImportMovieWithMode(
@@ -367,13 +370,16 @@ func (s *Service) commitAdoptInPlace(
 		return commitFail("add movie", err, 0)
 	}
 	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
-		MovieID:        m.ID,
-		Path:           f.SourcePath,
-		Size:           f.Size,
-		Quality:        f.ParsedQuality,
-		ReleaseGroup:   f.ParsedReleaseGroup,
-		Source:         entmediafile.SourceWizard,
-		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
+		MovieID:      m.ID,
+		Path:         f.SourcePath,
+		Size:         f.Size,
+		Quality:      f.ParsedQuality,
+		ReleaseGroup: f.ParsedReleaseGroup,
+		Source:       entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaMovie,
+			m.QualityProfile,
+		),
 	}, entimportscanfile.OutcomeCreated, m.ID)
 }
 
@@ -397,13 +403,16 @@ func (s *Service) commitRename(
 		return commitFail("import movie", err, m.ID)
 	}
 	return s.linkAndMarkAvailable(ctx, db.CreateMediaFileParams{
-		MovieID:        m.ID,
-		Path:           imported.Path,
-		Size:           imported.Size,
-		Quality:        imported.Parsed.Resolution,
-		ReleaseGroup:   imported.Parsed.Group,
-		Parsed:         &imported.Parsed,
-		Source:         entmediafile.SourceWizard,
-		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
+		MovieID:      m.ID,
+		Path:         imported.Path,
+		Size:         imported.Size,
+		Quality:      imported.Parsed.Resolution,
+		ReleaseGroup: imported.Parsed.Group,
+		Parsed:       &imported.Parsed,
+		Source:       entmediafile.SourceWizard,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaMovie,
+			m.QualityProfile,
+		),
 	}, entimportscanfile.OutcomeCreated, m.ID)
 }

@@ -48,14 +48,15 @@ var _ = Describe("Resource entries", Label("unit", "config"), func() {
 					"min_resolution":       "720p",
 				},
 			},
-			"quality_default_profile": "hd",
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
 		})
 		Expect(c.MediaServer.Servers).To(HaveLen(1))
 		Expect(c.MediaServer.Servers[0].Name).To(Equal("home-plex"))
 		Expect(c.DownloadClients).To(HaveLen(1))
 		Expect(c.Indexers).To(HaveLen(1))
 		Expect(c.QualityProfiles).To(HaveLen(1))
-		Expect(c.QualityDefaultProfile).To(Equal("hd"))
+		Expect(c.MovieQualityDefaultProfile).To(Equal("hd"))
 	})
 })
 
@@ -76,15 +77,31 @@ var _ = Describe("FFmpeg config", Label("unit", "config"), func() {
 })
 
 var _ = Describe(
-	"quality_default_profile validation",
+	"quality default profile validation",
 	Label("unit", "config"),
 	func() {
-		It("rejects a default that names no existing profile", func() {
+		It("rejects a movie default that names no existing profile", func() {
 			c := configtest.Setup()
-			c.QualityDefaultProfile = "missing"
+			c.MovieQualityDefaultProfile = "missing"
 			err := c.Validate()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("quality_default_profile"))
+			Expect(err.Error()).To(ContainSubstring("movie_quality_default_profile"))
+			Expect(
+				err.Error(),
+			).NotTo(ContainSubstring("series_quality_default_profile"))
+		})
+
+		It("rejects a series default that names no existing profile", func() {
+			c := configtest.Setup()
+			c.SeriesQualityDefaultProfile = "missing"
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(
+				err.Error(),
+			).To(ContainSubstring("series_quality_default_profile"))
+			Expect(
+				err.Error(),
+			).NotTo(ContainSubstring("movie_quality_default_profile"))
 		})
 
 		It("accepts a default that exists", func() {
@@ -142,24 +159,25 @@ var _ = Describe("ResolveQualityProfile", Label("unit", "config"), func() {
 					"min_resolution":       "1080p",
 				},
 			},
-			"quality_default_profile": "default",
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
 		})
 	})
 
 	It("returns the named profile", func() {
-		p, ok := config.ResolveQualityProfile("uhd")
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "uhd")
 		Expect(ok).To(BeTrue())
 		Expect(p.PreferredResolution).To(Equal("2160p"))
 	})
 
 	It("falls back to default when empty", func() {
-		p, ok := config.ResolveQualityProfile("")
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "")
 		Expect(ok).To(BeTrue())
 		Expect(p.Name).To(Equal("default"))
 	})
 
 	It("falls back to default when unknown", func() {
-		p, ok := config.ResolveQualityProfile("nope")
+		p, ok := config.ResolveQualityProfile(config.MediaMovie, "nope")
 		Expect(ok).To(BeTrue())
 		Expect(p.Name).To(Equal("default"))
 	})
@@ -472,7 +490,7 @@ var _ = Describe("Custom formats", Label("unit", "config"), func() {
 					},
 				},
 			}
-			c.QualityDefaultProfile = "default"
+			c.MovieQualityDefaultProfile = "default"
 			err := c.Validate()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("nonexistent"))
@@ -535,7 +553,7 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 				},
 			})
 
-			p, ok := config.ResolveQualityProfile("default")
+			p, ok := config.ResolveQualityProfile(config.MediaMovie, "default")
 			Expect(ok).To(BeTrue())
 			Expect(p.Transcode).NotTo(BeNil())
 			Expect(p.Transcode.If.VideoCodecs).To(Equal([]string{"hevc"}))
@@ -551,7 +569,9 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 			configtest.Setup(map[string]any{
 				"transcoding": map[string]any{"enabled": true},
 			})
-			Expect(config.TranscodeEligible("default")).To(BeFalse())
+			Expect(
+				config.TranscodeEligible(config.MediaMovie, "default"),
+			).To(BeFalse())
 		})
 
 		It(
@@ -574,7 +594,9 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 						},
 					},
 				})
-				Expect(config.TranscodeEligible("default")).To(BeFalse())
+				Expect(
+					config.TranscodeEligible(config.MediaMovie, "default"),
+				).To(BeFalse())
 			},
 		)
 
@@ -599,7 +621,9 @@ var _ = Describe("Transcoding config", Label("unit", "config"), func() {
 						},
 					},
 				})
-				Expect(config.TranscodeEligible("default")).To(BeTrue())
+				Expect(
+					config.TranscodeEligible(config.MediaMovie, "default"),
+				).To(BeTrue())
 			},
 		)
 	})
@@ -754,14 +778,15 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 					},
 				},
 			},
-			"quality_default_profile": "default",
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
 		})
 	})
 
 	It(
 		"resolves min/max resolution, thresholds, and scored formats",
 		func() {
-			p, ok := config.ResolveScoredProfile("default")
+			p, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
 			Expect(ok).To(BeTrue())
 			Expect(p.MinResolution).To(Equal("720p"))
 			Expect(p.MaxResolution).To(Equal("1080p"))
@@ -780,7 +805,7 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 	)
 
 	It("falls back to the default profile for an unknown name", func() {
-		p, ok := config.ResolveScoredProfile("nope")
+		p, ok := config.ResolveScoredProfile(config.MediaMovie, "nope")
 		Expect(ok).To(BeTrue())
 		Expect(p.MaxResolution).To(Equal("1080p"))
 	})
@@ -788,17 +813,17 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 	It("reports ok=false when no profiles are configured", func() {
 		c := config.Get()
 		c.QualityProfiles = nil
-		c.QualityDefaultProfile = ""
-		_, ok := config.ResolveScoredProfile("anything")
+		c.MovieQualityDefaultProfile = ""
+		_, ok := config.ResolveScoredProfile(config.MediaMovie, "anything")
 		Expect(ok).To(BeFalse())
 	})
 
 	It("returns the same assembled profile on a repeat call", func() {
 		// The formats slice is built once per config generation; identical
 		// backing arrays are the observable evidence nothing recompiled.
-		a, ok := config.ResolveScoredProfile("default")
+		a, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
 		Expect(ok).To(BeTrue())
-		b, ok := config.ResolveScoredProfile("default")
+		b, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
 		Expect(ok).To(BeTrue())
 		Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
 	})
@@ -808,16 +833,16 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 		func() {
 			// Cache keys are the resolved entry's name, so an arbitrary stored
 			// profile string cannot grow the map — and must still resolve.
-			a, ok := config.ResolveScoredProfile("nope")
+			a, ok := config.ResolveScoredProfile(config.MediaMovie, "nope")
 			Expect(ok).To(BeTrue())
-			b, ok := config.ResolveScoredProfile("also-nope")
+			b, ok := config.ResolveScoredProfile(config.MediaMovie, "also-nope")
 			Expect(ok).To(BeTrue())
 			Expect(&b.Formats[0]).To(BeIdenticalTo(&a.Formats[0]))
 		},
 	)
 
 	It("rebuilds after a config commit so a hot edit takes effect", func() {
-		before, ok := config.ResolveScoredProfile("default")
+		before, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
 		Expect(ok).To(BeTrue())
 		Expect(before.Formats).To(HaveLen(2))
 
@@ -835,10 +860,11 @@ var _ = Describe("ResolveScoredProfile", Label("unit", "config"), func() {
 					},
 				},
 			},
-			"quality_default_profile": "default",
+			"movie_quality_default_profile":  "default",
+			"series_quality_default_profile": "default",
 		})
 
-		after, ok := config.ResolveScoredProfile("default")
+		after, ok := config.ResolveScoredProfile(config.MediaMovie, "default")
 		Expect(ok).To(BeTrue())
 		Expect(after.Formats).To(HaveLen(1))
 		Expect(after.MaxResolution).To(Equal("2160p"))

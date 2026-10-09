@@ -569,7 +569,11 @@ func resolveShowProfiles(
 			if _, ok := profiles[show.QualityProfile]; ok {
 				continue
 			}
-			profiles[show.QualityProfile] = qualityFor(ctx, show.QualityProfile)
+			profiles[show.QualityProfile] = qualityFor(
+				ctx,
+				config.MediaSeries,
+				show.QualityProfile,
+			)
 		}
 	}
 	return profiles

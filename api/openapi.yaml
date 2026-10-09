@@ -1857,11 +1857,16 @@ paths:
       operationId: setDefaultQualityProfile
       summary: Make this the default quality profile
       description: >-
-        Points `quality_default_profile` at this profile — the one a movie or
-        series with an empty `quality_profile` resolves to. Also the only way
-        to free the current default for deletion, which is refused with 409
-        while it holds the role.
+        Points `movie_quality_default_profile` and/or
+        `series_quality_default_profile` at this profile — the one a movie or
+        series with an empty `quality_profile` resolves to. `media` picks which
+        one; absent sets both, which is what a v1 client calling this before the
+        two defaults were split got. Also the only way to free a current default
+        for deletion, which is refused with 409 while the profile is the default
+        for either media.
       tags: [quality-profiles]
+      parameters:
+        - $ref: "#/components/parameters/QualityDefaultMedia"
       responses:
         "204":
           description: Default set
@@ -4564,7 +4569,8 @@ paths:
       summary: Approve a request (admin/member) — creates the library item
       description: |
         Creates the library item with the chosen quality profile. Omitting
-        quality_profile (or sending it empty) uses the server default.
+        quality_profile (or sending it empty) uses the server default for the
+        requested media.
         Answers 429 (`code: rate_limited`, with `Retry-After`) when approving
         an author or book request runs into Hardcover's rate limit or daily
         request budget; the request stays pending.
@@ -4714,6 +4720,15 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    QualityDefaultMedia:
+      name: media
+      in: query
+      required: false
+      description: >-
+        Which library the profile becomes the default for. Absent means both
+        movies and series.
+      schema:
+        $ref: "#/components/schemas/QualityDefaultMedia"
     BookSlotKind:
       name: kind
       in: query
@@ -6615,7 +6630,7 @@ components:
           x-go-type: uint32
         quality_profile:
           type: string
-          description: Name of the quality profile (empty resolves to the default).
+          description: Name of the quality profile (empty resolves to the movie default).
         media_files:
           type: array
           nullable: true
@@ -6814,14 +6829,14 @@ components:
           x-go-type: uint32
         quality_profile:
           type: string
-          description: Name of the quality profile (empty resolves to the default).
+          description: Name of the quality profile (empty resolves to the movie default).
 
     UpdateMovieRequest:
       type: object
       properties:
         quality_profile:
           type: string
-          description: Name of the quality profile (empty resolves to the default).
+          description: Name of the quality profile (empty resolves to the movie default).
         status:
           type: string
           enum: [wanted, downloading, importing, available, failed]
@@ -7131,7 +7146,7 @@ components:
             type: string
         quality_profile:
           type: string
-          description: Name of the quality profile (empty resolves to the default).
+          description: Name of the quality profile (empty resolves to the series default).
         total_seasons:
           type: integer
           description: |
@@ -7960,7 +7975,7 @@ components:
           x-go-type: uint32
         quality_profile:
           type: string
-          description: Name of the quality profile (empty resolves to the default).
+          description: Name of the quality profile (empty resolves to the series default).
         preset:
           type: string
           enum: [all, future, missing, existing, pilot, none]
@@ -8253,6 +8268,10 @@ components:
           type: string
           format: date-time
 
+    QualityDefaultMedia:
+      type: string
+      enum: [movie, series]
+
     QualityProfile:
       type: object
       required:
@@ -8262,6 +8281,7 @@ components:
           min_resolution,
           upgrade_allowed,
           is_default,
+          default_for,
         ]
       properties:
         name:
@@ -8269,8 +8289,16 @@ components:
         is_default:
           type: boolean
           description: |
-            True when quality_default_profile names this profile — the one a
-            movie or series with an empty quality_profile resolves to.
+            True when this profile is the default for at least one media —
+            kept for clients that predate the split into per-media defaults.
+            `default_for` says which.
+        default_for:
+          type: array
+          description: |
+            The media this profile is the default for: the one an item of that
+            media with an empty quality_profile resolves to.
+          items:
+            $ref: "#/components/schemas/QualityDefaultMedia"
         preferred_resolution:
           type: string
           enum: ["720p", "1080p", "2160p"]
@@ -11453,7 +11481,7 @@ components:
       properties:
         quality_profile:
           type: string
-          description: Profile name; empty or omitted uses the server default.
+          description: Profile name; empty or omitted uses the requested media's server default.
 
     LookupDetail:
       type: object

@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -17,7 +18,7 @@ var _ = Describe("qualityFor", Label("unit", "rss"), func() {
 
 	accepts := func(profile, title string) bool {
 		return !evaluateRelease(
-			qualityFor(ctx, profile),
+			qualityFor(ctx, config.MediaMovie, profile),
 			indexer.SearchResult{Title: title},
 			singleRelease,
 		).Rejected

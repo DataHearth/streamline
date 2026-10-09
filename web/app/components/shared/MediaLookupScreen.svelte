@@ -39,6 +39,7 @@
 	import LookupSheet from "./LookupSheet.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import Select from "@components/forms/Select.svelte";
+	import { serverDefaultLabel } from "@lib/quality-profiles";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
 
@@ -225,7 +226,7 @@
 
 	let results = $derived(searchQuery.data ?? []);
 	let qpOptions = $derived([
-		{ value: "", label: canAdd ? i18n.quality_server_default() : i18n.quality_no_preference() },
+		{ value: "", label: canAdd ? serverDefaultLabel(qpQuery.data, kind) : i18n.quality_no_preference() },
 		...(qpQuery.data ?? []).map((p) => ({ value: p.name, label: p.name })),
 	]);
 

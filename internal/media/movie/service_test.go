@@ -75,8 +75,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		Context("when no quality profile is configured", func() {
 			It("returns ErrNoQualityProfile", func() {
 				configtest.Setup(map[string]any{
-					"quality_profiles":        []any{},
-					"quality_default_profile": "",
+					"quality_profiles":               []any{},
+					"movie_quality_default_profile":  "",
+					"series_quality_default_profile": "",
 				})
 
 				_, _, err := svc.Add(ctx, 1, "")
@@ -459,8 +460,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 
 		It("rejects a profile change when none resolves", func() {
 			configtest.Setup(map[string]any{
-				"quality_profiles":        []any{},
-				"quality_default_profile": "",
+				"quality_profiles":               []any{},
+				"movie_quality_default_profile":  "",
+				"series_quality_default_profile": "",
 			})
 			qp := "gone"
 

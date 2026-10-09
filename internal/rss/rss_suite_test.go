@@ -57,7 +57,8 @@ func defaultRSSConfig() map[string]any {
 				"enabled":     true,
 			},
 		},
-		"quality_default_profile": "default",
+		"movie_quality_default_profile":  "default",
+		"series_quality_default_profile": "default",
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",

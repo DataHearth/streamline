@@ -16,13 +16,16 @@ func qualityProfileToAPI(e config.QualityProfileEntry) QualityProfile {
 		codecs = []string{}
 	}
 	formats := formatScoresToAPI(e.Formats)
-	var isDefault bool
+	defaultFor := []QualityDefaultMedia{}
 	if c := config.Get(); c != nil {
-		isDefault = c.QualityDefaultProfile == e.Name
+		for _, m := range c.DefaultFor(e.Name) {
+			defaultFor = append(defaultFor, QualityDefaultMedia(m))
+		}
 	}
 	out := QualityProfile{
-		Name:      e.Name,
-		IsDefault: isDefault,
+		Name:       e.Name,
+		IsDefault:  len(defaultFor) > 0,
+		DefaultFor: defaultFor,
 		PreferredResolution: QualityProfilePreferredResolution(
 			e.PreferredResolution,
 		),
@@ -284,13 +287,14 @@ func (s *Server) UpdateQualityProfile(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	e, _ := config.ResolveQualityProfile(request.Name)
+	e, _ := config.LookupQualityProfile(request.Name)
 	return UpdateQualityProfile200JSONResponse(qualityProfileToAPI(e)), nil
 }
 
-// SetDefaultQualityProfile points quality_default_profile at the named
-// profile. Also the way out of DeleteQualityProfile's 409: the current default
-// cannot be deleted while it holds the role.
+// SetDefaultQualityProfile points the movie and/or series default at the named
+// profile; an absent media sets both, as the single v1 default did. Also the
+// way out of DeleteQualityProfile's 409: a current default cannot be deleted
+// while it holds the role.
 func (s *Server) SetDefaultQualityProfile(
 	ctx context.Context,
 	request SetDefaultQualityProfileRequestObject,
@@ -300,7 +304,11 @@ func (s *Server) SetDefaultQualityProfile(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	switch err := config.SetDefaultQualityProfile(ctx, request.Name); {
+	media := []config.Media{config.MediaMovie, config.MediaSeries}
+	if request.Params.Media != nil {
+		media = []config.Media{config.Media(*request.Params.Media)}
+	}
+	switch err := config.SetDefaultQualityProfile(ctx, request.Name, media...); {
 	case errors.Is(err, config.ErrQualityProfileNotFound):
 		return SetDefaultQualityProfile404JSONResponse{
 			NotFoundJSONResponse: errNotFound("quality profile not found"),

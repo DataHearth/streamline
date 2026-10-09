@@ -902,7 +902,7 @@ var _ = Describe(
 				func() map[string]any { return map[string]any{} },
 				Succeed(),
 			),
-			// The environment supplies quality_default_profile, so the file's
+			// The environment supplies the default profile keys, so the file's
 			// own profile list answers to no default name once the write-back
 			// strips it. That is this install's entire pre-existing flaw, and
 			// it has nothing to do with the key the update breaks — nor can the
@@ -911,7 +911,10 @@ var _ = Describe(
 				"on a file the environment already props up",
 				func() map[string]any {
 					GinkgoT().Setenv(
-						"STREAMLINE_QUALITY_DEFAULT_PROFILE", "uhd-remux",
+						"STREAMLINE_MOVIE_QUALITY_DEFAULT_PROFILE", "uhd-remux",
+					)
+					GinkgoT().Setenv(
+						"STREAMLINE_SERIES_QUALITY_DEFAULT_PROFILE", "uhd-remux",
 					)
 					return map[string]any{
 						"quality_profiles": []map[string]any{{
@@ -987,12 +990,12 @@ var _ = Describe(
 				Expect(err).ToNot(HaveOccurred())
 
 				// The file never names a default, so the write-back's own
-				// quality_default_profile is the built-in "default" — the
+				// the default keys are the built-in "default" — the
 				// profile this call deletes.
 				err = DeleteQualityProfile(context.Background(), "default")
 				Expect(err).To(MatchError(ErrWriteBackUnloadable))
 				Expect(err.Error()).To(ContainSubstring(
-					`quality_default_profile "default" names no profile`,
+					`movie_quality_default_profile "default" names no profile`,
 				))
 
 				Expect(onDisk(path).Get("quality_profiles")).To(HaveLen(2))
@@ -1073,7 +1076,8 @@ var _ = Describe(
 					}},
 				},
 				ContainSubstring("server.trusted_proxies"),
-				ContainSubstring("quality_default_profile"),
+				ContainSubstring("movie_quality_default_profile"),
+				ContainSubstring("series_quality_default_profile"),
 			),
 			Entry(
 				"an invariant behind two struct tags",
@@ -1093,7 +1097,8 @@ var _ = Describe(
 				},
 				Equal("Config.Log.App.Level oneof"),
 				Equal("Config.Log.App.Format oneof"),
-				ContainSubstring("quality_default_profile"),
+				ContainSubstring("movie_quality_default_profile"),
+				ContainSubstring("series_quality_default_profile"),
 			),
 			// The key that would not decode is left at its zero value, so the
 			// tags report it a second time. Both readings are the same on
@@ -1111,7 +1116,8 @@ var _ = Describe(
 				},
 				ContainSubstring("'server.port' cannot parse value as 'uint16'"),
 				Equal("Config.Server.Port required"),
-				ContainSubstring("quality_default_profile"),
+				ContainSubstring("movie_quality_default_profile"),
+				ContainSubstring("series_quality_default_profile"),
 			),
 		)
 

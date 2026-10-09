@@ -205,9 +205,12 @@ func (s *Service) Add(
 	)
 	defer span.End()
 
-	// An empty name resolves to quality_default_profile at read time; reject
+	// An empty name resolves to the movie default profile at read time; reject
 	// only when the named profile (or default) resolves to nothing at all.
-	if _, ok := config.ResolveQualityProfile(qualityProfile); !ok {
+	if _, ok := config.ResolveQualityProfile(
+		config.MediaMovie,
+		qualityProfile,
+	); !ok {
 		return nil, "", otelx.RecordSpanError(span, ErrNoQualityProfile)
 	}
 
@@ -467,7 +470,10 @@ func (s *Service) Update(
 	defer span.End()
 
 	if p.QualityProfile != nil {
-		if _, ok := config.ResolveQualityProfile(*p.QualityProfile); !ok {
+		if _, ok := config.ResolveQualityProfile(
+			config.MediaMovie,
+			*p.QualityProfile,
+		); !ok {
 			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
 	}

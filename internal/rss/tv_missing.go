@@ -212,7 +212,7 @@ func (s *EpisodeMissingSearcher) processSeason(
 	if len(wanted) == 0 {
 		return searchTally{}
 	}
-	profile := qualityFor(ctx, show.QualityProfile)
+	profile := qualityFor(ctx, config.MediaSeries, show.QualityProfile)
 
 	// Prefer a season pack when the whole season (2+ episodes) is wanted.
 	if len(wanted) >= 2 &&

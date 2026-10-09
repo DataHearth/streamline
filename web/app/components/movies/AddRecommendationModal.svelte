@@ -18,6 +18,7 @@
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import { serverDefaultLabel } from "@lib/quality-profiles";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Props = {
@@ -43,7 +44,7 @@
 		{
 			value: "",
 			label: auth.canAddDirectly
-				? i18n.quality_server_default()
+				? serverDefaultLabel(qpQuery.data, "movie")
 				: i18n.quality_no_preference(),
 		},
 		...(qpQuery.data ?? []).map((p) => ({

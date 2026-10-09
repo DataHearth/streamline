@@ -326,7 +326,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `POST` | `/custom-formats/test` | Evaluate a draft condition set against a sample release | 🔒 Admin |
 | `POST` | `/media-servers/discover` | List libraries/sections for a draft (body carries the token) | 🔒 Admin |
 | `POST` | `/media-servers/{name}/discover` | Same, for a saved server, using its stored token | 🔒 Admin |
-| `POST` | `/quality-profiles/{name}/default` | Point `quality_default_profile` at this profile | 🔒 Admin |
+| `POST` | `/quality-profiles/{name}/default` | Make this the default profile. `?media=movie\|series` picks which; absent sets both | 🔒 Admin |
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 

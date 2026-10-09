@@ -130,7 +130,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | --- | --- | --- |
 | Indexers, download clients, media servers | ✅ Full CRUD | Settings → Connections |
 | Quality profiles, custom formats | ✅ Full CRUD | Settings → Library |
-| `quality_default_profile` | ✅ The ★ button on a profile row | Settings → Quality profiles |
+| `movie_quality_default_profile`, `series_quality_default_profile` | ✅ The film / TV buttons on a profile row | Settings → Quality profiles |
 | Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
 | `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
@@ -200,7 +200,9 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `data_dir` | string | `./data` | Runtime data (SQLite DB, posters). **Must already exist.** Pin it to an absolute path in containers |
 | `read_only` | bool | `false` | Reject all runtime config write-backs. For GitOps deploys |
 | `torrent_listen_port` | int | `0` | Overrides the builtin download client's `listen_port`. Top-level so `STREAMLINE_TORRENT_LISTEN_PORT` can reach it — see [torrent_listen_port](#torrent_listen_port) |
-| `quality_default_profile` | string | `default` | Profile used when an item names none |
+| `movie_quality_default_profile` | string | `default` | Profile used when a movie names none |
+| `series_quality_default_profile` | string | `default` | Profile used when a series names none |
+| `quality_default_profile` | string | unset | **Legacy (v1).** One default for both media. Still read: it fills whichever of the two keys above is not set itself, and is never written back |
 | `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `formats` (non-empty, from `flac-24` `flac` `mp3-320` `mp3-v0` `mp3-256` `mp3-192` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
 | `music_quality_default_profile` | string | empty | Music profile used when an item names none |
 | `ebook_quality_profiles` | list | `[]` | Ebook quality profiles: `name`, `formats` (non-empty, from `epub` `azw3` `mobi` `pdf` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
@@ -497,7 +499,7 @@ The built-in engine treats what a release names as untrusted:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `name` | ✅ | Referenced by `quality_default_profile` and per-title |
+| `name` | ✅ | Referenced by `movie_quality_default_profile`, `series_quality_default_profile` and per-title |
 | `preferred_resolution` | ✅ | `720p` \| `1080p` \| `2160p` — hard ceiling of the accepted band |
 | `min_resolution` | ✅ | Same set — hard floor |
 | `upgrade_allowed` | | Whether a file already on disk can be replaced by a higher-scoring release. See [Quality Profiles and Naming](Quality-Profiles-and-Naming) |

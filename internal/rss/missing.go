@@ -304,7 +304,10 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 	}
 
 	resultCount = len(results)
-	match, ok := scoreBest(qualityFor(ctx, m.QualityProfile), results)
+	match, ok := scoreBest(
+		qualityFor(ctx, config.MediaMovie, m.QualityProfile),
+		results,
+	)
 	if e := s.db.SetMovieLastSearchAt(ctx, m.ID, time.Now()); e != nil {
 		slog.WarnContext(ctx,
 			"missing-search: failed to update last_search_at",

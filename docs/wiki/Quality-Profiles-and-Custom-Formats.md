@@ -212,7 +212,8 @@ quality_profiles:
     min_score: 0                  # NEW: total below this -> release rejected
     upgrade_until_score: 500      # NEW: stop upgrading once the current file reaches this
 
-quality_default_profile: default
+movie_quality_default_profile: default
+series_quality_default_profile: default
 ```
 
 | Incoming release | Formats matched | Score | Outcome under `default` |

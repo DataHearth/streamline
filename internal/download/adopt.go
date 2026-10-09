@@ -155,11 +155,11 @@ func classifyMovieAdoption(
 		d.completed = true
 	case len(m.Edges.MediaFiles) > 0:
 		d.reason = "already have a file"
-	case resolutionOK(parsed.Resolution, profileMin(m.QualityProfile)):
+	case resolutionOK(parsed.Resolution, profileMin(config.MediaMovie, m.QualityProfile)):
 		d.autoImport = true
 	default:
 		d.reason = fmt.Sprintf("resolution %q below minimum %q",
-			parsed.Resolution, profileMin(m.QualityProfile))
+			parsed.Resolution, profileMin(config.MediaMovie, m.QualityProfile))
 	}
 	return d, true
 }
@@ -211,11 +211,11 @@ func classifyEpisodeAdoption(
 		d.completed = true
 	case episodeHasFile(ep):
 		d.reason = "already have a file"
-	case resolutionOK(parsed.Resolution, profileMin(show.QualityProfile)):
+	case resolutionOK(parsed.Resolution, profileMin(config.MediaSeries, show.QualityProfile)):
 		d.autoImport = true
 	default:
 		d.reason = fmt.Sprintf("resolution %q below minimum %q",
-			parsed.Resolution, profileMin(show.QualityProfile))
+			parsed.Resolution, profileMin(config.MediaSeries, show.QualityProfile))
 	}
 	return d, true
 }
@@ -351,8 +351,8 @@ func episodeHasFile(ep *ent.Episode) bool {
 	return len(ep.Edges.MediaFiles) > 0
 }
 
-func profileMin(name string) string {
-	p, _ := config.ResolveQualityProfile(name)
+func profileMin(media config.Media, name string) string {
+	p, _ := config.ResolveQualityProfile(media, name)
 	return p.MinResolution
 }
 

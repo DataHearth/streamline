@@ -538,7 +538,12 @@ func (s *Server) BrowseEpisodeReleases(
 		}, nil
 	}
 	items := s.toSearchResults(ctx, results, 0, show.ID)
-	annotateResults(show.QualityProfile, items, singleReleaseEpisodes)
+	annotateResults(
+		config.MediaSeries,
+		show.QualityProfile,
+		items,
+		singleReleaseEpisodes,
+	)
 	out := SearchResultsJSONResponse{Items: items}
 	if hiddenPacks > 0 {
 		out.HiddenPacks = &hiddenPacks
@@ -639,6 +644,7 @@ func (s *Server) BrowseSeasonReleases(
 	}
 	items := s.toSearchResults(ctx, results, 0, show.ID)
 	annotateResults(
+		config.MediaSeries,
 		show.QualityProfile,
 		items,
 		spanEpisodes(s.seasonLengths(ctx, show.ID)),
@@ -771,6 +777,7 @@ func (s *Server) BrowseSeriesReleases(
 	}
 	items := s.toSearchResults(ctx, results, 0, show.ID)
 	annotateResults(
+		config.MediaSeries,
 		show.QualityProfile,
 		items,
 		spanEpisodes(s.seasonLengths(ctx, show.ID)),

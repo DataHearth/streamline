@@ -260,7 +260,10 @@ func previewPack(
 		Keeps:    []PendingPreviewEpisode{},
 	}
 	anime := show.Type == enttvshow.TypeAnime
-	profile, hasProfile := config.ResolveScoredProfile(show.QualityProfile)
+	profile, hasProfile := config.ResolveScoredProfile(
+		config.MediaSeries,
+		show.QualityProfile,
+	)
 	seen := map[uint32]bool{}
 	for _, f := range files {
 		name := path.Base(f.Path)

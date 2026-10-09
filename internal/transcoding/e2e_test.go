@@ -104,7 +104,8 @@ var _ = Describe(
 						},
 					},
 				},
-				"quality_default_profile": "hevc",
+				"movie_quality_default_profile":  "hevc",
+				"series_quality_default_profile": "hevc",
 			})
 
 			var openErr error

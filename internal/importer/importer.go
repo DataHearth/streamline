@@ -294,6 +294,7 @@ func (w *Worker) probeSource(
 // its own reason only when nothing else objected — it needs no probe, so it
 // holds even with ffmpeg off.
 func (w *Worker) verdict(
+	media config.Media,
 	file string,
 	releaseTitle string,
 	info *ffmpeg.Info,
@@ -303,7 +304,7 @@ func (w *Worker) verdict(
 ) []schema.HoldReason {
 	cfg := config.Get()
 	var allowedCodecs []string
-	if profile, ok := config.ResolveQualityProfile(qualityProfile); ok {
+	if profile, ok := config.ResolveQualityProfile(media, qualityProfile); ok {
 		allowedCodecs = profile.AllowedCodecs
 	}
 	parsed := library.Parse(filepath.Base(file))
@@ -390,7 +391,13 @@ func (w *Worker) importMovieRecord(
 	}
 	if !rec.VerificationBypassed {
 		reasons := w.verdict(
-			src, rec.Title, probeInfo, probeErr, m.Runtime, m.QualityProfile,
+			config.MediaMovie,
+			src,
+			rec.Title,
+			probeInfo,
+			probeErr,
+			m.Runtime,
+			m.QualityProfile,
 		)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
@@ -414,9 +421,12 @@ func (w *Worker) importMovieRecord(
 	}
 
 	if err := w.db.RecordImportSuccess(ctx, db.RecordImportSuccessParams{
-		RecordID:       rec.ID,
-		MovieID:        m.ID,
-		QueueTranscode: config.TranscodeEligible(m.QualityProfile),
+		RecordID: rec.ID,
+		MovieID:  m.ID,
+		QueueTranscode: config.TranscodeEligible(
+			config.MediaMovie,
+			m.QualityProfile,
+		),
 		File: db.MediaFileRow{
 			Path:         imported.Path,
 			Size:         imported.Size,
@@ -607,7 +617,10 @@ func (w *Worker) importEpisodeRecord(
 		return w.importSingleEpisode(ctx, span, rec, show, season.Number, ep, libCfg)
 	}
 
-	profile, hasProfile := config.ResolveScoredProfile(show.QualityProfile)
+	profile, hasProfile := config.ResolveScoredProfile(
+		config.MediaSeries,
+		show.QualityProfile,
+	)
 	plan := make([]packFile, 0, len(files))
 	for _, f := range files {
 		pf := packFile{path: f}
@@ -654,7 +667,7 @@ func (w *Worker) importEpisodeRecord(
 				continue
 			}
 			reasons = append(reasons, w.verdict(
-				pf.path, rec.Title, pf.info, pf.probeErr,
+				config.MediaSeries, pf.path, rec.Title, pf.info, pf.probeErr,
 				show.Runtime, show.QualityProfile,
 			)...)
 		}
@@ -711,9 +724,12 @@ func (w *Worker) importEpisodeRecord(
 		if err := w.db.RecordEpisodeImportSuccess(
 			ctx,
 			db.RecordEpisodeImportSuccessParams{
-				RecordID:       rec.ID,
-				EpisodeID:      pf.episode.ID,
-				QueueTranscode: config.TranscodeEligible(show.QualityProfile),
+				RecordID:  rec.ID,
+				EpisodeID: pf.episode.ID,
+				QueueTranscode: config.TranscodeEligible(
+					config.MediaSeries,
+					show.QualityProfile,
+				),
 				File: db.MediaFileRow{
 					Path:         imported.Path,
 					Size:         imported.Size,
@@ -808,7 +824,13 @@ func (w *Worker) importSingleEpisode(
 	}
 	if !rec.VerificationBypassed {
 		reasons := w.verdict(
-			src, rec.Title, probeInfo, probeErr, show.Runtime, show.QualityProfile,
+			config.MediaSeries,
+			src,
+			rec.Title,
+			probeInfo,
+			probeErr,
+			show.Runtime,
+			show.QualityProfile,
 		)
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
@@ -841,9 +863,12 @@ func (w *Worker) importSingleEpisode(
 	if err := w.db.RecordEpisodeImportSuccess(
 		ctx,
 		db.RecordEpisodeImportSuccessParams{
-			RecordID:       rec.ID,
-			EpisodeID:      ep.ID,
-			QueueTranscode: config.TranscodeEligible(show.QualityProfile),
+			RecordID:  rec.ID,
+			EpisodeID: ep.ID,
+			QueueTranscode: config.TranscodeEligible(
+				config.MediaSeries,
+				show.QualityProfile,
+			),
 			File: db.MediaFileRow{
 				Path:         imported.Path,
 				Size:         imported.Size,

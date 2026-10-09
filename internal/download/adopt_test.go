@@ -60,7 +60,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 						"min_resolution": "1080p",
 					},
 				},
-				"quality_default_profile": "HD",
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
 			})
 		})
 
@@ -221,7 +222,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 						"min_resolution": "1080p",
 					},
 				},
-				"quality_default_profile": "HD",
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
 			})
 		})
 
@@ -629,7 +631,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 						"min_resolution": "1080p",
 					},
 				},
-				"quality_default_profile": "HD",
+				"movie_quality_default_profile":  "HD",
+				"series_quality_default_profile": "HD",
 				"download_clients": []map[string]any{{
 					"name": "embedded", "client_type": "builtin",
 					"download_dir": root, "enabled": true,

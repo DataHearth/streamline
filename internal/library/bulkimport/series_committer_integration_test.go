@@ -409,7 +409,8 @@ var _ = Describe(
 							},
 						},
 					}},
-					"quality_default_profile": "hd",
+					"movie_quality_default_profile":  "hd",
+					"series_quality_default_profile": "hd",
 				})
 				tmpDir := GinkgoT().TempDir()
 				client := dbtest.SetupTestDB(ctx)

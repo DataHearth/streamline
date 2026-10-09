@@ -318,7 +318,8 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			f := &ent.ImportScanFile{
 				ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
@@ -447,7 +448,8 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 				"name": "hd", "preferred_resolution": "1080p",
 				"min_resolution": "720p",
 			}},
-			"quality_default_profile": "hd",
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
 		})
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
@@ -530,7 +532,8 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			svc = NewService(
 				store,
@@ -589,7 +592,8 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				"name": "hd", "preferred_resolution": "1080p",
 				"min_resolution": "720p",
 			}},
-			"quality_default_profile": "hd",
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
 		})
 		svc = NewService(
 			store,
@@ -684,7 +688,8 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 						},
 					},
 				}},
-				"quality_default_profile": "hd",
+				"movie_quality_default_profile":  "hd",
+				"series_quality_default_profile": "hd",
 			})
 			svc = NewService(
 				store, meta, nil, library.NewImportService(),

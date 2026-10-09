@@ -1098,8 +1098,10 @@ func sweepTempFiles(dir string) error {
 // carries no transcode block.
 func policyFor(mf *ent.MediaFile) *config.TranscodePolicy {
 	var profile string
+	media := config.MediaSeries
 	switch {
 	case mf.Edges.Movie != nil:
+		media = config.MediaMovie
 		profile = mf.Edges.Movie.QualityProfile
 	case mf.Edges.Episode != nil &&
 		mf.Edges.Episode.Edges.Season != nil &&
@@ -1108,7 +1110,7 @@ func policyFor(mf *ent.MediaFile) *config.TranscodePolicy {
 	default:
 		return nil
 	}
-	entry, ok := config.ResolveQualityProfile(profile)
+	entry, ok := config.ResolveQualityProfile(media, profile)
 	if !ok {
 		return nil
 	}

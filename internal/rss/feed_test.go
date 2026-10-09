@@ -70,7 +70,8 @@ func upgradeConfig(names ...string) map[string]any {
 		return p
 	}
 	cfg := indexerConfig(names...)
-	cfg["quality_default_profile"] = upgradableProfile
+	cfg["movie_quality_default_profile"] = upgradableProfile
+	cfg["series_quality_default_profile"] = upgradableProfile
 	cfg["quality_profiles"] = []map[string]any{
 		profile(upgradableProfile, nil),
 		profile(cappedProfile, map[string]any{"upgrade_until_score": 100}),

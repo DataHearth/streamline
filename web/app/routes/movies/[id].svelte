@@ -22,6 +22,7 @@
 	import MovieKebabMenu from "@components/movies/MovieKebabMenu.svelte";
 	import ManualSearchModal from "@components/movies/ManualSearchModal.svelte";
 	import { existingFromMediaFile } from "@lib/release-facts";
+	import { defaultProfileName } from "@lib/quality-profiles";
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import RenameMoviePreviewModal from "@components/movies/RenameMoviePreviewModal.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
@@ -80,7 +81,7 @@
 	let movie = $derived(movieQuery.data);
 	let hasFiles = $derived((movie?.media_files?.length ?? 0) > 0);
 	let defaultQpName = $derived(
-		qpQuery.data?.find((p) => p.is_default)?.name ?? "",
+		defaultProfileName(qpQuery.data, "movie"),
 	);
 	let qpName = $derived(
 		movie?.quality_profile || defaultQpName || i18n.quality_server_default(),

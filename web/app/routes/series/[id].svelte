@@ -41,6 +41,7 @@
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
 	import ReidentifyDialog from "@components/shared/ReidentifyDialog.svelte";
 	import SeriesRenamePreviewModal from "@components/series/SeriesRenamePreviewModal.svelte";
+	import { defaultProfileName } from "@lib/quality-profiles";
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
 	import SeriesTypeModal from "@components/series/SeriesTypeModal.svelte";
 	import SeasonStrip from "@components/series/SeasonStrip.svelte";
@@ -480,7 +481,7 @@
 	}));
 	let qpName = $derived(
 		show?.quality_profile ||
-			qpQuery.data?.find((p) => p.is_default)?.name ||
+			defaultProfileName(qpQuery.data, "series") ||
 			i18n.quality_server_default(),
 	);
 </script>

@@ -7,12 +7,12 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Gauge, Pencil, Eye, Star } from "@lucide/svelte";
+	import { Plus, Trash2, Gauge, Pencil, Eye, Film, Tv } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { qualityProfile } from "@lib/schemas";
-	import type { QualityProfileFull } from "@lib/types";
+	import type { DefaultMedia, QualityProfileFull } from "@lib/types";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import QualityProfileForm, {
@@ -96,11 +96,16 @@
 
 	// Deleting the current default is a 409, so this is also the way to free a
 	// profile for deletion — not only a preference.
-	const makeDefault = createMutation<null, Error, string>(() => ({
-		mutationFn: (name) =>
-			api<null>(`/quality-profiles/${encodeURIComponent(name)}/default`, {
-				method: "POST",
-			}),
+	const makeDefault = createMutation<
+		null,
+		Error,
+		{ name: string; media: DefaultMedia }
+	>(() => ({
+		mutationFn: ({ name, media }) =>
+			api<null>(
+				`/quality-profiles/${encodeURIComponent(name)}/default?media=${media}`,
+				{ method: "POST" },
+			),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["quality-profiles"] });
 			toast.ok(i18n.quality_default_set());
@@ -266,11 +271,18 @@
 								<span class="truncate text-sm font-semibold text-fg">
 									{p.name}
 								</span>
-								{#if p.is_default}
+								{#if p.default_for?.includes("movie")}
 									<span
 										class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent"
 									>
-										{i18n.quality_default_badge()}
+										{i18n.quality_default_movies_badge()}
+									</span>
+								{/if}
+								{#if p.default_for?.includes("series")}
+									<span
+										class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent"
+									>
+										{i18n.quality_default_series_badge()}
 									</span>
 								{/if}
 								{#if p.upgrade_allowed}
@@ -319,16 +331,30 @@
 								<Eye size={16} aria-hidden="true" />
 							</button>
 						{:else}
-							{#if !p.is_default}
+							{#if !p.default_for?.includes("movie")}
 								<button
 									type="button"
 									disabled={makeDefault.isPending}
-									onclick={() => makeDefault.mutate(p.name)}
+									onclick={() =>
+										makeDefault.mutate({ name: p.name, media: "movie" })}
 									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-									aria-label={i18n.quality_make_default()}
-									title={i18n.quality_make_default()}
+									aria-label={i18n.quality_make_default_movies()}
+									title={i18n.quality_make_default_movies()}
 								>
-									<Star size={16} aria-hidden="true" />
+									<Film size={16} aria-hidden="true" />
+								</button>
+							{/if}
+							{#if !p.default_for?.includes("series")}
+								<button
+									type="button"
+									disabled={makeDefault.isPending}
+									onclick={() =>
+										makeDefault.mutate({ name: p.name, media: "series" })}
+									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+									aria-label={i18n.quality_make_default_series()}
+									title={i18n.quality_make_default_series()}
+								>
+									<Tv size={16} aria-hidden="true" />
 								</button>
 							{/if}
 							<button
@@ -341,8 +367,10 @@
 							</button>
 							<button
 								type="button"
-								disabled={p.is_default}
-								title={p.is_default ? i18n.quality_default_undeletable() : null}
+								disabled={(p.default_for?.length ?? 0) > 0}
+								title={(p.default_for?.length ?? 0) > 0
+									? i18n.quality_default_undeletable()
+									: null}
 								onclick={() => onDelete(p)}
 								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 								aria-label={i18n.quality_delete()}

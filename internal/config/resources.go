@@ -191,7 +191,7 @@ func FindCustomFormat(name string) (CustomFormatEntry, bool) {
 }
 
 // ResolveScoredProfile mirrors ResolveQualityProfile's fallback semantics
-// (name falls back to the configured default; ok is false only when no
+// (name falls back to media's configured default; ok is false only when no
 // profiles are configured at all) while assembling a quality.Profile with
 // its formats resolved and scored.
 // scoredProfiles memoises assembled profiles. Assembling one compiles every
@@ -210,13 +210,13 @@ var scoredProfiles struct {
 }
 
 // ResolveScoredProfile mirrors ResolveQualityProfile's fallback semantics
-// (name falls back to the configured default; ok is false only when no
+// (name falls back to media's configured default; ok is false only when no
 // profiles are configured at all) while assembling a quality.Profile with
 // its formats resolved and scored.
 //
 // The returned Profile is shared between callers and must not be mutated.
-func ResolveScoredProfile(name string) (quality.Profile, bool) {
-	e, ok := ResolveQualityProfile(name)
+func ResolveScoredProfile(media Media, name string) (quality.Profile, bool) {
+	e, ok := ResolveQualityProfile(media, name)
 	if !ok {
 		return quality.Profile{}, false
 	}
@@ -264,10 +264,49 @@ func buildScoredProfile(e QualityProfileEntry) quality.Profile {
 	return p
 }
 
+// Media names the library a quality profile is resolved for: movies and series
+// each have their own default.
+type Media string
+
+const (
+	MediaMovie  Media = "movie"
+	MediaSeries Media = "series"
+)
+
+// DefaultProfile is the quality profile name configured as media's default.
+func (c *Config) DefaultProfile(media Media) string {
+	if media == MediaSeries {
+		return c.SeriesQualityDefaultProfile
+	}
+	return c.MovieQualityDefaultProfile
+}
+
+// DefaultFor lists the media name is the default quality profile of.
+func (c *Config) DefaultFor(name string) []Media {
+	out := []Media{}
+	if c.MovieQualityDefaultProfile == name {
+		out = append(out, MediaMovie)
+	}
+	if c.SeriesQualityDefaultProfile == name {
+		out = append(out, MediaSeries)
+	}
+	return out
+}
+
+// LookupQualityProfile returns the profile named exactly name, with no
+// fallback to a default.
+func LookupQualityProfile(name string) (QualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return QualityProfileEntry{}, false
+	}
+	return findProfile(c.QualityProfiles, name)
+}
+
 // ResolveQualityProfile returns the profile named by name, falling back to
-// QualityDefaultProfile when name is empty or unknown. ok is false only when
-// no profiles are configured at all.
-func ResolveQualityProfile(name string) (QualityProfileEntry, bool) {
+// media's default when name is empty or unknown. ok is false only when no
+// profiles are configured at all.
+func ResolveQualityProfile(media Media, name string) (QualityProfileEntry, bool) {
 	c := Get()
 	if c == nil {
 		return QualityProfileEntry{}, false
@@ -275,18 +314,18 @@ func ResolveQualityProfile(name string) (QualityProfileEntry, bool) {
 	if p, ok := findProfile(c.QualityProfiles, name); ok {
 		return p, true
 	}
-	return findProfile(c.QualityProfiles, c.QualityDefaultProfile)
+	return findProfile(c.QualityProfiles, c.DefaultProfile(media))
 }
 
 // TranscodeEligible reports whether profile is subject to the background
 // transcode worker: the feature must be enabled globally, and the resolved
 // profile must carry a transcode policy.
-func TranscodeEligible(profile string) bool {
+func TranscodeEligible(media Media, profile string) bool {
 	c := Get()
 	if c == nil || !c.Transcoding.Enabled {
 		return false
 	}
-	p, ok := ResolveQualityProfile(profile)
+	p, ok := ResolveQualityProfile(media, profile)
 	return ok && p.Transcode != nil
 }
 
