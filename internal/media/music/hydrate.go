@@ -112,9 +112,9 @@ func (h *hydrator) add(artistID uint32, items []hydrateItem) bool {
 	return true
 }
 
-// pop takes the next album, one artist at a time in turn. With nothing left
-// it stops the worker under the same lock add checks, so an add can never be
-// stranded behind a worker that has just decided to exit.
+// pop takes the next album, one artist at a time in turn. It leaves running
+// set when the queue is empty: the worker still has to refill before it may
+// stop, and clearing the flag here would let an add start a second worker.
 func (h *hydrator) pop() (hydrateItem, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -134,8 +134,21 @@ func (h *hydrator) pop() (hydrateItem, bool) {
 		h.next++
 		return it, true
 	}
-	h.running = false
 	return hydrateItem{}, false
+}
+
+// stop clears running when nothing is queued, under the lock add checks, so an
+// add can never be stranded behind a worker that has just decided to exit.
+func (h *hydrator) stop() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, q := range h.queues {
+		if len(q) > 0 {
+			return false
+		}
+	}
+	h.running = false
+	return true
 }
 
 func (h *hydrator) done(albumID uint32) {
@@ -192,7 +205,7 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 	for {
 		it, ok := s.hydrate.pop()
 		if !ok {
-			if s.refillHydration(ctx, failed) {
+			if s.refillHydration(ctx, failed) || !s.hydrate.stop() {
 				continue
 			}
 			return

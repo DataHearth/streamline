@@ -113,9 +113,12 @@ func (s *Service) commitAlbum(
 		if err := s.musicAdder.HydrateAlbum(ctx, alb.ID); err != nil {
 			return commitAlbumFail(span, "hydrate album", err, alb.ID)
 		}
-		if alb, err = s.store.FindAlbumByID(ctx, alb.ID); err != nil {
-			return commitAlbumFail(span, "reload album", err, alb.ID)
+		albumID := alb.ID
+		reloaded, err := s.store.FindAlbumByID(ctx, albumID)
+		if err != nil {
+			return commitAlbumFail(span, "reload album", err, albumID)
 		}
+		alb = reloaded
 	}
 
 	plan, unmatched, adopted, uncovered, err := planAlbumFiles(

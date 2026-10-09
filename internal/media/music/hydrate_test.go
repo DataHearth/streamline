@@ -85,6 +85,11 @@ var _ = Describe("hydrator queue", Label("unit", "music"), func() {
 		_, ok = h.pop()
 		Expect(ok).To(BeFalse())
 		h.done(1)
+		Expect(h.add(1, []hydrateItem{item(3, true, 0)})).To(BeFalse(),
+			"the worker is still running until it stops")
+		_, ok = h.pop()
+		Expect(ok).To(BeTrue())
+		Expect(h.stop()).To(BeTrue())
 		Expect(h.add(1, []hydrateItem{item(2, true, 0)})).To(BeTrue(),
 			"a later add has to start the worker again")
 	})

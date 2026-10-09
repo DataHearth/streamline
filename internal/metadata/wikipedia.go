@@ -27,21 +27,12 @@ const (
 // article is the overview. No key. Wikipedia text is CC BY-SA, which is why
 // every overview carries the page it came from.
 type Wikipedia struct {
-	client      *http.Client
-	wikidataURL string
-	// pageURL builds the summary endpoint host for a language.
-	summaryHost func(lang string) string
+	client *http.Client
 }
 
 func NewWikipedia() *Wikipedia {
 	c := *otelx.HTTPClient
-	return &Wikipedia{
-		client:      &c,
-		wikidataURL: wikidataAPIURL,
-		summaryHost: func(lang string) string {
-			return "https://" + lang + ".wikipedia.org"
-		},
-	}
+	return &Wikipedia{client: &c}
 }
 
 func (w *Wikipedia) get(
