@@ -1,12 +1,12 @@
 {
-  "id": "upscalevault-api",
-  "name": "Upscale Vault (API)",
-  "description": "Upscale Vault is a Private Torrent Tracker for AI upscaled and remastered MOVIES / TV",
+  "id": "darkpeers-api",
+  "name": "Darkpeers (API)",
+  "description": "Darkpeers is a Private Torrent Tracker for MOVIES / TV / GENERAL",
   "language": "en-US",
   "type": "private",
   "encoding": "UTF-8",
   "links": [
-    "https://upscalevault.com/"
+    "https://darkpeers.org/"
   ],
   "caps": {
     "categorymappings": [
@@ -21,9 +21,39 @@
         "desc": "TV"
       },
       {
+        "id": "4",
+        "cat": "Console",
+        "desc": "Games"
+      },
+      {
         "id": "3",
-        "cat": "Audio/Video",
-        "desc": "Music Videos"
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "5",
+        "cat": "PC",
+        "desc": "Software"
+      },
+      {
+        "id": "6",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "7",
+        "cat": "Other",
+        "desc": "Assorted"
+      },
+      {
+        "id": "8",
+        "cat": "Books",
+        "desc": "Books"
+      },
+      {
+        "id": "9",
+        "cat": "TV/Anime",
+        "desc": "Anime"
       }
     ],
     "modes": {
@@ -42,8 +72,15 @@
         "q",
         "imdbid",
         "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
       ]
-    }
+    },
+    "allowtvsearchimdb": true
   },
   "settings": [
     {
@@ -56,7 +93,7 @@
       "name": "info_key",
       "label": "About your API key",
       "type": "info",
-      "default": "Find or Generate a new API Token by accessing your <a href=\"https://upscalevault.com/\" target=\"_blank\">Upscale Vault</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://darkpeers.org/\" target=\"_blank\">Darkpeers</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
     },
     {
       "name": "freeleech",
@@ -91,6 +128,12 @@
         "desc": "desc",
         "asc": "asc"
       }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Users must log in or be seeding for their account to be considered active. If the account is not active for a consecutive 90 days, the account will be deactivated. After a consecutive 120 days, the account will be pruned."
     }
   ],
   "login": {
@@ -120,6 +163,8 @@
     "inputs": {
       "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
       "name": "{{ .Keywords }}",
+      "seasonNumber": "{{ .Query.Season }}",
+      "episodeNumber": "{{ .Query.Ep }}",
       "imdbId": "{{ .Query.IMDBIDShort }}",
       "tmdbId": "{{ .Query.TMDBID }}",
       "tvdbId": "{{ .Query.TVDBID }}",
@@ -169,9 +214,6 @@
       "download": {
         "selector": "download_link"
       },
-      "infohash": {
-        "selector": "info_hash"
-      },
       "poster": {
         "selector": "meta.poster",
         "filters": [
@@ -204,6 +246,13 @@
             ]
           },
           {
+            "name": "re_replace",
+            "args": [
+              "(?i)(TV Movie)",
+              "TV_Movie"
+            ]
+          },
+          {
             "name": "replace",
             "args": [
               " & ",
@@ -215,8 +264,8 @@
       "_internal": {
         "selector": "internal",
         "case": {
-          "0": "{{ .False }}",
-          "1": "{{ .True }}"
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
         }
       },
       "description": {
@@ -243,7 +292,8 @@
           {
             "name": "dateparse",
             "args": [
-              "01/02/2006 15:04:05 -07:00"
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
             ]
           }
         ]
@@ -282,14 +332,17 @@
       "uploadvolumefactor": {
         "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
       },
+      "minimumratio": {
+        "text": "1.0"
+      },
       "minimumseedtime": {
-        "text": "1209600"
+        "text": "518400"
       }
     }
   },
   "source": {
-    "path": "definitions/v11/upscalevault.yml",
-    "sha256": "8f80c7f45c8314dc904a1c51d38179a1fac65b21194654a085d6ea8edcc20e1a",
+    "path": "definitions/v11/darkpeers.yml",
+    "sha256": "e310421a6f316db41486e15b338ea1aac5a349dd771b50ce7bd3ba40781e14bb",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

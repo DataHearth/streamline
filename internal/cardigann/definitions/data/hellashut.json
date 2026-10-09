@@ -5,6 +5,7 @@
   "language": "el-GR",
   "type": "private",
   "encoding": "UTF-8",
+  "testlinktorrent": false,
   "links": [
     "https://hellashut.net/"
   ],

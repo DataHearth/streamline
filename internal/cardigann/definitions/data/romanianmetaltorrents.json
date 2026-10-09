@@ -331,7 +331,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d+) seeders"
+              "(\\p{Nd}+) seeders"
             ]
           }
         ]
@@ -342,7 +342,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d+) leechers"
+              "(\\p{Nd}+) leechers"
             ]
           }
         ]
@@ -353,7 +353,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d+) times"
+              "(\\p{Nd}+) times"
             ]
           }
         ]

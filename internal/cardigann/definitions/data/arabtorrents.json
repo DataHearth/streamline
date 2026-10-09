@@ -483,7 +483,7 @@
       {
         "name": "re_replace",
         "args": [
-          "\\W+",
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
           "*"
         ]
       },
@@ -506,7 +506,7 @@
           {
             "name": "regexp",
             "args": [
-              "torrent-category-(\\d+)/"
+              "torrent-category-(\\p{Nd}+)/"
             ]
           }
         ]
@@ -528,7 +528,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2})"
+              "(\\p{Nd}{2}-\\p{Nd}{2}-\\p{Nd}{4} \\p{Nd}{2}:\\p{Nd}{2})"
             ]
           },
           {
@@ -581,7 +581,7 @@
       "path": "takethanks.php",
       "method": "post",
       "inputs": {
-        "torrentid": "{{ re_replace .DownloadUri.PathAndQuery \".*download-torrent-(\\\\d+).*\" \"${1}\" }}"
+        "torrentid": "{{ re_replace .DownloadUri.PathAndQuery \".*download-torrent-(\\\\p{Nd}+).*\" \"${1}\" }}"
       }
     }
   },

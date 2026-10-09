@@ -71,7 +71,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d+ [M|G]i?B)"
+              "(\\p{Nd}+ [M|G]i?B)"
             ]
           }
         ]

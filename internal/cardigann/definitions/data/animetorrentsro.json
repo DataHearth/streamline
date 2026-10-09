@@ -194,7 +194,7 @@
           {
             "name": "regexp",
             "args": [
-              "· (\\d+) fișiere"
+              "· (\\p{Nd}+) fișiere"
             ]
           }
         ]
@@ -217,7 +217,8 @@
           {
             "name": "dateparse",
             "args": [
-              "02 Jan 2006 -07:00"
+              "02 Jan 2006 -07:00",
+              "02 Jan 2006 -0700"
             ]
           }
         ]

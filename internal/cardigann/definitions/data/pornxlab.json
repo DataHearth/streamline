@@ -24,6 +24,7 @@
       ]
     }
   },
+  "settings": [],
   "search": {
     "paths": [
       {
@@ -60,7 +61,7 @@
           {
             "name": "regexp",
             "args": [
-              "-(\\d+).html"
+              "-(\\p{Nd}+).html"
             ]
           },
           {

@@ -6,6 +6,7 @@
   "type": "private",
   "encoding": "UTF-8",
   "followredirect": true,
+  "testlinktorrent": false,
   "requestDelay": 10,
   "links": [
     "https://hdf.world/"
@@ -189,8 +190,9 @@
         "name": "re_replace",
         "args": [
           "(?i)\\b(S\\d{2,})(?:E\\d{2,})+\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -212,7 +214,8 @@
             "args": [
               "(?i)\\b(vostfr|subfrench)\\b",
               "ENGLISH"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -227,7 +230,8 @@
             "args": [
               "(?i)\\bMULTI(?:\\.(?:TRUEFRENCH|FRENCH|ENGLISH|VOSTFR|VF2|VFF|VFQ|VOQ|VFI|VOF))?\\b",
               "{{ .Config.multilanguage }}"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -331,5 +335,6 @@
     "path": "definitions/v11/hdforever-api.yml",
     "sha256": "51e64b7ffd3385689ea04ee07b32c82eae4838b0be62dd093091b143de0d81e5",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

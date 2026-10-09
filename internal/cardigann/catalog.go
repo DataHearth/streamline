@@ -34,6 +34,10 @@ type Upstream struct {
 // Summary is what a catalog browser needs about a definition without loading
 // it: enough to filter by kind, login burden and what it can search.
 type Summary struct {
+	// File is the definition's upstream file name without .yml — the key
+	// Load takes, and what Prowlarr itself stores an indexer under. It is not
+	// always the id: bluebird.yml holds bluebirdhd.
+	File        string   `json:"file"`
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
@@ -61,9 +65,11 @@ type Skipped struct {
 	Reason string `json:"reason"`
 }
 
-// Summarize builds a definition's catalog row.
-func Summarize(d *Definition) Summary {
+// Summarize builds a definition's catalog row; file is its upstream file
+// name without the extension.
+func Summarize(file string, d *Definition) Summary {
 	s := Summary{
+		File:        file,
 		ID:          d.ID,
 		Name:        d.Name,
 		Description: d.Description,
@@ -85,20 +91,21 @@ func Summarize(d *Definition) Summary {
 			s.Challenge = true
 		}
 	}
-	seen := map[string]bool{}
-	add := func(cat string) {
-		top, _, _ := strings.Cut(cat, "/")
-		if top != "" && !seen[top] {
-			seen[top] = true
-			s.Categories = append(s.Categories, top)
-		}
-	}
 	for _, m := range d.Caps.CategoryMappings {
-		add(m.Cat)
+		s.Categories = append(s.Categories, topCategory(m.Cat))
 	}
 	for _, e := range d.Caps.Categories {
-		add(string(e.Value))
+		s.Categories = append(s.Categories, topCategory(string(e.Value)))
 	}
 	slices.Sort(s.Categories)
+	s.Categories = slices.Compact(s.Categories)
+	if len(s.Categories) > 0 && s.Categories[0] == "" {
+		s.Categories = s.Categories[1:]
+	}
 	return s
+}
+
+func topCategory(cat string) string {
+	top, _, _ := strings.Cut(cat, "/")
+	return top
 }

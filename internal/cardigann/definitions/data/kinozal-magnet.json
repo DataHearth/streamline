@@ -380,15 +380,17 @@
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
-          "${1} ${2}"
-        ]
+          "$1 $2"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -499,14 +501,14 @@
           {
             "name": "re_replace",
             "args": [
-              "\\((\\d+-*\\d*)\\s+[Сс]езоны?:?\\s+(?:(\\d+-*\\d*)\\s+(?:[Сс]ери[ийя]|выпуски?(?:ов)?)(?:.*\\d+)?)?\\)(.*)\\s+((?:[12][0-9]{3}-?){1,})(.*)",
+              "\\((\\p{Nd}+-*\\p{Nd}*)[\\t-\\r\\x{85}\\p{Z}]+[Сс]езоны?:?[\\t-\\r\\x{85}\\p{Z}]+(?:(\\p{Nd}+-*\\p{Nd}*)[\\t-\\r\\x{85}\\p{Z}]+(?:[Сс]ери[ийя]|выпуски?(?:ов)?)(?:.*\\p{Nd}+)?)?\\)(.*)[\\t-\\r\\x{85}\\p{Z}]+((?:[12][0-9]{3}-?){1,})(.*)",
               "${3} - S${1}E${2} - ${4} ${5}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "\\((?:(\\d+-*\\d*)\\s+(?:[Сс]ери[ийя]|выпуски?(?:ов)?)(?:.*\\d+)?)?\\)(.*)\\s+((?:[12][0-9]{3}-?){1,})(.*)",
+              "\\((?:(\\p{Nd}+-*\\p{Nd}*)[\\t-\\r\\x{85}\\p{Z}]+(?:[Сс]ери[ийя]|выпуски?(?:ов)?)(?:.*\\p{Nd}+)?)?\\)(.*)[\\t-\\r\\x{85}\\p{Z}]+((?:[12][0-9]{3}-?){1,})(.*)",
               "${2} - E${1} - ${3} ${4}"
             ]
           },
@@ -514,8 +516,9 @@
             "name": "re_replace",
             "args": [
               "(\\([А-Яа-яЁё\\W]+\\))|(^[А-Яа-яЁё\\W\\d]+\\/ ((?:[12][0-9]{3}-?){1,}))|(^[А-Яа-яЁё\\W\\d]+\\/ )|([а-яА-ЯЁё \\-]+,+)|([а-яА-ЯЁё]+)",
-              "{{ if .Config.stripcyrillic }}{{ else }}${0}{{ end }}"
-            ]
+              "{{ if .Config.stripcyrillic }}{{ else }}$0{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "replace",
@@ -527,21 +530,21 @@
           {
             "name": "re_replace",
             "args": [
-              "^-\\s+",
+              "^-[\\t-\\r\\x{85}\\p{Z}]+",
               " "
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "\\((\\d+[pi])\\)",
+              "\\((\\p{Nd}+[pi])\\)",
               "${1}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(.*)(Blu-Ray\\s*(?:Disc|EUR|CEE)?)\\s*(\\d+[pi])",
+              "(.*)(Blu-Ray[\\t-\\r\\x{85}\\p{Z}]*(?:Disc|EUR|CEE)?)[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+[pi])",
               "${1} BR-DISK ${3}"
             ]
           },
@@ -592,7 +595,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[^\\d+]",
+              "[^\\p{Nd}+]",
               ""
             ]
           }
@@ -759,5 +762,6 @@
     "path": "definitions/v11/kinozal-magnet.yml",
     "sha256": "34c9564d63087980078c39c0e19b518922941a98e99a6f0bdbc13e5076cd9d27",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

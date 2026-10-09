@@ -80,15 +80,17 @@
         "name": "re_replace",
         "args": [
           " *\\b((?:19|20)\\d{2})\\b",
-          "{{ if .Config.radarr_compatibility }}{{ else }} ${1}{{ end }}"
-        ]
+          "{{ if .Config.radarr_compatibility }}{{ else }} $1{{ end }}"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
           "(?i) *\\b(S(?:0|eason *)?1)\\b",
-          "{{ if .Config.strip_s01 }}{{ else }} ${1}{{ end }}"
-        ]
+          "{{ if .Config.strip_s01 }}{{ else }} $1{{ end }}"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -105,7 +107,8 @@
             "name": "regexp",
             "args": [
               "\\b((19|20)\\d{2})\\b"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -127,7 +130,7 @@
           {
             "name": "regexp",
             "args": [
-              "(?i)(S\\d{1,3}([Ev]\\d+)?)"
+              "(?i)(S\\p{Nd}{1,3}([Ev]\\p{Nd}+)?)"
             ]
           },
           {
@@ -145,7 +148,8 @@
             "name": "regexp",
             "args": [
               "\\b(.+? - ?)(\\d+([-v]\\d+)?) ([\\[\\(])\\b"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "append",
@@ -193,7 +197,7 @@
           {
             "name": "re_replace",
             "args": [
-              "^(.+?)([\\. ])((?:19|20)\\d{2})([\\. ])(.+)$",
+              "^(.+?)([\\. ])((?:19|20)\\p{Nd}{2})([\\. ])(.+)$",
               "{{ if and (eq .Result.title_has_season \"NULL\") (eq .Result.title_has_episode \"NULL\") }}${1}${2}${3}${4}S01${4}${5}{{ else }}${1}${2}${3}${4}${5}{{ end }}"
             ]
           },
@@ -235,7 +239,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Mon, 02 Jan 2006 15:04:05 -07:00"
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
             ]
           }
         ]

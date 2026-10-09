@@ -161,7 +161,7 @@
           {
             "name": "regexp",
             "args": [
-              "Size:\\s+([\\w\\d\\.,]+ \\w\\w)"
+              "Size:[\\t-\\r\\x{85}\\p{Z}]+([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}\\p{Nd}\\.,]+ [\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}][\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}])"
             ]
           }
         ]

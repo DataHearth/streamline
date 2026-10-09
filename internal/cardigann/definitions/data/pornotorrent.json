@@ -5,6 +5,7 @@
   "language": "pt-BR",
   "type": "public",
   "encoding": "UTF-8",
+  "testlinktorrent": false,
   "links": [
     "https://pornotorrent.com.br/"
   ],
@@ -39,6 +40,7 @@
       ]
     }
   },
+  "settings": [],
   "search": {
     "paths": [
       {
@@ -91,7 +93,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Mon, 02 Jan 2006 15:04:05 -07:00"
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
             ]
           }
         ]

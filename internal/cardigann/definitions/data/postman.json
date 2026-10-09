@@ -162,6 +162,7 @@
     }
   ],
   "login": {
+    "method": "form",
     "path": "index.php?view=Main",
     "selectorinputs": {
       "formtoken": {
@@ -230,7 +231,7 @@
           {
             "name": "regexp",
             "args": [
-              "(https?:\\/\\/www\\.imdb\\.com\\/title\\/tt\\d+)"
+              "(https?:\\/\\/www\\.imdb\\.com\\/title\\/tt\\p{Nd}+)"
             ]
           }
         ]

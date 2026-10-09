@@ -187,8 +187,9 @@
         "name": "re_replace",
         "args": [
           "\\bS(\\d{2,4})\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -239,7 +240,8 @@
           {
             "name": "dateparse",
             "args": [
-              "01/02/2006 15:04:05 -07:00"
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
             ]
           }
         ]
@@ -287,5 +289,6 @@
     "path": "definitions/v11/f1carreras-api.yml",
     "sha256": "c10a8be4d69b0d894d4d2e2e8c53c8bfffc21418d7fff3e4e5ffd8c647aeb6b5",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

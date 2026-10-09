@@ -244,7 +244,8 @@
             "args": [
               "(\\b0\\b)",
               "31"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -298,7 +299,8 @@
           {
             "name": "dateparse",
             "args": [
-              "02/01/2006 -07:00"
+              "02/01/2006 -07:00",
+              "02/01/2006 -0700"
             ]
           }
         ]
@@ -336,5 +338,6 @@
     "path": "definitions/v11/3dtorrents.yml",
     "sha256": "5e1622afd37a02382a841690a9daf816887eec0f9c224c55a099409600a9c05a",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

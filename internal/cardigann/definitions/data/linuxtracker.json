@@ -1578,6 +1578,7 @@
       ]
     }
   },
+  "settings": [],
   "search": {
     "paths": [
       {
@@ -1611,7 +1612,7 @@
           {
             "name": "regexp",
             "args": [
-              "/torrents/(\\w+)/"
+              "/torrents/([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+)/"
             ]
           }
         ]
@@ -1628,7 +1629,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Jan 2, 2006 -07:00"
+              "Jan 2, 2006 -07:00",
+              "Jan 2, 2006 -0700"
             ]
           }
         ]

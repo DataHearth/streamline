@@ -416,14 +416,16 @@
         "args": [
           "(?i)\\bit's\\b",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
-          "([\\p{Han}\\W]+)",
+          "([\\u4E00-\\u9FFF\\W]+)",
           "."
-        ]
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "tolower"
@@ -448,7 +450,7 @@
           {
             "name": "re_replace",
             "args": [
-              "- (\\w+-?\\w*)$",
+              "- ([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+-?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*)$",
               "-${1}"
             ]
           },
@@ -456,15 +458,17 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bSeason[\\s\\.]+(\\d)([\\s\\.]+Complete)?\\b",
-              "S0${1}"
-            ]
+              "S0$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSeason[\\s\\.]+(\\d{1,2})([\\s\\.]+Complete)?\\b",
-              "S${1}"
-            ]
+              "S$1"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -519,5 +523,6 @@
     "path": "definitions/v11/thepiratebay.yml",
     "sha256": "9420ad60ebe408a86fe8ce142284db8da67cf26fb80bee97d16133aa40db1e88",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

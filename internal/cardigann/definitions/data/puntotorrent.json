@@ -554,14 +554,14 @@
       {
         "name": "re_replace",
         "args": [
-          "(?i)S(\\d+)",
+          "(?i)S(\\p{Nd}+)",
           " ${1} "
         ]
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i)E(\\d+)",
+          "(?i)E(\\p{Nd}+)",
           " ${1} "
         ]
       },
@@ -767,7 +767,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)T[\\s-_]?(\\d{1,2})(.*)\\[(\\d{1,2})[x|\\/|\\\\](\\d{1,2})\\]",
+              "(?i)T[\\t-\\r\\x{85}\\p{Z}-_]?(\\p{Nd}{1,2})(.*)\\[(\\p{Nd}{1,2})[x|\\/|\\\\](\\p{Nd}{1,2})\\]",
               "S${1}E${3} ${2}"
             ]
           },
@@ -775,41 +775,45 @@
             "name": "re_replace",
             "args": [
               "(?i)T[\\s-_]?(\\d{1,2})\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\w*Temp\\w*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{1,2})[x|\\/|\\\\](\\d{1,2})",
+              "(?i)(\\p{Nd}{1,2})[x|\\/|\\\\](\\p{Nd}{1,2})",
               "S${1}E${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)S(\\d{1,2})[/x]?C(\\d{1,2})",
+              "(?i)S(\\p{Nd}{1,2})[/x]?C(\\p{Nd}{1,2})",
               "S${1}E${2}"
             ]
           },
@@ -844,7 +848,7 @@
           {
             "name": "re_replace",
             "args": [
-              "\\W",
+              "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]",
               "."
             ]
           },
@@ -883,7 +887,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)T[\\s-_]?(\\d{1,2})(.*)\\[(\\d{1,2})[x|\\/|\\\\](\\d{1,2})\\]",
+              "(?i)T[\\t-\\r\\x{85}\\p{Z}-_]?(\\p{Nd}{1,2})(.*)\\[(\\p{Nd}{1,2})[x|\\/|\\\\](\\p{Nd}{1,2})\\]",
               "S${1}E${3} ${2}"
             ]
           },
@@ -891,27 +895,30 @@
             "name": "re_replace",
             "args": [
               "(?i)T[\\s-_]?(\\d{1,2})\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\w*Temp\\w*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
-              " S${1} "
-            ]
+              " S$1 "
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{1,2})[x|\\/|\\\\](\\d{1,2})",
+              "(?i)(\\p{Nd}{1,2})[x|\\/|\\\\](\\p{Nd}{1,2})",
               "S${1}E${2}"
             ]
           },
@@ -963,7 +970,8 @@
           {
             "name": "dateparse",
             "args": [
-              "02/01/2006 -07:00"
+              "02/01/2006 -07:00",
+              "02/01/2006 -0700"
             ]
           }
         ]
@@ -992,5 +1000,6 @@
     "path": "definitions/v11/puntotorrent.yml",
     "sha256": "e6c55c72ec9cbebf60a201fb0153d1b867a4cf28c1b662ca788707e97eb273b8",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

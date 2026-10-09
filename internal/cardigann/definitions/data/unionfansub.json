@@ -220,29 +220,33 @@
             "name": "re_replace",
             "args": [
               "(?i)\\b(\\d{1,4})([ºª])\\b",
-              "${1}"
-            ]
+              "$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(Temporada|Season) (\\d+)\\b",
-              "S${2}"
-            ]
+              "S$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(\\d+)(st|nd|rd|th) (Season|Temporada)\\b",
-              "S${1}"
-            ]
+              "S$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(Season|Temporada) (\\d+)(st|nd|rd|th)\\b",
-              "S${2}"
-            ]
+              "S$2"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -308,5 +312,6 @@
     "path": "definitions/v11/unionfansub.yml",
     "sha256": "20364a02ccab9ac753b401a4fb5498a30f907ae6856b2eb16920622336ad3b28",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

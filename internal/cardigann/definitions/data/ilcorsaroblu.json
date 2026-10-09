@@ -357,15 +357,17 @@
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
-          "${1} ${2}"
-        ]
+          "$1 $2"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -395,7 +397,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[\\[!\"#$%&'()*+,\\-.\\/:;<=>?@[\\]^_`{|}~]",
+              "[\\[!\"#$%&'()*+,\\-.\\/:;<=>?@\\[\\]^_`{|}~]",
               " "
             ]
           },
@@ -416,13 +418,14 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bS(\\d+)\\sE(\\d+)\\b",
-              "S${1}E${2}"
-            ]
+              "S$1E$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{2})x(\\d+)",
+              "(?i)(\\p{Nd}{2})x(\\p{Nd}+)",
               "S${1}E${2}"
             ]
           },
@@ -430,36 +433,41 @@
             "name": "re_replace",
             "args": [
               "(?i)\\b(\\d{1})x(\\d+)",
-              "S0${1}E${2}"
-            ]
+              "S0$1E$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{1})\\b|\\bSeason'?s?\\s?(\\d{1})\\b",
-              "S0${1}${2}"
-            ]
+              "S0$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{2,})\\b|\\bSeason'?s?\\s?(\\d{2,})\\b",
-              "S${1}${2}"
-            ]
+              "S$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(?:[\\/\\|]?Episodio\\s?(\\d+)|Puntata\\s?(\\d+))",
-              "E${1}${2}"
-            ]
+              "E$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(?:Puntate\\s*)(\\d+)\\s?(\\d+)",
-              "E0${1}-0${2}"
-            ]
+              "E0$1-0$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
@@ -471,49 +479,49 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\sEP\\s(\\d{1,2})\\s(E?\\s?\\d{1,2})\\s",
+              "(?i)[\\t-\\r\\x{85}\\p{Z}]EP[\\t-\\r\\x{85}\\p{Z}](\\p{Nd}{1,2})[\\t-\\r\\x{85}\\p{Z}](E?[\\t-\\r\\x{85}\\p{Z}]?\\p{Nd}{1,2})[\\t-\\r\\x{85}\\p{Z}]",
               " E${1}-${2} "
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\sS(\\d{1,2})\\s?E\\s?(\\d{1,2})\\s(E?\\s?\\d{1,2})\\s",
+              "(?i)[\\t-\\r\\x{85}\\p{Z}]S(\\p{Nd}{1,2})[\\t-\\r\\x{85}\\p{Z}]?E[\\t-\\r\\x{85}\\p{Z}]?(\\p{Nd}{1,2})[\\t-\\r\\x{85}\\p{Z}](E?[\\t-\\r\\x{85}\\p{Z}]?\\p{Nd}{1,2})[\\t-\\r\\x{85}\\p{Z}]",
               " S${1}E${2}-${3} "
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)AC3\\s?(\\d)\\s(\\d)",
+              "(?i)AC3[\\t-\\r\\x{85}\\p{Z}]?(\\p{Nd})[\\t-\\r\\x{85}\\p{Z}](\\p{Nd})",
               "AC3 ${1}.${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i) DD\\s?(\\d)\\s(\\d)",
+              "(?i) DD[\\t-\\r\\x{85}\\p{Z}]?(\\p{Nd})[\\t-\\r\\x{85}\\p{Z}](\\p{Nd})",
               " DD ${1}.${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i) DDP\\s?(\\d)\\s(\\d)",
+              "(?i) DDP[\\t-\\r\\x{85}\\p{Z}]?(\\p{Nd})[\\t-\\r\\x{85}\\p{Z}](\\p{Nd})",
               " DDP ${1}.${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\sE\\s?AC3",
+              "(?i)[\\t-\\r\\x{85}\\p{Z}]E[\\t-\\r\\x{85}\\p{Z}]?AC3",
               " EAC3"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)WEB\\sDL",
+              "(?i)WEB[\\t-\\r\\x{85}\\p{Z}]DL",
               "WEB-DL"
             ]
           },
@@ -629,5 +637,6 @@
     "path": "definitions/v11/ilcorsaroblu.yml",
     "sha256": "cb1894111d81e029d9c62d95e77de25d1ba0f95cfe272b16393b93e033fb707a",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -62,6 +62,7 @@
       ]
     }
   },
+  "settings": [],
   "login": {
     "method": "form",
     "path": "addon.php?r=document/view&page=visitor-test",
@@ -90,7 +91,7 @@
           {
             "name": "regexp",
             "args": [
-              "-(\\d)-"
+              "-(\\p{Nd})-"
             ]
           }
         ]
@@ -109,7 +110,7 @@
           {
             "name": "regexp",
             "args": [
-              "-(\\w+).html"
+              "-([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+).html"
             ]
           }
         ]
@@ -130,7 +131,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006/01/02 -07:00"
+              "2006/01/02 -07:00",
+              "2006/01/02 -0700"
             ]
           }
         ]
@@ -155,7 +157,8 @@
           {
             "name": "timeparse",
             "args": [
-              "15:04 -07:00"
+              "15:04 -07:00",
+              "15:04 -0700"
             ]
           }
         ]

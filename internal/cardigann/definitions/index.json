@@ -1,6 +1,6 @@
 {
   "schema": 11,
-  "converter": 1,
+  "converter": 2,
   "upstream": {
     "repository": "https://github.com/Prowlarr/Indexers",
     "commit": "8df0764eec2d6d138a60cc461d7a850dda8dee5a",
@@ -8,6 +8,7 @@
   },
   "definitions": [
     {
+      "file": "0dayfiles-api",
       "id": "0dayfiles-api",
       "name": "0DayFiles (API)",
       "description": "0DayFiles is a Private Torrent Tracker for 0DAY / GENERAL",
@@ -42,6 +43,7 @@
       ]
     },
     {
+      "file": "0daykiev",
       "id": "0daykiev",
       "name": "0day.kiev",
       "description": "0day.kiev.ua is a UKRAINIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -65,9 +67,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "0magnet",
       "id": "0magnet",
       "name": "0Magnet",
       "description": "ØMagnet is a CHINESE Public tracker for Asian 3X (JAV)",
@@ -82,6 +86,7 @@
       ]
     },
     {
+      "file": "13city",
       "id": "13city",
       "name": "13City",
       "description": "13City is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -111,6 +116,7 @@
       ]
     },
     {
+      "file": "13city-api",
       "id": "13city-api",
       "name": "13City (API)",
       "description": "13City is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -136,6 +142,7 @@
       ]
     },
     {
+      "file": "1ptbar",
       "id": "1ptbar",
       "name": "1ptbar",
       "description": "1ptbar is a CHINESE Private Torrent Tracker for MOVIES / TV / E-LEARNING",
@@ -169,6 +176,7 @@
       ]
     },
     {
+      "file": "1ptbar-api",
       "id": "1ptbar-api",
       "name": "1ptbar (API)",
       "description": "1ptbar is a CHINESE Private Torrent Tracker for MOVIES / TV / E-LEARNING",
@@ -197,6 +205,7 @@
       ]
     },
     {
+      "file": "3dtorrents",
       "id": "3dtorrents",
       "name": "3D Torrents",
       "description": "3D Torrents (3DT) is a Private Torrent Tracker for 3D HD / BLURAY MOVIES",
@@ -216,9 +225,11 @@
       ],
       "movie_search": [
         "q"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "3dvault-api",
       "id": "3dvault-api",
       "name": "3D Vault (API)",
       "description": "3D Vault is a Private Torrent Tracker for 3D MOVIES",
@@ -247,6 +258,7 @@
       ]
     },
     {
+      "file": "4thd",
       "id": "4thd",
       "name": "4thD",
       "description": "4th Dimension is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -273,6 +285,7 @@
       ]
     },
     {
+      "file": "52bt",
       "id": "52bt",
       "name": "52BT",
       "description": "52BT is a Public tracker for MOVIES / TV / MUSIC / GENERAL",
@@ -302,6 +315,7 @@
       ]
     },
     {
+      "file": "52pt",
       "id": "52pt",
       "name": "52PT",
       "description": "52PT is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -333,6 +347,7 @@
       ]
     },
     {
+      "file": "Bittorrentfiles",
       "id": "Bittorrentfiles",
       "name": "Bittorrentfiles",
       "description": "Bittorrentfiles is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL",
@@ -364,6 +379,7 @@
       ]
     },
     {
+      "file": "abnormal-api",
       "id": "abnormal-api",
       "name": "Abnormal (API)",
       "description": "ABNormal (ABN) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -390,6 +406,7 @@
       "regex_net": true
     },
     {
+      "file": "abtorrents",
       "id": "abtorrents",
       "name": "ABtorrents",
       "description": "ABtorrents (ABT) is a Private Torrent Tracker for AUDIOBOOKS",
@@ -408,6 +425,7 @@
       ]
     },
     {
+      "file": "acgrip",
       "id": "acgrip",
       "name": "ACG.RIP",
       "description": "ACG.RIP is a CHINESE Public torrent tracker for the latest anime and Japanese related torrents",
@@ -427,6 +445,7 @@
       ]
     },
     {
+      "file": "acrossthetasman",
       "id": "acrossthetasman",
       "name": "Across The Tasman",
       "description": "ATT is a Private torrent site for Rugby and other sports played in Australia",
@@ -441,6 +460,7 @@
       ]
     },
     {
+      "file": "aftershock",
       "id": "aftershock",
       "name": "Aftershock",
       "description": "Aftershock is a HUNGARIAN Private Torrent Tracker for MOVIES / GENERAL",
@@ -470,6 +490,7 @@
       ]
     },
     {
+      "file": "agsvpt",
       "id": "agsvpt",
       "name": "AGSVPT",
       "description": "AGSVPT (Arctic Global Seed Vault) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -501,6 +522,7 @@
       ]
     },
     {
+      "file": "aidoruonline",
       "id": "aidoruonline",
       "name": "Aidoru!Online",
       "description": "Aidoru!Online is a JAPANESE Private Torrent Tracker for Female Japanese Idol related files",
@@ -526,6 +548,7 @@
       ]
     },
     {
+      "file": "aither-api",
       "id": "aither-api",
       "name": "Aither (API)",
       "description": "Aither is a Private Torrent Tracker for HD MOVIES / TV",
@@ -554,6 +577,7 @@
       ]
     },
     {
+      "file": "alabala",
       "id": "alabala",
       "name": "AlaBala",
       "description": "AlaBala is a BULGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -583,6 +607,7 @@
       ]
     },
     {
+      "file": "alingpt",
       "id": "alingpt",
       "name": "alingPT",
       "description": "alingPT is a CHINESE Private Torrent Tracker for MOVIES / TV",
@@ -610,6 +635,7 @@
       ]
     },
     {
+      "file": "alingpt-api",
       "id": "alingpt-api",
       "name": "alingPT (API)",
       "description": "alingPT is a CHINESE Private Torrent Tracker for MOVIES / TV",
@@ -633,6 +659,7 @@
       ]
     },
     {
+      "file": "amigosshare",
       "id": "amigosshare",
       "name": "Amigos Share Club",
       "description": "Amigos Share Club (ASC) is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -665,6 +692,7 @@
       "regex_net": true
     },
     {
+      "file": "anibt",
       "id": "anibt",
       "name": "Anibt",
       "description": "Anibt is a CHINESE Public aggregate indexer for ANIME\"",
@@ -686,6 +714,7 @@
       ]
     },
     {
+      "file": "animebybelka",
       "id": "animebybelka",
       "name": "Anime by Belka",
       "description": "Anime by Belka (Аниме от Белки) is a RUSSIAN Semi-Private Torrent Tracker for ANIME",
@@ -709,9 +738,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "animelayer",
       "id": "animelayer",
       "name": "AnimeLayer",
       "description": "AnimeLayer is a RUSSIAN Semi-Private Torrent Tracker for ANIME",
@@ -736,6 +767,7 @@
       ]
     },
     {
+      "file": "animetorrentsro",
       "id": "animetorrentsro",
       "name": "AnimeTorrents.ro",
       "description": "AnimeTorrents.ro (Anime Torrents Romania) is a ROMANIAN Private Torrent Tracker for ANIME / MANGA",
@@ -760,6 +792,7 @@
       ]
     },
     {
+      "file": "animetosho-xyz",
       "id": "animetosho-xyz",
       "name": "Anime Tosho",
       "description": "Anime Tosho is a Public Torrent Tracker for ANIME",
@@ -783,6 +816,7 @@
       "regex_net": true
     },
     {
+      "file": "animeworld-api",
       "id": "animeworld-api",
       "name": "AnimeWorld (API)",
       "description": "AnimeWorld (AW) is a GERMAN Private Torrent Tracker for ANIME / MANGA / HENTAI",
@@ -816,6 +850,7 @@
       ]
     },
     {
+      "file": "anisource",
       "id": "anisource",
       "name": "AniSource",
       "description": "AniSource is a Public site for HD Anime raws.",
@@ -835,6 +870,7 @@
       ]
     },
     {
+      "file": "anthelion-api",
       "id": "anthelion-api",
       "name": "Anthelion (API)",
       "description": "Anthelion (ANT) is a Private Torrent Tracker for MOVIES",
@@ -859,6 +895,7 @@
       ]
     },
     {
+      "file": "arabafenice",
       "id": "arabafenice",
       "name": "ArabaFenice",
       "description": "Araba Fenice (Phoenix) is an ITALIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -887,9 +924,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "arabicsource-api",
       "id": "arabicsource-api",
       "name": "ArabicSource (API)",
       "description": "ArabicSource is an ARABIC Private Torrent Tracker for MOVIES / TV",
@@ -920,6 +959,7 @@
       ]
     },
     {
+      "file": "arabp2p",
       "id": "arabp2p",
       "name": "ArabP2P",
       "description": "ArabP2P is an ARABIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -948,6 +988,7 @@
       "regex_net": true
     },
     {
+      "file": "arabscene",
       "id": "arabscene",
       "name": "ArabScene",
       "description": "ArabScene is an ARABIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -975,6 +1016,7 @@
       "regex_net": true
     },
     {
+      "file": "arabtorrents",
       "id": "arabtorrents",
       "name": "ArabTorrents",
       "description": "ArabTorrents is an ARABIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1001,6 +1043,7 @@
       ]
     },
     {
+      "file": "asiancinema",
       "id": "asiancinema",
       "name": "AsianCinema",
       "description": "AsianCinema is a Private Tracker for ASIAN MOVIES / TV / MUSIC",
@@ -1030,6 +1073,7 @@
       ]
     },
     {
+      "file": "asiandvdclub",
       "id": "asiandvdclub",
       "name": "AsianDVDClub",
       "description": "AsianDVDClub (ADC) is a Private Torrent Tracker for ASIAN DVD and BluRay",
@@ -1055,6 +1099,7 @@
       ]
     },
     {
+      "file": "astratorrent",
       "id": "astratorrent",
       "name": "AstraTorrent",
       "description": "AstraTorrent is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1082,6 +1127,7 @@
       "regex_net": true
     },
     {
+      "file": "audiences",
       "id": "audiences",
       "name": "Audiences",
       "description": "Audiences is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1113,6 +1159,7 @@
       ]
     },
     {
+      "file": "audionews",
       "id": "audionews",
       "name": "AudioNews",
       "description": "AudioNews (AN) is a Private Torrent Tracker for AUDIO SOFTWARE / SAMPLES / ETC",
@@ -1130,6 +1177,7 @@
       ]
     },
     {
+      "file": "aussierules",
       "id": "aussierules",
       "name": "Aussierul.es",
       "description": "AussieRul.es is a Private Torrent Tracker for AUSTRALIAN RULES FOOTBALL",
@@ -1144,6 +1192,7 @@
       ]
     },
     {
+      "file": "azusa",
       "id": "azusa",
       "name": "Azusa (梓喵)",
       "description": "Azusa (梓喵) is a CHINESE Private Torrent Tracker focusing on COMICS",
@@ -1161,6 +1210,7 @@
       ]
     },
     {
+      "file": "backups",
       "id": "backups",
       "name": "Back-ups",
       "description": "Back-Ups is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1186,9 +1236,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "bangumi-moe",
       "id": "bangumi-moe",
       "name": "Bangumi Moe",
       "description": "Bangumi Moe is a Public torrent site for ANIME",
@@ -1216,6 +1268,7 @@
       ]
     },
     {
+      "file": "baozipt",
       "id": "baozipt",
       "name": "baoziPT",
       "description": "baoziPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1245,6 +1298,7 @@
       ]
     },
     {
+      "file": "baozipt-api",
       "id": "baozipt-api",
       "name": "baoziPT (API)",
       "description": "baoziPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1270,6 +1324,7 @@
       ]
     },
     {
+      "file": "beload",
       "id": "beload",
       "name": "Beload",
       "description": "Beload is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1297,6 +1352,7 @@
       ]
     },
     {
+      "file": "best-torrents",
       "id": "best-torrents",
       "name": "Best-Torrents",
       "description": "Best-Torrents is a POLISH Semi-Private PAY2DL Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1326,6 +1382,7 @@
       ]
     },
     {
+      "file": "bestcore",
       "id": "bestcore",
       "name": "Best-Core",
       "description": "Best-Core is a HUNGARIAN Private Tracker for MOVIES / TV / GENERAL",
@@ -1357,6 +1414,7 @@
       ]
     },
     {
+      "file": "bibliotik",
       "id": "bibliotik",
       "name": "Bibliotik",
       "description": "Bibliotik is a Private Torrent Tracker for EBOOKS and AUDIOBOOKS",
@@ -1373,6 +1431,7 @@
       ]
     },
     {
+      "file": "bigcore",
       "id": "bigcore",
       "name": "BigCore",
       "description": "BigCore is a HUNGARIAN Private Tracker for MOVIES / TV / GENERAL",
@@ -1400,6 +1459,7 @@
       ]
     },
     {
+      "file": "bigfangroup",
       "id": "bigfangroup",
       "name": "BigFANGroup",
       "description": "BigFANGroup is a RUSSIAN Public Torrent Tracker for MOVIES / TV",
@@ -1426,9 +1486,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "bitagent",
       "id": "bitagent",
       "name": "BitAgent",
       "description": "BitAgent is a Private Torrent Tracker for MOVIES / TV",
@@ -1461,6 +1523,7 @@
       ]
     },
     {
+      "file": "bitbazis",
       "id": "bitbazis",
       "name": "Bit-Bázis",
       "description": "Bit-Bázis is a HUNGARIAN Private Tracker for MOVIES / TV",
@@ -1489,6 +1552,7 @@
       ]
     },
     {
+      "file": "bitded",
       "id": "bitded",
       "name": "Bitded",
       "description": "Bitded is a THAI Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1517,6 +1581,7 @@
       ]
     },
     {
+      "file": "bitgamer",
       "id": "bitgamer",
       "name": "bitGAMER",
       "description": "bitGAMER is a Private Torrent Tracker for GAMES",
@@ -1539,6 +1604,7 @@
       ]
     },
     {
+      "file": "bithumen",
       "id": "bithumen",
       "name": "BitHUmen",
       "description": "BitHUmen is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1570,6 +1636,7 @@
       ]
     },
     {
+      "file": "bitmagnet",
       "id": "bitmagnet",
       "name": "BitMagnet (Local DHT)",
       "description": "BitMagnet is a self-hosted BitTorrent DHT search engine",
@@ -1603,6 +1670,7 @@
       ]
     },
     {
+      "file": "bitporn",
       "id": "bitporn",
       "name": "BitPorn (API)",
       "description": "BitPorn (Malacka) is a HUNGARIAN Private Torrent Tracker for 3X",
@@ -1617,6 +1685,7 @@
       ]
     },
     {
+      "file": "bitturk",
       "id": "bitturk",
       "name": "BiTTuRK",
       "description": "BiTTuRK is a TURKISH Private Torrent Tracker for HD MOVIES / TV / GENERAL. This Indexer is for English only.",
@@ -1644,6 +1713,7 @@
       ]
     },
     {
+      "file": "bjshare",
       "id": "bjshare",
       "name": "BJ-Share",
       "description": "BJ-Share is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1671,9 +1741,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "bluebird",
       "id": "bluebirdhd",
       "name": "BlueBird",
       "description": "BlueBird is a RUSSIAN Private Torrent Tracker for HD MOVIES",
@@ -1702,6 +1774,7 @@
       ]
     },
     {
+      "file": "blueroms",
       "id": "blueroms",
       "name": "BlueRoms",
       "description": "BlueRoms is a Public Torrent Tracker for ROMS",
@@ -1716,6 +1789,7 @@
       ]
     },
     {
+      "file": "bluetorrents",
       "id": "bluetorrents",
       "name": "BlueTorrents",
       "description": "BlueTorrents is a Private Torrent Tracker for MOVIES / TV / MUSIC / GENERAL",
@@ -1747,6 +1821,7 @@
       ]
     },
     {
+      "file": "bluraytracker",
       "id": "bluraytracker",
       "name": "BlurayTracker",
       "description": "BlurayTracker is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1775,6 +1850,7 @@
       ]
     },
     {
+      "file": "blutopia-api",
       "id": "blutopia-api",
       "name": "Blutopia (API)",
       "description": "Blutopia (BLU) is a Private Torrent Tracker for HD MOVIES / TV",
@@ -1805,6 +1881,7 @@
       ]
     },
     {
+      "file": "booktracker",
       "id": "booktracker",
       "name": "BookTracker",
       "description": "BookTracker is a RUSSIAN Semi-Private Torrent Tracker for EBOOKS",
@@ -1819,6 +1896,7 @@
       ]
     },
     {
+      "file": "bootytape",
       "id": "bootytape",
       "name": "BootyTape",
       "description": "BootyTape is a Semi-Private Torrent Tracker for 3X",
@@ -1833,6 +1911,7 @@
       ]
     },
     {
+      "file": "borgzelle",
       "id": "borgzelle",
       "name": "Borgzelle",
       "description": "Borgzelle is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1861,6 +1940,7 @@
       ]
     },
     {
+      "file": "boxingtorrents",
       "id": "boxingtorrents",
       "name": "Boxing Torrents",
       "description": "Boxing Torrents is a Private Torrent Tracker for BOXING",
@@ -1880,6 +1960,7 @@
       ]
     },
     {
+      "file": "brasiltracker",
       "id": "brasiltracker",
       "name": "BrasilTracker",
       "description": "BrasilTracker is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1910,6 +1991,7 @@
       "regex_net": true
     },
     {
+      "file": "btarg",
       "id": "btarg",
       "name": "BTArg",
       "description": "BTArg is an ARGENTINIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -1940,6 +2022,7 @@
       "regex_net": true
     },
     {
+      "file": "btdirectory",
       "id": "btdirectory",
       "name": "BTdirectory",
       "description": "BTdirectory (BT目录) is a Public DHT Crawler",
@@ -1966,6 +2049,7 @@
       ]
     },
     {
+      "file": "btetree",
       "id": "btetree",
       "name": "BT.etree",
       "description": "BT.etree is a Public Tracker dedicated to Bootleg FLAC MUSIC",
@@ -1981,6 +2065,7 @@
       ]
     },
     {
+      "file": "btnext",
       "id": "btnext",
       "name": "BTNext",
       "description": "BTNext (BTNT) is a PORTUGUESE Private Torrent Tracker for 0DAY / GENERAL",
@@ -2012,6 +2097,7 @@
       ]
     },
     {
+      "file": "btschool",
       "id": "btschool",
       "name": "BTSCHOOL",
       "description": "BTSCHOOL is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -2044,6 +2130,7 @@
       ]
     },
     {
+      "file": "bwtorrents",
       "id": "bwtorrents",
       "name": "BwTorrents",
       "description": "BwTorrents is an INDIAN Private Torrent Tracker for MOVIES / TV",
@@ -2077,6 +2164,7 @@
       ]
     },
     {
+      "file": "byrbt",
       "id": "byrbt",
       "name": "BYRBT",
       "description": "BYRBT is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -2108,6 +2196,7 @@
       ]
     },
     {
+      "file": "byrutor",
       "id": "byrutor",
       "name": "Byrutor",
       "description": "Byrutor is a RUSSIAN Public Torrent Tracker for GAMES",
@@ -2122,6 +2211,7 @@
       ]
     },
     {
+      "file": "c411",
       "id": "c411",
       "name": "C411",
       "description": "C411 (Community 411) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2156,6 +2246,7 @@
       "regex_net": true
     },
     {
+      "file": "cangbaoge",
       "id": "cangbaoge",
       "name": "cangbaoge (CBG)",
       "description": "cangbaoge (CBG) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2185,6 +2276,7 @@
       ]
     },
     {
+      "file": "capybarabr",
       "id": "capybarabr",
       "name": "CapybaraBR (API)",
       "description": "CapybaraBR is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2217,6 +2309,7 @@
       ]
     },
     {
+      "file": "carpathians",
       "id": "carpathians",
       "name": "Carpathians",
       "description": "Carpathians is a HUNGARIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -2247,6 +2340,7 @@
       ]
     },
     {
+      "file": "carpt",
       "id": "carpt",
       "name": "CarPT",
       "description": "CarPT is a CHINESE Private Torrent Tracker for HD MOVIES / TV / MUSIC",
@@ -2277,6 +2371,7 @@
       ]
     },
     {
+      "file": "cathoderaytube",
       "id": "cathoderaytube",
       "name": "Cathode-Ray.Tube",
       "description": "Cathode-Ray.Tube (CRT) is a Private Torrent Tracker for CLASSIC MOVIES / TV",
@@ -2303,9 +2398,11 @@
         "ep",
         "imdbid",
         "genre"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "catorrent",
       "id": "catorrent",
       "name": "Catorrent",
       "description": "Catorrent is a RUSSIAN Public Torrent Tracker for GAMES",
@@ -2321,6 +2418,7 @@
       ]
     },
     {
+      "file": "ceskeforum",
       "id": "ceskeforum",
       "name": "CeskeForum",
       "description": "CeskeForum is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2350,6 +2448,7 @@
       ]
     },
     {
+      "file": "cgpeers",
       "id": "cgpeers",
       "name": "CGPeers",
       "description": "CGPeers is a Private Torrent Tracker for GRAPHICS SOFTWARE / TUTORIALS / ETC",
@@ -2365,6 +2464,7 @@
       ]
     },
     {
+      "file": "chdbits",
       "id": "chdbits",
       "name": "CHDBits",
       "description": "CHDBits is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -2395,6 +2495,7 @@
       ]
     },
     {
+      "file": "cinemageddon",
       "id": "cinemageddon",
       "name": "Cinemageddon",
       "description": "Cinemageddon is a Private Torrent Tracker for B-movies",
@@ -2413,6 +2514,7 @@
       ]
     },
     {
+      "file": "cinemamovies",
       "id": "cinemamovies",
       "name": "CinemaMovieS_ZT",
       "description": "CinemaMovieS_ZT is a POLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2443,6 +2545,7 @@
       "regex_net": true
     },
     {
+      "file": "cinematik",
       "id": "cinematik",
       "name": "Cinematik (API)",
       "description": "Cinematik is a Private tracker for full BD and DVD discs of non-mainstream movies, niche cinema and arthouse.",
@@ -2472,6 +2575,7 @@
       ]
     },
     {
+      "file": "clearjav-api",
       "id": "clearjav-api",
       "name": "ClearJAV (API)",
       "description": "ClearJAV is a Private Torrent Tracker for Japanese Adult Video (JAV) content from official JAV studios only.",
@@ -2486,6 +2590,7 @@
       ]
     },
     {
+      "file": "coastalcrew",
       "id": "coastalcrew",
       "name": "Coastal-Music-Crew",
       "description": "Coastal-Music-Crew (C-M-C) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2515,6 +2620,7 @@
       ]
     },
     {
+      "file": "comicat",
       "id": "comicat",
       "name": "comicat",
       "description": "comicat is a CHINESE Semi-Private tracker for Anime / Hentai / Manga",
@@ -2540,6 +2646,7 @@
       ]
     },
     {
+      "file": "concertos",
       "id": "concertos",
       "name": "Concertos (API)",
       "description": "Concertos is a Private Torrent Tracker for Live Concerts with Strict Quality Control",
@@ -2563,6 +2670,7 @@
       ]
     },
     {
+      "file": "crabpt",
       "id": "crabpt",
       "name": "CrabPT (蟹黄堡)",
       "description": "CrabPT (蟹黄堡) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2595,6 +2703,7 @@
       ]
     },
     {
+      "file": "crabpt-api",
       "id": "crabpt-api",
       "name": "CrabPT (蟹黄堡) (API)",
       "description": "CrabPT (蟹黄堡) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2622,6 +2731,7 @@
       ]
     },
     {
+      "file": "crackingpatching",
       "id": "crackingpatching",
       "name": "CrackingPatching",
       "description": "CrackingPatching is a Public tracker for Software and Apps",
@@ -2637,6 +2747,7 @@
       ]
     },
     {
+      "file": "crazyspirits-api",
       "id": "crazyspirits-api",
       "name": "CrazySpirits (API)",
       "description": "Crazy Spirits is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2665,6 +2776,7 @@
       "regex_net": true
     },
     {
+      "file": "crnaberza",
       "id": "crnaberza",
       "name": "CrnaBerza",
       "description": "CrnaBerza is a BALKAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2693,6 +2805,7 @@
       ]
     },
     {
+      "file": "crnaberza2fa",
       "id": "crnaberza2fa",
       "name": "CrnaBerza2FA",
       "description": "CrnaBerza is a BALKAN Private Torrent Tracker for MOVIES / TV / GENERAL. This indexer uses cookie login for 2FA.",
@@ -2721,6 +2834,7 @@
       ]
     },
     {
+      "file": "crt2fa",
       "id": "crt2fa",
       "name": "CRT2FA",
       "description": "Cathode-Ray.Tube (CRT) is a Private Torrent Tracker for CLASSIC MOVIES / TV. This indexer uses cookie login for 2FA.",
@@ -2747,9 +2861,11 @@
         "ep",
         "imdbid",
         "genre"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "cspt",
       "id": "cspt",
       "name": "Caishen (财神)",
       "description": "Caishen (财神) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2779,6 +2895,7 @@
       ]
     },
     {
+      "file": "cyanbug",
       "id": "cyanbug",
       "name": "cyanbug (大青虫)",
       "description": "cyanbug (大青虫) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2809,6 +2926,7 @@
       ]
     },
     {
+      "file": "cyclingarchiveclub",
       "id": "cyclingarchiveclub",
       "name": "CyclingArchiveClub",
       "description": "CyclingArchiveClub is a Private tracker for Professional road and Cyclocross racing VIDEOS",
@@ -2823,6 +2941,7 @@
       ]
     },
     {
+      "file": "czteam-api",
       "id": "czteam-api",
       "name": "CZTeam (API)",
       "description": "CZTeam (CZT) is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2854,6 +2973,7 @@
       ]
     },
     {
+      "file": "damagnet",
       "id": "damagnet",
       "name": "DaMagNet",
       "description": "DaMagNet is a Public DHT Crawler",
@@ -2877,6 +2997,7 @@
       ]
     },
     {
+      "file": "danishbits-api",
       "id": "danishbits-api",
       "name": "DanishBits (API)",
       "description": "DanishBits is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2911,6 +3032,7 @@
       ]
     },
     {
+      "file": "darkpeers",
       "id": "darkpeers-api",
       "name": "Darkpeers (API)",
       "description": "Darkpeers is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2945,6 +3067,7 @@
       ]
     },
     {
+      "file": "dasunerwartete",
       "id": "dasunerwartete",
       "name": "Das Unerwartete",
       "description": "Das Unerwartete (D-U) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -2976,6 +3099,7 @@
       ]
     },
     {
+      "file": "dasunerwartete-api",
       "id": "dasunerwartete-api",
       "name": "Das Unerwartete (API)",
       "description": "Das Unerwartete (D-U) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL. This is the API version.",
@@ -3009,6 +3133,7 @@
       ]
     },
     {
+      "file": "datascene-api",
       "id": "datascene-api",
       "name": "DataScene (API)",
       "description": "DataScene (DS) is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3041,6 +3166,7 @@
       ]
     },
     {
+      "file": "daxiangjiao",
       "id": "daxiangjiao",
       "name": "DaXiangJiao (大香蕉)",
       "description": "DaXiangJiao (大香蕉) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3066,6 +3192,7 @@
       ]
     },
     {
+      "file": "daxiangjiao-api",
       "id": "daxiangjiao-api",
       "name": "DaXiangJiao (大香蕉) (API)",
       "description": "DaXiangJiao (大香蕉) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3091,6 +3218,7 @@
       ]
     },
     {
+      "file": "deildu",
       "id": "deildu",
       "name": "Deildu",
       "description": "Deildu is an ICELANDIC Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3121,6 +3249,7 @@
       ]
     },
     {
+      "file": "depthstudio",
       "id": "depthstudio",
       "name": "Depth Studio",
       "description": "Depth Studio is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3150,6 +3279,7 @@
       ]
     },
     {
+      "file": "depthstudio-api",
       "id": "depthstudio-api",
       "name": "Depth Studio (API)",
       "description": "Depth Studio is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3174,6 +3304,7 @@
       ]
     },
     {
+      "file": "desitorrents-api",
       "id": "desitorrents-api",
       "name": "DesiTorrents (API)",
       "description": "DesiTorrents is an INDIAN Private Torrent Tracker for MOVIES / TV",
@@ -3203,6 +3334,7 @@
       ]
     },
     {
+      "file": "devil-torrents",
       "id": "devil-torrents",
       "name": "Devil-Torrents",
       "description": "Devil-Torrents is a POLISH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3235,6 +3367,7 @@
       "regex_net": true
     },
     {
+      "file": "diablotorrent",
       "id": "diablotorrent",
       "name": "Diablo Torrent",
       "description": "Diablo Torrent is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3266,6 +3399,7 @@
       ]
     },
     {
+      "file": "digitalcore-api",
       "id": "digitalcore-api",
       "name": "DigitalCore (API)",
       "description": "DigitalCore (DC) is a Private Torrent Tracker for 0DAY / GENERAL",
@@ -3301,6 +3435,7 @@
       ]
     },
     {
+      "file": "dimeadozen",
       "id": "dimeadozen",
       "name": "DimeADozen",
       "description": "DimeADozen (EzTorrent) is a Private Torrent Tracker for BOOTLEG MUSIC",
@@ -3315,6 +3450,7 @@
       ]
     },
     {
+      "file": "dirtybytes-api",
       "id": "dirtybytes-api",
       "name": "DirtyBytes (API)",
       "description": "DirtyBytes is a Private Torrent Tracker for 3X",
@@ -3329,6 +3465,7 @@
       ]
     },
     {
+      "file": "discfan",
       "id": "discfan",
       "name": "DiscFan",
       "description": "DiscFan is a CHINESE Private Torrent Tracker for MOVIES / TV",
@@ -3356,6 +3493,7 @@
       ]
     },
     {
+      "file": "dmhy",
       "id": "dmhy",
       "name": "dmhy",
       "description": "dmhy is a TAIWANESE Public magnet tracker for ANIME",
@@ -3385,6 +3523,7 @@
       ]
     },
     {
+      "file": "docspedia",
       "id": "docspedia",
       "name": "DocsPedia",
       "description": "DocsPedia is a Private Torrent Tracker for E-LEARNING",
@@ -3408,6 +3547,7 @@
       ]
     },
     {
+      "file": "draupnirr",
       "id": "draupnirr",
       "name": "Draupnirr",
       "description": "Draupnirr (Yggrasil) is a FRENCH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3444,6 +3584,7 @@
       "regex_net": true
     },
     {
+      "file": "dreadvault-api",
       "id": "dreadvault-api",
       "name": "DreadVault (API)",
       "description": "DreadVault is a Private Torrent Tracker for HORROR MOVIES / TV",
@@ -3474,6 +3615,7 @@
       ]
     },
     {
+      "file": "dreamingtree",
       "id": "dreamingtree",
       "name": "DreamingTree",
       "description": "DreamingTree is a Semi-Private Torrent Tracker for DAVE MATHEWS MUSIC / BOOTLEGS",
@@ -3488,6 +3630,7 @@
       ]
     },
     {
+      "file": "drugari",
       "id": "drugari",
       "name": "Drugari",
       "description": "Drugari is a CROATIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3519,6 +3662,7 @@
       ]
     },
     {
+      "file": "ds-reloaded",
       "id": "ds-reloaded",
       "name": "DS-Reloaded",
       "description": "DS-Reloaded (DS.R) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3547,6 +3691,7 @@
       ]
     },
     {
+      "file": "dubhe",
       "id": "dubhe",
       "name": "dubhe (天枢)",
       "description": "dubhe (天枢) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3577,6 +3722,7 @@
       ]
     },
     {
+      "file": "dxp",
       "id": "dxp",
       "name": "DXP",
       "description": "Deaf Experts (DXP) is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV with Russian Subtitles",
@@ -3601,9 +3747,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "ebookbay",
       "id": "ebookbay",
       "name": "EBookBay",
       "description": "EBook Bay (EBB) is a Public Torrent Tracker for E-BOOKS",
@@ -3616,9 +3764,11 @@
       "categories": [
         "Audio",
         "Books"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "ehentai",
       "id": "ehentai",
       "name": "E-Hentai",
       "description": "E-Hentai is a Public site for Hentai doujinshi, manga.",
@@ -3638,6 +3788,7 @@
       ]
     },
     {
+      "file": "electro-torrent",
       "id": "electro-torrent",
       "name": "Electro-Torrent",
       "description": "Electro-Torrent is a POLISH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3669,6 +3820,7 @@
       "regex_net": true
     },
     {
+      "file": "empornium",
       "id": "empornium",
       "name": "Empornium",
       "description": "Empornium (EMP) is a Private Torrent Tracker for 3X",
@@ -3683,6 +3835,7 @@
       ]
     },
     {
+      "file": "empornium2fa",
       "id": "empornium2fa",
       "name": "Empornium2FA",
       "description": "Empornium (EMP) is a Private Torrent Tracker for 3X. This indexer uses cookie login for 2FA.",
@@ -3697,6 +3850,7 @@
       ]
     },
     {
+      "file": "emuwarez",
       "id": "emuwarez",
       "name": "eMuwarez (API)",
       "description": "eMuwarez is a SPANISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3728,6 +3882,7 @@
       ]
     },
     {
+      "file": "estone",
       "id": "estone",
       "name": "eStone",
       "description": "eStone (BigTorrent) is a HUNGARIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -3759,6 +3914,7 @@
       ]
     },
     {
+      "file": "ex-torrenty",
       "id": "ex-torrenty",
       "name": "Ex-torrenty",
       "description": "Ex-torrenty is a POLISH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3789,6 +3945,7 @@
       "regex_net": true
     },
     {
+      "file": "exitorrent-org",
       "id": "exitorrent-org",
       "name": "exitorrent.org",
       "description": "exitorrent.org is a POLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3819,6 +3976,7 @@
       ]
     },
     {
+      "file": "exkinoray",
       "id": "exkinoray",
       "name": "ExKinoRay",
       "description": "ExKinoRay is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV",
@@ -3844,9 +4002,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "explosiv-world",
       "id": "explosiv-world",
       "name": "Explosiv-World",
       "description": "Explosiv-World (E-W) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -3879,6 +4039,7 @@
       ]
     },
     {
+      "file": "extratorrent-st",
       "id": "extratorrent-st",
       "name": "ExtraTorrent.st",
       "description": "ExtraTorrent.st is a Public tracker for MOVIE / TV / GENERAL magnets",
@@ -3911,6 +4072,7 @@
       ]
     },
     {
+      "file": "extremebits",
       "id": "extremebits",
       "name": "ExtremeBits",
       "description": "ExtremeBits is a Private Torrent Tracker for EXTREME SPORTS",
@@ -3936,6 +4098,7 @@
       ]
     },
     {
+      "file": "eztv",
       "id": "eztv",
       "name": "EZTV",
       "description": "EZTV is a Public torrent site for TV shows",
@@ -3957,9 +4120,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "eztvl",
       "id": "eztvl",
       "name": "EZTVL",
       "description": "EZTV is a Public torrent site for TV shows. This indexer supports login.",
@@ -3981,9 +4146,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "f1carreras-api",
       "id": "f1carreras-api",
       "name": "F1Carreras (API)",
       "description": "F1Carreras is a SPANISH Private Torrent Tracker for Motor Racing TV Releases",
@@ -4004,9 +4171,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "fanoin",
       "id": "fanoin",
       "name": "FANO.IN",
       "description": "Fano.in is a LATVIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -4038,6 +4207,7 @@
       ]
     },
     {
+      "file": "fappaizuri",
       "id": "fappaizuri",
       "name": "Fappaizuri",
       "description": "Fappaizuri is a Private Torrent Tracker for HENTAI / JAV",
@@ -4061,6 +4231,7 @@
       ]
     },
     {
+      "file": "fappaizuri2fa",
       "id": "fappaizuri2fa",
       "name": "Fappaizuri2FA",
       "description": "Fappaizuri is a Private Torrent Tracker for HENTAI / JAV. This indexer uses cookie login for 2FA.",
@@ -4084,6 +4255,7 @@
       ]
     },
     {
+      "file": "femdomcult",
       "id": "femdomcult",
       "name": "Femdomcult",
       "description": "Femdomcult is a Private Torrent Tracker for FETISH 3X",
@@ -4098,6 +4270,7 @@
       ]
     },
     {
+      "file": "fenyarnyek-tracker",
       "id": "fenyarnyek-tracker",
       "name": "Fenyarnyek-Tracker",
       "description": "Fenyarnyek-Tracker is a HUNGARIAN Semi-Private site for TV / MOVIES / GENERAL",
@@ -4126,6 +4299,7 @@
       ]
     },
     {
+      "file": "file-tracker",
       "id": "file-tracker",
       "name": "File-Tracker",
       "description": "File Tracker is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / GENERAL",
@@ -4152,9 +4326,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "fileiplay",
       "id": "fileiplay",
       "name": "FileIplay",
       "description": "FileIplay is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4187,6 +4363,7 @@
       ]
     },
     {
+      "file": "filemood",
       "id": "filemood",
       "name": "FileMood",
       "description": "FileMood is a Public BitTorrent DHT search engine.",
@@ -4209,6 +4386,7 @@
       ]
     },
     {
+      "file": "finelite",
       "id": "finelite",
       "name": "FinElite",
       "description": "FinElite (FE) is a FINNISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4238,6 +4416,7 @@
       ]
     },
     {
+      "file": "flood",
       "id": "flood",
       "name": "Flood",
       "description": "Flood (FLD) is a Private Torrent Tracker for MOVIES / TV",
@@ -4265,6 +4444,7 @@
       ]
     },
     {
+      "file": "freefarm",
       "id": "freefarm",
       "name": "Free Farm (自由农场)",
       "description": "Free Farm (自由农场) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4297,6 +4477,7 @@
       ]
     },
     {
+      "file": "freefarm-api",
       "id": "freefarm-api",
       "name": "Free Farm (自由农场) (API)",
       "description": "Free Farm (自由农场) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4324,6 +4505,7 @@
       ]
     },
     {
+      "file": "freejavtorrent",
       "id": "freejavtorrent",
       "name": "Free JAV Torrent",
       "description": "Free JAV Torrent is a Public tracker for Asian 3X (JAV)",
@@ -4338,6 +4520,7 @@
       ]
     },
     {
+      "file": "funfile",
       "id": "funfile",
       "name": "FunFile",
       "description": "FunFile is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4371,6 +4554,7 @@
       ]
     },
     {
+      "file": "funzone-api",
       "id": "funzone-api",
       "name": "funZone (API)",
       "description": "funZone is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4405,6 +4589,7 @@
       ]
     },
     {
+      "file": "futuretorrent",
       "id": "futuretorrent",
       "name": "FutureTorrent",
       "description": "FutureTorrent is an ITALIAN Private PAY2DL Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4433,6 +4618,7 @@
       ]
     },
     {
+      "file": "fuzer",
       "id": "fuzer",
       "name": "Fuzer",
       "description": "Fuzer (FZ) is an ISRAELI Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4463,6 +4649,7 @@
       ]
     },
     {
+      "file": "g3minitr4ck3r-api",
       "id": "g3minitr4ck3r-api",
       "name": "G3MINI TR4CK3R (API)",
       "description": "G3MINI TR4CK3R is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4496,6 +4683,7 @@
       "regex_net": true
     },
     {
+      "file": "gamestorrents",
       "id": "gamestorrents",
       "name": "GamesTorrents",
       "description": "GamesTorrents is a SPANISH Public tracker for GAMES",
@@ -4511,6 +4699,7 @@
       ]
     },
     {
+      "file": "gay-torrents",
       "id": "gay-torrents",
       "name": "Gay-Torrents.net",
       "description": "Gay-Torrents.net is a Private Torrent Tracker for GAY 3X",
@@ -4538,6 +4727,7 @@
       ]
     },
     {
+      "file": "gaytorrentru",
       "id": "gaytorrentru",
       "name": "GAYtorrent.ru",
       "description": "GayTorrent.ru is a Private Torrent Tracker for GAY 3X",
@@ -4564,6 +4754,7 @@
       ]
     },
     {
+      "file": "generationfree-api",
       "id": "generationfree-api",
       "name": "Generation-Free (API)",
       "description": "Generation-Free (GF-Free) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4597,6 +4788,7 @@
       "regex_net": true
     },
     {
+      "file": "ggpt",
       "id": "ggpt",
       "name": "GGPT",
       "description": "GGPT is a CHINESE Private Torrent Tracker for GAMES",
@@ -4614,6 +4806,7 @@
       ]
     },
     {
+      "file": "gigatorrents",
       "id": "gigatorrents",
       "name": "GigaTorrents",
       "description": "GigaTorrents is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4643,6 +4836,7 @@
       ]
     },
     {
+      "file": "girotorrent",
       "id": "girotorrent",
       "name": "Girotorrent",
       "description": "Girotorrent is an ITALIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4668,9 +4862,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "haidan",
       "id": "haidan",
       "name": "HaiDan",
       "description": "HaiDan is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -4702,6 +4898,7 @@
       ]
     },
     {
+      "file": "haitang",
       "id": "haitang",
       "name": "Hǎitáng (海棠PT)",
       "description": "Hǎitáng (海棠PT) is a CHINESE Private Torrent Tracker for OPERA / CROSSTALK",
@@ -4723,6 +4920,7 @@
       ]
     },
     {
+      "file": "happyfappy",
       "id": "happyfappy",
       "name": "HappyFappy",
       "description": "HappyFappy (HF) is a Private Torrent Tracker for 3X",
@@ -4737,6 +4935,7 @@
       ]
     },
     {
+      "file": "happyfappy2fa",
       "id": "happyfappy2fa",
       "name": "HappyFappy2FA",
       "description": "HappyFappy (HF) is a Private Torrent Tracker for 3X. This indexer uses cookie login for 2FA.",
@@ -4751,6 +4950,7 @@
       ]
     },
     {
+      "file": "hawke-uno",
       "id": "hawke-uno",
       "name": "hawke-uno",
       "description": "hawke-uno (HUNO) is a Private Torrent Tracker for HD MOVIES / TV",
@@ -4780,6 +4980,7 @@
       "regex_net": true
     },
     {
+      "file": "hd-club",
       "id": "hd-club",
       "name": "HD-CLUB",
       "description": "HD-CLUB is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4807,6 +5008,7 @@
       ]
     },
     {
+      "file": "hd-unit3d-api",
       "id": "hd-unit3d-api",
       "name": "HD-UNiT3D (API)",
       "description": "HD-UNiT3D is a Private Torrent Tracker for HD MOVIES / TV",
@@ -4836,6 +5038,7 @@
       ]
     },
     {
+      "file": "hdarea",
       "id": "hdarea",
       "name": "HDArea",
       "description": "HDArea (HDA) is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -4865,6 +5068,7 @@
       ]
     },
     {
+      "file": "hdbao",
       "id": "hdbao",
       "name": "HDBao",
       "description": "HDBao is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4891,6 +5095,7 @@
       ]
     },
     {
+      "file": "hdbao-api",
       "id": "hdbao-api",
       "name": "HDBao (API)",
       "description": "HDBao is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4917,6 +5122,7 @@
       ]
     },
     {
+      "file": "hdc",
       "id": "hdc",
       "name": "HDCiTY",
       "description": "HDCiTY (HDC) is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -4950,6 +5156,7 @@
       ]
     },
     {
+      "file": "hdclone",
       "id": "hdclone",
       "name": "HDClone",
       "description": "HDClone is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -4980,6 +5187,7 @@
       ]
     },
     {
+      "file": "hddolby",
       "id": "hddolby",
       "name": "HD Dolby",
       "description": "HD Dolby is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -5011,6 +5219,7 @@
       ]
     },
     {
+      "file": "hdfans",
       "id": "hdfans",
       "name": "HDFans",
       "description": "HDFans is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5043,6 +5252,7 @@
       ]
     },
     {
+      "file": "hdforever-api",
       "id": "hdforever-api",
       "name": "HD-Forever (API)",
       "description": "HD-Forever (HD-F) is a French private tracker dedicated to movies, TV shows, animation, documentaries, concerts, and live shows.",
@@ -5068,9 +5278,11 @@
         "imdbid",
         "tmdbid",
         "year"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hdgalaktik",
       "id": "hdgalaktik",
       "name": "HDGalaKtik",
       "description": "HDGalaKtik is a RUSSIAN Semi-Private tracker for MOVIES / TV / GENERAL",
@@ -5098,9 +5310,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hdhome",
       "id": "hdhome",
       "name": "HDHome",
       "description": "HDHome is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -5128,6 +5342,7 @@
       ]
     },
     {
+      "file": "hdkylin",
       "id": "hdkylin",
       "name": "HDKylin (麒麟)",
       "description": "HDKylin (麒麟) is a CHINESE Private tracker for MOVIES / TV / GENERAL",
@@ -5161,6 +5376,7 @@
       ]
     },
     {
+      "file": "hdolimpo-api",
       "id": "hdolimpo-api",
       "name": "HD-Olimpo (API)",
       "description": "HD-Olimpo is a SPANISH Private Torrent Tracker for HD MOVIES / TV",
@@ -5191,6 +5407,7 @@
       "regex_net": true
     },
     {
+      "file": "hdonly-api",
       "id": "hdonly-api",
       "name": "HD-Only (API)",
       "description": "HD-Only (HD-O) is a FRENCH Private Torrent Tracker for HD MOVIES / TV",
@@ -5224,6 +5441,7 @@
       "regex_net": true
     },
     {
+      "file": "hdroute",
       "id": "hdroute",
       "name": "HDRoute",
       "description": "HDRoute is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -5251,6 +5469,7 @@
       ]
     },
     {
+      "file": "hdsky",
       "id": "hdsky",
       "name": "HDSky",
       "description": "HDSky is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -5278,6 +5497,7 @@
       ]
     },
     {
+      "file": "hdspace",
       "id": "hdspace",
       "name": "HD-Space",
       "description": "HD-Space (HDS) is a Private Torrent Tracker for HD MOVIES / TV",
@@ -5305,9 +5525,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hdspacecookie",
       "id": "hdspacecookie",
       "name": "HD-SpaceCookie",
       "description": "HD-Space (HDS) is a Private Torrent Tracker for HD MOVIES / TV. This uses the cookie method for access",
@@ -5334,9 +5556,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hdtime",
       "id": "hdtime",
       "name": "HDtime",
       "description": "HDtime is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -5368,6 +5592,7 @@
       ]
     },
     {
+      "file": "hdtorrents",
       "id": "hdtorrents",
       "name": "HD-Torrents",
       "description": "HD-Torrents (HDT) is a Private Torrent Tracker for HD MOVIES / TV / MUSIC / 3X",
@@ -5399,6 +5624,7 @@
       ]
     },
     {
+      "file": "hdtorrentsit",
       "id": "hdtorrentsit",
       "name": "HDTorrents.it (API)",
       "description": "HDTorrents.it is an ITALIAN Private PAY2DL site for MOVIES / TV",
@@ -5427,9 +5653,11 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hdturk",
       "id": "hdturk",
       "name": "HDTurk",
       "description": "HDTurk is a TURKISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5457,6 +5685,7 @@
       ]
     },
     {
+      "file": "hdu",
       "id": "hdu",
       "name": "HDU",
       "description": "HDU is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -5488,6 +5717,7 @@
       ]
     },
     {
+      "file": "hdvideo",
       "id": "hdvideo",
       "name": "HDVideo",
       "description": "HDVideo is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5517,6 +5747,7 @@
       ]
     },
     {
+      "file": "hdvideo-api",
       "id": "hdvideo-api",
       "name": "HDVideo (API)",
       "description": "HDVideo is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5541,6 +5772,7 @@
       ]
     },
     {
+      "file": "hdzero",
       "id": "hdzero-api",
       "name": "HDZero (API)",
       "description": "HD Zero is a SPANISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5570,6 +5802,7 @@
       ]
     },
     {
+      "file": "hebits",
       "id": "hebits",
       "name": "Hebits",
       "description": "Hebits (HB) is an ISRAELI Private Torrent Tracker for MOVIES / TV / GENERAL.",
@@ -5600,6 +5833,7 @@
       ]
     },
     {
+      "file": "hellashut",
       "id": "hellashut",
       "name": "HellasHut",
       "description": "HellasHut is a GREEK Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5631,6 +5865,7 @@
       ]
     },
     {
+      "file": "hellashut-api",
       "id": "hellashut-api",
       "name": "HellasHut (API)",
       "description": "HellasHut is a GREEK Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5659,6 +5894,7 @@
       ]
     },
     {
+      "file": "hellenic-hd-api",
       "id": "hellenic-hd-api",
       "name": "HELLENIC-HD (API)",
       "description": "HELLENIC-HD is a GREEK Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5690,6 +5926,7 @@
       ]
     },
     {
+      "file": "helltorrents",
       "id": "helltorrents",
       "name": "HellTorrents",
       "description": "HellTorrents is a POLISH Semi-Private PAY2DL Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5721,6 +5958,7 @@
       "regex_net": true
     },
     {
+      "file": "herobit",
       "id": "herobit",
       "name": "HeroBit",
       "description": "HeroBit is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5754,6 +5992,7 @@
       ]
     },
     {
+      "file": "hhanclub",
       "id": "hhanclub",
       "name": "HHanClub",
       "description": "HHanClub is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -5782,9 +6021,11 @@
         "ep",
         "imdbid",
         "doubanid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "hhd-api",
       "id": "hhd-api",
       "name": "HHD (API)",
       "description": "HHD is a Private Torrent Tracker for MOVIES / TV / GAMES",
@@ -5818,6 +6059,7 @@
       ]
     },
     {
+      "file": "houseofdevil",
       "id": "houseofdevil",
       "name": "House of Devil",
       "description": "House of Devil is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5847,6 +6089,7 @@
       ]
     },
     {
+      "file": "hqmusic",
       "id": "hqmusic",
       "name": "HQMusic",
       "description": "HQMusic is a VIETNAMESE Private Torrent Tracker for MUSIC",
@@ -5861,6 +6104,7 @@
       ]
     },
     {
+      "file": "hudbt",
       "id": "hudbt",
       "name": "HUDBT (蝴蝶)",
       "description": "HUDBT (蝴蝶) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5894,6 +6138,7 @@
       ]
     },
     {
+      "file": "huntorrent",
       "id": "huntorrent",
       "name": "HunTorrent",
       "description": "HunTorrent is a HUNGARIAN Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5928,6 +6173,7 @@
       ]
     },
     {
+      "file": "hxpt",
       "id": "hxpt",
       "name": "HxPT (好学)",
       "description": "HxPT (好学) is a CHINESE Private Torrent Tracker for E-LEARNING",
@@ -5942,6 +6188,7 @@
       ]
     },
     {
+      "file": "ilcorsaroblu",
       "id": "ilcorsaroblu",
       "name": "Il Corsaro Blu",
       "description": "il CorSaRo Blu is an ITALIAN Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -5969,9 +6216,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "immortuos",
       "id": "immortuos",
       "name": "Immortuos",
       "description": "Immortuos is a GERMAN Private Tracker for MOVIES / TV",
@@ -6005,6 +6254,7 @@
       ]
     },
     {
+      "file": "indietorrents",
       "id": "indietorrents",
       "name": "Indietorrents",
       "description": "Indietorrents is a Private Music Torrent Tracker for independent MUSIC",
@@ -6019,6 +6269,7 @@
       ]
     },
     {
+      "file": "infinityhd-api",
       "id": "infinityhd-api",
       "name": "InfinityHD (API)",
       "description": "InfinityHD is a Private Torrent Tracker for MOVIES / TV / ANIME / MUSIC",
@@ -6048,6 +6299,7 @@
       ]
     },
     {
+      "file": "infire",
       "id": "infire",
       "name": "Infire",
       "description": "Infire is a SLOVENIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6078,6 +6330,7 @@
       ]
     },
     {
+      "file": "insanetracker",
       "id": "insanetracker",
       "name": "Insane Tracker",
       "description": "Insane Tracker is a HUNGARIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -6109,6 +6362,7 @@
       ]
     },
     {
+      "file": "internetarchive",
       "id": "internetarchive",
       "name": "Internet Archive",
       "description": "Internet Archive is a non-profit digital library offering free universal access to books, movies & music, as well as 406 billion archived web pages",
@@ -6136,6 +6390,7 @@
       ]
     },
     {
+      "file": "itatorrents",
       "id": "itatorrents",
       "name": "ItaTorrents",
       "description": "ItaTorrents is an ITALIAN Private tracker for MOVIES / TV / GENERAL",
@@ -6166,9 +6421,11 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "jme-reunit3d-api",
       "id": "jme-reunit3d-api",
       "name": "JME-REUNIT3D (API)",
       "description": "JME-REUNIT3D is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6202,6 +6459,7 @@
       ]
     },
     {
+      "file": "jpopsuki",
       "id": "jpopsuki",
       "name": "JPopsuki",
       "description": "JPopSuki is a Private Torrent Tracker for ASIAN MUSIC",
@@ -6229,6 +6487,7 @@
       ]
     },
     {
+      "file": "jptv4us-api",
       "id": "jptv4us-api",
       "name": "JPTV4us (API)",
       "description": "JPTV4us is a JAPANESE Private Torrent Tracker for MOVIES / TV / MUSIC / GENERAL",
@@ -6259,6 +6518,7 @@
       ]
     },
     {
+      "file": "kamept",
       "id": "kamept",
       "name": "KamePT",
       "description": "KamePT is a CHINESE Private Torrent Tracker for 3X",
@@ -6273,6 +6533,7 @@
       ]
     },
     {
+      "file": "karagarga",
       "id": "karagarga",
       "name": "Karagarga",
       "description": "Karagarga is a Private Torrent Tracker that tracks non-hollywood, rare and obscure MOVIES, MUSIC and LITERATURE.",
@@ -6294,6 +6555,7 @@
       ]
     },
     {
+      "file": "keepfriends",
       "id": "keepfriends",
       "name": "Keep Friends",
       "description": "Keep Friends (FRDS-PT) is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -6323,6 +6585,7 @@
       ]
     },
     {
+      "file": "kelu",
       "id": "kelu",
       "name": "Kelu",
       "description": "Kelu is a CHINESE Private Torrent Tracker for GAY 3X",
@@ -6339,6 +6602,7 @@
       ]
     },
     {
+      "file": "kickasstorrents-to",
       "id": "kickasstorrents-to",
       "name": "kickasstorrents.to",
       "description": "kickasstorrents.to is a Public KickAssTorrent clone for MOVIES / TV / GENERAL",
@@ -6372,6 +6636,7 @@
       ]
     },
     {
+      "file": "kickasstorrents-ws",
       "id": "kickasstorrents-ws",
       "name": "kickasstorrents.ws",
       "description": "kickasstorrents.ws is a Public KickAssTorrent clone for MOVIES / TV / GENERAL",
@@ -6413,6 +6678,7 @@
       ]
     },
     {
+      "file": "kinorun",
       "id": "kinorun",
       "name": "Kinorun",
       "description": "Kinorun is a RUSSIAN Semi-Private Torrent Tracker for 3X",
@@ -6427,6 +6693,7 @@
       ]
     },
     {
+      "file": "kinozal",
       "id": "kinozal",
       "name": "Kinozal",
       "description": "Kinozal is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV / MUSIC. This indexer uses torrents.",
@@ -6453,9 +6720,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "kinozal-magnet",
       "id": "kinozal-magnet",
       "name": "Kinozal (M)",
       "description": "Kinozal is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV / MUSIC. This indexer uses magnet links.",
@@ -6482,9 +6751,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "korsar",
       "id": "korsar",
       "name": "Korsar",
       "description": "Korsar is a RUSSIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6513,6 +6784,7 @@
       ]
     },
     {
+      "file": "krazyzone",
       "id": "krazyzone",
       "name": "KrazyZone",
       "description": "KrazyZone is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6540,6 +6812,7 @@
       ]
     },
     {
+      "file": "kufei",
       "id": "kufei",
       "name": "Kufei (库非)",
       "description": "Kufei (库非) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6572,6 +6845,7 @@
       ]
     },
     {
+      "file": "kufei-api",
       "id": "kufei-api",
       "name": "Kufei (库非) (API)",
       "description": "Kufei (库非) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6600,6 +6874,7 @@
       ]
     },
     {
+      "file": "kufirc",
       "id": "kufirc",
       "name": "Kufirc",
       "description": "Kufirc is a HUNGARIAN Private tracker for 3X",
@@ -6616,6 +6891,7 @@
       ]
     },
     {
+      "file": "kufirc2fa",
       "id": "kufirc2fa",
       "name": "Kufirc2FA",
       "description": "Kufirc is a HUNGARIAN Private tracker for 3X. This indexer uses cookie login for 2FA.",
@@ -6632,6 +6908,7 @@
       ]
     },
     {
+      "file": "lajidui",
       "id": "lajidui",
       "name": "lajidui",
       "description": "lajidui is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6663,6 +6940,7 @@
       ]
     },
     {
+      "file": "lajidui-api",
       "id": "lajidui-api",
       "name": "lajidui (API)",
       "description": "lajidui is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6690,6 +6968,7 @@
       ]
     },
     {
+      "file": "lastdigitalunderground",
       "id": "lastdigitalunderground",
       "name": "Last Digital Underground",
       "description": "Last Digital Underground (LDU) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6724,6 +7003,7 @@
       ]
     },
     {
+      "file": "lastfiles",
       "id": "lastfiles",
       "name": "LastFiles",
       "description": "LastFiles (LF) is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6754,6 +7034,7 @@
       ]
     },
     {
+      "file": "lat-team-api",
       "id": "lat-team-api",
       "name": "Lat-Team (API)",
       "description": "Lat-Team is a SPANISH Private Torrent Tracker for MOVIES / TV",
@@ -6788,6 +7069,7 @@
       ]
     },
     {
+      "file": "learnflakes",
       "id": "learnflakes",
       "name": "LearnFlakes",
       "description": "LearnFlakes is a Private Torrent Tracker for CERTIFICATE / TRAINING E-LEARNING",
@@ -6802,6 +7084,7 @@
       ]
     },
     {
+      "file": "leech24",
       "id": "leech24",
       "name": "leech24",
       "description": "leech24 is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6830,6 +7113,7 @@
       ]
     },
     {
+      "file": "lemonhd-net",
       "id": "lemonhd-net",
       "name": "LemonHD.net",
       "description": "LemonHD.net is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -6860,6 +7144,7 @@
       ]
     },
     {
+      "file": "lemonhd-net-api",
       "id": "lemonhd-net-api",
       "name": "LemonHD.net (API)",
       "description": "LemonHD.net is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -6885,6 +7170,7 @@
       ]
     },
     {
+      "file": "lesaloon",
       "id": "lesaloon",
       "name": "LeSaloon",
       "description": "Le Saloon is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6915,6 +7201,7 @@
       "regex_net": true
     },
     {
+      "file": "letseed",
       "id": "letseed",
       "name": "LetSeed",
       "description": "LetSeed is a TURKISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -6946,6 +7233,7 @@
       ]
     },
     {
+      "file": "libranet",
       "id": "libranet",
       "name": "LibraNet",
       "description": "LibraNet (LN) is a HUNGARIAN Private Torrent Tracker for EBOOKS / LOSSLESS MUSIC",
@@ -6965,6 +7253,7 @@
       ]
     },
     {
+      "file": "limetorrents",
       "id": "limetorrents",
       "name": "LimeTorrents",
       "description": "LimeTorrents is a Public general torrent index with mostly verified torrents",
@@ -6994,9 +7283,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "linkomanija",
       "id": "linkomanija",
       "name": "LinkoManija",
       "description": "LinkoManija is an LITHUANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7027,6 +7318,7 @@
       ]
     },
     {
+      "file": "linuxtracker",
       "id": "linuxtracker",
       "name": "LinuxTracker",
       "description": "LinuxTracker is a Public Linux ISO Torrent Repository",
@@ -7042,6 +7334,7 @@
       ]
     },
     {
+      "file": "locadora",
       "id": "locadora",
       "name": "Locadora (API)",
       "description": "Locadora is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / ANIME",
@@ -7071,6 +7364,7 @@
       ]
     },
     {
+      "file": "longpt",
       "id": "longpt",
       "name": "LongPT",
       "description": "LongPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7101,6 +7395,7 @@
       ]
     },
     {
+      "file": "longpt-api",
       "id": "longpt-api",
       "name": "LongPT (API)",
       "description": "LongPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7126,6 +7421,7 @@
       ]
     },
     {
+      "file": "losslessclub",
       "id": "losslessclub",
       "name": "LosslessClub",
       "description": "LosslessClub is a RUSSIAN Private Torrent Tracker for High Quality Music",
@@ -7140,6 +7436,7 @@
       ]
     },
     {
+      "file": "lp-bits",
       "id": "lp-bits",
       "name": "LP-Bits 2.0",
       "description": "LP-Bits 2.0 is a Private Torrent Tracker for Linkin Park Music Releases.\"",
@@ -7154,6 +7451,7 @@
       ]
     },
     {
+      "file": "lst",
       "id": "lst",
       "name": "LST",
       "description": "LST is an ENGLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7188,6 +7486,7 @@
       ]
     },
     {
+      "file": "luckpt",
       "id": "luckpt",
       "name": "LuckPT",
       "description": "LuckPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7217,6 +7516,7 @@
       ]
     },
     {
+      "file": "luminarr-api",
       "id": "luminarr-api",
       "name": "Luminarr (API)",
       "description": "Luminarr is a Private Torrent Tracker for MOVIES / TV",
@@ -7245,6 +7545,7 @@
       ]
     },
     {
+      "file": "mactorrentsdownload",
       "id": "mactorrentsdownload",
       "name": "Mac Torrents Download",
       "description": "Mac Torrents Download is a Public tracker for Mac software",
@@ -7261,6 +7562,7 @@
       ]
     },
     {
+      "file": "madsrevolution",
       "id": "madsrevolution",
       "name": "MaDs Revolution",
       "description": "MaDs Revolution is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7292,6 +7594,7 @@
       ]
     },
     {
+      "file": "magico",
       "id": "magico",
       "name": "Magico",
       "description": "Magico (Trellas) is a GREEK Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7322,6 +7625,7 @@
       ]
     },
     {
+      "file": "magnetcat",
       "id": "magnetcat",
       "name": "Magnet Cat",
       "description": "Magnet Cat is a Public Tracker for MOVIES / TV / GENERAL",
@@ -7354,6 +7658,7 @@
       ]
     },
     {
+      "file": "magnetdownload",
       "id": "magnetdownload",
       "name": "MagnetDownload",
       "description": "MagnetDownload is a Public DHT Crawler",
@@ -7376,6 +7681,7 @@
       ]
     },
     {
+      "file": "majomparade",
       "id": "majomparade",
       "name": "Majomparádé",
       "description": "Majomparádé (TurkDepo) is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7407,6 +7713,7 @@
       ]
     },
     {
+      "file": "malayabits-api",
       "id": "malayabits-api",
       "name": "Malayabits (API)",
       "description": "Malayabits is a MALAYSIAN Private Torrent Tracker for MOVIES / TV / MUSIC",
@@ -7437,6 +7744,7 @@
       ]
     },
     {
+      "file": "march",
       "id": "march",
       "name": "March",
       "description": "March is a CHINESE Private Torrent Tracker for MOVIES / TV",
@@ -7466,6 +7774,7 @@
       ]
     },
     {
+      "file": "marinetracker",
       "id": "marinetracker",
       "name": "Marine Tracker",
       "description": "Marine Tracker is a RUSSIAN Semi-Private Torrent Tracker for MARITIME E-LEARNING",
@@ -7488,6 +7797,7 @@
       ]
     },
     {
+      "file": "matrix",
       "id": "matrix",
       "name": "Matrix",
       "description": "M.A.T.R.I.X is a HUNGARIAN Private Tracker for MOVIES / TV / GENERAL",
@@ -7518,6 +7828,7 @@
       ]
     },
     {
+      "file": "mazepa",
       "id": "mazepa",
       "name": "Mazepa",
       "description": "Mazepa is an UKRAINIAN Semi-Private Torrent Tracker for Videos with Ukrainian soundtracks",
@@ -7542,9 +7853,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "mdan",
       "id": "mdan",
       "name": "MDAN",
       "description": "Mansão dos Animes (MDAN) is a BRAZILIAN Private Torrent Tracker for ANIME",
@@ -7570,6 +7883,7 @@
       ]
     },
     {
+      "file": "megapeer",
       "id": "megapeer",
       "name": "MegaPeer",
       "description": "MegaPeer is a RUSSIAN Public Torrent Tracker for MOVIES / TV",
@@ -7596,9 +7910,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "memphis",
       "id": "memphis",
       "name": "Memphis",
       "description": "Memphis is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7626,6 +7942,7 @@
       "regex_net": true
     },
     {
+      "file": "mesevilag",
       "id": "mesevilag",
       "name": "MeseVilág",
       "description": "MeseVilág (Fairytale World) is a HUNGARIAN Private Torrent Tracker for ANIMATED MOVIES / TV",
@@ -7653,6 +7970,7 @@
       ]
     },
     {
+      "file": "metalguru",
       "id": "metalguru",
       "name": "MetalGuru",
       "description": "MetalGuru is a Private Torrent Tracker for GENERAL with focus on MUSIC",
@@ -7684,6 +8002,7 @@
       ]
     },
     {
+      "file": "metaltracker",
       "id": "metaltracker",
       "name": "Metal Tracker",
       "description": "Metal Tracker is a Semi-Private Torrent Tracker dedicated to HEAVY METAL MUSIC. This definition is for the English site.",
@@ -7698,6 +8017,7 @@
       ]
     },
     {
+      "file": "midnightscene",
       "id": "midnightscene",
       "name": "MidnightScene",
       "description": "MidnightScene is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7728,6 +8048,7 @@
       ]
     },
     {
+      "file": "mikan",
       "id": "mikan",
       "name": "Mikan",
       "description": "Mikan is a CHINESE Public torrent tracker for ANIME",
@@ -7747,6 +8068,7 @@
       ]
     },
     {
+      "file": "milkie",
       "id": "milkie",
       "name": "Milkie",
       "description": "Milkie.cc (ME) is Private Torrent Tracker for 0DAY / GENERAL",
@@ -7774,6 +8096,7 @@
       ]
     },
     {
+      "file": "milnueve-api",
       "id": "milnueve-api",
       "name": "Milnueve (API)",
       "description": "Milnueve is a SPANISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7804,6 +8127,7 @@
       ]
     },
     {
+      "file": "miobt",
       "id": "miobt",
       "name": "MioBT",
       "description": "MioBT is a CHINESE Semi-Private torrent index",
@@ -7832,6 +8156,7 @@
       ]
     },
     {
+      "file": "mixtapetorrent",
       "id": "mixtapetorrent",
       "name": "MixtapeTorrent",
       "description": "MixtapeTorrent is a Public Music site for MixTapes",
@@ -7846,6 +8171,7 @@
       ]
     },
     {
+      "file": "mma-torrents",
       "id": "mma-torrents",
       "name": "MMA-torrents",
       "description": "MMA-Torrents is a Private Torrent Tracker for MMA (Mixed Martial Arts)",
@@ -7872,6 +8198,7 @@
       ]
     },
     {
+      "file": "mnv",
       "id": "mnv",
       "name": "MNV",
       "description": "MNV (Max-New-Vision) is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7900,6 +8227,7 @@
       ]
     },
     {
+      "file": "mojblink",
       "id": "mojblink",
       "name": "MOJBLiNK",
       "description": "MOJBLiNK is a SLOVENIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -7931,6 +8259,7 @@
       ]
     },
     {
+      "file": "momentpt",
       "id": "momentpt",
       "name": "MomentPT",
       "description": "MomentPT is a CHINESE Private Torrent Tracker for Photography",
@@ -7945,6 +8274,7 @@
       ]
     },
     {
+      "file": "monikadesign-api",
       "id": "monikadesign-api",
       "name": "MonikaDesign (API)",
       "description": "MonikaDesign is a CHINESE Private Torrent Tracker for MOVIES / TV / ANIME",
@@ -7975,6 +8305,7 @@
       ]
     },
     {
+      "file": "mousebits",
       "id": "mousebits",
       "name": "MouseBits",
       "description": "MouseBits is a Private Torrent Tracker for all things Disney",
@@ -7996,6 +8327,7 @@
       ]
     },
     {
+      "file": "musebootlegs",
       "id": "musebootlegs",
       "name": "MuseBootlegs",
       "description": "MuseBootlegs (MB) is a Semi-Private Torrent Tracker for MUSE MUSIC / BOOTLEGS",
@@ -8012,6 +8344,7 @@
       ]
     },
     {
+      "file": "musopia",
       "id": "musopia",
       "name": "Musopia (音乐乌托邦)",
       "description": "Musopia (音乐乌托邦) is a CHINESE Private Torrent Tracker for MUSIC",
@@ -8026,6 +8359,7 @@
       ]
     },
     {
+      "file": "musopia-api",
       "id": "musopia-api",
       "name": "Musopia (音乐乌托邦) (API)",
       "description": "Musopia (音乐乌托邦) is a CHINESE Private Torrent Tracker for MUSIC",
@@ -8040,6 +8374,7 @@
       ]
     },
     {
+      "file": "muxuege",
       "id": "muxuege",
       "name": "Muxuege",
       "description": "Muxuege is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8072,6 +8407,7 @@
       ]
     },
     {
+      "file": "mvgroupforum",
       "id": "mvgroupforum",
       "name": "MVGroup Forum",
       "description": "MVGroup is a Semi-Private Torrent Tracker dedicated to UK TV and DOCUMENTARIES. This definition is for the Forum Tracker site.",
@@ -8095,6 +8431,7 @@
       ]
     },
     {
+      "file": "mvgroupmain",
       "id": "mvgroupmain",
       "name": "MVGroup Main",
       "description": "MVGroup is a Semi-Private Torrent Tracker dedicated to UK TV and DOCUMENTARIES. This definition is for the Main Tracker site.",
@@ -8118,6 +8455,7 @@
       ]
     },
     {
+      "file": "mypornclub",
       "id": "mypornclub",
       "name": "MyPornClub",
       "description": "MyPornClub is a Public Torrent Tracker for 3X",
@@ -8133,6 +8471,7 @@
       ]
     },
     {
+      "file": "myspleen",
       "id": "myspleen",
       "name": "MySpleen",
       "description": "MySpleen is a Private Torrent Tracker for TV / COMEDY / ANIMATION / 80-90’S VHS NOSTALGIA",
@@ -8157,6 +8496,7 @@
       ]
     },
     {
+      "file": "nanyangpt",
       "id": "nanyangpt",
       "name": "NanyangPT (南洋)",
       "description": "NanyangPT (南洋) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8188,6 +8528,7 @@
       ]
     },
     {
+      "file": "ncore",
       "id": "ncore",
       "name": "nCore",
       "description": "nCore is a HUNGARIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8220,6 +8561,7 @@
       ]
     },
     {
+      "file": "nekobt",
       "id": "nekobt",
       "name": "nekoBT",
       "description": "nekoBT is a Public Torrent Tracker for ANIME",
@@ -8244,6 +8586,7 @@
       ]
     },
     {
+      "file": "nethd",
       "id": "nethd",
       "name": "NetHD",
       "description": "NetHD (VietTorrent) is a VIETNAMESE Semi-Private Torrent Tracker for HD MOVIES / TV",
@@ -8270,9 +8613,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "new-team",
       "id": "new-team",
       "name": "New-Team",
       "description": "New-Team is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8298,6 +8643,7 @@
       ]
     },
     {
+      "file": "newheaven",
       "id": "newheaven",
       "name": "New Heaven",
       "description": "New Heaven is a GERMAN Private tracker for MOVIES / AUDIO / TV / GENERAL",
@@ -8328,6 +8674,7 @@
       ]
     },
     {
+      "file": "newretro",
       "id": "newretro",
       "name": "The New Retro",
       "description": "The New Retro is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8357,6 +8704,7 @@
       ]
     },
     {
+      "file": "newstudio",
       "id": "newstudio",
       "name": "NewStudio",
       "description": "NewStudio is a RUSSIAN Public site for TV",
@@ -8373,9 +8721,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "newstudiol",
       "id": "newstudiol",
       "name": "NewStudioL",
       "description": "NewStudio is a RUSSIAN Public site for TV. This supports login.",
@@ -8392,9 +8742,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "nicept",
       "id": "nicept",
       "name": "NicePT",
       "description": "NicePT is a CHINESE Private Torrent Tracker for 3X",
@@ -8409,6 +8761,7 @@
       ]
     },
     {
+      "file": "nicept-api",
       "id": "nicept-api",
       "name": "NicePT (API)",
       "description": "NicePT is a CHINESE Private Torrent Tracker for 3X",
@@ -8423,6 +8776,7 @@
       ]
     },
     {
+      "file": "nipponsei",
       "id": "nipponsei",
       "name": "Nipponsei",
       "description": "Nipponsei is a Public site for MUSIC fresh from JAPAN",
@@ -8437,6 +8791,7 @@
       ]
     },
     {
+      "file": "nirvana",
       "id": "nirvana",
       "name": "Nirvana (API)",
       "description": "Nirvana is a Private RUSSIAN Tracker for MOVIES / TV",
@@ -8466,6 +8821,7 @@
       ]
     },
     {
+      "file": "njtupt",
       "id": "njtupt",
       "name": "njtupt (浦园)",
       "description": "njtupt (浦园) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8497,6 +8853,7 @@
       ]
     },
     {
+      "file": "nobs",
       "id": "nobs",
       "name": "NOBS",
       "description": "NOBS (NUCLEAR ORDER BIT SYNDICATE) is a SPANISH Private Torrent Tracker for MOVIES / TV",
@@ -8528,6 +8885,7 @@
       ]
     },
     {
+      "file": "noname-club",
       "id": "noname-club",
       "name": "NoNaMe Club",
       "description": "NoNaMe Club (NNM-Club) is a RUSSIAN Public Tracker for MOVIES / TV / MUSIC",
@@ -8554,9 +8912,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "noname-clubl",
       "id": "noname-clubl",
       "name": "NoNaMe ClubL",
       "description": "This is the NoNaMe Club indexer with Login enabled in the config.",
@@ -8580,9 +8940,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "nordicbytes",
       "id": "nordicbytes",
       "name": "NordicBytes",
       "description": "NordicBytes is a Mixed NORDIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8618,6 +8980,7 @@
       ]
     },
     {
+      "file": "nordicquality",
       "id": "nordicquality-api",
       "name": "NordicQuality (API)",
       "description": "NordicQuality is a NORDIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8651,6 +9014,7 @@
       ]
     },
     {
+      "file": "nostradamus",
       "id": "nostradamus",
       "name": "Nostradamus",
       "description": "Nostradamus is a ratioless FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8682,6 +9046,7 @@
       "regex_net": true
     },
     {
+      "file": "novahd",
       "id": "novahd",
       "name": "NovaHD",
       "description": "NovaHD is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8712,6 +9077,7 @@
       ]
     },
     {
+      "file": "nyaasi",
       "id": "nyaasi",
       "name": "Nyaa.si",
       "description": "Nyaa is a Public torrent site focused on Eastern ASIAN media including anime, manga, literature and music",
@@ -8744,6 +9110,7 @@
       "regex_net": true
     },
     {
+      "file": "okpt",
       "id": "okpt",
       "name": "OKPT",
       "description": "OKPT is a CHINESE Private Torrent Tracker for MOVIES / TV / MUSIC / GENERAL",
@@ -8777,6 +9144,7 @@
       ]
     },
     {
+      "file": "oldgreektracker",
       "id": "oldgreektracker",
       "name": "Old Greek Tracker (OGT)",
       "description": "Old Greek Tracker (OGT) is a GREEK Private Torrent Tracker for PRE-2020 MOVIES / TV / GENERAL",
@@ -8801,6 +9169,7 @@
       ]
     },
     {
+      "file": "oldtoonsworld",
       "id": "oldtoonsworld",
       "name": "OldToonsWorld (API)",
       "description": "Old Toons World (OTW) is a Private Torrent Tracker for ANIMATED MOVIES / TV",
@@ -8832,6 +9201,7 @@
       ]
     },
     {
+      "file": "onejav",
       "id": "onejav",
       "name": "OneJAV",
       "description": "OneJAV is a Public tracker for ASIAN 3X (JAV)",
@@ -8847,6 +9217,7 @@
       ]
     },
     {
+      "file": "onlyencodes-api",
       "id": "onlyencodes-api",
       "name": "OnlyEncodes+ (API)",
       "description": "OnlyEncodes+ is a Private Tracker for MOVIES / TV",
@@ -8875,6 +9246,7 @@
       ]
     },
     {
+      "file": "opencd",
       "id": "opencd",
       "name": "OpenCD",
       "description": "OpenCD is a CHINESE Private Torrent Tracker for LOSSLESS ASIAN MUSIC",
@@ -8889,6 +9261,7 @@
       ]
     },
     {
+      "file": "opensharing",
       "id": "opensharing",
       "name": "OpenSharing",
       "description": "OpenSharing is a RUSSIAN Public Torrent Tracker for 3X",
@@ -8903,6 +9276,7 @@
       ]
     },
     {
+      "file": "order66",
       "id": "order66",
       "name": "Order66",
       "description": "Order66 is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -8930,6 +9304,7 @@
       ]
     },
     {
+      "file": "oshenpt",
       "id": "oshenpt",
       "name": "OshenPT",
       "description": "OshenPT is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -8961,6 +9336,7 @@
       ]
     },
     {
+      "file": "oshenpt-api",
       "id": "oshenpt-api",
       "name": "OshenPT (API)",
       "description": "OshenPT is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -8987,6 +9363,7 @@
       ]
     },
     {
+      "file": "ourbits",
       "id": "ourbits",
       "name": "OurBits",
       "description": "OurBits (HDPter) is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -9015,6 +9392,7 @@
       ]
     },
     {
+      "file": "p2pbg",
       "id": "p2pbg",
       "name": "P2PBG",
       "description": "P2PBG is a BULGARIAN Private PAY2DL Torrent Tracker for 0DAY / GENERAL",
@@ -9044,6 +9422,7 @@
       ]
     },
     {
+      "file": "panda",
       "id": "panda",
       "name": "Panda",
       "description": "Panda is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9076,6 +9455,7 @@
       ]
     },
     {
+      "file": "pandacd",
       "id": "pandacd",
       "name": "PandaCD",
       "description": "PandaCD is a Public Tracker for MUSIC (Creative Commons and artist-permitted content)",
@@ -9090,6 +9470,7 @@
       ]
     },
     {
+      "file": "parabellumhd-api",
       "id": "parabellumhd-api",
       "name": "ParabellumHD (API)",
       "description": "ParabellumHD is a SPANISH Private Torrent Tracker for HEVC & AV1-encoded MOVIES / TV",
@@ -9119,9 +9500,11 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "party-tracker",
       "id": "party-tracker",
       "name": "Party-Tracker",
       "description": "Party-Tracker is a HUNGARIAN private tracker for MOVIES / TV / GENERAL",
@@ -9151,6 +9534,7 @@
       ]
     },
     {
+      "file": "pctorrent",
       "id": "pctorrent",
       "name": "PC-torrent",
       "description": "PC-torrent is a RUSSIAN Public Torrent Tracker for Games",
@@ -9165,6 +9549,7 @@
       ]
     },
     {
+      "file": "peeratiko",
       "id": "peeratiko",
       "name": "Peeratiko",
       "description": "Peeratiko is a GREEK Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9195,6 +9580,7 @@
       ]
     },
     {
+      "file": "peergarden",
       "id": "peergarden",
       "name": "PeerGarden",
       "description": "PeerGarden (PG) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9226,6 +9612,7 @@
       ]
     },
     {
+      "file": "peersfm",
       "id": "peersfm",
       "name": "Peers.FM",
       "description": "Peers.FM is a RUSSIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9254,6 +9641,7 @@
       ]
     },
     {
+      "file": "periodical",
       "id": "periodical",
       "name": "Periodical",
       "description": "Periodical (PER) is a Private Torrent Tracker for MAGAZINES",
@@ -9268,6 +9656,7 @@
       ]
     },
     {
+      "file": "phoenixproject",
       "id": "phoenixproject",
       "name": "Phoenix Project",
       "description": "Phoenix Project is a Private MacOS software tracker",
@@ -9284,6 +9673,7 @@
       ]
     },
     {
+      "file": "phoenixpt",
       "id": "phoenixpt",
       "name": "PhoenixPT (凤凰PT)",
       "description": "PhoenixPT (凤凰PT) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9315,6 +9705,7 @@
       ]
     },
     {
+      "file": "phoenixpt-api",
       "id": "phoenixpt-api",
       "name": "PhoenixPT (凤凰PT) (API)",
       "description": "PhoenixPT (凤凰PT) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9342,6 +9733,7 @@
       ]
     },
     {
+      "file": "pier720",
       "id": "pier720",
       "name": "720pier",
       "description": "720pier is a RUSSIAN Private Torrent Tracker for HD SPORTS",
@@ -9361,6 +9753,7 @@
       ]
     },
     {
+      "file": "pignetwork",
       "id": "pignetwork",
       "name": "PigNetwork (猪猪网)",
       "description": "PigNetwork (猪猪网) is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -9391,6 +9784,7 @@
       ]
     },
     {
+      "file": "pixelcove",
       "id": "pixelcove",
       "name": "PixelCove",
       "description": "PixelCove (Ultimate Gamer) is a Private Torrent Tracker for GAMES",
@@ -9409,6 +9803,7 @@
       ]
     },
     {
+      "file": "pixelcove2fa",
       "id": "pixelcove2fa",
       "name": "PixelCove2FA",
       "description": "PixelCove2FA (Ultimate Gamer) is a Private Torrent Tracker for GAMES. Cookie Login for 2FA use.",
@@ -9427,6 +9822,7 @@
       ]
     },
     {
+      "file": "playletpt",
       "id": "playletpt",
       "name": "PlayletPT",
       "description": "PlayletPT is a CHINESE Private Torrent Tracker for Short Drama",
@@ -9447,6 +9843,7 @@
       ]
     },
     {
+      "file": "plugintorrent",
       "id": "plugintorrent",
       "name": "plugintorrent",
       "description": "plugintorrent is a Public site for AUDIO apps, plugins and samples",
@@ -9461,6 +9858,7 @@
       ]
     },
     {
+      "file": "podzemlje",
       "id": "podzemlje",
       "name": "Podzemlje",
       "description": "Podzemlje is an EX-YU Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9492,6 +9890,7 @@
       ]
     },
     {
+      "file": "polishtorrent",
       "id": "polishtorrent",
       "name": "Polish Torrent (API)",
       "description": "Polish Torrent (PTT) is a POLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9525,6 +9924,7 @@
       "regex_net": true
     },
     {
+      "file": "polishtracker-api",
       "id": "polishtracker-api",
       "name": "PolishTracker (API)",
       "description": "PolishTracker is a POLISH Private Torrent Tracker for 0DAY / MOVIES / GENERAL",
@@ -9556,6 +9956,7 @@
       "regex_net": true
     },
     {
+      "file": "polskie-torrenty",
       "id": "polskie-torrenty",
       "name": "Polskie-Torrenty",
       "description": "Polskie-Torrenty is a POLISH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9586,6 +9987,7 @@
       "regex_net": true
     },
     {
+      "file": "pornolab",
       "id": "pornolab",
       "name": "PornoLab",
       "description": "PornoLab is a Semi-Private Russian site for 3X",
@@ -9600,9 +10002,11 @@
       "captcha": true,
       "categories": [
         "XXX"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "pornotorrent",
       "id": "pornotorrent",
       "name": "PornoTorrent",
       "description": "PornoTorrent is a BRAZILIAN Public Torrent Tracker for 3X",
@@ -9620,6 +10024,7 @@
       ]
     },
     {
+      "file": "pornrips",
       "id": "pornrips",
       "name": "PornRips",
       "description": "PornRips is a Public site for 3X",
@@ -9635,6 +10040,7 @@
       ]
     },
     {
+      "file": "pornxlab",
       "id": "pornxlab",
       "name": "PornXLab",
       "description": "PornXLab is a Public tracker for 3X",
@@ -9652,6 +10058,7 @@
       ]
     },
     {
+      "file": "portugas-api",
       "id": "portugas-api",
       "name": "Portugas (API)",
       "description": "Portugas is a PORTUGUESE Private Torrent Tracker for 0DAY / GENERAL",
@@ -9684,6 +10091,7 @@
       ]
     },
     {
+      "file": "postman",
       "id": "postman",
       "name": "Postman",
       "description": "Postman is a Public I2P Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9692,7 +10100,7 @@
       "links": [
         "http://tracker2.postman.i2p/"
       ],
-      "login": "",
+      "login": "form",
       "categories": [
         "Audio",
         "Books",
@@ -9712,6 +10120,7 @@
       ]
     },
     {
+      "file": "postman-api",
       "id": "postman-api",
       "name": "Postman (API)",
       "description": "Postman is a Semi-Private I2P Torrent Tracker for MOVIES / TV / GENERAL. This indexer uses the API for login.",
@@ -9740,6 +10149,7 @@
       ]
     },
     {
+      "file": "proaudiotorrents",
       "id": "proaudiotorrents",
       "name": "ProAudioTorrents",
       "description": "ProAudioTorrents (PAT) is a Private Torrent Tracker for AUDIO SOFTWARE / SAMPLES / TUTORIALS / ETC",
@@ -9758,6 +10168,7 @@
       ]
     },
     {
+      "file": "proporno",
       "id": "proporno",
       "name": "ProPorno",
       "description": "ProPorno is a RUSSIAN Semi-Private tracker for 3X",
@@ -9772,6 +10183,7 @@
       ]
     },
     {
+      "file": "ptcafe",
       "id": "ptcafe",
       "name": "PTCafe (咖啡)",
       "description": "PTCafe (咖啡) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9802,6 +10214,7 @@
       ]
     },
     {
+      "file": "ptcafe-api",
       "id": "ptcafe-api",
       "name": "PTCafe (咖啡) (API)",
       "description": "PTCafe (咖啡) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9827,6 +10240,7 @@
       ]
     },
     {
+      "file": "ptcc",
       "id": "ptcc",
       "name": "PTCC (我的PT)",
       "description": "PTCC (我的PT) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9853,6 +10267,7 @@
       ]
     },
     {
+      "file": "pterclub",
       "id": "pterclub",
       "name": "PTerClub (PT之友俱乐部)",
       "description": "PTerClub (PT之友俱乐部) is a CHINESE Private Torrent Tracker for HD MUSIC VIDEOS / MOVIES / TV / ANIME",
@@ -9885,6 +10300,7 @@
       ]
     },
     {
+      "file": "ptfans",
       "id": "ptfans",
       "name": "PTFans",
       "description": "PTFans is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9917,6 +10333,7 @@
       ]
     },
     {
+      "file": "ptfiles",
       "id": "ptfiles",
       "name": "PTFiles",
       "description": "PTFiles (PTF) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9948,6 +10365,7 @@
       ]
     },
     {
+      "file": "ptgtk",
       "id": "ptgtk",
       "name": "PT GTK",
       "description": "PT GTK is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -9979,6 +10397,7 @@
       ]
     },
     {
+      "file": "ptgtk-api",
       "id": "ptgtk-api",
       "name": "PT GTK (API)",
       "description": "PT GTK is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10005,6 +10424,7 @@
       ]
     },
     {
+      "file": "pthome",
       "id": "pthome",
       "name": "PThome",
       "description": "PTHome is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -10035,6 +10455,7 @@
       ]
     },
     {
+      "file": "ptitzmx",
       "id": "ptitzmx",
       "name": "PT分享站 (itzmx)",
       "description": "PT分享站 (itzmx) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10067,6 +10488,7 @@
       ]
     },
     {
+      "file": "ptlao",
       "id": "ptlao",
       "name": "PTLAO",
       "description": "PTLAO is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10096,6 +10518,7 @@
       ]
     },
     {
+      "file": "ptlao-api",
       "id": "ptlao-api",
       "name": "PTLAO (API)",
       "description": "PTLAO is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10121,6 +10544,7 @@
       ]
     },
     {
+      "file": "ptlgs",
       "id": "ptlgs",
       "name": "PTLGS",
       "description": "PTLGS is a CHINESE Private Torrent Tracker for MOVIES / TV",
@@ -10151,6 +10575,7 @@
       ]
     },
     {
+      "file": "ptsbao",
       "id": "ptsbao",
       "name": "PTSBAO (烧包)",
       "description": "PTSBAO (烧包) is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -10178,6 +10603,7 @@
       ]
     },
     {
+      "file": "ptskit",
       "id": "ptskit",
       "name": "PTSKIT",
       "description": "PTSKIT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10208,6 +10634,7 @@
       ]
     },
     {
+      "file": "ptskit-api",
       "id": "ptskit-api",
       "name": "PTSKIT (API)",
       "description": "PTSKIT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10234,6 +10661,7 @@
       ]
     },
     {
+      "file": "pttey",
       "id": "pttey",
       "name": "PTTey",
       "description": "PTTey is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10261,6 +10689,7 @@
       ]
     },
     {
+      "file": "pttime",
       "id": "pttime",
       "name": "PTTime",
       "description": "PTTime is a ratioless CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -10292,6 +10721,7 @@
       ]
     },
     {
+      "file": "ptying",
       "id": "ptying",
       "name": "PTYING (樱花)",
       "description": "PTYING (樱花) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10322,6 +10752,7 @@
       ]
     },
     {
+      "file": "ptzone",
       "id": "ptzone",
       "name": "PTzone",
       "description": "PTzone is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10352,6 +10783,7 @@
       ]
     },
     {
+      "file": "ptzone-api",
       "id": "ptzone-api",
       "name": "PTzone (API)",
       "description": "PTzone is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10378,6 +10810,7 @@
       ]
     },
     {
+      "file": "punkshorror",
       "id": "punkshorror",
       "name": "Punk's Horror Tracker",
       "description": "Punk's Horror Tracker is a HUNGARIAN Private Tracker for Horror MOVIES / TV",
@@ -10403,6 +10836,7 @@
       ]
     },
     {
+      "file": "puntotorrent",
       "id": "puntotorrent",
       "name": "PuntoTorrent",
       "description": "PuntoTorrent is a SPANISH Private Torrent Tracker for 0DAY / GENERAL",
@@ -10432,9 +10866,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "pussytorrents",
       "id": "pussytorrents",
       "name": "PussyTorrents",
       "description": "PussyTorrents is a Semi-Private Torrent Tracker for 3X",
@@ -10449,6 +10885,7 @@
       ]
     },
     {
+      "file": "putao",
       "id": "putao",
       "name": "PuTao (葡萄)",
       "description": "PuTao (葡萄) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10480,6 +10917,7 @@
       ]
     },
     {
+      "file": "pwtorrents",
       "id": "pwtorrents",
       "name": "PWTorrents",
       "description": "PWTorrents (PWT) is a Private Torrent Tracker for PROFESSIONAL WRESTLING",
@@ -10499,6 +10937,7 @@
       ]
     },
     {
+      "file": "pwtorrents2fa",
       "id": "pwtorrents2fa",
       "name": "PWTorrents2FA",
       "description": "PWTorrents (PWT) is a Private Torrent Tracker for PROFESSIONAL WRESTLING. This indexer uses cookie login for 2FA.",
@@ -10518,6 +10957,7 @@
       ]
     },
     {
+      "file": "qingwa",
       "id": "qingwa",
       "name": "Qingwa (青蛙)",
       "description": "Qingwa (青蛙) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10547,6 +10987,7 @@
       ]
     },
     {
+      "file": "r3vwtf",
       "id": "r3vwtf",
       "name": "R3V WTF!",
       "description": "R3V WTF! is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10575,6 +11016,7 @@
       ]
     },
     {
+      "file": "racing4everyone-api",
       "id": "racing4everyone-api",
       "name": "Racing4Everyone (API)",
       "description": "Racing4Everyone (R4E) is a Private Torrent Tracker for RACING",
@@ -10594,6 +11036,7 @@
       ]
     },
     {
+      "file": "racingforme",
       "id": "racingforme",
       "name": "RacingForMe",
       "description": "Racing For Me (RFM) is a Private Torrent Tracker for RACING",
@@ -10613,6 +11056,7 @@
       ]
     },
     {
+      "file": "railgunpt",
       "id": "railgunpt",
       "name": "RailgunPT",
       "description": "RailgunPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10646,6 +11090,7 @@
       ]
     },
     {
+      "file": "rainbowtracker",
       "id": "rainbowtracker",
       "name": "Rainbow Tracker",
       "description": "Rainbow Tracker is a RUSSIAN Semi-Private Torrent Tracker for LGBTQ MOVIES / TV",
@@ -10669,9 +11114,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "rastastugan-api",
       "id": "rastastugan-api",
       "name": "Rastastugan (API)",
       "description": "Rastastugan is a NORDIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10706,6 +11153,7 @@
       ]
     },
     {
+      "file": "redstartorrent",
       "id": "redstartorrent",
       "name": "Red Star Torrent",
       "description": "Red Star Torrent (RST) is a POLISH Private Torrent Tracker for MOVIES / TV",
@@ -10737,6 +11185,7 @@
       ]
     },
     {
+      "file": "reelflix-api",
       "id": "reelflix-api",
       "name": "ReelFLiX (API)",
       "description": "ReelFLiX (HD4Free, LegacyHD) is a Private Torrent Tracker for HD MOVIES",
@@ -10760,6 +11209,7 @@
       ]
     },
     {
+      "file": "retromoviesclub-api",
       "id": "retromoviesclub-api",
       "name": "RetroMoviesClub (API)",
       "description": "RetroMoviesClub (RMC) is a Private Torrent Tracker for Classic Movies",
@@ -10779,6 +11229,7 @@
       ]
     },
     {
+      "file": "retrotoon",
       "id": "retrotoon",
       "name": "RetroToon",
       "description": "RetroToon is a Private Torrent Tracker for ANIMATED MOVIES / TV",
@@ -10804,6 +11255,7 @@
       ]
     },
     {
+      "file": "rgfootball",
       "id": "rgfootball",
       "name": "RGFootball",
       "description": "RGFootball is a RUSSIAN Sports torrent tracker.",
@@ -10823,6 +11275,7 @@
       ]
     },
     {
+      "file": "rintor",
       "id": "rintor",
       "name": "RinTor",
       "description": "RinTor is a Semi-Private Tracker for 3X",
@@ -10837,6 +11290,7 @@
       ]
     },
     {
+      "file": "rintornet",
       "id": "rintornet",
       "name": "RinTor.NeT",
       "description": "RinTor.NeT is a RUSSIAN Public tracker for 3X",
@@ -10851,6 +11305,7 @@
       ]
     },
     {
+      "file": "riperam",
       "id": "riperam",
       "name": "RiperAM",
       "description": "RiperAM is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV",
@@ -10877,9 +11332,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "rockethd",
       "id": "rockethd",
       "name": "RocketHD (API)",
       "description": "RocketHD is a GERMAN Private Torrent Tracker for MOVIES / TV",
@@ -10908,6 +11365,7 @@
       ]
     },
     {
+      "file": "romanianmetaltorrents",
       "id": "romanianmetaltorrents",
       "name": "Romanian Metal Torrents",
       "description": "Romanian Metal Torrents (RMT) is a Private Torrent Tracker dedicated to METAL MUSIC. This definition is for the English site.",
@@ -10926,6 +11384,7 @@
       ]
     },
     {
+      "file": "rousi-pro",
       "id": "rousi-pro",
       "name": "Rousi.pro",
       "description": "Rousi.pro is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -10954,6 +11413,7 @@
       ]
     },
     {
+      "file": "rudub",
       "id": "rudub",
       "name": "RUDUB",
       "description": "RUDUB (ex-BaibaKoTV) is a RUSSIAN Semi-Private Torrent Tracker for TV",
@@ -10973,9 +11433,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "rustorka",
       "id": "rustorka",
       "name": "Rustorka",
       "description": "Rustorka is a RUSSIAN Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11001,9 +11463,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "rutor",
       "id": "rutor",
       "name": "RuTor",
       "description": "RuTor is a RUSSIAN Public site for MOVIES / TV / GENERAL",
@@ -11029,9 +11493,11 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "samaritano",
       "id": "samaritano",
       "name": "SAMARITANO (API)",
       "description": "SAMARITANO is a BRAZILIAN Private tracker for MOVIES / TV / GENERAL",
@@ -11065,6 +11531,7 @@
       ]
     },
     {
+      "file": "sbpt",
       "id": "sbpt",
       "name": "SBPT",
       "description": "SBPT is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11095,6 +11562,7 @@
       ]
     },
     {
+      "file": "scenerush",
       "id": "scenerush",
       "name": "SceneRush",
       "description": "SceneRush is a PORTUGUESE Private Torrent Tracker for 0DAY / GENERAL",
@@ -11125,6 +11593,7 @@
       ]
     },
     {
+      "file": "scenetime-api",
       "id": "scenetime-api",
       "name": "SceneTime (API)",
       "description": "SceneTime is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11156,6 +11625,7 @@
       ]
     },
     {
+      "file": "seedcore-api",
       "id": "seedcore-api",
       "name": "SeedCore (API)",
       "description": "SeedCore (ROT) is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11191,6 +11661,7 @@
       ]
     },
     {
+      "file": "seedfile",
       "id": "seedfile",
       "name": "SeedFile",
       "description": "SeedFile (SF) is a ROMANIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -11220,6 +11691,7 @@
       ]
     },
     {
+      "file": "seedpool-api",
       "id": "seedpool-api",
       "name": "seedpool (API)",
       "description": "seedpool is a Private Torrent Tracker for 0-DAY MOVIES / TV / GENERAL",
@@ -11253,6 +11725,7 @@
       ]
     },
     {
+      "file": "selezen",
       "id": "selezen",
       "name": "seleZen",
       "description": "seleZen is a RUSSIAN Semi-Private Torrent Tracker for MOVIES",
@@ -11274,9 +11747,11 @@
       "movie_search": [
         "q",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "sewerpt",
       "id": "sewerpt",
       "name": "SewerPT",
       "description": "SewerPT (下水道) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11306,6 +11781,7 @@
       ]
     },
     {
+      "file": "sextorrent-api",
       "id": "sextorrent-api",
       "name": "SexTorrent (API)",
       "description": "SexTorrent is a Private Torrent Tracker for 3X / MOVIES / TV",
@@ -11339,6 +11815,7 @@
       ]
     },
     {
+      "file": "sexypics",
       "id": "sexypics",
       "name": "Sexy-Pics",
       "description": "Sexy-Pics is a Public Magnet Links site for 3X MP4",
@@ -11354,6 +11831,7 @@
       ]
     },
     {
+      "file": "shadowbit",
       "id": "shadowbit",
       "name": "Shadowbit",
       "description": "Shadowbit is a ratioless ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11384,6 +11862,7 @@
       ]
     },
     {
+      "file": "shakaw",
       "id": "shakaw",
       "name": "ShaKaw",
       "description": "ShaKaw is a BRAZILIAN Private Torrent Tracker for ANIME",
@@ -11409,6 +11888,7 @@
       ]
     },
     {
+      "file": "shanaproject",
       "id": "shanaproject",
       "name": "Shana Project",
       "description": "Shana Project is a Public torrent site for ANIME",
@@ -11428,6 +11908,7 @@
       ]
     },
     {
+      "file": "shareisland-api",
       "id": "shareisland-api",
       "name": "Shareisland (API)",
       "description": "Shareisland is a ITALIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11457,9 +11938,11 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "showrss",
       "id": "showrss-yml",
       "name": "showRSS",
       "description": "showRSS is a service that allows you to keep track of your favorite TV shows",
@@ -11479,6 +11962,7 @@
       ]
     },
     {
+      "file": "siambit",
       "id": "siambit",
       "name": "SiamBIT",
       "description": "SiamBIT is a THAI PAY2DL Private Torrent Tracker for GENERAL",
@@ -11508,6 +11992,7 @@
       ]
     },
     {
+      "file": "siqi",
       "id": "siqi",
       "name": "Siqi",
       "description": "Siqi is a CHINESE Private Tracker for HD image BOOKS and E-BOOKS",
@@ -11523,6 +12008,7 @@
       ]
     },
     {
+      "file": "skidrowrepack",
       "id": "skidrowrepack",
       "name": "SkidrowRepack",
       "description": "SkidrowRepack is a Public Torrent Tracker for GAMES",
@@ -11537,6 +12023,7 @@
       ]
     },
     {
+      "file": "skipthecommercials-api",
       "id": "skipthecommercials-api",
       "name": "SkipTheCommercials (API)",
       "description": "SkipTheCommercials (STC) is a Private Torrent Tracker for TV",
@@ -11565,6 +12052,7 @@
       ]
     },
     {
+      "file": "sktorrent",
       "id": "sktorrent",
       "name": "Sk-CzTorrent",
       "description": "Sk-CzTorrent is a CZECH/SLOVAK Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11595,6 +12083,7 @@
       ]
     },
     {
+      "file": "sktorrent-org",
       "id": "sktorrent-org",
       "name": "SkTorrent.org",
       "description": "SkTorrent.org is a Semi-Private torrent site for MOVIES / TV/ GENERAL",
@@ -11624,6 +12113,7 @@
       ]
     },
     {
+      "file": "slobitgames",
       "id": "slobitgames",
       "name": "Slobit Games",
       "description": "Slobit Games is a Private Torrent Tracker for GAMES",
@@ -11640,6 +12130,7 @@
       ]
     },
     {
+      "file": "snowpt",
       "id": "snowpt",
       "name": "SnowPT",
       "description": "SnowPT (SSPT) is a CHINESE Private Torrent Tracker for ANIME",
@@ -11659,6 +12150,7 @@
       ]
     },
     {
+      "file": "sosulki",
       "id": "sosulki",
       "name": "sosulki",
       "description": "sosulki is a RUSSIAN Public Torrent Tracker for 3X",
@@ -11673,6 +12165,7 @@
       ]
     },
     {
+      "file": "soulvoice",
       "id": "soulvoice",
       "name": "SoulVoice (聆音Club)",
       "description": "SoulVoice (聆音Club) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11703,6 +12196,7 @@
       ]
     },
     {
+      "file": "soulvoice-api",
       "id": "soulvoice-api",
       "name": "SoulVoice (聆音Club) (API)",
       "description": "SoulVoice (聆音Club) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11728,6 +12222,7 @@
       ]
     },
     {
+      "file": "speedmasterhd",
       "id": "speedmasterhd",
       "name": "Speedmaster HD",
       "description": "Speedmaster HD is a GERMAN Time based Torrent Tracker for MOVIES / TV",
@@ -11755,6 +12250,7 @@
       ]
     },
     {
+      "file": "spiritofrevolution",
       "id": "spiritofrevolution",
       "name": "Spirit of Revolution",
       "description": "Spirit of Revolution is a GERMAN Time based Torrent Tracker for 0DAY",
@@ -11786,6 +12282,7 @@
       ]
     },
     {
+      "file": "sportscora",
       "id": "sportscora",
       "name": "SportsCora (API)",
       "description": "SportsCora is a Private Torrent Tracker for SPORTS",
@@ -11817,6 +12314,7 @@
       ]
     },
     {
+      "file": "sportscult",
       "id": "sportscult",
       "name": "SportsCult",
       "description": "SportsCult is a Private Torrent Tracker for SPORTS",
@@ -11837,9 +12335,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "sportz247",
       "id": "sportz247",
       "name": "Sportz247",
       "description": "Sportz247 is a Private Torrent Tracker for SPORTS",
@@ -11868,6 +12368,7 @@
       ]
     },
     {
+      "file": "springsunday",
       "id": "springsunday",
       "name": "SpringSunday",
       "description": "SpringSunday (SSD) is a CHINESE Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -11897,6 +12398,7 @@
       ]
     },
     {
+      "file": "stellarwinds",
       "id": "stellarwinds",
       "name": "Stellarwinds",
       "description": " Stellarwinds is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11926,6 +12428,7 @@
       ]
     },
     {
+      "file": "sukebeinyaasi",
       "id": "sukebeinyaasi",
       "name": "sukebei.nyaa.si",
       "description": "sukebei.nyaa is a Public torrent site focused on adult Eastern ASIAN media including anime, manga, games and JAV",
@@ -11941,6 +12444,7 @@
       ]
     },
     {
+      "file": "superbits",
       "id": "superbits",
       "name": "Superbits",
       "description": "SuperBits (SBS) is a SWEDISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -11973,6 +12477,7 @@
       ]
     },
     {
+      "file": "swarmazon-api",
       "id": "swarmazon-api",
       "name": "Swarmazon (API)",
       "description": "Swarmazon is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12002,6 +12507,7 @@
       ]
     },
     {
+      "file": "tangpt",
       "id": "tangpt",
       "name": "TangPT (躺平)",
       "description": "TangPT (躺平) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12031,6 +12537,7 @@
       ]
     },
     {
+      "file": "tapochek",
       "id": "tapochek",
       "name": "Tapochek",
       "description": "Tapochek is a RUSSIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -12058,9 +12565,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "tasmanit",
       "id": "tasmanit",
       "name": "Tasmanit",
       "description": "Tasmanit.es is a AUSTRALIAN / NEW ZEALAND Private Torrent Tracker for AUS/NZ TV",
@@ -12085,6 +12594,7 @@
       ]
     },
     {
+      "file": "teamctgame",
       "id": "teamctgame",
       "name": "Team CT Game",
       "description": "Team CT Game (TCTG) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12121,6 +12631,7 @@
       "regex_net": true
     },
     {
+      "file": "teamflix",
       "id": "teamflix",
       "name": "TeamFlix",
       "description": "TeamFlix is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12154,6 +12665,7 @@
       "regex_net": true
     },
     {
+      "file": "teamhd",
       "id": "teamhd",
       "name": "TeamHD",
       "description": "TeamHD is a RUSSIAN Private Torrent Tracker for HD MOVIES / TV",
@@ -12176,9 +12688,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "teamos",
       "id": "teamos",
       "name": "TeamOS",
       "description": "Team OS is a Private Torrent Tracker for SOFTWARE",
@@ -12195,6 +12709,7 @@
       ]
     },
     {
+      "file": "thebrothers",
       "id": "thebrothers",
       "name": "The Brothers",
       "description": "The Brothers is a Private GERMAN tracker for MOVIES / TV / GENERAL",
@@ -12223,6 +12738,7 @@
       ]
     },
     {
+      "file": "thecrazyones",
       "id": "thecrazyones",
       "name": "The Crazy Ones",
       "description": "The Crazy Ones is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12252,6 +12768,7 @@
       ]
     },
     {
+      "file": "theempire",
       "id": "theempire",
       "name": "The Empire",
       "description": "TheEmpire (TE) is a Private Torrent Tracker for COMMONWEALTH TV / RADIO",
@@ -12268,9 +12785,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "thefallingangels",
       "id": "thefallingangels",
       "name": "The Falling Angels",
       "description": "The Falling Angels (TFA) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12300,6 +12819,7 @@
       ]
     },
     {
+      "file": "thegeeks",
       "id": "thegeeks",
       "name": "The Geeks",
       "description": "The Geeks is a Private Torrent Tracker for Technology E-LEARNING",
@@ -12314,6 +12834,7 @@
       ]
     },
     {
+      "file": "thekitchen",
       "id": "thekitchen",
       "name": "The Kitchen",
       "description": "TheKitchen (TK) is a Private Torrent Tracker for COOKING / CUISINES / RECIPES",
@@ -12334,6 +12855,7 @@
       ]
     },
     {
+      "file": "theleachzone-api",
       "id": "theleachzone-api",
       "name": "TheLeachZone (API)",
       "description": "The Leach Zone (TLZ) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12367,6 +12889,7 @@
       ]
     },
     {
+      "file": "themixingbowl",
       "id": "themixingbowl",
       "name": "themixingbowl",
       "description": "themixingbowl (TMB) is a Semi-Private Torrent Tracker for DJ Music mixes",
@@ -12382,6 +12905,7 @@
       ]
     },
     {
+      "file": "thenewfun",
       "id": "thenewfun",
       "name": "The-New-Fun",
       "description": "The-New-Fun is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12411,6 +12935,7 @@
       ]
     },
     {
+      "file": "thenewheaven",
       "id": "thenewheaven",
       "name": "The New Heaven",
       "description": "The New Heaven (TNH) is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12440,6 +12965,7 @@
       ]
     },
     {
+      "file": "theoccult",
       "id": "theoccult",
       "name": "The Occult",
       "description": "TheOccult (TO) is a Private Torrent Tracker for CULT / MYTHOLOGY E-LEARNING",
@@ -12454,6 +12980,7 @@
       ]
     },
     {
+      "file": "theoldschool-api",
       "id": "theoldschool-api",
       "name": "The Old School (API)",
       "description": "The Old School (TOS) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12486,6 +13013,7 @@
       "regex_net": true
     },
     {
+      "file": "thepiratebay",
       "id": "thepiratebay",
       "name": "The Pirate Bay",
       "description": "The Pirate Bay (TPB) is the galaxy’s most resilient Public BitTorrent site",
@@ -12528,9 +13056,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "theplace",
       "id": "theplace",
       "name": "The Place",
       "description": "ThePlace (TP) is a Private Torrent Tracker for SEDUCTION / SELF-IMPROVEMENT E-LEARNING",
@@ -12545,6 +13075,7 @@
       ]
     },
     {
+      "file": "theshow",
       "id": "theshow",
       "name": "The Show",
       "description": "TheShow (TSBZ) is a Private Torrent Tracker for ENTERTAINMENT-INDUSTRY E-LEARNING",
@@ -12559,6 +13090,7 @@
       ]
     },
     {
+      "file": "thevault",
       "id": "thevault",
       "name": "The Vault",
       "description": "TheVault (TVBZ) is a Private Torrent Tracker for BUSINESS / MARKETING E-LEARNING",
@@ -12573,6 +13105,7 @@
       ]
     },
     {
+      "file": "thewordmusic",
       "id": "thewordmusic",
       "name": "The Word Music",
       "description": "The Word Music is a Private GERMAN tracker for  MUSIC / MOVIES / TV / GENERAL",
@@ -12601,6 +13134,7 @@
       ]
     },
     {
+      "file": "thorhub-api",
       "id": "thorhub-api",
       "name": "Thor HUB (API)",
       "description": "Thor HUB is a Private Torrent Tracker for MOVIES / TV / MUSIC",
@@ -12633,6 +13167,7 @@
       ]
     },
     {
+      "file": "tjupt",
       "id": "tjupt",
       "name": "TJUPT (北洋园PT)",
       "description": "TJUPT (北洋园PT) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12665,6 +13200,7 @@
       ]
     },
     {
+      "file": "tlfbits",
       "id": "tlfbits",
       "name": "TLFBits",
       "description": "TLFBits is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -12694,6 +13230,7 @@
       ]
     },
     {
+      "file": "tmghub",
       "id": "tmghub",
       "name": "TmGHuB",
       "description": "TmGHuB (TH) is an INDIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12722,6 +13259,7 @@
       ]
     },
     {
+      "file": "tocashare",
       "id": "tocashare",
       "name": "Toca Share (API)",
       "description": "Toca Share is a PORTUGUESE Private Torrent Tracker for EBOOKS / AUDIOBOOKS / COURSES",
@@ -12742,6 +13280,7 @@
       ]
     },
     {
+      "file": "tokyotosho",
       "id": "tokyotosho",
       "name": "Tokyo Toshokan",
       "description": "Tokyo Toshokan is a Public BitTorrent Library for JAPANESE Media",
@@ -12767,6 +13306,7 @@
       ]
     },
     {
+      "file": "tormac",
       "id": "tormac",
       "name": "Tormac",
       "description": "Tormac is a RUSSIAN Private Torrent Tracker for MAC SOFTWARE",
@@ -12791,9 +13331,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "tornado",
       "id": "tornado",
       "name": "Tornado",
       "description": "Tornado is a SLOVENIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12823,6 +13365,7 @@
       ]
     },
     {
+      "file": "torrent-heaven",
       "id": "torrent-heaven",
       "name": "Torrent Heaven",
       "description": "Torrent Heaven is a DUTCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12851,6 +13394,7 @@
       ]
     },
     {
+      "file": "torrent-pirat",
       "id": "torrent-pirat",
       "name": "torrent-pirat",
       "description": "torrent-pirat is a RUSSIAN Public Torrent Tracker for 3X",
@@ -12865,6 +13409,7 @@
       ]
     },
     {
+      "file": "torrent-turk",
       "id": "torrent-turk",
       "name": "TOrrent-tuRK",
       "description": "TOrrent-tuRK (TORK) is a TURKISH Private Torrent Tracker for HD MOVIES / TV / GENERAL",
@@ -12893,6 +13438,7 @@
       ]
     },
     {
+      "file": "torrent9",
       "id": "torrent9",
       "name": "Torrent9",
       "description": "Torrent9 is a FRENCH Public site for MOVIES / TV / GENERAL",
@@ -12922,6 +13468,7 @@
       "regex_net": true
     },
     {
+      "file": "torrentbd",
       "id": "torrentbd",
       "name": "TorrentBD",
       "description": "TorrentBD is a BANGLADESH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -12951,6 +13498,7 @@
       ]
     },
     {
+      "file": "torrentby",
       "id": "torrentby",
       "name": "torrent.by",
       "description": "torrent.by is a BELARUSIAN Public Torrent Tracker",
@@ -12970,9 +13518,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "torrentbyte",
       "id": "torrentbyte",
       "name": "TorrentByte",
       "description": "TorrentByte is a Public DHT Crawler",
@@ -13001,6 +13551,7 @@
       ]
     },
     {
+      "file": "torrentccf",
       "id": "torrentccf",
       "name": "TorrentCCF",
       "description": "TorrentCCF (TCCF) is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
@@ -13032,6 +13583,7 @@
       ]
     },
     {
+      "file": "torrentclaw",
       "id": "torrentclaw",
       "name": "TorrentClaw",
       "description": "TorrentClaw is a Private aggregate indexer of 10+ Public Torrent Trackers, with additional 'TrueSpec' metadata and quality score",
@@ -13058,6 +13610,7 @@
       ]
     },
     {
+      "file": "torrentcore",
       "id": "torrentcore",
       "name": "Torrent[CORE]",
       "description": "Torrent[CORE] is a Public DHT Crawler",
@@ -13088,6 +13641,7 @@
       ]
     },
     {
+      "file": "torrentdd",
       "id": "torrentdd",
       "name": "TorrentDD",
       "description": "TorrentDD (TodayBit) is a THAI Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13117,6 +13671,7 @@
       ]
     },
     {
+      "file": "torrentdownload",
       "id": "torrentdownload",
       "name": "TorrentDownload",
       "description": "TorrentDownload is a Public torrent meta-search engine",
@@ -13146,6 +13701,7 @@
       ]
     },
     {
+      "file": "torrentdownloads",
       "id": "torrentdownloads",
       "name": "Torrent Downloads",
       "description": "Torrent Downloads (TD) is a Public torrent site for all kinds of content",
@@ -13175,6 +13731,7 @@
       ]
     },
     {
+      "file": "torrenteros-api",
       "id": "torrenteros-api",
       "name": "Torrenteros (API)",
       "description": "Torrenteros (TTR) is a SPANISH Torrent Tracker for MOVIES / TV / MUSIC",
@@ -13204,6 +13761,7 @@
       ]
     },
     {
+      "file": "torrenthaven-api",
       "id": "torrenthaven-api",
       "name": "TorrentHaven (API)",
       "description": "TorrentHaven is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13239,6 +13797,7 @@
       ]
     },
     {
+      "file": "torrenthr-api",
       "id": "torrenthr-api",
       "name": "TorrentHR (API)",
       "description": "TorrentHR is a ratioless CROATIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -13273,6 +13832,7 @@
       ]
     },
     {
+      "file": "torrenting",
       "id": "torrenting",
       "name": "Torrenting",
       "description": "Torrenting (TT) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13306,6 +13866,7 @@
       ]
     },
     {
+      "file": "torrentkitty",
       "id": "torrentkitty",
       "name": "TorrentKitty",
       "description": "TorrentKitty is a Public torrent indexer",
@@ -13338,6 +13899,7 @@
       ]
     },
     {
+      "file": "torrentleech",
       "id": "torrentleech",
       "name": "TorrentLeech",
       "description": "TorrentLeech (TL) is a Private Torrent Tracker for 0DAY / GENERAL. not here _ not scene",
@@ -13373,6 +13935,7 @@
       ]
     },
     {
+      "file": "torrentlt",
       "id": "torrentlt",
       "name": "Torrent.LT",
       "description": "Torrent.LT is a LITHUANIAN Private Torrent Tracker for 0DAY / GENERAL",
@@ -13402,6 +13965,7 @@
       ]
     },
     {
+      "file": "torrentmasters",
       "id": "torrentmasters",
       "name": "TorrentMasters",
       "description": "TorrentMasters is a HUNGARIAN semi-private tracker for MOVIES / TV / GENERAL",
@@ -13431,6 +13995,7 @@
       ]
     },
     {
+      "file": "torrentproject2",
       "id": "torrentproject2",
       "name": "TorrentProject2",
       "description": "TorrentProject2 is a Public torrent meta-search engine",
@@ -13458,6 +14023,7 @@
       ]
     },
     {
+      "file": "torrentsome",
       "id": "torrentsome",
       "name": "Torrentsome",
       "description": "Torrentsome is a KOREAN Public tracker for Korean media.",
@@ -13484,6 +14050,7 @@
       ]
     },
     {
+      "file": "torrenttip",
       "id": "torrenttip",
       "name": "Torrenttip",
       "description": "Torrenttip (토렌트팁) is a Public KOREAN tracker for Korean media.",
@@ -13512,6 +14079,7 @@
       ]
     },
     {
+      "file": "torrenttrader",
       "id": "torrenttrader",
       "name": "Torrent Trader",
       "description": "Torrent Trader is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13541,6 +14109,7 @@
       ]
     },
     {
+      "file": "totheglory",
       "id": "totheglory",
       "name": "ToTheGlory",
       "description": "ToTheGlory (TTG) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13571,6 +14140,7 @@
       ]
     },
     {
+      "file": "totheglory2fa",
       "id": "totheglory2fa",
       "name": "ToTheGlory2FA",
       "description": "ToTheGlory (TTG) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL. This indexer uses cookie login for 2FA.",
@@ -13604,6 +14174,7 @@
       ]
     },
     {
+      "file": "tr4ker",
       "id": "tr4ker",
       "name": "TR4KER",
       "description": "TR4KER is a FRENCH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13638,6 +14209,7 @@
       "regex_net": true
     },
     {
+      "file": "trackermk",
       "id": "trackermk",
       "name": "TrackerMK",
       "description": "TrackerMK is a MACEDONIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13667,6 +14239,7 @@
       ]
     },
     {
+      "file": "trackerzero",
       "id": "trackerzero",
       "name": "TrackerZero",
       "description": "TrackerZero is an ITALIAN Private PAY2DL Torrent Tracker for MOVIES / TV / MUSIC / SOFTWARE",
@@ -13695,6 +14268,7 @@
       ]
     },
     {
+      "file": "traht",
       "id": "traht",
       "name": "TrahT",
       "description": "TrahT is a RUSSIAN Semi-Private Torrent Tracker for 3X",
@@ -13710,6 +14284,7 @@
       ]
     },
     {
+      "file": "trancetraffic",
       "id": "trancetraffic",
       "name": "TranceTraffic",
       "description": "TranceTraffic is a Private Torrent Tracker for MUSIC",
@@ -13724,6 +14299,7 @@
       ]
     },
     {
+      "file": "trezzor",
       "id": "trezzor",
       "name": "TreZzoR",
       "description": "TreZzoR is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13752,9 +14328,11 @@
         "season",
         "ep",
         "year"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "trezzorcookie",
       "id": "trezzorcookie",
       "name": "TreZzoRCookie",
       "description": "TreZzoR is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL. This uses the cookie method for access",
@@ -13783,9 +14361,11 @@
         "season",
         "ep",
         "year"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "tribalmixes",
       "id": "tribalmixes",
       "name": "TribalMixes",
       "description": "TribalMixes is a Semi-Private Torrent Tracker for DJ MIXES",
@@ -13800,6 +14380,7 @@
       ]
     },
     {
+      "file": "turkseed-api",
       "id": "turkseed-api",
       "name": "TurkSeed (API)",
       "description": "TurkSeed (Aturk) is a TURKISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13832,6 +14413,7 @@
       ]
     },
     {
+      "file": "turktorrent",
       "id": "turktorrent",
       "name": "TurkTorrent",
       "description": "TurkTorrent (TT) is a TURKISH Private PAY2DL Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13857,9 +14439,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "u2",
       "id": "u2",
       "name": "U2",
       "description": "U2 (U2分享園@動漫花園) is a CHINESE Private Torrent Tracker for ANIME",
@@ -13886,6 +14470,7 @@
       ]
     },
     {
+      "file": "u3c3",
       "id": "u3c3",
       "name": "U3C3",
       "description": "U3C3 is a CHINESE Public tracker focused on 3X Eastern Asian media",
@@ -13916,6 +14501,7 @@
       ]
     },
     {
+      "file": "ubits",
       "id": "ubits",
       "name": "UBits",
       "description": "UBits is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -13945,6 +14531,7 @@
       ]
     },
     {
+      "file": "uindex",
       "id": "uindex",
       "name": "Uindex",
       "description": "Uindex is a Public Torrent Tracker for MOVIES / TV / MUSIC / GENERAL",
@@ -13974,6 +14561,7 @@
       ]
     },
     {
+      "file": "ultrabits-api",
       "id": "ultrabits-api",
       "name": "Ultrabits (API)",
       "description": "Ultrabits is a NORDIC Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14005,6 +14593,7 @@
       ]
     },
     {
+      "file": "ultrahd",
       "id": "ultrahd",
       "name": "UltraHD",
       "description": "UltraHD is a CHINESE Private Torrent Tracker for UHD MOVIES / TV / GENERAL",
@@ -14034,6 +14623,7 @@
       ]
     },
     {
+      "file": "ultrahd-api",
       "id": "ultrahd-api",
       "name": "UltraHD (API)",
       "description": "UltraHD is a CHINESE Private Torrent Tracker for UHD MOVIES / TV / GENERAL",
@@ -14059,6 +14649,7 @@
       ]
     },
     {
+      "file": "unbreakable",
       "id": "unbreakable",
       "name": "Unbreakable",
       "description": "Unbreakable is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14087,6 +14678,7 @@
       ]
     },
     {
+      "file": "unionfansub",
       "id": "unionfansub",
       "name": "Union Fansub",
       "description": "Union Fansub is a SPANISH Semi-Private torrent site focused on ANIME",
@@ -14109,9 +14701,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "unlimitz",
       "id": "unlimitz",
       "name": "Unlimitz",
       "description": "Unlimitz is a THAI Private Torrent Tracker for GENERAL",
@@ -14142,6 +14736,7 @@
       ]
     },
     {
+      "file": "uploadcx",
       "id": "uploadcx",
       "name": "upload.cx (API)",
       "description": "upload.cx (ULCX) is a Private Torrent Tracker for MOVIES / TV",
@@ -14170,6 +14765,7 @@
       ]
     },
     {
+      "file": "upscalevault",
       "id": "upscalevault-api",
       "name": "Upscale Vault (API)",
       "description": "Upscale Vault is a Private Torrent Tracker for AI upscaled and remastered MOVIES / TV",
@@ -14199,6 +14795,7 @@
       ]
     },
     {
+      "file": "utopia",
       "id": "utopia",
       "name": "UTOPIA (API)",
       "description": "UTOPIA is a UKRAINIAN Private Tracker for HD MOVIES and TV",
@@ -14227,6 +14824,7 @@
       ]
     },
     {
+      "file": "uztracker",
       "id": "uztracker",
       "name": "UzTracker",
       "description": "UzTracker is an UZBEK Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14252,9 +14850,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "v3x",
       "id": "v3x",
       "name": "V3X",
       "description": "V3X is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14287,6 +14887,7 @@
       "regex_net": true
     },
     {
+      "file": "vault-network",
       "id": "vault-network",
       "name": "Vault network",
       "description": "Vault network is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14315,6 +14916,7 @@
       ]
     },
     {
+      "file": "vc-lib",
       "id": "vc-lib",
       "name": "VC-Lib",
       "description": "VC-Lib is a CHINESE Private Torrent Tracker for MUSIC",
@@ -14331,6 +14933,7 @@
       ]
     },
     {
+      "file": "vietmediaf",
       "id": "vietmediaf",
       "name": "VietMediaF",
       "description": "VietMediaF is a VIETNAMESE Private Torrent Tracker for MOVIES / TV",
@@ -14362,6 +14965,7 @@
       ]
     },
     {
+      "file": "vsthouse",
       "id": "vsthouse",
       "name": "VSTHouse",
       "description": "VSTHouse is a RUSSIAN Public site for AUDIO apps, plugins and samples",
@@ -14376,6 +14980,7 @@
       ]
     },
     {
+      "file": "vstorrent",
       "id": "vstorrent",
       "name": "VSTorrent",
       "description": "VSTorrent is a Public site for AUDIO apps, plugins and samples",
@@ -14390,6 +14995,7 @@
       ]
     },
     {
+      "file": "vsttorrents",
       "id": "vsttorrents",
       "name": "VST Torrentz",
       "description": "VST Torrentz is a Public site for AUDIO apps, plugins and samples",
@@ -14404,6 +15010,7 @@
       ]
     },
     {
+      "file": "whiteangel",
       "id": "whiteangel",
       "name": "White Angel",
       "description": "White Angel is a HUNGARIAN Private Tracker for MOVIES / TV",
@@ -14435,6 +15042,7 @@
       ]
     },
     {
+      "file": "wihd",
       "id": "wihd",
       "name": "World-In-HD",
       "description": "World-In-HD is a Private Torrent Tracker. Your world in HD",
@@ -14461,6 +15069,7 @@
       "regex_net": true
     },
     {
+      "file": "wintersakura",
       "id": "wintersakura",
       "name": "WinterSakura",
       "description": "WinterSakura is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14493,6 +15102,7 @@
       ]
     },
     {
+      "file": "world-of-tomorrow",
       "id": "world-of-tomorrow",
       "name": "World-of-Tomorrow",
       "description": "World-of-Tomorrow is a GERMAN Private tracker",
@@ -14520,9 +15130,11 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
+      "file": "world-torrent",
       "id": "world-torrent",
       "name": "World-torrent",
       "description": "World-torrent is a FRENCH Public site for MOVIES / TV / GENERAL",
@@ -14566,6 +15178,7 @@
       "regex_net": true
     },
     {
+      "file": "xdy",
       "id": "xdy",
       "name": "XDY (修道院)",
       "description": "XDY (修道院) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14596,6 +15209,7 @@
       ]
     },
     {
+      "file": "xdy-api",
       "id": "xdy-api",
       "name": "XDY (修道院) (API)",
       "description": "XDY (修道院) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14622,6 +15236,7 @@
       ]
     },
     {
+      "file": "xingtan",
       "id": "xingtan",
       "name": "Xingtan (杏坛)",
       "description": "Xingtan (杏坛) is a CHINESE Torrent Tracker focusing on Medical Resources EBOOKS",
@@ -14637,6 +15252,7 @@
       ]
     },
     {
+      "file": "xingwan",
       "id": "xingwan",
       "name": "Xingwan (星湾)",
       "description": "Xingwan (星湾) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14669,6 +15285,7 @@
       ]
     },
     {
+      "file": "xingyung",
       "id": "xingyung",
       "name": "Xingyung (星陨阁)",
       "description": "Xingyung (星陨阁) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14698,6 +15315,7 @@
       ]
     },
     {
+      "file": "xloli",
       "id": "xloli",
       "name": "xloli",
       "description": "xloli (ilolicon PT) is a CHINESE Private Torrent Tracker for LOLICON / MOVIES / 3X",
@@ -14733,6 +15351,7 @@
       ]
     },
     {
+      "file": "xloli-api",
       "id": "xloli-api",
       "name": "xloli (API)",
       "description": "xloli (ilolicon PT) is a CHINESE Private Torrent Tracker for LOLICON / MOVIES / 3X",
@@ -14761,6 +15380,7 @@
       ]
     },
     {
+      "file": "xtorrenty",
       "id": "xtorrenty",
       "name": "xTorrenty",
       "description": "xTorrenty is a POLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14793,6 +15413,7 @@
       "regex_net": true
     },
     {
+      "file": "xtremebytes",
       "id": "xtremebytes",
       "name": "Xtreme Bytes",
       "description": "Xtreme Bytes (TorrentSurf) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14825,6 +15446,7 @@
       ]
     },
     {
+      "file": "xwtclassics",
       "id": "xwtclassics",
       "name": "XWT-Classics",
       "description": "XWT-Classics is a Private Torrent Tracker for CLASSIC PROFESSIONAL WRESTLING",
@@ -14847,6 +15469,7 @@
       ]
     },
     {
+      "file": "xwtclassics2fa",
       "id": "xwtclassics2fa",
       "name": "XWT-Classics2FA",
       "description": "XWT-Classics is a Private Torrent Tracker for CLASSIC PROFESSIONAL WRESTLING. This indexer uses cookie login for 2FA.",
@@ -14869,6 +15492,7 @@
       ]
     },
     {
+      "file": "xwtorrents",
       "id": "xwtorrents",
       "name": "XWtorrents",
       "description": "XtremeWrestlingTorrents (XWT) is a Private Torrent Tracker for PROFESSIONAL WRESTLING / MMA",
@@ -14894,6 +15518,7 @@
       ]
     },
     {
+      "file": "xwtorrents2fa",
       "id": "xwtorrents2fa",
       "name": "XWtorrents2FA",
       "description": "XtremeWrestlingTorrents (XWT) is a Private Torrent Tracker for PROFESSIONAL WRESTLING / MMA. This indexer uses cookie login for 2FA.",
@@ -14919,6 +15544,7 @@
       ]
     },
     {
+      "file": "xxxclub",
       "id": "xxxclub",
       "name": "XXXClub",
       "description": "XXXClub is a Public torrent site for 3X",
@@ -14936,6 +15562,7 @@
       ]
     },
     {
+      "file": "xxxtor",
       "id": "xxxtor",
       "name": "xxxtor",
       "description": "xxxtor is a RUSSIAN Public Torrent Tracker for 3X",
@@ -14950,6 +15577,7 @@
       ]
     },
     {
+      "file": "yggreborn-api",
       "id": "yggreborn-api",
       "name": "YggReborn (API)",
       "description": "YggReborn is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -14980,6 +15608,7 @@
       "regex_net": true
     },
     {
+      "file": "yts",
       "id": "yts",
       "name": "YTS",
       "description": "YTS is a Public torrent site specialising in HD movies of small size",
@@ -15002,6 +15631,7 @@
       ]
     },
     {
+      "file": "yuscene-api",
       "id": "yuscene-api",
       "name": "YUSCENE (API)",
       "description": "YUSCENE is a Private Tracker for MOVIES / TV",
@@ -15034,6 +15664,7 @@
       ]
     },
     {
+      "file": "zamundalife",
       "id": "zamundalife",
       "name": "Zamunda LIFE",
       "description": "Zamunda LIFE is a BULGARIAN Public Torrent Archive for MOVIES / TV / GENERAL",
@@ -15066,6 +15697,7 @@
       ]
     },
     {
+      "file": "zappateers",
       "id": "zappateers",
       "name": "Zappateers",
       "description": "Zappateers is a Private Torrent Tracker for Frank Zappa MUSIC",
@@ -15081,6 +15713,7 @@
       ]
     },
     {
+      "file": "zenith",
       "id": "zenith",
       "name": "Zenith",
       "description": "Zenith is an Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -15114,6 +15747,7 @@
       ]
     },
     {
+      "file": "zmpt",
       "id": "zmpt",
       "name": "ZmPT (织梦)",
       "description": "ZmPT (织梦) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -15145,6 +15779,7 @@
       ]
     },
     {
+      "file": "zmpt-api",
       "id": "zmpt-api",
       "name": "ZmPT (织梦) (API)",
       "description": "ZmPT (织梦) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
@@ -15172,6 +15807,7 @@
       ]
     },
     {
+      "file": "zrpt",
       "id": "zrpt",
       "name": "ZRPT (自然)",
       "description": "ZRPT (自然) is a CHINESE Private Torrent Tracker for Documentaries",
@@ -15192,6 +15828,7 @@
       ]
     },
     {
+      "file": "ztracker",
       "id": "ztracker",
       "name": "Ztracker",
       "description": "Ztracker is a HUNGARIAN Semi-Private Torrent Tracker for 0DAY / GENERAL",

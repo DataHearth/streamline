@@ -31,7 +31,7 @@
   "search": {
     "paths": [
       {
-        "path": "{{ if .Keywords }}s/{{ re_replace .Keywords \"\\\\s+\" \"-\" }}{{ else }}ts{{ end }}"
+        "path": "{{ if .Keywords }}s/{{ re_replace .Keywords \"[\\\\t-\\\\r\\\\x{85}\\\\p{Z}]+\" \"-\" }}{{ else }}ts{{ end }}"
       }
     ],
     "rows": {
@@ -106,7 +106,7 @@
           {
             "name": "re_replace",
             "args": [
-              "\\s+",
+              "[\\t-\\r\\x{85}\\p{Z}]+",
               " "
             ]
           }

@@ -5,6 +5,7 @@
   "language": "it-IT",
   "type": "private",
   "encoding": "UTF-8",
+  "testlinktorrent": false,
   "links": [
     "https://girotorrent.org/"
   ],
@@ -412,15 +413,17 @@
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
-          "${1} ${2}"
-        ]
+          "$1 $2"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -450,7 +453,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[\\[!\"#$%&'()*+,\\-.\\/:;<=>?@[\\]^_`{|}~]",
+              "[\\[!\"#$%&'()*+,\\-.\\/:;<=>?@\\[\\]^_`{|}~]",
               " "
             ]
           },
@@ -471,13 +474,14 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bS(\\d+)\\sE(\\d+)\\b",
-              "S${1}E${2}"
-            ]
+              "S$1E$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{2})x(\\d+)",
+              "(?i)(\\p{Nd}{2})x(\\p{Nd}+)",
               "S${1}E${2}"
             ]
           },
@@ -485,36 +489,41 @@
             "name": "re_replace",
             "args": [
               "(?i)\\b(\\d{1})x(\\d+)",
-              "S0${1}E${2}"
-            ]
+              "S0$1E$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{1})\\b|\\bSeason'?s?\\s?(\\d{1})\\b",
-              "S0${1}${2}"
-            ]
+              "S0$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{2,})\\b|\\bSeason'?s?\\s?(\\d{2,})\\b",
-              "S${1}${2}"
-            ]
+              "S$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(?:[\\/\\|]?Episodio\\s?(\\d+)|Puntata\\s?(\\d+))",
-              "E${1}${2}"
-            ]
+              "E$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(?:Puntate\\s*)(\\d+)\\s?(\\d+)",
-              "E0${1}-0${2}"
-            ]
+              "E0$1-0$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
@@ -626,5 +635,6 @@
     "path": "definitions/v11/girotorrent.yml",
     "sha256": "4394cab2f54d25d256b1f20e7bf1999178477e5cb533151835e9f5707b00bc24",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

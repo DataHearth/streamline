@@ -242,7 +242,7 @@
           {
             "name": "regexp",
             "args": [
-              "\\((\\d+) files\\)"
+              "\\((\\p{Nd}+) files\\)"
             ]
           }
         ]
@@ -254,7 +254,7 @@
           {
             "name": "regexp",
             "args": [
-              ">(\\d+) seeder"
+              ">(\\p{Nd}+) seeder"
             ]
           }
         ]
@@ -266,7 +266,7 @@
           {
             "name": "regexp",
             "args": [
-              ", (\\d+) leecher"
+              ", (\\p{Nd}+) leecher"
             ]
           },
           {

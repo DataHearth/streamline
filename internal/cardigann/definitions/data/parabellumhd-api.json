@@ -252,20 +252,22 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bTemporada (\\d+)\\b",
-              "S${1}"
-            ]
+              "S$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bEpisodio (\\d+)\\b",
-              "E${1}"
-            ]
+              "E$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d+)x(\\d+)",
+              "(?i)(\\p{Nd}+)x(\\p{Nd}+)",
               "S${1}E${2}"
             ]
           }
@@ -355,7 +357,8 @@
           {
             "name": "dateparse",
             "args": [
-              "01/02/2006 15:04:05 -07:00"
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
             ]
           }
         ]
@@ -403,5 +406,6 @@
     "path": "definitions/v11/parabellumhd-api.yml",
     "sha256": "bd93a69dcdf621ae36ac16f1812f30f0ff5aecd35442532e3ecc00a496e06c2a",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

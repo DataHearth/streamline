@@ -173,7 +173,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Monday, 2. Jan, 2006 -07:00"
+              "Monday, 2. Jan, 2006 -07:00",
+              "Monday, 2. Jan, 2006 -0700"
             ]
           }
         ]
