@@ -65,8 +65,9 @@
             "name": "re_replace",
             "args": [
               "^(\\[.+?\\]) (.+?)$",
-              "${2} ${1}"
-            ]
+              "$2 $1"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -141,8 +142,9 @@
           {
             "name": "regexp",
             "args": [
-              "(\\p{Nd}+)$"
-            ]
+              "(\\d+)$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -164,5 +166,6 @@
     "path": "definitions/v11/anisource.yml",
     "sha256": "122a960657ce1f13c7f1a07da4893a0cb0640966e3811f9229068441324896cc",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

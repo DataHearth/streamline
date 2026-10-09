@@ -197,9 +197,10 @@
           {
             "name": "re_replace",
             "args": [
-              "^(.+?)([\\. ])((?:19|20)\\p{Nd}{2})([\\. ])(.+)$",
-              "{{ if and (eq .Result.title_has_season \"NULL\") (eq .Result.title_has_episode \"NULL\") }}${1}${2}${3}${4}S01${4}${5}{{ else }}${1}${2}${3}${4}${5}{{ end }}"
-            ]
+              "^(.+?)([\\. ])((?:19|20)\\d{2})([\\. ])(.+)$",
+              "{{ if and (eq .Result.title_has_season \"NULL\") (eq .Result.title_has_episode \"NULL\") }}$1$2$3$4S01$4$5{{ else }}$1$2$3$4$5{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",

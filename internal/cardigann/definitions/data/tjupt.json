@@ -201,8 +201,9 @@
             "name": "re_replace",
             "args": [
               "^\\[([^\\]]+)\\]\\[([^\\]]+)\\]\\[([^\\]]+)\\](.*)$",
-              "${3} [${1}][${2}]${4}"
-            ]
+              "$3 [$1][$2]$4"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -326,5 +327,6 @@
     "path": "definitions/v11/tjupt.yml",
     "sha256": "83891e855529b9a993735e5e12c45542f33fbf22075378366cc8b5de573da580",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -170,8 +170,9 @@
           {
             "name": "regexp",
             "args": [
-              "\\/(\\p{Nd}+)$"
-            ]
+              "\\/(\\d+)$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -228,5 +229,6 @@
     "path": "definitions/v11/dmhy.yml",
     "sha256": "7b8236111c9dfbaab548e3d362c3cc2c154dc9997f7343fc2e44d349a8dead9f",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -153,23 +153,26 @@
       {
         "name": "re_replace",
         "args": [
-          " +(?:19|20)\\p{Nd}{2} *$",
+          " +(?:19|20)\\d{2} *$",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i) S0(\\p{Nd}{1})$",
-          " Season ${1}"
-        ]
+          "(?i) S0(\\d{1})$",
+          " Season $1"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i) S(\\p{Nd}{2})$",
-          " Season ${1}"
-        ]
+          "(?i) S(\\d{2})$",
+          " Season $1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {

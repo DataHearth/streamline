@@ -73,9 +73,10 @@
       {
         "name": "re_replace",
         "args": [
-          "(?i)(?:[\\t-\\r\\x{85}\\p{Z}]?[SE]?\\p{Nd}{1,4}){1,2}$",
+          "(?i)(?:\\s?[SE]?\\d{1,4}){1,2}$",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -332,5 +333,6 @@
     "path": "definitions/v11/shanaproject.yml",
     "sha256": "49fcae98cc96f5bac9e6f948d798c97353057d222ce30d9e899da298974742bf",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

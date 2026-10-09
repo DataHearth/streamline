@@ -50,9 +50,10 @@ const (
 // shorthand classes \d \w \s and their negations, spelled as the Unicode sets
 // .NET means by them. What RE2 cannot say goes to regexp2 instead:
 // lookarounds, backreferences, \b and \B (Go's word boundary is ASCII-only,
-// and a boundary beside a Cyrillic letter never matches), a negated shorthand
-// inside a character class, class subtraction. A pattern neither engine
-// compiles fails the definition.
+// and a boundary beside a Cyrillic letter never matches), $ (.NET's also
+// matches before a final newline), a negated shorthand inside a character
+// class, class subtraction. A pattern neither engine compiles fails the
+// definition.
 func translateRegex(pat string) (string, string, error) {
 	if out, ok := rewriteRE2(pat); ok {
 		if _, err := regexp.Compile(out); err == nil {
@@ -118,6 +119,10 @@ func rewriteRE2(pat string) (string, bool) {
 			continue
 		case inClass && c == '-' && i+1 < len(pat) && pat[i+1] == '[':
 			return "", false // .NET class subtraction
+		case !inClass && c == '$':
+			// .NET's $ also matches just before a final newline, which RE2
+			// can only say with a lookahead it does not have.
+			return "", false
 		case inClass && c == '[':
 			b.WriteString(`\[`) // literal in .NET; Go would read [: as POSIX
 		case inClass && c == ']':

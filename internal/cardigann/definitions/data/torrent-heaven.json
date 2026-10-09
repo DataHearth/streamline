@@ -210,16 +210,18 @@
       {
         "name": "re_replace",
         "args": [
-          "(?i)(S0)(\\p{Nd}{1,2})$",
-          "seizoen ${2}"
-        ]
+          "(?i)(S0)(\\d{1,2})$",
+          "seizoen $2"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i)(S)(\\p{Nd}{1,3})$",
-          "seizoen ${2}"
-        ]
+          "(?i)(S)(\\d{1,3})$",
+          "seizoen $2"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -439,5 +441,6 @@
     "path": "definitions/v11/torrent-heaven.yml",
     "sha256": "25b7af1eabc304d50306529c42c37cdc9f11c18dd46edbbea5b135dc3b06b8ec",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

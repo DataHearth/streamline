@@ -240,9 +240,10 @@
       {
         "name": "re_replace",
         "args": [
-          " +(?:19|20)\\p{Nd}{2} *$",
+          " +(?:19|20)\\d{2} *$",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -276,8 +277,9 @@
             "name": "re_replace",
             "args": [
               "^(.*/)(.*)$",
-              "${2}"
-            ]
+              "$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "trim"
@@ -299,8 +301,9 @@
             "name": "re_replace",
             "args": [
               "^return downloadTorrent\\('([^']+)', '([^']+)', '[^']*'\\);$",
-              "download.php/${1}/${2}.torrent"
-            ]
+              "download.php/$1/$2.torrent"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -361,5 +364,6 @@
     "path": "definitions/v11/exitorrent-org.yml",
     "sha256": "ca3e17afc98493e68c5af92d20f00ce579dcfc1dd8ef1de45b02de9e87d29ed5",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

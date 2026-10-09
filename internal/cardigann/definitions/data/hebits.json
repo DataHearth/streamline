@@ -185,14 +185,16 @@
             "args": [
               "(אנגלית)$",
               " - אנגלית"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(עברית)$",
               " - עברית"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -312,5 +314,6 @@
     "path": "definitions/v11/hebits.yml",
     "sha256": "23e6723c3dce1536efb740a1d77999be9bc4f1b1d308b6df3d19def3484b22a0",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

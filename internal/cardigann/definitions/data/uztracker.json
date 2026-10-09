@@ -1985,8 +1985,9 @@
           {
             "name": "regexp",
             "args": [
-              "(\\p{Nd}+)$"
-            ]
+              "(\\d+)$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
