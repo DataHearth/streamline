@@ -1,0 +1,280 @@
+{
+  "id": "best-torrents",
+  "name": "Best-Torrents",
+  "description": "Best-Torrents is a POLISH Semi-Private PAY2DL Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "pl-PL",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://best-torrents.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "774",
+        "cat": "Movies",
+        "desc": "Filmy Polskie"
+      },
+      {
+        "id": "642",
+        "cat": "Movies",
+        "desc": "Filmy/Bajki"
+      },
+      {
+        "id": "1",
+        "cat": "Movies/SD",
+        "desc": "Filmy XviD/DivX"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/DVD",
+        "desc": "Filmy DVD"
+      },
+      {
+        "id": "23",
+        "cat": "Movies/HD",
+        "desc": "Filmy x264"
+      },
+      {
+        "id": "573",
+        "cat": "Movies/UHD",
+        "desc": "Filmy 4K UHD"
+      },
+      {
+        "id": "17",
+        "cat": "Movies/HD",
+        "desc": "Filmy HD"
+      },
+      {
+        "id": "265",
+        "cat": "Movies/HD",
+        "desc": "Filmy x265 HEVC"
+      },
+      {
+        "id": "12",
+        "cat": "Movies/3D",
+        "desc": "Filmy 3D"
+      },
+      {
+        "id": "530",
+        "cat": "Movies/SD",
+        "desc": "Filmy TS/CAM"
+      },
+      {
+        "id": "9",
+        "cat": "PC",
+        "desc": "Programy"
+      },
+      {
+        "id": "7",
+        "cat": "Console",
+        "desc": "Konsole"
+      },
+      {
+        "id": "6",
+        "cat": "PC/Games",
+        "desc": "Gry"
+      },
+      {
+        "id": "5",
+        "cat": "Audio",
+        "desc": "Muzyka"
+      },
+      {
+        "id": "305",
+        "cat": "Audio/Video",
+        "desc": "Teledyski"
+      },
+      {
+        "id": "22",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "228",
+        "cat": "XXX",
+        "desc": "Erotyka"
+      },
+      {
+        "id": "25",
+        "cat": "Books/EBook",
+        "desc": "Książki"
+      },
+      {
+        "id": "739",
+        "cat": "Audio/Audiobook",
+        "desc": "AudioBooki"
+      },
+      {
+        "id": "26",
+        "cat": "Books/Comics",
+        "desc": "Komiksy"
+      },
+      {
+        "id": "27",
+        "cat": "PC/Mac",
+        "desc": "Linux/Mac"
+      },
+      {
+        "id": "28",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "29",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "31",
+        "cat": "PC/Mobile-Other",
+        "desc": "GSM/PDA"
+      },
+      {
+        "id": "32",
+        "cat": "Other",
+        "desc": "Inne"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td.komunikaty:contains(\"Nazwa użytkownika bądź hasło jest nieprawidłowe\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href$=\"/logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "szukaj.php"
+      }
+    ],
+    "inputs": {
+      "cat": "0",
+      "full_name": "no",
+      "search": "{{ if .Keywords }}{{ .Keywords }}{{ else }}%{{ end }}"
+    },
+    "rows": {
+      "selector": "div#torrents_browse-standard-all"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "div#torrents_browse-standard-category a",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "kategorii/(.+?)/gatunku"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "div#torrents_browse-standard-torrent-name a"
+      },
+      "details": {
+        "selector": "div#torrents_browse-standard-torrent-name a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "div#torrents_browse-standard-download a",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "div#torrents_browse-standard-poster img",
+        "attribute": "src"
+      },
+      "date": {
+        "selector": "div#torrents_browse-standard-time",
+        "remove": "b",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "div#torrents_browse-standard-size",
+        "remove": "b",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\d{1,4}\\.\\d{2}\\s+?[T|G|M|k]B)"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "div#torrents_browse-standard-seeds span font"
+      },
+      "leechers": {
+        "selector": "div#torrents_browse-standard-peers span font"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/best-torrents.yml",
+    "sha256": "00d982f3208827dbdf85e13dd380d1eb55d618ab55f421e2ab64838b71100c34",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

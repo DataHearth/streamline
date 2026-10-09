@@ -1,0 +1,128 @@
+{
+  "id": "sexypics",
+  "name": "Sexy-Pics",
+  "description": "Sexy-Pics is a Public Magnet Links site for 3X MP4",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "followredirect": true,
+  "requestDelay": 2,
+  "links": [
+    "https://www.sexy-pics.us/"
+  ],
+  "caps": {
+    "categories": {
+      "XXX": "XXX"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "age",
+      "options": {
+        "age": "created",
+        "se": "seeders",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "{{ if .Keywords }}{{ re_replace .Keywords \"(.).*\" \"${1}\" }}/{{ .Keywords }}/{{ else }}browse/all/{{ end }}{{ .Config.sort }}/{{ .Config.type }}/"
+      },
+      {
+        "path": "{{ if .Keywords }}{{ re_replace .Keywords \"(.).*\" \"${1}\" }}/{{ .Keywords }}/{{ else }}browse/all/{{ end }}{{ .Config.sort }}/{{ .Config.type }}/2/"
+      }
+    ],
+    "headers": {
+      "Accept": [
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          " ",
+          "-"
+        ]
+      },
+      {
+        "name": "tolower"
+      }
+    ],
+    "rows": {
+      "selector": "tr:has(td.m)"
+    },
+    "fields": {
+      "category": {
+        "text": "XXX"
+      },
+      "title": {
+        "selector": "td.n a",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "td.n a",
+        "attribute": "href"
+      },
+      "magnet": {
+        "selector": "td.m a",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "td:nth-child(3)",
+        "filters": [
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "files": {
+        "selector": "td:nth-child(5)"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td.s"
+      },
+      "leechers": {
+        "selector": "td.l"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/sexypics.yml",
+    "sha256": "3e6c5fed8af4b7daf9b80d0c28a44b98e615241c5eb93555fc6928d5d06dcd81",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

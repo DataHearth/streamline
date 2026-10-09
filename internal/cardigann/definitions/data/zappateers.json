@@ -1,0 +1,387 @@
+{
+  "id": "zappateers",
+  "name": "Zappateers",
+  "description": "Zappateers is a Private Torrent Tracker for Frank Zappa MUSIC",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://zappateers.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Audio",
+        "desc": "FZ Audio"
+      },
+      {
+        "id": "6",
+        "cat": "Audio",
+        "desc": "Samples & Fills"
+      },
+      {
+        "id": "7",
+        "cat": "Audio",
+        "desc": "FZ Outtakes/Unreleased"
+      },
+      {
+        "id": "8",
+        "cat": "Audio",
+        "desc": "FZ Liberated Boots"
+      },
+      {
+        "id": "2",
+        "cat": "Audio/Video",
+        "desc": "FZ Video"
+      },
+      {
+        "id": "9",
+        "cat": "Audio/Video",
+        "desc": "FZ Related"
+      },
+      {
+        "id": "10",
+        "cat": "Audio",
+        "desc": "FZ Interviews/Radio"
+      },
+      {
+        "id": "11",
+        "cat": "Other",
+        "desc": "Misc"
+      },
+      {
+        "id": "12",
+        "cat": "Audio",
+        "desc": "The Beefheart Corner"
+      },
+      {
+        "id": "13",
+        "cat": "Audio/Video",
+        "desc": "The Mike Keneally Corner"
+      },
+      {
+        "id": "14",
+        "cat": "Audio",
+        "desc": "The Shoebox"
+      },
+      {
+        "id": "16",
+        "cat": "Audio",
+        "desc": "The Shoebox Archive"
+      },
+      {
+        "id": "15",
+        "cat": "Other",
+        "desc": "Covers"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login",
+    "form": "form[action$=\"/login\"]",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "remember": "on"
+    },
+    "selectorinputs": {
+      "_token": {
+        "selector": "input[name=\"_token\"]",
+        "attribute": "value"
+      }
+    },
+    "error": [
+      {
+        "selector": "div#ERROR_COPY"
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents/filter"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}categories[]={{.}}&{{end}}",
+      "search": "{{ .Keywords }}",
+      "sorting": "{{ .Config.sort }}",
+      "direction": "{{ .Config.type }}",
+      "qty": "50",
+      "page": "0",
+      "view": "list",
+      "freeleech": "{{ if .Config.freeleech }}1{{ else }}{{ end }}"
+    },
+    "rows": {
+      "selector": "table > tbody > tr"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"/categories/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "/categories/(\\d+)"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a.view-torrent"
+      },
+      "download": {
+        "selector": "a[href*=\"/download/\"]",
+        "attribute": "href"
+      },
+      "details": {
+        "selector": "a.view-torrent",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "div.torrent-poster img",
+        "attribute": "src",
+        "filters": [
+          {
+            "name": "prepend",
+            "args": [
+              "https://images.weserv.nl/?url="
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "&w=180&h=270"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "https://images.weserv.nl/?url=https://via.placeholder.com/600x900&w=180&h=270",
+              ""
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(1)"
+      },
+      "date": {
+        "selector": "time",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(önce|tagasi|geleden|fa|temu|siden|há|atrás|nazpět|назад|acum|în urmă|hace|il y a|vor|преди|前|sedan)",
+              " ago"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(saniye|sekundit|sekunder|secondi|sekund|segundos|sekundami|секунд|secunde|secondes|Sekunden|секунди|seconden|秒前)",
+              "seconds"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(minutit|minutter|minuti|minuty|minutos|минуты|минут|Minuten|минути|minuten|minuter)",
+              "minutes"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(dakika|minut|minuto|minuta|minutt|минута|Minute|minuut|分钟|分)",
+              " minute"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(tundi|timer|ore|godziny|horas|hodiny|hoden|часа|часов|ore|heures|Stunden|timmar)",
+              "hours"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(saat|tund|time|ora|godzina|hora|hodina|час|oră|heure|Stunde|uur|小时|時間|timme)",
+              " hour"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(päeva|dage|giorni|dni|dias|dny|дня|дней|zile|días|jours|Tagen|дни|dagen|dagar)",
+              "days"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(gün|päev|dag|giorno|dzień|dia|den|день|zi|día|jour|Tag|ден|天|日)",
+              " day"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(nädalat|uger|settimane|tygodnie|uker|semanas|týdny|недели|недель|săptămâni|semaines|Wochen|седмици|weken|veckor)",
+              "weeks"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(hafta|nädal|uge|settimana|tydzień|uke|semana|týden|неделю|săptămână|semaine|Woche|седмица|周|週間|vecka)",
+              " week"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i) (ay)",
+              "month"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(kuud|måneder|mesi|miesiące|meses|měsíce|месяца|месяцев|luni|meses|mois|Monaten|месеца|maanden|månader)",
+              "months"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(kuu|måned|mese|miesiąc|mês|měsíc|месяц|lună|mes|Monat|месец|maand|个月|ヶ月|månad)",
+              " month"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(aastat|anni|lata|anos|roky|года|ani|años|ans|Jahren|години)",
+              " years"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(yil|aasta|år|anno|rok|ano|год|año|Jahr|година|jaar|年)",
+              " year"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i) (an)",
+              "year"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(För |und)",
+              ""
+            ]
+          },
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "i[class*=\"fa-id-badge text-orange\"]": "0",
+          "i[class*=\"fa-star text-bold\"]": "0",
+          "i[class*=\"fa-coins text-bold\"]": "0",
+          "i[class*=\"fa-globe text-blue\"]": "0",
+          "i[class*=\"fa-star text-gold\"]": "0",
+          "i[class*=\"fa-certificate text-pink\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "i[class*=\"fa-gem text-green\"]": "2",
+          "i[class*=\"fa-globe text-green\"]": "2",
+          "i[class*=\"fa-certificate text-pink\"]": "2",
+          "i[class*=\"fa-trophy text-purple\"]": "2",
+          "*": "1"
+        }
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/zappateers.yml",
+    "sha256": "3e83dfae4fd908b43b53ba009032812f51371b2f4c26bbc30c78b0a67262776a",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "id": "indietorrents",
+  "name": "Indietorrents",
+  "description": "Indietorrents is a Private Music Torrent Tracker for independent MUSIC",
+  "language": "en-GB",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.indietorrents.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Audio",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q",
+        "album",
+        "artist"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "time",
+      "options": {
+        "time": "created",
+        "seeders": "seeders",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_cats",
+      "label": "About categories",
+      "type": "info",
+      "default": "This indexer only supports searching the <b>Audio</b> category. <i>Video</i> searching is not supported."
+    },
+    {
+      "name": "info_results",
+      "label": "Search results",
+      "type": "info",
+      "default": "This indexer does not support <b>Torrent Groups</b>.<br />On your account <i>Settings</i> change <b>Torrent grouping</b> to <b>DO NOT Group torrents by default</b>."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php?lang=",
+    "form": "form#loginform",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "keeplogged": "1"
+    },
+    "error": [
+      {
+        "selector": "form#loginform:contains(\"incorrect\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?auth=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "searchstr": "{{ if or (.Query.Artist) (.Query.Album) }}{{ or (.Query.Artist) (.Query.Album) }}{{ else }}{{ .Keywords }}{{ end }}",
+      "action": "basic",
+      "taglist": "",
+      "tags_type": "1",
+      "order_by": "{{ .Config.sort }}",
+      "order_way": "{{ .Config.type }}",
+      "freetorrent": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "filter_cat[1]": "1"
+    },
+    "rows": {
+      "after": 2,
+      "selector": "table#torrent_table > tbody > tr[class^=\"group\"]"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "details": {
+        "selector": "a[href^=\"torrents.php?id=\"]:last-of-type",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"torrents.php?action=download&id=\"]",
+        "attribute": "href"
+      },
+      "_tags": {
+        "selector": "div.tags"
+      },
+      "description": {
+        "selector": "td.edition_info",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "</br>{{ .Result._tags }}"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "td:nth-last-child(7)"
+      },
+      "date": {
+        "selector": "td:nth-last-child(6) > span.time",
+        "attribute": "title",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Jan 2 2006, 15:04 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(5)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "strong:contains(\"Freeleech!\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "title_details": {
+        "selector": "td:nth-child(3)",
+        "remove": "span, div.tags"
+      },
+      "title": {
+        "selector": "a[href*=\"torrentid=\"]",
+        "remove": "strong",
+        "filters": [
+          {
+            "name": "prepend",
+            "args": [
+              "{{ .Result.title_details }} "
+            ]
+          }
+        ]
+      },
+      "minimumratio": {
+        "text": "0.60"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/indietorrents.yml",
+    "sha256": "d870e9e582e70fcf28fefaf022868973d4ce9491dbacac6bfb77f13b63f70f7f",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

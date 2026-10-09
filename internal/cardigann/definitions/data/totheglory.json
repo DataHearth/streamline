@@ -1,0 +1,347 @@
+{
+  "id": "totheglory",
+  "name": "ToTheGlory",
+  "description": "ToTheGlory (TTG) is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://totheglory.im/"
+  ],
+  "caps": {
+    "categories": {
+      "电影DVDRip": "Movies/SD",
+      "电影720p": "Movies/HD",
+      "电影1080i/p": "Movies/HD",
+      "BluRay原盘": "Movies/BluRay",
+      "影视2160p": "Movies/UHD",
+      "UHD原盘": "Movies/UHD",
+      "纪录片720p": "Movies/HD",
+      "纪录片1080i/p": "Movies/HD",
+      "纪录片BluRay原盘": "Movies/BluRay",
+      "欧美剧720p": "TV/HD",
+      "欧美剧1080i/p": "TV/HD",
+      "高清日剧": "TV/HD",
+      "大陆港台剧1080i/p": "TV/HD",
+      "大陆港台剧720p": "TV/HD",
+      "高清韩剧": "TV/HD",
+      "欧美剧包": "TV/HD",
+      "日剧包": "TV/HD",
+      "韩剧包": "TV/HD",
+      "华语剧包": "TV/HD",
+      "(电影原声&Game)OST": "Audio",
+      "无损音乐FLAC&APE": "Audio/Lossless",
+      "MV&演唱会": "Audio/Video",
+      "高清体育节目": "TV/Sport",
+      "高清动漫": "TV/Anime",
+      "韩国综艺": "TV/HD",
+      "高清综艺": "TV/HD",
+      "日本综艺": "TV/HD",
+      "MiniVideo": "Other",
+      "补充音轨": "Audio",
+      "iPhone/iPad视频": "PC/Mobile-Other",
+      "动漫原盘": "Movies/Other",
+      "PC": "PC/Games",
+      "MAC": "PC/Mac",
+      "XBOX360": "Console/XBox 360",
+      "XBOX1": "Console/XBox",
+      "XBLA": "Console/XBox",
+      "XBOX+to+XBOX360": "Console/XBox",
+      "PS2": "Console/Other",
+      "PSP": "Console/PSP",
+      "PS4": "Console/PS4",
+      "PS3": "Console/PS3",
+      "PSV": "Console/PS Vita",
+      "WIIU": "Console/WiiU",
+      "WII": "Console/Wii",
+      "SWITCH": "Console/Other",
+      "NDS": "Console/NDS",
+      "NGC": "Console/Other",
+      "PS3兼容高清": "Console/PS3",
+      "PSP兼容高清&标清": "Console/PSP",
+      "XBOX360兼容高清": "Console/XBox 360",
+      "Game+Video": "Console/Other",
+      "APPZ": "PC",
+      "Game+Ebook": "Books/EBook",
+      "Ebook": "Books/EBook",
+      "iPhone/iPad游戏": "PC/Mobile-iOS",
+      "iPad书籍": "Books/EBook",
+      "iPhone/iPad软件": "PC/Mobile-iOS"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_2fa",
+      "label": "About 2FA",
+      "type": "info",
+      "default": "If you want to enable 2FA then use the ToTheGlory2FA indexer instead."
+    },
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "passid",
+      "label": "Security Question ID",
+      "type": "select",
+      "default": "0",
+      "options": {
+        "0": "Security question (Ignore not set)",
+        "1": "When did your start using PT?",
+        "2": "How did you get to know about TTG?",
+        "3": "What's the name of the first movie you watched in a cinema?",
+        "4": "What's your favorite movie?",
+        "5": "Who's your favorite porn star?",
+        "6": "Who's your favorite actor/actress?",
+        "7": "What's your most anticipated movie?"
+      }
+    },
+    {
+      "name": "info_passid",
+      "label": "About Security ID",
+      "type": "info",
+      "default": "Only select the <b>Security Question ID</b> from the pulldown if you have set it on the TTG Web Site. Otherwise just leave it as <b>Ignore not set</b>."
+    },
+    {
+      "name": "passan",
+      "label": "Security Question Answer",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_passan",
+      "label": "About Security Question Answer",
+      "type": "info",
+      "default": "Only fill in the <b>Security Question Answer</b> box if you have set it on the TTG Web Site. Don't forget to write your answer in the same language you saved it on the TTG Web Site. Otherwise just leave it empty."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php?returnto=",
+    "form": "form[action=\"takelogin.php\"]",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "rememberme": "yes",
+      "passid": "{{ .Config.passid }}",
+      "passan": "{{ .Config.passan }}"
+    },
+    "error": [
+      {
+        "selector": "td.embedded:has(h2:contains(\"！\"))"
+      },
+      {
+        "selector": "td.embedded:has(h2:contains(\"!\"))"
+      }
+    ],
+    "test": {
+      "path": "my.php",
+      "selector": "a[href*=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php",
+        "inputs": {
+          "c": "M"
+        }
+      },
+      {
+        "path": "browse.php",
+        "categories": [
+          "1000",
+          "1010",
+          "1020",
+          "1030",
+          "1040",
+          "1050",
+          "1080",
+          "1090",
+          "1120",
+          "1130",
+          "1180",
+          "4000",
+          "4030",
+          "4040",
+          "4050",
+          "4060",
+          "7000",
+          "7020"
+        ],
+        "inputs": {
+          "c": "G"
+        }
+      }
+    ],
+    "inputs": {
+      "search_field": "{{ range .Categories }}分类:`{{.}}` {{end}}{{ if .Query.IMDBID }}imdb{{ .Query.IMDBIDShort }}{{ else }}{{ .Keywords }}{{ end }}"
+    },
+    "rows": {
+      "selector": "table#torrent_table > tbody > tr[id]"
+    },
+    "fields": {
+      "description": {
+        "selector": "div.name_left > a > b"
+      },
+      "title": {
+        "selector": "div.name_left > a > b",
+        "remove": "span"
+      },
+      "category": {
+        "selector": "tr[id] td:nth-child(1) > a",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "search_field"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "category:",
+              ""
+            ]
+          },
+          {
+            "name": "trim",
+            "args": [
+              "\""
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "div.name_left > a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a.dl_a",
+        "attribute": "href"
+      },
+      "files": {
+        "selector": "td:nth-child(3)"
+      },
+      "size": {
+        "selector": "td:nth-child(7)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(9)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "/",
+              "0"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "td:nth-child(9)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "/",
+              "1"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "\n",
+              ""
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "td:nth-child(8)"
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "span.imdb_rate > a",
+        "attribute": "href"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[alt=\"free\"]": "0",
+          "img[alt=\"50%\"]": "0.5",
+          "img[alt=\"30%\"]": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[alt=\"200%\"]": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "case": {
+          "img[title=\"Hit and Run\"]": "1",
+          "*": "0"
+        }
+      },
+      "minimumseedtime": {
+        "case": {
+          "img[title=\"Hit and Run\"]": "216000",
+          "*": "0"
+        }
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/totheglory.yml",
+    "sha256": "6d41be7480906ce731f54b3dc7aa5a2bc78e2613e895f5c7eb23408cc377eb5c",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

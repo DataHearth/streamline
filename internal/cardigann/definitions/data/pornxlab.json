@@ -1,0 +1,114 @@
+{
+  "id": "pornxlab",
+  "replaces": [
+    "ptorrents"
+  ],
+  "name": "PornXLab",
+  "description": "PornXLab is a Public tracker for 3X",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.pornxlab.com/"
+  ],
+  "legacylinks": [
+    "https://www.ptorrents.com/"
+  ],
+  "caps": {
+    "categories": {
+      "XXX": "XXX"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "{{ if .Keywords }}s.php?search={{ .Keywords }}{{ else }}{{ end }}"
+      }
+    ],
+    "rows": {
+      "selector": "div.image-wrapper"
+    },
+    "fields": {
+      "category": {
+        "text": "XXX"
+      },
+      "title": {
+        "selector": "a.overlay",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^.+?\\] ",
+              ""
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a.overlay",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a.overlay",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "-(\\d+).html"
+            ]
+          },
+          {
+            "name": "prepend",
+            "args": [
+              "/dl.php?t="
+            ]
+          }
+        ]
+      },
+      "poster": {
+        "selector": "img",
+        "attribute": "src"
+      },
+      "date": {
+        "text": "now"
+      },
+      "size": {
+        "selector": "span.size"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "description": {
+        "selector": "div.catalog a"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a.download-button",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/pornxlab.yml",
+    "sha256": "66411a55b216e06ff5c763155222465eff3bc9bf4e4fb6bb97c07bb7292b96c5",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

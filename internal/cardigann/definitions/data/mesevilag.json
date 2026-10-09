@@ -1,0 +1,360 @@
+{
+  "id": "mesevilag",
+  "name": "MeseVilág",
+  "description": "MeseVilág (Fairytale World) is a HUNGARIAN Private Torrent Tracker for ANIMATED MOVIES / TV",
+  "language": "hu-HU",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://mese-vilag.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Anime/Cam"
+      },
+      {
+        "id": "2",
+        "cat": "TV/Anime",
+        "desc": "Anime/Eng"
+      },
+      {
+        "id": "21",
+        "cat": "TV/Anime",
+        "desc": "Anime/HD"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Anime",
+        "desc": "Anime/Hun"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Anime",
+        "desc": "Anime/Sorozat(Series)"
+      },
+      {
+        "id": "4",
+        "cat": "Movies",
+        "desc": "Családi/Cam(Family)"
+      },
+      {
+        "id": "5",
+        "cat": "Movies",
+        "desc": "Családi/Eng(Family)"
+      },
+      {
+        "id": "19",
+        "cat": "Movies/HD",
+        "desc": "Családi/HD(Family)"
+      },
+      {
+        "id": "6",
+        "cat": "Movies",
+        "desc": "Családi/Hun(Family)"
+      },
+      {
+        "id": "17",
+        "cat": "Movies",
+        "desc": "Családi/Romantikus/Cam(Family Romantic)"
+      },
+      {
+        "id": "16",
+        "cat": "Movies",
+        "desc": "Családi/Romantikus/Eng(Family Romantic)"
+      },
+      {
+        "id": "15",
+        "cat": "Movies",
+        "desc": "Családi/Romantikus/Hun(Family Romantic)"
+      },
+      {
+        "id": "18",
+        "cat": "TV",
+        "desc": "Családi/Romantikus/Sorozat(Family Romantic Series)"
+      },
+      {
+        "id": "14",
+        "cat": "TV",
+        "desc": "Családi/Sorozat(Family Series)"
+      },
+      {
+        "id": "8",
+        "cat": "Audio/Audiobook",
+        "desc": "Hangoskönyv(Audiobooks)"
+      },
+      {
+        "id": "9",
+        "cat": "PC/Games",
+        "desc": "Játék/ISO(Games)"
+      },
+      {
+        "id": "11",
+        "cat": "Console",
+        "desc": "Játék/Konzol(Console)"
+      },
+      {
+        "id": "10",
+        "cat": "PC/Games",
+        "desc": "Játék/RIP(Games)"
+      },
+      {
+        "id": "7",
+        "cat": "Books",
+        "desc": "Könyv(Books)"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/HD",
+        "desc": "Romantikus/HD(Romantic)"
+      },
+      {
+        "id": "12",
+        "cat": "Audio",
+        "desc": "Zene/Hun(Music)"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php",
+    "form": "form#loginForm",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "letoltes.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "[^a-zA-Z0-9]+",
+          "%"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "table[cellpadding=\"5\"] > tbody > tr:has(a[onmouseover])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"letoltes.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"javascript:\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "span",
+        "attribute": "id",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "span_bookmark_",
+              "details.php?id="
+            ]
+          }
+        ]
+      },
+      "download": {
+        "selector": "span",
+        "attribute": "id",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "span_bookmark_",
+              "download.php?id="
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[onmouseover]",
+        "attribute": "onmouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=(.+?) "
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "td:nth-last-child(6)",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2})"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "description": {
+        "case": {
+          "img[src=\"pic/yes.png\"]": "Verified",
+          "img[src=\"pic/nincs.png\"]": "Unverified"
+        }
+      },
+      "downloadvolumefactor": {
+        "selector": "td:nth-last-child(5) > font",
+        "case": {
+          "font:contains(\"x0\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "selector": "td:nth-last-child(5) > font",
+        "case": {
+          "font:contains(\"x2\")": "2",
+          "font:contains(\"x3\")": "3",
+          "font:contains(\"x4\")": "4",
+          "*": "1"
+        }
+      },
+      "size": {
+        "selector": "td:nth-last-child(5)",
+        "remove": "font"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/mesevilag.yml",
+    "sha256": "115477f52f9a7e8ec4d10fc5f75881ac5c2bad37f2ae860316e1c34055a7129a",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

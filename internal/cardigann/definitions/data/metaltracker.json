@@ -1,0 +1,176 @@
+{
+  "id": "metaltracker",
+  "name": "Metal Tracker",
+  "description": "Metal Tracker is a Semi-Private Torrent Tracker dedicated to HEAVY METAL MUSIC. This definition is for the English site.",
+  "language": "en-US",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://en.metal-tracker.com/"
+  ],
+  "legacylinks": [
+    "http://en.metal-tracker.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "Books",
+        "cat": "Audio/Audiobook",
+        "desc": "Books"
+      },
+      {
+        "id": "Video",
+        "cat": "Audio/Video",
+        "desc": "Videos"
+      },
+      {
+        "id": "Music",
+        "cat": "Audio/MP3",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q",
+        "album",
+        "artist"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "date",
+      "options": {
+        "date": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "DESC",
+      "options": {
+        "DESC": "desc",
+        "ASC": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "user/login.html",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "go": "Enter"
+    },
+    "error": [
+      {
+        "selector": "div.errorSummary",
+        "message": {
+          "selector": "div.errorSummary ul li"
+        }
+      }
+    ],
+    "test": {
+      "path": "torrents/search.html",
+      "selector": "li li:has(a[href=\"/user/logout.html\"])"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents/search.html",
+        "method": "post"
+      }
+    ],
+    "inputs": {
+      "SearchTorrentsForm[nameTorrent]": "{{ if or (.Query.Artist) (.Query.Album) }}{{ or (.Query.Artist) (.Query.Album) }}{{ else }}{{ .Keywords }}{{ end }}",
+      "SearchTorrentsForm[sort]": "{{ .Config.sort }}",
+      "SearchTorrentsForm[sortType]": "{{ .Config.type }}",
+      "go-search": "Search"
+    },
+    "rows": {
+      "selector": ".smallalbum"
+    },
+    "fields": {
+      "title": {
+        "selector": "a h3"
+      },
+      "poster": {
+        "selector": ".thumb a img",
+        "attribute": "src"
+      },
+      "details": {
+        "selector": ".thumb a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": ".center a[href^=\"/torrents/download/id/\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "text": "now"
+      },
+      "seeders": {
+        "selector": ".center font:nth-of-type(1)"
+      },
+      "leechers": {
+        "selector": ".center font:nth-of-type(2)"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "category": {
+        "selector": ".smallalbum",
+        "case": {
+          ":contains(\"Type: Music\")": "Music",
+          ":contains(\"Type: Video\")": "Video",
+          ":contains(\"Type: Books\")": "Books"
+        },
+        "remove": "div.thumb, div.center, a"
+      },
+      "size": {
+        "selector": ".smallalbum",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Size:\\s+([\\w\\d\\.,]+ \\w\\w)"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/metaltracker.yml",
+    "sha256": "e97a1652b43f329fffd8572ebc6e83a1cd23e9544828ae9059c5776bc786fd4a",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

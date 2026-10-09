@@ -1,0 +1,398 @@
+{
+  "id": "thewordmusic",
+  "name": "The Word Music",
+  "description": "The Word Music is a Private GERMAN tracker for  MUSIC / MOVIES / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://thewordmusic.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "166",
+        "cat": "Movies",
+        "desc": "Alle Filme"
+      },
+      {
+        "id": "157",
+        "cat": "TV/Documentary",
+        "desc": "Doku 1080p"
+      },
+      {
+        "id": "156",
+        "cat": "TV/Documentary",
+        "desc": "Doku 720p"
+      },
+      {
+        "id": "155",
+        "cat": "TV/Documentary",
+        "desc": "Doku SD x264/x26"
+      },
+      {
+        "id": "152",
+        "cat": "Books/EBook",
+        "desc": "E-Books"
+      },
+      {
+        "id": "165",
+        "cat": "Movies/3D",
+        "desc": "Filme 3D"
+      },
+      {
+        "id": "141",
+        "cat": "Movies/HD",
+        "desc": "Filme HD 1080p"
+      },
+      {
+        "id": "154",
+        "cat": "Movies/HD",
+        "desc": "Filme HD 720p"
+      },
+      {
+        "id": "139",
+        "cat": "Movies/HD",
+        "desc": "Filme Packs HD 1080p"
+      },
+      {
+        "id": "106",
+        "cat": "Movies/HD",
+        "desc": "Filme Packs HD 720p"
+      },
+      {
+        "id": "105",
+        "cat": "Movies/SD",
+        "desc": "Filme Packs SD x264/x265"
+      },
+      {
+        "id": "153",
+        "cat": "Movies/SD",
+        "desc": "Filme SD x264/x265"
+      },
+      {
+        "id": "140",
+        "cat": "Movies/UHD",
+        "desc": "Filme UHD 2160p"
+      },
+      {
+        "id": "118",
+        "cat": "Audio/Audiobook",
+        "desc": "Hörbücher"
+      },
+      {
+        "id": "129",
+        "cat": "Audio",
+        "desc": "Musik MP3/FLAC"
+      },
+      {
+        "id": "112",
+        "cat": "Audio",
+        "desc": "Musik Packs MP3/FLAC"
+      },
+      {
+        "id": "167",
+        "cat": "TV/UHD",
+        "desc": "Serie 2160"
+      },
+      {
+        "id": "113",
+        "cat": "TV/HD",
+        "desc": "Serie HD 1080p"
+      },
+      {
+        "id": "125",
+        "cat": "TV/HD",
+        "desc": "Serie HD 720p"
+      },
+      {
+        "id": "138",
+        "cat": "TV/HD",
+        "desc": "Serie Packs HD 1080p"
+      },
+      {
+        "id": "116",
+        "cat": "TV/HD",
+        "desc": "Serie Packs HD 720p"
+      },
+      {
+        "id": "137",
+        "cat": "TV/SD",
+        "desc": "Serie Packs SD x264/x265"
+      },
+      {
+        "id": "133",
+        "cat": "TV/SD",
+        "desc": "Serie SD x264/x265"
+      },
+      {
+        "id": "168",
+        "cat": "TV/UHD",
+        "desc": "Serien Packs 2160"
+      },
+      {
+        "id": "161",
+        "cat": "Other",
+        "desc": "Sonstige"
+      },
+      {
+        "id": "163",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "150",
+        "cat": "PC/0day",
+        "desc": "Windows Apps"
+      },
+      {
+        "id": "149",
+        "cat": "PC/Games",
+        "desc": "Windows Spiele"
+      },
+      {
+        "id": "147",
+        "cat": "XXX/x264",
+        "desc": "XXX HD 1080p"
+      },
+      {
+        "id": "146",
+        "cat": "XXX/x264",
+        "desc": "XXX HD 720p"
+      },
+      {
+        "id": "148",
+        "cat": "XXX/Pack",
+        "desc": "XXX Packs"
+      },
+      {
+        "id": "69",
+        "cat": "XXX/SD",
+        "desc": "XXX SD x264/x265"
+      },
+      {
+        "id": "151",
+        "cat": "Books/Mags",
+        "desc": "Zeitschriften"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "pin",
+      "label": "Pin",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "onlyupload",
+      "label": "Filter OnlyUpload only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_free",
+      "label": "About OnlyUpload at The New Retro",
+      "type": "info",
+      "default": "<ul><li>OnlyUpload are torrents where download is not counted but upload is. Good for building your Ratio up. (On the Jackett dashboard search results these are tagged as Freeleech).</li></ul>"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeds": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents pro Seite:</b> setting to <b>100</b> on your <b>UserCP</b> page. The default is <i>15</i>."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts are automatically deleted after 42 days."
+    },
+    {
+      "name": "info_seedhours",
+      "label": "Seeding Hours",
+      "type": "info",
+      "default": "Before using this indexer, make sure that you have set <b>Meine Seedzeit</b> on your <b>UserCP</b> page."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "cookies": [
+      "JAVA=OK"
+    ],
+    "path": "login.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "secure_pin": "{{ .Config.pin }}",
+      "returnto": "/"
+    },
+    "error": [
+      {
+        "selector": "table.tableinborder:contains(\"Anmeldung Gescheitert!\") > tbody > tr > td.tablea"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "showsearch": "1",
+      "incldead": "1",
+      "orderby": "{{ .Config.sort }}",
+      "sort": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.tableinborder[border=\"0\"][cellspacing=\"1\"][cellpadding=\"0\"][style=\"width:100%\"] > tbody > tr:has(a[href^=\"download.php?torrent=\"]){{ if .Config.onlyupload }}:has(img[src=\"pic/oupic.gif\"]){{ else }}{{ end }}"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]:has(b)"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]:has(b)",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?torrent=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img#img-1",
+        "attribute": "src"
+      },
+      "size": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(1) > b:nth-child(1)"
+      },
+      "grabs": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(3) > b"
+      },
+      "files": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(1) > b:nth-child(2)"
+      },
+      "seeders": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(2) > b:nth-child(1)"
+      },
+      "leechers": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(2) > b:nth-child(3)"
+      },
+      "date": {
+        "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(5)",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.ou-badge": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "span.fl-badge": "0",
+          "*": "1"
+        }
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/thewordmusic.yml",
+    "sha256": "bf4ad2ea16d027f0fc73bd5a9f943ba3f1a06df65e71c32d1774ece0c983baf7",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

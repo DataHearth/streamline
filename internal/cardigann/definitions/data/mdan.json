@@ -1,0 +1,273 @@
+{
+  "id": "mdan",
+  "name": "MDAN",
+  "description": "Mansão dos Animes (MDAN) is a BRAZILIAN Private Torrent Tracker for ANIME",
+  "language": "pt-BR",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://bt.mdan.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "5",
+        "cat": "TV/Anime",
+        "desc": "Animes Completo"
+      },
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Animes EpisÃ³dios"
+      },
+      {
+        "id": "2",
+        "cat": "TV/Anime",
+        "desc": "Animes OVAs"
+      },
+      {
+        "id": "3",
+        "cat": "Movies",
+        "desc": "Filmes"
+      },
+      {
+        "id": "6",
+        "cat": "Movies/Other",
+        "desc": "Live"
+      },
+      {
+        "id": "7",
+        "cat": "Books/Comics",
+        "desc": "MangÃ¡"
+      },
+      {
+        "id": "4",
+        "cat": "Audio",
+        "desc": "OST"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents por página (Torrents per Page):</b> setting to <b>100</b> on your Perfil (Profile). The default is <i>30</i>."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts are automatically deleted."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": ":contains(\"incorret\")"
+      },
+      {
+        "selector": ":root:contains(\"Too many users. Please\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?hash_please=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "searchin": "title",
+      "incldead": "1",
+      "only_free": "{{ if .Config.freeleech }}1{{else}}{{end}}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "after": 1,
+      "selector": "table[style^=\"width\"] > tbody > tr:has(a[href^=\"details.php?id=\"]), table[style^=\"width\"] > tbody > tr[id^=\"kdescr\"]"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "_id": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "id"
+            ]
+          }
+        ]
+      },
+      "download": {
+        "text": "download.php?torrent={{ .Result._id }}&ssl=1"
+      },
+      "poster": {
+        "selector": "td:nth-child(9) img",
+        "attribute": "src"
+      },
+      "date_day": {
+        "selector": "td:nth-child(7):contains(\"e\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Hoje",
+              "Today"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Ontem",
+              "Yesterday"
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "td:nth-child(7):not(:contains(\"e\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "15:04 02-01-2006"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_day .Result.date_year }}{{ or .Result.date_day .Result.date_year }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "files": {
+        "selector": "td:nth-child(5)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(4)"
+      },
+      "seeders": {
+        "selector": "a[href$=\"seeders\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "a[href$=\"leechers\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"./pic/free.gif\"]": "0",
+          "img[src=\"./pic/silver2.gif\"]": "0.5",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.4"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/mdan.yml",
+    "sha256": "bc38c4228321d16bd48c112a4067f5b50b4e94476e2a0a42754476bc17353bcd",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}
