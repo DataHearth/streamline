@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -368,11 +369,20 @@ var _ = Describe("Handler: StartImport from a source",
 			idle()
 			var seen bulkimport.StartScanParams
 			app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
-				Run(func(_ context.Context, p bulkimport.StartScanParams) { seen = p }).
-				Return(&ent.ImportScan{
-					ID: 1, Source: entimportscan.SourceRadarr,
-					SourceURL: "http://radarr.lan:7878",
-				}, nil).Once()
+				RunAndReturn(func(
+					ctx context.Context, p bulkimport.StartScanParams,
+				) (*ent.ImportScan, error) {
+					// StartScan runs the profile write once its own checks pass.
+					seen = p
+					Expect(p.BeforeCreate).NotTo(BeNil())
+					if err := p.BeforeCreate(ctx); err != nil {
+						return nil, err
+					}
+					return &ent.ImportScan{
+						ID: 1, Source: entimportscan.SourceRadarr,
+						SourceURL: "http://radarr.lan:7878",
+					}, nil
+				}).Once()
 
 			resp := postSourceJSON(app, "/api/v1/library/imports", "", body(true))
 			defer resp.Body.Close()
@@ -396,9 +406,16 @@ var _ = Describe("Handler: StartImport from a source",
 		It(
 			"is idempotent over a profile an earlier attempt already created",
 			func() {
+				// The first attempt writes its profile and then fails to insert
+				// the scan row — the one failure left after the write.
 				idle()
 				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
-					Return(nil, bulkimport.ErrScanRunning).Once()
+					RunAndReturn(func(
+						ctx context.Context, p bulkimport.StartScanParams,
+					) (*ent.ImportScan, error) {
+						Expect(p.BeforeCreate(ctx)).To(Succeed())
+						return nil, errors.New("database is locked")
+					}).Once()
 				resp := postSourceJSON(
 					app,
 					"/api/v1/library/imports",
@@ -406,16 +423,57 @@ var _ = Describe("Handler: StartImport from a source",
 					body(true),
 				)
 				resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+				Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
 
+				// The retry finds its own profile identical and writes nothing.
 				idle()
 				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
-					Return(&ent.ImportScan{ID: 2}, nil).Once()
+					RunAndReturn(func(
+						_ context.Context, p bulkimport.StartScanParams,
+					) (*ent.ImportScan, error) {
+						Expect(p.BeforeCreate).To(BeNil())
+						return &ent.ImportScan{ID: 2}, nil
+					}).Once()
 				resp = postSourceJSON(app, "/api/v1/library/imports", "", body(true))
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			},
 		)
+
+		It("leaves no profile behind when StartScan refuses the start", func() {
+			idle()
+			// StartScan refuses before it would run the profile write.
+			app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
+				Return(nil, bulkimport.ErrRootOutsideLibrary).Once()
+
+			resp := postSourceJSON(app, "/api/v1/library/imports", "", body(true))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			_, ok := config.LookupQualityProfile("HD")
+			Expect(ok).To(BeFalse())
+		})
+
+		It("422s a source it does not know, before anything else runs", func() {
+			b := body(true)
+			b["source"] = "Radarr"
+			// No CountActiveImportScans or StartScan expectation.
+			resp := postSourceJSON(app, "/api/v1/library/imports", "", b)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			_, ok := config.LookupQualityProfile("HD")
+			Expect(ok).To(BeFalse())
+		})
+
+		It("422s an instance URL it could never dial", func() {
+			b := body(true)
+			b["source_url"] = "radarr.lan:7878"
+			resp := postSourceJSON(app, "/api/v1/library/imports", "", b)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			code := decodeBody[Error](resp).Code
+			Expect(code).NotTo(BeNil())
+			Expect(*code).To(Equal(codeMigrationRejected))
+		})
 
 		It("422s a name collision and starts no scan", func() {
 			idle()
@@ -550,6 +608,12 @@ var _ = Describe("Handler: StartImport from a source",
 				// Removing the directory, not chmod-ing it: root ignores the mode,
 				// and the write must fail however the suite is run.
 				Expect(os.RemoveAll(filepath.Dir(config.Path()))).To(Succeed())
+				app.bulkImports.EXPECT().StartScan(mock.Anything, mock.Anything).
+					RunAndReturn(func(
+						ctx context.Context, p bulkimport.StartScanParams,
+					) (*ent.ImportScan, error) {
+						return nil, p.BeforeCreate(ctx)
+					}).Once()
 
 				resp := postSourceJSON(
 					app,

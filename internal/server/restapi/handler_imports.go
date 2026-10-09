@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
@@ -10,6 +11,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -27,6 +29,30 @@ func (s *Server) StartImport(
 		return StartImport422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(msg),
 		}, nil
+	}
+	// Nothing validates a body against the spec, and a value ent's enum
+	// refuses would only surface from the scan insert as a 500 — after a
+	// migration had written its profiles.
+	if !req.Body.Mode.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"mode %q is not in_place or rename", req.Body.Mode,
+		))
+	}
+	if req.Body.Source != nil && !req.Body.Source.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"source %q is not filesystem, radarr or sonarr", *req.Body.Source,
+		))
+	}
+	if req.Body.Kind != nil && !req.Body.Kind.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"kind %q is not movie or series", *req.Body.Kind,
+		))
+	}
+	if req.Body.ImportMode != nil && *req.Body.ImportMode != "" &&
+		!req.Body.ImportMode.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"import_mode %q is not hardlink, copy or move", *req.Body.ImportMode,
+		))
 	}
 	params := bulkimport.StartScanParams{
 		Mode: entimportscan.Mode(req.Body.Mode),
@@ -57,6 +83,11 @@ func (s *Server) StartImport(
 			req.Body.ApiKey == nil || *req.Body.ApiKey == "" {
 			return rejected("a migration needs source_url and api_key")
 		}
+		// The fetch only dials the URL once the scan exists; one it could
+		// never dial is refused now, not reported as a failed scan later.
+		if _, err := arr.ParseBaseURL(*req.Body.SourceUrl); err != nil {
+			return rejected(err.Error())
+		}
 		if draftTargetRefused(ctx, *req.Body.SourceUrl) {
 			return StartImport422JSONResponse{
 				UnprocessableEntityJSONResponse: errConnectionFailed(
@@ -73,8 +104,8 @@ func (s *Server) StartImport(
 		params.APIKey = *req.Body.ApiKey
 		params.Mappings = mappings
 
-		// StartScan checks this too, but only after the profiles below are
-		// written: a refused start would otherwise leave them behind.
+		// A running scan answers 409 before the profile collision check
+		// below; StartScan checks again, ahead of the profile write.
 		running, err := s.store.CountActiveImportScans(ctx)
 		if err != nil {
 			return nil, err
@@ -88,28 +119,32 @@ func (s *Server) StartImport(
 		}
 
 		// Profiles land before the scan row so a commit weeks later finds
-		// them, in one config write so half a set never does.
+		// them, in one config write so half a set never does — written by
+		// StartScan once the start has passed every check it makes, so a
+		// start refused for a mapping, the library root or a running scan
+		// leaves none behind.
 		profiles, msg := profilesToCreate(req.Body)
 		if msg != "" {
 			return rejected(msg)
 		}
 		if len(profiles) > 0 {
-			if err := config.AddResources(ctx, profiles, nil, nil); err != nil {
-				if configLocked(err) {
-					return StartImport403JSONResponse{
-						ForbiddenJSONResponse: forbiddenResp(err.Error()),
-					}, nil
-				}
-				if !migrationWriteRejected(err) {
-					return nil, err
-				}
-				return rejected(err.Error())
+			params.BeforeCreate = func(ctx context.Context) error {
+				return config.AddResources(ctx, profiles, nil, nil)
 			}
 		}
 	}
 	scan, err := s.bulkImports.StartScan(ctx, params)
 	if err != nil {
 		switch {
+		// The profile write's own refusals, from BeforeCreate.
+		case configLocked(err):
+			return StartImport403JSONResponse{
+				ForbiddenJSONResponse: forbiddenResp(err.Error()),
+			}, nil
+		case migrationWriteRejected(err):
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errMigrationRejected(err.Error()),
+			}, nil
 		case errors.Is(err, bulkimport.ErrInvalidPath),
 			errors.Is(err, bulkimport.ErrPathOutsideLibrary),
 			errors.Is(err, bulkimport.ErrLibraryPathMissing),

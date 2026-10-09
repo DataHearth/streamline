@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -105,13 +104,13 @@ func (s *Server) PreviewImportSource(
 
 // rootFor returns the index of the longest root folder containing path, or
 // -1. The longest wins so /media/movies cannot claim /media/movies-4k titles.
+// Both are the source's paths, compared in its own style as MapRoot does.
 func rootFor(path string, roots []arr.RootFolder) int {
 	best, bestLen := -1, -1
-	clean := filepath.Clean(path)
+	clean := arr.SourcePath(path)
 	for i, r := range roots {
-		root := filepath.Clean(r.Path)
-		if clean != root &&
-			!strings.HasPrefix(clean, root+string(filepath.Separator)) {
+		root := arr.SourcePath(r.Path)
+		if !arr.UnderSourceRoot(clean, root) {
 			continue
 		}
 		if len(root) > bestLen {
@@ -174,8 +173,14 @@ func buildPreview(
 			return ArrPreview{}, err
 		}
 		// A series carries no file paths, so a sample costs an episode
-		// request: one per root folder, against its first show with a file.
-		sampled := map[int]bool{}
+		// request: per root folder, against its shows with a file until one
+		// answers with one. A root holding files must end up with a sample —
+		// the wizard maps only roots that have one — so a show whose files do
+		// not come back does not end the search; the attempts are bounded so a
+		// root whose episodes never carry one costs a few requests, not one per
+		// show.
+		const sampleAttempts = 3
+		attempts := map[int]int{}
 		for _, sh := range shows {
 			out.Counts.Titles++
 			inUse[sh.QualityProfileID]++
@@ -190,10 +195,11 @@ func buildPreview(
 				continue
 			}
 			out.Counts.WithFile++
-			if i < 0 || sampled[i] {
+			if i < 0 || out.RootFolders[i].SamplePath != nil ||
+				attempts[i] >= sampleAttempts {
 				continue
 			}
-			sampled[i] = true
+			attempts[i]++
 			eps, err := client.Episodes(ctx, sh.ID)
 			if err != nil {
 				return ArrPreview{}, err

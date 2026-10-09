@@ -4181,14 +4181,17 @@ paths:
       tags: [library]
       description: |
         Starts a filesystem scan, or a Radarr/Sonarr migration when `source`
-        names one. For a migration a running scan answers 409 before any
-        quality profile is created. A migration's diagnostic 422s — a
-        missing `source_url` or `api_key`, a root mapping whose sample does
-        not resolve, a profile name already taken by a different profile
-        (every such name is listed), a root outside the library — carry
-        `code: migration_rejected` and a message safe to show verbatim. A
-        filesystem scan's 422s carry no code. A `book` scan requested
-        without a Hardcover API key answers 503.
+        names one. A `mode`, `source`, `kind` or `import_mode` outside its
+        enum answers 422. A migration creates its quality profiles only once
+        the start has passed every check, just before the scan row: a
+        running scan answers 409 and a refused start leaves no profile
+        behind. A migration's diagnostic 422s — a missing `source_url` or
+        `api_key`, a `source_url` that is not an http(s) address, a root
+        mapping whose sample does not resolve, a profile name already taken
+        by a different profile (every such name is listed), a root outside
+        the library — carry `code: migration_rejected` and a message safe to
+        show verbatim. A filesystem scan's 422s carry no code. A `book` scan
+        requested without a Hardcover API key answers 503.
       requestBody:
         $ref: "#/components/requestBodies/StartImport"
       responses:
