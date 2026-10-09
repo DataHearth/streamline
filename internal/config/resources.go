@@ -1,6 +1,9 @@
 package config
 
 import (
+	"errors"
+	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/datahearth/streamline/internal/quality"
@@ -344,23 +347,90 @@ func findProfile(
 	return QualityProfileEntry{}, false
 }
 
-// MusicFormats is the ordered quality ladder, best first. Profile Formats
-// and Cutoff must come from this set.
-var MusicFormats = []string{
-	"flac-24",
-	"flac",
-	"mp3-320",
-	"mp3-v0",
-	"mp3-256",
-	"mp3-192",
-	"other",
-}
+// MusicTiers is the canonical tier order, best first. A profile's Tiers are
+// stored in this order whatever order they arrive in.
+var MusicTiers = []string{"hires", "lossless", "high", "standard", "low"}
+
+// BookKinds lists the kinds a book carries, each with its own default profile.
+var BookKinds = []string{"novel", "bd", "comic", "manga"}
+
+// EbookFormats and AudiobookFormats are the canonical format ladders, best
+// first, upper case everywhere: config, wire and MediaFile.quality.
+var (
+	EbookFormats     = quality.EbookLadder
+	AudiobookFormats = quality.AudiobookLadder
+)
 
 type MusicQualityProfileEntry struct {
 	Name           string   `koanf:"name"            validate:"required"`
-	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=flac-24 flac mp3-320 mp3-v0 mp3-256 mp3-192 other"`
-	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=flac-24 flac mp3-320 mp3-v0 mp3-256 mp3-192 other"`
+	Tiers          []string `koanf:"tiers"           validate:"required,min=1,unique,dive,oneof=hires lossless high standard low"`
+	Preferred      string   `koanf:"preferred"       validate:"required,oneof=hires lossless high standard low"`
 	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
+}
+
+type EbookSlot struct {
+	Formats   []string `koanf:"formats"   validate:"required,min=1,unique,dive,oneof=EPUB AZW3 MOBI PDF CBZ CBR"`
+	Preferred string   `koanf:"preferred" validate:"required,oneof=EPUB AZW3 MOBI PDF CBZ CBR"`
+}
+
+type AudiobookSlot struct {
+	Formats    []string `koanf:"formats"     validate:"required,min=1,unique,dive,oneof=M4B MP3 M4A FLAC"`
+	Preferred  string   `koanf:"preferred"   validate:"required,oneof=M4B MP3 M4A FLAC"`
+	MinBitrate uint16   `koanf:"min_bitrate" validate:"max=1024"`
+}
+
+type BookQualityProfileEntry struct {
+	Name           string        `koanf:"name"            validate:"required"`
+	UpgradeAllowed bool          `koanf:"upgrade_allowed"`
+	Ebook          EbookSlot     `koanf:"ebook"`
+	Audiobook      AudiobookSlot `koanf:"audiobook"`
+}
+
+// BookQualityDefaults names the default profile for each book kind.
+type BookQualityDefaults struct {
+	Novel string `koanf:"novel"`
+	BD    string `koanf:"bd"`
+	Comic string `koanf:"comic"`
+	Manga string `koanf:"manga"`
+}
+
+// For returns the default profile name for kind; an unknown kind reads as
+// novel, the kind a book carries before it is classified.
+func (d BookQualityDefaults) For(kind string) string {
+	switch kind {
+	case "bd":
+		return d.BD
+	case "comic":
+		return d.Comic
+	case "manga":
+		return d.Manga
+	}
+	return d.Novel
+}
+
+func (d *BookQualityDefaults) set(kind, name string) {
+	switch kind {
+	case "bd":
+		d.BD = name
+	case "comic":
+		d.Comic = name
+	case "manga":
+		d.Manga = name
+	default:
+		d.Novel = name
+	}
+}
+
+// BookDefaultFor lists the book kinds name is the default profile of, in
+// BookKinds order.
+func (c *Config) BookDefaultFor(name string) []string {
+	out := []string{}
+	for _, k := range BookKinds {
+		if c.BookQualityDefaultProfiles.For(k) == name {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // ResolveMusicQualityProfile returns the profile named by name, falling back
@@ -375,6 +445,16 @@ func ResolveMusicQualityProfile(name string) (MusicQualityProfileEntry, bool) {
 		return p, true
 	}
 	return findMusicProfile(c.MusicQualityProfiles, c.MusicQualityDefaultProfile)
+}
+
+// LookupMusicQualityProfile returns the profile named exactly name, with no
+// fallback to the default.
+func LookupMusicQualityProfile(name string) (MusicQualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return MusicQualityProfileEntry{}, false
+	}
+	return findMusicProfile(c.MusicQualityProfiles, name)
 }
 
 func findMusicProfile(
@@ -392,89 +472,138 @@ func findMusicProfile(
 	return MusicQualityProfileEntry{}, false
 }
 
-// EbookFormats is the ordered quality ladder, best first. Profile Formats
-// and Cutoff must come from this set.
-var EbookFormats = []string{"epub", "azw3", "mobi", "pdf", "other"}
-
-// AudiobookFormats is the ordered quality ladder, best first. Profile Formats
-// and Cutoff must come from this set.
-var AudiobookFormats = []string{"m4b", "mp3", "other"}
-
-type EbookQualityProfileEntry struct {
-	Name           string   `koanf:"name"            validate:"required"`
-	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=epub azw3 mobi pdf other"`
-	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=epub azw3 mobi pdf other"`
-	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
-}
-
-type AudiobookQualityProfileEntry struct {
-	Name           string   `koanf:"name"            validate:"required"`
-	Formats        []string `koanf:"formats"         validate:"required,min=1,dive,oneof=m4b mp3 other"`
-	Cutoff         string   `koanf:"cutoff"          validate:"required,oneof=m4b mp3 other"`
-	UpgradeAllowed bool     `koanf:"upgrade_allowed"`
-}
-
-// ResolveEbookQualityProfile returns the profile named by name, falling back
-// to EbookQualityDefaultProfile when name is empty or unknown. ok is false
-// only when no ebook profiles are configured at all.
-func ResolveEbookQualityProfile(name string) (EbookQualityProfileEntry, bool) {
+// ResolveBookQualityProfile returns the profile named by name, falling back to
+// the default of kind (novel, bd, comic, manga; empty reads as novel) when
+// name is empty or unknown. ok is false only when no book profiles are
+// configured at all.
+func ResolveBookQualityProfile(
+	name, kind string,
+) (BookQualityProfileEntry, bool) {
 	c := Get()
 	if c == nil {
-		return EbookQualityProfileEntry{}, false
+		return BookQualityProfileEntry{}, false
 	}
-	if p, ok := findEbookProfile(c.EbookQualityProfiles, name); ok {
+	if p, ok := findBookProfile(c.BookQualityProfiles, name); ok {
 		return p, true
 	}
-	return findEbookProfile(c.EbookQualityProfiles, c.EbookQualityDefaultProfile)
-}
-
-func findEbookProfile(
-	profiles []EbookQualityProfileEntry,
-	name string,
-) (EbookQualityProfileEntry, bool) {
-	if name == "" {
-		return EbookQualityProfileEntry{}, false
-	}
-	for _, p := range profiles {
-		if p.Name == name {
-			return p, true
-		}
-	}
-	return EbookQualityProfileEntry{}, false
-}
-
-// ResolveAudiobookQualityProfile returns the profile named by name, falling back
-// to AudiobookQualityDefaultProfile when name is empty or unknown. ok is false
-// only when no audiobook profiles are configured at all.
-func ResolveAudiobookQualityProfile(
-	name string,
-) (AudiobookQualityProfileEntry, bool) {
-	c := Get()
-	if c == nil {
-		return AudiobookQualityProfileEntry{}, false
-	}
-	if p, ok := findAudiobookProfile(c.AudiobookQualityProfiles, name); ok {
-		return p, true
-	}
-	return findAudiobookProfile(
-		c.AudiobookQualityProfiles,
-		c.AudiobookQualityDefaultProfile,
+	return findBookProfile(
+		c.BookQualityProfiles, c.BookQualityDefaultProfiles.For(kind),
 	)
 }
 
-func findAudiobookProfile(
-	profiles []AudiobookQualityProfileEntry,
+// LookupBookQualityProfile returns the profile named exactly name, with no
+// fallback to a default.
+func LookupBookQualityProfile(name string) (BookQualityProfileEntry, bool) {
+	c := Get()
+	if c == nil {
+		return BookQualityProfileEntry{}, false
+	}
+	return findBookProfile(c.BookQualityProfiles, name)
+}
+
+func findBookProfile(
+	profiles []BookQualityProfileEntry,
 	name string,
-) (AudiobookQualityProfileEntry, bool) {
+) (BookQualityProfileEntry, bool) {
 	if name == "" {
-		return AudiobookQualityProfileEntry{}, false
+		return BookQualityProfileEntry{}, false
 	}
 	for _, p := range profiles {
 		if p.Name == name {
 			return p, true
 		}
 	}
-	return AudiobookQualityProfileEntry{}, false
+	return BookQualityProfileEntry{}, false
+}
+
+// Profile is the entry as the scoring engine reads it. An unknown tier name is
+// dropped, which validation has already refused on every path that stores one.
+func (e MusicQualityProfileEntry) Profile() quality.MusicProfile {
+	p := quality.MusicProfile{UpgradeAllowed: e.UpgradeAllowed}
+	for _, name := range e.Tiers {
+		if t, ok := quality.ParseAudioTier(name); ok {
+			p.Tiers = append(p.Tiers, t)
+		}
+	}
+	p.Preferred, _ = quality.ParseAudioTier(e.Preferred)
+	return p
+}
+
+// EbookProfile is the ebook slot as the scoring engine reads it; the slot
+// inherits the profile's single upgrade switch.
+func (e BookQualityProfileEntry) EbookProfile() quality.EbookProfile {
+	return quality.EbookProfile{
+		Formats:        e.Ebook.Formats,
+		Preferred:      e.Ebook.Preferred,
+		UpgradeAllowed: e.UpgradeAllowed,
+	}
+}
+
+// AudiobookProfile is the audiobook slot as the scoring engine reads it.
+func (e BookQualityProfileEntry) AudiobookProfile() quality.AudiobookProfile {
+	return quality.AudiobookProfile{
+		Formats:        e.Audiobook.Formats,
+		Preferred:      e.Audiobook.Preferred,
+		MinBitrate:     e.Audiobook.MinBitrate,
+		UpgradeAllowed: e.UpgradeAllowed,
+	}
+}
+
+// check holds the rule the struct tags cannot express: the preferred tier must
+// be one of the ticked ones. It runs from the mutators and from
+// checkInvariants, so a hand-edited file fails the same way.
+func (e MusicQualityProfileEntry) check() error {
+	if !slices.Contains(e.Tiers, e.Preferred) {
+		return fmt.Errorf(
+			"music quality profile %q: preferred %q is not one of its tiers",
+			e.Name, e.Preferred,
+		)
+	}
+	return nil
+}
+
+func (e BookQualityProfileEntry) check() error {
+	var errs []error
+	if !slices.Contains(e.Ebook.Formats, e.Ebook.Preferred) {
+		errs = append(errs, fmt.Errorf(
+			"book quality profile %q: ebook preferred %q is not one of its formats",
+			e.Name, e.Ebook.Preferred,
+		))
+	}
+	if !slices.Contains(e.Audiobook.Formats, e.Audiobook.Preferred) {
+		errs = append(errs, fmt.Errorf(
+			"book quality profile %q: audiobook preferred %q is not one of its formats",
+			e.Name,
+			e.Audiobook.Preferred,
+		))
+	}
+	if e.Audiobook.MinBitrate > MaxAudiobookBitrate {
+		errs = append(errs, fmt.Errorf(
+			"book quality profile %q: audiobook min_bitrate %d is above %d",
+			e.Name, e.Audiobook.MinBitrate, MaxAudiobookBitrate,
+		))
+	}
+	return errors.Join(errs...)
+}
+
+// MaxAudiobookBitrate bounds AudiobookSlot.MinBitrate in kbps.
+const MaxAudiobookBitrate = 1024
+
+// canonical returns values in ladder order; a value outside the ladder sorts
+// last and is left for validation to reject.
+func canonical(values, ladder []string) []string {
+	out := slices.Clone(values)
+	slices.SortStableFunc(out, func(a, b string) int {
+		ia, ib := slices.Index(ladder, a), slices.Index(ladder, b)
+		if ia < 0 {
+			ia = len(ladder)
+		}
+		if ib < 0 {
+			ib = len(ladder)
+		}
+		return ia - ib
+	})
+	return out
 }
 
 // PickDownloadClient returns the highest-priority enabled download client.

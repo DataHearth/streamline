@@ -10,12 +10,9 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
-	entrequest "github.com/datahearth/streamline/ent/request"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
-	"github.com/datahearth/streamline/internal/media/book"
-	"github.com/datahearth/streamline/internal/media/music"
-	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -34,6 +31,19 @@ var (
 	// ErrRequestNotFound is returned by Approve/Deny/Reopen for an unknown id
 	// so callers can answer 404 instead of 500.
 	ErrRequestNotFound = errors.New("request not found")
+	// ErrUnknownProfile is returned by Approve for a quality profile that is
+	// not in the request's medium family. The request stays pending.
+	ErrUnknownProfile = errors.New("request: unknown quality profile")
+	// ErrAlreadyInLibrary is what an adder returns for an item the library
+	// already holds; approving then only has to mark the request available.
+	ErrAlreadyInLibrary = errors.New("request: already in library")
+)
+
+// Monitor values an approval adds with. A requester never chooses one.
+const (
+	artistMonitor = "all"
+	bookMonitor   = "both"
+	seriesMonitor = "all"
 )
 
 // MovieAdder / ShowAdder are the slices of the media services this needs —
@@ -55,33 +65,55 @@ type ShowAdder interface {
 	) (*ent.TVShow, error)
 }
 
+// ArtistAdder adds a requested artist to the library. An artist the library
+// already holds is reported as ErrAlreadyInLibrary.
+type ArtistAdder interface {
+	AddArtist(
+		ctx context.Context,
+		mbid, monitor, qualityProfile string,
+	) error
+}
+
+// BookAdder adds a requested book or series to the library and answers the two
+// in-library questions Create asks. AddBook and AddSeries report an item the
+// library already holds as ErrAlreadyInLibrary, and an unconfigured Hardcover
+// provider as book.ErrNotConfigured.
+type BookAdder interface {
+	AddBook(
+		ctx context.Context,
+		hardcoverID uint32,
+		monitor, qualityProfile string,
+	) error
+	AddSeries(
+		ctx context.Context,
+		hardcoverID uint32,
+		monitor, qualityProfile string,
+	) error
+	HasBook(ctx context.Context, hardcoverID uint32) (bool, error)
+	HasSeries(ctx context.Context, hardcoverID uint32) (bool, error)
+}
+
 type Service struct {
-	db        db.Store
-	movies    MovieAdder
-	shows     ShowAdder
-	music     music.Adder
-	books     book.Adder
-	musicMeta metadata.MusicProvider
-	bookMeta  metadata.BookProvider
+	db      db.Store
+	movies  MovieAdder
+	shows   ShowAdder
+	artists ArtistAdder
+	books   BookAdder
 }
 
 func NewService(
 	store db.Store,
 	movies MovieAdder,
 	shows ShowAdder,
-	music music.Adder,
-	books book.Adder,
-	musicMeta metadata.MusicProvider,
-	bookMeta metadata.BookProvider,
+	artists ArtistAdder,
+	books BookAdder,
 ) *Service {
 	return &Service{
-		db:        store,
-		movies:    movies,
-		shows:     shows,
-		music:     music,
-		books:     books,
-		musicMeta: musicMeta,
-		bookMeta:  bookMeta,
+		db:      store,
+		movies:  movies,
+		shows:   shows,
+		artists: artists,
+		books:   books,
 	}
 }
 
@@ -89,45 +121,34 @@ type CreateParams struct {
 	MediaType      string
 	MediaID        uint32
 	MediaMBID      string
-	BookKind       string
 	Title          string
 	RequesterID    uint32
 	QualityProfile string
 }
 
-func isMusicType(mediaType string) bool {
-	return mediaType == "artist" || mediaType == "album"
-}
-
+// validate checks the media identity fits the type: an artist is keyed by
+// MBID, every other type by id.
 func validate(p CreateParams) error {
-	if isMusicType(p.MediaType) {
+	switch p.MediaType {
+	case "artist":
 		if p.MediaMBID == "" || p.MediaID != 0 {
 			return fmt.Errorf(
-				"%w: %s needs a media_mbid and no media_id",
+				"%w: artist needs a media_mbid and no media_id", ErrInvalidRequest,
+			)
+		}
+	case "movie", "tvshow", "book", "book_series":
+		if p.MediaID == 0 || p.MediaMBID != "" {
+			return fmt.Errorf(
+				"%w: %s needs a media_id and no media_mbid",
 				ErrInvalidRequest, p.MediaType,
 			)
 		}
-	} else if p.MediaID == 0 || p.MediaMBID != "" {
+	default:
 		return fmt.Errorf(
-			"%w: %s needs a media_id and no media_mbid",
-			ErrInvalidRequest, p.MediaType,
+			"%w: unknown media_type %q", ErrInvalidRequest, p.MediaType,
 		)
 	}
-	if p.MediaType != "book" {
-		if p.BookKind != "" {
-			return fmt.Errorf(
-				"%w: book_kind only applies to a book", ErrInvalidRequest,
-			)
-		}
-		return nil
-	}
-	switch p.BookKind {
-	case "ebook", "audiobook", "both":
-		return nil
-	}
-	return fmt.Errorf(
-		"%w: book_kind must be ebook, audiobook or both", ErrInvalidRequest,
-	)
+	return nil
 }
 
 func (s *Service) Create(
@@ -150,7 +171,7 @@ func (s *Service) Create(
 		existing *ent.Request
 		err      error
 	)
-	if isMusicType(p.MediaType) {
+	if p.MediaType == "artist" {
 		existing, err = s.db.FindActiveRequestByMBID(
 			ctx, p.MediaType, p.MediaMBID,
 		)
@@ -181,12 +202,20 @@ func (s *Service) Create(
 		if a != nil {
 			return nil, ErrDuplicate
 		}
-	case "author":
-		a, err := s.db.FindAuthorByHardcoverID(ctx, p.MediaID)
+	case "book":
+		in, err := s.books.HasBook(ctx, p.MediaID)
 		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
-		if a != nil {
+		if in {
+			return nil, ErrDuplicate
+		}
+	case "book_series":
+		in, err := s.books.HasSeries(ctx, p.MediaID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if in {
 			return nil, ErrDuplicate
 		}
 	}
@@ -194,7 +223,6 @@ func (s *Service) Create(
 		MediaType:      p.MediaType,
 		MediaID:        p.MediaID,
 		MediaMBID:      p.MediaMBID,
-		BookKind:       p.BookKind,
 		Title:          p.Title,
 		RequesterID:    p.RequesterID,
 		QualityProfile: p.QualityProfile,
@@ -223,7 +251,9 @@ func (s *Service) Create(
 }
 
 // Approve adds the requested item to the library with qualityProfile (empty
-// resolves to the server default) and marks the request approved.
+// resolves to the medium's default) and marks the request approved. A profile
+// that is not in the request's medium family fails with ErrUnknownProfile
+// before anything is added.
 func (s *Service) Approve(
 	ctx context.Context,
 	id, adminID uint32,
@@ -238,6 +268,9 @@ func (s *Service) Approve(
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("request %d: %w", id, ErrRequestNotFound)
 		}
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if err := checkProfile(string(req.MediaType), qualityProfile); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	// The library row Add creates carries its own `added` event via the ent
@@ -266,40 +299,30 @@ func (s *Service) Approve(
 		}
 		scope, ownerID = events.ScopeSeries, show.ID
 	case "artist":
-		_, err := s.music.Add(ctx, music.AddParams{
-			MBID:           req.MediaMbid,
-			Monitored:      true,
-			QualityProfile: qualityProfile,
-		})
-		if errors.Is(err, music.ErrArtistExists) {
+		err := s.artists.AddArtist(ctx, req.MediaMbid, artistMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
 			alreadyInLibrary = true
 		} else if err != nil {
 			return nil, otelx.RecordSpanError(
 				span, fmt.Errorf("approve: add artist: %w", err),
 			)
 		}
-	case "author":
-		_, err := s.books.Add(ctx, book.AddParams{
-			HardcoverID: req.MediaID,
-			Monitored:   true,
-		})
-		if errors.Is(err, book.ErrAuthorExists) {
+	case "book":
+		err := s.books.AddBook(ctx, req.MediaID, bookMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
 			alreadyInLibrary = true
 		} else if err != nil {
-			return nil, otelx.RecordSpanError(
-				span, fmt.Errorf("approve: add author: %w", err),
-			)
-		}
-	case "book":
-		if err := s.approveBook(ctx, req.MediaID, req.BookKind); err != nil {
 			return nil, otelx.RecordSpanError(
 				span, fmt.Errorf("approve: add book: %w", err),
 			)
 		}
-	case "album":
-		if err := s.approveAlbum(ctx, req.MediaMbid, qualityProfile); err != nil {
+	case "book_series":
+		err := s.books.AddSeries(ctx, req.MediaID, seriesMonitor, qualityProfile)
+		if errors.Is(err, ErrAlreadyInLibrary) {
+			alreadyInLibrary = true
+		} else if err != nil {
 			return nil, otelx.RecordSpanError(
-				span, fmt.Errorf("approve: add album: %w", err),
+				span, fmt.Errorf("approve: add book series: %w", err),
 			)
 		}
 	}
@@ -328,94 +351,23 @@ func (s *Service) Approve(
 	return s.db.GetRequest(ctx, id)
 }
 
-// approveAlbum makes exactly one album monitored, and so wanted (status
-// defaults to wanted). An absent artist is added with every album unmonitored
-// so the rest of its discography stays out of the want list.
-func (s *Service) approveAlbum(
-	ctx context.Context,
-	albumMBID, qualityProfile string,
-) error {
-	rg, err := s.musicMeta.GetReleaseGroup(ctx, albumMBID)
-	if err != nil {
-		return fmt.Errorf("get release group: %w", err)
+// checkProfile rejects a non-empty profile name that the request's medium
+// family does not hold. Empty is the family default and always passes.
+func checkProfile(mediaType, name string) error {
+	if name == "" {
+		return nil
 	}
-	row, err := s.db.FindArtistByMBID(ctx, rg.ArtistMBID)
-	if err != nil {
-		return err
+	var ok bool
+	switch mediaType {
+	case "artist":
+		_, ok = config.LookupMusicQualityProfile(name)
+	case "book", "book_series":
+		_, ok = config.LookupBookQualityProfile(name)
+	default:
+		_, ok = config.LookupQualityProfile(name)
 	}
-	var artist *ent.Artist
-	if row == nil {
-		artist, err = s.music.Add(ctx, music.AddParams{
-			MBID:           rg.ArtistMBID,
-			Monitored:      false,
-			QualityProfile: qualityProfile,
-		})
-	} else {
-		artist, err = s.music.Get(ctx, row.ID)
-	}
-	if err != nil {
-		return err
-	}
-	for _, a := range artist.Edges.Albums {
-		if a.Mbid == albumMBID {
-			return s.music.SetAlbumMonitored(ctx, a.ID, true)
-		}
-	}
-	return fmt.Errorf("album %s not in artist %s", albumMBID, rg.ArtistMBID)
-}
-
-// approveBook makes exactly the requested slot(s) of one book wanted. An
-// absent author is added with monitor policy none so the rest of its
-// bibliography stays out of the want list.
-func (s *Service) approveBook(
-	ctx context.Context,
-	hardcoverID uint32,
-	kind entrequest.BookKind,
-) error {
-	if s.bookMeta == nil {
-		return book.ErrNotConfigured
-	}
-	details, err := s.bookMeta.GetBook(ctx, hardcoverID)
-	if err != nil {
-		return fmt.Errorf("get book: %w", err)
-	}
-	row, err := s.db.FindAuthorByHardcoverID(ctx, details.AuthorHardcover)
-	if err != nil {
-		return err
-	}
-	var author *ent.Author
-	if row == nil {
-		author, err = s.books.Add(ctx, book.AddParams{
-			HardcoverID:   details.AuthorHardcover,
-			Monitored:     true,
-			MonitorPolicy: "none",
-		})
-	} else {
-		author, err = s.books.Get(ctx, row.ID)
-	}
-	if err != nil {
-		return err
-	}
-	var target *ent.Book
-	for _, b := range author.Edges.Books {
-		if b.HardcoverID == hardcoverID {
-			target = b
-			break
-		}
-	}
-	if target == nil {
-		return fmt.Errorf(
-			"book %d not in author %d", hardcoverID, details.AuthorHardcover,
-		)
-	}
-	kinds := []string{string(kind)}
-	if kind == entrequest.BookKindBoth {
-		kinds = []string{"ebook", "audiobook"}
-	}
-	for _, k := range kinds {
-		if err := s.books.SetBookSlot(ctx, target.ID, k, true); err != nil {
-			return fmt.Errorf("set %s slot: %w", k, err)
-		}
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrUnknownProfile, name)
 	}
 	return nil
 }

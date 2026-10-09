@@ -374,6 +374,11 @@ export type SearchResult = {
 	rejected?: boolean;
 	reject_reason?: string;
 	matched_formats?: string[];
+	// Music releases only: the tier read off the release name, absent when the
+	// name states none. The table falls back to releaseTier(source).
+	audio_tier?: "hires" | "lossless" | "high" | "standard" | "low";
+	// Audiobook releases only: the rate the name states.
+	bitrate_kbps?: number;
 	// Stamped from the indexer's own setting (Settings → Indexers): true for a
 	// private tracker, false for a public one, absent when the indexer does not
 	// say. Not derivable from a Torznab feed.
@@ -453,10 +458,12 @@ export type RequestUser = {
 
 export type MediaRequest = {
 	id: number;
-	// artist / book / book_series are the music and book requests; their ids
-	// are MusicBrainz's (a string) and Hardcover's.
+	// artist / book / book_series are the music and book requests. An artist is
+	// keyed by its MusicBrainz id (media_mbid, media_id is 0); a book and a
+	// series by Hardcover ids, which are separate spaces.
 	media_type: "movie" | "tvshow" | "artist" | "book" | "book_series";
-	media_id: number | string;
+	media_id: number;
+	media_mbid?: string;
 	title: string;
 	status: RequestStatus;
 	reason?: string;

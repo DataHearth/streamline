@@ -53,12 +53,12 @@ func newCatalogFixture(ctx context.Context) *catalogFixture {
 
 	file := filepath.Join(g.GinkgoT().TempDir(), "elantris.epub")
 	Expect(os.WriteFile(file, []byte("EPUBDATA"), 0o600)).To(Succeed())
-	client.MediaFile.Create().SetPath(file).SetSize(8).SetQuality("epub").
+	client.MediaFile.Create().SetPath(file).SetSize(8).SetQuality("EPUB").
 		SetBookKind(mediafile.BookKindEbook).SetBook(ebook).SaveX(ctx)
 	client.MediaFile.Create().
 		SetPath(filepath.Join(filepath.Dir(file), "warbreaker.m4b")).
 		SetSize(1).
-		SetQuality("m4b").
+		SetQuality("M4B").
 		SetBookKind(mediafile.BookKindAudiobook).
 		SetBook(audioOnly).
 		SaveX(ctx)
@@ -126,7 +126,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 			f.client.MediaFile.Create().
 				SetPath("/x/zed.epub").
 				SetSize(1).
-				SetQuality("epub").
+				SetQuality("EPUB").
 				SetBookKind(mediafile.BookKindEbook).
 				SetBook(b).
 				SaveX(ctx)
@@ -142,7 +142,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 			f.client.MediaFile.Create().
 				SetPath("/x/spoken.m4b").
 				SetSize(1).
-				SetQuality("m4b").
+				SetQuality("M4B").
 				SetBookKind(mediafile.BookKindAudiobook).
 				SetBook(ab).
 				SaveX(ctx)
@@ -201,7 +201,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 			f.client.MediaFile.Create().
 				SetPath("/x/mistborn.epub").
 				SetSize(1).
-				SetQuality("epub").
+				SetQuality("EPUB").
 				SetBookKind(mediafile.BookKindEbook).
 				SetBook(later).
 				SaveX(ctx)
@@ -226,7 +226,7 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 			f.client.MediaFile.Create().
 				SetPath("/x/elantris.pdf").
 				SetSize(1).
-				SetQuality("pdf").
+				SetQuality("PDF").
 				SetBookKind(mediafile.BookKindEbook).
 				SetBook(f.ebook).
 				SaveX(ctx)

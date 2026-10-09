@@ -203,12 +203,10 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `movie_quality_default_profile` | string | `default` | Profile used when a movie names none |
 | `series_quality_default_profile` | string | `default` | Profile used when a series names none |
 | `quality_default_profile` | string | unset | **Legacy (v1).** One default for both media. Still read: it fills whichever of the two keys above is not set itself, and is never written back |
-| `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `formats` (non-empty, from `flac-24` `flac` `mp3-320` `mp3-v0` `mp3-256` `mp3-192` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
-| `music_quality_default_profile` | string | empty | Music profile used when an item names none |
-| `ebook_quality_profiles` | list | `[]` | Ebook quality profiles: `name`, `formats` (non-empty, from `epub` `azw3` `mobi` `pdf` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
-| `ebook_quality_default_profile` | string | empty | Ebook profile used when an item names none |
-| `audiobook_quality_profiles` | list | `[]` | Audiobook quality profiles: `name`, `formats` (non-empty, from `m4b` `mp3` `other`, best first), `cutoff` (same set), `upgrade_allowed`. File-only |
-| `audiobook_quality_default_profile` | string | empty | Audiobook profile used when an item names none |
+| `music_quality_profiles` | list | `[]` | Music quality profiles: `name`, `tiers` (non-empty, from `hires` `lossless` `high` `standard` `low`, any order, stored best first), `preferred` (one of `tiers`: the tier an upgrade stops at), `upgrade_allowed`. Edited through `/music/quality-profiles` or the file, never `/config/*` |
+| `music_quality_default_profile` | string | empty | Music profile used when an artist names none; must name an entry whenever the list has any. The first profile created through the API becomes the default |
+| `book_quality_profiles` | list | one `default` profile | Book quality profiles, one per entry for both slots: `name`, `upgrade_allowed`, `ebook` (`formats` from `EPUB` `AZW3` `MOBI` `PDF` `CBZ` `CBR`, `preferred` one of them) and `audiobook` (`formats` from `M4B` `MP3` `M4A` `FLAC`, `preferred` one of them, `min_bitrate` in kbps from `0` for no floor to `1024`). Formats are upper case. Edited through `/books/quality-profiles` or the file, never `/config/*` |
+| `book_quality_default_profiles` | map | all four = `default` | The profile a book takes when it and its series name none, per book kind: `novel`, `bd`, `comic`, `manga`. Each must name an entry in `book_quality_profiles` whenever that list has any |
 
 ### server
 

@@ -1,31 +1,42 @@
 package library
 
 import (
+	"fmt"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/quality"
 )
 
 type ParsedBookRelease struct {
-	Title      string
-	Year       uint16
-	Format     string // one of config.EbookFormats ∪ config.AudiobookFormats
-	Kind       string // "ebook" | "audiobook" | "" when undetectable
-	Collection bool
+	Title string
+	Year  uint16
+	// Format is upper case and one of config.EbookFormats or
+	// config.AudiobookFormats; empty when the name states none.
+	Format string
+	Kind   string // "ebook" | "audiobook" | "" when undetectable
+	// BitrateKbps is the audiobook rate the name states ("64k", "128kbps"), 0
+	// when it states none.
+	BitrateKbps uint32
+	Collection  bool
 }
 
 var (
-	ebookFormatRe = regexp.MustCompile(`(?i)\b(EPUB|AZW3?|MOBI|PDF)\b`)
-	m4bRe         = regexp.MustCompile(`(?i)\bM4B\b`)
-	mp3Re         = regexp.MustCompile(`(?i)\bMP3\b`)
-	// A bare MP3 is far more often music than a book, so mp3 only counts
-	// as an audiobook when the name says so.
+	ebookFormatRe = regexp.MustCompile(`(?i)\b(EPUB|AZW3?|MOBI|PDF|CBZ)\b`)
+	cbrRe         = regexp.MustCompile(`(?i)\bCBR\b`)
+	// CBR is also "constant bit rate"; either of these beside it says so.
+	audioTokenRe = regexp.MustCompile(`(?i)\b(MP3|M4B|M4A|FLAC)\b`)
+	cbrRateRe    = regexp.MustCompile(`(?i)\bCBR\W*\d{2,3}`)
+	m4bRe        = regexp.MustCompile(`(?i)\bM4B\b`)
+	// A bare MP3, M4A or FLAC is far more often music than a book, so they
+	// only count as an audiobook when the name says so.
+	audioFormatRe      = regexp.MustCompile(`(?i)\b(MP3|M4A|FLAC)\b`)
 	audiobookContextRe = regexp.MustCompile(
 		`(?i)\b(audiobook|unabridged|narrated)\b`,
 	)
+	bookBitrateRe = regexp.MustCompile(`(?i)\b(\d{2,3})\s?k(?:bps)?\b`)
 	// \b binds each word alternative separately; the year range has no word
 	// boundary inside its parentheses to anchor on.
 	collectionRe = regexp.MustCompile(
@@ -33,12 +44,11 @@ var (
 	)
 )
 
-// ParseBookRelease classifies a release name into a book format tier. A name
-// with no recognisable format stays Format "other" with Kind "".
+// ParseBookRelease classifies a release name into a book format. A name with
+// no recognisable format stays Format "" with Kind "".
 func ParseBookRelease(name string) ParsedBookRelease {
 	p := ParsedBookRelease{
 		Title:      name,
-		Format:     "other",
 		Collection: collectionRe.MatchString(name),
 	}
 	if m := yearRe.FindString(name); m != "" {
@@ -49,43 +59,85 @@ func ParseBookRelease(name string) ParsedBookRelease {
 
 	switch {
 	case ebookFormatRe.MatchString(name):
-		f := strings.ToLower(ebookFormatRe.FindString(name))
-		if f == "azw" {
-			f = "azw3"
+		f := strings.ToUpper(ebookFormatRe.FindString(name))
+		if f == "AZW" {
+			f = "AZW3"
 		}
 		p.Format, p.Kind = f, "ebook"
 	case m4bRe.MatchString(name):
-		p.Format, p.Kind = "m4b", "audiobook"
-	case mp3Re.MatchString(name) && audiobookContextRe.MatchString(name):
-		p.Format, p.Kind = "mp3", "audiobook"
+		p.Format, p.Kind = "M4B", "audiobook"
+	case audioFormatRe.MatchString(name) && audiobookContextRe.MatchString(name):
+		p.Format = strings.ToUpper(audioFormatRe.FindString(name))
+		p.Kind = "audiobook"
+	case cbrRe.MatchString(name) && !audioTokenRe.MatchString(name) &&
+		!cbrRateRe.MatchString(name):
+		p.Format, p.Kind = "CBR", "ebook"
+	}
+	if p.Kind == "audiobook" {
+		if m := bookBitrateRe.FindStringSubmatch(name); m != nil {
+			if n, err := strconv.ParseUint(m[1], 10, 32); err == nil {
+				p.BitrateKbps = uint32(n)
+			}
+		}
 	}
 	return p
 }
 
-// scoreFormat is -1 for a release of the other family or a format outside
-// the profile; an undetectable release (Kind "") therefore never scores,
-// even where "other" is listed.
-func scoreFormat(p ParsedBookRelease, kind string, formats []string) int {
-	if p.Kind != kind {
-		return -1
+// JudgeEbookRelease scores a release against a profile's ebook slot and, when
+// it scores -1, says why.
+func JudgeEbookRelease(
+	p ParsedBookRelease,
+	profile config.BookQualityProfileEntry,
+) (int, string) {
+	if p.Kind != "ebook" {
+		return -1, "not an ebook"
 	}
-	i := slices.Index(formats, p.Format)
-	if i < 0 {
-		return -1
+	score := quality.ScoreEbook(p.Format, profile.EbookProfile())
+	if score < 0 {
+		return -1, fmt.Sprintf("%s is not in the profile", p.Format)
 	}
-	return (len(formats) - i) * 100
+	return score, ""
 }
 
+// JudgeAudiobookRelease scores a release against a profile's audiobook slot.
+// A stated rate under the floor is rejected; an unstated one is accepted,
+// since the name cannot always say and the importer measures the real one.
+func JudgeAudiobookRelease(
+	p ParsedBookRelease,
+	profile config.BookQualityProfileEntry,
+) (int, string) {
+	if p.Kind != "audiobook" {
+		return -1, "not an audiobook"
+	}
+	slot := profile.AudiobookProfile()
+	score := quality.ScoreAudiobook(p.Format, p.BitrateKbps, slot)
+	if score >= 0 {
+		return score, ""
+	}
+	if quality.ScoreAudiobook(p.Format, 0, slot) >= 0 {
+		return -1, fmt.Sprintf(
+			"%d kbps is below the profile's minimum of %d",
+			p.BitrateKbps, slot.MinBitrate,
+		)
+	}
+	return -1, fmt.Sprintf("%s is not in the profile", p.Format)
+}
+
+// ScoreEbookRelease is -1 for a release of the other family or a format
+// outside the profile; an undetectable release (Kind "") therefore never
+// scores.
 func ScoreEbookRelease(
 	p ParsedBookRelease,
-	profile config.EbookQualityProfileEntry,
+	profile config.BookQualityProfileEntry,
 ) int {
-	return scoreFormat(p, "ebook", profile.Formats)
+	score, _ := JudgeEbookRelease(p, profile)
+	return score
 }
 
 func ScoreAudiobookRelease(
 	p ParsedBookRelease,
-	profile config.AudiobookQualityProfileEntry,
+	profile config.BookQualityProfileEntry,
 ) int {
-	return scoreFormat(p, "audiobook", profile.Formats)
+	score, _ := JudgeAudiobookRelease(p, profile)
+	return score
 }

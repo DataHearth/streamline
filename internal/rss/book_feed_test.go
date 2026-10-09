@@ -12,6 +12,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entbook "github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediafile"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -22,14 +24,20 @@ import (
 
 func bookConfig(names ...string) map[string]any {
 	cfg := indexerConfig(names...)
-	cfg["ebook_quality_default_profile"] = "ebooks"
-	cfg["ebook_quality_profiles"] = []map[string]any{{
-		"name": "ebooks", "formats": []string{"epub", "azw3"}, "cutoff": "epub",
+	cfg["book_quality_profiles"] = []map[string]any{{
+		"name":            "books",
+		"upgrade_allowed": true,
+		"ebook": map[string]any{
+			"formats": []string{"EPUB", "AZW3"}, "preferred": "EPUB",
+		},
+		"audiobook": map[string]any{
+			"formats": []string{"M4B", "MP3"}, "preferred": "M4B",
+			"min_bitrate": 64,
+		},
 	}}
-	cfg["audiobook_quality_default_profile"] = "audio"
-	cfg["audiobook_quality_profiles"] = []map[string]any{{
-		"name": "audio", "formats": []string{"m4b"}, "cutoff": "m4b",
-	}}
+	cfg["book_quality_default_profiles"] = map[string]any{
+		"novel": "books", "bd": "books", "comic": "books", "manga": "books",
+	}
 	return cfg
 }
 
@@ -59,6 +67,8 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		grabber *mocks.MockDownloader
 		books   *mocks.MockBookGrabber
 		scanner *FeedScanner
+		// upgradeBooks is what the store lists as holding files.
+		upgradeBooks []*ent.Book
 	)
 
 	run := func(wanted []*ent.Book, items ...indexer.SearchResult) {
@@ -70,6 +80,10 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 			Return(nil, nil).Once()
 		store.EXPECT().ListWantedBooks(mock.Anything, uint8(3)).
 			Return(wanted, nil).Once()
+		store.EXPECT().ListUpgradeCandidateAlbums(mock.Anything).
+			Return(nil, nil).Once()
+		store.EXPECT().ListUpgradeCandidateBooks(mock.Anything).
+			Return(upgradeBooks, nil).Once()
 		feeder.EXPECT().Feed(mock.Anything, "idx").Return(items, nil).Once()
 		Expect(scanner.Run(ctx)).To(Succeed())
 	}
@@ -93,6 +107,7 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		upgradeBooks = nil
 		store = dbmocks.NewMockStore(GinkgoT())
 		feeder = mocks.NewMockIndexerFeeder(GinkgoT())
 		grabber = mocks.NewMockDownloader(GinkgoT())
@@ -209,6 +224,95 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		books.EXPECT().GrabBookRelease(mock.Anything, uint32(1), mock.Anything).
 			Return(fmt.Errorf("grab: %w", download.ErrUnreachable)).Once()
 		run([]*ent.Book{wantedBook(true, false)}, ebookItem)
+	})
+
+	Describe("upgrades", func() {
+		heldBook := func(kind mediafile.BookKind, quality string, bitrate uint32) *ent.Book {
+			b := wantedBook(false, false)
+			if kind == mediafile.BookKindEbook {
+				b.EbookMonitored, b.EbookStatus = true, entbook.EbookStatusAvailable
+			} else {
+				b.AudiobookMonitored = true
+				b.AudiobookStatus = entbook.AudiobookStatusAvailable
+			}
+			b.Edges.MediaFiles = []*ent.MediaFile{{
+				BookKind: kind, Quality: quality, Bitrate: bitrate,
+			}}
+			return b
+		}
+		azw3Item := indexer.SearchResult{
+			Title:    "Author Name - Book Title (2015) AZW3",
+			Category: "7020",
+		}
+		expectFlag := func(kind downloadrecord.BookKind) {
+			store.EXPECT().SetLiveBookRecordReplaceMode(
+				mock.Anything, uint32(1), kind, downloadrecord.ReplaceModeUpgrades,
+			).Return(nil).Once()
+		}
+		upgrade := func(b *ent.Book, items ...indexer.SearchResult) {
+			upgradeBooks = []*ent.Book{b}
+			run(nil, items...)
+		}
+
+		It("grabs a better ebook format and flags the record", func() {
+			books.EXPECT().GrabBookRelease(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+			expectFlag(downloadrecord.BookKindEbook)
+			upgrade(
+				heldBook(mediafile.BookKindEbook, "AZW3", 0),
+				ebookItem,
+				ebookItem,
+			)
+		})
+
+		It("leaves an ebook at the preferred format alone", func() {
+			upgrade(heldBook(mediafile.BookKindEbook, "EPUB", 0), ebookItem)
+		})
+
+		It("does not take a worse format", func() {
+			upgrade(heldBook(mediafile.BookKindEbook, "EPUB", 0), azw3Item)
+		})
+
+		It("does not touch a slot that is not monitored", func() {
+			b := heldBook(mediafile.BookKindEbook, "AZW3", 0)
+			b.EbookMonitored = false
+			upgrade(b, ebookItem)
+		})
+
+		It("upgrades an audiobook folder measured under the floor", func() {
+			books.EXPECT().GrabBookRelease(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+			expectFlag(downloadrecord.BookKindAudiobook)
+			upgrade(heldBook(mediafile.BookKindAudiobook, "M4B", 32000), audioItem)
+		})
+
+		It("leaves a healthy audiobook at the preferred format alone", func() {
+			upgrade(heldBook(mediafile.BookKindAudiobook, "M4B", 128000), audioItem)
+		})
+
+		It("does nothing when the profile forbids upgrades", func() {
+			cfg := bookConfig("idx")
+			cfg["book_quality_profiles"] = []map[string]any{{
+				"name": "books",
+				"ebook": map[string]any{
+					"formats": []string{"EPUB", "AZW3"}, "preferred": "EPUB",
+				},
+				"audiobook": map[string]any{
+					"formats": []string{"M4B"}, "preferred": "M4B",
+				},
+			}}
+			configtest.Setup(cfg)
+			upgrade(heldBook(mediafile.BookKindEbook, "AZW3", 0), ebookItem)
+		})
+
+		It("bumps the slot's grab_failures when the upgrade grab fails", func() {
+			books.EXPECT().GrabBookRelease(mock.Anything, uint32(1), mock.Anything).
+				Return(fmt.Errorf("add: %w", download.ErrNoWantedFiles)).Once()
+			store.EXPECT().IncrementBookSlotGrabFailures(
+				mock.Anything, uint32(1), "ebook",
+			).Return(nil).Once()
+			upgrade(heldBook(mediafile.BookKindEbook, "AZW3", 0), ebookItem)
+		})
 	})
 })
 

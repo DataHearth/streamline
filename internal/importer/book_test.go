@@ -77,10 +77,18 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 				"import_mode":         "copy",
 				"import_max_attempts": 3,
 			},
-			"ebook_quality_profiles": []map[string]any{{
-				"name": "e", "formats": []string{"epub", "mobi"}, "cutoff": "epub",
+			"book_quality_profiles": []map[string]any{{
+				"name": "e",
+				"ebook": map[string]any{
+					"formats": []string{"EPUB", "MOBI"}, "preferred": "EPUB",
+				},
+				"audiobook": map[string]any{
+					"formats": []string{"M4B", "MP3"}, "preferred": "M4B",
+				},
 			}},
-			"ebook_quality_default_profile": "e",
+			"book_quality_default_profiles": map[string]any{
+				"novel": "e", "bd": "e", "comic": "e", "manga": "e",
+			},
 		})
 		client = dbtest.SetupTestDB(ctx)
 		DeferCleanup(client.Close)
@@ -121,7 +129,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		Expect(files).To(HaveLen(1))
 		Expect(files[0].Source).To(Equal(mediafile.SourceAuto))
 		Expect(files[0].BookKind).To(Equal(mediafile.BookKindEbook))
-		Expect(files[0].Quality).To(Equal("epub"))
+		Expect(files[0].Quality).To(Equal("EPUB"))
 		Expect(files[0].Format).To(Equal("epub"))
 		Expect(files[0].Path).To(Equal(dst))
 		Expect(reload().EbookStatus).To(Equal(book.EbookStatusAvailable))
@@ -187,7 +195,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		Expect(files).To(HaveLen(12))
 		for _, f := range files {
 			Expect(f.BookKind).To(Equal(mediafile.BookKindAudiobook))
-			Expect(f.Quality).To(Equal("mp3"))
+			Expect(f.Quality).To(Equal("MP3"))
 			Expect(filepath.Dir(f.Path)).To(Equal(dir))
 		}
 		Expect(filepath.Join(dir, "Part 07.mp3")).To(BeAnExistingFile())

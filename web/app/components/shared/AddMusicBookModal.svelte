@@ -17,6 +17,7 @@
 	import { toast } from "@lib/toast";
 	import { auth } from "@lib/auth.svelte";
 	import type { QualityProfile } from "@lib/types";
+	import { profilesPath } from "@lib/music-books";
 	import {
 		addRequest,
 		libraryHref,
@@ -86,7 +87,7 @@
 
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<QualityProfile[]>(`/quality-profiles?media=${media}`),
+		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: open,
 	}));
 

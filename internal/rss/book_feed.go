@@ -27,12 +27,14 @@ type bookSlot struct {
 	kind string
 }
 
-// bookPass carries one tick's state for the book branch: wanted books indexed
-// by author key, and the slots already attempted. A book's two slots are
-// separate grabs, so grabbed is keyed on the pair.
+// bookPass carries one tick's state for the book branch: wanted books and
+// books holding files (upgrade candidates) indexed by author key, and the
+// slots already attempted. A book's two slots are separate grabs, so grabbed is
+// keyed on the pair.
 type bookPass struct {
-	wanted  map[string][]*ent.Book
-	grabbed map[bookSlot]struct{}
+	wanted   map[string][]*ent.Book
+	upgrades map[string][]*ent.Book
+	grabbed  map[bookSlot]struct{}
 }
 
 // bookKindForCategory maps a Torznab category to the slot it fills: exactly
@@ -71,9 +73,14 @@ func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
 	if err != nil {
 		return nil, err
 	}
+	upgradable, err := s.store.ListUpgradeCandidateBooks(ctx)
+	if err != nil {
+		return nil, err
+	}
 	pass := &bookPass{
-		wanted:  make(map[string][]*ent.Book),
-		grabbed: make(map[bookSlot]struct{}),
+		wanted:   make(map[string][]*ent.Book),
+		upgrades: make(map[string][]*ent.Book),
+		grabbed:  make(map[bookSlot]struct{}),
 	}
 	for _, b := range books {
 		if b.Edges.Author == nil {
@@ -81,6 +88,13 @@ func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
 		}
 		key := showKey(b.Edges.Author.Name)
 		pass.wanted[key] = append(pass.wanted[key], b)
+	}
+	for _, b := range upgradable {
+		if b.Edges.Author == nil {
+			continue
+		}
+		key := showKey(b.Edges.Author.Name)
+		pass.upgrades[key] = append(pass.upgrades[key], b)
 	}
 	return pass, nil
 }
@@ -90,7 +104,7 @@ func (s *FeedScanner) processBookItems(
 	items []indexer.SearchResult,
 	pass *bookPass,
 ) int {
-	if len(pass.wanted) == 0 {
+	if len(pass.wanted) == 0 && len(pass.upgrades) == 0 {
 		return 0
 	}
 	maxFailures := config.Get().Library.MaxGrabFailures
@@ -117,6 +131,17 @@ func (s *FeedScanner) processBookItems(
 			}
 		}
 		if b == nil {
+			if s.tryBookUpgrade(
+				ctx,
+				item,
+				parsed,
+				kind,
+				authorPart,
+				titlePart,
+				pass,
+			) {
+				matched++
+			}
 			continue
 		}
 		slot := bookSlot{id: b.ID, kind: kind}
@@ -176,7 +201,7 @@ func bookScore(
 ) int {
 	a := b.Edges.Author
 	if kind == slotAudiobook {
-		p, ok := config.ResolveAudiobookQualityProfile(a.AudiobookQualityProfile)
+		p, ok := config.ResolveBookQualityProfile(a.AudiobookQualityProfile, "")
 		if !ok {
 			slog.WarnContext(ctx, "feed-scan: audiobook quality profile unresolved",
 				"author", a.Name, "profile", a.AudiobookQualityProfile)
@@ -184,7 +209,7 @@ func bookScore(
 		}
 		return library.ScoreAudiobookRelease(parsed, p)
 	}
-	p, ok := config.ResolveEbookQualityProfile(a.EbookQualityProfile)
+	p, ok := config.ResolveBookQualityProfile(a.EbookQualityProfile, "")
 	if !ok {
 		slog.WarnContext(ctx, "feed-scan: ebook quality profile unresolved",
 			"author", a.Name, "profile", a.EbookQualityProfile)

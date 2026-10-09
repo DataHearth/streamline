@@ -189,12 +189,15 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/albums/{id}/grab` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
 | `GET` `POST` | `/music/quality-profiles` | List / create music quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/music/quality-profiles/{name}` | Update / delete a music quality profile | 🔒 Admin |
+| `POST` | `/music/quality-profiles/{name}/default` | Make this the default music profile; the way out of the `409` a delete of the default answers | 🔒 Admin |
 
 Adding an artist fetches its whole discography from MusicBrainz, which allows one request per second, so a large catalogue makes `POST /music/artists` slow. Poster URLs are not in the payloads: clients build `/posters/artists/{id}/poster.jpg` and `/posters/albums/{id}/poster.jpg` themselves.
 
 An album search answers `422` with `code: no_quality_profile` when the album has no usable profile; a refused grab answers `422` with `code: grab_rejected`. The grab flips the album to `downloading`.
 
-A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `formats` and `cutoff` drawn from `flac-24`, `flac`, `mp3-320`, `mp3-v0`, `mp3-256`, `mp3-192`, `other`. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`. `PUT` takes the same body as `POST` and ignores the name in the body.
+A music quality profile is `{name, tiers, preferred, upgrade_allowed, is_default}`: `tiers` are the quality tiers it accepts, drawn from `hires`, `lossless`, `high`, `standard`, `low` and returned best first, and `preferred` (one of `tiers`, else `422`) is the tier an upgrade stops at. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`, and the first profile created while none resolves becomes the default. `PUT` takes the same body as `POST` and ignores the name in the body.
+
+A music release in a search result carries `source` as a display label (`FLAC 24/96`, `MP3 V0`, `AAC 256`) and `audio_tier` when the release name states its quality; a release that states none stays in the list with `rejected: true` and `reject_reason`. A grab body also accepts `replace_existing: true`: the old files of the tracks the release matches go only after the new ones are placed and verified (for an artist pack, only on the albums that already had files).
 
 ### Books
 
@@ -211,10 +214,11 @@ A music quality profile is `{name, formats, cutoff, upgrade_allowed}` with `form
 | `PATCH` | `/books/{id}` | Update `ebook_monitored` / `audiobook_monitored` | Member |
 | `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Search the indexers for one slot of a book; returns `{items: [{format, release}]}` ranked, rejected releases kept at the end with `release.rejected` and `release.reject_reason` | Member |
 | `POST` | `/books/{id}/grab?kind=ebook\|audiobook` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
-| `GET` `POST` | `/books/ebook-quality-profiles` | List / create ebook quality profiles | Authenticated / 🔒 Admin |
-| `PUT` `DELETE` | `/books/ebook-quality-profiles/{name}` | Update / delete an ebook quality profile | 🔒 Admin |
-| `GET` `POST` | `/books/audiobook-quality-profiles` | List / create audiobook quality profiles | Authenticated / 🔒 Admin |
-| `PUT` `DELETE` | `/books/audiobook-quality-profiles/{name}` | Update / delete an audiobook quality profile | 🔒 Admin |
+| `GET` `POST` | `/books/quality-profiles` | List / create book quality profiles | Authenticated / 🔒 Admin |
+| `PUT` `DELETE` | `/books/quality-profiles/{name}` | Update / delete a book quality profile | 🔒 Admin |
+| `POST` | `/books/quality-profiles/{name}/default?kind=novel\|bd\|comic\|manga` | Make this the default profile for one book kind (`kind` is required) | 🔒 Admin |
+
+A book quality profile is `{name, upgrade_allowed, ebook: {formats, preferred}, audiobook: {formats, preferred, min_bitrate}, default_for}`: one profile covers both slots, `upgrade_allowed` is one switch for both, ebook `formats` come from `EPUB`, `AZW3`, `MOBI`, `PDF`, `CBZ`, `CBR` and audiobook `formats` from `M4B`, `MP3`, `M4A`, `FLAC` (upper case, best first), `preferred` must be one of the slot's `formats` and `min_bitrate` is kbps from `0` (no floor) to `1024`, else `422`. A book with no profile of its own takes the default of its kind, so `default_for` lists the kinds a profile is the default of; deleting a profile that is any kind's default is a `409`. A grab body also accepts `replace_existing: true`: every file of the grabbed slot is replaced after the new one is placed and verified, and the other slot is never touched.
 
 A book search or grab without a valid `kind` answers `400`; a slot with no usable quality profile answers `422` with `code: no_quality_profile`, and a refused grab `422` with `code: grab_rejected`. The grab flips the slot to `downloading`.
 
@@ -308,9 +312,9 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/requests` | List / create requests | Any (scoped for `request_only`) |
-| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata | Any (scoped for `request_only`) |
-| `POST` | `/requests/{id}/approve` | Approve a request (`429` with `Retry-After` when an author or book request hits Hardcover's limit; the request stays pending) | admin, member |
+| `GET` `POST` | `/requests` | List / create requests. `?media_type=` takes a comma list (`book,book_series`; an unknown member is a `400`). A request is a `movie`, `tvshow`, `artist` (by `media_mbid`), `book` or `book_series` (by Hardcover `media_id`) | Any (scoped for `request_only`) |
+| `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata (an artist, book or series request answers the same detail as its lookup; `429` / `503` mean the provider is out of budget or unconfigured) | Any (scoped for `request_only`) |
+| `POST` | `/requests/{id}/approve` | Approve a request with the reviewer's `quality_profile` (empty means the medium's default; a name outside the medium's profiles is a `422`; `429` with `Retry-After` when a book or series request hits Hardcover's limit, `503` without a Hardcover key; the request stays pending). An artist is added monitored `all`, a book `both`, a series `all`; the request turns `available` on the first imported album, or the first imported slot or volume | admin, member |
 | `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin, member |
 
 ### Config-backed resources
@@ -412,7 +416,8 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` scan
 | `POST` | `/auth/login` · `/auth/register` · `/auth/logout` | Cookie-based, `204` on success | None |
 | `GET` | `/auth/config` · `/auth/invite/{token}` | Pre-auth SPA bootstrap | None |
 | `GET` | `/auth/oidc/{name}/start` · `/callback` | The OIDC flow | None |
-| `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy | — |
+| `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy; `kind` is `movies`, `tvshows`, `artists`, `albums`, `books` or `authors` | — |
+| `GET` | `/posters/lookup/{kind}/{key}/poster.jpg` | Art for a title that is not in the library yet: `kind` is `artists` or `albums` (a MusicBrainz id, a release-group id for albums) or `books` (a Hardcover book id). The server fetches it from a source it remembered while serving the lookup, so a tile listed before a restart answers `404` until its search runs again | Session |
 
 ---
 

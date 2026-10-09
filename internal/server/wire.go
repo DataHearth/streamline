@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/artwork"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
@@ -195,8 +196,19 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	dispatcher := mediaserver.NewDispatcher()
 	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
 	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
+	deezer := metadata.NewDeezer()
+	lookupArt, err := artwork.New(artwork.Deps{
+		DataDir: cfg.DataDir,
+		Posters: postersSvc,
+		Library: artwork.EntLibrary{Client: dbClient},
+		Deezer:  deezer,
+	})
+	if err != nil {
+		dbClient.Close()
+		return nil, fmt.Errorf("create lookup art service: %w", err)
+	}
 	musicSvc := music.NewService(
-		store, mb, postersSvc, metadata.NewDeezer(), indexerSvc, dlManager,
+		store, mb, postersSvc, deezer, indexerSvc, dlManager,
 	)
 	bookSvc := book.NewService(store, bookMeta, postersSvc, indexerSvc, dlManager)
 	mediaServerSvc := mediaserver.New()
@@ -338,10 +350,8 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store,
 		movieSvc,
 		tvSvc,
-		musicSvc,
-		bookSvc,
-		mb,
-		bookMeta,
+		artistRequestAdder{svc: musicSvc},
+		bookRequestAdder{client: dbClient},
 	)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)
@@ -506,6 +516,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		TVSearcher:      tvMissing,
 		MetadataTV:      tvdb,
 		Posters:         postersSvc,
+		LookupArt:       lookupArt,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
 		Importer:        imp,

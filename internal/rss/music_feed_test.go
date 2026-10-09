@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -22,9 +23,10 @@ func musicConfig(names ...string) map[string]any {
 	cfg := indexerConfig(names...)
 	cfg["music_quality_default_profile"] = "lossless"
 	cfg["music_quality_profiles"] = []map[string]any{{
-		"name":    "lossless",
-		"formats": []string{"flac-24", "flac"},
-		"cutoff":  "flac",
+		"name":            "lossless",
+		"tiers":           []string{"hires", "lossless"},
+		"preferred":       "hires",
+		"upgrade_allowed": true,
 	}}
 	return cfg
 }
@@ -45,6 +47,8 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		grabber *mocks.MockDownloader
 		albums  *mocks.MockAlbumGrabber
 		scanner *FeedScanner
+		// upgradeAlbums is what the store lists as holding files.
+		upgradeAlbums []*ent.Album
 	)
 
 	run := func(wanted []*ent.Album, items ...indexer.SearchResult) {
@@ -55,6 +59,10 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		store.EXPECT().ListWantedAlbums(mock.Anything, uint8(3)).
 			Return(wanted, nil).Once()
 		store.EXPECT().ListWantedBooks(mock.Anything, uint8(3)).
+			Return(nil, nil).Once()
+		store.EXPECT().ListUpgradeCandidateAlbums(mock.Anything).
+			Return(upgradeAlbums, nil).Once()
+		store.EXPECT().ListUpgradeCandidateBooks(mock.Anything).
 			Return(nil, nil).Once()
 		feeder.EXPECT().Feed(mock.Anything, "idx").Return(items, nil).Once()
 		Expect(scanner.Run(ctx)).To(Succeed())
@@ -69,6 +77,7 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		upgradeAlbums = nil
 		store = dbmocks.NewMockStore(GinkgoT())
 		feeder = mocks.NewMockIndexerFeeder(GinkgoT())
 		grabber = mocks.NewMockDownloader(GinkgoT())
@@ -168,6 +177,89 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 		albums.EXPECT().GrabAlbumRelease(mock.Anything, uint32(1), mock.Anything).
 			Return(fmt.Errorf("grab: %w", download.ErrUnreachable)).Once()
 		run([]*ent.Album{wantedAlbum()}, flacItem)
+	})
+
+	Describe("upgrades", func() {
+		heldAlbum := func(qualities ...string) *ent.Album {
+			a := wantedAlbum()
+			a.Status = "available"
+			for i, q := range qualities {
+				tr := &ent.Track{ID: uint32(i + 1)}
+				tr.Edges.MediaFiles = []*ent.MediaFile{{Quality: q}}
+				a.Edges.Tracks = append(a.Edges.Tracks, tr)
+			}
+			return a
+		}
+		mp3Item := indexer.SearchResult{
+			Title:    "Artist Name - Album Title (2020) [MP3 320]",
+			Category: "3010",
+		}
+
+		It("grabs a better tier and flags the record to replace per track", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("high", "high")}
+			albums.EXPECT().GrabAlbumRelease(mock.Anything, uint32(1), flacItem).
+				Return(nil).Once()
+			store.EXPECT().SetLiveAlbumRecordReplaceMode(
+				mock.Anything, uint32(1), downloadrecord.ReplaceModeUpgrades,
+			).Return(nil).Once()
+			run(nil, flacItem, flacItem)
+		})
+
+		It("compares against the worst tier on disk", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("lossless", "high")}
+			albums.EXPECT().GrabAlbumRelease(mock.Anything, uint32(1), flacItem).
+				Return(nil).Once()
+			store.EXPECT().SetLiveAlbumRecordReplaceMode(
+				mock.Anything, uint32(1), downloadrecord.ReplaceModeUpgrades,
+			).Return(nil).Once()
+			run(nil, flacItem)
+		})
+
+		It("leaves an album already at the preferred ceiling alone", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("hires")}
+			run(nil, flacItem)
+		})
+
+		It("leaves an album whose files have no known tier alone", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("high", "")}
+			run(nil, flacItem)
+		})
+
+		It("does not grab an equal or worse tier", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("lossless")}
+			run(nil, mp3Item)
+		})
+
+		It("does nothing when the profile forbids upgrades", func() {
+			configtest.Setup(func() map[string]any {
+				cfg := musicConfig("idx")
+				cfg["music_quality_profiles"] = []map[string]any{{
+					"name":      "lossless",
+					"tiers":     []string{"hires", "lossless"},
+					"preferred": "hires",
+				}}
+				return cfg
+			}())
+			upgradeAlbums = []*ent.Album{heldAlbum("high")}
+			run(nil, flacItem)
+		})
+
+		It("skips a release whose tier the name does not state", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("high")}
+			run(nil, indexer.SearchResult{
+				Title:    "Artist Name - Album Title (2020)",
+				Category: "3040",
+			})
+		})
+
+		It("bumps grab_failures when the upgrade grab fails", func() {
+			upgradeAlbums = []*ent.Album{heldAlbum("high")}
+			albums.EXPECT().GrabAlbumRelease(mock.Anything, uint32(1), flacItem).
+				Return(fmt.Errorf("add: %w", download.ErrNoWantedFiles)).Once()
+			store.EXPECT().IncrementAlbumGrabFailures(mock.Anything, uint32(1)).
+				Return(nil).Once()
+			run(nil, flacItem)
+		})
 	})
 })
 

@@ -106,50 +106,72 @@
     "musicQualityProfileEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "formats", "cutoff"],
+      "required": ["name", "tiers", "preferred"],
       "properties": {
         "name": { "type": "string" },
-        "formats": {
+        "tiers": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "enum": ["flac-24", "flac", "mp3-320", "mp3-v0", "mp3-256", "mp3-192", "other"]
-          }
+          "uniqueItems": true,
+          "description": "Accepted tiers, in any order; stored best first.",
+          "items": { "enum": ["hires", "lossless", "high", "standard", "low"] }
         },
-        "cutoff": {
-          "enum": ["flac-24", "flac", "mp3-320", "mp3-v0", "mp3-256", "mp3-192", "other"]
+        "preferred": {
+          "enum": ["hires", "lossless", "high", "standard", "low"],
+          "description": "The upgrade ceiling. Must be one of tiers."
         },
         "upgrade_allowed": { "type": "boolean" }
       }
     },
-    "ebookQualityProfileEntry": {
+    "ebookSlot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "formats", "cutoff"],
+      "required": ["formats", "preferred"],
       "properties": {
-        "name": { "type": "string" },
         "formats": {
           "type": "array",
           "minItems": 1,
-          "items": { "enum": ["epub", "azw3", "mobi", "pdf", "other"] }
+          "uniqueItems": true,
+          "items": { "enum": ["EPUB", "AZW3", "MOBI", "PDF", "CBZ", "CBR"] }
         },
-        "cutoff": { "enum": ["epub", "azw3", "mobi", "pdf", "other"] },
-        "upgrade_allowed": { "type": "boolean" }
+        "preferred": {
+          "enum": ["EPUB", "AZW3", "MOBI", "PDF", "CBZ", "CBR"],
+          "description": "Must be one of formats."
+        }
       }
     },
-    "audiobookQualityProfileEntry": {
+    "audiobookSlot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "formats", "cutoff"],
+      "required": ["formats", "preferred"],
       "properties": {
-        "name": { "type": "string" },
         "formats": {
           "type": "array",
           "minItems": 1,
-          "items": { "enum": ["m4b", "mp3", "other"] }
+          "uniqueItems": true,
+          "items": { "enum": ["M4B", "MP3", "M4A", "FLAC"] }
         },
-        "cutoff": { "enum": ["m4b", "mp3", "other"] },
-        "upgrade_allowed": { "type": "boolean" }
+        "preferred": {
+          "enum": ["M4B", "MP3", "M4A", "FLAC"],
+          "description": "Must be one of formats."
+        },
+        "min_bitrate": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024,
+          "description": "Floor in kbps for an audiobook whose release states a rate; 0 for none."
+        }
+      }
+    },
+    "bookQualityProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "ebook", "audiobook"],
+      "properties": {
+        "name": { "type": "string" },
+        "upgrade_allowed": { "type": "boolean" },
+        "ebook": { "$ref": "#/definitions/ebookSlot" },
+        "audiobook": { "$ref": "#/definitions/audiobookSlot" }
       }
     },
     "qualityProfileEntry": {
@@ -799,30 +821,28 @@
     },
     "music_quality_profiles": {
       "type": "array",
-      "description": "Named music quality profiles, ranked over the format ladder flac-24 > flac > mp3-320 > mp3-v0 > mp3-256 > mp3-192 > other.",
+      "description": "Named music quality profiles. A profile ticks the tiers it accepts (hires > lossless > high > standard > low) and names the preferred one, the ceiling for upgrades. Edited through /music/quality-profiles, never /config/*.",
       "items": { "$ref": "#/definitions/musicQualityProfileEntry" }
     },
     "music_quality_default_profile": {
       "type": "string",
-      "description": "Name of the music quality profile used when an artist names none."
+      "description": "Name of the music quality profile used when an artist names none. Must name an entry in music_quality_profiles whenever that list has any."
     },
-    "ebook_quality_profiles": {
+    "book_quality_profiles": {
       "type": "array",
-      "description": "Named ebook quality profiles, ranked over the format ladder epub > azw3 > mobi > pdf > other.",
-      "items": { "$ref": "#/definitions/ebookQualityProfileEntry" }
+      "description": "Named book quality profiles. Each carries an ebook slot and an audiobook slot; which slots a title uses is its monitor, not the profile. Edited through /books/quality-profiles, never /config/*.",
+      "items": { "$ref": "#/definitions/bookQualityProfileEntry" }
     },
-    "ebook_quality_default_profile": {
-      "type": "string",
-      "description": "Name of the ebook quality profile used when an author names none."
-    },
-    "audiobook_quality_profiles": {
-      "type": "array",
-      "description": "Named audiobook quality profiles, ranked over the format ladder m4b > mp3 > other.",
-      "items": { "$ref": "#/definitions/audiobookQualityProfileEntry" }
-    },
-    "audiobook_quality_default_profile": {
-      "type": "string",
-      "description": "Name of the audiobook quality profile used when an author names none."
+    "book_quality_default_profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Name of the book quality profile used when a book (and its series) names none, per book kind. Each must name an entry in book_quality_profiles whenever that list has any.",
+      "properties": {
+        "novel": { "type": "string" },
+        "bd": { "type": "string" },
+        "comic": { "type": "string" },
+        "manga": { "type": "string" }
+      }
     },
     "custom_formats": {
       "type": "array",

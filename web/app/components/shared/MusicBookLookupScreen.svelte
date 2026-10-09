@@ -9,6 +9,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import type { QualityProfile } from "@lib/types";
+	import { profilesPath } from "@lib/music-books";
 	import {
 		addRequest,
 		hitChips,
@@ -79,7 +80,7 @@
 
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<QualityProfile[]>(`/quality-profiles?media=${media}`),
+		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: open,
 	}));
 	const searchQuery = createQuery<LookupHit[]>(() => ({

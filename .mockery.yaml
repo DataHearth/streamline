@@ -80,6 +80,8 @@ packages:
       Manager: {}
   github.com/datahearth/streamline/internal/request:
     interfaces:
+      ArtistAdder: {}
+      BookAdder: {}
       Manager: {}
       MovieAdder: {}
       ShowAdder: {}

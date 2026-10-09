@@ -29,7 +29,7 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 		Where(
 			mediafile.HasBookWith(book.IDEQ(uint32(id))),
 			mediafile.BookKindEQ(mediafile.BookKindEbook),
-			mediafile.QualityEQ(format),
+			mediafile.QualityEqualFold(format),
 		).
 		WithBook(func(q *ent.BookQuery) { q.WithAuthor() }).
 		First(r.Context())
@@ -58,8 +58,8 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
-	ext := mf.Quality
-	if ext == "other" {
+	ext := strings.ToLower(mf.Quality)
+	if ext == "" || ext == "other" {
 		ext = strings.TrimPrefix(filepath.Ext(mf.Path), ".")
 	}
 	w.Header().Set("Content-Type", ebookContentType(mf.Quality))

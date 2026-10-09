@@ -68,6 +68,7 @@ type albumFile struct {
 	path string
 	info audiotags.Info
 	tr   *ent.Track
+	q    albumFileQuality
 }
 
 // importAlbumRecord imports a completed album download: every audio file is
@@ -99,12 +100,20 @@ func (w *Worker) importAlbumRecord(
 	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
 	}
-	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files)
+	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
+	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
 	if len(plan) == 0 {
 		if skippedCovered > 0 {
 			return otelx.RecordSpanError(span, library.ErrDestExists)
 		}
 		return otelx.RecordSpanError(span, ErrNoAlbumTracks)
+	}
+	// Verified before anything is set aside or transferred, so a hold leaves
+	// the library exactly as it was.
+	if haveProfile && !rec.VerificationBypassed {
+		if reasons := tierHoldReasons(plan, profile); len(reasons) > 0 {
+			return w.hold(ctx, span, rec, reasons)
+		}
 	}
 
 	multiDisc := slices.ContainsFunc(alb.Edges.Tracks, func(t *ent.Track) bool {
@@ -174,7 +183,7 @@ func (w *Worker) importAlbumRecord(
 		rows = append(rows, db.AdoptAlbumFile{
 			TrackID: f.tr.ID,
 			Path:    imported.Path,
-			Quality: f.info.Format,
+			Quality: tierName(f.q),
 			Format:  f.info.Format,
 			Size:    size,
 		})
@@ -211,6 +220,8 @@ func (w *Worker) importAlbumRecord(
 	slog.InfoContext(ctx, "imported album",
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
+	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
+
 	// The torrent is judged by what the import actually did: a forced copy left
 	// the source untouched, so a configured "move" must not delete it.
 	libCfg.ImportMode = mode
@@ -220,16 +231,19 @@ func (w *Worker) importAlbumRecord(
 }
 
 // planAlbumImport binds each source file to the track it fills. A track
-// already holding a file is left alone unless the record replaces, and two
-// files never fill one track: the first wins. skippedCovered counts the files
-// dropped because their track was already filled in the library.
+// already holding a file is left alone unless the record replaces it: a record
+// in replace mode all takes every track it covers, one in upgrades mode only
+// the tracks whose held tier the profile lets this file beat. Two files never
+// fill one track: the first wins. skippedCovered counts the files dropped
+// because their track was already filled in the library.
 func (w *Worker) planAlbumImport(
 	ctx context.Context,
 	rec *ent.DownloadRecord,
 	alb *ent.Album,
 	files []string,
+	profile config.MusicQualityProfileEntry,
 ) ([]albumFile, int) {
-	replace := rec.ReplaceMode != downloadrecord.ReplaceModeNone
+	claim := library.ParseMusicRelease(rec.Title)
 	claimed := map[uint32]struct{}{}
 	var (
 		plan           []albumFile
@@ -259,14 +273,15 @@ func (w *Worker) planAlbumImport(
 			)
 			continue
 		}
-		if len(tr.Edges.MediaFiles) > 0 && !replace {
+		q := w.assessAlbumFile(ctx, path, claim)
+		if len(tr.Edges.MediaFiles) > 0 && !replacesTrack(rec, tr, q, profile) {
 			skippedCovered++
 			slog.InfoContext(ctx, "album import: leaving track's file in place",
 				"track.id", tr.ID, "file", filepath.Base(path))
 			continue
 		}
 		claimed[tr.ID] = struct{}{}
-		plan = append(plan, albumFile{path: path, info: info, tr: tr})
+		plan = append(plan, albumFile{path: path, info: info, tr: tr, q: q})
 	}
 	return plan, skippedCovered
 }
@@ -285,4 +300,31 @@ func missingTracks(alb *ent.Album, rows []db.AdoptAlbumFile) int {
 		}
 	}
 	return missing
+}
+
+// replacesTrack decides whether an incoming file takes the place of the files
+// its track already holds.
+func replacesTrack(
+	rec *ent.DownloadRecord,
+	tr *ent.Track,
+	q albumFileQuality,
+	profile config.MusicQualityProfileEntry,
+) bool {
+	switch rec.ReplaceMode {
+	case downloadrecord.ReplaceModeAll:
+		return true
+	case downloadrecord.ReplaceModeUpgrades:
+		have, haveKnown := heldTrackTier(tr)
+		return q.known && profile.Profile().Replaces(have, haveKnown, q.tier)
+	}
+	return false
+}
+
+// tierName is what MediaFile.quality stores: the tier, or empty when it could
+// not be established.
+func tierName(q albumFileQuality) string {
+	if !q.known {
+		return ""
+	}
+	return q.tier.String()
 }

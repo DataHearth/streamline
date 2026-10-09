@@ -89,18 +89,20 @@ var _ = Describe("Book schedulers", Label("unit", "integration", "book"), func()
 			})
 		}
 		configtest.Setup(map[string]any{
-			"ebook_quality_profiles": []map[string]any{
+			"book_quality_profiles": []map[string]any{
 				{
-					"name":    "std",
-					"formats": []string{"epub", "azw3"},
-					"cutoff":  "epub",
+					"name": "std",
+					"ebook": map[string]any{
+						"formats": []string{"EPUB", "AZW3"}, "preferred": "EPUB",
+					},
+					"audiobook": map[string]any{
+						"formats": []string{"M4B", "MP3"}, "preferred": "M4B",
+					},
 				},
 			},
-			"ebook_quality_default_profile": "std",
-			"audiobook_quality_profiles": []map[string]any{
-				{"name": "std", "formats": []string{"m4b", "mp3"}, "cutoff": "m4b"},
+			"book_quality_default_profiles": map[string]any{
+				"novel": "std", "bd": "std", "comic": "std", "manga": "std",
 			},
-			"audiobook_quality_default_profile": "std",
 			"library": map[string]any{
 				"ebook_path":        GinkgoT().TempDir(),
 				"audiobook_path":    GinkgoT().TempDir(),

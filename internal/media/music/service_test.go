@@ -52,9 +52,9 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			"library": map[string]any{"music_path": GinkgoT().TempDir()},
 			"music_quality_profiles": []map[string]any{
 				{
-					"name":    "lossless",
-					"formats": []string{"flac-24", "flac", "mp3-320"},
-					"cutoff":  "flac",
+					"name":      "lossless",
+					"tiers":     []string{"hires", "lossless", "high"},
+					"preferred": "lossless",
 				},
 			},
 			"music_quality_default_profile": "lossless",
@@ -344,7 +344,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 					"Nirvana - Nevermind (1991) [FLAC]",
 					"Nirvana - Nevermind (1991) [MP3 320]",
 				}))
-				Expect(got[0].Format).To(Equal("flac-24"))
+				Expect(got[0].Format).To(Equal("FLAC 24-bit"))
 				Expect(got[0].Score).To(BeNumerically(">", got[3].Score))
 			},
 		)

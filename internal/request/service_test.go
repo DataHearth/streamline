@@ -7,19 +7,14 @@ import (
 	"sync"
 
 	"github.com/datahearth/streamline/ent"
-	entrequest "github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/media/book"
-	bookmocks "github.com/datahearth/streamline/internal/media/book/mocks"
-	"github.com/datahearth/streamline/internal/media/music"
-	musicmocks "github.com/datahearth/streamline/internal/media/music/mocks"
-	"github.com/datahearth/streamline/internal/metadata"
-	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/request"
 	reqmocks "github.com/datahearth/streamline/internal/request/mocks"
 	"github.com/datahearth/streamline/internal/role"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -44,36 +39,61 @@ func (s barrierStore) CreateRequest(
 
 var _ = Describe("Request service", Label("unit", "request"), func() {
 	var (
-		ctx        context.Context
-		storeMk    *dbmocks.MockStore_Expecter
-		movieMk    *reqmocks.MockMovieAdder_Expecter
-		showMk     *reqmocks.MockShowAdder_Expecter
-		musicMk    *musicmocks.MockAdder_Expecter
-		metaMk     *metadatamocks.MockMusicProvider_Expecter
-		bookMk     *bookmocks.MockAdder_Expecter
-		bookMetaMk *metadatamocks.MockBookProvider_Expecter
-		svc        *request.Service
+		ctx      context.Context
+		storeMk  *dbmocks.MockStore_Expecter
+		movieMk  *reqmocks.MockMovieAdder_Expecter
+		showMk   *reqmocks.MockShowAdder_Expecter
+		artistMk *reqmocks.MockArtistAdder_Expecter
+		bookMk   *reqmocks.MockBookAdder_Expecter
+		svc      *request.Service
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		configtest.Setup(map[string]any{
+			"quality_profiles": []map[string]any{{
+				"name":                 "hd",
+				"preferred_resolution": "1080p",
+				"min_resolution":       "720p",
+			}},
+			"movie_quality_default_profile":  "hd",
+			"series_quality_default_profile": "hd",
+			"music_quality_profiles": []map[string]any{{
+				"name": "Lossless", "tiers": []string{"lossless"},
+				"preferred": "lossless",
+			}},
+			"music_quality_default_profile": "Lossless",
+			"book_quality_profiles": []map[string]any{
+				{
+					"name": "Retail",
+					"ebook": map[string]any{
+						"formats":   []string{"EPUB"},
+						"preferred": "EPUB",
+					},
+					"audiobook": map[string]any{
+						"formats":   []string{"M4B"},
+						"preferred": "M4B",
+					},
+				},
+			},
+			"book_quality_default_profiles": map[string]any{
+				"novel": "Retail",
+				"bd":    "Retail",
+				"comic": "Retail",
+				"manga": "Retail",
+			},
+		})
 		store := dbmocks.NewMockStore(GinkgoT())
 		storeMk = store.EXPECT()
 		movies := reqmocks.NewMockMovieAdder(GinkgoT())
 		movieMk = movies.EXPECT()
 		shows := reqmocks.NewMockShowAdder(GinkgoT())
 		showMk = shows.EXPECT()
-		musicAdder := musicmocks.NewMockAdder(GinkgoT())
-		musicMk = musicAdder.EXPECT()
-		musicMeta := metadatamocks.NewMockMusicProvider(GinkgoT())
-		metaMk = musicMeta.EXPECT()
-		bookAdder := bookmocks.NewMockAdder(GinkgoT())
-		bookMk = bookAdder.EXPECT()
-		bookMeta := metadatamocks.NewMockBookProvider(GinkgoT())
-		bookMetaMk = bookMeta.EXPECT()
-		svc = request.NewService(
-			store, movies, shows, musicAdder, bookAdder, musicMeta, bookMeta,
-		)
+		artists := reqmocks.NewMockArtistAdder(GinkgoT())
+		artistMk = artists.EXPECT()
+		books := reqmocks.NewMockBookAdder(GinkgoT())
+		bookMk = books.EXPECT()
+		svc = request.NewService(store, movies, shows, artists, books)
 	})
 
 	Describe("Create", func() {
@@ -204,10 +224,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 	})
 
 	Describe("Create music requests", func() {
-		const (
-			artistMBID = "artist-1"
-			rgMBID     = "rg-1"
-		)
+		const artistMBID = "artist-1"
 
 		It("persists an artist request keyed by MBID", func() {
 			storeMk.FindActiveRequestByMBID(mock.Anything, "artist", artistMBID).
@@ -279,22 +296,7 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			},
 		)
 
-		It("persists an album request without an in-library pre-check", func() {
-			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
-				Return(nil, nil).Once()
-			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "album" && p.MediaMBID == rgMBID
-			})).
-				Return(&ent.Request{ID: 2}, nil).
-				Once()
-
-			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "album", MediaMBID: rgMBID, Title: "Al", RequesterID: 9,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		DescribeTable("rejects an invalid identity before any store call",
+		DescribeTable("rejects an invalid identity or type before any store call",
 			func(p request.CreateParams) {
 				_, err := svc.Create(ctx, p)
 				Expect(err).To(MatchError(request.ErrInvalidRequest))
@@ -302,9 +304,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 			Entry("artist without an mbid",
 				request.CreateParams{MediaType: "artist", Title: "A"}),
 			Entry(
-				"album with a media_id",
+				"artist with a media_id",
 				request.CreateParams{
-					MediaType: "album",
+					MediaType: "artist",
 					MediaMBID: "x",
 					MediaID:   3,
 				},
@@ -319,47 +321,53 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 					MediaMBID: "x",
 				},
 			),
-			Entry("author without a media_id",
-				request.CreateParams{MediaType: "author", Title: "A"}),
+			Entry("book without a media_id",
+				request.CreateParams{MediaType: "book", Title: "B"}),
 			Entry("book with an mbid",
 				request.CreateParams{MediaType: "book", MediaID: 3, MediaMBID: "x"}),
-			Entry(
-				"book_kind on a movie",
-				request.CreateParams{
-					MediaType: "movie",
-					MediaID:   3,
-					BookKind:  "ebook",
-				},
-			),
+			Entry("book_series without a media_id",
+				request.CreateParams{MediaType: "book_series", Title: "S"}),
+			Entry("the removed album type",
+				request.CreateParams{MediaType: "album", MediaMBID: "x"}),
+			Entry("the removed author type",
+				request.CreateParams{MediaType: "author", MediaID: 3}),
 		)
 	})
 
 	Describe("Approve music requests", func() {
-		const (
-			artistMBID = "artist-1"
-			rgMBID     = "rg-1"
-		)
+		const artistMBID = "artist-1"
+		artistReq := &ent.Request{ID: 1, MediaType: "artist", MediaMbid: artistMBID}
 
-		It("adds a monitored artist then approves, recording no event", func() {
+		It("adds the artist monitored all, then approves", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: artistMBID}, nil).
-				Twice()
-			musicMk.Add(mock.Anything, music.AddParams{
-				MBID: artistMBID, Monitored: true, QualityProfile: "lossless",
-			}).Return(&ent.Artist{ID: 4}, nil).Once()
+				Return(artistReq, nil).Twice()
+			artistMk.AddArtist(mock.Anything, artistMBID, "all", "Lossless").
+				Return(nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(1), uint32(9)).
 				Return(nil).Once()
 
-			_, err := svc.Approve(ctx, 1, 9, "lossless")
+			_, err := svc.Approve(ctx, 1, 9, "Lossless")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("passes an empty profile through as the family default", func() {
+			storeMk.GetRequest(mock.Anything, uint32(1)).
+				Return(artistReq, nil).Twice()
+			artistMk.AddArtist(mock.Anything, artistMBID, "all", "").
+				Return(nil).Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(1), uint32(9)).
+				Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 1, 9, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("marks the request available when the artist already exists", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: artistMBID}, nil).
-				Twice()
-			musicMk.Add(mock.Anything, mock.Anything).
-				Return(nil, fmt.Errorf("%w: mbid", music.ErrArtistExists)).Once()
+				Return(artistReq, nil).Twice()
+			artistMk.AddArtist(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(fmt.Errorf("%w: mbid", request.ErrAlreadyInLibrary)).
+				Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(1), uint32(9)).
 				Return(nil).Once()
 			storeMk.MarkRequestAvailable(mock.Anything, uint32(1)).
@@ -371,275 +379,156 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 		It("does not approve when the artist add fails", func() {
 			storeMk.GetRequest(mock.Anything, uint32(1)).
-				Return(&ent.Request{ID: 1, MediaType: "artist", MediaMbid: artistMBID}, nil).
+				Return(artistReq, nil).Once()
+			artistMk.AddArtist(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(errors.New("musicbrainz down")).
 				Once()
-			musicMk.Add(mock.Anything, mock.Anything).
-				Return(nil, errors.New("musicbrainz down")).Once()
 
 			_, err := svc.Approve(ctx, 1, 9, "")
 			Expect(err).To(MatchError(ContainSubstring("approve: add artist")))
 		})
 
-		It("adds the absent artist unmonitored and monitors only the album", func() {
-			storeMk.GetRequest(mock.Anything, uint32(2)).
-				Return(&ent.Request{ID: 2, MediaType: "album", MediaMbid: rgMBID}, nil).
-				Twice()
-			metaMk.GetReleaseGroup(mock.Anything, rgMBID).
-				Return(&metadata.ReleaseGroupDetails{ArtistMBID: artistMBID}, nil).
-				Once()
-			storeMk.FindArtistByMBID(mock.Anything, artistMBID).
-				Return(nil, nil).Once()
-			musicMk.Add(mock.Anything, music.AddParams{
-				MBID: artistMBID, Monitored: false, QualityProfile: "lossless",
-			}).Return(&ent.Artist{ID: 4, Edges: ent.ArtistEdges{Albums: []*ent.Album{
-				{ID: 10, Mbid: "other"}, {ID: 11, Mbid: rgMBID},
-			}}}, nil).Once()
-			musicMk.SetAlbumMonitored(mock.Anything, uint32(11), true).
-				Return(nil).Once()
-			storeMk.ApproveRequest(mock.Anything, uint32(2), uint32(9)).
-				Return(nil).Once()
+		It("refuses a profile from another family before adding anything", func() {
+			storeMk.GetRequest(mock.Anything, uint32(1)).
+				Return(artistReq, nil).Once()
 
-			_, err := svc.Approve(ctx, 2, 9, "lossless")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("monitors the album under an artist already in the library", func() {
-			storeMk.GetRequest(mock.Anything, uint32(2)).
-				Return(&ent.Request{ID: 2, MediaType: "album", MediaMbid: rgMBID}, nil).
-				Twice()
-			metaMk.GetReleaseGroup(mock.Anything, rgMBID).
-				Return(&metadata.ReleaseGroupDetails{ArtistMBID: artistMBID}, nil).
-				Once()
-			storeMk.FindArtistByMBID(mock.Anything, artistMBID).
-				Return(&ent.Artist{ID: 4}, nil).Once()
-			musicMk.Get(mock.Anything, uint32(4)).
-				Return(&ent.Artist{ID: 4, Edges: ent.ArtistEdges{Albums: []*ent.Album{
-					{ID: 11, Mbid: rgMBID},
-				}}}, nil).
-				Once()
-			musicMk.SetAlbumMonitored(mock.Anything, uint32(11), true).
-				Return(nil).Once()
-			storeMk.ApproveRequest(mock.Anything, uint32(2), uint32(9)).
-				Return(nil).Once()
-
-			_, err := svc.Approve(ctx, 2, 9, "")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("fails without approving when the album is not in the artist", func() {
-			storeMk.GetRequest(mock.Anything, uint32(2)).
-				Return(&ent.Request{ID: 2, MediaType: "album", MediaMbid: rgMBID}, nil).
-				Once()
-			metaMk.GetReleaseGroup(mock.Anything, rgMBID).
-				Return(&metadata.ReleaseGroupDetails{ArtistMBID: artistMBID}, nil).
-				Once()
-			storeMk.FindArtistByMBID(mock.Anything, artistMBID).
-				Return(&ent.Artist{ID: 4}, nil).Once()
-			musicMk.Get(mock.Anything, uint32(4)).
-				Return(&ent.Artist{ID: 4}, nil).Once()
-
-			_, err := svc.Approve(ctx, 2, 9, "")
-			Expect(err).To(MatchError(ContainSubstring("approve: add album")))
+			_, err := svc.Approve(ctx, 1, 9, "Retail")
+			Expect(err).To(MatchError(request.ErrUnknownProfile))
 		})
 	})
 
 	Describe("Create book requests", func() {
-		It("persists an author request", func() {
-			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
-				Return(nil, nil).Once()
-			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
-				Return(nil, nil).Once()
-			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "author" && p.MediaID == 30
-			})).
-				Return(&ent.Request{ID: 1}, nil).
-				Once()
-
-			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("rejects a duplicate active author request", func() {
-			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
-				Return(&ent.Request{ID: 7}, nil).Once()
-
-			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
-			})
-			Expect(err).To(MatchError(request.ErrDuplicate))
-		})
-
-		It("rejects an author already in the library", func() {
-			storeMk.FindActiveRequest(mock.Anything, "author", uint32(30)).
-				Return(nil, nil).Once()
-			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
-				Return(&ent.Author{ID: 2}, nil).Once()
-
-			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "author", MediaID: 30, Title: "A", RequesterID: 9,
-			})
-			Expect(err).To(MatchError(request.ErrDuplicate))
-		})
-
-		It("persists a book request with its kind", func() {
+		It("persists a book request", func() {
 			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
 				Return(nil, nil).Once()
+			bookMk.HasBook(mock.Anything, uint32(40)).Return(false, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
-				return p.MediaType == "book" && p.MediaID == 40 &&
-					p.BookKind == "ebook"
+				return p.MediaType == "book" && p.MediaID == 40
 			})).
 				Return(&ent.Request{ID: 3}, nil).
 				Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book", MediaID: 40, BookKind: "ebook",
-				Title: "B", RequesterID: 9,
+				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		DescribeTable("rejects a book without a valid kind",
-			func(kind string) {
-				_, err := svc.Create(ctx, request.CreateParams{
-					MediaType: "book", MediaID: 40, BookKind: kind, Title: "B",
-				})
-				Expect(err).To(MatchError(request.ErrInvalidRequest))
-			},
-			Entry("missing", ""),
-			Entry("unknown", "paperback"),
-		)
-
-		// The dedup index ignores book_kind, so a second kind for a book
-		// with an active request is refused rather than widening the first.
-		It("refuses a different kind for an already-requested book", func() {
-			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
-				Return(&ent.Request{ID: 3, BookKind: "ebook"}, nil).Once()
+		It("persists a series request in its own id space", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book_series", uint32(40)).
+				Return(nil, nil).Once()
+			bookMk.HasSeries(mock.Anything, uint32(40)).Return(false, nil).Once()
+			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
+				return p.MediaType == "book_series" && p.MediaID == 40
+			})).
+				Return(&ent.Request{ID: 4}, nil).
+				Once()
 
 			_, err := svc.Create(ctx, request.CreateParams{
-				MediaType: "book", MediaID: 40, BookKind: "audiobook",
-				Title: "B", RequesterID: 9,
+				MediaType: "book_series", MediaID: 40, Title: "S", RequesterID: 9,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("rejects a duplicate active book request", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+				Return(&ent.Request{ID: 7}, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
+			})
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+
+		It("rejects a book already in the library", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book", uint32(40)).
+				Return(nil, nil).Once()
+			bookMk.HasBook(mock.Anything, uint32(40)).Return(true, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "book", MediaID: 40, Title: "B", RequesterID: 9,
+			})
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+
+		It("rejects a series already in the library", func() {
+			storeMk.FindActiveRequest(mock.Anything, "book_series", uint32(40)).
+				Return(nil, nil).Once()
+			bookMk.HasSeries(mock.Anything, uint32(40)).Return(true, nil).Once()
+
+			_, err := svc.Create(ctx, request.CreateParams{
+				MediaType: "book_series", MediaID: 40, Title: "S", RequesterID: 9,
 			})
 			Expect(err).To(MatchError(request.ErrDuplicate))
 		})
 	})
 
 	Describe("Approve book requests", func() {
-		bookReq := func(kind string) *ent.Request {
-			return &ent.Request{
-				ID:        5,
-				MediaType: "book",
-				MediaID:   40,
-				BookKind:  entrequest.BookKind(kind),
-			}
-		}
+		bookReq := &ent.Request{ID: 5, MediaType: "book", MediaID: 40}
+		seriesReq := &ent.Request{ID: 6, MediaType: "book_series", MediaID: 50}
 
-		It("adds a monitored author with the default policy", func() {
-			storeMk.GetRequest(mock.Anything, uint32(4)).
-				Return(&ent.Request{ID: 4, MediaType: "author", MediaID: 30}, nil).
-				Twice()
-			bookMk.Add(mock.Anything, book.AddParams{
-				HardcoverID: 30, Monitored: true,
-			}).Return(&ent.Author{ID: 8}, nil).Once()
-			storeMk.ApproveRequest(mock.Anything, uint32(4), uint32(9)).
-				Return(nil).Once()
-
-			_, err := svc.Approve(ctx, 4, 9, "")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("marks the request available when the author already exists", func() {
-			storeMk.GetRequest(mock.Anything, uint32(4)).
-				Return(&ent.Request{ID: 4, MediaType: "author", MediaID: 30}, nil).
-				Twice()
-			bookMk.Add(mock.Anything, mock.Anything).
-				Return(nil, fmt.Errorf("%w: id", book.ErrAuthorExists)).Once()
-			storeMk.ApproveRequest(mock.Anything, uint32(4), uint32(9)).
-				Return(nil).Once()
-			storeMk.MarkRequestAvailable(mock.Anything, uint32(4)).
-				Return(nil).Once()
-
-			_, err := svc.Approve(ctx, 4, 9, "")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It(
-			"adds an absent author with policy none and wants the ebook slot",
-			func() {
-				storeMk.GetRequest(mock.Anything, uint32(5)).
-					Return(bookReq("ebook"), nil).Twice()
-				bookMetaMk.GetBook(mock.Anything, uint32(40)).
-					Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
-				storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
-					Return(nil, nil).Once()
-				bookMk.Add(mock.Anything, book.AddParams{
-					HardcoverID: 30, Monitored: true, MonitorPolicy: "none",
-				}).Return(&ent.Author{ID: 8, Edges: ent.AuthorEdges{Books: []*ent.Book{
-					{ID: 20, HardcoverID: 41}, {ID: 21, HardcoverID: 40},
-				}}}, nil).Once()
-				bookMk.SetBookSlot(mock.Anything, uint32(21), "ebook", true).
-					Return(nil).Once()
-				storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
-					Return(nil).Once()
-
-				_, err := svc.Approve(ctx, 5, 9, "")
-				Expect(err).NotTo(HaveOccurred())
-			},
-		)
-
-		It("wants both slots in order for a both request", func() {
-			storeMk.GetRequest(mock.Anything, uint32(5)).
-				Return(bookReq("both"), nil).Twice()
-			bookMetaMk.GetBook(mock.Anything, uint32(40)).
-				Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
-			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
-				Return(&ent.Author{ID: 8}, nil).Once()
-			bookMk.Get(mock.Anything, uint32(8)).
-				Return(&ent.Author{ID: 8, Edges: ent.AuthorEdges{Books: []*ent.Book{
-					{ID: 21, HardcoverID: 40},
-				}}}, nil).Once()
-			bookMk.SetBookSlot(mock.Anything, uint32(21), "ebook", true).
-				Return(nil).Once()
-			bookMk.SetBookSlot(mock.Anything, uint32(21), "audiobook", true).
+		It("adds the book monitored both with the reviewer's profile", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).Return(bookReq, nil).Twice()
+			bookMk.AddBook(mock.Anything, uint32(40), "both", "Retail").
 				Return(nil).Once()
 			storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
 				Return(nil).Once()
 
+			_, err := svc.Approve(ctx, 5, 9, "Retail")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("adds the series monitored all", func() {
+			storeMk.GetRequest(mock.Anything, uint32(6)).
+				Return(seriesReq, nil).
+				Twice()
+			bookMk.AddSeries(mock.Anything, uint32(50), "all", "").
+				Return(nil).Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(6), uint32(9)).
+				Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 6, 9, "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("marks the request available when the book is already there", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).Return(bookReq, nil).Twice()
+			bookMk.AddBook(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(fmt.Errorf("%w: id", request.ErrAlreadyInLibrary)).
+				Once()
+			storeMk.ApproveRequest(mock.Anything, uint32(5), uint32(9)).
+				Return(nil).Once()
+			storeMk.MarkRequestAvailable(mock.Anything, uint32(5)).
+				Return(nil).Once()
+
 			_, err := svc.Approve(ctx, 5, 9, "")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("fails without approving when the book is not in the author", func() {
-			storeMk.GetRequest(mock.Anything, uint32(5)).
-				Return(bookReq("ebook"), nil).Once()
-			bookMetaMk.GetBook(mock.Anything, uint32(40)).
-				Return(&metadata.BookDetails{AuthorHardcover: 30}, nil).Once()
-			storeMk.FindAuthorByHardcoverID(mock.Anything, uint32(30)).
-				Return(&ent.Author{ID: 8}, nil).Once()
-			bookMk.Get(mock.Anything, uint32(8)).
-				Return(&ent.Author{ID: 8}, nil).Once()
+		It("does not approve when hardcover is not configured", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).Return(bookReq, nil).Once()
+			bookMk.AddBook(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(book.ErrNotConfigured).
+				Once()
 
 			_, err := svc.Approve(ctx, 5, 9, "")
-			Expect(err).To(MatchError(ContainSubstring("approve: add book")))
+			Expect(err).To(MatchError(book.ErrNotConfigured))
 		})
 
-		It("fails before any store write when hardcover is not configured", func() {
-			store := dbmocks.NewMockStore(GinkgoT())
-			store.EXPECT().GetRequest(mock.Anything, uint32(5)).
-				Return(bookReq("ebook"), nil).Once()
-			noMeta := request.NewService(
-				store,
-				reqmocks.NewMockMovieAdder(GinkgoT()),
-				reqmocks.NewMockShowAdder(GinkgoT()),
-				musicmocks.NewMockAdder(GinkgoT()),
-				bookmocks.NewMockAdder(GinkgoT()),
-				metadatamocks.NewMockMusicProvider(GinkgoT()),
-				nil,
-			)
+		It("refuses a music profile on a book before adding anything", func() {
+			storeMk.GetRequest(mock.Anything, uint32(5)).Return(bookReq, nil).Once()
 
-			_, err := noMeta.Approve(ctx, 5, 9, "")
-			Expect(err).To(MatchError(book.ErrNotConfigured))
+			_, err := svc.Approve(ctx, 5, 9, "Lossless")
+			Expect(err).To(MatchError(request.ErrUnknownProfile))
+		})
+
+		It("refuses a profile the series family does not hold", func() {
+			storeMk.GetRequest(mock.Anything, uint32(6)).
+				Return(seriesReq, nil).
+				Once()
+
+			_, err := svc.Approve(ctx, 6, 9, "ghost")
+			Expect(err).To(MatchError(request.ErrUnknownProfile))
 		})
 	})
 
@@ -665,10 +554,8 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				barrierStore{Store: store, gate: gate},
 				movies,
 				reqmocks.NewMockShowAdder(GinkgoT()),
-				musicmocks.NewMockAdder(GinkgoT()),
-				bookmocks.NewMockAdder(GinkgoT()),
-				metadatamocks.NewMockMusicProvider(GinkgoT()),
-				metadatamocks.NewMockBookProvider(GinkgoT()),
+				reqmocks.NewMockArtistAdder(GinkgoT()),
+				reqmocks.NewMockBookAdder(GinkgoT()),
 			)
 
 			errs := make([]error, 2)
@@ -733,6 +620,15 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 
 			_, err := svc.Approve(ctx, 1, 9, "")
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("refuses a profile outside the video family before adding", func() {
+			storeMk.GetRequest(mock.Anything, uint32(1)).
+				Return(&ent.Request{ID: 1, MediaType: "movie", MediaID: 5}, nil).
+				Once()
+
+			_, err := svc.Approve(ctx, 1, 9, "Lossless")
+			Expect(err).To(MatchError(request.ErrUnknownProfile))
 		})
 
 		It(

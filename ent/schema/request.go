@@ -22,13 +22,11 @@ func (Request) Mixin() []ent.Mixin {
 func (Request) Fields() []ent.Field {
 	return []ent.Field{
 		field.Enum("media_type").
-			Values("movie", "tvshow", "artist", "album", "author", "book"),
+			Values("movie", "tvshow", "artist", "book", "book_series"),
 		field.Uint32("media_id").Optional().Default(0).
-			Comment("TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for authors and books. Zero for artists and albums."),
+			Comment("TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists."),
 		field.String("media_mbid").Optional().
-			Comment("MusicBrainz ID: artist MBID for artist requests, release-group MBID for album requests."),
-		field.Enum("book_kind").Values("ebook", "audiobook", "both").Optional().
-			Comment("Slot a book request asks for. Only set when media_type=book."),
+			Comment("Artist MBID, for artist requests only."),
 		field.String("title").NotEmpty(),
 		field.Enum("status").
 			Values("pending", "approved", "denied", "available").

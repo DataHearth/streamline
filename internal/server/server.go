@@ -48,6 +48,12 @@ type Server struct {
 	web     *web.Handler
 	api     *restapi.Server
 	posters posters.Manager
+	art     LookupArt
+}
+
+// LookupArt serves the art of titles that are not in the library yet.
+type LookupArt interface {
+	Serve(w http.ResponseWriter, r *http.Request, kind, key string)
 }
 
 // Config carries the service-layer dependencies the composition root needs to
@@ -79,6 +85,7 @@ type Config struct {
 	MetadataBook    metadata.BookProvider
 	Hardcover       interface{ AuthRejected() bool }
 	Posters         posters.Manager
+	LookupArt       LookupArt
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
 	Importer        importer.Enqueuer
@@ -134,6 +141,7 @@ func New(cfg Config) *Server {
 		web:     webH,
 		api:     api,
 		posters: cfg.Posters,
+		art:     cfg.LookupArt,
 	}
 
 	// RequestID first so every line the rest of the chain logs — including the
@@ -201,6 +209,15 @@ func New(cfg Config) *Server {
 				return
 			}
 			s.posters.Serve(w, r, kind, uint32(idU))
+		},
+	)
+
+	// The one proxy for art of a title not in the library: the browser sees only
+	// same-origin bytes. Behind the session middleware like /posters above.
+	s.router.Get(
+		"/posters/lookup/{kind}/{key}/poster.jpg",
+		func(w http.ResponseWriter, r *http.Request) {
+			s.art.Serve(w, r, chi.URLParam(r, "kind"), chi.URLParam(r, "key"))
 		},
 	)
 

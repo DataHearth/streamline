@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -85,6 +86,42 @@ func (d *Deezer) get(
 		span,
 		otelx.DecodeJSON(resp.Body, maxDeezerResponse, out),
 	)
+}
+
+// DeezerArtist is the slice of a Deezer artist the lookup art proxy needs.
+type DeezerArtist struct {
+	ID         uint32 `json:"id"`
+	Name       string `json:"name"`
+	PictureURL string `json:"picture_xl"`
+}
+
+// ArtistByID returns the artist with the Deezer id, or nil when Deezer has
+// none. The id comes from MusicBrainz's own url-rel, so no name guess is
+// involved.
+func (d *Deezer) ArtistByID(ctx context.Context, id uint32) (*DeezerArtist, error) {
+	var a DeezerArtist
+	found, err := d.get(ctx, "/artist/"+strconv.FormatUint(uint64(id), 10), nil, &a)
+	if err != nil || !found || a.ID == 0 {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// SearchArtists returns Deezer's first page of artist hits for name. Whether a
+// hit is the right artist is the caller's call; Deezer ranks namesakes
+// together, so only an unambiguous result is safe to use.
+func (d *Deezer) SearchArtists(
+	ctx context.Context,
+	name string,
+) ([]DeezerArtist, error) {
+	var payload struct {
+		Data []DeezerArtist `json:"data"`
+	}
+	found, err := d.get(ctx, "/search/artist", url.Values{"q": {name}}, &payload)
+	if err != nil || !found {
+		return nil, err
+	}
+	return payload.Data, nil
 }
 
 // CoverByUPC returns the 1000px cover of the album carrying the barcode, or

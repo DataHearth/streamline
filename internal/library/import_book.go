@@ -34,7 +34,7 @@ func (s *ImportService) ImportEbook(
 	srcPath string,
 	author *ent.Author,
 	b *ent.Book,
-	profile config.EbookQualityProfileEntry,
+	profile config.BookQualityProfileEntry,
 	replace bool,
 ) (ImportedFile, error) {
 	lib := config.Get().Library

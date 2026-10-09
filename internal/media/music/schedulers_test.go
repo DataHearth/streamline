@@ -87,9 +87,9 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 			"download_clients": clients,
 			"music_quality_profiles": []map[string]any{
 				{
-					"name":    "lossless",
-					"formats": []string{"flac-24", "flac", "mp3-320"},
-					"cutoff":  "flac",
+					"name":      "lossless",
+					"tiers":     []string{"hires", "lossless", "high"},
+					"preferred": "lossless",
 				},
 			},
 			"music_quality_default_profile": "lossless",

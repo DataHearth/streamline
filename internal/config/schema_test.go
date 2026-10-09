@@ -65,9 +65,8 @@ var listElementTypes = map[string]reflect.Type{
 	"media_server.servers": reflect.TypeFor[MediaServerEntry](),
 	"custom_formats":       reflect.TypeFor[CustomFormatEntry](),
 
-	"music_quality_profiles":     reflect.TypeFor[MusicQualityProfileEntry](),
-	"ebook_quality_profiles":     reflect.TypeFor[EbookQualityProfileEntry](),
-	"audiobook_quality_profiles": reflect.TypeFor[AudiobookQualityProfileEntry](),
+	"music_quality_profiles": reflect.TypeFor[MusicQualityProfileEntry](),
+	"book_quality_profiles":  reflect.TypeFor[BookQualityProfileEntry](),
 }
 
 // itemProperties resolves the JSON Schema "properties" map describing one

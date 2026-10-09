@@ -685,6 +685,46 @@ quality_profiles:
 		})
 	})
 
+	Describe("music and book profile invariants", func() {
+		load := func(body string) error {
+			GinkgoHelper()
+			DeferCleanup(ResetForTest)
+			return LoadReader(strings.NewReader(
+				"data_dir: " + GinkgoT().TempDir() + "\n" + body,
+			))
+		}
+
+		It(
+			"rejects a hand-edited music profile whose preferred tier is unticked",
+			func() {
+				Expect(load(`music_quality_profiles:
+  - name: odd
+    tiers: [lossless]
+    preferred: low
+music_quality_default_profile: odd
+`)).To(MatchError(ContainSubstring("not one of its tiers")))
+			},
+		)
+
+		It("rejects a book kind default that names no profile", func() {
+			Expect(load(`book_quality_profiles:
+  - name: only
+    ebook: { formats: [EPUB], preferred: EPUB }
+    audiobook: { formats: [M4B], preferred: M4B }
+book_quality_default_profiles: { novel: only, bd: only, comic: only, manga: ghost }
+`)).To(MatchError(ContainSubstring("book_quality_default_profiles.manga")))
+		})
+
+		It("rejects a min_bitrate above 1024", func() {
+			Expect(load(`book_quality_profiles:
+  - name: only
+    ebook: { formats: [EPUB], preferred: EPUB }
+    audiobook: { formats: [M4B], preferred: M4B, min_bitrate: 2000 }
+book_quality_default_profiles: { novel: only, bd: only, comic: only, manga: only }
+`)).To(HaveOccurred())
+		})
+	})
+
 	Describe("DumpDefaults", func() {
 		It("writes valid YAML with expected top-level keys", func() {
 			var buf bytes.Buffer

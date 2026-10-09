@@ -34,7 +34,13 @@ Subsonic serves artists, albums, songs, album lists, search and raw streaming wi
 
 The unit of acquisition is the album for music and the slot (ebook or audiobook) for books. Each has a manual search that returns every release the indexers offer, scored against the quality profile and with rejected releases kept at the end with their reason, and a grab that sends the chosen release to the download client.
 
-A stock install has no music or book quality profiles, so searches answer with `no_quality_profile` until you create one under the music, ebook and audiobook profile settings.
+A stock install has no music profile, so a music search answers with `no_quality_profile` until you create one in Settings → Quality profiles; the first one you create becomes the default. Books ship with a stock `default` profile.
+
+**Music profiles are tiers, not formats.** A profile ticks the tiers it accepts, best first: *hi-res* (24-bit lossless), *lossless*, *high* (MP3 320, V0, AAC 256), *standard* (MP3 192-256, V2) and *low* (under 192 kbps), and names the *preferred* one, which is where upgrades stop. Leaving hi-res unticked is how a lossless profile keeps 24-bit files off your disk. A release whose name states no quality is listed but set aside, with the reason; if ffprobe is available an imported file is measured, and a file whose real tier your profile does not accept (a "FLAC" that is a 128k transcode) is held for your decision before anything is copied.
+
+**Book profiles cover both slots.** One profile holds the accepted ebook formats (`EPUB`, `AZW3`, `MOBI`, `PDF`, `CBZ`, `CBR`) and audiobook formats (`M4B`, `MP3`, `M4A`, `FLAC`), a preferred one for each, and a minimum audiobook bit rate. A book takes the default profile of its kind (novel, bd, comic or manga). An audiobook whose files are mostly in an unticked format, or whose measured bit rate is under the minimum, is held before import.
+
+**Upgrades.** With *Upgrade allowed* on, the RSS scan replaces what you have with a better release it sees until the preferred tier or format is reached: an album per track, only where the new tier beats that track's own. Nothing searches in order to upgrade. Ticking *replace existing files* on a manual grab replaces the matching files once the new ones are in place and verified.
 
 When a download completes, music is imported with corrected tags and MusicBrainz ids written into the library copy, renamed per `library.music_naming`. Because tags are written, music imports copy instead of hardlinking (and instead of moving when seeding is kept on), or the torrent you are still seeding would be corrupted. Books are never modified: an ebook is placed as one file named per `library.ebook_naming`, an audiobook as one folder per `library.audiobook_naming` with its original file names.
 
@@ -65,4 +71,3 @@ Users can request an artist (its whole discography), a single album, an author (
 - Multi-disc albums split into `CD1`, `CD2` folders are adopted as separate candidates.
 - OPDS covers need a web session, so readers show no thumbnails.
 - A book Hardcover credits to several authors (anthologies, co-written titles) is listed under whichever of them you added first.
-- Music and book quality profiles have no "make default" action yet: set a profile on each artist or author, or set `music_quality_default_profile` / `ebook_quality_default_profile` / `audiobook_quality_default_profile` in the config file.

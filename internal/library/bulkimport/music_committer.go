@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 )
 
 // runCommitMusic adopts every reviewed album folder in a music scan in place:
@@ -275,12 +276,22 @@ func planAlbumFiles(
 		plan = append(plan, db.AdoptAlbumFile{
 			TrackID: tr.ID,
 			Path:    path,
-			Quality: info.Format,
+			Quality: adoptedTier(path),
 			Format:  info.Format,
 			Size:    stat.Size(),
 		})
 	}
 	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
+}
+
+// adoptedTier is the tier recorded for an adopted file. Nothing is probed, so
+// only the extension can speak: a lossless one is lossless, never hi-res, and
+// every other file is left without a tier rather than guessed at.
+func adoptedTier(path string) string {
+	if strings.EqualFold(filepath.Ext(path), ".flac") {
+		return quality.TierLossless.String()
+	}
+	return ""
 }
 
 func commitAlbumFail(

@@ -49,18 +49,20 @@ var _ = Describe("Book service", Label("unit", "integration", "book"), func() {
 		dl = mockdownload.NewMockDownloader(GinkgoT())
 		svc = NewService(db.New(client), provider, posters, indexers, dl)
 		configtest.Setup(map[string]any{
-			"ebook_quality_profiles": []map[string]any{
+			"book_quality_profiles": []map[string]any{
 				{
-					"name":    "std",
-					"formats": []string{"epub", "azw3"},
-					"cutoff":  "epub",
+					"name": "std",
+					"ebook": map[string]any{
+						"formats": []string{"EPUB", "AZW3"}, "preferred": "EPUB",
+					},
+					"audiobook": map[string]any{
+						"formats": []string{"M4B", "MP3"}, "preferred": "M4B",
+					},
 				},
 			},
-			"ebook_quality_default_profile": "std",
-			"audiobook_quality_profiles": []map[string]any{
-				{"name": "std", "formats": []string{"m4b", "mp3"}, "cutoff": "m4b"},
+			"book_quality_default_profiles": map[string]any{
+				"novel": "std", "bd": "std", "comic": "std", "manga": "std",
 			},
-			"audiobook_quality_default_profile": "std",
 			"library": map[string]any{
 				"ebook_path":     GinkgoT().TempDir(),
 				"audiobook_path": GinkgoT().TempDir(),
@@ -372,10 +374,10 @@ var _ = Describe("Book service", Label("unit", "integration", "book"), func() {
 				got, err := svc.SearchBookReleases(ctx, bookID, "ebook")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(got).To(HaveLen(5))
-				Expect(got[0].Format).To(Equal("epub"))
+				Expect(got[0].Format).To(Equal("EPUB"))
 				Expect(got[0].Seeders).To(BeEquivalentTo(9))
-				Expect(got[1].Format).To(Equal("epub"))
-				Expect(got[2].Format).To(Equal("azw3"))
+				Expect(got[1].Format).To(Equal("EPUB"))
+				Expect(got[2].Format).To(Equal("AZW3"))
 				for _, r := range got[:3] {
 					Expect(r.Rejected).To(BeFalse())
 				}
@@ -398,7 +400,7 @@ var _ = Describe("Book service", Label("unit", "integration", "book"), func() {
 					got, err := svc.SearchBookReleases(ctx, bookID, "audiobook")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(got).To(HaveLen(2))
-					Expect(got[0].Format).To(Equal("m4b"))
+					Expect(got[0].Format).To(Equal("M4B"))
 					Expect(got[0].Rejected).To(BeFalse())
 					Expect(got[1].Rejected).To(BeTrue())
 				},
@@ -421,6 +423,7 @@ var _ = Describe("Book service", Label("unit", "integration", "book"), func() {
 
 			It("returns ErrNoQualityProfile without calling an indexer", func() {
 				configtest.Setup(map[string]any{
+					"book_quality_profiles": []map[string]any{},
 					"library": map[string]any{
 						"ebook_path":     GinkgoT().TempDir(),
 						"audiobook_path": GinkgoT().TempDir(),

@@ -918,6 +918,19 @@ func (w *Worker) markRequestsAvailable(
 	}
 }
 
+// markRequestsAvailableByMBID is markRequestsAvailable for the MusicBrainz-keyed
+// request types. An artist request flips on the artist's first imported album,
+// not when the discography is complete: a request has no notion of "all of it".
+func (w *Worker) markRequestsAvailableByMBID(
+	ctx context.Context,
+	mediaType, mbid string,
+) {
+	if err := w.db.MarkRequestsAvailableByMBID(ctx, mediaType, mbid); err != nil {
+		slog.WarnContext(ctx, "mark requests available failed",
+			"media.type", mediaType, "media.mbid", mbid, "error", err)
+	}
+}
+
 func (w *Worker) cleanupTorrent(
 	ctx context.Context,
 	rec *ent.DownloadRecord,

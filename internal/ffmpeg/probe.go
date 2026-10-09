@@ -49,8 +49,38 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 		trace.WithAttributes(attribute.String("file.path", path)))
 	defer span.End()
 
+	raw, err := c.runProbe(ctx, path)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	info, err := parseProbeOutput(raw)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	return info, nil
+}
+
+// ProbeAudio probes a music or audiobook file. Probe refuses a file without a
+// video stream, which is exactly what an audio file is.
+func (c *CLI) ProbeAudio(ctx context.Context, path string) (*AudioInfo, error) {
+	ctx, span := tracer.Start(ctx, "ffmpeg.probe_audio",
+		trace.WithAttributes(attribute.String("file.path", path)))
+	defer span.End()
+
+	raw, err := c.runProbe(ctx, path)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	info, err := parseAudioProbeOutput(raw)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	return info, nil
+}
+
+func (c *CLI) runProbe(ctx context.Context, path string) ([]byte, error) {
 	if !c.Available() {
-		return nil, otelx.RecordSpanError(span, fmt.Errorf("ffprobe not available"))
+		return nil, fmt.Errorf("ffprobe not available")
 	}
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
@@ -70,36 +100,81 @@ func (c *CLI) Probe(ctx context.Context, path string) (*Info, error) {
 	out.limit = maxProbeOutput
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
-		return nil, otelx.RecordSpanError(
-			span,
-			fmt.Errorf("%w: %w", ErrUnreadable, err),
-		)
+		return nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
 	}
 	if out.truncated {
-		return nil, otelx.RecordSpanError(span, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: ffprobe wrote more than %d bytes", ErrUnreadable, maxProbeOutput,
-		))
+		)
 	}
-	info, err := parseProbeOutput(out.buf.Bytes())
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
+	return out.buf.Bytes(), nil
+}
+
+// parseAudioProbeOutput reads the first audio stream. BitRateKbps prefers the
+// stream's own rate and falls back to the container's, which is the only one
+// an mp3 reports.
+func parseAudioProbeOutput(raw []byte) (*AudioInfo, error) {
+	var out probeOutput
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
+	}
+	var stream *probeStream
+	for i := range out.Streams {
+		s := &out.Streams[i]
+		if s.CodecType == "audio" {
+			stream = s
+			break
+		}
+	}
+	if stream == nil {
+		return nil, ErrNoAudioStream
+	}
+	info := &AudioInfo{Codec: stream.CodecName}
+	if d, err := strconv.ParseFloat(out.Format.Duration, 64); err == nil {
+		info.DurationSec = uint32(d)
+	}
+	if info.DurationSec == 0 {
+		if d, err := strconv.ParseFloat(stream.Duration, 64); err == nil {
+			info.DurationSec = uint32(d)
+		}
+	}
+	if info.DurationSec == 0 {
+		return nil, ErrZeroDuration
+	}
+	if n, err := strconv.ParseUint(stream.BitsPerRawSample, 10, 8); err == nil {
+		info.BitDepth = uint8(n)
+	} else if stream.BitsPerSample > 0 && stream.BitsPerSample <= 64 {
+		info.BitDepth = stream.BitsPerSample
+	}
+	if n, err := strconv.ParseUint(stream.SampleRate, 10, 32); err == nil {
+		info.SampleRateHz = uint32(n)
+	}
+	rate := stream.BitRate
+	if rate == "" {
+		rate = out.Format.BitRate
+	}
+	if n, err := strconv.ParseUint(rate, 10, 32); err == nil {
+		info.BitrateKbps = uint32(n / 1000)
 	}
 	return info, nil
 }
 
 type probeStream struct {
-	CodecType     string          `json:"codec_type"`
-	CodecName     string          `json:"codec_name"`
-	Width         uint16          `json:"width"`
-	Height        uint16          `json:"height"`
-	PixFmt        string          `json:"pix_fmt"`
-	Channels      uint8           `json:"channels"`
-	Duration      string          `json:"duration"`
-	BitRate       string          `json:"bit_rate"`
-	ColorTransfer string          `json:"color_transfer"`
-	SideDataList  []probeSideData `json:"side_data_list"`
-	Disposition   probeStreamDisp `json:"disposition"`
-	Tags          probeStreamTags `json:"tags"`
+	BitsPerRawSample string          `json:"bits_per_raw_sample"`
+	BitsPerSample    uint8           `json:"bits_per_sample"`
+	SampleRate       string          `json:"sample_rate"`
+	CodecType        string          `json:"codec_type"`
+	CodecName        string          `json:"codec_name"`
+	Width            uint16          `json:"width"`
+	Height           uint16          `json:"height"`
+	PixFmt           string          `json:"pix_fmt"`
+	Channels         uint8           `json:"channels"`
+	Duration         string          `json:"duration"`
+	BitRate          string          `json:"bit_rate"`
+	ColorTransfer    string          `json:"color_transfer"`
+	SideDataList     []probeSideData `json:"side_data_list"`
+	Disposition      probeStreamDisp `json:"disposition"`
+	Tags             probeStreamTags `json:"tags"`
 }
 
 type probeSideData struct {

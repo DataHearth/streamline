@@ -12,16 +12,15 @@ type CreateRequestParams struct {
 	MediaType      string
 	MediaID        uint32
 	MediaMBID      string
-	BookKind       string
 	Title          string
 	RequesterID    uint32
 	QualityProfile string // "" = no preference
 }
 
 type ListRequestsParams struct {
-	Status      string // "" = all
-	MediaType   string // "" = all
-	RequesterID uint32 // 0 = all requesters (admin view)
+	Status      string   // "" = all
+	MediaTypes  []string // empty = all
+	RequesterID uint32   // 0 = all requesters (admin view)
 	Offset      uint32
 	Limit       uint32
 }
@@ -38,9 +37,6 @@ func (db *DB) CreateRequest(
 		SetQualityProfile(p.QualityProfile)
 	if p.MediaMBID != "" {
 		c = c.SetMediaMbid(p.MediaMBID)
-	}
-	if p.BookKind != "" {
-		c = c.SetBookKind(request.BookKind(p.BookKind))
 	}
 	return c.Save(ctx)
 }
@@ -105,8 +101,12 @@ func (db *DB) ListRequests(
 	if p.Status != "" {
 		q = q.Where(request.StatusEQ(request.Status(p.Status)))
 	}
-	if p.MediaType != "" {
-		q = q.Where(request.MediaTypeEQ(request.MediaType(p.MediaType)))
+	if len(p.MediaTypes) > 0 {
+		types := make([]request.MediaType, len(p.MediaTypes))
+		for i, t := range p.MediaTypes {
+			types[i] = request.MediaType(t)
+		}
+		q = q.Where(request.MediaTypeIn(types...))
 	}
 	if p.RequesterID != 0 {
 		q = q.Where(request.HasRequesterWith(user.IDEQ(p.RequesterID)))
@@ -165,6 +165,21 @@ func (db *DB) MarkRequestsAvailable(
 		Where(
 			request.MediaTypeEQ(request.MediaType(mediaType)),
 			request.MediaIDEQ(mediaID),
+			request.StatusEQ(request.StatusApproved),
+		).SetStatus(request.StatusAvailable).Save(ctx)
+	return err
+}
+
+// MarkRequestsAvailableByMBID is MarkRequestsAvailable for the MusicBrainz-keyed
+// types.
+func (db *DB) MarkRequestsAvailableByMBID(
+	ctx context.Context,
+	mediaType, mbid string,
+) error {
+	_, err := db.client.Request.Update().
+		Where(
+			request.MediaTypeEQ(request.MediaType(mediaType)),
+			request.MediaMbidEQ(mbid),
 			request.StatusEQ(request.StatusApproved),
 		).SetStatus(request.StatusAvailable).Save(ctx)
 	return err

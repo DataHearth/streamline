@@ -22,6 +22,7 @@
 	import { cn } from "@lib/cn";
 	import { formatRelative } from "@lib/dates";
 	import { auth } from "@lib/auth.svelte";
+	import { profilesPath } from "@lib/music-books";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
@@ -128,6 +129,9 @@
 		queryFn: () => api<RequestMediaDetails | ArtistMeta | BookMeta>(`/requests/${detailId}/metadata`),
 		enabled: detailId !== null,
 		staleTime: 5 * 60 * 1000,
+		// A 429 or 503 means the provider is out of budget or unconfigured; a retry
+		// would spend the budget it is protecting. The panel falls back to the title.
+		retry: false,
 	}));
 	const profilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles"],
@@ -137,12 +141,12 @@
 	// A music or book request is approved under that medium's own profiles.
 	const musicProfilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", "music"],
-		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=music"),
+		queryFn: () => api<QualityProfile[]>(profilesPath("music")),
 		enabled: isReviewer,
 	}));
 	const bookProfilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", "books"],
-		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=books"),
+		queryFn: () => api<QualityProfile[]>(profilesPath("books")),
 		enabled: isReviewer,
 	}));
 	function profilesFor(t: MediaRequest["media_type"] | undefined): QualityProfile[] {

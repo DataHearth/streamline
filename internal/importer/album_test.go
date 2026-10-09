@@ -141,6 +141,9 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		dlMk = mockdl.NewMockDownloader(GinkgoT())
 		alb = fixtureAlbum()
 		setup("copy", true)
+		storeMk.EXPECT().
+			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
+			Return(nil).Maybe()
 	})
 
 	It("imports matched tracks, tags the library copies and leaves the gap", func() {
@@ -165,7 +168,13 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			HaveField("TrackID", uint32(12)),
 		))
 		for _, f := range got.Files {
-			Expect(f.Quality).To(Equal(f.Format))
+			// No probe here: a flac reads as lossless off its extension, an
+			// mp3 with no claim in the release title stays unknown.
+			if f.Format == "flac" {
+				Expect(f.Quality).To(Equal("lossless"))
+			} else {
+				Expect(f.Quality).To(BeEmpty())
+			}
 			Expect(f.Path).To(HaveSuffix("." + f.Format))
 			Expect(f.Path).To(HavePrefix(musicDir))
 			Expect(f.Size).To(BeNumerically(">", 0))

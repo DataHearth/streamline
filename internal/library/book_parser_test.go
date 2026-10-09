@@ -8,20 +8,42 @@ import (
 )
 
 var _ = Describe("ParseBookRelease", Label("unit", "library"), func() {
-	DescribeTable("format detection",
-		func(name, wantFormat string) {
-			Expect(ParseBookRelease(name).Format).To(Equal(wantFormat))
+	DescribeTable(
+		"format detection",
+		func(name, wantFormat, wantKind string) {
+			p := ParseBookRelease(name)
+			Expect(p.Format).To(Equal(wantFormat))
+			Expect(p.Kind).To(Equal(wantKind))
 		},
-		Entry("epub", "Brandon Sanderson - Elantris (2005) EPUB", "epub"),
-		Entry("azw3", "Elantris by Brandon Sanderson [AZW3]", "azw3"),
-		Entry("azw", "Elantris.AZW", "azw3"),
-		Entry("mobi", "Elantris.2005.MOBI", "mobi"),
-		Entry("pdf", "Elantris (PDF)", "pdf"),
-		Entry("retail flag ignored for format", "Elantris EPUB Retail", "epub"),
-		Entry("m4b", "Elantris (Unabridged) M4B 64kbps", "m4b"),
-		Entry("mp3 audiobook", "Elantris Audiobook MP3", "mp3"),
-		Entry("bare mp3 is not a book", "Some Artist - Some Album MP3", "other"),
-		Entry("unknown", "Brandon Sanderson - Elantris", "other"),
+		Entry("epub", "Brandon Sanderson - Elantris (2005) EPUB", "EPUB", "ebook"),
+		Entry("azw3", "Elantris by Brandon Sanderson [AZW3]", "AZW3", "ebook"),
+		Entry("azw", "Elantris.AZW", "AZW3", "ebook"),
+		Entry("mobi", "Elantris.2005.MOBI", "MOBI", "ebook"),
+		Entry("pdf", "Elantris (PDF)", "PDF", "ebook"),
+		Entry("cbz", "Saga T01 CBZ", "CBZ", "ebook"),
+		Entry("cbr as a comic container", "Saga T01 CBR", "CBR", "ebook"),
+		Entry(
+			"retail flag ignored for format",
+			"Elantris EPUB Retail",
+			"EPUB",
+			"ebook",
+		),
+		Entry("m4b", "Elantris (Unabridged) M4B 64kbps", "M4B", "audiobook"),
+		Entry("mp3 audiobook", "Elantris Audiobook MP3", "MP3", "audiobook"),
+		Entry("m4a audiobook", "Elantris Unabridged M4A", "M4A", "audiobook"),
+		Entry("flac audiobook", "Elantris narrated FLAC", "FLAC", "audiobook"),
+		Entry("bare mp3 is not a book", "Some Artist - Some Album MP3", "", ""),
+		Entry("bare m4a is not a book", "Some Artist - Some Album M4A", "", ""),
+		Entry("bare flac is not a book", "Some Artist - Some Album FLAC", "", ""),
+		Entry(
+			"constant bit rate is not a comic",
+			"Foo Audiobook MP3 CBR 64k",
+			"MP3",
+			"audiobook",
+		),
+		Entry("cbr beside an audio token is a bit rate", "Foo MP3 CBR", "", ""),
+		Entry("cbr rate with no audio token is a bit rate", "Foo CBR 128", "", ""),
+		Entry("unknown", "Brandon Sanderson - Elantris", "", ""),
 	)
 
 	It("extracts year and flags collections", func() {
@@ -35,50 +57,69 @@ var _ = Describe("ParseBookRelease", Label("unit", "library"), func() {
 		Expect(ParseBookRelease("Cosmere Anthology EPUB").Collection).To(BeTrue())
 	})
 
-	It("classifies the slot kind from the format", func() {
-		Expect(ParseBookRelease("X EPUB").Kind).To(Equal("ebook"))
-		Expect(ParseBookRelease("X M4B").Kind).To(Equal("audiobook"))
-		Expect(ParseBookRelease("X Audiobook MP3").Kind).To(Equal("audiobook"))
-		Expect(ParseBookRelease("X").Kind).To(Equal(""))
-		Expect(ParseBookRelease("Some Album MP3").Kind).To(Equal(""))
+	It("reads a stated audiobook bit rate and no other", func() {
+		Expect(
+			ParseBookRelease("X Unabridged M4B 64kbps").BitrateKbps,
+		).To(Equal(uint32(64)))
+		Expect(
+			ParseBookRelease("X Audiobook MP3 128k").BitrateKbps,
+		).To(Equal(uint32(128)))
+		Expect(ParseBookRelease("X M4B").BitrateKbps).To(BeZero())
+		Expect(ParseBookRelease("X EPUB 300k words").BitrateKbps).To(BeZero())
 	})
 })
 
 var _ = Describe("ScoreBookRelease", Label("unit", "library"), func() {
-	ebookProfile := config.EbookQualityProfileEntry{
-		Name: "std", Formats: []string{"epub", "azw3"}, Cutoff: "epub",
-	}
-	audiobookProfile := config.AudiobookQualityProfileEntry{
-		Name: "m4b", Formats: []string{"m4b", "mp3"}, Cutoff: "m4b",
+	profile := config.BookQualityProfileEntry{
+		Name:           "std",
+		UpgradeAllowed: true,
+		Ebook: config.EbookSlot{
+			Formats: []string{"EPUB", "AZW3", "CBZ"}, Preferred: "EPUB",
+		},
+		Audiobook: config.AudiobookSlot{
+			Formats: []string{"M4B", "MP3"}, Preferred: "M4B", MinBitrate: 64,
+		},
 	}
 
-	It("ranks by ebook profile format order and rejects formats outside it", func() {
-		epub := ScoreEbookRelease(ParseBookRelease("X EPUB"), ebookProfile)
-		azw3 := ScoreEbookRelease(ParseBookRelease("X AZW3"), ebookProfile)
-		pdf := ScoreEbookRelease(ParseBookRelease("X PDF"), ebookProfile)
+	It("ranks by the ebook ladder and rejects formats outside the profile", func() {
+		epub := ScoreEbookRelease(ParseBookRelease("X EPUB"), profile)
+		azw3 := ScoreEbookRelease(ParseBookRelease("X AZW3"), profile)
+		cbz := ScoreEbookRelease(ParseBookRelease("X CBZ"), profile)
 		Expect(epub).To(BeNumerically(">", azw3))
-		Expect(pdf).To(Equal(-1))
+		Expect(azw3).To(BeNumerically(">", cbz))
+		score, reason := JudgeEbookRelease(ParseBookRelease("X PDF"), profile)
+		Expect(score).To(Equal(-1))
+		Expect(reason).To(Equal("PDF is not in the profile"))
 	})
 
-	It("scores audiobook releases against the audiobook family", func() {
-		Expect(ScoreAudiobookRelease(ParseBookRelease("X M4B"), audiobookProfile)).
-			To(BeNumerically(">", ScoreAudiobookRelease(ParseBookRelease("X Audiobook MP3"), audiobookProfile)))
+	It("scores audiobook releases against the audiobook slot", func() {
+		Expect(ScoreAudiobookRelease(ParseBookRelease("X M4B"), profile)).
+			To(BeNumerically(">", ScoreAudiobookRelease(ParseBookRelease("X Audiobook MP3"), profile)))
 	})
+
+	It(
+		"rejects a stated rate under the floor with the numbers and accepts an unstated one",
+		func() {
+			score, reason := JudgeAudiobookRelease(
+				ParseBookRelease("X Unabridged M4B 32kbps"),
+				profile,
+			)
+			Expect(score).To(Equal(-1))
+			Expect(reason).To(Equal("32 kbps is below the profile's minimum of 64"))
+			Expect(
+				ScoreAudiobookRelease(ParseBookRelease("X M4B"), profile),
+			).To(BeNumerically(">", 0))
+		},
+	)
 
 	It("rejects a release of the other family", func() {
+		Expect(ScoreEbookRelease(ParseBookRelease("X M4B"), profile)).To(Equal(-1))
 		Expect(
-			ScoreEbookRelease(ParseBookRelease("X M4B"), ebookProfile),
-		).To(Equal(-1))
-		Expect(
-			ScoreAudiobookRelease(ParseBookRelease("X EPUB"), audiobookProfile),
+			ScoreAudiobookRelease(ParseBookRelease("X EPUB"), profile),
 		).To(Equal(-1))
 	})
 
-	It("rejects an undetectable release even when other is in the profile", func() {
-		profile := config.EbookQualityProfileEntry{
-			Name:    "any",
-			Formats: []string{"epub", "other"},
-		}
+	It("rejects an undetectable release", func() {
 		Expect(ScoreEbookRelease(ParseBookRelease("X"), profile)).To(Equal(-1))
 	})
 })

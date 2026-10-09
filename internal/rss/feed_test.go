@@ -172,6 +172,10 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			Return(nil, nil).Maybe()
 		store.EXPECT().ListWantedBooks(mock.Anything, mock.Anything).
 			Return(nil, nil).Maybe()
+		store.EXPECT().ListUpgradeCandidateAlbums(mock.Anything).
+			Return(nil, nil).Maybe()
+		store.EXPECT().ListUpgradeCandidateBooks(mock.Anything).
+			Return(nil, nil).Maybe()
 	})
 
 	It("noops when no indexers are configured", func() {

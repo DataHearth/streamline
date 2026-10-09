@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,16 +38,20 @@ const openSearchDescription = `<?xml version="1.0" encoding="UTF-8"?>
 </OpenSearchDescription>
 `
 
-func ebookContentType(quality string) string {
-	switch quality {
-	case "epub":
+func ebookContentType(format string) string {
+	switch strings.ToUpper(format) {
+	case "EPUB":
 		return "application/epub+zip"
-	case "pdf":
+	case "PDF":
 		return "application/pdf"
-	case "mobi":
+	case "MOBI":
 		return "application/x-mobipocket-ebook"
-	case "azw3":
+	case "AZW3":
 		return "application/x-mobi8-ebook"
+	case "CBZ":
+		return "application/vnd.comicbook+zip"
+	case "CBR":
+		return "application/vnd.comicbook-rar"
 	default:
 		return "application/octet-stream"
 	}
@@ -289,8 +294,10 @@ func bookEntry(bk *ent.Book) *entry {
 		Updated: atomTime(bk.UpdateTime),
 		Links: []link{
 			{
-				Rel:  relAcquisition,
-				Href: fmt.Sprintf("/opds/download/%d/%s", bk.ID, best.Quality),
+				Rel: relAcquisition,
+				Href: fmt.Sprintf(
+					"/opds/download/%d/%s", bk.ID, strings.ToLower(best.Quality),
+				),
 				Type: ebookContentType(best.Quality),
 			},
 			{
@@ -310,8 +317,8 @@ func bookEntry(bk *ent.Book) *entry {
 }
 
 func bestFile(files []*ent.MediaFile) *ent.MediaFile {
-	rank := func(quality string) int {
-		if i := slices.Index(config.EbookFormats, quality); i >= 0 {
+	rank := func(format string) int {
+		if i := slices.Index(config.EbookFormats, strings.ToUpper(format)); i >= 0 {
 			return i
 		}
 		return len(config.EbookFormats)

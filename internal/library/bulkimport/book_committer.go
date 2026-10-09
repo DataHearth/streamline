@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/otelx"
+	"github.com/datahearth/streamline/internal/quality"
 )
 
 // runCommitBooks adopts every reviewed book in a book scan in place: it
@@ -124,7 +125,7 @@ func (s *Service) commitBook(
 			BookKind: kind,
 			Path:     p,
 			Size:     info.Size(),
-			Quality:  ext,
+			Quality:  adoptedBookQuality(ext),
 			Format:   ext,
 			Source:   entmediafile.SourceOrphan,
 		}); cerr != nil {
@@ -248,6 +249,17 @@ func knownAuthorID(sc *ent.ImportScanBook, bookHC uint32) uint32 {
 		}
 	}
 	return 0
+}
+
+// adoptedBookQuality is the format recorded for an adopted book file: the
+// upper-case profile format, or empty for an extension no profile can name.
+func adoptedBookQuality(ext string) string {
+	f := strings.ToUpper(ext)
+	if slices.Contains(quality.EbookLadder, f) ||
+		slices.Contains(quality.AudiobookLadder, f) {
+		return f
+	}
+	return ""
 }
 
 func commitBookFail(

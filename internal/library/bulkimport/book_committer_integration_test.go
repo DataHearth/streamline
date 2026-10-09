@@ -191,7 +191,7 @@ var _ = Describe(
 					Expect(f.Size).To(Equal(int64(1)))
 				}
 				Expect([]string{files[0].Quality, files[1].Quality}).
-					To(ConsistOf("epub", "mobi"))
+					To(ConsistOf("EPUB", "MOBI"))
 			},
 		)
 

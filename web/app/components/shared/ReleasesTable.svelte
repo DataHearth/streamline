@@ -476,7 +476,7 @@
 				{:else if music}
 					<span class="inline-flex h-6 whitespace-nowrap items-center gap-1.5 rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
 						<Music size={13} aria-hidden="true" />
-						{tierLabel(releaseTier(r.source))}
+						{tierLabel(r.audio_tier ?? releaseTier(r.source))}
 						{#if r.source}<span class="font-mono text-[10.5px] font-medium text-fg-subtle">{r.source}</span>{/if}
 					</span>
 				{:else}

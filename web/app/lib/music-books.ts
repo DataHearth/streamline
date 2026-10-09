@@ -110,6 +110,7 @@ export type ArtistCounts = {
 
 // ── Books ────────────────────────────────────────────────────────────────
 export type BookKind = "novel" | "bd" | "comic" | "manga";
+export const BOOK_KINDS: BookKind[] = ["novel", "bd", "comic", "manga"];
 export type BookFormat = "ebook" | "audiobook";
 export type BookMonitor = "both" | "ebook" | "audiobook" | "none";
 export type FormatState = MediaState | "unmonitored";
@@ -212,7 +213,9 @@ export type ShelfItem = {
 	author: string;
 	kind: BookKind;
 	status: MediaState;
-	cover_url: string;
+	// The Book whose poster is the cover: the book itself, or a series' lowest
+	// volume. The image is bookPosterUrl(cover_id).
+	cover_id: number;
 	added_at: string;
 	year?: number;
 	progress?: number;
@@ -561,10 +564,11 @@ export function releaseLanguage(title: string): string | null {
 }
 
 // ── Quality profiles ─────────────────────────────────────────────────────
-// Music and books keep their own profiles, served by /quality-profiles?media=:
+// Music and books keep their own profiles, each family behind its own resource:
 // a resolution or a video codec means nothing to a FLAC or an EPUB. Names are
-// unique per medium, so every write carries the medium too.
+// unique per family.
 export type ProfileMedia = "music" | "books";
+export const profilesPath = (media: ProfileMedia) => (media === "music" ? "/music/quality-profiles" : "/books/quality-profiles");
 
 // Best first. A profile grabs only the tiers it ticks and keeps upgrading until
 // it holds `preferred`. Leaving hi-res unticked is how a Lossless profile keeps
@@ -592,7 +596,9 @@ export const AUDIOBOOK_BITRATES = [0, 64, 96, 128];
 // and its audiobook.
 export type BookProfile = {
 	name: string;
-	is_default?: boolean;
+	// The book kinds this is the default profile of; a book takes the default of
+	// its own kind.
+	default_for?: BookKind[];
 	upgrade_allowed: boolean;
 	ebook: { formats: EbookFormat[]; preferred: EbookFormat };
 	audiobook: { formats: AudiobookFormat[]; preferred: AudiobookFormat; min_bitrate: number };
@@ -602,7 +608,7 @@ const TIER_FORMATS: Record<MusicTier, string> = {
 	hires: "FLAC · ALAC 24-bit",
 	lossless: "FLAC · ALAC 16-bit",
 	high: "MP3 320 · V0 · AAC 256",
-	standard: "MP3 192–256 · AAC 128",
+	standard: "MP3 192–256 · AAC 192–255",
 	low: "MP3 · AAC < 192 kbps",
 };
 // A typical 45-minute album, so the list can say what each step costs on disk.
@@ -695,7 +701,7 @@ export const bookProfileSchema = v.object({
 	ebook_preferred: v.picklist(EBOOK_FORMATS),
 	audiobook_formats: v.pipe(v.array(v.picklist(AUDIOBOOK_FORMATS)), v.minLength(1, i18n.validation_pick_format())),
 	audiobook_preferred: v.picklist(AUDIOBOOK_FORMATS),
-	min_bitrate: v.number(),
+	min_bitrate: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1024)),
 });
 
 export const musicValues = (p: MusicProfile): MusicProfileValues => ({

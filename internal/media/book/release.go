@@ -74,7 +74,10 @@ func (s *Service) SearchBookReleases(
 
 	var score func(library.ParsedBookRelease) int
 	if kind == string(mediafile.BookKindEbook) {
-		profile, ok := config.ResolveEbookQualityProfile(author.EbookQualityProfile)
+		profile, ok := config.ResolveBookQualityProfile(
+			author.EbookQualityProfile,
+			"",
+		)
 		if !ok {
 			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
@@ -82,8 +85,8 @@ func (s *Service) SearchBookReleases(
 			return library.ScoreEbookRelease(p, profile)
 		}
 	} else {
-		profile, ok := config.ResolveAudiobookQualityProfile(
-			author.AudiobookQualityProfile,
+		profile, ok := config.ResolveBookQualityProfile(
+			author.AudiobookQualityProfile, "",
 		)
 		if !ok {
 			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)

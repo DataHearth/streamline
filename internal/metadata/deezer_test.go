@@ -144,4 +144,68 @@ var _ = Describe("Deezer cover provider", Label("unit", "metadata"), func() {
 			Expect(hit).To(BeNil())
 		})
 	})
+
+	Describe("ArtistByID", func() {
+		It("returns the artist with its xl picture", func() {
+			var gotPath string
+			dz.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotPath = r.URL.Path
+					return jsonResponse(
+						200,
+						`{"id":412,"name":"Nirvana","picture_xl":"https://cdn-images.dzcdn.net/x.jpg"}`,
+					), nil
+				},
+			)
+			a, err := dz.ArtistByID(ctx, 412)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(a).To(Equal(&DeezerArtist{
+				ID:         412,
+				Name:       "Nirvana",
+				PictureURL: "https://cdn-images.dzcdn.net/x.jpg",
+			}))
+			Expect(gotPath).To(Equal("/artist/412"))
+		})
+
+		It("treats Deezer's 200 error body as no artist", func() {
+			dz.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"error":{"code":800}}`), nil
+				},
+			)
+			a, err := dz.ArtistByID(ctx, 1)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(a).To(BeNil())
+		})
+	})
+
+	Describe("SearchArtists", func() {
+		It("returns the hits for the name", func() {
+			var gotQuery string
+			dz.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotQuery = r.URL.Query().Get("q")
+					return jsonResponse(
+						200,
+						`{"data":[{"id":1,"name":"Nirvana","picture_xl":"p1"},{"id":2,"name":"Nirvana UK","picture_xl":"p2"}]}`,
+					), nil
+				},
+			)
+			hits, err := dz.SearchArtists(ctx, "Nirvana")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits).To(HaveLen(2))
+			Expect(gotQuery).To(Equal("Nirvana"))
+		})
+
+		It("treats a 404 as no hits", func() {
+			dz.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(404, `{}`), nil
+				},
+			)
+			hits, err := dz.SearchArtists(ctx, "x")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits).To(BeEmpty())
+		})
+	})
 })

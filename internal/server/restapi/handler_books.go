@@ -71,26 +71,14 @@ func deref(s *string) string {
 	return *s
 }
 
-// The Resolve functions fall back to the default profile, so they cannot tell
-// a typo from a real name.
+// The Resolve function falls back to the default profile, so it cannot tell a
+// typo from a real name.
 func ebookProfileExists(name string) bool {
-	c := config.Get()
-	if c == nil {
-		return false
-	}
-	return slices.ContainsFunc(
-		c.EbookQualityProfiles,
-		func(p config.EbookQualityProfileEntry) bool { return p.Name == name },
-	)
+	_, ok := config.LookupBookQualityProfile(name)
+	return ok
 }
 
 func audiobookProfileExists(name string) bool {
-	c := config.Get()
-	if c == nil {
-		return false
-	}
-	return slices.ContainsFunc(
-		c.AudiobookQualityProfiles,
-		func(p config.AudiobookQualityProfileEntry) bool { return p.Name == name },
-	)
+	_, ok := config.LookupBookQualityProfile(name)
+	return ok
 }

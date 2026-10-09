@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
@@ -20,7 +20,8 @@ import (
 // importBookRecord routes a completed book download into the slot it was
 // grabbed for. One record fills one slot: an ebook record imports a single
 // file, an audiobook record every audio file into one folder. Files are
-// transferred as they are — nothing is probed, tagged or held.
+// transferred as they are and never tagged; an audiobook is checked against
+// its profile first and parked held when it falls short.
 func (w *Worker) importBookRecord(
 	ctx context.Context,
 	span trace.Span,
@@ -62,10 +63,14 @@ func (w *Worker) importBookRecord(
 	var (
 		placed []library.ImportedFile
 		aside  []string
+		probed *ffmpeg.Info
 	)
 	switch rec.BookKind {
 	case downloadrecord.BookKindEbook:
-		profile, ok := config.ResolveEbookQualityProfile(author.EbookQualityProfile)
+		profile, ok := config.ResolveBookQualityProfile(
+			author.EbookQualityProfile,
+			"",
+		)
 		if !ok {
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
@@ -80,6 +85,19 @@ func (w *Worker) importBookRecord(
 		}
 		placed = []library.ImportedFile{f}
 	case downloadrecord.BookKindAudiobook:
+		profile, ok := config.ResolveBookQualityProfile(
+			author.AudiobookQualityProfile, "",
+		)
+		if !ok {
+			return otelx.RecordSpanError(span, ErrNoBookProfile)
+		}
+		if !rec.VerificationBypassed {
+			reasons, measured := w.audiobookHoldReasons(ctx, rec.SavePath, profile)
+			if len(reasons) > 0 {
+				return w.hold(ctx, span, rec, reasons)
+			}
+			probed = measured
+		}
 		aside, err = setAside(ctx, existing)
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
@@ -97,10 +115,13 @@ func (w *Worker) importBookRecord(
 		rows = append(rows, db.MediaFileRow{
 			Path:    f.Path,
 			Size:    f.Size,
-			Quality: bookQuality(kind, format),
+			Quality: bookQuality(format),
 			Format:  format,
 			Parsed:  &f.Parsed,
 		})
+	}
+	if probed != nil && len(rows) > 0 {
+		rows[0].Probe = probed
 	}
 	replacedIDs := make([]uint32, 0, len(existing))
 	for _, mf := range existing {
@@ -122,25 +143,7 @@ func (w *Worker) importBookRecord(
 	slog.InfoContext(ctx, "imported book",
 		"book.id", b.ID, "book.kind", string(rec.BookKind), "files", len(placed))
 
+	w.markRequestsAvailable(ctx, "book", b.HardcoverID)
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
-}
-
-// bookQuality is the profile-ladder tier of a file: its format when the
-// ladder names it, "other" otherwise.
-func bookQuality(kind mediafile.BookKind, ext string) string {
-	ext = strings.ToLower(ext)
-	switch kind {
-	case mediafile.BookKindEbook:
-		switch ext {
-		case "epub", "azw3", "mobi", "pdf":
-			return ext
-		}
-	case mediafile.BookKindAudiobook:
-		switch ext {
-		case "m4b", "mp3":
-			return ext
-		}
-	}
-	return "other"
 }

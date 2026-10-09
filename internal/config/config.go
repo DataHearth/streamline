@@ -67,10 +67,8 @@ type Config struct {
 	MusicQualityProfiles       []MusicQualityProfileEntry `koanf:"music_quality_profiles"        validate:"unique=Name,dive"`
 	MusicQualityDefaultProfile string                     `koanf:"music_quality_default_profile"`
 
-	EbookQualityProfiles           []EbookQualityProfileEntry     `koanf:"ebook_quality_profiles"            validate:"unique=Name,dive"`
-	EbookQualityDefaultProfile     string                         `koanf:"ebook_quality_default_profile"`
-	AudiobookQualityProfiles       []AudiobookQualityProfileEntry `koanf:"audiobook_quality_profiles"        validate:"unique=Name,dive"`
-	AudiobookQualityDefaultProfile string                         `koanf:"audiobook_quality_default_profile"`
+	BookQualityProfiles        []BookQualityProfileEntry `koanf:"book_quality_profiles"         validate:"unique=Name,dive"`
+	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -614,6 +612,7 @@ func (c *Config) checkInvariants() error {
 			}
 		}
 	}
+	errs = append(errs, c.checkMusicBookProfiles()...)
 	builtin := 0
 	for _, dc := range c.DownloadClients {
 		if dc.ClientType == "builtin" {
@@ -743,6 +742,56 @@ func (c *Config) checkInvariants() error {
 	return errors.Join(errs...)
 }
 
+// checkMusicBookProfiles checks each music and book profile's preferred entry
+// against its own list, and that every non-empty default names a profile that
+// exists. Like the video check, the default one only runs against a non-empty
+// list: an empty list is how a stock install starts, and the first profile
+// added becomes the default.
+func (c *Config) checkMusicBookProfiles() []error {
+	var errs []error
+	for _, p := range c.MusicQualityProfiles {
+		if err := p.check(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for _, p := range c.BookQualityProfiles {
+		if err := p.check(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(c.MusicQualityProfiles) > 0 && c.MusicQualityDefaultProfile != "" &&
+		!slices.ContainsFunc(
+			c.MusicQualityProfiles,
+			func(p MusicQualityProfileEntry) bool {
+				return p.Name == c.MusicQualityDefaultProfile
+			},
+		) {
+		errs = append(errs, fmt.Errorf(
+			"music_quality_default_profile %q names no profile in music_quality_profiles",
+			c.MusicQualityDefaultProfile,
+		))
+	}
+	if len(c.BookQualityProfiles) > 0 {
+		for _, k := range BookKinds {
+			name := c.BookQualityDefaultProfiles.For(k)
+			if name == "" {
+				continue
+			}
+			if !slices.ContainsFunc(
+				c.BookQualityProfiles,
+				func(p BookQualityProfileEntry) bool { return p.Name == name },
+			) {
+				errs = append(errs, fmt.Errorf(
+					"book_quality_default_profiles.%s %q names no profile in book_quality_profiles",
+					k,
+					name,
+				))
+			}
+		}
+	}
+	return errs
+}
+
 // findCustomFormatEntry mirrors FindCustomFormat but reads from an explicit
 // list rather than the singleton — checkInvariants runs on a *Config before
 // it is stored, both at boot (finalize) and inside config.Update (a clone
@@ -844,15 +893,30 @@ func defaults() map[string]any {
 				"upgrade_allowed":      true,
 			},
 		},
-		"movie_quality_default_profile":       "default",
-		"series_quality_default_profile":      "default",
-		"custom_formats":                      []any{},
-		"music_quality_profiles":              []any{},
-		"music_quality_default_profile":       "",
-		"ebook_quality_profiles":              []any{},
-		"ebook_quality_default_profile":       "",
-		"audiobook_quality_profiles":          []any{},
-		"audiobook_quality_default_profile":   "",
+		"movie_quality_default_profile":  "default",
+		"series_quality_default_profile": "default",
+		"custom_formats":                 []any{},
+		"music_quality_profiles":         []any{},
+		"music_quality_default_profile":  "",
+		"book_quality_profiles": []map[string]any{
+			{
+				"name":            "default",
+				"upgrade_allowed": true,
+				"ebook": map[string]any{
+					"formats":   []string{"EPUB", "AZW3", "MOBI", "PDF"},
+					"preferred": "EPUB",
+				},
+				"audiobook": map[string]any{
+					"formats":     []string{"M4B", "MP3"},
+					"preferred":   "M4B",
+					"min_bitrate": 0,
+				},
+			},
+		},
+		"book_quality_default_profiles.novel": "default",
+		"book_quality_default_profiles.bd":    "default",
+		"book_quality_default_profiles.comic": "default",
+		"book_quality_default_profiles.manga": "default",
 		"events.retention":                    "2160h",
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",

@@ -54,8 +54,11 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 	})
 
 	Describe("ImportEbook", func() {
-		profile := config.EbookQualityProfileEntry{
-			Name: "p", Formats: []string{"epub", "mobi"}, Cutoff: "epub",
+		profile := config.BookQualityProfileEntry{
+			Name: "p",
+			Ebook: config.EbookSlot{
+				Formats: []string{"EPUB", "MOBI"}, Preferred: "EPUB",
+			},
 		}
 
 		It("imports the best format and ignores the rest", func() {

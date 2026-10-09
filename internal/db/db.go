@@ -116,6 +116,26 @@ type Store interface {
 	// holding a file stays available, otherwise skipped and wanted follow the
 	// flag.
 	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	// ListUpgradeCandidateAlbums returns the monitored albums that hold a file
+	// and have no live record, tracks and their files loaded.
+	ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, error)
+	// SetLiveAlbumRecordReplaceMode flags the album's newest downloading record.
+	SetLiveAlbumRecordReplaceMode(
+		ctx context.Context,
+		albumID uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// ListUpgradeCandidateBooks returns the books of monitored authors that
+	// hold a file of a slot no live record covers, files loaded.
+	ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error)
+	// SetLiveBookRecordReplaceMode flags the newest downloading record of one
+	// book slot.
+	SetLiveBookRecordReplaceMode(
+		ctx context.Context,
+		bookID uint32,
+		kind downloadrecord.BookKind,
+		mode downloadrecord.ReplaceMode,
+	) error
 	// ListWantedBooks returns books of monitored authors with at least one
 	// monitored, wanted slot under the grab-failure cap and with no live
 	// download record, author loaded.
@@ -1126,6 +1146,10 @@ type Store interface {
 	ApproveRequest(ctx context.Context, id, adminID uint32) error
 	DenyRequest(ctx context.Context, id, adminID uint32, reason string) error
 	ReopenRequest(ctx context.Context, id uint32) error
+	MarkRequestsAvailableByMBID(
+		ctx context.Context,
+		mediaType, mbid string,
+	) error
 	MarkRequestsAvailable(
 		ctx context.Context,
 		mediaType string,

@@ -21,6 +21,7 @@ var tracer = otel.Tracer("github.com/datahearth/streamline/internal/ffmpeg")
 var (
 	ErrUnreadable    = errors.New("ffprobe output unreadable")
 	ErrNoVideoStream = errors.New("no video stream")
+	ErrNoAudioStream = errors.New("no audio stream")
 	ErrZeroDuration  = errors.New("zero duration")
 )
 
@@ -64,11 +65,22 @@ type Info struct {
 	AudioCodecs []string
 }
 
+// AudioInfo is what ProbeAudio reports about the first audio stream of a music
+// or audiobook file. A zero field is unknown.
+type AudioInfo struct {
+	Codec        string
+	DurationSec  uint32
+	BitDepth     uint8
+	SampleRateHz uint32
+	BitrateKbps  uint32
+}
+
 // Prober is the consumer-facing surface (importer, media-probe job). *CLI
 // implements it; tests use the mockery mock.
 type Prober interface {
 	Available() bool
 	Probe(ctx context.Context, path string) (*Info, error)
+	ProbeAudio(ctx context.Context, path string) (*AudioInfo, error)
 	// ResolvedPath returns the absolute ffprobe path this process resolved at
 	// construction, or "" when Available() is false.
 	ResolvedPath() string

@@ -81,7 +81,7 @@ Their **Requests** page lists what they've asked for and where each one stands. 
 
 ---
 
-Music and books can be requested too: an artist or a single album, an author or a single book with the wanted kind (ebook, audiobook or both). Approving a single album or book adds its artist or author unmonitored and monitors only what was requested. See [Music and Books](Music-and-Books).
+Music and books can be requested too: an artist, a single book or a whole series of books. A requester never chooses what to monitor: approving an artist monitors all of its albums, a book is added with both its ebook and audiobook slots, and a series with every volume; change that on the title's page afterwards. The profile you pick at approval comes from that medium's own profiles (music, or books); one from another medium is refused and the request stays pending. A music or book request turns *available* when its first file lands. See [Music and Books](Music-and-Books).
 
 ## Reviewing requests
 

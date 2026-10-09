@@ -19,7 +19,7 @@ type Info struct {
 }
 
 var EbookExtensions = map[string]struct{}{
-	".epub": {}, ".mobi": {}, ".azw3": {}, ".pdf": {},
+	".epub": {}, ".mobi": {}, ".azw3": {}, ".pdf": {}, ".cbz": {}, ".cbr": {},
 }
 
 var AudiobookExtensions = map[string]struct{}{

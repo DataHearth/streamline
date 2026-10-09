@@ -1548,7 +1548,13 @@ paths:
       tags: [music-quality-profiles]
       responses:
         "200":
-          $ref: "#/components/responses/MusicQualityProfileList"
+          description: Music quality profile list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MusicQualityProfile"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -1954,7 +1960,13 @@ paths:
       tags: [book-quality-profiles]
       responses:
         "200":
-          $ref: "#/components/responses/BookQualityProfileList"
+          description: Book quality profile list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookQualityProfile"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
@@ -6679,24 +6691,6 @@ components:
 
     QualityProfileDefaultSet:
       description: Default set.
-
-    MusicQualityProfileList:
-      description: Music quality profile list.
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/MusicQualityProfile"
-
-    BookQualityProfileList:
-      description: Book quality profile list.
-      content:
-        application/json:
-          schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/BookQualityProfile"
 
     RequestMetadataResponse:
       description: Cover, synopsis and basic metadata for a requested item.

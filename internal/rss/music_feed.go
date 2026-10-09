@@ -18,11 +18,12 @@ const (
 	audiobookCategory = 3030
 )
 
-// musicPass carries one tick's state for the album branch: wanted albums
-// indexed by artist key, the music profile resolved per artist profile name,
-// and the albums already attempted.
+// musicPass carries one tick's state for the album branch: wanted albums and
+// albums holding files (upgrade candidates) indexed by artist key, the music
+// profile resolved per artist profile name, and the albums already attempted.
 type musicPass struct {
 	wanted   map[string][]*ent.Album
+	upgrades map[string][]*ent.Album
 	profiles map[string]config.MusicQualityProfileEntry
 	grabbed  map[uint32]struct{}
 }
@@ -42,33 +43,48 @@ func (s *FeedScanner) newMusicPass(ctx context.Context) (*musicPass, error) {
 	if err != nil {
 		return nil, err
 	}
+	upgradable, err := s.store.ListUpgradeCandidateAlbums(ctx)
+	if err != nil {
+		return nil, err
+	}
 	pass := &musicPass{
 		wanted:   make(map[string][]*ent.Album),
+		upgrades: make(map[string][]*ent.Album),
 		profiles: make(map[string]config.MusicQualityProfileEntry),
 		grabbed:  make(map[uint32]struct{}),
 	}
 	unresolved := make(map[string]struct{})
-	for _, a := range albums {
-		ar := a.Edges.Artist
-		if ar == nil {
-			continue
-		}
-		if _, bad := unresolved[ar.QualityProfile]; bad {
-			continue
-		}
-		if _, ok := pass.profiles[ar.QualityProfile]; !ok {
-			p, ok := config.ResolveMusicQualityProfile(ar.QualityProfile)
-			if !ok {
-				unresolved[ar.QualityProfile] = struct{}{}
-				slog.WarnContext(ctx, "feed-scan: music quality profile unresolved",
-					"artist", ar.Name, "profile", ar.QualityProfile)
+	index := func(into map[string][]*ent.Album, list []*ent.Album) {
+		for _, a := range list {
+			ar := a.Edges.Artist
+			if ar == nil {
 				continue
 			}
-			pass.profiles[ar.QualityProfile] = p
+			if _, bad := unresolved[ar.QualityProfile]; bad {
+				continue
+			}
+			if _, ok := pass.profiles[ar.QualityProfile]; !ok {
+				p, ok := config.ResolveMusicQualityProfile(ar.QualityProfile)
+				if !ok {
+					unresolved[ar.QualityProfile] = struct{}{}
+					slog.WarnContext(
+						ctx,
+						"feed-scan: music quality profile unresolved",
+						"artist",
+						ar.Name,
+						"profile",
+						ar.QualityProfile,
+					)
+					continue
+				}
+				pass.profiles[ar.QualityProfile] = p
+			}
+			key := showKey(ar.Name)
+			into[key] = append(into[key], a)
 		}
-		key := showKey(ar.Name)
-		pass.wanted[key] = append(pass.wanted[key], a)
 	}
+	index(pass.wanted, albums)
+	index(pass.upgrades, upgradable)
 	return pass, nil
 }
 
@@ -77,7 +93,7 @@ func (s *FeedScanner) processMusicItems(
 	items []indexer.SearchResult,
 	pass *musicPass,
 ) int {
-	if len(pass.wanted) == 0 {
+	if len(pass.wanted) == 0 && len(pass.upgrades) == 0 {
 		return 0
 	}
 	matched := 0
@@ -101,15 +117,18 @@ func (s *FeedScanner) processMusicItems(
 			}
 		}
 		if a == nil {
+			if s.tryAlbumUpgrade(ctx, item, parsed, artistPart, albumPart, pass) {
+				matched++
+			}
 			continue
 		}
 		if _, already := pass.grabbed[a.ID]; already {
 			continue
 		}
 		profile := pass.profiles[a.Edges.Artist.QualityProfile]
-		if library.ScoreMusicRelease(parsed, profile) < 0 {
+		if library.ScoreMusicRelease(parsed, profile, library.MusicScopeAlbum) < 0 {
 			slog.DebugContext(ctx, "feed-scan: music format rejected",
-				"album", a.Title, "release", item.Title, "format", parsed.Format)
+				"album", a.Title, "release", item.Title, "format", parsed.Source)
 			continue
 		}
 		pass.grabbed[a.ID] = struct{}{}

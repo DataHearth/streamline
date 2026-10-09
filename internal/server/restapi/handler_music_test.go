@@ -27,9 +27,9 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		configtest.SetupFile(map[string]any{
 			"music_quality_profiles": []map[string]any{
 				{
-					"name":    "lossless",
-					"formats": []string{"flac"},
-					"cutoff":  "flac",
+					"name":      "lossless",
+					"tiers":     []string{"lossless"},
+					"preferred": "lossless",
 				},
 			},
 			"music_quality_default_profile": "lossless",

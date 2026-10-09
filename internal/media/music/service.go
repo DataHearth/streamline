@@ -443,12 +443,12 @@ func (s *Service) SearchAlbumReleases(
 	releases := make([]AlbumRelease, 0, len(results))
 	for _, r := range results {
 		parsed := library.ParseMusicRelease(r.Title)
-		score := library.ScoreMusicRelease(parsed, profile)
+		score := library.ScoreMusicRelease(parsed, profile, library.MusicScopeAlbum)
 		if score < 0 {
 			continue
 		}
 		releases = append(releases, AlbumRelease{
-			Result: r, Format: parsed.Format, Score: score,
+			Result: r, Format: parsed.Source, Score: score,
 		})
 	}
 	slices.SortStableFunc(releases, func(x, y AlbumRelease) int {

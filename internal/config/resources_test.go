@@ -876,14 +876,14 @@ var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
 		configtest.Setup(map[string]any{
 			"music_quality_profiles": []map[string]any{
 				{
-					"name":    "lossless",
-					"formats": []string{"flac-24", "flac"},
-					"cutoff":  "flac",
+					"name":      "lossless",
+					"tiers":     []string{"hires", "lossless"},
+					"preferred": "lossless",
 				},
 				{
-					"name":    "lossy",
-					"formats": []string{"mp3-320", "mp3-v0"},
-					"cutoff":  "mp3-320",
+					"name":      "lossy",
+					"tiers":     []string{"high", "standard"},
+					"preferred": "high",
 				},
 			},
 			"music_quality_default_profile": "lossless",
@@ -893,7 +893,7 @@ var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
 	It("returns the named profile", func() {
 		p, ok := config.ResolveMusicQualityProfile("lossy")
 		Expect(ok).To(BeTrue())
-		Expect(p.Cutoff).To(Equal("mp3-320"))
+		Expect(p.Preferred).To(Equal("high"))
 	})
 
 	It("falls back to the default profile on unknown name", func() {
@@ -909,43 +909,56 @@ var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
 	})
 })
 
-var _ = Describe("ResolveEbookQualityProfile", Label("unit", "config"), func() {
+var _ = Describe("ResolveBookQualityProfile", Label("unit", "config"), func() {
+	profile := func(name string) map[string]any {
+		return map[string]any{
+			"name": name,
+			"ebook": map[string]any{
+				"formats":   []string{"EPUB", "AZW3"},
+				"preferred": "EPUB",
+			},
+			"audiobook": map[string]any{
+				"formats":     []string{"M4B"},
+				"preferred":   "M4B",
+				"min_bitrate": 64,
+			},
+		}
+	}
+
 	BeforeEach(func() {
 		configtest.Setup(map[string]any{
-			"ebook_quality_profiles": []map[string]any{
-				{
-					"name":    "standard",
-					"formats": []string{"epub", "azw3"},
-					"cutoff":  "epub",
-				},
+			"book_quality_profiles": []map[string]any{
+				profile("retail"), profile("comics"),
 			},
-			"ebook_quality_default_profile": "standard",
+			"book_quality_default_profiles": map[string]any{
+				"novel": "retail",
+				"bd":    "comics",
+				"comic": "comics",
+				"manga": "retail",
+			},
 		})
 	})
 
-	It("falls back to the default profile on unknown name", func() {
-		p, ok := config.ResolveEbookQualityProfile("nope")
+	It("returns the named profile whatever the kind", func() {
+		p, ok := config.ResolveBookQualityProfile("comics", "novel")
 		Expect(ok).To(BeTrue())
-		Expect(p.Name).To(Equal("standard"))
+		Expect(p.Name).To(Equal("comics"))
+		Expect(p.Audiobook.MinBitrate).To(Equal(uint16(64)))
 	})
 
-	It("reports ok=false when no ebook profiles exist", func() {
-		configtest.Setup()
-		_, ok := config.ResolveEbookQualityProfile("")
-		Expect(ok).To(BeFalse())
+	It("falls back to the default of the book's kind", func() {
+		for kind, want := range map[string]string{
+			"novel": "retail", "bd": "comics", "comic": "comics", "manga": "retail",
+		} {
+			p, ok := config.ResolveBookQualityProfile("nope", kind)
+			Expect(ok).To(BeTrue())
+			Expect(p.Name).To(Equal(want), kind)
+		}
 	})
-})
 
-var _ = Describe("ResolveAudiobookQualityProfile", Label("unit", "config"), func() {
-	It("resolves by name", func() {
-		configtest.Setup(map[string]any{
-			"audiobook_quality_profiles": []map[string]any{
-				{"name": "m4b-only", "formats": []string{"m4b"}, "cutoff": "m4b"},
-			},
-			"audiobook_quality_default_profile": "m4b-only",
-		})
-		p, ok := config.ResolveAudiobookQualityProfile("m4b-only")
+	It("reads an empty kind as novel", func() {
+		p, ok := config.ResolveBookQualityProfile("", "")
 		Expect(ok).To(BeTrue())
-		Expect(p.Cutoff).To(Equal("m4b"))
+		Expect(p.Name).To(Equal("retail"))
 	})
 })

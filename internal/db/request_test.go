@@ -193,8 +193,13 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 				c.SetMediaMbid(mbid)
 			})
 		}
-		author := func(id uint32) error {
-			return create(request.MediaTypeAuthor, func(c *ent.RequestCreate) {
+		series := func(id uint32) error {
+			return create(request.MediaTypeBookSeries, func(c *ent.RequestCreate) {
+				c.SetMediaID(id)
+			})
+		}
+		book := func(id uint32) error {
+			return create(request.MediaTypeBook, func(c *ent.RequestCreate) {
 				c.SetMediaID(id)
 			})
 		}
@@ -211,19 +216,18 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			Expect(r.MediaMbid).To(Equal(mbidA))
 		})
 
-		It("saves a book request with a book kind", func() {
+		It("saves a book request", func() {
 			r, err := client.Request.Create().
 				SetMediaType(request.MediaTypeBook).
 				SetMediaID(12).
-				SetBookKind(request.BookKindEbook).
 				SetTitle("Book").
 				SetRequesterID(userID).
 				Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(r.BookKind).To(Equal(request.BookKindEbook))
+			Expect(r.MediaID).To(Equal(uint32(12)))
 		})
 
-		It("persists the MBID and book kind through the store", func() {
+		It("persists the MBID through the store", func() {
 			a, err := store.CreateRequest(ctx, CreateRequestParams{
 				MediaType:   "artist",
 				MediaMBID:   mbidA,
@@ -237,12 +241,11 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			b, err := store.CreateRequest(ctx, CreateRequestParams{
 				MediaType:   "book",
 				MediaID:     4,
-				BookKind:    "both",
 				Title:       "B",
 				RequesterID: userID,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(b.BookKind).To(Equal(request.BookKindBoth))
+			Expect(b.MediaID).To(Equal(uint32(4)))
 		})
 
 		It("finds an active request by MBID and ignores a denied one", func() {
@@ -258,7 +261,7 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found.ID).To(Equal(row.ID))
 
-			none, err := store.FindActiveRequestByMBID(ctx, "album", mbidA)
+			none, err := store.FindActiveRequestByMBID(ctx, "book", mbidA)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(none).To(BeNil())
 
@@ -292,10 +295,64 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			Expect(ent.IsConstraintError(artist(mbidA))).To(BeTrue())
 		})
 
-		It("dedups author requests on media_id only", func() {
-			Expect(author(1)).To(Succeed())
-			Expect(author(2)).To(Succeed())
-			Expect(ent.IsConstraintError(author(1))).To(BeTrue())
+		It("dedups a book on media_id within its type", func() {
+			Expect(book(1)).To(Succeed())
+			Expect(book(2)).To(Succeed())
+			Expect(ent.IsConstraintError(book(1))).To(BeTrue())
+		})
+
+		It("keeps books and series in separate id spaces", func() {
+			Expect(book(1)).To(Succeed())
+			Expect(series(1)).To(Succeed())
+			Expect(ent.IsConstraintError(series(1))).To(BeTrue())
+		})
+
+		It("flips an approved artist request by MBID on the first import", func() {
+			row, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType:   "artist",
+				MediaMBID:   mbidA,
+				Title:       "A",
+				RequesterID: userID,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(
+				store.MarkRequestsAvailableByMBID(ctx, "artist", mbidA),
+			).To(Succeed())
+			got, err := store.GetRequest(ctx, row.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(request.StatusPending))
+
+			Expect(store.ApproveRequest(ctx, row.ID, userID)).To(Succeed())
+			Expect(
+				store.MarkRequestsAvailableByMBID(ctx, "artist", mbidB),
+			).To(Succeed())
+			got, err = store.GetRequest(ctx, row.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(request.StatusApproved))
+
+			Expect(
+				store.MarkRequestsAvailableByMBID(ctx, "artist", mbidA),
+			).To(Succeed())
+			got, err = store.GetRequest(ctx, row.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.Status).To(Equal(request.StatusAvailable))
+		})
+
+		It("filters the list by a set of media types", func() {
+			Expect(artist(mbidA)).To(Succeed())
+			Expect(book(1)).To(Succeed())
+			Expect(series(1)).To(Succeed())
+
+			rows, total, err := store.ListRequests(ctx, ListRequestsParams{
+				MediaTypes: []string{"book", "book_series"}, Limit: 50,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(total).To(Equal(2))
+			Expect(rows).To(HaveLen(2))
+			for _, r := range rows {
+				Expect(r.MediaType).NotTo(Equal(request.MediaTypeArtist))
+			}
 		})
 
 		It("lets a denied music request be re-requested", func() {

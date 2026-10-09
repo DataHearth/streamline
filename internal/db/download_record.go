@@ -891,15 +891,18 @@ func (db *DB) RecordBookImportSuccess(
 		}
 	}
 	for _, f := range p.Files {
-		if _, err := applyParsed(tx.MediaFile.Create().
+		c := applyParsed(tx.MediaFile.Create().
 			SetPath(f.Path).
 			SetSize(f.Size).
 			SetQuality(f.Quality).
 			SetFormat(f.Format).
 			SetReleaseGroup(f.ReleaseGroup).
 			SetBookID(p.BookID).
-			SetBookKind(p.Kind), f.Parsed, f.Path).
-			Save(ctx); err != nil {
+			SetBookKind(p.Kind), f.Parsed, f.Path)
+		if f.Probe != nil {
+			c = applyProbe(c, f.Probe)
+		}
+		if _, err := c.Save(ctx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("create media file: %w", err)
 		}
