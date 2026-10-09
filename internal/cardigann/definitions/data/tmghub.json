@@ -1,0 +1,381 @@
+{
+  "id": "tmghub",
+  "name": "TmGHuB",
+  "description": "TmGHuB (TH) is an INDIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://tmghub.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "29",
+        "cat": "Movies",
+        "desc": "Movie Packs"
+      },
+      {
+        "id": "30",
+        "cat": "Movies",
+        "desc": "V.I.P"
+      },
+      {
+        "id": "13",
+        "cat": "Movies/BluRay",
+        "desc": "BD-25/BD-50"
+      },
+      {
+        "id": "32",
+        "cat": "Movies/BluRay",
+        "desc": "1080p BluRay"
+      },
+      {
+        "id": "33",
+        "cat": "Movies/HD",
+        "desc": "BDRip / 720p"
+      },
+      {
+        "id": "11",
+        "cat": "Movies/DVD",
+        "desc": "DVD-R/DVD-DL"
+      },
+      {
+        "id": "22",
+        "cat": "Movies/DVD",
+        "desc": "Encoded DVDs"
+      },
+      {
+        "id": "17",
+        "cat": "Movies/WEB-DL",
+        "desc": "WEB-DL/DTH"
+      },
+      {
+        "id": "14",
+        "cat": "Movies/DVD",
+        "desc": "DVD-Rips"
+      },
+      {
+        "id": "15",
+        "cat": "Movies/HD",
+        "desc": "DTH/HD-Rip"
+      },
+      {
+        "id": "45",
+        "cat": "Movies/Other",
+        "desc": "AI Encodes"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/SD",
+        "desc": "VHS/TV-Rip"
+      },
+      {
+        "id": "21",
+        "cat": "Movies",
+        "desc": "Video CDs"
+      },
+      {
+        "id": "19",
+        "cat": "Movies",
+        "desc": "Pre Releases "
+      },
+      {
+        "id": "42",
+        "cat": "Movies",
+        "desc": "Dubbed Movies"
+      },
+      {
+        "id": "44",
+        "cat": "Movies",
+        "desc": "TmG Special"
+      },
+      {
+        "id": "27",
+        "cat": "Audio",
+        "desc": "MP3/FLAC/WAV"
+      },
+      {
+        "id": "23",
+        "cat": "Audio/Video",
+        "desc": "Music Videos"
+      },
+      {
+        "id": "37",
+        "cat": "Audio",
+        "desc": "Music Packs"
+      },
+      {
+        "id": "40",
+        "cat": "TV",
+        "desc": "TV Shows"
+      },
+      {
+        "id": "28",
+        "cat": "TV",
+        "desc": "TV Series"
+      },
+      {
+        "id": "25",
+        "cat": "TV/Sport",
+        "desc": "Sports"
+      },
+      {
+        "id": "26",
+        "cat": "TV/Documentary",
+        "desc": "Documentary"
+      },
+      {
+        "id": "38",
+        "cat": "Books/EBook",
+        "desc": "E-Books"
+      },
+      {
+        "id": "34",
+        "cat": "Books",
+        "desc": "Guides / Tutorials"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "39",
+        "cat": "Other",
+        "desc": "Religious"
+      },
+      {
+        "id": "43",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile. Default is 30."
+    },
+    {
+      "name": "info_grabs",
+      "label": "Search results",
+      "type": "info",
+      "default": "Note that torrents that you have previously downloaded will not be included in results.<br /> You are not allowed to download a torrent twice without informing admin."
+    },
+    {
+      "name": "thankyou",
+      "label": "Thank You Comment",
+      "type": "text"
+    },
+    {
+      "name": "info",
+      "label": "Thank you comment",
+      "type": "info",
+      "default": "This site requires you to leave a Thank You comment before you can download.<br /> Enter your personalised comment above, at least 8 characters long."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "3",
+      "options": {
+        "3": "created",
+        "5": "seeders",
+        "4": "size",
+        "2": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "desc",
+        "1": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "index.php?page=login",
+    "form": "form[action^=\"index.php?page=login\"]",
+    "inputs": {
+      "uid": "{{ .Config.username }}",
+      "pwd": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "tr td span[style=\"color:#FF0000;\"]"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php"
+      }
+    ],
+    "inputs": {
+      "page": "torrents",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "category": "{{ if .Categories }}{{ range .Categories }}{{.}};{{end}}{{ else }}0{{ end }}",
+      "uploader": "0",
+      "options": "{{ if .Query.IMDBID }}3{{ else }}0{{ end }}",
+      "active": "0",
+      "gold": "{{ if .Config.freeleech }}3{{ else }}0{{ end }}",
+      "langsel": "-1",
+      "order": "{{ .Config.sort }}",
+      "by": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "div.tor-list div.torrent-item:not(:has(img[title=\"Allready Grabbed !!\"]))"
+    },
+    "fields": {
+      "category": {
+        "selector": "div.tor-cat-col a",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "category"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a.torr-link b"
+      },
+      "details": {
+        "selector": "a.torr-link",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a.torr-link",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a.torr-link",
+        "attribute": "onmouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=(.+?) border"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "a.torr-link",
+        "attribute": "onmouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Added\\:(\\d+ \\w+ \\w+)<"
+            ]
+          },
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "size": {
+        "selector": "div.torrent-stats div.stat-item:nth-child(4)"
+      },
+      "grabs": {
+        "selector": "div.torrent-stats div.stat-item:nth-child(3)"
+      },
+      "seeders": {
+        "selector": "div.torrent-stats div.stat-item:nth-child(1)"
+      },
+      "leechers": {
+        "selector": "div.torrent-stats div.stat-item:nth-child(2)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"gold/gold.gif\"]": "0",
+          "img[src=\"gold/silver.gif\"]": "0.5",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.7"
+      },
+      "minimumseedtime": {
+        "text": "7200"
+      }
+    }
+  },
+  "download": {
+    "before": {
+      "path": "{{ .DownloadUri.AbsoluteUri }}",
+      "method": "post",
+      "inputs": {
+        "comment": "{{ .Config.thankyou }}",
+        "confirm": "Confirm"
+      }
+    },
+    "selectors": [
+      {
+        "selector": "a[href*=\"download.php?id=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/tmghub.yml",
+    "sha256": "5be3ee602e37f4bbb403c152904dc8f93a4926e00b72e552558402bc11488522",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

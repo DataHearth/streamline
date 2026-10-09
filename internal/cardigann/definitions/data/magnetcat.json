@@ -1,0 +1,236 @@
+{
+  "id": "magnetcat",
+  "name": "Magnet Cat",
+  "description": "Magnet Cat is a Public Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://magnetcatcat.com/",
+    "https://clmclm.com/",
+    "https://ksos9z8i.8800591.xyz/",
+    "https://aiohf4w8.8800592.xyz/",
+    "https://nd6mgjh9.8800593.xyz/",
+    "https://7z8qnsfv.8800594.xyz/"
+  ],
+  "legacylinks": [
+    "https://5l3obnl8.8800591.xyz/",
+    "https://m7z0fr4i.8800592.xyz/",
+    "https://41lragki.8800593.xyz/",
+    "https://tsh1e0qo.8800594.xyz/",
+    "https://g6nh94lg.8800591.xyz/",
+    "https://x82z60f1.8800592.xyz/",
+    "https://9e9cta7o.8800593.xyz/",
+    "https://647iznvd.8800594.xyz/",
+    "https://q2t3qsm7.8800591.xyz/",
+    "https://v1p7y7ay.8800592.xyz/",
+    "https://rqybbczm.8800593.xyz/",
+    "https://ziat3sqw.8800594.xyz/",
+    "https://pxv3w11f.8800591.xyz/",
+    "https://1npq05i9.8800592.xyz/",
+    "https://coohnwox.8800593.xyz/",
+    "https://9bd87yuc.8800594.xyz/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "影视",
+        "cat": "TV",
+        "desc": "影视"
+      },
+      {
+        "id": "影视",
+        "cat": "Movies",
+        "desc": "影视"
+      },
+      {
+        "id": "音乐",
+        "cat": "Audio",
+        "desc": "音乐"
+      },
+      {
+        "id": "图像",
+        "cat": "Other",
+        "desc": "图像"
+      },
+      {
+        "id": "文档书籍",
+        "cat": "Books",
+        "desc": "文档书籍"
+      },
+      {
+        "id": "压缩文件",
+        "cat": "Other",
+        "desc": "压缩文件"
+      },
+      {
+        "id": "安装包",
+        "cat": "PC",
+        "desc": "安装包"
+      },
+      {
+        "id": "其他",
+        "cat": "Other",
+        "desc": "其他"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cat-id",
+      "label": "Category",
+      "type": "select",
+      "default": "0",
+      "options": {
+        "0": "全部(All categories)",
+        "1": "影视(Movies and TV shows)",
+        "2": "音乐(Music)",
+        "3": "图像(Images)",
+        "4": "文档书籍(Documents)",
+        "5": "压缩文件(Archives)",
+        "6": "安装包(Apps)",
+        "7": "其他(Other)"
+      }
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "created",
+        "1": "size",
+        "0": "relevance"
+      }
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "search-{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}-{{ (index .Config \"cat-id\") }}-{{ .Config.sort }}-1.html"
+      }
+    ],
+    "error": [
+      {
+        "selector": ":root:contains(\"Internal Server Error\")"
+      }
+    ],
+    "rows": {
+      "selector": "article.zsky-result-row"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "a[href^=\"/hash/\"] span",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "【",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "】",
+              ""
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"/hash/\"]",
+        "remove": "span"
+      },
+      "details": {
+        "selector": "a[href^=\"/hash/\"]",
+        "attribute": "href"
+      },
+      "infohash": {
+        "selector": "a[href^=\"/hash/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "div.zsky-result-meta span:nth-child(1)",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "添加时间：",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "div.zsky-result-meta span:nth-child(2)",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "大小：",
+              ""
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/magnetcat.yml",
+    "sha256": "558956223fa416c9a064d4e57f52804f57ee01373d100c3b417bd342ac14e6d4",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

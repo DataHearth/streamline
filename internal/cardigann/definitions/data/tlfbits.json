@@ -1,0 +1,302 @@
+{
+  "id": "tlfbits",
+  "name": "TLFBits",
+  "description": "TLFBits is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://pt.eastgame.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "438",
+        "cat": "Movies",
+        "desc": "电影 (Movie)"
+      },
+      {
+        "id": "440",
+        "cat": "TV",
+        "desc": "电视剧(TV series)"
+      },
+      {
+        "id": "441",
+        "cat": "TV",
+        "desc": "综艺 (TV Show)"
+      },
+      {
+        "id": "442",
+        "cat": "TV/Anime",
+        "desc": "动漫 (Anime)"
+      },
+      {
+        "id": "443",
+        "cat": "TV/Documentary",
+        "desc": "纪录片 (Documentary)"
+      },
+      {
+        "id": "444",
+        "cat": "TV/Sport",
+        "desc": "体育 (Sport)"
+      },
+      {
+        "id": "445",
+        "cat": "Audio/Video",
+        "desc": "音乐视频 (Music Video)"
+      },
+      {
+        "id": "446",
+        "cat": "Audio",
+        "desc": "音乐(Music)"
+      },
+      {
+        "id": "447",
+        "cat": "PC/Games",
+        "desc": "游戏 (Game)"
+      },
+      {
+        "id": "448",
+        "cat": "PC/0day",
+        "desc": "软件 (Software)"
+      },
+      {
+        "id": "449",
+        "cat": "Other/Misc",
+        "desc": "资料（E-Learning）"
+      },
+      {
+        "id": "450",
+        "cat": "Other",
+        "desc": "其它 (Other)"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php",
+    "form": "form[action=\"takelogin.php\"]",
+    "captcha": {
+      "type": "image",
+      "selector": "img[alt=\"CAPTCHA\"]",
+      "input": "imagestring"
+    },
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "logout": "",
+      "securelogin": "",
+      "ssl": "yes",
+      "trackerssl": "yes"
+    },
+    "error": [
+      {
+        "selector": "td.embedded:has(h2:contains(\"失败\"))"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(table.torrentname)"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href^=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "imdbid": {
+        "selector": "div.imdb_100 > a",
+        "attribute": "href"
+      },
+      "date_elapsed": {
+        "selector": "td:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-child(5)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(6)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(7)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(8)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "description": {
+        "selector": "td:nth-child(2)",
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/tlfbits.yml",
+    "sha256": "c7d32b7cd8556066d61b8f214ccb271c9fb7cc9fd1c5f29fdc34d3e50ee04163",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

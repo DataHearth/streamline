@@ -1,0 +1,332 @@
+{
+  "id": "mnv",
+  "name": "MNV",
+  "description": "MNV (Max-New-Vision) is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://mnvv2.info/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "2",
+        "cat": "PC",
+        "desc": "Appz"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Documentary",
+        "desc": "Doku"
+      },
+      {
+        "id": "3",
+        "cat": "Books/EBook",
+        "desc": "E-Books/Bücher"
+      },
+      {
+        "id": "24",
+        "cat": "PC/Games",
+        "desc": "Games/PC"
+      },
+      {
+        "id": "32",
+        "cat": "TV/Anime",
+        "desc": "Hentai"
+      },
+      {
+        "id": "4",
+        "cat": "Audio/Audiobook",
+        "desc": "Hörspiel/Hörbuch"
+      },
+      {
+        "id": "6",
+        "cat": "Movies/HD",
+        "desc": "Movies/H.26x"
+      },
+      {
+        "id": "18",
+        "cat": "Audio",
+        "desc": "Musik"
+      },
+      {
+        "id": "19",
+        "cat": "Audio/Video",
+        "desc": "Musik Videos"
+      },
+      {
+        "id": "30",
+        "cat": "Other",
+        "desc": "Sonstiges"
+      },
+      {
+        "id": "5",
+        "cat": "Books/Mags",
+        "desc": "Tageszeitung"
+      },
+      {
+        "id": "14",
+        "cat": "TV",
+        "desc": "TV-Serien"
+      },
+      {
+        "id": "29",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search FreeLeech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "onlyupload",
+      "label": "Search OnlyUpload only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_free",
+      "label": "About Freeleech and OnlyUpload at MNV",
+      "type": "info",
+      "default": "<ul><li>FreeLeech are torrents where neither the download or upload is counted.</li><li>OnlyUpload are torrents where download is not counted but upload is. Good for building your Ratio up.</li><li>Do not set both FreeLeech and OnlyUpload check boxes, there are no torrents with both these flags so you will get a no-results error.</li></ul>"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeds": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile. The default is <i>10</i>."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts are automatically deactivated after 42 days."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": ".tablea:contains(\"Fehler\")"
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "blah": "0",
+      "incldead": "1",
+      "team": "0",
+      "language": "all",
+      "freeleech": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "free": "{{ if .Config.onlyupload }}1{{ else }}{{ end }}",
+      "orderby": "{{ .Config.sort }}",
+      "order": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.tableinborder > tbody > tr:has(a[href^=\"download.php\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "onMouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=([^\\s]+)"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "td.tablea > table > tbody > tr:nth-child(2) > td:nth-child(2) > b",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(3) b"
+      },
+      "size": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "onMouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Größe: <b>(.*?)</b>"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "onMouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              ">(\\d+) Seeder"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "onMouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              ">(\\d+) Leecher"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/oupic.gif\"]": "0",
+          "img[src=\"pic/freeleech.gif\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src=\"pic/freeleech.gif\"]": "0",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.7"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/mnv.yml",
+    "sha256": "27998059af9af9e124713c366c5db5dd4f318828c89daf83b20d9fd1f54d6840",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

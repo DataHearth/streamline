@@ -1,0 +1,257 @@
+{
+  "id": "boxingtorrents",
+  "name": "Boxing Torrents",
+  "description": "Boxing Torrents is a Private Torrent Tracker for BOXING",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://tc-boxing.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "17",
+        "cat": "TV/Sport",
+        "desc": "4K"
+      },
+      {
+        "id": "16",
+        "cat": "TV/Sport",
+        "desc": "Blu-ray"
+      },
+      {
+        "id": "14",
+        "cat": "TV/Sport",
+        "desc": "HD"
+      },
+      {
+        "id": "8",
+        "cat": "TV/Sport",
+        "desc": "DVD"
+      },
+      {
+        "id": "1",
+        "cat": "TV/Sport",
+        "desc": "Full - Excellent"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Sport",
+        "desc": "Full - Fair"
+      },
+      {
+        "id": "2",
+        "cat": "TV/Sport",
+        "desc": "Full - Good"
+      },
+      {
+        "id": "4",
+        "cat": "TV/Sport",
+        "desc": "Full - Poor"
+      },
+      {
+        "id": "10",
+        "cat": "TV/Sport",
+        "desc": "Foreign - Excellent"
+      },
+      {
+        "id": "11",
+        "cat": "TV/Sport",
+        "desc": "Foreign - Fair"
+      },
+      {
+        "id": "6",
+        "cat": "TV/Sport",
+        "desc": "Foreign - Good"
+      },
+      {
+        "id": "12",
+        "cat": "TV/Sport",
+        "desc": "Foreign - Poor"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Sport",
+        "desc": "Career Set"
+      },
+      {
+        "id": "19",
+        "cat": "TV/Documentary",
+        "desc": "Documentary"
+      },
+      {
+        "id": "9",
+        "cat": "TV/Sport",
+        "desc": "Amateur - Full"
+      },
+      {
+        "id": "18",
+        "cat": "TV/Sport",
+        "desc": "Instructional"
+      },
+      {
+        "id": "7",
+        "cat": "TV/Sport",
+        "desc": "Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_download",
+      "label": "Download Restrictions",
+      "type": "info",
+      "default": "You must have uploaded at least 10GB before you are able to access all torrent sizes. Until then, you are restricted to torrents no larger than 2.5GB."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ if .Categories }}{{ range .Categories }}c{{.}}=1&{{end}}{{ else }}cat=0{{ end }}",
+      "incldead": "1",
+      "free": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "search": "{{ .Keywords }}"
+    },
+    "rows": {
+      "dateheaders": {
+        "selector": "td[colspan] > b",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " -07:00"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Torrents added ",
+              ""
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Monday, 2. Jan, 2006 -07:00"
+            ]
+          }
+        ]
+      },
+      "selector": "table.torrenttable > tbody > tr:has(a[href^=\"details.php?id=\"])",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "files": {
+        "selector": "td:nth-last-child(7)"
+      },
+      "size": {
+        "selector": "td:nth-last-child(5)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "b:contains(\"FreeLeech\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/boxingtorrents.yml",
+    "sha256": "974232e620399eb061d306be64a00a63ec7c70e52d90d9e18e3c95a63bfe92bc",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "id": "f1carreras-api",
+  "name": "F1Carreras (API)",
+  "description": "F1Carreras is a SPANISH Private Torrent Tracker for Motor Racing TV Releases",
+  "language": "es-MX",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://f1carreras.xyz/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Sport",
+        "desc": "Formula 1"
+      },
+      {
+        "id": "4",
+        "cat": "TV/Sport",
+        "desc": "IndyCar Series"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Sport",
+        "desc": "Formula 2"
+      },
+      {
+        "id": "6",
+        "cat": "TV/Sport",
+        "desc": "Formula E"
+      },
+      {
+        "id": "7",
+        "cat": "TV/Sport",
+        "desc": "MotoGP"
+      },
+      {
+        "id": "8",
+        "cat": "TV/Sport",
+        "desc": "Nascar"
+      },
+      {
+        "id": "9",
+        "cat": "TV/Sport",
+        "desc": "Formula 3"
+      },
+      {
+        "id": "10",
+        "cat": "TV/Sport",
+        "desc": "DTM"
+      },
+      {
+        "id": "11",
+        "cat": "TV/Sport",
+        "desc": "Rally"
+      },
+      {
+        "id": "12",
+        "cat": "TV/Sport",
+        "desc": "WEC"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Sport",
+        "desc": "Other Series"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://f1carreras.xyz/\" target=\"_blank\">F1Carreras</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "single_file_release_use_filename",
+      "label": "Use filename as title for single file releases",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "\\bS(\\d{2,4})\\b",
+          "${1}"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title_optional": {
+        "selector": "name"
+      },
+      "title_filename": {
+        "selector": "files[0].name",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "title": {
+        "text": "{{ if and (.Config.single_file_release_use_filename) (eq .Result.files \"1\") (.Result.title_filename) }}{{ .Result.title_filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/f1carreras-api.yml",
+    "sha256": "c10a8be4d69b0d894d4d2e2e8c53c8bfffc21418d7fff3e4e5ffd8c647aeb6b5",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,556 @@
+{
+  "id": "backups",
+  "name": "Back-ups",
+  "description": "Back-Ups is a Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://back-ups.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "115",
+        "cat": "PC",
+        "desc": "2Play Official"
+      },
+      {
+        "id": "100",
+        "cat": "Console",
+        "desc": "Anbernic"
+      },
+      {
+        "id": "15",
+        "cat": "PC/Mobile-Android",
+        "desc": "Android"
+      },
+      {
+        "id": "35",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "3",
+        "cat": "PC",
+        "desc": "Apps"
+      },
+      {
+        "id": "109",
+        "cat": "PC",
+        "desc": "Attract"
+      },
+      {
+        "id": "71",
+        "cat": "Console",
+        "desc": "Batocera"
+      },
+      {
+        "id": "108",
+        "cat": "Console",
+        "desc": "Bazpacks"
+      },
+      {
+        "id": "112",
+        "cat": "Console",
+        "desc": "Brojack & Laws"
+      },
+      {
+        "id": "42",
+        "cat": "Console",
+        "desc": "CoinOPS Official"
+      },
+      {
+        "id": "140",
+        "cat": "Console",
+        "desc": "CoinOps Unofficial"
+      },
+      {
+        "id": "142",
+        "cat": "Console",
+        "desc": "CoinOps Xbox"
+      },
+      {
+        "id": "63",
+        "cat": "Books/Comics",
+        "desc": "Comics"
+      },
+      {
+        "id": "60",
+        "cat": "Console",
+        "desc": "CORE"
+      },
+      {
+        "id": "143",
+        "cat": "Console",
+        "desc": "CORE Community"
+      },
+      {
+        "id": "44",
+        "cat": "Console",
+        "desc": "CP78"
+      },
+      {
+        "id": "16",
+        "cat": "TV/Documentary",
+        "desc": "Docu"
+      },
+      {
+        "id": "41",
+        "cat": "Console",
+        "desc": "Dragon"
+      },
+      {
+        "id": "5",
+        "cat": "Books",
+        "desc": "eBooks"
+      },
+      {
+        "id": "138",
+        "cat": "Audio/Audiobook",
+        "desc": "eBooks Audiobooks"
+      },
+      {
+        "id": "89",
+        "cat": "PC",
+        "desc": "Ghostware"
+      },
+      {
+        "id": "77",
+        "cat": "PC",
+        "desc": "Hyperspin"
+      },
+      {
+        "id": "34",
+        "cat": "TV",
+        "desc": "Kids"
+      },
+      {
+        "id": "107",
+        "cat": "Console",
+        "desc": "KinHanK"
+      },
+      {
+        "id": "43",
+        "cat": "Console",
+        "desc": "LaunchBox"
+      },
+      {
+        "id": "85",
+        "cat": "PC",
+        "desc": "MAME"
+      },
+      {
+        "id": "135",
+        "cat": "Movies",
+        "desc": "Movie Pack"
+      },
+      {
+        "id": "132",
+        "cat": "Movies/UHD",
+        "desc": "Movies 4K"
+      },
+      {
+        "id": "137",
+        "cat": "Movies/UHD",
+        "desc": "Movie Pack 4K"
+      },
+      {
+        "id": "136",
+        "cat": "Movies/BluRay",
+        "desc": "Movies Bluray"
+      },
+      {
+        "id": "133",
+        "cat": "Movies/HD",
+        "desc": "Movies HD"
+      },
+      {
+        "id": "134",
+        "cat": "Movies/SD",
+        "desc": "Movies SD"
+      },
+      {
+        "id": "82",
+        "cat": "PC",
+        "desc": "MS-DOS"
+      },
+      {
+        "id": "7",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "121",
+        "cat": "Audio/Video",
+        "desc": "Music Videos"
+      },
+      {
+        "id": "31",
+        "cat": "Console",
+        "desc": "Nintendo"
+      },
+      {
+        "id": "59",
+        "cat": "Console",
+        "desc": "P-R-U"
+      },
+      {
+        "id": "8",
+        "cat": "PC/Games",
+        "desc": "PC Games"
+      },
+      {
+        "id": "144",
+        "cat": "PC/Games",
+        "desc": "PC GamesGOG DRM FREE"
+      },
+      {
+        "id": "87",
+        "cat": "Console",
+        "desc": "Playnite"
+      },
+      {
+        "id": "30",
+        "cat": "Console",
+        "desc": "Playstation"
+      },
+      {
+        "id": "118",
+        "cat": "Console",
+        "desc": "PS5.Roms"
+      },
+      {
+        "id": "83",
+        "cat": "PC",
+        "desc": "Retro eXo"
+      },
+      {
+        "id": "56",
+        "cat": "PC",
+        "desc": "Retro Minis"
+      },
+      {
+        "id": "67",
+        "cat": "PC",
+        "desc": "RetroBat"
+      },
+      {
+        "id": "88",
+        "cat": "PC",
+        "desc": "RetroFE"
+      },
+      {
+        "id": "76",
+        "cat": "Console",
+        "desc": "RGS"
+      },
+      {
+        "id": "27",
+        "cat": "PC",
+        "desc": "ROM Packs"
+      },
+      {
+        "id": "62",
+        "cat": "PC",
+        "desc": "RPi"
+      },
+      {
+        "id": "81",
+        "cat": "PC",
+        "desc": "Scene"
+      },
+      {
+        "id": "68",
+        "cat": "PC",
+        "desc": "Schmoomer"
+      },
+      {
+        "id": "110",
+        "cat": "Console",
+        "desc": "ScummVM"
+      },
+      {
+        "id": "57",
+        "cat": "Console",
+        "desc": "SEGA"
+      },
+      {
+        "id": "116",
+        "cat": "PC",
+        "desc": "SiteRIP"
+      },
+      {
+        "id": "74",
+        "cat": "PC",
+        "desc": "Sleyk/SGC"
+      },
+      {
+        "id": "75",
+        "cat": "Audio",
+        "desc": "Soundtracks"
+      },
+      {
+        "id": "29",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "90",
+        "cat": "PC",
+        "desc": "TeknoParrot"
+      },
+      {
+        "id": "97",
+        "cat": "TV/Other",
+        "desc": "Tutorials"
+      },
+      {
+        "id": "148",
+        "cat": "TV/HD",
+        "desc": "TV HD"
+      },
+      {
+        "id": "9",
+        "cat": "TV",
+        "desc": "TV Packs"
+      },
+      {
+        "id": "149",
+        "cat": "TV/SD",
+        "desc": "TV SD"
+      },
+      {
+        "id": "11",
+        "cat": "TV",
+        "desc": "TV Shows"
+      },
+      {
+        "id": "145",
+        "cat": "TV/UHD",
+        "desc": "TV UHD"
+      },
+      {
+        "id": "117",
+        "cat": "Console",
+        "desc": "Virtual Reality"
+      },
+      {
+        "id": "73",
+        "cat": "Console",
+        "desc": "Wolfanoz"
+      },
+      {
+        "id": "12",
+        "cat": "Console",
+        "desc": "XBOX360"
+      },
+      {
+        "id": "139",
+        "cat": "Console",
+        "desc": "Xbox Original"
+      },
+      {
+        "id": "23",
+        "cat": "XXX",
+        "desc": "XXX18+"
+      },
+      {
+        "id": "120",
+        "cat": "XXX",
+        "desc": "trans.xxx"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Filter freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>40</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "To keep records updated regularly, all inactive accounts will be deleted after 60 days of inactivity."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td:contains(\"remaining tries\")"
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href*=\"/logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "do": "search",
+      "keywords": "{{ .Keywords }}",
+      "search_type": "t_name",
+      "category": "0",
+      "include_dead_torrents": "yes"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(?:^|\\s)[_\\+\\/\\.\\-\\(\\)]*[\\S]{0,3}[_\\+\\/\\.\\-\\(\\)]*(?:\\s|$)",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "table#sortabletable > tbody > tr:has(a[href*=\"/details.php?id=\"]){{ if .Config.freeleech }}:has(img[src$=\"freedownload.gif\"]){{ else }}{{ end }}",
+      "filters": [
+        {
+          "name": "andmatch",
+          "args": [
+            "66"
+          ]
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"/browse.php?category=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "category"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href*=\"/details.php?id=\"]"
+      },
+      "title": {
+        "selector": "div.tooltip-content > div",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href*=\"/details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href*=\"/download.php?id=\"]",
+        "attribute": "href"
+      },
+      "magnet": {
+        "selector": "a[href^=\"magnet:?xt=\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "size": {
+        "selector": "td:nth-child(5)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(7)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(8)"
+      },
+      "poster": {
+        "selector": "div.tooltip-content > img",
+        "attribute": "src"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src$=\"freedownload.gif\"]": "0",
+          "img[src$=\"silverdownload.gif\"]": "0.5",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src$=\"x2.gif\"]": "2",
+          "*": "1"
+        }
+      },
+      "date": {
+        "selector": "td:nth-child(2) > div:has(span[style=\"float: right;\"])",
+        "remove": "span",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02-01-2006 15:04 -07:00"
+            ]
+          }
+        ]
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/backups.yml",
+    "sha256": "ff7c9afb75e787dc33d1c39ded4194d12a45d4a6c0594fca6abfa1030a0ea8bd",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

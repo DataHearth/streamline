@@ -1,0 +1,304 @@
+{
+  "id": "abnormal-api",
+  "name": "Abnormal (API)",
+  "description": "ABNormal (ABN) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "fr-FR",
+  "type": "private",
+  "encoding": "UTF-8",
+  "requestDelay": 2.1,
+  "links": [
+    "https://abn.lol/"
+  ],
+  "legacylinks": [
+    "https://abnormal.ws"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV",
+        "desc": "Series"
+      },
+      {
+        "id": "2",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Documentary",
+        "desc": "Documentaries"
+      },
+      {
+        "id": "4",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "5",
+        "cat": "PC/Games",
+        "desc": "Games"
+      },
+      {
+        "id": "6",
+        "cat": "PC",
+        "desc": "Applications"
+      },
+      {
+        "id": "7",
+        "cat": "Books/EBook",
+        "desc": "Ebooks"
+      },
+      {
+        "id": "9",
+        "cat": "TV",
+        "desc": "Emissions"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find your API key on your <a href=\"https://abn.lol/User/Parameters\" target=\"_blank\">Parameters</a> page. The API key is read-only and never expires."
+    },
+    {
+      "name": "apiurl",
+      "label": "API URL",
+      "type": "text",
+      "default": "api.abn.lol"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "multilang",
+      "label": "Replace MULTi by another language in release name",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "multilanguage",
+      "label": "Replace MULTi by this language",
+      "type": "select",
+      "default": "FRENCH",
+      "options": {
+        "FRENCH": "FRENCH",
+        "MULTi.FRENCH": "MULTi.FRENCH",
+        "ENGLISH": "ENGLISH",
+        "MULTi.ENGLISH": "MULTi.ENGLISH",
+        "VOSTFR": "VOSTFR",
+        "MULTi.VOSTFR": "MULTi.VOSTFR"
+      }
+    },
+    {
+      "name": "vostfr",
+      "label": "Replace VOSTFR and SUBFRENCH with ENGLISH",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "Created",
+      "options": {
+        "Created": "created",
+        "Seeders": "seeders",
+        "Size": "size",
+        "ReleaseName": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "DESC",
+      "options": {
+        "DESC": "desc",
+        "ASC": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Accounts are automatically deactivated after 4 months of inactivity (no connection to the site)."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "https://{{ .Config.apiurl }}/api/Release/Search?name=test&resultByPage=1",
+    "error": [
+      {
+        "selector": ":root:contains(\"Unauthorized\")",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "https://{{ .Config.apiurl }}/api/Release/Search",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}categoryId={{.}}&{{end}}",
+      "name": "{{ .Keywords }}",
+      "resultByPage": "100",
+      "sort": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "freeleech": "{{ if .Config.freeleech }}true{{ else }}{{ end }}"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "$"
+    },
+    "fields": {
+      "category": {
+        "selector": "categoryId"
+      },
+      "title_phase1": {
+        "selector": "name"
+      },
+      "title_vostfr": {
+        "text": "{{ .Result.title_phase1 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(vostfr|subfrench)\\b",
+              "ENGLISH"
+            ]
+          }
+        ]
+      },
+      "title_phase2": {
+        "text": "{{ if .Config.vostfr }}{{ .Result.title_vostfr }}{{ else }}{{ .Result.title_phase1 }}{{ end }}"
+      },
+      "title_multilang": {
+        "text": "{{ .Result.title_phase2 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(MULTI(?!.*(?:FRENCH|ENGLISH|VOSTFR)))\\b",
+              "{{ .Config.multilanguage }}"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
+      },
+      "_id": {
+        "selector": "id"
+      },
+      "details": {
+        "text": "{{ .Config.sitelink }}Torrent/Details?ReleaseId={{ .Result._id }}"
+      },
+      "download": {
+        "selector": "downloadUrl"
+      },
+      "infohash": {
+        "selector": "infoHash"
+      },
+      "date": {
+        "selector": "created",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:01"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "completed"
+      },
+      "downloadvolumefactor": {
+        "selector": "freeleech",
+        "case": {
+          "False": "1",
+          "True": "0"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "345600"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/abnormal-api.yml",
+    "sha256": "514c375efed6be41d6d01e37cfff53be0bf5702da1b765587d7f137ecc0efcf1",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

@@ -1,0 +1,144 @@
+{
+  "id": "mactorrentsdownload",
+  "name": "Mac Torrents Download",
+  "description": "Mac Torrents Download is a Public tracker for Mac software",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.torrentmac.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "apps",
+        "cat": "PC/Mac",
+        "desc": "Apps"
+      },
+      {
+        "id": "games",
+        "cat": "PC/Games",
+        "desc": "Games"
+      },
+      {
+        "id": "design-assets",
+        "cat": "Other",
+        "desc": "Design Assets"
+      },
+      {
+        "id": "uncategorized",
+        "cat": "Other",
+        "desc": "Uncategorized"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "/"
+      }
+    ],
+    "inputs": {
+      "s": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "article[id^=\"post-\"][class*=\"type-post\"]",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"/category/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "/",
+              "4"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img",
+        "attribute": "src"
+      },
+      "description": {
+        "selector": "section p"
+      },
+      "date": {
+        "selector": "time",
+        "attribute": "datetime",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " -07:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "text": "512 MB"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a.download-btn",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/mactorrentsdownload.yml",
+    "sha256": "1d83665a84b3538a9841ddb88dedef91ce6f578217085cfe2ad2bc8fb6850c5e",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

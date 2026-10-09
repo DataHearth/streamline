@@ -1,0 +1,261 @@
+{
+  "id": "fappaizuri",
+  "name": "Fappaizuri",
+  "description": "Fappaizuri is a Private Torrent Tracker for HENTAI / JAV",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.fappaizuri.me/"
+  ],
+  "legacylinks": [
+    "https://fappaizuri.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "5",
+        "cat": "XXX",
+        "desc": "JAV"
+      },
+      {
+        "id": "6",
+        "cat": "Books",
+        "desc": "Manga"
+      },
+      {
+        "id": "7",
+        "cat": "Console",
+        "desc": "H-games"
+      },
+      {
+        "id": "8",
+        "cat": "TV/Anime",
+        "desc": "Hentai"
+      },
+      {
+        "id": "9",
+        "cat": "XXX",
+        "desc": "OFFS"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_2fa",
+      "label": "About 2FA",
+      "type": "info",
+      "default": "If you want to enable 2FA then use the Fappaizuri2FA indexer instead."
+    },
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "lang",
+      "label": "Language",
+      "type": "select",
+      "default": "0",
+      "options": {
+        "0": "All",
+        "4": "Japanese",
+        "5": "Chinese",
+        "6": "Malaysia",
+        "7": "North Korea",
+        "8": "English"
+      }
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "id",
+      "options": {
+        "id": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "account-login.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "b:contains(\"The specified username or password was incorrect.\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"account-logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents-search.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "incldead": "1",
+      "freeleech": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "lang": "{{ .Config.lang }}",
+      "sort": "{{ .Config.sort }}",
+      "order": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "tr.t-row"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"torrents-search.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"torrents-details.php?id=\"] > b"
+      },
+      "details": {
+        "selector": "a[href^=\"torrents-details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"torrents-details.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[href^=\"torrents-details.php?id=\"]",
+        "attribute": "onMouseover",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=(.+?)>"
+            ]
+          }
+        ]
+      },
+      "_language": {
+        "selector": "img[src*=\"images/languages/\"]",
+        "attribute": "alt",
+        "optional": true
+      },
+      "description": {
+        "selector": "font[color=\"red\"]",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result._language }} - {{ .Result._language }}{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(3)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(5)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "date": {
+        "selector": "td:nth-child(8)",
+        "filters": [
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"images/free.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src=\"images/doubleupload.gif\"]": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "345600"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/fappaizuri.yml",
+    "sha256": "0c909ddcdf70976a2c2e27003310e8d1316715edbafc37b266b851c9f4b21aff",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}
