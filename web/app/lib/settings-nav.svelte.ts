@@ -20,6 +20,7 @@ import {
 import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
 import { api } from "./api";
+import { profilesPath } from "./music-books";
 import type {
 	CustomFormat,
 	DownloadClient,
@@ -96,12 +97,12 @@ export function createSettingsNav(withCounts = true) {
 	// Music and books keep their own lists; the row counts all three.
 	const musicProfiles = createQuery<unknown[]>(() => ({
 		queryKey: ["quality-profiles", "music"],
-		queryFn: () => api<unknown[]>("/quality-profiles?media=music"),
+		queryFn: () => api<unknown[]>(profilesPath("music")),
 		enabled: withCounts,
 	}));
 	const bookProfiles = createQuery<unknown[]>(() => ({
 		queryKey: ["quality-profiles", "books"],
-		queryFn: () => api<unknown[]>("/quality-profiles?media=books"),
+		queryFn: () => api<unknown[]>(profilesPath("books")),
 		enabled: withCounts,
 	}));
 	let profileCount = $derived(

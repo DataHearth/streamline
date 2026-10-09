@@ -17,7 +17,9 @@
 	import { toast } from "@lib/toast";
 	import { auth } from "@lib/auth.svelte";
 	import type { QualityProfile } from "@lib/types";
+	import { profilesPath } from "@lib/music-books";
 	import {
+		addErrorText,
 		addRequest,
 		libraryHref,
 		libraryRoot,
@@ -86,7 +88,7 @@
 
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<QualityProfile[]>(`/quality-profiles?media=${media}`),
+		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: open,
 	}));
 
@@ -141,7 +143,7 @@
 			qc.invalidateQueries({ queryKey: [libraryRoot(kind)] });
 			toast.ok(i18n.toast_added({ title: h.title }));
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e) => toast.err(addErrorText(e, canAdd)),
 		onSettled: () => {
 			pendingKey = null;
 		},

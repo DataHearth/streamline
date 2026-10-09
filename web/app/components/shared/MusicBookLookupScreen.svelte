@@ -9,7 +9,9 @@
 	import { auth } from "@lib/auth.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import type { QualityProfile } from "@lib/types";
+	import { profilesPath } from "@lib/music-books";
 	import {
+		addErrorText,
 		addRequest,
 		hitChips,
 		libraryHref,
@@ -79,7 +81,7 @@
 
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<QualityProfile[]>(`/quality-profiles?media=${media}`),
+		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: open,
 	}));
 	const searchQuery = createQuery<LookupHit[]>(() => ({
@@ -123,7 +125,7 @@
 			// Back to the grid: the badge carries the new state.
 			selectedKey = null;
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e) => toast.err(addErrorText(e, canAdd)),
 		onSettled: () => {
 			pendingKey = null;
 		},

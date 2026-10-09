@@ -17,7 +17,8 @@
 		Music,
 		BookOpen,
 	} from "@lucide/svelte";
-	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import { api, apiAllPages, ApiError, type Paginated } from "@lib/api";
+	import { SILENT } from "@lib/query";
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { formatRelative } from "@lib/dates";
@@ -26,7 +27,8 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
-	import { requestHit, type ArtistMeta, type BookMeta } from "@lib/music-books-lookup";
+	import { requestHit, type ArtistMeta, type BookMeta, type RequestMetadata } from "@lib/music-books-lookup";
+	import { profilesPath } from "@lib/music-books";
 	import RequestStatLine from "@components/requests/RequestStatLine.svelte";
 	import RequestFilterLine from "@components/requests/RequestFilterLine.svelte";
 	import RequestFilterSheet from "@components/requests/RequestFilterSheet.svelte";
@@ -123,11 +125,16 @@
 	// Cover/synopsis for whichever row is open — expanded on desktop, or the
 	// sheet below lg. One query serves both; only one can be open at a time.
 	let detailId = $derived(sheetId ?? expandedId);
-	const detailQuery = createQuery<RequestMediaDetails | ArtistMeta | BookMeta>(() => ({
+	// A provider that is limiting (429) or a book request with no Hardcover key
+	// (503) answers an error, not metadata: the row falls back to its title and
+	// retrying only spends the provider's budget.
+	const detailQuery = createQuery<RequestMetadata>(() => ({
 		queryKey: ["request-metadata", detailId],
-		queryFn: () => api<RequestMediaDetails | ArtistMeta | BookMeta>(`/requests/${detailId}/metadata`),
+		queryFn: () => api<RequestMetadata>(`/requests/${detailId}/metadata`),
 		enabled: detailId !== null,
 		staleTime: 5 * 60 * 1000,
+		retry: (count, err) => !(err instanceof ApiError && (err.status === 429 || err.status === 503)) && count < 1,
+		meta: SILENT,
 	}));
 	const profilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles"],
@@ -137,12 +144,12 @@
 	// A music or book request is approved under that medium's own profiles.
 	const musicProfilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", "music"],
-		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=music"),
+		queryFn: () => api<QualityProfile[]>(profilesPath("music")),
 		enabled: isReviewer,
 	}));
 	const bookProfilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", "books"],
-		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=books"),
+		queryFn: () => api<QualityProfile[]>(profilesPath("books")),
 		enabled: isReviewer,
 	}));
 	function profilesFor(t: MediaRequest["media_type"] | undefined): QualityProfile[] {

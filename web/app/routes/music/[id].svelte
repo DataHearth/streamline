@@ -9,6 +9,7 @@
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
+	import { artistPosterUrl } from "@lib/posters";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
@@ -29,7 +30,9 @@
 		creditRoleLabel,
 		defaultRelease,
 		memberYears,
+		overviewLang,
 		personHref,
+		personPhoto,
 		reachRole,
 		releasesCount,
 		tracksCount,
@@ -76,14 +79,15 @@
 	);
 
 	const artistQuery = createQuery<Artist>(() => ({
-		queryKey: ["music", "artist", id],
-		queryFn: () => api<Artist>(`/music/artists/${id}`),
+		queryKey: ["music", "artist", id, overviewLang()],
+		queryFn: () => api<Artist>(`/music/artists/${id}?lang=${overviewLang()}`),
 		enabled: !!id,
+		refetchInterval: (q) => (q.state.data?.hydrating ? 10_000 : false),
 	}));
 	let artist = $derived(artistQuery.data);
 	let tally = $derived(artist ? artistTally(artist) : null);
 	let selected = $derived(
-		artist ? (artist.releases.find((r) => r.id === selectedId) ?? defaultRelease(artist.releases)) : undefined,
+		artist ? (artist.albums.find((r) => r.id === selectedId) ?? defaultRelease(artist.albums)) : undefined,
 	);
 	let open = $derived(openId === null ? selected?.id : openId);
 	let canEdit = $derived(auth.canAddDirectly);
@@ -117,20 +121,20 @@
 		}
 	}
 	async function toggleRelease(r: Release) {
-		await api(`/music/releases/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } });
+		await api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } });
 		invalidate();
 	}
 	async function searchMissing() {
 		if (!artist) return;
-		await api(`/music/artists/${id}/search`, { method: "POST" });
+		await api(`/music/artists/${id}/search-now`, { method: "POST" });
 		toast.ok(i18n.music_search_started({ title: artist.name }));
 	}
 	async function searchRelease(r: Release) {
-		await api(`/music/releases/${r.id}/search`, { method: "POST" });
+		await api(`/music/albums/${r.id}/search-now`, { method: "POST" });
 		toast.ok(i18n.music_search_started({ title: r.title }));
 	}
 	async function searchTrack(t: Track) {
-		await api(`/music/tracks/${t.id}/search`, { method: "POST" });
+		await api(`/music/tracks/${t.id}/search-now`, { method: "POST" });
 		toast.ok(i18n.music_search_started({ title: t.title }));
 	}
 	let deletingTrack = $state<Track | null>(null);
@@ -155,7 +159,7 @@
 		if (!artist || !tally) return [];
 		const p: string[] = [releasesCount(tally.released)];
 		if (tally.upcoming) p.push(i18n.music_n_upcoming({ count: String(tally.upcoming) }));
-		p.push(tracksCount(artist.track_count));
+		p.push(tracksCount(artist.tracks_have));
 		if (artist.size) p.push(formatBytes(artist.size, ""));
 		return p;
 	});
@@ -169,7 +173,7 @@
 	const memberTile = (m: Member): PersonTile => ({
 		key: m.name,
 		name: m.name,
-		photo_url: m.photo_url,
+		photo_url: personPhoto(m),
 		href: personHref(m),
 		role: m.instruments.join(", "),
 		note: memberYears(m),
@@ -178,7 +182,7 @@
 	const reachTile = (x: Reach, role: string): PersonTile => ({
 		key: x.person.name,
 		name: x.person.name,
-		photo_url: x.person.photo_url,
+		photo_url: personPhoto(x.person),
 		href: personHref(x.person),
 		role,
 		note: releasesCount(x.releases),
@@ -197,13 +201,15 @@
 
 	let artistRows = $derived.by<InfoRow[]>(() => {
 		if (!artist) return [];
-		const labels = [...new Set(artist.releases.map((r) => r.label).filter((l): l is string => !!l))];
+		const labels = [...new Set(artist.albums.map((r) => r.label).filter((l): l is string => !!l))];
 		const rows: InfoRow[] = [];
 		if (artist.type) rows.push({ label: i18n.common_type(), value: artist.type === "group" ? i18n.lookup_group() : i18n.common_person(), mono: false });
-		rows.push({ label: i18n.music_fact_genre(), value: artist.genre, mono: false });
+		if (artist.genre) rows.push({ label: i18n.music_fact_genre(), value: artist.genre, mono: false });
 		if (artist.origin) rows.push({ label: i18n.music_fact_from(), value: artist.origin, mono: false });
 		if (artist.since) rows.push({ label: i18n.music_fact_since(), value: String(artist.since) });
 		if (labels.length) rows.push({ label: labels.length === 1 ? i18n.music_fact_label() : i18n.music_fact_labels(), value: labels.join(", "), mono: false });
+		if (artist.overview_source)
+			rows.push({ label: "Wikipedia", value: [{ text: "CC BY-SA", href: artist.overview_source, external: true }], mono: false });
 		if (artist.mbid)
 			rows.push({ label: "MusicBrainz", value: [{ text: artist.mbid.slice(0, 8), href: `https://musicbrainz.org/artist/${artist.mbid}`, external: true }], mono: true });
 		return rows;
@@ -215,7 +221,7 @@
 			{ label: i18n.action_monitor(), value: MONITOR.find((o) => o.key === artist.monitor)?.label ?? "", mono: false },
 			{ label: i18n.music_fact_releases(), value: `${tally.have} / ${tally.released}` },
 			{ label: i18n.music_fact_on_disk(), value: formatBytes(artist.size, "") },
-			{ label: i18n.music_fact_last_added(), value: formatRelative(artist.last_added_at) },
+			{ label: i18n.music_fact_last_added(), value: formatRelative(artist.added_at) },
 		];
 	});
 	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
@@ -243,7 +249,7 @@
 {:else}
 	<div class={cn(canEdit && "pb-24 md:pb-0")}>
 		<MediaHero
-			backdrop={artist.photo_url}
+			backdrop={artistPosterUrl(artist.id)}
 			backHref="/music"
 			backLabel={i18n.music_label()}
 			cols="md:grid-cols-[180px_1fr] lg:grid-cols-[220px_1fr]"
@@ -258,12 +264,12 @@
 					<div class="absolute inset-0 grid place-items-center text-fg-faint">
 						<UserRound class="h-1/3 w-1/3" aria-hidden="true" />
 					</div>
-					<Poster src={artist.photo_url} alt="" loading="eager" class="relative h-full w-full object-cover" />
+					<Poster src={artistPosterUrl(artist.id)} alt="" loading="eager" class="relative h-full w-full object-cover" />
 				</div>
 			{/snippet}
 			{#snippet pills()}
 				<StatusPill status={artist.status} size="md" variant="translucent" live={artist.status === "downloading"} />
-				<span class={caps}>{artist.genre}</span>
+				{#if artist.genre}<span class={caps}>{artist.genre}</span>{/if}
 				{#if artist.origin}
 					<span class="text-fg-faint" aria-hidden="true">·</span>
 					<span class={caps}>{artist.origin}</span>
@@ -371,7 +377,7 @@
 
 		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div class="flex w-full gap-0.5">
-				{#each [{ key: "overview", label: i18n.common_overview(), n: null }, { key: "discography", label: i18n.music_discography(), n: artist.releases.length }, { key: "credits", label: i18n.music_credits(), n: people?.total || null }] as t (t.key)}
+				{#each [{ key: "overview", label: i18n.common_overview(), n: null }, { key: "discography", label: i18n.music_discography(), n: artist.albums.length }, { key: "credits", label: i18n.music_credits(), n: people?.total || null }] as t (t.key)}
 					{@const active = tab === t.key}
 					<button
 						type="button"
@@ -390,7 +396,7 @@
 		{#if tab === "discography"}
 			<div class="md:hidden">
 				<ReleaseAccordion
-					releases={artist.releases}
+					releases={artist.albums}
 					openId={open}
 					onToggle={(rid) => (openId = open === rid ? -1 : rid)}
 					{canEdit}
@@ -405,7 +411,7 @@
 			     an arbitrary grid template that ends in `minmax(0,1fr)]`. The panel is
 			     min-w-0, which gives the same floor. -->
 			<div class="hidden gap-6 px-8 py-6 md:grid md:grid-cols-[200px_1fr] lg:grid-cols-[250px_1fr]">
-				<ReleaseList releases={artist.releases} selectedId={selected?.id} onSelect={select} />
+				<ReleaseList releases={artist.albums} selectedId={selected?.id} onSelect={select} />
 				{#if selected}
 					<ReleasePanel
 						release={selected}

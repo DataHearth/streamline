@@ -9,6 +9,7 @@
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
+	import { bookPosterUrl } from "@lib/posters";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
@@ -32,6 +33,7 @@
 		kindLabel,
 		languageName,
 		personHref,
+		personPhoto,
 		type Book,
 		type BookFormat,
 		type BookMonitor,
@@ -94,14 +96,14 @@
 	}
 	async function search(f: BookFormat) {
 		if (!book) return;
-		await api(`/books/${id}/search`, { method: "POST", body: { format: f } });
+		await api(`/books/${id}/search-now?kind=${f}`, { method: "POST" });
 		toast.ok(i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() }));
 	}
 	// Every monitored format at once: the book's counterpart to a movie's
 	// automatic search.
 	async function searchAll() {
 		if (!book) return;
-		await api(`/books/${id}/search`, { method: "POST" });
+		await api(`/books/${id}/search-now`, { method: "POST" });
 		toast.ok(i18n.books_search_all_started({ title: book.title }));
 	}
 	async function changeEdition(f: BookFormat) {
@@ -140,7 +142,7 @@
 			? bookPeople(book.contributors ?? [], book.editions, [inUse.ebook, inUse.audiobook]).map((x) => ({
 					key: `${x.role}:${x.person.name}`,
 					name: x.person.name,
-					photo_url: x.person.photo_url,
+					photo_url: personPhoto(x.person),
 					href: personHref(x.person),
 					role: bookRoleLabel(x.role),
 					note: x.languages.map((l) => languageName(l, true)).join(", "),
@@ -197,7 +199,7 @@
 	</div>
 {:else}
 	<MediaHero
-		backdrop={book.cover_url}
+		backdrop={bookPosterUrl(book.id)}
 		backHref="/books"
 		backLabel={i18n.books_label()}
 		cols="md:grid-cols-[190px_1fr] lg:grid-cols-[240px_1fr]"
@@ -210,7 +212,7 @@
 	>
 		{#snippet art()}
 			<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-				<BookCover src={book.cover_url} alt={i18n.common_poster_alt({ title: book.title })} />
+				<BookCover src={bookPosterUrl(book.id)} alt={i18n.common_poster_alt({ title: book.title })} />
 			</div>
 		{/snippet}
 		{#snippet pills()}
@@ -352,7 +354,7 @@
 
 	<Modal open={manualOpen} title={i18n.manual_search_scope({ scope: book.title })} size="4xl" onClose={() => (manualOpen = false)}>
 		<ReleasesTable
-			searchPath={`/books/${book.id}/releases`}
+			searchPath={`/books/${book.id}/search`}
 			grabPath={`/books/${book.id}/grab`}
 			queryKey={["releases", "book", book.id]}
 			existingCount={book.formats.filter((f) => !!f.file).length}

@@ -12,6 +12,16 @@ export function albumPosterUrl(id: number): string {
 	return `/posters/albums/${id}/poster.jpg`;
 }
 
+export function artistPosterUrl(id: number): string {
+	return `/posters/artists/${id}/poster.jpg`;
+}
+
+// Art for a title that is not in the library yet, keyed by the provider's id:
+// the artist's or release group's MBID, a Hardcover book id.
+export function lookupPosterUrl(kind: "artists" | "albums" | "books", key: string | number): string {
+	return `/posters/lookup/${kind}/${key}/poster.jpg`;
+}
+
 export function authorPosterUrl(id: number): string {
 	return `/posters/authors/${id}/poster.jpg`;
 }

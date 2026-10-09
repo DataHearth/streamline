@@ -1,3 +1,5 @@
+import type { MusicTier } from "./music-books";
+
 export type MovieStatus =
 	| "wanted"
 	| "downloading"
@@ -365,6 +367,11 @@ export type SearchResult = {
 	resolution?: string;
 	source?: string;
 	codec?: string;
+	// Music: the tier the release falls in. Book: the audiobook bit rate, when
+	// the name states one, and the slot the release fills.
+	audio_tier?: MusicTier;
+	bitrate_kbps?: number;
+	slot?: "ebook" | "audiobook";
 	indexer?: string;
 	published_at?: string;
 	// Scoring against the queried item's quality profile. Absent when no profile
@@ -453,10 +460,12 @@ export type RequestUser = {
 
 export type MediaRequest = {
 	id: number;
-	// artist / book / book_series are the music and book requests; their ids
-	// are MusicBrainz's (a string) and Hardcover's.
+	// artist / book / book_series are the music and book requests. An artist
+	// request is keyed by `media_mbid` (media_id is 0); a book's and a series'
+	// `media_id` is the Hardcover id, in separate spaces per type.
 	media_type: "movie" | "tvshow" | "artist" | "book" | "book_series";
-	media_id: number | string;
+	media_id: number;
+	media_mbid?: string;
 	title: string;
 	status: RequestStatus;
 	reason?: string;

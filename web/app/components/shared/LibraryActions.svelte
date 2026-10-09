@@ -6,6 +6,7 @@
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
 	import type { QualityProfile } from "@lib/types";
+	import { profilesPath } from "@lib/music-books";
 	import KebabMenu, { type KebabItem } from "./KebabMenu.svelte";
 	import QualityProfileModal from "./QualityProfileModal.svelte";
 	import DeleteTitleDialog from "./DeleteTitleDialog.svelte";
@@ -57,7 +58,7 @@
 	const invalidate = () => qc.invalidateQueries({ queryKey: [queryKey] });
 	const profiles = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<QualityProfile[]>(`/quality-profiles?media=${media}`),
+		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: qpOpen,
 	}));
 

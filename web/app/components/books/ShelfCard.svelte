@@ -5,6 +5,7 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import BookCover from "./BookCover.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
+	import { bookPosterUrl } from "@lib/posters";
 	import { formatLabel, kindLabel, type FormatState, type ShelfItem } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -37,7 +38,7 @@
 	<div
 		class="relative overflow-hidden rounded-lg transition group-hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)] group-has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]"
 	>
-		<BookCover src={item.cover_url} alt={i18n.common_poster_alt({ title: item.title })} />
+		<BookCover src={bookPosterUrl(item.cover_id)} alt={i18n.common_poster_alt({ title: item.title })} />
 		<div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-2.5 pt-12">
 			<p class="truncate text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]">{item.title}</p>
 			<p class="truncate text-[11px] text-white/70">{item.author}</p>

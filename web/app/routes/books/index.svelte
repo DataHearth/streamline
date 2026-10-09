@@ -3,14 +3,16 @@
 	import { onMount } from "svelte";
 	import { createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { ArrowLeft, Layers, UserRound } from "@lucide/svelte";
-	import { api, errorText } from "@lib/api";
+	import { api, apiAllPages, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
 	import { onRouteQuery } from "@lib/route-query";
 	import LibraryToolbar from "@components/shared/LibraryToolbar.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import Shelf from "@components/books/Shelf.svelte";
 	import ShelfCard from "@components/books/ShelfCard.svelte";
-	import type { BookCounts, ShelfItem, ShelfList } from "@lib/music-books";
+	import type { BookCounts, ShelfItem } from "@lib/music-books";
+	import type { ScheduleList } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Shelves by kind; "See all" turns the page into that kind's full grid,
@@ -76,21 +78,43 @@
 		document.getElementById("main")?.scrollTo({ top: 0 });
 	}
 
-	const listQuery = createQuery<ShelfList>(() => ({
-		queryKey: ["books", "list", status, author, format, debounced, sort],
+	// The server's kind filter for the page: the BD shelf holds comics too.
+	const KIND_PARAM: Record<Kind, string> = { all: "", novel: "novel", bd: "bd,comic", manga: "manga" };
+	function filterParams(withKind: boolean) {
+		const p = new URLSearchParams();
+		if (status !== "all") p.set("status", status);
+		if (author !== "all") p.set("author", author);
+		if (format !== "all") p.set("format", format);
+		if (withKind && KIND_PARAM[kind]) p.set("kind", KIND_PARAM[kind]);
+		if (debounced.trim()) p.set("query", debounced.trim());
+		return p;
+	}
+
+	// The landing page folds every kind into its shelves, so it needs the whole
+	// matching shelf; a kind's grid asks the server for that kind alone.
+	const listQuery = createQuery<{ items: ShelfItem[]; total: number }>(() => ({
+		queryKey: ["books", "list", kind, status, author, format, debounced, sort],
 		queryFn: () => {
-			const p = new URLSearchParams({ sort });
-			if (status !== "all") p.set("status", status);
-			if (author !== "all") p.set("author", author);
-			if (format !== "all") p.set("format", format);
-			if (debounced.trim()) p.set("query", debounced.trim());
-			return api<ShelfList>(`/books?${p}`);
+			const p = filterParams(true);
+			p.set("sort", sort);
+			return apiAllPages<ShelfItem>(`/books?${p}`);
 		},
 		placeholderData: keepPreviousData,
 	}));
+	// Carries the page's filters so the facet rows count against them; the nav
+	// badge keeps the unfiltered ["books", "counts"] entry.
 	const countsQuery = createQuery<BookCounts>(() => ({
-		queryKey: ["books", "counts"],
-		queryFn: () => api<BookCounts>("/books/counts"),
+		queryKey: ["books", "counts", { kind, status, author, format, query: debounced }],
+		queryFn: () => {
+			const qs = filterParams(true).toString();
+			return api<BookCounts>(`/books/counts${qs ? `?${qs}` : ""}`);
+		},
+		placeholderData: keepPreviousData,
+	}));
+	const schedulesQuery = createQuery<ScheduleList>(() => ({
+		queryKey: ["schedules"],
+		queryFn: () => api<ScheduleList>("/schedules"),
+		enabled: auth.isAdmin,
 	}));
 
 	let items = $derived(listQuery.data?.items ?? []);
@@ -115,10 +139,16 @@
 	);
 	let shown = $derived(kind === "all" ? items : kindItems);
 	let filtering = $derived(status !== "all" || author !== "all" || format !== "all" || !!debounced);
-	let lastScan = $derived(counts?.last_scan ? formatRelative(counts.last_scan) : "");
+	let lastFinished = $derived.by(() => {
+		let latest: string | null = null;
+		for (const s of schedulesQuery.data?.items ?? [])
+			if (s.last_finished_at && (!latest || s.last_finished_at > latest)) latest = s.last_finished_at;
+		return latest;
+	});
+	let lastScan = $derived(lastFinished ? formatRelative(lastFinished) : "");
 
 	let tabs = $derived([
-		{ key: "all", label: i18n.common_all(), count: counts?.total },
+		{ key: "all", label: i18n.common_all(), count: counts?.status_total },
 		{ key: "wanted", label: i18n.status_wanted(), count: counts?.wanted, dot: "bg-status-wanted" },
 		{ key: "downloading", label: i18n.status_downloading(), count: counts?.downloading, dot: "bg-status-downloading" },
 		{ key: "available", label: i18n.status_available(), count: counts?.available, dot: "bg-status-available" },
@@ -139,8 +169,8 @@
 			value: format,
 			options: [
 				{ key: "all", label: i18n.books_any_format() },
-				{ key: "ebook", label: i18n.books_format_ebook() },
-				{ key: "audiobook", label: i18n.books_format_audiobook() },
+				{ key: "ebook", label: i18n.books_format_ebook(), count: counts?.ebook },
+				{ key: "audiobook", label: i18n.books_format_audiobook(), count: counts?.audiobook },
 			],
 			onChange: (v: string) => (format = v),
 		},

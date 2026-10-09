@@ -23,7 +23,7 @@
 	import MediaProfilesPanel from "@components/settings/MediaProfilesPanel.svelte";
 	import { onRouteQuery } from "@lib/route-query";
 	import { cn } from "@lib/cn";
-	import type { ProfileMedia } from "@lib/music-books";
+	import { profilesPath, type ProfileMedia } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Video, music and books keep separate lists: a resolution means nothing to
@@ -42,11 +42,11 @@
 	// request per medium.
 	const musicList = createQuery<unknown[]>(() => ({
 		queryKey: ["quality-profiles", "music"],
-		queryFn: () => api<unknown[]>("/quality-profiles?media=music"),
+		queryFn: () => api<unknown[]>(profilesPath("music")),
 	}));
 	const bookList = createQuery<unknown[]>(() => ({
 		queryKey: ["quality-profiles", "books"],
-		queryFn: () => api<unknown[]>("/quality-profiles?media=books"),
+		queryFn: () => api<unknown[]>(profilesPath("books")),
 	}));
 
 	const qc = useQueryClient();

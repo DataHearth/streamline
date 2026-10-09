@@ -14,7 +14,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
-	import { requestHit, type ArtistMeta, type BookMeta } from "@lib/music-books-lookup";
+	import { requestHit, type ArtistMeta, type BookMeta, type RequestMetadata } from "@lib/music-books-lookup";
 	import type {
 		MediaRequest,
 		QualityProfile,
@@ -41,7 +41,7 @@
 		onReopen,
 	}: {
 		request: MediaRequest | null;
-		detail?: RequestMediaDetails | ArtistMeta | BookMeta;
+		detail?: RequestMetadata;
 		detailLoading?: boolean;
 		detailError?: boolean;
 		reviewer: boolean;

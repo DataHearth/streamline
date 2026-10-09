@@ -6,6 +6,7 @@
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
 	import { qualityNote, releaseFacts, releasePill, releaseTypeLabel, releaseYear, type Release, type Track } from "@lib/music-books";
+	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The selected release, right of the list from md. Two searches, as on the
@@ -39,7 +40,7 @@
 <section aria-labelledby="release-title" class="min-w-0">
 	<div class="flex items-start gap-4 rounded-lg border border-border bg-bg-elevated/70 p-4 lg:gap-5">
 		<div class="w-[88px] shrink-0 lg:w-[112px]">
-			<ReleaseCover src={r.cover_url} dim={up} dashed={up} />
+			<ReleaseCover src={albumPosterUrl(r.id)} dim={up} dashed={up} />
 		</div>
 		<!-- A container, so Manual search can drop its label where this column
 		     is narrow (tablet, and lg until ~1180px) instead of wrapping the
@@ -48,7 +49,7 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
 				<span class={caps}>{releaseTypeLabel(r.type)}</span>
-				{#if !up}
+				{#if !up && releaseYear(r)}
 					<span class="text-fg-faint" aria-hidden="true">·</span>
 					<span class={caps}>{releaseYear(r)}</span>
 				{/if}

@@ -31,6 +31,7 @@ import {
 import { api, type Paginated } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
+import { artistPosterUrl, bookPosterUrl } from "./posters";
 import type { Movie, Person, TVShow } from "./types";
 import { kindLabel, type Artist, type BookKind, type ShelfItem } from "./music-books";
 import { m as i18n } from "./paraglide/messages.js";
@@ -296,7 +297,7 @@ export function createSearchModel(
 					kind: "artist",
 					id: a.id,
 					label: a.name,
-					image: a.photo_url,
+					image: artistPosterUrl(a.id),
 					genre: a.genre,
 				}))
 			: [];
@@ -305,7 +306,7 @@ export function createSearchModel(
 					kind: "book",
 					id: b.id,
 					label: b.title,
-					image: b.cover_url,
+					image: bookPosterUrl(b.cover_id),
 					author: b.author,
 					year: b.year,
 					bookKind: b.kind,

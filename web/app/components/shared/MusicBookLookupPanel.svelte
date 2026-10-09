@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { BookOpen, ChevronLeft, ExternalLink, Music } from "@lucide/svelte";
 	import Img from "./Img.svelte";
+	import { lookupPosterUrl } from "@lib/posters";
 	import { formatLabel, languageName, releaseTypeLabel } from "@lib/music-books";
 	import {
 		hitChips,
@@ -71,7 +72,6 @@
 				a.type ? { label: i18n.common_type(), value: a.type === "group" ? i18n.lookup_group() : i18n.common_person() } : null,
 				a.area ? { label: i18n.music_fact_from(), value: a.area } : null,
 				a.since ? { label: i18n.music_fact_since(), value: String(a.since) } : null,
-				a.release_count ? { label: i18n.music_fact_releases(), value: String(a.release_count) } : null,
 				artistDetail?.members?.length ? { label: i18n.lookup_members(), value: artistDetail.members.join(", ") } : null,
 				{ label: "MusicBrainz", value: a.mbid.slice(0, 8), href: `https://musicbrainz.org/artist/${a.mbid}` },
 			];
@@ -196,27 +196,27 @@
 			<section>
 				<h4 class={h4}>{i18n.music_discography()}</h4>
 				<ul class="grid grid-cols-3 gap-3 sm:grid-cols-4">
-					{#each releases as r (r.title + r.year)}
+					{#each releases as r (r.mbid)}
 						<li class="min-w-0">
 							<div class="aspect-square overflow-hidden rounded-md border border-white/[0.06] bg-bg-card">
-								<Img src={r.cover_url} alt="" class="h-full w-full object-cover" />
+								<Img src={lookupPosterUrl("albums", r.mbid)} alt="" class="h-full w-full object-cover" />
 							</div>
 							<p class="mt-1.5 truncate text-[12px] font-medium text-fg">{r.title}</p>
 							<p class="truncate font-mono text-[10.5px] text-fg-subtle">
-								{r.year} · {releaseTypeLabel(r.type)}
+								{[r.year, releaseTypeLabel(r.type)].filter(Boolean).join(" · ")}
 							</p>
 						</li>
 					{/each}
 				</ul>
 			</section>
-		{:else if !isArtist && hit.series && (bookDetail?.volume_covers?.length ?? 0) > 0}
+		{:else if !isArtist && hit.series && (bookDetail?.volume_book_ids?.length ?? 0) > 0}
 			<section>
 				<h4 class={h4}>{hit.book?.volumes ? volumesCount(hit.book.volumes) : i18n.books_volumes()}</h4>
 				<ul class="grid grid-cols-4 gap-2.5 sm:grid-cols-6">
-					{#each bookDetail?.volume_covers ?? [] as cover, i (i)}
+					{#each bookDetail?.volume_book_ids ?? [] as volumeId, i (volumeId)}
 						<li class="min-w-0">
 							<div class="aspect-[2/3] overflow-hidden rounded-[5px] border border-white/[0.06] bg-bg-card">
-								<Img src={cover} alt="" class="h-full w-full object-cover" />
+								<Img src={lookupPosterUrl("books", volumeId)} alt="" class="h-full w-full object-cover" />
 							</div>
 							<p class="mt-1 text-center font-mono text-[10px] text-fg-subtle">{i18n.books_volume_n({ n: String(i + 1) })}</p>
 						</li>

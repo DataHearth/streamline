@@ -3,7 +3,7 @@
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Trash2, Gauge, Pencil, Eye, Star } from "@lucide/svelte";
+	import { Trash2, Gauge, Pencil, Eye, Star, BookOpen, Layers, MessageSquare, Sparkles } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
@@ -19,11 +19,14 @@
 		bookRequest,
 		bookValues,
 		formatLabel,
+		kindLabel,
 		musicProfileSchema,
 		musicRequest,
 		musicValues,
+		profilesPath,
 		sortTiers,
 		tierLabel,
+		type BookKind,
 		type BookProfile,
 		type MusicProfile,
 		type ProfileMedia,
@@ -31,31 +34,40 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The music and books halves of Settings → Quality profiles: the same list,
-	// row and actions as the video profiles, over /quality-profiles?media=. The
-	// page mounts one instance per tab, so `media` is fixed for an instance.
+	// row and actions as the video profiles, over /music/quality-profiles and
+	// /books/quality-profiles. The page mounts one instance per tab, so `media`
+	// is fixed for an instance. Music has one default; books one per kind.
 	let { media }: { media: ProfileMedia } = $props();
 	const isMusic = untrack(() => media) === "music";
-	const qs = `?media=${untrack(() => media)}`;
+	const base = profilesPath(untrack(() => media));
+	const KINDS: { kind: BookKind; icon: typeof BookOpen }[] = [
+		{ kind: "novel", icon: BookOpen },
+		{ kind: "bd", icon: Layers },
+		{ kind: "comic", icon: MessageSquare },
+		{ kind: "manga", icon: Sparkles },
+	];
 
 	type Profile = MusicProfile | BookProfile;
 	const qc = useQueryClient();
 	const list = createQuery<Profile[]>(() => ({
 		queryKey: ["quality-profiles", media],
-		queryFn: () => api<Profile[]>(`/quality-profiles${qs}`),
+		queryFn: () => api<Profile[]>(base),
 	}));
 	let items = $derived(list.data ?? []);
 
 	let editing = $state<Profile | null>(null);
 	let modalOpen = $state(false);
 	let deleting = $state<Profile | null>(null);
-	const at = (name: string) => `/quality-profiles/${encodeURIComponent(name)}`;
+	const at = (name: string) => `${base}/${encodeURIComponent(name)}`;
+	const defaultKinds = (p: Profile): BookKind[] => ("default_for" in p ? p.default_for : []);
+	const isDefault = (p: Profile) => ("tiers" in p ? !!p.is_default : defaultKinds(p).length > 0);
 	const invalidate = () => qc.invalidateQueries({ queryKey: ["quality-profiles"] });
 
 	const save = createMutation<Profile, Error, object>(() => ({
 		mutationFn: (body) =>
 			editing
-				? api<Profile>(`${at(editing.name)}${qs}`, { method: "PUT", body: { ...body, media } })
-				: api<Profile>(`/quality-profiles${qs}`, { method: "POST", body: { ...body, media } }),
+				? api<Profile>(at(editing.name), { method: "PUT", body })
+				: api<Profile>(base, { method: "POST", body }),
 		onSuccess: () => {
 			invalidate();
 			toast.ok(editing ? i18n.quality_updated() : i18n.quality_created());
@@ -65,7 +77,7 @@
 		onError: (err) => toast.err(errorText(err)),
 	}));
 	const remove = createMutation<null, Error, string>(() => ({
-		mutationFn: (name) => api<null>(`${at(name)}${qs}`, { method: "DELETE" }),
+		mutationFn: (name) => api<null>(at(name), { method: "DELETE" }),
 		onSuccess: () => {
 			invalidate();
 			toast.ok(i18n.qp_deleted());
@@ -74,8 +86,9 @@
 	}));
 	// Deleting the default is a 409 here too, so this is also how a profile is
 	// freed for deletion.
-	const makeDefault = createMutation<null, Error, string>(() => ({
-		mutationFn: (name) => api<null>(`${at(name)}/default${qs}`, { method: "POST" }),
+	const makeDefault = createMutation<null, Error, { name: string; kind?: BookKind }>(() => ({
+		mutationFn: ({ name, kind }) =>
+			api<null>(`${at(name)}/default${kind ? `?kind=${kind}` : ""}`, { method: "POST" }),
 		onSuccess: () => {
 			invalidate();
 			toast.ok(i18n.quality_default_set());
@@ -147,10 +160,18 @@
 					<div class="min-w-0 flex-1">
 						<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 							<span class="truncate text-sm font-semibold text-fg">{p.name}</span>
-							{#if p.is_default}
-								<span class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-									{i18n.quality_default_badge()}
-								</span>
+							{#if "tiers" in p}
+								{#if p.is_default}
+									<span class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+										{i18n.quality_default_badge()}
+									</span>
+								{/if}
+							{:else}
+								{#each p.default_for as k (k)}
+									<span class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+										{i18n.quality_default_kind_badge({ kind: kindLabel(k) })}
+									</span>
+								{/each}
 							{/if}
 							{#if p.upgrade_allowed}
 								<span class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available">
@@ -188,17 +209,34 @@
 							<Eye size={16} aria-hidden="true" />
 						</button>
 					{:else}
-						{#if !p.is_default}
-							<button
-								type="button"
-								disabled={makeDefault.isPending}
-								onclick={() => makeDefault.mutate(p.name)}
-								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-								aria-label={i18n.quality_make_default()}
-								title={i18n.quality_make_default()}
-							>
-								<Star size={16} aria-hidden="true" />
-							</button>
+						{#if "tiers" in p}
+							{#if !p.is_default}
+								<button
+									type="button"
+									disabled={makeDefault.isPending}
+									onclick={() => makeDefault.mutate({ name: p.name })}
+									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+									aria-label={i18n.quality_make_default()}
+									title={i18n.quality_make_default()}
+								>
+									<Star size={16} aria-hidden="true" />
+								</button>
+							{/if}
+						{:else}
+							{#each KINDS as { kind, icon: Icon } (kind)}
+								{#if !p.default_for.includes(kind)}
+									<button
+										type="button"
+										disabled={makeDefault.isPending}
+										onclick={() => makeDefault.mutate({ name: p.name, kind })}
+										class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+										aria-label={i18n.quality_make_default_kind({ kind: kindLabel(kind) })}
+										title={i18n.quality_make_default_kind({ kind: kindLabel(kind) })}
+									>
+										<Icon size={16} aria-hidden="true" />
+									</button>
+								{/if}
+							{/each}
 						{/if}
 						<button
 							type="button"
@@ -210,8 +248,8 @@
 						</button>
 						<button
 							type="button"
-							disabled={p.is_default}
-							title={p.is_default ? i18n.quality_default_undeletable() : null}
+							disabled={isDefault(p)}
+							title={isDefault(p) ? i18n.quality_default_undeletable() : null}
 							onclick={() => (deleting = p)}
 							class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 							aria-label={i18n.quality_delete()}

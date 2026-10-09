@@ -22,7 +22,7 @@
 		extra,
 		actions,
 	}: {
-		backdrop: string;
+		backdrop?: string;
 		backHref: string;
 		backLabel: string;
 		// The md/lg grid template, e.g. "md:grid-cols-[180px_1fr] lg:grid-cols-[220px_1fr]".
@@ -43,12 +43,14 @@
 
 <section class="relative" aria-labelledby={labelId}>
 	<div class="absolute inset-0 z-0 overflow-hidden bg-bg-deep">
-		<Img
-			src={backdrop}
-			alt=""
-			aria-hidden="true"
-			class="h-full w-full scale-110 object-cover opacity-70 blur-md"
-		/>
+		{#if backdrop}
+			<Img
+				src={backdrop}
+				alt=""
+				aria-hidden="true"
+				class="h-full w-full scale-110 object-cover opacity-70 blur-md"
+			/>
+		{/if}
 		<div class="hero-overlay absolute inset-0"></div>
 	</div>
 
