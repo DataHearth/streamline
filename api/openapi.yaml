@@ -41,13 +41,11 @@ tags:
   - name: music
     description: Music library, artists, albums and tracks backed by MusicBrainz
   - name: music-quality-profiles
-    description: Audio format quality profiles for the music library
+    description: Audio tier quality profiles for the music library
   - name: books
-    description: Book library, authors and books backed by Hardcover
-  - name: ebook-quality-profiles
-    description: Format quality profiles for the ebook slot of the book library
-  - name: audiobook-quality-profiles
-    description: Format quality profiles for the audiobook slot of the book library
+    description: Book library, series and books backed by Hardcover
+  - name: book-quality-profiles
+    description: Format quality profiles covering the ebook and audiobook slots of the book library
 
 servers:
   - url: /api/v1
@@ -1080,14 +1078,42 @@ paths:
       operationId: searchMusicArtists
       summary: Search MusicBrainz for artists to add
       description: |
-        Searches MusicBrainz for artists matching the query. Used to find
-        MBIDs before adding artists to the library.
+        Searches MusicBrainz for artists matching the query. Used to find MBIDs before
+         adding artists to the library. Open to every authenticated user, `request_only`
+         included, since the request form reads it. A 429 (`code: rate_limited`) is
+         MusicBrainz answering 503.
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/MusicSearchQuery"
       responses:
         "200":
           $ref: "#/components/responses/MusicSearchResults"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/search/{mbid}:
+    get:
+      operationId: getMusicArtistLookup
+      summary: Look up one MusicBrainz artist
+      description: |
+        Returns the hit fields and the detail of one MusicBrainz artist in one object (no
+         `score`): overview, genres, current members and the release groups. The same
+         object is the artist arm of `GET /requests/{id}/metadata`. Costs `1 + ceil(n/100)`
+         MusicBrainz requests for an artist with `n` release groups, none on a hit of the
+         10-minute in-process cache. Open to every authenticated user.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/MBIDParam"
+        - $ref: "#/components/parameters/OverviewLang"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistLookupDetailResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1095,11 +1121,21 @@ paths:
     get:
       operationId: listMusicArtists
       summary: List music artists
-      description: Returns a paginated list of artists in the library.
+      description: |
+        Returns a paginated list of artists in the library. Items carry their albums as tile
+         summaries (no tracks). `query` matches accent-folded over name, sort name, genre and
+         album titles; `sort=recent` is newest first, `sort=name` ascending, and `order`
+         overrides either. A `limit` outside [1, 100] answers 400. Open to every authenticated
+         user: the command palette reads it with `query` and `limit=5`.
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/SeriesPage"
         - $ref: "#/components/parameters/SeriesLimit"
+        - $ref: "#/components/parameters/MusicArtistStatusParam"
+        - $ref: "#/components/parameters/MusicArtistMonitoredParam"
+        - $ref: "#/components/parameters/MusicArtistQueryParam"
+        - $ref: "#/components/parameters/MusicArtistSortParam"
+        - $ref: "#/components/parameters/MusicArtistOrderParam"
       responses:
         "200":
           $ref: "#/components/responses/MusicArtistList"
@@ -1111,9 +1147,12 @@ paths:
       operationId: addMusicArtist
       summary: Add an artist by MusicBrainz id
       description: |
-        Fetches the artist and its discography from MusicBrainz and adds
-        them to the library. MusicBrainz is rate limited to one request per
-        second, so an artist with a large discography is slow to add.
+        Adds the artist with one album stub per release group, in two phases. The request
+         fetches only the artist and its release-group list (`1 + ceil(n/100)` MusicBrainz
+         requests) and returns at once with `hydrating: true`; tracks, credits and covers
+         arrive in the background and the SPA polls the detail while `hydrating` holds. An
+         unknown `quality_profile` answers 422; a 429 (`code: rate_limited`) is MusicBrainz
+         answering 503.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/AddMusicArtist"
@@ -1126,16 +1165,43 @@ paths:
           $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/counts:
+    get:
+      operationId: getMusicArtistCounts
+      summary: Artist facet counts
+      description: |
+        Tallies the status and monitoring facets of the artist list. Each facet is counted
+         with the other facet's filter applied and its own left out, each with its own
+         `*_total` "all" row; `query` narrows every tally. Called with no parameters this is
+         the whole library, which is what the nav badge asks for. Open to every authenticated
+         user.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/MusicArtistStatusParam"
+        - $ref: "#/components/parameters/MusicArtistMonitoredParam"
+        - $ref: "#/components/parameters/MusicArtistQueryParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicArtistCountsResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /music/artists/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/OverviewLang"
     get:
       operationId: getMusicArtist
       summary: Get artist details
-      description: Returns one artist with its albums.
+      description: |
+        Returns one artist with its full tree: members and every album with tracks, credits and personnel.
       tags: [music]
       responses:
         "200":
@@ -1148,8 +1214,11 @@ paths:
       operationId: patchMusicArtist
       summary: Patch an artist
       description: |
-        Partially updates an artist. Changing `monitored` applies to every
-        album of the artist. An unknown `quality_profile` answers 422.
+        Partially updates an artist. Changing `monitor` re-applies the policy to the existing
+         albums (`all` and `none` set every album, `future` monitors albums with no release
+         date or one after today, `manual` leaves the flags alone) and never touches album
+         `status`. An unknown `monitor` or `quality_profile` answers 422; an empty
+         `quality_profile` clears to the default.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicArtist"
@@ -1170,8 +1239,8 @@ paths:
       operationId: deleteMusicArtist
       summary: Remove an artist from the library
       description: |
-        Deletes the artist with its albums and tracks. When delete_files=true,
-        also removes attached media files from disk.
+        Deletes the artist with its albums and tracks and removes the cached artist and album
+         posters. When delete_files=true, also removes attached media files from disk.
       tags: [music]
       parameters:
         - $ref: "#/components/parameters/DeleteSeriesFiles"
@@ -1185,16 +1254,18 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /music/artists/{id}/refresh:
+  /music/artists/{id}/refresh-metadata:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/OverviewLang"
     post:
       operationId: refreshMusicArtist
       summary: Refresh an artist from MusicBrainz
       description: |
-        Re-fetches the discography. New release groups become albums
-        inheriting the artist's monitored flag; existing albums update
-        metadata only.
+        Re-fetches the artist (type, origin, genre, members) and its release groups. New
+         release groups become albums following the artist's monitor policy and are hydrated
+         in the background; known albums that still have no tracks are retried. Answers 429
+         (`code: rate_limited`) when MusicBrainz is limiting.
       tags: [music]
       responses:
         "200":
@@ -1203,6 +1274,109 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/rename:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: renameMusicArtistFiles
+      summary: Rename an artist's track files to match the library naming pattern
+      description: |
+        Plans (and unless `preview` is true applies) a rename of every track file of the artist
+         to `library.music_naming`, from database metadata only: no tag is read or rewritten.
+         A hardlink of a seeding torrent keeps its inode and only the library path moves. Empty
+         `operations` means everything is already correct. Music has no media-server refresh.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/RenamePreview"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicRenamePlanResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/search-now:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMusicArtistNow
+      summary: Dispatch an indexer search for an artist's wanted albums
+      description: |
+        Runs the automatic search-and-grab pass over the artist's monitored, released,
+         hydrated albums in status `wanted`, one after the other, in the background. A manual
+         trigger waives the cooldown and the failure cap. Returns 202 at once.
+      tags: [music]
+      responses:
+        "202":
+          $ref: "#/components/responses/SearchNowAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/browse:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: browseMusicArtistReleases
+      summary: Search indexers for an artist's discography packs
+      description: |
+        Whole-artist manual search. Keeps only discographies whose artist part matches this
+         artist, scored against the artist's quality profile; items are plain `SearchResult`
+         with `audio_tier`. POST the chosen item back unchanged to `.../grab`, handle included.
+         A 422 with `code: no_quality_profile` means the artist has no usable quality profile.
+      tags: [music]
+      responses:
+        "200":
+          $ref: "#/components/responses/SearchResults"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/artists/{id}/grab:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: grabMusicArtistRelease
+      summary: Grab a discography pack for this artist
+      description: |
+        Dispatches the chosen pack to the highest-priority download client and links every
+         album of the artist that is monitored, released, hydrated and `wanted` or `paused`,
+         marking them `downloading`. The body is an item of the browse response, unchanged
+         (its `download_url` is a sealed handle). With `replace_existing: true` the importer
+         replaces, per linked album that already had files, the tracks the pack matches, and
+         deletes the old files only after the new ones are placed and verified. A refused grab,
+         including a pack with no linkable album, answers 422 with `code: grab_rejected`; an
+         artist with no usable quality profile answers 422 with `code: no_quality_profile`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabArtistRelease"
+      responses:
+        "202":
+          $ref: "#/components/responses/ReleaseGrabAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1212,7 +1386,8 @@ paths:
     get:
       operationId: getMusicAlbum
       summary: Get album details
-      description: Returns one album with its tracks.
+      description: |
+        Returns one album with its tracks, credits and personnel; the same object as an element of `MusicArtistDetail.albums`.
       tags: [music]
       responses:
         "200":
@@ -1224,6 +1399,8 @@ paths:
     patch:
       operationId: patchMusicAlbum
       summary: Patch an album
+      description: |
+        Sets the album's monitored flag. Never changes the artist's monitor policy or the album's status.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicAlbum"
@@ -1246,16 +1423,17 @@ paths:
       operationId: searchMusicAlbumReleases
       summary: Search indexers for one album's releases
       description: |
-        Interactive search across enabled indexers for a single album.
-        Releases the album's music quality profile rejects are dropped; the
-        rest come back ranked, each with its parsed `format` and `release.score`.
-        POST the chosen `release` object back unchanged to `.../grab`, handle
-        included. A 422 with `code: no_quality_profile` means the album has no
-        usable quality profile.
+        Interactive search across enabled indexers for a single album. Items are plain
+         `SearchResult` with the canonical display `source` and `audio_tier`. Releases the
+         album's music quality profile rejects stay in the list with `rejected` and
+         `reject_reason` ("tier not in the profile", or "quality is not stated in the release
+         name" when no tier can be read from the name). A discography never appears on an album
+         search. POST the chosen item back unchanged to `.../grab`, handle included. A 422 with
+         `code: no_quality_profile` means the album has no usable quality profile.
       tags: [music]
       responses:
         "200":
-          $ref: "#/components/responses/AlbumReleaseList"
+          $ref: "#/components/responses/SearchResults"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -1272,12 +1450,13 @@ paths:
       operationId: grabMusicAlbumRelease
       summary: Grab a specific release for this album
       description: |
-        Dispatches the chosen release to the highest-priority download client
-        and marks the album downloading. The body is the `release` object of
-        an item from the search response, unchanged (its `download_url` is a
-        sealed handle). A refused grab answers 422 with `code: grab_rejected`;
-        an album with no usable quality profile answers 422 with
-        `code: no_quality_profile`.
+        Dispatches the chosen release to the highest-priority download client and marks the
+         album downloading. The body is an item of the search response, unchanged (its
+         `download_url` is a sealed handle). With `replace_existing: true` the importer, once
+         the new files are placed and verified, removes the old file of every track the release
+         matched; tracks it did not cover keep theirs. A refused grab answers 422 with
+         `code: grab_rejected`; an album with no usable quality profile answers 422 with
+         `code: no_quality_profile`.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/GrabAlbumRelease"
@@ -1295,25 +1474,90 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/albums/{id}/search-now:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMusicAlbumNow
+      summary: Dispatch an indexer search and grab for a single album
+      description: |
+        Runs one search-and-grab pass against the album, in the background, waiving the
+         cooldown and the failure cap. An album that is available, upcoming or already has a
+         live download record is a no-op 202. A missing quality profile is logged, not
+         answered: the interactive `/search` returns 422 for it.
+      tags: [music]
+      responses:
+        "202":
+          $ref: "#/components/responses/SearchNowAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tracks/{id}/search-now:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: searchMusicTrackNow
+      summary: Dispatch an indexer search for the album holding a track
+      description: |
+        Indexers search by artist and album, so this runs the track's album pass; the importer
+         fills the missing track from the grabbed release.
+      tags: [music]
+      responses:
+        "202":
+          $ref: "#/components/responses/SearchNowAccepted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tracks/{id}/file:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    delete:
+      operationId: deleteMusicTrackFile
+      summary: Delete a track's media file
+      description: |
+        Removes every media file of the track (normally one) from disk and the database, then
+         moves the album from `available` to `wanted`. 409 when a file's stored path is outside
+         the music root; nothing is deleted.
+      tags: [music]
+      responses:
+        "204":
+          $ref: "#/components/responses/MusicTrackFileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/quality-profiles:
     get:
       operationId: listMusicQualityProfiles
       summary: List music quality profiles
+      description: |
+        Open to every authenticated user: the request form's preferred-quality list and a reviewer's approve form read it.
       tags: [music-quality-profiles]
       responses:
         "200":
-          description: Music quality profile list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/MusicQualityProfile"
+          $ref: "#/components/responses/MusicQualityProfileList"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
       operationId: createMusicQualityProfile
       summary: Create a music quality profile
+      description: |
+        Creates the profile. The first profile created while the family has no resolvable default
+         becomes the default in the same write, so a stock install can add an artist. `preferred`
+         must be one of `tiers`, else 422.
       tags: [music-quality-profiles]
       requestBody:
         $ref: "#/components/requestBodies/CreateMusicQualityProfile"
@@ -1337,7 +1581,8 @@ paths:
     put:
       operationId: updateMusicQualityProfile
       summary: Update a music quality profile
-      description: The name in the body is ignored; the path names the profile.
+      description: |
+        The name in the body is ignored; the path names the profile.
       tags: [music-quality-profiles]
       requestBody:
         $ref: "#/components/requestBodies/CreateMusicQualityProfile"
@@ -1357,6 +1602,8 @@ paths:
     delete:
       operationId: deleteMusicQualityProfile
       summary: Delete a music quality profile
+      description: |
+        Answers 409 while the profile is the default; `POST .../default` on another profile frees it. The last remaining profile is therefore undeletable.
       tags: [music-quality-profiles]
       responses:
         "204":
@@ -1370,20 +1617,46 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/quality-profiles/{name}/default:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: setDefaultMusicQualityProfile
+      summary: Make this the default music quality profile
+      description: |
+        Points `music_quality_default_profile` at this profile, the one an artist with an empty `quality_profile` resolves to.
+      tags: [music-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/QualityProfileDefaultSet"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Books ───────────────────────────────────────────────
   /books/search:
     get:
-      operationId: searchBookAuthors
-      summary: Search Hardcover for authors to add
+      operationId: searchBooks
+      summary: Search Hardcover for books and series to add
       description: |
-        Searches Hardcover for authors matching the query. Answers 503 when
-        no Hardcover API key is configured.
+        Two Hardcover requests per distinct query (one with `type=book` or `type=series`),
+         memoised for 5 minutes. Series whose name equals or starts with the query come first,
+         then books in Hardcover's relevance order, capped at 20. Open to every authenticated
+         user. Answers 503 when no Hardcover API key is configured and 429
+         (`code: rate_limited`, with `Retry-After`) when Hardcover's rate limit or daily request
+         budget is spent.
       tags: [books]
       parameters:
         - $ref: "#/components/parameters/BookSearchQuery"
+        - $ref: "#/components/parameters/BookSearchTypeParam"
       responses:
         "200":
-          $ref: "#/components/responses/BookSearchResults"
+          $ref: "#/components/responses/BookLookupResults"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "429":
           $ref: "#/components/responses/RateLimited"
         "500":
@@ -1391,41 +1664,83 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /books/authors:
+  /books/search/{hardcover_id}:
     get:
-      operationId: listBookAuthors
-      summary: List book authors
+      operationId: getBookLookup
+      summary: Look up one Hardcover book or series
       description: |
-        Returns a paginated list of authors in the library. Items carry
-        `book_count` but not the nested books.
+        Returns the hit fields and the detail in one object, memoised for 10 minutes: one
+         Hardcover request for a book, two for a series. The same object is the book arm of
+         `GET /requests/{id}/metadata`. Open to every authenticated user. Answers 503 when no
+         Hardcover API key is configured and 429 (`code: rate_limited`, with `Retry-After`)
+         when Hardcover's rate limit or daily request budget is spent.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/HardcoverIDParam"
+        - $ref: "#/components/parameters/BookLookupTypeParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookLookupDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books:
+    get:
+      operationId: listBooks
+      summary: List the books shelf
+      description: |
+        Standalone books and series merged into one paged list (`type` says which; ids are
+         only unique per `type`). A series volume is never an item of its own. `author` is an
+         exact creator name, accent- and case-folded; `format` keeps books with that slot
+         monitored or holding a file and series only for `ebook`; `kind` is a comma list
+         (`bd,comic`); `query` matches the display title, original title, every edition title
+         and creator names. A `limit` outside [1, 100] answers 400. Open to every authenticated
+         user: the command palette reads it with `query` and `limit=5`.
       tags: [books]
       parameters:
         - $ref: "#/components/parameters/SeriesPage"
         - $ref: "#/components/parameters/SeriesLimit"
+        - $ref: "#/components/parameters/BookShelfStatusParam"
+        - $ref: "#/components/parameters/BookShelfAuthorParam"
+        - $ref: "#/components/parameters/BookShelfFormatParam"
+        - $ref: "#/components/parameters/BookShelfKindParam"
+        - $ref: "#/components/parameters/BookShelfQueryParam"
+        - $ref: "#/components/parameters/BookShelfSortParam"
+        - $ref: "#/components/parameters/BookShelfOrderParam"
       responses:
         "200":
-          $ref: "#/components/responses/BookAuthorList"
+          $ref: "#/components/responses/BookShelfPage"
         "400":
           $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
     post:
-      operationId: addBookAuthor
-      summary: Add an author by Hardcover id
+      operationId: addBook
+      summary: Add a book by Hardcover id
       description: |
-        Fetches the author and bibliography from Hardcover and adds them to
-        the library. Answers 503 when no Hardcover API key is configured,
-        429 (`code: rate_limited`, with `Retry-After`) when Hardcover's rate
-        limit or daily request budget is spent, and 422 for an unknown enum
-        value or quality profile name.
+        Adds one book with its editions, contributions and slot editions for one Hardcover
+         request. `monitor: none` adds it unmonitored (library adoption uses it). Answers 404 for
+         an unknown Hardcover id, 409 when already in the library, 422 for an unknown `monitor`
+         or quality profile name, 503 when no Hardcover API key is configured and 429
+         (`code: rate_limited`, with `Retry-After`) when Hardcover's limit or budget is spent.
       tags: [books]
       requestBody:
-        $ref: "#/components/requestBodies/AddBookAuthor"
+        $ref: "#/components/requestBodies/AddBook"
       responses:
         "201":
-          $ref: "#/components/responses/BookAuthorCreated"
+          $ref: "#/components/responses/BookCreated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
         "413":
@@ -1439,33 +1754,97 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
-  /books/authors/{id}:
+  /books/counts:
+    get:
+      operationId: getBookCounts
+      summary: Books shelf facet counts
+      description: |
+        Tallies the status, author and format facets of the shelf. Each facet is counted with
+         the other facets' filters applied and its own left out, each with its own `*_total`
+         "all" row; `query` narrows every tally. Called with no parameters this is the whole
+         library, which is what the nav badge asks for. Open to every authenticated user.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/BookShelfStatusParam"
+        - $ref: "#/components/parameters/BookShelfAuthorParam"
+        - $ref: "#/components/parameters/BookShelfFormatParam"
+        - $ref: "#/components/parameters/BookShelfKindParam"
+        - $ref: "#/components/parameters/BookShelfQueryParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookCountsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/series:
+    post:
+      operationId: addBookSeries
+      summary: Add a book series by Hardcover id
+      description: |
+        Two-phase add. The request makes two Hardcover requests (the series skeleton and the
+         first batch of 20 volumes) and returns at once with `hydrating: true`: the first 20
+         volumes are fully written and every other position is a stub with a placeholder title.
+         A background worker hydrates the stubs in batches of 20 and a stub is never searched or
+         grabbed. A volume already in the library as a standalone book is adopted into the
+         series; one already in another library series is skipped. Answers 404 for an unknown id,
+         409 when already in the library, 422 for an unknown `monitor` or quality profile name,
+         503 when no Hardcover API key is configured and 429 (`code: rate_limited`, with
+         `Retry-After`) when Hardcover's limit or budget is spent.
+      tags: [books]
+      requestBody:
+        $ref: "#/components/requestBodies/AddBookSeries"
+      responses:
+        "201":
+          $ref: "#/components/responses/BookSeriesCreated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/series/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
     get:
-      operationId: getBookAuthor
-      summary: Get author details
-      description: Returns one author with its books.
+      operationId: getBookSeries
+      summary: Get series details
+      description: |
+        Returns one series with its volumes. The SPA polls it every 10 seconds while `hydrating`.
       tags: [books]
       responses:
         "200":
-          $ref: "#/components/responses/BookAuthorDetail"
+          $ref: "#/components/responses/BookSeriesDetail"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
     patch:
-      operationId: patchBookAuthor
-      summary: Patch an author
+      operationId: patchBookSeries
+      summary: Patch a series
       description: |
-        Partially updates an author. An unknown enum value or quality profile
-        name answers 422.
+        `monitor` applies to each volume's ebook slot. `quality_profile` is written through to
+         every volume. `edition` must equal one of the series' `editions`, else 422; it re-picks
+         and retitles only volumes with no ebook file, and volumes already on disk keep their
+         file and edition. No Hardcover request is made.
       tags: [books]
       requestBody:
-        $ref: "#/components/requestBodies/PatchBookAuthor"
+        $ref: "#/components/requestBodies/PatchBookSeries"
       responses:
         "200":
-          $ref: "#/components/responses/BookAuthorDetail"
+          $ref: "#/components/responses/BookSeriesDetail"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -1477,17 +1856,17 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
-      operationId: deleteBookAuthor
-      summary: Remove an author from the library
+      operationId: deleteBookSeries
+      summary: Remove a series and its volumes from the library
       description: |
-        Deletes the author with its books. When delete_files=true, also
-        removes attached media files from disk.
+        Deletes the series with its volumes, their media file rows and download records. When
+         delete_files=true, also removes attached media files from disk.
       tags: [books]
       parameters:
         - $ref: "#/components/parameters/DeleteSeriesFiles"
       responses:
         "204":
-          $ref: "#/components/responses/BookAuthorDeleted"
+          $ref: "#/components/responses/BookSeriesDeleted"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -1495,20 +1874,42 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /books/authors/{id}/refresh:
+  /books/series/{id}/search-now:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
     post:
-      operationId: refreshBookAuthor
-      summary: Refresh an author from Hardcover
+      operationId: searchBookSeriesNow
+      summary: Dispatch an indexer search for a series' wanted volumes
       description: |
-        Re-fetches the bibliography. Answers 503 when no Hardcover API key is
-        configured and 429 (`code: rate_limited`, with `Retry-After`) when
-        Hardcover's rate limit or daily request budget is spent.
+        Searches the ebook slot of the series' wanted volumes with one query set for the whole
+         series rather than one per volume. `queued` is the number of volumes the pass will
+         search.
+      tags: [books]
+      responses:
+        "202":
+          $ref: "#/components/responses/BookSearchAcceptedResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/series/{id}/refresh-metadata:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshBookSeries
+      summary: Refresh a series from Hardcover
+      description: |
+        Costs `1 + ceil(N/20)` Hardcover requests for N volumes. New volumes follow the
+         series monitor policy and pick the series edition. Answers 503 when no Hardcover API
+         key is configured and 429 (`code: rate_limited`, with `Retry-After`) when Hardcover's
+         limit or budget is spent.
       tags: [books]
       responses:
         "200":
-          $ref: "#/components/responses/BookAuthorDetail"
+          $ref: "#/components/responses/BookSeriesDetail"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -1519,6 +1920,128 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/series/{id}/rename:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: renameBookSeriesFiles
+      summary: Rename a series' volume files to match the library naming pattern
+      description: |
+        Plans (and unless `preview` is true applies) a rename of the union of the series'
+         member books' files: ebook volumes by `library.series_naming`, audiobook folders by
+         `library.audiobook_naming` with filenames kept. Empty `operations` means everything is
+         already correct. Books have no media-server refresh.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/RenamePreview"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookSeriesRenamePlanResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/quality-profiles:
+    get:
+      operationId: listBookQualityProfiles
+      summary: List book quality profiles
+      description: |
+        One profile covers both slots of a title. Open to every authenticated user: the request form's preferred-quality list and a reviewer's approve form read it.
+      tags: [book-quality-profiles]
+      responses:
+        "200":
+          $ref: "#/components/responses/BookQualityProfileList"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createBookQualityProfile
+      summary: Create a book quality profile
+      description: |
+        Creates the profile. The first profile created while the family has no resolvable default
+         becomes the default in the same write. Each slot needs at least one format and
+         `preferred` must be one of its `formats`; `min_bitrate` outside 0..1024 answers 422.
+      tags: [book-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateBookQualityProfile"
+      responses:
+        "201":
+          $ref: "#/components/responses/BookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/quality-profiles/{name}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    put:
+      operationId: updateBookQualityProfile
+      summary: Update a book quality profile
+      description: |
+        The name in the body is ignored; the path names the profile.
+      tags: [book-quality-profiles]
+      requestBody:
+        $ref: "#/components/requestBodies/CreateBookQualityProfile"
+      responses:
+        "200":
+          $ref: "#/components/responses/BookQualityProfileResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteBookQualityProfile
+      summary: Delete a book quality profile
+      description: |
+        Answers 409 while the profile is the default for any book kind; `POST .../default?kind=` on another profile frees that kind. The last remaining profile is therefore undeletable.
+      tags: [book-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/BookQualityProfileDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /books/quality-profiles/{name}/default:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+      - $ref: "#/components/parameters/BookDefaultKind"
+    post:
+      operationId: setDefaultBookQualityProfile
+      summary: Make this the default book quality profile
+      description: |
+        Makes this profile the default for one book kind (`book_quality_default_profiles.<kind>`): the profile a book of that kind resolves to when neither it nor its series names one. Each kind has its own default, so a manga can default to a CBZ profile while novels default to EPUB.
+      tags: [book-quality-profiles]
+      responses:
+        "204":
+          $ref: "#/components/responses/QualityProfileDefaultSet"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /books/{id}:
     parameters:
@@ -1537,7 +2060,14 @@ paths:
     patch:
       operationId: patchBook
       summary: Patch a book
-      description: Sets the monitored flag of the ebook and audiobook slots.
+      description: |
+        Partially updates a book and always answers the full `Book`. `monitor` flips the slot
+         flags; unmonitoring a slot that is `downloading` or `available` keeps its status.
+         `preferred_language` recomputes the title and re-picks the edition of every slot with no
+         file. `format` and `edition_id` are required together (else 422); changing the edition of
+         a slot that already holds a file queues a replacement. An unknown enum, quality profile
+         name, or an `edition_id` that is not one of this book's editions of that format answers
+         422.
       tags: [books]
       requestBody:
         $ref: "#/components/requestBodies/PatchBook"
@@ -1550,27 +2080,52 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteBook
+      summary: Remove a book from the library
+      description: |
+        Deletes the book with its editions and contributions; authors left with no contribution
+         are deleted with it. When delete_files=true, also removes attached media files from
+         disk. A volume of a series answers 409 with `code: series_volume`: it would come back
+         at the next refresh, so it is removed with its series.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/DeleteSeriesFiles"
+      responses:
+        "204":
+          $ref: "#/components/responses/BookDeleted"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /books/{id}/search:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
-      - $ref: "#/components/parameters/BookSlotKind"
     post:
       operationId: searchBookReleases
-      summary: Search indexers for one slot of a book
+      summary: Search indexers for the releases of a book
       description: |
-        Interactive search across enabled indexers for the ebook or audiobook
-        slot of one book, judged against that slot's quality profile.
-        Rejected releases stay in the list with `release.rejected` set and
-        sort last. POST the chosen `release` object back unchanged to
-        `.../grab`, handle included. A 422 with `code: no_quality_profile`
-        means the slot has no usable quality profile.
+        Interactive search across enabled indexers, judged against the book's quality profile.
+         Without `kind` it searches both slots and merges the results; items are plain
+         `SearchResult` whose `slot` says which slot a release fills and whose `source` is the
+         upper-case container. Rejected releases stay in the list with `rejected` set. POST the
+         chosen item back unchanged to `.../grab`, handle included. A 422 with
+         `code: no_quality_profile` means no usable quality profile resolves.
       tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/BookSlotKind"
       responses:
         "200":
-          $ref: "#/components/responses/BookReleaseList"
+          $ref: "#/components/responses/SearchResults"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -1585,18 +2140,23 @@ paths:
   /books/{id}/grab:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
-      - $ref: "#/components/parameters/BookSlotKind"
     post:
       operationId: grabBookRelease
       summary: Grab a specific release for one slot of a book
       description: |
-        Dispatches the chosen release to the highest-priority download client
-        and marks the slot downloading. The body is the `release` object of an
-        item from the search response, unchanged (its `download_url` is a
-        sealed handle). A refused grab answers 422 with `code: grab_rejected`;
-        a slot with no usable quality profile answers 422 with
-        `code: no_quality_profile`.
+        Dispatches the chosen release to the highest-priority download client and marks the slot
+         downloading. The body is an item of the search response, unchanged (its `download_url` is
+         a sealed handle, its `slot` included). `kind` is optional: the slot is read from the
+         body's `slot`, and when both are present they must agree, else 400. The server re-derives
+         the slot from the parsed container and refuses a body whose `slot` disagrees with it with
+         `code: grab_rejected`, so a tampered `slot` cannot place an audiobook container in an
+         ebook slot. With `replace_existing: true` every file of that slot is removed once the new
+         one is placed and verified; the other slot is never touched. A refused grab answers 422
+         with `code: grab_rejected`; a book with no usable quality profile answers 422 with
+         `code: no_quality_profile`.
       tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/BookSlotKind"
       requestBody:
         $ref: "#/components/requestBodies/GrabBookRelease"
       responses:
@@ -1615,153 +2175,74 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /books/ebook-quality-profiles:
-    get:
-      operationId: listEbookQualityProfiles
-      summary: List ebook quality profiles
-      tags: [ebook-quality-profiles]
-      responses:
-        "200":
-          description: Ebook quality profile list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/EbookQualityProfile"
-        "500":
-          $ref: "#/components/responses/InternalError"
-    post:
-      operationId: createEbookQualityProfile
-      summary: Create an ebook quality profile
-      tags: [ebook-quality-profiles]
-      requestBody:
-        $ref: "#/components/requestBodies/CreateEbookQualityProfile"
-      responses:
-        "201":
-          $ref: "#/components/responses/EbookQualityProfileResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /books/ebook-quality-profiles/{name}:
+  /books/{id}/search-now:
     parameters:
-      - $ref: "#/components/parameters/ResourceName"
-    put:
-      operationId: updateEbookQualityProfile
-      summary: Update an ebook quality profile
-      description: The name in the body is ignored; the path names the profile.
-      tags: [ebook-quality-profiles]
-      requestBody:
-        $ref: "#/components/requestBodies/CreateEbookQualityProfile"
-      responses:
-        "200":
-          $ref: "#/components/responses/EbookQualityProfileResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
-        "500":
-          $ref: "#/components/responses/InternalError"
-    delete:
-      operationId: deleteEbookQualityProfile
-      summary: Delete an ebook quality profile
-      tags: [ebook-quality-profiles]
-      responses:
-        "204":
-          $ref: "#/components/responses/EbookQualityProfileDeleted"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /books/audiobook-quality-profiles:
-    get:
-      operationId: listAudiobookQualityProfiles
-      summary: List audiobook quality profiles
-      tags: [audiobook-quality-profiles]
-      responses:
-        "200":
-          description: Audiobook quality profile list
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AudiobookQualityProfile"
-        "500":
-          $ref: "#/components/responses/InternalError"
+      - $ref: "#/components/parameters/ResourceID"
     post:
-      operationId: createAudiobookQualityProfile
-      summary: Create an audiobook quality profile
-      tags: [audiobook-quality-profiles]
-      requestBody:
-        $ref: "#/components/requestBodies/CreateAudiobookQualityProfile"
+      operationId: searchBookNow
+      summary: Dispatch an indexer search and grab for a book
+      description: |
+        Searches each monitored `wanted` slot once and grabs the best accepted release. Without
+         `kind` it covers every monitored slot. An unreleased book is never searched. `queued` is
+         the number of slots the pass will search.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/BookSlotKind"
       responses:
-        "201":
-          $ref: "#/components/responses/AudiobookQualityProfileResponse"
+        "202":
+          $ref: "#/components/responses/BookSearchAcceptedResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /books/audiobook-quality-profiles/{name}:
+  /books/{id}/refresh-metadata:
     parameters:
-      - $ref: "#/components/parameters/ResourceName"
-    put:
-      operationId: updateAudiobookQualityProfile
-      summary: Update an audiobook quality profile
-      description: The name in the body is ignored; the path names the profile.
-      tags: [audiobook-quality-profiles]
-      requestBody:
-        $ref: "#/components/requestBodies/CreateAudiobookQualityProfile"
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: refreshBook
+      summary: Refresh a book from Hardcover
+      description: |
+        Costs one Hardcover request. Answers 503 when no Hardcover API key is configured and 429
+         (`code: rate_limited`, with `Retry-After`) when Hardcover's limit or budget is spent.
+      tags: [books]
       responses:
         "200":
-          $ref: "#/components/responses/AudiobookQualityProfileResponse"
+          $ref: "#/components/responses/BookDetail"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "413":
-          $ref: "#/components/responses/PayloadTooLarge"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
-    delete:
-      operationId: deleteAudiobookQualityProfile
-      summary: Delete an audiobook quality profile
-      tags: [audiobook-quality-profiles]
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /books/{id}/rename:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: renameBookFiles
+      summary: Rename a book's files to match the library naming pattern
+      description: |
+        Plans (and unless `preview` is true applies) a rename: ebook files by
+         `library.ebook_naming`, an audiobook folder by `library.audiobook_naming` with its
+         filenames kept. Empty `operations` means everything is already correct. Books have no
+         media-server refresh.
+      tags: [books]
+      parameters:
+        - $ref: "#/components/parameters/RenamePreview"
       responses:
-        "204":
-          $ref: "#/components/responses/AudiobookQualityProfileDeleted"
+        "200":
+          $ref: "#/components/responses/BookRenamePlanResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -4506,7 +4987,7 @@ paths:
       description: |
         Reviewers (admin/member) see all requests; request_only users see
         only their own (scoped server-side). Filterable by status and
-        media_type.
+        media_type, which takes a comma list; an unknown member answers 400.
       tags: [requests]
       parameters:
         - $ref: "#/components/parameters/RequestStatusParam"
@@ -4524,10 +5005,14 @@ paths:
           $ref: "#/components/responses/InternalError"
     post:
       operationId: createRequest
-      summary: Request a movie, show, artist, album, author or book
+      summary: Request a movie, show, artist, book or book series
       description: |
-        Request a movie, show, artist, album, author or book. A body whose
-        identity does not fit its type answers 400.
+        Request a movie, show, artist, book or book series. An artist takes
+        `media_mbid` and no `media_id`; every other type takes `media_id` and
+        no `media_mbid`. A body whose identity does not fit its type answers
+        400. Answers 409 `duplicate` when an active request exists or the
+        title is already in the library. Makes no provider call, so it works
+        without a Hardcover key.
       tags: [requests]
       requestBody:
         $ref: "#/components/requestBodies/CreateRequest"
@@ -4568,12 +5053,18 @@ paths:
       operationId: approveRequest
       summary: Approve a request (admin/member) — creates the library item
       description: |
-        Creates the library item with the chosen quality profile. Omitting
-        quality_profile (or sending it empty) uses the server default for the
-        requested media.
-        Answers 429 (`code: rate_limited`, with `Retry-After`) when approving
-        an author or book request runs into Hardcover's rate limit or daily
-        request budget; the request stays pending.
+        Creates the library item with the chosen quality profile: an artist
+        is added with monitor `all`, a book with `both`, a book series with
+        `all`. Omitting quality_profile (or sending it empty) uses the default
+        of that medium's profile family (the movie or series default for
+        video, the default for the book's kind for books), not the requester's
+        preference. A
+        non-empty name that is not in that family answers 422 before anything
+        is added. A title already in the library marks the request
+        `available`. Answers 429 (`code: rate_limited`, with `Retry-After`)
+        when approving a book or series runs into Hardcover's rate limit or
+        daily request budget, and 503 when no Hardcover API key is
+        configured; either way the request stays pending.
       tags: [requests]
       requestBody:
         $ref: "#/components/requestBodies/ApproveRequest"
@@ -4586,10 +5077,14 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "429":
           $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /requests/{id}/metadata:
     parameters:
@@ -4598,21 +5093,33 @@ paths:
       operationId: getRequestMetadata
       summary: Cover and synopsis for a requested item
       description: |
-        Fetches poster, overview and basic metadata for the requested movie
-        (TMDB) or show (TVDB) so reviewers can judge the request. Visible to
-        reviewers (admin/member) and to the requester for their own request.
+        Fetches the metadata a reviewer needs to judge the request: poster,
+        overview and basic metadata for a movie (TMDB) or show (TVDB); the
+        MusicBrainz artist lookup for an artist, which costs `1 + ceil(n/100)`
+        MusicBrainz requests for `n` release groups and none on a cache hit;
+        the Hardcover lookup detail for a book or series, one request for a
+        book and two for a series, none on a cache hit. The response is
+        `oneOf` with no discriminator: the caller branches on the request's
+        `media_type`. Visible to reviewers (admin/member) and to the
+        requester for their own request. Answers 429 (`code: rate_limited`)
+        when the provider is limiting and 503 when a book or series request
+        has no Hardcover API key; the SPA treats either as "no metadata".
       tags: [requests]
       responses:
         "200":
-          $ref: "#/components/responses/RequestMediaDetailResponse"
+          $ref: "#/components/responses/RequestMetadataResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /requests/{id}/deny:
     parameters:
@@ -4720,6 +5227,22 @@ components:
       schema:
         type: integer
         x-go-type: uint32
+    OverviewLang:
+      name: lang
+      in: query
+      required: false
+      description: SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+      schema:
+        type: string
+        enum: [en, fr]
+        default: en
+    BookDefaultKind:
+      name: kind
+      in: query
+      required: true
+      description: Which book kind the profile becomes the default for.
+      schema:
+        $ref: "#/components/schemas/BookKind"
     QualityDefaultMedia:
       name: media
       in: query
@@ -4732,11 +5255,136 @@ components:
     BookSlotKind:
       name: kind
       in: query
+      required: false
+      description: |
+        Which slot of the book to search or grab for. On a search, omitted
+        means both slots merged; on a grab the slot is read from the body's
+        `slot` and the two must agree when both are present; on `search-now`
+        omitted means every monitored slot.
+      schema:
+        $ref: "#/components/schemas/BookFormat"
+    MBIDParam:
+      name: mbid
+      in: path
       required: true
-      description: Which slot of the book to search or grab for.
+      description: MusicBrainz artist id.
       schema:
         type: string
-        enum: [ebook, audiobook]
+    HardcoverIDParam:
+      name: hardcover_id
+      in: path
+      required: true
+      description: Hardcover book id or series id, as selected by `type`; the two id spaces are separate.
+      schema:
+        type: integer
+        x-go-type: uint32
+    BookLookupTypeParam:
+      name: type
+      in: query
+      required: true
+      description: Whether `hardcover_id` names a book or a series.
+      schema:
+        $ref: "#/components/schemas/BookShelfType"
+    BookSearchTypeParam:
+      name: type
+      in: query
+      required: false
+      description: Restricts the lookup to books or series (one Hardcover request instead of two). Defaults to `all`.
+      schema:
+        type: string
+        enum: [book, series, all]
+        default: all
+    MusicArtistStatusParam:
+      name: status
+      in: query
+      required: false
+      description: Filter by the artist status rollup.
+      schema:
+        $ref: "#/components/schemas/MusicArtistStatus"
+    MusicArtistMonitoredParam:
+      name: monitored
+      in: query
+      required: false
+      description: Filter by monitoring; an artist is monitored when its `monitor` is not `none`.
+      schema:
+        type: string
+        enum: [monitored, unmonitored]
+    MusicArtistQueryParam:
+      name: query
+      in: query
+      required: false
+      description: Accent-folded match over artist name, sort name, genre and album titles.
+      schema:
+        type: string
+    MusicArtistSortParam:
+      name: sort
+      in: query
+      required: false
+      description: "`recent` is by added time, newest first; `name` is by sort name then name, ascending. `order` overrides either; ties break on id."
+      schema:
+        type: string
+        enum: [recent, name]
+    MusicArtistOrderParam:
+      name: order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+    BookShelfStatusParam:
+      name: status
+      in: query
+      required: false
+      description: Filter by derived item status; `all` is the same as omitting it.
+      schema:
+        type: string
+        enum: [all, available, wanted, downloading]
+    BookShelfAuthorParam:
+      name: author
+      in: query
+      required: false
+      description: Exact creator name (author, writer or artist role), matched accent- and case-folded, so homonyms merge.
+      schema:
+        type: string
+    BookShelfFormatParam:
+      name: format
+      in: query
+      required: false
+      description: Keep items with that slot monitored or holding a file; a series qualifies for `ebook` only.
+      schema:
+        $ref: "#/components/schemas/BookFormat"
+    BookShelfKindParam:
+      name: kind
+      in: query
+      required: false
+      description: Comma list of kinds, for example `bd,comic`.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/BookKind"
+    BookShelfQueryParam:
+      name: query
+      in: query
+      required: false
+      description: Accent-folded match over the display title, original title, every edition title and creator names.
+      schema:
+        type: string
+    BookShelfSortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [added, title, year]
+    BookShelfOrderParam:
+      name: order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
     PeopleQuery:
       name: query
       in: query
@@ -4804,9 +5452,13 @@ components:
       name: media_type
       in: query
       required: false
+      description: Comma list of media types, for example `book,book_series`. An unknown member answers 400.
+      style: form
+      explode: false
       schema:
-        type: string
-        enum: [movie, tvshow, artist, album, author, book]
+        type: array
+        items:
+          $ref: "#/components/schemas/RequestMediaType"
     RequestPage:
       name: page
       in: query
@@ -5201,7 +5853,7 @@ components:
       name: query
       in: query
       required: true
-      description: Hardcover author search query.
+      description: Hardcover book and series search query, at least 2 characters.
       schema:
         type: string
 
@@ -5306,21 +5958,14 @@ components:
           schema:
             $ref: "#/components/schemas/MusicQualityProfileCreate"
 
-    AddBookAuthor:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/AddBookAuthorRequest"
-
-    PatchBookAuthor:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/PatchBookAuthorRequest"
-
     GrabAlbumRelease:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SearchResult"
+
+    GrabArtistRelease:
       required: true
       content:
         application/json:
@@ -5334,6 +5979,20 @@ components:
           schema:
             $ref: "#/components/schemas/SearchResult"
 
+    AddBook:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddBookRequest"
+
+    AddBookSeries:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AddBookSeriesRequest"
+
     PatchBook:
       required: true
       content:
@@ -5341,19 +6000,19 @@ components:
           schema:
             $ref: "#/components/schemas/PatchBookRequest"
 
-    CreateEbookQualityProfile:
+    PatchBookSeries:
       required: true
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/EbookQualityProfileCreate"
+            $ref: "#/components/schemas/PatchBookSeriesRequest"
 
-    CreateAudiobookQualityProfile:
+    CreateBookQualityProfile:
       required: true
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AudiobookQualityProfileCreate"
+            $ref: "#/components/schemas/BookQualityProfileCreate"
 
     CreateCustomFormat:
       required: true
@@ -5833,13 +6492,6 @@ components:
           schema:
             $ref: "#/components/schemas/RequestCounts"
 
-    RequestMediaDetailResponse:
-      description: Cover and synopsis for a requested item.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/RequestMediaDetails"
-
     SeriesLookupResults:
       description: TVDB search results.
       content:
@@ -5861,6 +6513,13 @@ components:
           schema:
             $ref: "#/components/schemas/MusicArtistSearchResultList"
 
+    MusicArtistLookupDetailResponse:
+      description: One MusicBrainz artist, as the hit fields and the detail.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtistLookupDetail"
+
     MusicArtistList:
       description: Paginated artist list.
       content:
@@ -5868,19 +6527,26 @@ components:
           schema:
             $ref: "#/components/schemas/PaginatedMusicArtists"
 
-    MusicArtistDetail:
-      description: An artist with its albums.
+    MusicArtistCountsResponse:
+      description: Faceted artist counts.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/MusicArtist"
+            $ref: "#/components/schemas/MusicArtistCounts"
+
+    MusicArtistDetail:
+      description: An artist with its full tree.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicArtistDetail"
 
     MusicArtistCreated:
-      description: Artist added.
+      description: Artist added; album stubs are present and their tracks arrive in the background (`hydrating`).
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/MusicArtist"
+            $ref: "#/components/schemas/MusicArtistDetail"
 
     MusicArtistDeleted:
       description: Artist deleted.
@@ -5892,19 +6558,15 @@ components:
           schema:
             $ref: "#/components/schemas/MusicAlbum"
 
-    AlbumReleaseList:
-      description: Ranked indexer releases for one album.
+    MusicRenamePlanResponse:
+      description: Artist rename plan (preview or applied).
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AlbumReleaseList"
+            $ref: "#/components/schemas/MusicRenamePlan"
 
-    BookReleaseList:
-      description: Ranked indexer releases for one slot of a book.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/BookReleaseList"
+    SearchNowAccepted:
+      description: Indexer search queued; the pass runs in the background.
 
     ReleaseGrabAccepted:
       description: Release grab dispatched.
@@ -5919,63 +6581,129 @@ components:
     MusicQualityProfileDeleted:
       description: Profile deleted.
 
-    BookSearchResults:
-      description: Hardcover author search results.
+    BookLookupResults:
+      description: Hardcover book and series search results.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/BookAuthorSearchResultList"
+            $ref: "#/components/schemas/BookLookupList"
 
-    BookAuthorList:
-      description: Paginated author list.
+    BookLookupDetailResponse:
+      description: One Hardcover book or series, as the hit fields and the detail.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/PaginatedBookAuthors"
+            $ref: "#/components/schemas/BookLookupDetail"
 
-    BookAuthorDetail:
-      description: An author with its books.
+    BookShelfPage:
+      description: Paginated books shelf of standalone books and series merged.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/BookAuthor"
+            $ref: "#/components/schemas/PaginatedShelf"
 
-    BookAuthorCreated:
-      description: Author added.
+    BookCountsResponse:
+      description: Faceted shelf counts.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/BookAuthor"
-
-    BookAuthorDeleted:
-      description: Author deleted.
+            $ref: "#/components/schemas/BookCounts"
 
     BookDetail:
-      description: A book with its ebook and audiobook slots.
+      description: A book with its slots and editions.
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/Book"
 
-    EbookQualityProfileResponse:
-      description: An ebook quality profile.
+    BookCreated:
+      description: Book added.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/EbookQualityProfile"
+            $ref: "#/components/schemas/Book"
 
-    EbookQualityProfileDeleted:
-      description: Profile deleted.
+    BookDeleted:
+      description: Book deleted.
 
-    AudiobookQualityProfileResponse:
-      description: An audiobook quality profile.
+    BookSearchAcceptedResponse:
+      description: Indexer search queued; says how many slots or volumes it will search.
       content:
         application/json:
           schema:
-            $ref: "#/components/schemas/AudiobookQualityProfile"
+            $ref: "#/components/schemas/BookSearchAccepted"
 
-    AudiobookQualityProfileDeleted:
+    BookRenamePlanResponse:
+      description: Book rename plan (preview or applied).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookRenamePlan"
+
+    BookSeriesDetail:
+      description: A series with its volumes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookSeries"
+
+    BookSeriesCreated:
+      description: Series added; volume stubs beyond the first batch hydrate in the background (`hydrating`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookSeries"
+
+    BookSeriesDeleted:
+      description: Series deleted.
+
+    BookSeriesRenamePlanResponse:
+      description: Series rename plan (preview or applied).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookSeriesRenamePlan"
+
+    BookQualityProfileResponse:
+      description: A book quality profile.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BookQualityProfile"
+
+    BookQualityProfileDeleted:
       description: Profile deleted.
+
+    MusicTrackFileDeleted:
+      description: Track file deleted.
+
+    QualityProfileDefaultSet:
+      description: Default set.
+
+    MusicQualityProfileList:
+      description: Music quality profile list.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/MusicQualityProfile"
+
+    BookQualityProfileList:
+      description: Book quality profile list.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/BookQualityProfile"
+
+    RequestMetadataResponse:
+      description: Cover, synopsis and basic metadata for a requested item.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RequestMetadata"
 
     ServiceUnavailable:
       description: Feature not configured.
@@ -7377,9 +8105,72 @@ components:
         media_info:
           $ref: "#/components/schemas/MediaInfo"
 
-    MusicArtist:
+    MusicMonitor:
+      type: string
+      enum: [all, future, manual, none]
+      description: |
+        Artist monitor policy. `all` monitors every album, `future` only
+        albums with no release date or one after today, `manual` leaves the
+        album flags alone and monitors no new release group, `none` monitors
+        nothing. `Album.monitored` stays the only flag searches, RSS and
+        imports read.
+
+    MusicArtistKind:
+      type: string
+      enum: [group, person]
+      description: MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+
+    MusicAlbumType:
+      type: string
+      enum: [album, ep, single, compilation, live, other]
+
+    MusicAlbumStatus:
+      type: string
+      enum: [wanted, downloading, paused, available, skipped, upcoming]
+      description: |
+        `upcoming` is derived, never stored: a `wanted` album whose release
+        date is after today (UTC). An undated album is never `upcoming`.
+
+    MusicArtistStatus:
+      type: string
+      enum: [wanted, downloading, available]
+      description: |
+        Rollup over the monitored, non-upcoming albums: `downloading` if any
+        is downloading or paused, else `wanted` if any is wanted, else
+        `available` (including an artist with nothing monitored).
+
+    MusicTier:
+      type: string
+      enum: [hires, lossless, high, standard, low]
+      description: Audio quality tier, best first. The canonical order everywhere.
+
+    MusicMedium:
+      type: string
+      enum: [cd, vinyl, digital, cassette]
+
+    MusicCreditRole:
+      type: string
+      enum: [producer, recording, mix, mastering, artwork]
+
+    MusicArtistCore:
       type: object
-      required: [id, mbid, name, sort_name, monitored, path, quality_profile, album_count]
+      description: Fields shared by the artist list item and the artist detail.
+      required:
+        [
+          id,
+          mbid,
+          name,
+          sort_name,
+          monitor,
+          quality_profile,
+          path,
+          status,
+          added_at,
+          album_count,
+          tracks_have,
+          size,
+          hydrating,
+        ]
       properties:
         id:
           type: integer
@@ -7390,141 +8181,327 @@ components:
           type: string
         sort_name:
           type: string
+        type:
+          $ref: "#/components/schemas/MusicArtistKind"
+        genre:
+          type: string
+          description: Highest-count MusicBrainz genre, title-cased.
+        origin:
+          type: string
+          description: Begin area and area joined with ", " and de-duplicated, for example "Gothenburg, Sweden".
+        since:
+          type: integer
+          x-go-type: uint16
+          description: Year of the life-span begin.
         overview:
           type: string
-        monitored:
-          type: boolean
-        path:
+          description: Wikipedia extract in the `lang` asked for, falling back to English; absent when neither exists. Both are fetched and stored at hydration and refresh.
+        overview_source:
           type: string
+          description: URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
+        monitor:
+          $ref: "#/components/schemas/MusicMonitor"
         quality_profile:
           type: string
+          description: Music quality profile name; empty means the default.
+        path:
+          type: string
+        status:
+          $ref: "#/components/schemas/MusicArtistStatus"
+        added_at:
+          type: string
+          format: date-time
         album_count:
           type: integer
           x-go-type: uint32
-        albums:
-          type: array
-          description: Populated by the detail, patch and refresh responses.
-          items:
-            $ref: "#/components/schemas/MusicAlbum"
+          description: Albums of the artist, upcoming included.
+        tracks_have:
+          type: integer
+          x-go-type: uint32
+          description: Tracks with at least one media file.
+        size:
+          type: integer
+          format: int64
+          description: Sum of the artist's media file sizes, in bytes.
+        hydrating:
+          type: boolean
+          description: |
+            True while any album still has its tracks to fetch
+            (`metadata_fetched_at` unset) or a released album with tracks
+            still has its credits to fetch. The SPA polls the detail every 10
+            seconds while it holds.
 
-    AlbumRelease:
+    MusicArtist:
+      description: Artist list item. Albums are tile summaries without tracks.
+      allOf:
+        - $ref: "#/components/schemas/MusicArtistCore"
+        - type: object
+          required: [albums]
+          properties:
+            albums:
+              type: array
+              description: Newest first (release date descending, undated last, then title), upcoming included.
+              items:
+                $ref: "#/components/schemas/MusicAlbumSummary"
+
+    MusicArtistDetail:
+      description: |
+        Artist with its full tree: members, and every album with tracks,
+        credits and personnel. Also the response of add, patch and refresh.
+      allOf:
+        - $ref: "#/components/schemas/MusicArtistCore"
+        - type: object
+          required: [members, albums]
+          properties:
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/MusicMember"
+            albums:
+              type: array
+              items:
+                $ref: "#/components/schemas/MusicAlbum"
+
+    MusicMember:
       type: object
-      required: [format, release]
+      required: [name, instruments]
       properties:
-        format:
+        name:
           type: string
-          description: Audio format parsed from the release title.
-        release:
-          $ref: "#/components/schemas/SearchResult"
-
-    AlbumReleaseList:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/AlbumRelease"
-
-    BookRelease:
-      type: object
-      required: [format, release]
-      properties:
-        format:
+        mbid:
           type: string
-          description: Book format parsed from the release title.
-        release:
-          $ref: "#/components/schemas/SearchResult"
-
-    BookReleaseList:
-      type: object
-      required: [items]
-      properties:
-        items:
+        artist_id:
+          type: integer
+          x-go-type: uint32
+          description: Library artist id when that member is an artist in the library.
+        instruments:
           type: array
+          description: Instrument and vocal attributes; empty when MusicBrainz lists none.
           items:
-            $ref: "#/components/schemas/BookRelease"
+            type: string
+        from:
+          type: integer
+          x-go-type: uint16
+          description: Year the membership began; falls back to the artist's `since`, omitted when both are missing.
+        to:
+          type: integer
+          x-go-type: uint16
+          description: Year the membership ended; present only for an ended membership.
 
-    MusicAlbum:
+    MusicPerson:
       type: object
-      required: [id, mbid, title, type, monitored, status, track_count]
+      required: [name]
+      properties:
+        name:
+          type: string
+        mbid:
+          type: string
+        artist_id:
+          type: integer
+          x-go-type: uint32
+          description: Library artist id when this person is an artist in the library; the SPA shows that artist's photo.
+
+    MusicCredit:
+      allOf:
+        - $ref: "#/components/schemas/MusicPerson"
+        - type: object
+          required: [role]
+          properties:
+            role:
+              $ref: "#/components/schemas/MusicCreditRole"
+
+    MusicPerformer:
+      allOf:
+        - $ref: "#/components/schemas/MusicPerson"
+        - type: object
+          required: [instruments, guest]
+          properties:
+            instruments:
+              type: array
+              items:
+                type: string
+            guest:
+              type: boolean
+              description: |
+                Heuristic: not the album artist, not a member, and credited
+                on at most half of the release's performer-bearing
+                recordings.
+
+    MusicAlbumSummary:
+      type: object
+      required:
+        [id, artist_id, title, type, status, monitored, track_count, tracks_have, tracks_pending]
       properties:
         id:
           type: integer
           x-go-type: uint32
-        mbid:
-          type: string
+        artist_id:
+          type: integer
+          x-go-type: uint32
         title:
           type: string
         type:
-          type: string
-          enum: [album, ep, single, compilation, live, other]
+          $ref: "#/components/schemas/MusicAlbumType"
         release_date:
           type: string
           format: date
           nullable: true
+        status:
+          $ref: "#/components/schemas/MusicAlbumStatus"
         monitored:
           type: boolean
-        status:
-          type: string
-          enum: [wanted, downloading, paused, available, skipped]
         track_count:
           type: integer
           x-go-type: uint32
-        tracks:
-          type: array
-          description: Populated by the album endpoints.
-          items:
-            $ref: "#/components/schemas/MusicTrack"
+          description: Track rows; the announced count for an upcoming album.
+        tracks_have:
+          type: integer
+          x-go-type: uint32
+          description: Tracks with at least one media file.
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Present while `status` is `downloading`; live torrent progress, 100 while the record is importing.
+        tracks_pending:
+          type: boolean
+          description: True until the album's tracks have been fetched.
+
+    MusicAlbum:
+      allOf:
+        - $ref: "#/components/schemas/MusicAlbumSummary"
+        - type: object
+          required: [mbid, credits, personnel, tracks]
+          properties:
+            mbid:
+              type: string
+              description: MusicBrainz release-group id.
+            label:
+              type: string
+            catalog_number:
+              type: string
+            country:
+              type: string
+              description: Two-letter region code of the canonical release.
+            media:
+              type: array
+              items:
+                $ref: "#/components/schemas/MusicMedium"
+            studio:
+              type: string
+              description: Most frequent "recorded at" place; omitted when none.
+            quality:
+              $ref: "#/components/schemas/MusicTier"
+            format:
+              type: string
+              description: Display label of the worst-tier file, for example "FLAC" or "MP3 320". Omitted with no files.
+            size:
+              type: integer
+              format: int64
+              description: Sum of the album's file sizes in bytes; omitted at 0.
+            duration:
+              type: integer
+              x-go-type: uint32
+              description: Sum of the track durations in seconds; omitted at 0.
+            credits:
+              type: array
+              items:
+                $ref: "#/components/schemas/MusicCredit"
+            personnel:
+              type: array
+              items:
+                $ref: "#/components/schemas/MusicPerformer"
+            tracks:
+              type: array
+              description: Ordered by disc, then position.
+              items:
+                $ref: "#/components/schemas/MusicTrack"
 
     MusicTrack:
       type: object
-      required: [id, mbid, title, disc, position, duration]
+      required: [id, disc, number, title, duration, has_file]
       properties:
         id:
           type: integer
           x-go-type: uint32
         mbid:
           type: string
-        title:
-          type: string
+          description: MusicBrainz recording id.
         disc:
           type: integer
           x-go-type: uint8
-        position:
+        number:
           type: integer
           x-go-type: uint16
+          description: Position on the disc.
+        title:
+          type: string
         duration:
           type: integer
           x-go-type: uint32
           description: Length in seconds, 0 when unknown.
-
-    MusicArtistSearchResultList:
-      type: object
-      required: [items]
-      properties:
-        items:
+        featuring:
           type: array
           items:
-            $ref: "#/components/schemas/MusicArtistSearchResult"
-
-    MusicArtistSearchResult:
-      type: object
-      required: [mbid, name, sort_name, score, already_added]
-      properties:
-        mbid:
-          type: string
-        name:
-          type: string
-        sort_name:
-          type: string
-        disambiguation:
-          type: string
-        score:
-          type: integer
-          x-go-type: uint8
-        already_added:
+            $ref: "#/components/schemas/MusicPerson"
+        writers:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicPerson"
+        bonus:
           type: boolean
+          description: Set only when MusicBrainz says so; never guessed.
+        has_file:
+          type: boolean
+
+    MusicArtistCounts:
+      type: object
+      description: |
+        Faceted like `TVShowCounts`: every status and monitoring tally is
+        counted with the other facet's filter and the `query` applied and its
+        own left out, and each facet carries its own `*_total` "all" row.
+      required:
+        [
+          total,
+          status_total,
+          wanted,
+          downloading,
+          available,
+          monitored_total,
+          monitored,
+          unmonitored,
+          albums,
+        ]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+          description: The library, filtered by nothing (header, empty state, nav badge).
+        status_total:
+          type: integer
+          x-go-type: uint32
+        wanted:
+          type: integer
+          x-go-type: uint32
+        downloading:
+          type: integer
+          x-go-type: uint32
+        available:
+          type: integer
+          x-go-type: uint32
+        monitored_total:
+          type: integer
+          x-go-type: uint32
+        monitored:
+          type: integer
+          x-go-type: uint32
+        unmonitored:
+          type: integer
+          x-go-type: uint32
+        albums:
+          type: integer
+          x-go-type: uint32
+          description: Every album row in the library, upcoming included; filters do not narrow it.
 
     PaginatedMusicArtists:
       type: object
@@ -7544,25 +8521,119 @@ components:
           type: integer
           x-go-type: uint16
 
+    MusicArtistSearchResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicArtistSearchResult"
+
+    MusicArtistLookupHit:
+      type: object
+      description: Fields a MusicBrainz artist lookup carries, in the search list and in the detail alike.
+      required: [mbid, name, sort_name, already_added]
+      properties:
+        mbid:
+          type: string
+        name:
+          type: string
+        sort_name:
+          type: string
+        disambiguation:
+          type: string
+        type:
+          $ref: "#/components/schemas/MusicArtistKind"
+        genre:
+          type: string
+        area:
+          type: string
+          description: Begin area and area joined as for a library artist's `origin`.
+        since:
+          type: integer
+          x-go-type: uint16
+        already_added:
+          type: boolean
+        library_id:
+          type: integer
+          x-go-type: uint32
+          description: Library artist id when `already_added`.
+
+    MusicArtistSearchResult:
+      allOf:
+        - $ref: "#/components/schemas/MusicArtistLookupHit"
+        - type: object
+          required: [score]
+          properties:
+            score:
+              type: integer
+              x-go-type: uint8
+              description: MusicBrainz search ranking. A search artefact, never present on the detail.
+
+    MusicArtistLookupDetail:
+      description: |
+        The hit fields and the detail in one object (no `score`), so the
+        request panel needs no second call. Also the music arm of
+        `GET /requests/{id}/metadata`.
+      allOf:
+        - $ref: "#/components/schemas/MusicArtistLookupHit"
+        - type: object
+          properties:
+            overview:
+              type: string
+              description: Wikipedia extract.
+            genres:
+              type: array
+              description: Highest count first, title-cased, at most 5.
+              items:
+                type: string
+            members:
+              type: array
+              description: Names of current members.
+              items:
+                type: string
+            releases:
+              type: array
+              description: The artist's release groups, newest first.
+              items:
+                $ref: "#/components/schemas/MusicLookupRelease"
+
+    MusicLookupRelease:
+      type: object
+      required: [mbid, title, type]
+      properties:
+        mbid:
+          type: string
+          description: Release-group MBID; the key of the lookup cover (`/posters/lookup/albums/{key}/poster.jpg`).
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        type:
+          $ref: "#/components/schemas/MusicAlbumType"
+
     AddMusicArtistRequest:
       type: object
       required: [mbid]
       properties:
         mbid:
           type: string
-        monitored:
-          type: boolean
-          description: Defaults to true.
         quality_profile:
           type: string
+          description: Empty or omitted uses the default music profile; an unknown name answers 422.
+        monitor:
+          $ref: "#/components/schemas/MusicMonitor"
 
     PatchMusicArtistRequest:
       type: object
       properties:
-        monitored:
-          type: boolean
+        monitor:
+          $ref: "#/components/schemas/MusicMonitor"
         quality_profile:
           type: string
+          description: Empty clears to the default; an unknown name answers 422.
 
     PatchMusicAlbumRequest:
       type: object
@@ -7570,20 +8641,33 @@ components:
         monitored:
           type: boolean
 
+    MusicRenamePlan:
+      type: object
+      required: [artist_id, operations]
+      properties:
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RenameOperation"
+
     MusicQualityProfile:
       type: object
-      required: [name, formats, cutoff, upgrade_allowed, is_default]
+      required: [name, tiers, preferred, upgrade_allowed, is_default]
       properties:
         name:
           type: string
-        formats:
+        tiers:
           type: array
+          minItems: 1
+          uniqueItems: true
+          description: Accepted tiers, returned in canonical order (best first).
           items:
-            type: string
-            enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
-        cutoff:
-          type: string
-          enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+            $ref: "#/components/schemas/MusicTier"
+        preferred:
+          $ref: "#/components/schemas/MusicTier"
         upgrade_allowed:
           type: boolean
         is_default:
@@ -7591,73 +8675,270 @@ components:
 
     MusicQualityProfileCreate:
       type: object
-      required: [name, formats, cutoff, upgrade_allowed]
+      required: [name, tiers, preferred, upgrade_allowed]
       properties:
         name:
           type: string
-        formats:
+        tiers:
           type: array
+          minItems: 1
+          uniqueItems: true
           items:
-            type: string
-            enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
-        cutoff:
-          type: string
-          enum: [flac-24, flac, mp3-320, mp3-v0, mp3-256, mp3-192, other]
+            $ref: "#/components/schemas/MusicTier"
+        preferred:
+          allOf:
+            - $ref: "#/components/schemas/MusicTier"
+          description: Must be one of `tiers`, else 422. The upgrade ceiling.
         upgrade_allowed:
           type: boolean
 
-    BookAuthor:
+    EbookFormat:
+      type: string
+      enum: [EPUB, AZW3, MOBI, PDF, CBZ, CBR]
+      description: Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+
+    AudiobookFormat:
+      type: string
+      enum: [M4B, MP3, M4A, FLAC]
+      description: Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+
+    EbookProfileSlot:
       type: object
-      required:
-        [
-          id,
-          hardcover_id,
-          name,
-          sort_name,
-          monitored,
-          monitor_policy,
-          want_kinds,
-          ebook_quality_profile,
-          audiobook_quality_profile,
-          book_count,
-        ]
+      required: [formats, preferred]
+      properties:
+        formats:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/EbookFormat"
+        preferred:
+          $ref: "#/components/schemas/EbookFormat"
+
+    AudiobookProfileSlot:
+      type: object
+      required: [formats, preferred, min_bitrate]
+      properties:
+        formats:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/AudiobookFormat"
+        preferred:
+          $ref: "#/components/schemas/AudiobookFormat"
+        min_bitrate:
+          type: integer
+          x-go-type: uint16
+          minimum: 0
+          maximum: 1024
+          description: Floor in kbps, 0 for none. Outside the range answers 422 before conversion.
+
+    BookQualityProfile:
+      type: object
+      required: [name, upgrade_allowed, ebook, audiobook, default_for]
+      properties:
+        name:
+          type: string
+        upgrade_allowed:
+          type: boolean
+          description: One switch for both slots.
+        ebook:
+          $ref: "#/components/schemas/EbookProfileSlot"
+        audiobook:
+          $ref: "#/components/schemas/AudiobookProfileSlot"
+        default_for:
+          type: array
+          description: The book kinds this profile is the default for; deleting it answers 409 while this is non-empty.
+          items:
+            $ref: "#/components/schemas/BookKind"
+
+    BookQualityProfileCreate:
+      type: object
+      required: [name, upgrade_allowed, ebook, audiobook]
+      properties:
+        name:
+          type: string
+        upgrade_allowed:
+          type: boolean
+        ebook:
+          allOf:
+            - $ref: "#/components/schemas/EbookProfileSlot"
+          description: Both slots are always present and each needs at least one format; `preferred` must be one of `formats`, else 422.
+        audiobook:
+          $ref: "#/components/schemas/AudiobookProfileSlot"
+
+    BookKind:
+      type: string
+      enum: [novel, bd, comic, manga]
+      description: A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+
+    BookFormat:
+      type: string
+      enum: [ebook, audiobook]
+
+    BookMonitor:
+      type: string
+      enum: [both, ebook, audiobook, none]
+      description: Derived from the two slot `*_monitored` flags.
+
+    BookSeriesMonitor:
+      type: string
+      enum: [all, future, none]
+      description: Applies to each volume's ebook slot only.
+
+    BookFormatState:
+      type: string
+      enum: [available, wanted, downloading, unmonitored]
+      description: |
+        `unmonitored` iff the slot is not monitored and neither available nor
+        downloading. A paused record reports `downloading`.
+
+    BookItemStatus:
+      type: string
+      enum: [available, wanted, downloading]
+      description: |
+        Book: over the slots whose state is not `unmonitored`, any
+        `downloading` gives `downloading`, else any `wanted` gives `wanted`,
+        else `available` (also when every slot is unmonitored). A standalone
+        book released after today reports `available`. Series: any volume
+        `downloading`, else `wanted` when `monitor` is not `none` and any
+        volume is `wanted`, else `available`; upcoming volumes and volumes of
+        a series that is still `hydrating` never count.
+
+    BookRole:
+      type: string
+      enum: [author, writer, artist, colorist, cover, translator, narrator]
+
+    BookCredit:
+      type: object
+      required: [name, role, author_id]
+      properties:
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/BookRole"
+        language:
+          type: string
+          description: ISO 639-1; set on a series translator credit, the language of the edition it came from.
+        author_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            Library `Author` id. The SPA builds `/posters/authors/{author_id}/poster.jpg`
+            only for the roles author, writer and artist.
+
+    BookEdition:
+      type: object
+      required: [id, language, title, publisher, year, format]
       properties:
         id:
           type: integer
           x-go-type: uint32
-        hardcover_id:
+        language:
+          type: string
+          description: ISO 639-1.
+        title:
+          type: string
+        publisher:
+          type: string
+          description: Empty string when Hardcover has none.
+        year:
           type: integer
-          x-go-type: uint32
-        name:
-          type: string
-        sort_name:
-          type: string
-        overview:
-          type: string
-        monitored:
+          x-go-type: uint16
+        format:
+          $ref: "#/components/schemas/BookFormat"
+        original:
           type: boolean
-        monitor_policy:
-          type: string
-          enum: [all, future, none]
-        want_kinds:
-          type: string
-          enum: [ebook, audiobook, both]
-        ebook_quality_profile:
-          type: string
-        audiobook_quality_profile:
-          type: string
-        book_count:
+          description: True only on the winner in the language of the earliest-released edition.
+        pages:
+          type: integer
+          x-go-type: uint16
+        duration:
           type: integer
           x-go-type: uint32
-        books:
-          type: array
-          description: Populated by the detail, patch and refresh responses.
-          items:
-            $ref: "#/components/schemas/BookEntry"
+          description: Audiobook length in seconds.
+        narrator:
+          type: string
+        translator:
+          type: string
 
-    BookEntry:
+    BookSlotFile:
       type: object
-      required: [id, hardcover_id, title, ebook, audiobook]
+      required: [container, size]
+      properties:
+        container:
+          type: string
+          description: Upper-cased extension of the first file (EPUB, CBZ, M4B, MP3).
+        size:
+          type: integer
+          format: int64
+          description: Sum of the slot's file sizes; an audiobook folder is many files.
+        file_count:
+          type: integer
+          x-go-type: uint32
+
+    BookReplacing:
+      type: object
+      required: [language]
+      properties:
+        language:
+          type: string
+          description: Language of the edition being replaced.
+
+    BookFormatSlot:
+      type: object
+      required: [format, state, edition_id]
+      properties:
+        format:
+          $ref: "#/components/schemas/BookFormat"
+        state:
+          $ref: "#/components/schemas/BookFormatState"
+        edition_id:
+          type: integer
+          x-go-type: uint32
+          nullable: true
+        file:
+          $ref: "#/components/schemas/BookSlotFile"
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Present while `state` is `downloading`.
+        replacing:
+          $ref: "#/components/schemas/BookReplacing"
+
+    BookSeriesRef:
+      type: object
+      required: [id, title, number]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        number:
+          type: number
+
+    Book:
+      type: object
+      description: Book detail; also the response of add, patch and refresh. The cover is `/posters/books/{id}/poster.jpg`.
+      required:
+        [
+          id,
+          hardcover_id,
+          title,
+          author,
+          kind,
+          first_published,
+          contributors,
+          status,
+          monitor,
+          preferred_language,
+          added_at,
+          formats,
+          editions,
+        ]
       properties:
         id:
           type: integer
@@ -7667,79 +8948,238 @@ components:
           x-go-type: uint32
         title:
           type: string
+          description: |
+            Title of the best edition in `preferred_language` (ebook first,
+            then audiobook), else the original edition's, else Hardcover's.
+            Never tied to a slot's edition.
+        original_title:
+          type: string
+          description: The original edition's title when it differs from `title`.
+        author:
+          type: string
+          description: Author (else writer) names joined with " & ", at most 3 then " et al.".
+        kind:
+          $ref: "#/components/schemas/BookKind"
+        genre:
+          type: string
+        first_published:
+          type: integer
+          x-go-type: uint16
+        overview:
+          type: string
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          description: One decimal; absent when Hardcover has none.
+        contributors:
+          type: array
+          description: Makers only (author, writer, artist, colorist, cover). Translators and narrators live on the editions.
+          items:
+            $ref: "#/components/schemas/BookCredit"
+        status:
+          $ref: "#/components/schemas/BookItemStatus"
+        monitor:
+          $ref: "#/components/schemas/BookMonitor"
+        quality_profile:
+          type: string
+          description: Empty means the series' profile for a volume, else the default.
+        preferred_language:
+          type: string
+          description: ISO 639-1; defaults to `library.book_language` at add.
+        added_at:
+          type: string
+          format: date-time
+        formats:
+          type: array
+          description: Always two entries, ebook first.
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/BookFormatSlot"
+        editions:
+          type: array
+          description: Preferred language first, then by format.
+          items:
+            $ref: "#/components/schemas/BookEdition"
+        series:
+          allOf:
+            - $ref: "#/components/schemas/BookSeriesRef"
+          description: Set on a volume so its detail can link up to the series.
+
+    BookVolume:
+      type: object
+      required: [id, number, status]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+          description: The volume's Book id; the SPA builds its cover from it.
+        number:
+          type: number
+          description: May be fractional (1.5).
+        status:
+          type: string
+          enum: [available, wanted, downloading, upcoming]
+          description: |
+            Ebook-slot status. `upcoming` iff the release date is after today.
+            An un-hydrated stub reports `wanted` when its ebook slot is
+            monitored.
         release_date:
           type: string
           format: date
-          nullable: true
-        overview:
-          type: string
-        series_name:
-          type: string
-        series_position:
-          type: string
-        ebook:
-          $ref: "#/components/schemas/BookSlot"
-        audiobook:
-          $ref: "#/components/schemas/BookSlot"
 
-    Book:
-      allOf:
-        - $ref: "#/components/schemas/BookEntry"
-        - type: object
-          required: [author_id]
-          properties:
-            author_id:
-              type: integer
-              x-go-type: uint32
-
-    BookSlot:
+    BookSeries:
       type: object
-      required: [monitored, status, file_count]
+      description: Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+      required:
+        [
+          id,
+          hardcover_id,
+          title,
+          author,
+          kind,
+          contributors,
+          status,
+          ongoing,
+          since,
+          monitor,
+          hydrating,
+          edition,
+          editions,
+          added_at,
+          volumes,
+        ]
       properties:
-        monitored:
-          type: boolean
-        status:
-          type: string
-          enum: [wanted, downloading, paused, available, skipped]
-        file_count:
+        id:
           type: integer
           x-go-type: uint32
-
-    BookAuthorSearchResultList:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/BookAuthorSearchResult"
-
-    BookAuthorSearchResult:
-      type: object
-      required: [hardcover_id, name, books_count, already_added]
-      properties:
         hardcover_id:
           type: integer
           x-go-type: uint32
-        name:
+          description: Hardcover series id, a separate id space from books.
+        title:
           type: string
-        books_count:
+        original_title:
+          type: string
+        overview:
+          type: string
+        author:
+          type: string
+        kind:
+          $ref: "#/components/schemas/BookKind"
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          description: Derived, the mean of the rated volumes; Hardcover has no series rating.
+        contributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookCredit"
+        status:
+          $ref: "#/components/schemas/BookItemStatus"
+        ongoing:
+          type: boolean
+        since:
+          type: integer
+          x-go-type: uint16
+        monitor:
+          $ref: "#/components/schemas/BookSeriesMonitor"
+        quality_profile:
+          type: string
+          description: Written through to every volume.
+        hydrating:
+          type: boolean
+          description: |
+            True while any volume is still a stub (`last_refreshed_at` unset);
+            the SPA polls the detail every 10 seconds while it holds.
+        edition:
+          type: string
+          description: Label of the selected (language, publisher), "{language in its own name} · {publisher}".
+        editions:
+          type: array
+          description: Every selectable label, ordered by number of volumes covered.
+          items:
+            type: string
+        added_at:
+          type: string
+          format: date-time
+        volumes:
+          type: array
+          description: Ascending number, upcoming included.
+          items:
+            $ref: "#/components/schemas/BookVolume"
+
+    BookShelfType:
+      type: string
+      enum: [book, series]
+
+    BookShelfFormat:
+      type: object
+      required: [format, state]
+      properties:
+        format:
+          $ref: "#/components/schemas/BookFormat"
+        state:
+          $ref: "#/components/schemas/BookFormatState"
+
+    ShelfItem:
+      type: object
+      description: One entry of the books shelf. `id` is only unique together with `type`.
+      required: [type, id, cover_id, title, author, kind, status, added_at]
+      properties:
+        type:
+          $ref: "#/components/schemas/BookShelfType"
+        id:
           type: integer
           x-go-type: uint32
-        image_url:
+        cover_id:
+          type: integer
+          x-go-type: uint32
+          description: Book id whose poster is the cover; for a series, its lowest-position volume.
+        title:
           type: string
-          description: Hardcover image of an author not added yet; there is no poster to proxy.
-        already_added:
-          type: boolean
+        author:
+          type: string
+        kind:
+          $ref: "#/components/schemas/BookKind"
+        status:
+          $ref: "#/components/schemas/BookItemStatus"
+        added_at:
+          type: string
+          format: date-time
+        year:
+          type: integer
+          x-go-type: uint16
+          description: Books only; the first-published year.
+        progress:
+          type: number
+          description: Books only, while downloading.
+        formats:
+          type: array
+          description: Books only.
+          items:
+            $ref: "#/components/schemas/BookShelfFormat"
+        volumes_have:
+          type: integer
+          x-go-type: uint32
+          description: Series only; volumes whose state is available.
+        volumes_out:
+          type: integer
+          x-go-type: uint32
+          description: Series only; volumes not upcoming.
+        quality_profile:
+          type: string
 
-    PaginatedBookAuthors:
+    PaginatedShelf:
       type: object
       required: [items, total, page, limit]
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/BookAuthor"
+            $ref: "#/components/schemas/ShelfItem"
         total:
           type: integer
           x-go-type: uint32
@@ -7750,122 +9190,266 @@ components:
           type: integer
           x-go-type: uint16
 
-    AddBookAuthorRequest:
+    BookAuthorCount:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+          x-go-type: uint32
+
+    BookCounts:
+      type: object
+      description: |
+        Faceted like `TVShowCounts`: each facet is counted with the other
+        facets' filters and the `query` applied and its own left out, and
+        carries its own `*_total` "all" row.
+      required:
+        [
+          total,
+          status_total,
+          available,
+          wanted,
+          downloading,
+          author_total,
+          authors,
+          format_total,
+          ebook,
+          audiobook,
+        ]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+          description: The whole library, filtered by nothing (header, empty state, nav badge).
+        status_total:
+          type: integer
+          x-go-type: uint32
+        available:
+          type: integer
+          x-go-type: uint32
+        wanted:
+          type: integer
+          x-go-type: uint32
+        downloading:
+          type: integer
+          x-go-type: uint32
+        author_total:
+          type: integer
+          x-go-type: uint32
+        authors:
+          type: array
+          description: One entry per creator person (author, writer, artist), sorted by name. Not per display string.
+          items:
+            $ref: "#/components/schemas/BookAuthorCount"
+        format_total:
+          type: integer
+          x-go-type: uint32
+        ebook:
+          type: integer
+          x-go-type: uint32
+          description: Items with that slot monitored or holding a file; a series counts under ebook.
+        audiobook:
+          type: integer
+          x-go-type: uint32
+
+    BookLookupHit:
+      type: object
+      required: [hardcover_id, type, title, author, already_added]
+      properties:
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+        type:
+          $ref: "#/components/schemas/BookShelfType"
+        title:
+          type: string
+        original_title:
+          type: string
+          description: Absent from the search document; filled by the detail.
+        author:
+          type: string
+        kind:
+          $ref: "#/components/schemas/BookKind"
+        year:
+          type: integer
+          x-go-type: uint16
+          description: A series hit has one only when already in the library (its `since`).
+        volumes:
+          type: integer
+          x-go-type: uint32
+          description: Series only.
+        ongoing:
+          type: boolean
+          description: Series only, when the search document carries it.
+        already_added:
+          type: boolean
+        library_id:
+          type: integer
+          x-go-type: uint32
+          description: Set with `already_added`; a book that is a volume of a library series answers with its Book id.
+        cover_id:
+          type: integer
+          x-go-type: uint32
+          description: Series hit that is already added; Book id of the library series' lowest-position volume.
+
+    BookLookupList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookLookupHit"
+
+    BookLookupEdition:
+      type: object
+      required: [language, format, publisher, year]
+      properties:
+        language:
+          type: string
+        format:
+          $ref: "#/components/schemas/BookFormat"
+        publisher:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        original:
+          type: boolean
+
+    BookLookupDetail:
+      description: |
+        The hit fields and the detail in one object, with `kind` and
+        `original_title` filled. Also the book arm of
+        `GET /requests/{id}/metadata`, where `type: series` serves a
+        `book_series` request.
+      allOf:
+        - $ref: "#/components/schemas/BookLookupHit"
+        - type: object
+          properties:
+            overview:
+              type: string
+            genres:
+              type: array
+              description: Top 3 genre tags by count.
+              items:
+                type: string
+            pages:
+              type: integer
+              x-go-type: uint16
+              description: Books only.
+            editions:
+              type: array
+              items:
+                $ref: "#/components/schemas/BookLookupEdition"
+            volume_book_ids:
+              type: array
+              maxItems: 6
+              description: |
+                Hardcover book ids of the first 6 or fewer primary volumes of
+                a series; the SPA builds `/posters/lookup/books/{id}/poster.jpg`
+                from each.
+              items:
+                type: integer
+                x-go-type: uint32
+
+    AddBookRequest:
       type: object
       required: [hardcover_id]
       properties:
         hardcover_id:
           type: integer
           x-go-type: uint32
-        monitored:
-          type: boolean
-          description: Defaults to true.
-        monitor_policy:
+        quality_profile:
           type: string
-          enum: [all, future, none]
-        want_kinds:
-          type: string
-          enum: [ebook, audiobook, both]
-        ebook_quality_profile:
-          type: string
-        audiobook_quality_profile:
-          type: string
+          description: Empty or omitted uses the default book profile; an unknown name answers 422.
+        monitor:
+          $ref: "#/components/schemas/BookMonitor"
 
-    PatchBookAuthorRequest:
+    AddBookSeriesRequest:
       type: object
+      required: [hardcover_id]
       properties:
-        monitored:
-          type: boolean
-        monitor_policy:
+        hardcover_id:
+          type: integer
+          x-go-type: uint32
+          description: Hardcover series id.
+        quality_profile:
           type: string
-          enum: [all, future, none]
-        want_kinds:
-          type: string
-          enum: [ebook, audiobook, both]
-        ebook_quality_profile:
-          type: string
-        audiobook_quality_profile:
-          type: string
+        monitor:
+          $ref: "#/components/schemas/BookSeriesMonitor"
 
     PatchBookRequest:
       type: object
       properties:
-        ebook_monitored:
-          type: boolean
-        audiobook_monitored:
-          type: boolean
-
-    EbookQualityProfile:
-      type: object
-      required: [name, formats, cutoff, upgrade_allowed, is_default]
-      properties:
-        name:
+        monitor:
+          $ref: "#/components/schemas/BookMonitor"
+        preferred_language:
           type: string
-        formats:
+          description: ISO 639-1. Recomputes the title and re-picks the edition of every slot with no file.
+        quality_profile:
+          type: string
+          description: Empty clears to the default; an unknown name answers 422.
+        kind:
+          $ref: "#/components/schemas/BookKind"
+        format:
+          $ref: "#/components/schemas/BookFormat"
+        edition_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            Edition to use for `format`; the pair is required together (else
+            422), and an id that is not one of this book's editions of that
+            format answers 422. Changing the edition of a slot that holds a
+            file queues a replacement.
+
+    PatchBookSeriesRequest:
+      type: object
+      properties:
+        monitor:
+          $ref: "#/components/schemas/BookSeriesMonitor"
+        quality_profile:
+          type: string
+          description: Written through to every volume.
+        edition:
+          type: string
+          description: Must equal one of the series' `editions`, else 422. Re-picks only volumes with no ebook file.
+
+    BookSearchAccepted:
+      type: object
+      required: [queued]
+      properties:
+        queued:
+          type: integer
+          x-go-type: uint32
+          description: Slots (book) or volumes (series) the pass will search.
+
+    BookRenamePlan:
+      type: object
+      required: [book_id, operations]
+      properties:
+        book_id:
+          type: integer
+          x-go-type: uint32
+        operations:
           type: array
           items:
-            type: string
-            enum: [epub, azw3, mobi, pdf, other]
-        cutoff:
-          type: string
-          enum: [epub, azw3, mobi, pdf, other]
-        upgrade_allowed:
-          type: boolean
-        is_default:
-          type: boolean
+            $ref: "#/components/schemas/RenameOperation"
 
-    EbookQualityProfileCreate:
+    BookSeriesRenamePlan:
       type: object
-      required: [name, formats, cutoff, upgrade_allowed]
+      required: [series_id, operations]
       properties:
-        name:
-          type: string
-        formats:
+        series_id:
+          type: integer
+          x-go-type: uint32
+        operations:
           type: array
           items:
-            type: string
-            enum: [epub, azw3, mobi, pdf, other]
-        cutoff:
-          type: string
-          enum: [epub, azw3, mobi, pdf, other]
-        upgrade_allowed:
-          type: boolean
-
-    AudiobookQualityProfile:
-      type: object
-      required: [name, formats, cutoff, upgrade_allowed, is_default]
-      properties:
-        name:
-          type: string
-        formats:
-          type: array
-          items:
-            type: string
-            enum: [m4b, mp3, other]
-        cutoff:
-          type: string
-          enum: [m4b, mp3, other]
-        upgrade_allowed:
-          type: boolean
-        is_default:
-          type: boolean
-
-    AudiobookQualityProfileCreate:
-      type: object
-      required: [name, formats, cutoff, upgrade_allowed]
-      properties:
-        name:
-          type: string
-        formats:
-          type: array
-          items:
-            type: string
-            enum: [m4b, mp3, other]
-        cutoff:
-          type: string
-          enum: [m4b, mp3, other]
-        upgrade_allowed:
-          type: boolean
+            $ref: "#/components/schemas/RenameOperation"
 
     PaginatedTVShows:
       type: object
@@ -8125,8 +9709,28 @@ components:
           type: string
         source:
           type: string
+          description: >-
+            Display label printed verbatim by the releases table. Music and
+            book releases carry the canonical label rather than the raw token:
+            `FLAC`, `FLAC 24/96`, `FLAC 24/192`, `FLAC 24-bit`, `ALAC`, `WAV`,
+            `MP3 320`, `MP3 V0`, `MP3 V2`, `MP3 256`, `MP3 192`, `MP3 128`,
+            `AAC 256`, `AAC 128`, `OGG 320` for music, and the upper-case
+            container (`EPUB`, `M4B`, `CBZ`) for books.
         codec:
           type: string
+        audio_tier:
+          $ref: "#/components/schemas/MusicTier"
+        bitrate_kbps:
+          type: integer
+          x-go-type: uint32
+          description: Audiobook only, when the release name states a bit rate; absent otherwise.
+        slot:
+          allOf:
+            - $ref: "#/components/schemas/BookFormat"
+          description: >-
+            Book only: the slot the release fills, derived from its parsed
+            container. A grab body whose `slot` disagrees with the container
+            is refused with `grab_rejected`.
         indexer:
           type: string
         published_at:
@@ -8137,7 +9741,12 @@ components:
           description: >-
             Grab requests only: delete already-present file(s) for the
             covered media before importing (manual overwrite). Unset/false
-            keeps existing files. Ignored in search-result responses.
+            keeps existing files. Ignored in search-result responses. For an
+            album, an artist pack or a book slot the old files go only after
+            the new ones are placed and verified: per matched track for an
+            album, per linked album that already had files for a pack, and
+            every file of the grabbed slot for a book. Accepted and a no-op
+            on a title with no files.
         score:
           type: integer
           description: >-
@@ -10764,12 +12373,9 @@ components:
 
     ImportScanBookCandidate:
       type: object
-      required: [book_hardcover_id, author_hardcover_id, title]
+      required: [book_hardcover_id, title]
       properties:
         book_hardcover_id:
-          type: integer
-          x-go-type: uint32
-        author_hardcover_id:
           type: integer
           x-go-type: uint32
         title:
@@ -10804,9 +12410,6 @@ components:
           type: string
           enum: [confirmed, ambiguous, unmatched, existing]
         book_hardcover_id:
-          type: integer
-          x-go-type: uint32
-        author_hardcover_id:
           type: integer
           x-go-type: uint32
         candidates:
@@ -11368,6 +12971,10 @@ components:
         display_name:
           type: string
 
+    RequestMediaType:
+      type: string
+      enum: [movie, tvshow, artist, book, book_series]
+
     Request:
       type: object
       required: [id, media_type, media_id, title, status, requester, created_at, updated_at]
@@ -11376,19 +12983,18 @@ components:
           type: integer
           x-go-type: uint32
         media_type:
-          type: string
-          enum: [movie, tvshow, artist, album, author, book]
+          $ref: "#/components/schemas/RequestMediaType"
         media_id:
           type: integer
           x-go-type: uint32
-          description: TMDB id for movies, TVDB id for shows, Hardcover id for authors and books; 0 for artists and albums.
+          description: |
+            TMDB id for movies, TVDB id for shows, Hardcover book id for
+            books, Hardcover series id for book series (a separate id space,
+            which is why `media_type` is part of the uniqueness key); 0 for
+            artists.
         media_mbid:
           type: string
-          description: MusicBrainz id of an artist or album request.
-        book_kind:
-          type: string
-          enum: [ebook, audiobook, both]
-          description: Slot a book request asks for.
+          description: MusicBrainz id of an artist request; absent for every other type.
         title:
           type: string
         status:
@@ -11448,20 +13054,14 @@ components:
       required: [media_type, title]
       properties:
         media_type:
-          type: string
-          enum: [movie, tvshow, artist, album, author, book]
+          $ref: "#/components/schemas/RequestMediaType"
         media_id:
           type: integer
           x-go-type: uint32
+          description: Required for movie, tvshow, book and book_series; rejected for artist.
         media_mbid:
           type: string
-          description: |
-            MusicBrainz id: artist MBID for artist requests, release-group
-            MBID for album requests. Exactly one of media_id/media_mbid per type.
-        book_kind:
-          type: string
-          enum: [ebook, audiobook, both]
-          description: Slot a book request asks for; required for media_type=book and rejected for every other type.
+          description: Artist MBID; required for artist and rejected for every other type.
         title:
           type: string
         quality_profile:
@@ -11481,7 +13081,24 @@ components:
       properties:
         quality_profile:
           type: string
-          description: Profile name; empty or omitted uses the requested media's server default.
+          description: |
+            Profile name from the request's medium family (video, music or
+            book); empty or omitted uses that family's default for the
+            request's media (movie or series; the book's kind). A name that
+            is not in the family answers 422 and the request stays pending.
+
+    RequestMetadata:
+      description: |
+        Response of `GET /requests/{id}/metadata`. No discriminator: the
+        caller branches on the request's `media_type`. A movie or tvshow
+        request answers `RequestMediaDetails`, an artist request
+        `MusicArtistLookupDetail` (the hit fields and the detail), and a book
+        or book_series request `BookLookupDetail` (`type: series` for
+        `book_series`).
+      oneOf:
+        - $ref: "#/components/schemas/RequestMediaDetails"
+        - $ref: "#/components/schemas/MusicArtistLookupDetail"
+        - $ref: "#/components/schemas/BookLookupDetail"
 
     LookupDetail:
       type: object

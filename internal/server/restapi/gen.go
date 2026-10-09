@@ -93,48 +93,6 @@ func (e ActivityEventType) Valid() bool {
 	}
 }
 
-// Defines values for AddBookAuthorRequestMonitorPolicy.
-const (
-	AddBookAuthorRequestMonitorPolicyAll    AddBookAuthorRequestMonitorPolicy = "all"
-	AddBookAuthorRequestMonitorPolicyFuture AddBookAuthorRequestMonitorPolicy = "future"
-	AddBookAuthorRequestMonitorPolicyNone   AddBookAuthorRequestMonitorPolicy = "none"
-)
-
-// Valid indicates whether the value is a known member of the AddBookAuthorRequestMonitorPolicy enum.
-func (e AddBookAuthorRequestMonitorPolicy) Valid() bool {
-	switch e {
-	case AddBookAuthorRequestMonitorPolicyAll:
-		return true
-	case AddBookAuthorRequestMonitorPolicyFuture:
-		return true
-	case AddBookAuthorRequestMonitorPolicyNone:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AddBookAuthorRequestWantKinds.
-const (
-	AddBookAuthorRequestWantKindsAudiobook AddBookAuthorRequestWantKinds = "audiobook"
-	AddBookAuthorRequestWantKindsBoth      AddBookAuthorRequestWantKinds = "both"
-	AddBookAuthorRequestWantKindsEbook     AddBookAuthorRequestWantKinds = "ebook"
-)
-
-// Valid indicates whether the value is a known member of the AddBookAuthorRequestWantKinds enum.
-func (e AddBookAuthorRequestWantKinds) Valid() bool {
-	switch e {
-	case AddBookAuthorRequestWantKindsAudiobook:
-		return true
-	case AddBookAuthorRequestWantKindsBoth:
-		return true
-	case AddBookAuthorRequestWantKindsEbook:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for AddSeriesRequestPreset.
 const (
 	AddSeriesRequestPresetAll      AddSeriesRequestPreset = "all"
@@ -207,84 +165,24 @@ func (e AppLogConfigLevel) Valid() bool {
 	}
 }
 
-// Defines values for AudiobookQualityProfileCutoff.
+// Defines values for AudiobookFormat.
 const (
-	AudiobookQualityProfileCutoffM4b   AudiobookQualityProfileCutoff = "m4b"
-	AudiobookQualityProfileCutoffMp3   AudiobookQualityProfileCutoff = "mp3"
-	AudiobookQualityProfileCutoffOther AudiobookQualityProfileCutoff = "other"
+	AudiobookFormatFLAC AudiobookFormat = "FLAC"
+	AudiobookFormatM4A  AudiobookFormat = "M4A"
+	AudiobookFormatM4B  AudiobookFormat = "M4B"
+	AudiobookFormatMP3  AudiobookFormat = "MP3"
 )
 
-// Valid indicates whether the value is a known member of the AudiobookQualityProfileCutoff enum.
-func (e AudiobookQualityProfileCutoff) Valid() bool {
+// Valid indicates whether the value is a known member of the AudiobookFormat enum.
+func (e AudiobookFormat) Valid() bool {
 	switch e {
-	case AudiobookQualityProfileCutoffM4b:
+	case AudiobookFormatFLAC:
 		return true
-	case AudiobookQualityProfileCutoffMp3:
+	case AudiobookFormatM4A:
 		return true
-	case AudiobookQualityProfileCutoffOther:
+	case AudiobookFormatM4B:
 		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AudiobookQualityProfileFormats.
-const (
-	AudiobookQualityProfileFormatsM4b   AudiobookQualityProfileFormats = "m4b"
-	AudiobookQualityProfileFormatsMp3   AudiobookQualityProfileFormats = "mp3"
-	AudiobookQualityProfileFormatsOther AudiobookQualityProfileFormats = "other"
-)
-
-// Valid indicates whether the value is a known member of the AudiobookQualityProfileFormats enum.
-func (e AudiobookQualityProfileFormats) Valid() bool {
-	switch e {
-	case AudiobookQualityProfileFormatsM4b:
-		return true
-	case AudiobookQualityProfileFormatsMp3:
-		return true
-	case AudiobookQualityProfileFormatsOther:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AudiobookQualityProfileCreateCutoff.
-const (
-	AudiobookQualityProfileCreateCutoffM4b   AudiobookQualityProfileCreateCutoff = "m4b"
-	AudiobookQualityProfileCreateCutoffMp3   AudiobookQualityProfileCreateCutoff = "mp3"
-	AudiobookQualityProfileCreateCutoffOther AudiobookQualityProfileCreateCutoff = "other"
-)
-
-// Valid indicates whether the value is a known member of the AudiobookQualityProfileCreateCutoff enum.
-func (e AudiobookQualityProfileCreateCutoff) Valid() bool {
-	switch e {
-	case AudiobookQualityProfileCreateCutoffM4b:
-		return true
-	case AudiobookQualityProfileCreateCutoffMp3:
-		return true
-	case AudiobookQualityProfileCreateCutoffOther:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AudiobookQualityProfileCreateFormats.
-const (
-	AudiobookQualityProfileCreateFormatsM4b   AudiobookQualityProfileCreateFormats = "m4b"
-	AudiobookQualityProfileCreateFormatsMp3   AudiobookQualityProfileCreateFormats = "mp3"
-	AudiobookQualityProfileCreateFormatsOther AudiobookQualityProfileCreateFormats = "other"
-)
-
-// Valid indicates whether the value is a known member of the AudiobookQualityProfileCreateFormats enum.
-func (e AudiobookQualityProfileCreateFormats) Valid() bool {
-	switch e {
-	case AudiobookQualityProfileCreateFormatsM4b:
-		return true
-	case AudiobookQualityProfileCreateFormatsMp3:
-		return true
-	case AudiobookQualityProfileCreateFormatsOther:
+	case AudiobookFormatMP3:
 		return true
 	default:
 		return false
@@ -375,69 +273,207 @@ func (e AuthConfigViewRegistrationMode) Valid() bool {
 	}
 }
 
-// Defines values for BookAuthorMonitorPolicy.
+// Defines values for BookFormat.
 const (
-	BookAuthorMonitorPolicyAll    BookAuthorMonitorPolicy = "all"
-	BookAuthorMonitorPolicyFuture BookAuthorMonitorPolicy = "future"
-	BookAuthorMonitorPolicyNone   BookAuthorMonitorPolicy = "none"
+	BookFormatAudiobook BookFormat = "audiobook"
+	BookFormatEbook     BookFormat = "ebook"
 )
 
-// Valid indicates whether the value is a known member of the BookAuthorMonitorPolicy enum.
-func (e BookAuthorMonitorPolicy) Valid() bool {
+// Valid indicates whether the value is a known member of the BookFormat enum.
+func (e BookFormat) Valid() bool {
 	switch e {
-	case BookAuthorMonitorPolicyAll:
+	case BookFormatAudiobook:
 		return true
-	case BookAuthorMonitorPolicyFuture:
-		return true
-	case BookAuthorMonitorPolicyNone:
+	case BookFormatEbook:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for BookAuthorWantKinds.
+// Defines values for BookFormatState.
 const (
-	BookAuthorWantKindsAudiobook BookAuthorWantKinds = "audiobook"
-	BookAuthorWantKindsBoth      BookAuthorWantKinds = "both"
-	BookAuthorWantKindsEbook     BookAuthorWantKinds = "ebook"
+	BookFormatStateAvailable   BookFormatState = "available"
+	BookFormatStateDownloading BookFormatState = "downloading"
+	BookFormatStateUnmonitored BookFormatState = "unmonitored"
+	BookFormatStateWanted      BookFormatState = "wanted"
 )
 
-// Valid indicates whether the value is a known member of the BookAuthorWantKinds enum.
-func (e BookAuthorWantKinds) Valid() bool {
+// Valid indicates whether the value is a known member of the BookFormatState enum.
+func (e BookFormatState) Valid() bool {
 	switch e {
-	case BookAuthorWantKindsAudiobook:
+	case BookFormatStateAvailable:
 		return true
-	case BookAuthorWantKindsBoth:
+	case BookFormatStateDownloading:
 		return true
-	case BookAuthorWantKindsEbook:
+	case BookFormatStateUnmonitored:
+		return true
+	case BookFormatStateWanted:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for BookSlotStatus.
+// Defines values for BookItemStatus.
 const (
-	BookSlotStatusAvailable   BookSlotStatus = "available"
-	BookSlotStatusDownloading BookSlotStatus = "downloading"
-	BookSlotStatusPaused      BookSlotStatus = "paused"
-	BookSlotStatusSkipped     BookSlotStatus = "skipped"
-	BookSlotStatusWanted      BookSlotStatus = "wanted"
+	BookItemStatusAvailable   BookItemStatus = "available"
+	BookItemStatusDownloading BookItemStatus = "downloading"
+	BookItemStatusWanted      BookItemStatus = "wanted"
 )
 
-// Valid indicates whether the value is a known member of the BookSlotStatus enum.
-func (e BookSlotStatus) Valid() bool {
+// Valid indicates whether the value is a known member of the BookItemStatus enum.
+func (e BookItemStatus) Valid() bool {
 	switch e {
-	case BookSlotStatusAvailable:
+	case BookItemStatusAvailable:
 		return true
-	case BookSlotStatusDownloading:
+	case BookItemStatusDownloading:
 		return true
-	case BookSlotStatusPaused:
+	case BookItemStatusWanted:
 		return true
-	case BookSlotStatusSkipped:
+	default:
+		return false
+	}
+}
+
+// Defines values for BookKind.
+const (
+	BookKindBd    BookKind = "bd"
+	BookKindComic BookKind = "comic"
+	BookKindManga BookKind = "manga"
+	BookKindNovel BookKind = "novel"
+)
+
+// Valid indicates whether the value is a known member of the BookKind enum.
+func (e BookKind) Valid() bool {
+	switch e {
+	case BookKindBd:
 		return true
-	case BookSlotStatusWanted:
+	case BookKindComic:
+		return true
+	case BookKindManga:
+		return true
+	case BookKindNovel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookMonitor.
+const (
+	BookMonitorAudiobook BookMonitor = "audiobook"
+	BookMonitorBoth      BookMonitor = "both"
+	BookMonitorEbook     BookMonitor = "ebook"
+	BookMonitorNone      BookMonitor = "none"
+)
+
+// Valid indicates whether the value is a known member of the BookMonitor enum.
+func (e BookMonitor) Valid() bool {
+	switch e {
+	case BookMonitorAudiobook:
+		return true
+	case BookMonitorBoth:
+		return true
+	case BookMonitorEbook:
+		return true
+	case BookMonitorNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookRole.
+const (
+	BookRoleArtist     BookRole = "artist"
+	BookRoleAuthor     BookRole = "author"
+	BookRoleColorist   BookRole = "colorist"
+	BookRoleCover      BookRole = "cover"
+	BookRoleNarrator   BookRole = "narrator"
+	BookRoleTranslator BookRole = "translator"
+	BookRoleWriter     BookRole = "writer"
+)
+
+// Valid indicates whether the value is a known member of the BookRole enum.
+func (e BookRole) Valid() bool {
+	switch e {
+	case BookRoleArtist:
+		return true
+	case BookRoleAuthor:
+		return true
+	case BookRoleColorist:
+		return true
+	case BookRoleCover:
+		return true
+	case BookRoleNarrator:
+		return true
+	case BookRoleTranslator:
+		return true
+	case BookRoleWriter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookSeriesMonitor.
+const (
+	BookSeriesMonitorAll    BookSeriesMonitor = "all"
+	BookSeriesMonitorFuture BookSeriesMonitor = "future"
+	BookSeriesMonitorNone   BookSeriesMonitor = "none"
+)
+
+// Valid indicates whether the value is a known member of the BookSeriesMonitor enum.
+func (e BookSeriesMonitor) Valid() bool {
+	switch e {
+	case BookSeriesMonitorAll:
+		return true
+	case BookSeriesMonitorFuture:
+		return true
+	case BookSeriesMonitorNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookShelfType.
+const (
+	BookShelfTypeBook   BookShelfType = "book"
+	BookShelfTypeSeries BookShelfType = "series"
+)
+
+// Valid indicates whether the value is a known member of the BookShelfType enum.
+func (e BookShelfType) Valid() bool {
+	switch e {
+	case BookShelfTypeBook:
+		return true
+	case BookShelfTypeSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookVolumeStatus.
+const (
+	BookVolumeStatusAvailable   BookVolumeStatus = "available"
+	BookVolumeStatusDownloading BookVolumeStatus = "downloading"
+	BookVolumeStatusUpcoming    BookVolumeStatus = "upcoming"
+	BookVolumeStatusWanted      BookVolumeStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the BookVolumeStatus enum.
+func (e BookVolumeStatus) Valid() bool {
+	switch e {
+	case BookVolumeStatusAvailable:
+		return true
+	case BookVolumeStatusDownloading:
+		return true
+	case BookVolumeStatusUpcoming:
+		return true
+	case BookVolumeStatusWanted:
 		return true
 	default:
 		return false
@@ -459,57 +495,6 @@ func (e CreateInviteRequestRole) Valid() bool {
 	case CreateInviteRequestRoleMember:
 		return true
 	case CreateInviteRequestRoleRequestOnly:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateRequestRequestBookKind.
-const (
-	CreateRequestRequestBookKindAudiobook CreateRequestRequestBookKind = "audiobook"
-	CreateRequestRequestBookKindBoth      CreateRequestRequestBookKind = "both"
-	CreateRequestRequestBookKindEbook     CreateRequestRequestBookKind = "ebook"
-)
-
-// Valid indicates whether the value is a known member of the CreateRequestRequestBookKind enum.
-func (e CreateRequestRequestBookKind) Valid() bool {
-	switch e {
-	case CreateRequestRequestBookKindAudiobook:
-		return true
-	case CreateRequestRequestBookKindBoth:
-		return true
-	case CreateRequestRequestBookKindEbook:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CreateRequestRequestMediaType.
-const (
-	CreateRequestRequestMediaTypeAlbum  CreateRequestRequestMediaType = "album"
-	CreateRequestRequestMediaTypeArtist CreateRequestRequestMediaType = "artist"
-	CreateRequestRequestMediaTypeAuthor CreateRequestRequestMediaType = "author"
-	CreateRequestRequestMediaTypeBook   CreateRequestRequestMediaType = "book"
-	CreateRequestRequestMediaTypeMovie  CreateRequestRequestMediaType = "movie"
-	CreateRequestRequestMediaTypeTvshow CreateRequestRequestMediaType = "tvshow"
-)
-
-// Valid indicates whether the value is a known member of the CreateRequestRequestMediaType enum.
-func (e CreateRequestRequestMediaType) Valid() bool {
-	switch e {
-	case CreateRequestRequestMediaTypeAlbum:
-		return true
-	case CreateRequestRequestMediaTypeArtist:
-		return true
-	case CreateRequestRequestMediaTypeAuthor:
-		return true
-	case CreateRequestRequestMediaTypeBook:
-		return true
-	case CreateRequestRequestMediaTypeMovie:
-		return true
-	case CreateRequestRequestMediaTypeTvshow:
 		return true
 	default:
 		return false
@@ -684,108 +669,30 @@ func (e DownloadClientCreateClientType) Valid() bool {
 	}
 }
 
-// Defines values for EbookQualityProfileCutoff.
+// Defines values for EbookFormat.
 const (
-	EbookQualityProfileCutoffAzw3  EbookQualityProfileCutoff = "azw3"
-	EbookQualityProfileCutoffEpub  EbookQualityProfileCutoff = "epub"
-	EbookQualityProfileCutoffMobi  EbookQualityProfileCutoff = "mobi"
-	EbookQualityProfileCutoffOther EbookQualityProfileCutoff = "other"
-	EbookQualityProfileCutoffPdf   EbookQualityProfileCutoff = "pdf"
+	EbookFormatAZW3 EbookFormat = "AZW3"
+	EbookFormatCBR  EbookFormat = "CBR"
+	EbookFormatCBZ  EbookFormat = "CBZ"
+	EbookFormatEPUB EbookFormat = "EPUB"
+	EbookFormatMOBI EbookFormat = "MOBI"
+	EbookFormatPDF  EbookFormat = "PDF"
 )
 
-// Valid indicates whether the value is a known member of the EbookQualityProfileCutoff enum.
-func (e EbookQualityProfileCutoff) Valid() bool {
+// Valid indicates whether the value is a known member of the EbookFormat enum.
+func (e EbookFormat) Valid() bool {
 	switch e {
-	case EbookQualityProfileCutoffAzw3:
+	case EbookFormatAZW3:
 		return true
-	case EbookQualityProfileCutoffEpub:
+	case EbookFormatCBR:
 		return true
-	case EbookQualityProfileCutoffMobi:
+	case EbookFormatCBZ:
 		return true
-	case EbookQualityProfileCutoffOther:
+	case EbookFormatEPUB:
 		return true
-	case EbookQualityProfileCutoffPdf:
+	case EbookFormatMOBI:
 		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for EbookQualityProfileFormats.
-const (
-	EbookQualityProfileFormatsAzw3  EbookQualityProfileFormats = "azw3"
-	EbookQualityProfileFormatsEpub  EbookQualityProfileFormats = "epub"
-	EbookQualityProfileFormatsMobi  EbookQualityProfileFormats = "mobi"
-	EbookQualityProfileFormatsOther EbookQualityProfileFormats = "other"
-	EbookQualityProfileFormatsPdf   EbookQualityProfileFormats = "pdf"
-)
-
-// Valid indicates whether the value is a known member of the EbookQualityProfileFormats enum.
-func (e EbookQualityProfileFormats) Valid() bool {
-	switch e {
-	case EbookQualityProfileFormatsAzw3:
-		return true
-	case EbookQualityProfileFormatsEpub:
-		return true
-	case EbookQualityProfileFormatsMobi:
-		return true
-	case EbookQualityProfileFormatsOther:
-		return true
-	case EbookQualityProfileFormatsPdf:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for EbookQualityProfileCreateCutoff.
-const (
-	EbookQualityProfileCreateCutoffAzw3  EbookQualityProfileCreateCutoff = "azw3"
-	EbookQualityProfileCreateCutoffEpub  EbookQualityProfileCreateCutoff = "epub"
-	EbookQualityProfileCreateCutoffMobi  EbookQualityProfileCreateCutoff = "mobi"
-	EbookQualityProfileCreateCutoffOther EbookQualityProfileCreateCutoff = "other"
-	EbookQualityProfileCreateCutoffPdf   EbookQualityProfileCreateCutoff = "pdf"
-)
-
-// Valid indicates whether the value is a known member of the EbookQualityProfileCreateCutoff enum.
-func (e EbookQualityProfileCreateCutoff) Valid() bool {
-	switch e {
-	case EbookQualityProfileCreateCutoffAzw3:
-		return true
-	case EbookQualityProfileCreateCutoffEpub:
-		return true
-	case EbookQualityProfileCreateCutoffMobi:
-		return true
-	case EbookQualityProfileCreateCutoffOther:
-		return true
-	case EbookQualityProfileCreateCutoffPdf:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for EbookQualityProfileCreateFormats.
-const (
-	EbookQualityProfileCreateFormatsAzw3  EbookQualityProfileCreateFormats = "azw3"
-	EbookQualityProfileCreateFormatsEpub  EbookQualityProfileCreateFormats = "epub"
-	EbookQualityProfileCreateFormatsMobi  EbookQualityProfileCreateFormats = "mobi"
-	EbookQualityProfileCreateFormatsOther EbookQualityProfileCreateFormats = "other"
-	EbookQualityProfileCreateFormatsPdf   EbookQualityProfileCreateFormats = "pdf"
-)
-
-// Valid indicates whether the value is a known member of the EbookQualityProfileCreateFormats enum.
-func (e EbookQualityProfileCreateFormats) Valid() bool {
-	switch e {
-	case EbookQualityProfileCreateFormatsAzw3:
-		return true
-	case EbookQualityProfileCreateFormatsEpub:
-		return true
-	case EbookQualityProfileCreateFormatsMobi:
-		return true
-	case EbookQualityProfileCreateFormatsOther:
-		return true
-	case EbookQualityProfileCreateFormatsPdf:
+	case EbookFormatPDF:
 		return true
 	default:
 		return false
@@ -1719,6 +1626,7 @@ const (
 	MusicAlbumStatusDownloading MusicAlbumStatus = "downloading"
 	MusicAlbumStatusPaused      MusicAlbumStatus = "paused"
 	MusicAlbumStatusSkipped     MusicAlbumStatus = "skipped"
+	MusicAlbumStatusUpcoming    MusicAlbumStatus = "upcoming"
 	MusicAlbumStatusWanted      MusicAlbumStatus = "wanted"
 )
 
@@ -1732,6 +1640,8 @@ func (e MusicAlbumStatus) Valid() bool {
 	case MusicAlbumStatusPaused:
 		return true
 	case MusicAlbumStatusSkipped:
+		return true
+	case MusicAlbumStatusUpcoming:
 		return true
 	case MusicAlbumStatusWanted:
 		return true
@@ -1770,174 +1680,141 @@ func (e MusicAlbumType) Valid() bool {
 	}
 }
 
-// Defines values for MusicQualityProfileCutoff.
+// Defines values for MusicArtistKind.
 const (
-	MusicQualityProfileCutoffFlac   MusicQualityProfileCutoff = "flac"
-	MusicQualityProfileCutoffFlac24 MusicQualityProfileCutoff = "flac-24"
-	MusicQualityProfileCutoffMp3192 MusicQualityProfileCutoff = "mp3-192"
-	MusicQualityProfileCutoffMp3256 MusicQualityProfileCutoff = "mp3-256"
-	MusicQualityProfileCutoffMp3320 MusicQualityProfileCutoff = "mp3-320"
-	MusicQualityProfileCutoffMp3V0  MusicQualityProfileCutoff = "mp3-v0"
-	MusicQualityProfileCutoffOther  MusicQualityProfileCutoff = "other"
+	MusicArtistKindGroup  MusicArtistKind = "group"
+	MusicArtistKindPerson MusicArtistKind = "person"
 )
 
-// Valid indicates whether the value is a known member of the MusicQualityProfileCutoff enum.
-func (e MusicQualityProfileCutoff) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicArtistKind enum.
+func (e MusicArtistKind) Valid() bool {
 	switch e {
-	case MusicQualityProfileCutoffFlac:
+	case MusicArtistKindGroup:
 		return true
-	case MusicQualityProfileCutoffFlac24:
-		return true
-	case MusicQualityProfileCutoffMp3192:
-		return true
-	case MusicQualityProfileCutoffMp3256:
-		return true
-	case MusicQualityProfileCutoffMp3320:
-		return true
-	case MusicQualityProfileCutoffMp3V0:
-		return true
-	case MusicQualityProfileCutoffOther:
+	case MusicArtistKindPerson:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for MusicQualityProfileFormats.
+// Defines values for MusicArtistStatus.
 const (
-	MusicQualityProfileFormatsFlac   MusicQualityProfileFormats = "flac"
-	MusicQualityProfileFormatsFlac24 MusicQualityProfileFormats = "flac-24"
-	MusicQualityProfileFormatsMp3192 MusicQualityProfileFormats = "mp3-192"
-	MusicQualityProfileFormatsMp3256 MusicQualityProfileFormats = "mp3-256"
-	MusicQualityProfileFormatsMp3320 MusicQualityProfileFormats = "mp3-320"
-	MusicQualityProfileFormatsMp3V0  MusicQualityProfileFormats = "mp3-v0"
-	MusicQualityProfileFormatsOther  MusicQualityProfileFormats = "other"
+	MusicArtistStatusAvailable   MusicArtistStatus = "available"
+	MusicArtistStatusDownloading MusicArtistStatus = "downloading"
+	MusicArtistStatusWanted      MusicArtistStatus = "wanted"
 )
 
-// Valid indicates whether the value is a known member of the MusicQualityProfileFormats enum.
-func (e MusicQualityProfileFormats) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicArtistStatus enum.
+func (e MusicArtistStatus) Valid() bool {
 	switch e {
-	case MusicQualityProfileFormatsFlac:
+	case MusicArtistStatusAvailable:
 		return true
-	case MusicQualityProfileFormatsFlac24:
+	case MusicArtistStatusDownloading:
 		return true
-	case MusicQualityProfileFormatsMp3192:
-		return true
-	case MusicQualityProfileFormatsMp3256:
-		return true
-	case MusicQualityProfileFormatsMp3320:
-		return true
-	case MusicQualityProfileFormatsMp3V0:
-		return true
-	case MusicQualityProfileFormatsOther:
+	case MusicArtistStatusWanted:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for MusicQualityProfileCreateCutoff.
+// Defines values for MusicCreditRole.
 const (
-	MusicQualityProfileCreateCutoffFlac   MusicQualityProfileCreateCutoff = "flac"
-	MusicQualityProfileCreateCutoffFlac24 MusicQualityProfileCreateCutoff = "flac-24"
-	MusicQualityProfileCreateCutoffMp3192 MusicQualityProfileCreateCutoff = "mp3-192"
-	MusicQualityProfileCreateCutoffMp3256 MusicQualityProfileCreateCutoff = "mp3-256"
-	MusicQualityProfileCreateCutoffMp3320 MusicQualityProfileCreateCutoff = "mp3-320"
-	MusicQualityProfileCreateCutoffMp3V0  MusicQualityProfileCreateCutoff = "mp3-v0"
-	MusicQualityProfileCreateCutoffOther  MusicQualityProfileCreateCutoff = "other"
+	MusicCreditRoleArtwork   MusicCreditRole = "artwork"
+	MusicCreditRoleMastering MusicCreditRole = "mastering"
+	MusicCreditRoleMix       MusicCreditRole = "mix"
+	MusicCreditRoleProducer  MusicCreditRole = "producer"
+	MusicCreditRoleRecording MusicCreditRole = "recording"
 )
 
-// Valid indicates whether the value is a known member of the MusicQualityProfileCreateCutoff enum.
-func (e MusicQualityProfileCreateCutoff) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicCreditRole enum.
+func (e MusicCreditRole) Valid() bool {
 	switch e {
-	case MusicQualityProfileCreateCutoffFlac:
+	case MusicCreditRoleArtwork:
 		return true
-	case MusicQualityProfileCreateCutoffFlac24:
+	case MusicCreditRoleMastering:
 		return true
-	case MusicQualityProfileCreateCutoffMp3192:
+	case MusicCreditRoleMix:
 		return true
-	case MusicQualityProfileCreateCutoffMp3256:
+	case MusicCreditRoleProducer:
 		return true
-	case MusicQualityProfileCreateCutoffMp3320:
-		return true
-	case MusicQualityProfileCreateCutoffMp3V0:
-		return true
-	case MusicQualityProfileCreateCutoffOther:
+	case MusicCreditRoleRecording:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for MusicQualityProfileCreateFormats.
+// Defines values for MusicMedium.
 const (
-	MusicQualityProfileCreateFormatsFlac   MusicQualityProfileCreateFormats = "flac"
-	MusicQualityProfileCreateFormatsFlac24 MusicQualityProfileCreateFormats = "flac-24"
-	MusicQualityProfileCreateFormatsMp3192 MusicQualityProfileCreateFormats = "mp3-192"
-	MusicQualityProfileCreateFormatsMp3256 MusicQualityProfileCreateFormats = "mp3-256"
-	MusicQualityProfileCreateFormatsMp3320 MusicQualityProfileCreateFormats = "mp3-320"
-	MusicQualityProfileCreateFormatsMp3V0  MusicQualityProfileCreateFormats = "mp3-v0"
-	MusicQualityProfileCreateFormatsOther  MusicQualityProfileCreateFormats = "other"
+	MusicMediumCassette MusicMedium = "cassette"
+	MusicMediumCd       MusicMedium = "cd"
+	MusicMediumDigital  MusicMedium = "digital"
+	MusicMediumVinyl    MusicMedium = "vinyl"
 )
 
-// Valid indicates whether the value is a known member of the MusicQualityProfileCreateFormats enum.
-func (e MusicQualityProfileCreateFormats) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicMedium enum.
+func (e MusicMedium) Valid() bool {
 	switch e {
-	case MusicQualityProfileCreateFormatsFlac:
+	case MusicMediumCassette:
 		return true
-	case MusicQualityProfileCreateFormatsFlac24:
+	case MusicMediumCd:
 		return true
-	case MusicQualityProfileCreateFormatsMp3192:
+	case MusicMediumDigital:
 		return true
-	case MusicQualityProfileCreateFormatsMp3256:
-		return true
-	case MusicQualityProfileCreateFormatsMp3320:
-		return true
-	case MusicQualityProfileCreateFormatsMp3V0:
-		return true
-	case MusicQualityProfileCreateFormatsOther:
+	case MusicMediumVinyl:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for PatchBookAuthorRequestMonitorPolicy.
+// Defines values for MusicMonitor.
 const (
-	PatchBookAuthorRequestMonitorPolicyAll    PatchBookAuthorRequestMonitorPolicy = "all"
-	PatchBookAuthorRequestMonitorPolicyFuture PatchBookAuthorRequestMonitorPolicy = "future"
-	PatchBookAuthorRequestMonitorPolicyNone   PatchBookAuthorRequestMonitorPolicy = "none"
+	MusicMonitorAll    MusicMonitor = "all"
+	MusicMonitorFuture MusicMonitor = "future"
+	MusicMonitorManual MusicMonitor = "manual"
+	MusicMonitorNone   MusicMonitor = "none"
 )
 
-// Valid indicates whether the value is a known member of the PatchBookAuthorRequestMonitorPolicy enum.
-func (e PatchBookAuthorRequestMonitorPolicy) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicMonitor enum.
+func (e MusicMonitor) Valid() bool {
 	switch e {
-	case PatchBookAuthorRequestMonitorPolicyAll:
+	case MusicMonitorAll:
 		return true
-	case PatchBookAuthorRequestMonitorPolicyFuture:
+	case MusicMonitorFuture:
 		return true
-	case PatchBookAuthorRequestMonitorPolicyNone:
+	case MusicMonitorManual:
+		return true
+	case MusicMonitorNone:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for PatchBookAuthorRequestWantKinds.
+// Defines values for MusicTier.
 const (
-	PatchBookAuthorRequestWantKindsAudiobook PatchBookAuthorRequestWantKinds = "audiobook"
-	PatchBookAuthorRequestWantKindsBoth      PatchBookAuthorRequestWantKinds = "both"
-	PatchBookAuthorRequestWantKindsEbook     PatchBookAuthorRequestWantKinds = "ebook"
+	MusicTierHigh     MusicTier = "high"
+	MusicTierHires    MusicTier = "hires"
+	MusicTierLossless MusicTier = "lossless"
+	MusicTierLow      MusicTier = "low"
+	MusicTierStandard MusicTier = "standard"
 )
 
-// Valid indicates whether the value is a known member of the PatchBookAuthorRequestWantKinds enum.
-func (e PatchBookAuthorRequestWantKinds) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicTier enum.
+func (e MusicTier) Valid() bool {
 	switch e {
-	case PatchBookAuthorRequestWantKindsAudiobook:
+	case MusicTierHigh:
 		return true
-	case PatchBookAuthorRequestWantKindsBoth:
+	case MusicTierHires:
 		return true
-	case PatchBookAuthorRequestWantKindsEbook:
+	case MusicTierLossless:
+		return true
+	case MusicTierLow:
+		return true
+	case MusicTierStandard:
 		return true
 	default:
 		return false
@@ -2118,6 +1995,24 @@ func (e PlayOnLinkStatus) Valid() bool {
 	}
 }
 
+// Defines values for QualityDefaultMedia.
+const (
+	QualityDefaultMediaMovie  QualityDefaultMedia = "movie"
+	QualityDefaultMediaSeries QualityDefaultMedia = "series"
+)
+
+// Valid indicates whether the value is a known member of the QualityDefaultMedia enum.
+func (e QualityDefaultMedia) Valid() bool {
+	switch e {
+	case QualityDefaultMediaMovie:
+		return true
+	case QualityDefaultMediaSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QualityProfileMinResolution.
 const (
 	QualityProfileMinResolutionN1080p QualityProfileMinResolution = "1080p"
@@ -2253,57 +2148,6 @@ func (e QueueEntryStatus) Valid() bool {
 	}
 }
 
-// Defines values for RequestBookKind.
-const (
-	RequestBookKindAudiobook RequestBookKind = "audiobook"
-	RequestBookKindBoth      RequestBookKind = "both"
-	RequestBookKindEbook     RequestBookKind = "ebook"
-)
-
-// Valid indicates whether the value is a known member of the RequestBookKind enum.
-func (e RequestBookKind) Valid() bool {
-	switch e {
-	case RequestBookKindAudiobook:
-		return true
-	case RequestBookKindBoth:
-		return true
-	case RequestBookKindEbook:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for RequestMediaType.
-const (
-	RequestMediaTypeAlbum  RequestMediaType = "album"
-	RequestMediaTypeArtist RequestMediaType = "artist"
-	RequestMediaTypeAuthor RequestMediaType = "author"
-	RequestMediaTypeBook   RequestMediaType = "book"
-	RequestMediaTypeMovie  RequestMediaType = "movie"
-	RequestMediaTypeTvshow RequestMediaType = "tvshow"
-)
-
-// Valid indicates whether the value is a known member of the RequestMediaType enum.
-func (e RequestMediaType) Valid() bool {
-	switch e {
-	case RequestMediaTypeAlbum:
-		return true
-	case RequestMediaTypeArtist:
-		return true
-	case RequestMediaTypeAuthor:
-		return true
-	case RequestMediaTypeBook:
-		return true
-	case RequestMediaTypeMovie:
-		return true
-	case RequestMediaTypeTvshow:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for RequestStatus.
 const (
 	RequestStatusApproved  RequestStatus = "approved"
@@ -2322,6 +2166,33 @@ func (e RequestStatus) Valid() bool {
 	case RequestStatusDenied:
 		return true
 	case RequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequestMediaType.
+const (
+	RequestMediaTypeArtist     RequestMediaType = "artist"
+	RequestMediaTypeBook       RequestMediaType = "book"
+	RequestMediaTypeBookSeries RequestMediaType = "book_series"
+	RequestMediaTypeMovie      RequestMediaType = "movie"
+	RequestMediaTypeTvshow     RequestMediaType = "tvshow"
+)
+
+// Valid indicates whether the value is a known member of the RequestMediaType enum.
+func (e RequestMediaType) Valid() bool {
+	switch e {
+	case RequestMediaTypeArtist:
+		return true
+	case RequestMediaTypeBook:
+		return true
+	case RequestMediaTypeBookSeries:
+		return true
+	case RequestMediaTypeMovie:
+		return true
+	case RequestMediaTypeTvshow:
 		return true
 	default:
 		return false
@@ -2949,18 +2820,84 @@ func (e UserRole) Valid() bool {
 	}
 }
 
-// Defines values for BookSlotKind.
+// Defines values for BookSearchTypeParam.
 const (
-	BookSlotKindAudiobook BookSlotKind = "audiobook"
-	BookSlotKindEbook     BookSlotKind = "ebook"
+	BookSearchTypeParamAll    BookSearchTypeParam = "all"
+	BookSearchTypeParamBook   BookSearchTypeParam = "book"
+	BookSearchTypeParamSeries BookSearchTypeParam = "series"
 )
 
-// Valid indicates whether the value is a known member of the BookSlotKind enum.
-func (e BookSlotKind) Valid() bool {
+// Valid indicates whether the value is a known member of the BookSearchTypeParam enum.
+func (e BookSearchTypeParam) Valid() bool {
 	switch e {
-	case BookSlotKindAudiobook:
+	case BookSearchTypeParamAll:
 		return true
-	case BookSlotKindEbook:
+	case BookSearchTypeParamBook:
+		return true
+	case BookSearchTypeParamSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookShelfOrderParam.
+const (
+	BookShelfOrderParamAsc  BookShelfOrderParam = "asc"
+	BookShelfOrderParamDesc BookShelfOrderParam = "desc"
+)
+
+// Valid indicates whether the value is a known member of the BookShelfOrderParam enum.
+func (e BookShelfOrderParam) Valid() bool {
+	switch e {
+	case BookShelfOrderParamAsc:
+		return true
+	case BookShelfOrderParamDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookShelfSortParam.
+const (
+	BookShelfSortParamAdded BookShelfSortParam = "added"
+	BookShelfSortParamTitle BookShelfSortParam = "title"
+	BookShelfSortParamYear  BookShelfSortParam = "year"
+)
+
+// Valid indicates whether the value is a known member of the BookShelfSortParam enum.
+func (e BookShelfSortParam) Valid() bool {
+	switch e {
+	case BookShelfSortParamAdded:
+		return true
+	case BookShelfSortParamTitle:
+		return true
+	case BookShelfSortParamYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BookShelfStatusParam.
+const (
+	BookShelfStatusParamAll         BookShelfStatusParam = "all"
+	BookShelfStatusParamAvailable   BookShelfStatusParam = "available"
+	BookShelfStatusParamDownloading BookShelfStatusParam = "downloading"
+	BookShelfStatusParamWanted      BookShelfStatusParam = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the BookShelfStatusParam enum.
+func (e BookShelfStatusParam) Valid() bool {
+	switch e {
+	case BookShelfStatusParamAll:
+		return true
+	case BookShelfStatusParamAvailable:
+		return true
+	case BookShelfStatusParamDownloading:
+		return true
+	case BookShelfStatusParamWanted:
 		return true
 	default:
 		return false
@@ -3027,30 +2964,72 @@ func (e MoviesOrder) Valid() bool {
 	}
 }
 
-// Defines values for RequestMediaTypeParam.
+// Defines values for MusicArtistMonitoredParam.
 const (
-	RequestMediaTypeParamAlbum  RequestMediaTypeParam = "album"
-	RequestMediaTypeParamArtist RequestMediaTypeParam = "artist"
-	RequestMediaTypeParamAuthor RequestMediaTypeParam = "author"
-	RequestMediaTypeParamBook   RequestMediaTypeParam = "book"
-	RequestMediaTypeParamMovie  RequestMediaTypeParam = "movie"
-	RequestMediaTypeParamTvshow RequestMediaTypeParam = "tvshow"
+	MusicArtistMonitoredParamMonitored   MusicArtistMonitoredParam = "monitored"
+	MusicArtistMonitoredParamUnmonitored MusicArtistMonitoredParam = "unmonitored"
 )
 
-// Valid indicates whether the value is a known member of the RequestMediaTypeParam enum.
-func (e RequestMediaTypeParam) Valid() bool {
+// Valid indicates whether the value is a known member of the MusicArtistMonitoredParam enum.
+func (e MusicArtistMonitoredParam) Valid() bool {
 	switch e {
-	case RequestMediaTypeParamAlbum:
+	case MusicArtistMonitoredParamMonitored:
 		return true
-	case RequestMediaTypeParamArtist:
+	case MusicArtistMonitoredParamUnmonitored:
 		return true
-	case RequestMediaTypeParamAuthor:
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicArtistOrderParam.
+const (
+	MusicArtistOrderParamAsc  MusicArtistOrderParam = "asc"
+	MusicArtistOrderParamDesc MusicArtistOrderParam = "desc"
+)
+
+// Valid indicates whether the value is a known member of the MusicArtistOrderParam enum.
+func (e MusicArtistOrderParam) Valid() bool {
+	switch e {
+	case MusicArtistOrderParamAsc:
 		return true
-	case RequestMediaTypeParamBook:
+	case MusicArtistOrderParamDesc:
 		return true
-	case RequestMediaTypeParamMovie:
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicArtistSortParam.
+const (
+	MusicArtistSortParamName   MusicArtistSortParam = "name"
+	MusicArtistSortParamRecent MusicArtistSortParam = "recent"
+)
+
+// Valid indicates whether the value is a known member of the MusicArtistSortParam enum.
+func (e MusicArtistSortParam) Valid() bool {
+	switch e {
+	case MusicArtistSortParamName:
 		return true
-	case RequestMediaTypeParamTvshow:
+	case MusicArtistSortParamRecent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OverviewLang.
+const (
+	OverviewLangEn OverviewLang = "en"
+	OverviewLangFr OverviewLang = "fr"
+)
+
+// Valid indicates whether the value is a known member of the OverviewLang enum.
+func (e OverviewLang) Valid() bool {
+	switch e {
+	case OverviewLangEn:
+		return true
+	case OverviewLangFr:
 		return true
 	default:
 		return false
@@ -3153,6 +3132,114 @@ func (e UsersSort) Valid() bool {
 	case UsersSortName:
 		return true
 	case UsersSortRole:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListBooksParamsStatus.
+const (
+	ListBooksParamsStatusAll         ListBooksParamsStatus = "all"
+	ListBooksParamsStatusAvailable   ListBooksParamsStatus = "available"
+	ListBooksParamsStatusDownloading ListBooksParamsStatus = "downloading"
+	ListBooksParamsStatusWanted      ListBooksParamsStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the ListBooksParamsStatus enum.
+func (e ListBooksParamsStatus) Valid() bool {
+	switch e {
+	case ListBooksParamsStatusAll:
+		return true
+	case ListBooksParamsStatusAvailable:
+		return true
+	case ListBooksParamsStatusDownloading:
+		return true
+	case ListBooksParamsStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListBooksParamsSort.
+const (
+	ListBooksParamsSortAdded ListBooksParamsSort = "added"
+	ListBooksParamsSortTitle ListBooksParamsSort = "title"
+	ListBooksParamsSortYear  ListBooksParamsSort = "year"
+)
+
+// Valid indicates whether the value is a known member of the ListBooksParamsSort enum.
+func (e ListBooksParamsSort) Valid() bool {
+	switch e {
+	case ListBooksParamsSortAdded:
+		return true
+	case ListBooksParamsSortTitle:
+		return true
+	case ListBooksParamsSortYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListBooksParamsOrder.
+const (
+	ListBooksParamsOrderAsc  ListBooksParamsOrder = "asc"
+	ListBooksParamsOrderDesc ListBooksParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListBooksParamsOrder enum.
+func (e ListBooksParamsOrder) Valid() bool {
+	switch e {
+	case ListBooksParamsOrderAsc:
+		return true
+	case ListBooksParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetBookCountsParamsStatus.
+const (
+	GetBookCountsParamsStatusAll         GetBookCountsParamsStatus = "all"
+	GetBookCountsParamsStatusAvailable   GetBookCountsParamsStatus = "available"
+	GetBookCountsParamsStatusDownloading GetBookCountsParamsStatus = "downloading"
+	GetBookCountsParamsStatusWanted      GetBookCountsParamsStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the GetBookCountsParamsStatus enum.
+func (e GetBookCountsParamsStatus) Valid() bool {
+	switch e {
+	case GetBookCountsParamsStatusAll:
+		return true
+	case GetBookCountsParamsStatusAvailable:
+		return true
+	case GetBookCountsParamsStatusDownloading:
+		return true
+	case GetBookCountsParamsStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchBooksParamsType.
+const (
+	SearchBooksParamsTypeAll    SearchBooksParamsType = "all"
+	SearchBooksParamsTypeBook   SearchBooksParamsType = "book"
+	SearchBooksParamsTypeSeries SearchBooksParamsType = "series"
+)
+
+// Valid indicates whether the value is a known member of the SearchBooksParamsType enum.
+func (e SearchBooksParamsType) Valid() bool {
+	switch e {
+	case SearchBooksParamsTypeAll:
+		return true
+	case SearchBooksParamsTypeBook:
+		return true
+	case SearchBooksParamsTypeSeries:
 		return true
 	default:
 		return false
@@ -3309,6 +3396,96 @@ func (e GetMovieCountsParamsMonitored) Valid() bool {
 	}
 }
 
+// Defines values for ListMusicArtistsParamsMonitored.
+const (
+	ListMusicArtistsParamsMonitoredMonitored   ListMusicArtistsParamsMonitored = "monitored"
+	ListMusicArtistsParamsMonitoredUnmonitored ListMusicArtistsParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the ListMusicArtistsParamsMonitored enum.
+func (e ListMusicArtistsParamsMonitored) Valid() bool {
+	switch e {
+	case ListMusicArtistsParamsMonitoredMonitored:
+		return true
+	case ListMusicArtistsParamsMonitoredUnmonitored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMusicArtistsParamsSort.
+const (
+	ListMusicArtistsParamsSortName   ListMusicArtistsParamsSort = "name"
+	ListMusicArtistsParamsSortRecent ListMusicArtistsParamsSort = "recent"
+)
+
+// Valid indicates whether the value is a known member of the ListMusicArtistsParamsSort enum.
+func (e ListMusicArtistsParamsSort) Valid() bool {
+	switch e {
+	case ListMusicArtistsParamsSortName:
+		return true
+	case ListMusicArtistsParamsSortRecent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMusicArtistsParamsOrder.
+const (
+	ListMusicArtistsParamsOrderAsc  ListMusicArtistsParamsOrder = "asc"
+	ListMusicArtistsParamsOrderDesc ListMusicArtistsParamsOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListMusicArtistsParamsOrder enum.
+func (e ListMusicArtistsParamsOrder) Valid() bool {
+	switch e {
+	case ListMusicArtistsParamsOrderAsc:
+		return true
+	case ListMusicArtistsParamsOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetMusicArtistCountsParamsMonitored.
+const (
+	GetMusicArtistCountsParamsMonitoredMonitored   GetMusicArtistCountsParamsMonitored = "monitored"
+	GetMusicArtistCountsParamsMonitoredUnmonitored GetMusicArtistCountsParamsMonitored = "unmonitored"
+)
+
+// Valid indicates whether the value is a known member of the GetMusicArtistCountsParamsMonitored enum.
+func (e GetMusicArtistCountsParamsMonitored) Valid() bool {
+	switch e {
+	case GetMusicArtistCountsParamsMonitoredMonitored:
+		return true
+	case GetMusicArtistCountsParamsMonitoredUnmonitored:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetMusicArtistLookupParamsLang.
+const (
+	GetMusicArtistLookupParamsLangEn GetMusicArtistLookupParamsLang = "en"
+	GetMusicArtistLookupParamsLangFr GetMusicArtistLookupParamsLang = "fr"
+)
+
+// Valid indicates whether the value is a known member of the GetMusicArtistLookupParamsLang enum.
+func (e GetMusicArtistLookupParamsLang) Valid() bool {
+	switch e {
+	case GetMusicArtistLookupParamsLangEn:
+		return true
+	case GetMusicArtistLookupParamsLangFr:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRequestsParamsStatus.
 const (
 	ListRequestsParamsStatusApproved  ListRequestsParamsStatus = "approved"
@@ -3327,36 +3504,6 @@ func (e ListRequestsParamsStatus) Valid() bool {
 	case ListRequestsParamsStatusDenied:
 		return true
 	case ListRequestsParamsStatusPending:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListRequestsParamsMediaType.
-const (
-	ListRequestsParamsMediaTypeAlbum  ListRequestsParamsMediaType = "album"
-	ListRequestsParamsMediaTypeArtist ListRequestsParamsMediaType = "artist"
-	ListRequestsParamsMediaTypeAuthor ListRequestsParamsMediaType = "author"
-	ListRequestsParamsMediaTypeBook   ListRequestsParamsMediaType = "book"
-	ListRequestsParamsMediaTypeMovie  ListRequestsParamsMediaType = "movie"
-	ListRequestsParamsMediaTypeTvshow ListRequestsParamsMediaType = "tvshow"
-)
-
-// Valid indicates whether the value is a known member of the ListRequestsParamsMediaType enum.
-func (e ListRequestsParamsMediaType) Valid() bool {
-	switch e {
-	case ListRequestsParamsMediaTypeAlbum:
-		return true
-	case ListRequestsParamsMediaTypeArtist:
-		return true
-	case ListRequestsParamsMediaTypeAuthor:
-		return true
-	case ListRequestsParamsMediaTypeBook:
-		return true
-	case ListRequestsParamsMediaTypeMovie:
-		return true
-	case ListRequestsParamsMediaTypeTvshow:
 		return true
 	default:
 		return false
@@ -3514,27 +3661,30 @@ type ActivityList struct {
 	NextCursor *string         `json:"next_cursor,omitempty"`
 }
 
-// AddBookAuthorRequest defines model for AddBookAuthorRequest.
-type AddBookAuthorRequest struct {
-	AudiobookQualityProfile *string                            `json:"audiobook_quality_profile,omitempty"`
-	EbookQualityProfile     *string                            `json:"ebook_quality_profile,omitempty"`
-	HardcoverId             uint32                             `json:"hardcover_id"`
-	MonitorPolicy           *AddBookAuthorRequestMonitorPolicy `json:"monitor_policy,omitempty"`
+// AddBookRequest defines model for AddBookRequest.
+type AddBookRequest struct {
+	HardcoverId uint32 `json:"hardcover_id"`
 
-	// Monitored Defaults to true.
-	Monitored *bool                          `json:"monitored,omitempty"`
-	WantKinds *AddBookAuthorRequestWantKinds `json:"want_kinds,omitempty"`
+	// Monitor Derived from the two slot `*_monitored` flags.
+	Monitor *BookMonitor `json:"monitor,omitempty"`
+
+	// QualityProfile Empty or omitted uses the default book profile; an unknown name answers 422.
+	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
-// AddBookAuthorRequestMonitorPolicy defines model for AddBookAuthorRequest.MonitorPolicy.
-type AddBookAuthorRequestMonitorPolicy string
+// AddBookSeriesRequest defines model for AddBookSeriesRequest.
+type AddBookSeriesRequest struct {
+	// HardcoverId Hardcover series id.
+	HardcoverId uint32 `json:"hardcover_id"`
 
-// AddBookAuthorRequestWantKinds defines model for AddBookAuthorRequest.WantKinds.
-type AddBookAuthorRequestWantKinds string
+	// Monitor Applies to each volume's ebook slot only.
+	Monitor        *BookSeriesMonitor `json:"monitor,omitempty"`
+	QualityProfile *string            `json:"quality_profile,omitempty"`
+}
 
 // AddMovieRequest defines model for AddMovieRequest.
 type AddMovieRequest struct {
-	// QualityProfile Name of the quality profile (empty resolves to the default).
+	// QualityProfile Name of the quality profile (empty resolves to the movie default).
 	QualityProfile *string `json:"quality_profile,omitempty"`
 	TmdbId         uint32  `json:"tmdb_id"`
 }
@@ -3543,8 +3693,14 @@ type AddMovieRequest struct {
 type AddMusicArtistRequest struct {
 	Mbid string `json:"mbid"`
 
-	// Monitored Defaults to true.
-	Monitored      *bool   `json:"monitored,omitempty"`
+	// Monitor Artist monitor policy. `all` monitors every album, `future` only
+	// albums with no release date or one after today, `manual` leaves the
+	// album flags alone and monitors no new release group, `none` monitors
+	// nothing. `Album.monitored` stays the only flag searches, RSS and
+	// imports read.
+	Monitor *MusicMonitor `json:"monitor,omitempty"`
+
+	// QualityProfile Empty or omitted uses the default music profile; an unknown name answers 422.
 	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
@@ -3553,7 +3709,7 @@ type AddSeriesRequest struct {
 	// Preset One-shot monitoring preset applied to seasons/episodes.
 	Preset *AddSeriesRequestPreset `json:"preset,omitempty"`
 
-	// QualityProfile Name of the quality profile (empty resolves to the default).
+	// QualityProfile Name of the quality profile (empty resolves to the series default).
 	QualityProfile *string `json:"quality_profile,omitempty"`
 	TvdbId         uint32  `json:"tvdb_id"`
 }
@@ -3567,18 +3723,6 @@ type AddTorrentRequest struct {
 
 	// Torrent Base64-encoded .torrent file.
 	Torrent *[]byte `json:"torrent,omitempty"`
-}
-
-// AlbumRelease defines model for AlbumRelease.
-type AlbumRelease struct {
-	// Format Audio format parsed from the release title.
-	Format  string       `json:"format"`
-	Release SearchResult `json:"release"`
-}
-
-// AlbumReleaseList defines model for AlbumReleaseList.
-type AlbumReleaseList struct {
-	Items []AlbumRelease `json:"items"`
 }
 
 // ApiKey defines model for ApiKey.
@@ -3619,38 +3763,26 @@ type AppLogConfigLevel string
 
 // ApproveRequestRequest defines model for ApproveRequestRequest.
 type ApproveRequestRequest struct {
-	// QualityProfile Profile name; empty or omitted uses the server default.
+	// QualityProfile Profile name from the request's medium family (video, music or
+	// book); empty or omitted uses that family's default for the
+	// request's media (movie or series; the book's kind). A name that
+	// is not in the family answers 422 and the request stays pending.
 	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
-// AudiobookQualityProfile defines model for AudiobookQualityProfile.
-type AudiobookQualityProfile struct {
-	Cutoff         AudiobookQualityProfileCutoff    `json:"cutoff"`
-	Formats        []AudiobookQualityProfileFormats `json:"formats"`
-	IsDefault      bool                             `json:"is_default"`
-	Name           string                           `json:"name"`
-	UpgradeAllowed bool                             `json:"upgrade_allowed"`
+// AudiobookFormat Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+type AudiobookFormat string
+
+// AudiobookProfileSlot defines model for AudiobookProfileSlot.
+type AudiobookProfileSlot struct {
+	Formats []AudiobookFormat `json:"formats"`
+
+	// MinBitrate Floor in kbps, 0 for none. Outside the range answers 422 before conversion.
+	MinBitrate uint16 `json:"min_bitrate"`
+
+	// Preferred Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+	Preferred AudiobookFormat `json:"preferred"`
 }
-
-// AudiobookQualityProfileCutoff defines model for AudiobookQualityProfile.Cutoff.
-type AudiobookQualityProfileCutoff string
-
-// AudiobookQualityProfileFormats defines model for AudiobookQualityProfile.Formats.
-type AudiobookQualityProfileFormats string
-
-// AudiobookQualityProfileCreate defines model for AudiobookQualityProfileCreate.
-type AudiobookQualityProfileCreate struct {
-	Cutoff         AudiobookQualityProfileCreateCutoff    `json:"cutoff"`
-	Formats        []AudiobookQualityProfileCreateFormats `json:"formats"`
-	Name           string                                 `json:"name"`
-	UpgradeAllowed bool                                   `json:"upgrade_allowed"`
-}
-
-// AudiobookQualityProfileCreateCutoff defines model for AudiobookQualityProfileCreate.Cutoff.
-type AudiobookQualityProfileCreateCutoff string
-
-// AudiobookQualityProfileCreateFormats defines model for AudiobookQualityProfileCreate.Formats.
-type AudiobookQualityProfileCreateFormats string
 
 // AuthConfigPatch Only provided fields are applied.
 type AuthConfigPatch struct {
@@ -3690,94 +3822,403 @@ type AuthConfigViewDefaultRole string
 // AuthConfigViewRegistrationMode defines model for AuthConfigView.RegistrationMode.
 type AuthConfigViewRegistrationMode string
 
-// Book defines model for Book.
+// Book Book detail; also the response of add, patch and refresh. The cover is `/posters/books/{id}/poster.jpg`.
 type Book struct {
-	Audiobook      BookSlot            `json:"audiobook"`
-	AuthorId       uint32              `json:"author_id"`
-	Ebook          BookSlot            `json:"ebook"`
-	HardcoverId    uint32              `json:"hardcover_id"`
-	Id             uint32              `json:"id"`
-	Overview       *string             `json:"overview,omitempty"`
-	ReleaseDate    *openapi_types.Date `json:"release_date,omitempty"`
-	SeriesName     *string             `json:"series_name,omitempty"`
-	SeriesPosition *string             `json:"series_position,omitempty"`
-	Title          string              `json:"title"`
+	AddedAt time.Time `json:"added_at"`
+
+	// Author Author (else writer) names joined with " & ", at most 3 then " et al.".
+	Author string `json:"author"`
+
+	// Contributors Makers only (author, writer, artist, colorist, cover). Translators and narrators live on the editions.
+	Contributors []BookCredit `json:"contributors"`
+
+	// Editions Preferred language first, then by format.
+	Editions       []BookEdition `json:"editions"`
+	FirstPublished uint16        `json:"first_published"`
+
+	// Formats Always two entries, ebook first.
+	Formats     []BookFormatSlot `json:"formats"`
+	Genre       *string          `json:"genre,omitempty"`
+	HardcoverId uint32           `json:"hardcover_id"`
+	Id          uint32           `json:"id"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind BookKind `json:"kind"`
+
+	// Monitor Derived from the two slot `*_monitored` flags.
+	Monitor BookMonitor `json:"monitor"`
+
+	// OriginalTitle The original edition's title when it differs from `title`.
+	OriginalTitle *string `json:"original_title,omitempty"`
+	Overview      *string `json:"overview,omitempty"`
+
+	// PreferredLanguage ISO 639-1; defaults to `library.book_language` at add.
+	PreferredLanguage string `json:"preferred_language"`
+
+	// QualityProfile Empty means the series' profile for a volume, else the default.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+
+	// Rating One decimal; absent when Hardcover has none.
+	Rating *float32 `json:"rating,omitempty"`
+
+	// Series Set on a volume so its detail can link up to the series.
+	Series *BookSeriesRef `json:"series,omitempty"`
+
+	// Status Book: over the slots whose state is not `unmonitored`, any
+	// `downloading` gives `downloading`, else any `wanted` gives `wanted`,
+	// else `available` (also when every slot is unmonitored). A standalone
+	// book released after today reports `available`. Series: any volume
+	// `downloading`, else `wanted` when `monitor` is not `none` and any
+	// volume is `wanted`, else `available`; upcoming volumes and volumes of
+	// a series that is still `hydrating` never count.
+	Status BookItemStatus `json:"status"`
+
+	// Title Title of the best edition in `preferred_language` (ebook first,
+	// then audiobook), else the original edition's, else Hardcover's.
+	// Never tied to a slot's edition.
+	Title string `json:"title"`
 }
 
-// BookAuthor defines model for BookAuthor.
-type BookAuthor struct {
-	AudiobookQualityProfile string `json:"audiobook_quality_profile"`
-	BookCount               uint32 `json:"book_count"`
-
-	// Books Populated by the detail, patch and refresh responses.
-	Books               *[]BookEntry            `json:"books,omitempty"`
-	EbookQualityProfile string                  `json:"ebook_quality_profile"`
-	HardcoverId         uint32                  `json:"hardcover_id"`
-	Id                  uint32                  `json:"id"`
-	MonitorPolicy       BookAuthorMonitorPolicy `json:"monitor_policy"`
-	Monitored           bool                    `json:"monitored"`
-	Name                string                  `json:"name"`
-	Overview            *string                 `json:"overview,omitempty"`
-	SortName            string                  `json:"sort_name"`
-	WantKinds           BookAuthorWantKinds     `json:"want_kinds"`
+// BookAuthorCount defines model for BookAuthorCount.
+type BookAuthorCount struct {
+	Count uint32 `json:"count"`
+	Name  string `json:"name"`
 }
 
-// BookAuthorMonitorPolicy defines model for BookAuthor.MonitorPolicy.
-type BookAuthorMonitorPolicy string
+// BookCounts Faceted like `TVShowCounts`: each facet is counted with the other
+// facets' filters and the `query` applied and its own left out, and
+// carries its own `*_total` "all" row.
+type BookCounts struct {
+	Audiobook   uint32 `json:"audiobook"`
+	AuthorTotal uint32 `json:"author_total"`
 
-// BookAuthorWantKinds defines model for BookAuthor.WantKinds.
-type BookAuthorWantKinds string
+	// Authors One entry per creator person (author, writer, artist), sorted by name. Not per display string.
+	Authors     []BookAuthorCount `json:"authors"`
+	Available   uint32            `json:"available"`
+	Downloading uint32            `json:"downloading"`
 
-// BookAuthorSearchResult defines model for BookAuthorSearchResult.
-type BookAuthorSearchResult struct {
+	// Ebook Items with that slot monitored or holding a file; a series counts under ebook.
+	Ebook       uint32 `json:"ebook"`
+	FormatTotal uint32 `json:"format_total"`
+	StatusTotal uint32 `json:"status_total"`
+
+	// Total The whole library, filtered by nothing (header, empty state, nav badge).
+	Total  uint32 `json:"total"`
+	Wanted uint32 `json:"wanted"`
+}
+
+// BookCredit defines model for BookCredit.
+type BookCredit struct {
+	// AuthorId Library `Author` id. The SPA builds `/posters/authors/{author_id}/poster.jpg`
+	// only for the roles author, writer and artist.
+	AuthorId uint32 `json:"author_id"`
+
+	// Language ISO 639-1; set on a series translator credit, the language of the edition it came from.
+	Language *string  `json:"language,omitempty"`
+	Name     string   `json:"name"`
+	Role     BookRole `json:"role"`
+}
+
+// BookEdition defines model for BookEdition.
+type BookEdition struct {
+	// Duration Audiobook length in seconds.
+	Duration *uint32    `json:"duration,omitempty"`
+	Format   BookFormat `json:"format"`
+	Id       uint32     `json:"id"`
+
+	// Language ISO 639-1.
+	Language string  `json:"language"`
+	Narrator *string `json:"narrator,omitempty"`
+
+	// Original True only on the winner in the language of the earliest-released edition.
+	Original *bool   `json:"original,omitempty"`
+	Pages    *uint16 `json:"pages,omitempty"`
+
+	// Publisher Empty string when Hardcover has none.
+	Publisher  string  `json:"publisher"`
+	Title      string  `json:"title"`
+	Translator *string `json:"translator,omitempty"`
+	Year       uint16  `json:"year"`
+}
+
+// BookFormat defines model for BookFormat.
+type BookFormat string
+
+// BookFormatSlot defines model for BookFormatSlot.
+type BookFormatSlot struct {
+	EditionId *uint32       `json:"edition_id"`
+	File      *BookSlotFile `json:"file,omitempty"`
+	Format    BookFormat    `json:"format"`
+
+	// Progress Present while `state` is `downloading`.
+	Progress  *float32       `json:"progress,omitempty"`
+	Replacing *BookReplacing `json:"replacing,omitempty"`
+
+	// State `unmonitored` iff the slot is not monitored and neither available nor
+	// downloading. A paused record reports `downloading`.
+	State BookFormatState `json:"state"`
+}
+
+// BookFormatState `unmonitored` iff the slot is not monitored and neither available nor
+// downloading. A paused record reports `downloading`.
+type BookFormatState string
+
+// BookItemStatus Book: over the slots whose state is not `unmonitored`, any
+// `downloading` gives `downloading`, else any `wanted` gives `wanted`,
+// else `available` (also when every slot is unmonitored). A standalone
+// book released after today reports `available`. Series: any volume
+// `downloading`, else `wanted` when `monitor` is not `none` and any
+// volume is `wanted`, else `available`; upcoming volumes and volumes of
+// a series that is still `hydrating` never count.
+type BookItemStatus string
+
+// BookKind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+type BookKind string
+
+// BookLookupDetail The hit fields and the detail in one object, with `kind` and
+// `original_title` filled. Also the book arm of
+// `GET /requests/{id}/metadata`, where `type: series` serves a
+// `book_series` request.
+type BookLookupDetail struct {
 	AlreadyAdded bool   `json:"already_added"`
-	BooksCount   uint32 `json:"books_count"`
-	HardcoverId  uint32 `json:"hardcover_id"`
+	Author       string `json:"author"`
 
-	// ImageUrl Hardcover image of an author not added yet; there is no poster to proxy.
-	ImageUrl *string `json:"image_url,omitempty"`
-	Name     string  `json:"name"`
+	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
+	CoverId  *uint32              `json:"cover_id,omitempty"`
+	Editions *[]BookLookupEdition `json:"editions,omitempty"`
+
+	// Genres Top 3 genre tags by count.
+	Genres      *[]string `json:"genres,omitempty"`
+	HardcoverId uint32    `json:"hardcover_id"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind *BookKind `json:"kind,omitempty"`
+
+	// LibraryId Set with `already_added`; a book that is a volume of a library series answers with its Book id.
+	LibraryId *uint32 `json:"library_id,omitempty"`
+
+	// Ongoing Series only, when the search document carries it.
+	Ongoing *bool `json:"ongoing,omitempty"`
+
+	// OriginalTitle Absent from the search document; filled by the detail.
+	OriginalTitle *string `json:"original_title,omitempty"`
+	Overview      *string `json:"overview,omitempty"`
+
+	// Pages Books only.
+	Pages *uint16       `json:"pages,omitempty"`
+	Title string        `json:"title"`
+	Type  BookShelfType `json:"type"`
+
+	// VolumeBookIds Hardcover book ids of the first 6 or fewer primary volumes of
+	// a series; the SPA builds `/posters/lookup/books/{id}/poster.jpg`
+	// from each.
+	VolumeBookIds *[]uint32 `json:"volume_book_ids,omitempty"`
+
+	// Volumes Series only.
+	Volumes *uint32 `json:"volumes,omitempty"`
+
+	// Year A series hit has one only when already in the library (its `since`).
+	Year *uint16 `json:"year,omitempty"`
 }
 
-// BookAuthorSearchResultList defines model for BookAuthorSearchResultList.
-type BookAuthorSearchResultList struct {
-	Items []BookAuthorSearchResult `json:"items"`
+// BookLookupEdition defines model for BookLookupEdition.
+type BookLookupEdition struct {
+	Format    BookFormat `json:"format"`
+	Language  string     `json:"language"`
+	Original  *bool      `json:"original,omitempty"`
+	Publisher string     `json:"publisher"`
+	Year      uint16     `json:"year"`
 }
 
-// BookEntry defines model for BookEntry.
-type BookEntry struct {
-	Audiobook      BookSlot            `json:"audiobook"`
-	Ebook          BookSlot            `json:"ebook"`
-	HardcoverId    uint32              `json:"hardcover_id"`
-	Id             uint32              `json:"id"`
-	Overview       *string             `json:"overview,omitempty"`
-	ReleaseDate    *openapi_types.Date `json:"release_date,omitempty"`
-	SeriesName     *string             `json:"series_name,omitempty"`
-	SeriesPosition *string             `json:"series_position,omitempty"`
-	Title          string              `json:"title"`
+// BookLookupHit defines model for BookLookupHit.
+type BookLookupHit struct {
+	AlreadyAdded bool   `json:"already_added"`
+	Author       string `json:"author"`
+
+	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
+	CoverId     *uint32 `json:"cover_id,omitempty"`
+	HardcoverId uint32  `json:"hardcover_id"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind *BookKind `json:"kind,omitempty"`
+
+	// LibraryId Set with `already_added`; a book that is a volume of a library series answers with its Book id.
+	LibraryId *uint32 `json:"library_id,omitempty"`
+
+	// Ongoing Series only, when the search document carries it.
+	Ongoing *bool `json:"ongoing,omitempty"`
+
+	// OriginalTitle Absent from the search document; filled by the detail.
+	OriginalTitle *string       `json:"original_title,omitempty"`
+	Title         string        `json:"title"`
+	Type          BookShelfType `json:"type"`
+
+	// Volumes Series only.
+	Volumes *uint32 `json:"volumes,omitempty"`
+
+	// Year A series hit has one only when already in the library (its `since`).
+	Year *uint16 `json:"year,omitempty"`
 }
 
-// BookRelease defines model for BookRelease.
-type BookRelease struct {
-	// Format Book format parsed from the release title.
-	Format  string       `json:"format"`
-	Release SearchResult `json:"release"`
+// BookLookupList defines model for BookLookupList.
+type BookLookupList struct {
+	Items []BookLookupHit `json:"items"`
 }
 
-// BookReleaseList defines model for BookReleaseList.
-type BookReleaseList struct {
-	Items []BookRelease `json:"items"`
+// BookMonitor Derived from the two slot `*_monitored` flags.
+type BookMonitor string
+
+// BookQualityProfile defines model for BookQualityProfile.
+type BookQualityProfile struct {
+	Audiobook AudiobookProfileSlot `json:"audiobook"`
+
+	// DefaultFor The book kinds this profile is the default for; deleting it answers 409 while this is non-empty.
+	DefaultFor []BookKind       `json:"default_for"`
+	Ebook      EbookProfileSlot `json:"ebook"`
+	Name       string           `json:"name"`
+
+	// UpgradeAllowed One switch for both slots.
+	UpgradeAllowed bool `json:"upgrade_allowed"`
 }
 
-// BookSlot defines model for BookSlot.
-type BookSlot struct {
-	FileCount uint32         `json:"file_count"`
-	Monitored bool           `json:"monitored"`
-	Status    BookSlotStatus `json:"status"`
+// BookQualityProfileCreate defines model for BookQualityProfileCreate.
+type BookQualityProfileCreate struct {
+	Audiobook AudiobookProfileSlot `json:"audiobook"`
+
+	// Ebook Both slots are always present and each needs at least one format; `preferred` must be one of `formats`, else 422.
+	Ebook          EbookProfileSlot `json:"ebook"`
+	Name           string           `json:"name"`
+	UpgradeAllowed bool             `json:"upgrade_allowed"`
 }
 
-// BookSlotStatus defines model for BookSlot.Status.
-type BookSlotStatus string
+// BookRenamePlan defines model for BookRenamePlan.
+type BookRenamePlan struct {
+	BookId     uint32            `json:"book_id"`
+	Operations []RenameOperation `json:"operations"`
+}
+
+// BookReplacing defines model for BookReplacing.
+type BookReplacing struct {
+	// Language Language of the edition being replaced.
+	Language string `json:"language"`
+}
+
+// BookRole defines model for BookRole.
+type BookRole string
+
+// BookSearchAccepted defines model for BookSearchAccepted.
+type BookSearchAccepted struct {
+	// Queued Slots (book) or volumes (series) the pass will search.
+	Queued uint32 `json:"queued"`
+}
+
+// BookSeries Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+type BookSeries struct {
+	AddedAt      time.Time    `json:"added_at"`
+	Author       string       `json:"author"`
+	Contributors []BookCredit `json:"contributors"`
+
+	// Edition Label of the selected (language, publisher), "{language in its own name} · {publisher}".
+	Edition string `json:"edition"`
+
+	// Editions Every selectable label, ordered by number of volumes covered.
+	Editions []string `json:"editions"`
+
+	// HardcoverId Hardcover series id, a separate id space from books.
+	HardcoverId uint32 `json:"hardcover_id"`
+
+	// Hydrating True while any volume is still a stub (`last_refreshed_at` unset);
+	// the SPA polls the detail every 10 seconds while it holds.
+	Hydrating bool   `json:"hydrating"`
+	Id        uint32 `json:"id"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind BookKind `json:"kind"`
+
+	// Monitor Applies to each volume's ebook slot only.
+	Monitor       BookSeriesMonitor `json:"monitor"`
+	Ongoing       bool              `json:"ongoing"`
+	OriginalTitle *string           `json:"original_title,omitempty"`
+	Overview      *string           `json:"overview,omitempty"`
+
+	// QualityProfile Written through to every volume.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+
+	// Rating Derived, the mean of the rated volumes; Hardcover has no series rating.
+	Rating *float32 `json:"rating,omitempty"`
+	Since  uint16   `json:"since"`
+
+	// Status Book: over the slots whose state is not `unmonitored`, any
+	// `downloading` gives `downloading`, else any `wanted` gives `wanted`,
+	// else `available` (also when every slot is unmonitored). A standalone
+	// book released after today reports `available`. Series: any volume
+	// `downloading`, else `wanted` when `monitor` is not `none` and any
+	// volume is `wanted`, else `available`; upcoming volumes and volumes of
+	// a series that is still `hydrating` never count.
+	Status BookItemStatus `json:"status"`
+	Title  string         `json:"title"`
+
+	// Volumes Ascending number, upcoming included.
+	Volumes []BookVolume `json:"volumes"`
+}
+
+// BookSeriesMonitor Applies to each volume's ebook slot only.
+type BookSeriesMonitor string
+
+// BookSeriesRef defines model for BookSeriesRef.
+type BookSeriesRef struct {
+	Id     uint32  `json:"id"`
+	Number float32 `json:"number"`
+	Title  string  `json:"title"`
+}
+
+// BookSeriesRenamePlan defines model for BookSeriesRenamePlan.
+type BookSeriesRenamePlan struct {
+	Operations []RenameOperation `json:"operations"`
+	SeriesId   uint32            `json:"series_id"`
+}
+
+// BookShelfFormat defines model for BookShelfFormat.
+type BookShelfFormat struct {
+	Format BookFormat `json:"format"`
+
+	// State `unmonitored` iff the slot is not monitored and neither available nor
+	// downloading. A paused record reports `downloading`.
+	State BookFormatState `json:"state"`
+}
+
+// BookShelfType defines model for BookShelfType.
+type BookShelfType string
+
+// BookSlotFile defines model for BookSlotFile.
+type BookSlotFile struct {
+	// Container Upper-cased extension of the first file (EPUB, CBZ, M4B, MP3).
+	Container string  `json:"container"`
+	FileCount *uint32 `json:"file_count,omitempty"`
+
+	// Size Sum of the slot's file sizes; an audiobook folder is many files.
+	Size int64 `json:"size"`
+}
+
+// BookVolume defines model for BookVolume.
+type BookVolume struct {
+	// Id The volume's Book id; the SPA builds its cover from it.
+	Id uint32 `json:"id"`
+
+	// Number May be fractional (1.5).
+	Number      float32             `json:"number"`
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+
+	// Status Ebook-slot status. `upcoming` iff the release date is after today.
+	// An un-hydrated stub reports `wanted` when its ebook slot is
+	// monitored.
+	Status BookVolumeStatus `json:"status"`
+}
+
+// BookVolumeStatus Ebook-slot status. `upcoming` iff the release date is after today.
+// An un-hydrated stub reports `wanted` when its ebook slot is
+// monitored.
+type BookVolumeStatus string
 
 // CastMember defines model for CastMember.
 type CastMember struct {
@@ -3831,26 +4272,18 @@ type CreateInviteRequestRole string
 
 // CreateRequestRequest defines model for CreateRequestRequest.
 type CreateRequestRequest struct {
-	// BookKind Slot a book request asks for; required for media_type=book and rejected for every other type.
-	BookKind *CreateRequestRequestBookKind `json:"book_kind,omitempty"`
-	MediaId  *uint32                       `json:"media_id,omitempty"`
+	// MediaId Required for movie, tvshow, book and book_series; rejected for artist.
+	MediaId *uint32 `json:"media_id,omitempty"`
 
-	// MediaMbid MusicBrainz id: artist MBID for artist requests, release-group
-	// MBID for album requests. Exactly one of media_id/media_mbid per type.
-	MediaMbid *string                       `json:"media_mbid,omitempty"`
-	MediaType CreateRequestRequestMediaType `json:"media_type"`
+	// MediaMbid Artist MBID; required for artist and rejected for every other type.
+	MediaMbid *string          `json:"media_mbid,omitempty"`
+	MediaType RequestMediaType `json:"media_type"`
 
 	// QualityProfile Preferred profile name; omitted or empty records no preference.
 	// A preference, not a promise — the reviewer can override it.
 	QualityProfile *string `json:"quality_profile,omitempty"`
 	Title          string  `json:"title"`
 }
-
-// CreateRequestRequestBookKind Slot a book request asks for; required for media_type=book and rejected for every other type.
-type CreateRequestRequestBookKind string
-
-// CreateRequestRequestMediaType defines model for CreateRequestRequest.MediaType.
-type CreateRequestRequestMediaType string
 
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
@@ -4088,34 +4521,16 @@ type DownloadQueue struct {
 	RefreshedAt time.Time    `json:"refreshed_at"`
 }
 
-// EbookQualityProfile defines model for EbookQualityProfile.
-type EbookQualityProfile struct {
-	Cutoff         EbookQualityProfileCutoff    `json:"cutoff"`
-	Formats        []EbookQualityProfileFormats `json:"formats"`
-	IsDefault      bool                         `json:"is_default"`
-	Name           string                       `json:"name"`
-	UpgradeAllowed bool                         `json:"upgrade_allowed"`
+// EbookFormat Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+type EbookFormat string
+
+// EbookProfileSlot defines model for EbookProfileSlot.
+type EbookProfileSlot struct {
+	Formats []EbookFormat `json:"formats"`
+
+	// Preferred Best first. Upper case on the wire, in config and in `MediaFile.quality`.
+	Preferred EbookFormat `json:"preferred"`
 }
-
-// EbookQualityProfileCutoff defines model for EbookQualityProfile.Cutoff.
-type EbookQualityProfileCutoff string
-
-// EbookQualityProfileFormats defines model for EbookQualityProfile.Formats.
-type EbookQualityProfileFormats string
-
-// EbookQualityProfileCreate defines model for EbookQualityProfileCreate.
-type EbookQualityProfileCreate struct {
-	Cutoff         EbookQualityProfileCreateCutoff    `json:"cutoff"`
-	Formats        []EbookQualityProfileCreateFormats `json:"formats"`
-	Name           string                             `json:"name"`
-	UpgradeAllowed bool                               `json:"upgrade_allowed"`
-}
-
-// EbookQualityProfileCreateCutoff defines model for EbookQualityProfileCreate.Cutoff.
-type EbookQualityProfileCreateCutoff string
-
-// EbookQualityProfileCreateFormats defines model for EbookQualityProfileCreate.Formats.
-type EbookQualityProfileCreateFormats string
 
 // Episode defines model for Episode.
 type Episode struct {
@@ -4415,7 +4830,6 @@ type ImportScanAlbumList struct {
 
 // ImportScanBook defines model for ImportScanBook.
 type ImportScanBook struct {
-	AuthorHardcoverId       *uint32                      `json:"author_hardcover_id,omitempty"`
 	BookHardcoverId         *uint32                      `json:"book_hardcover_id,omitempty"`
 	Candidates              *[]ImportScanBookCandidate   `json:"candidates,omitempty"`
 	Classification          ImportScanBookClassification `json:"classification"`
@@ -4449,11 +4863,10 @@ type ImportScanBookSlot string
 
 // ImportScanBookCandidate defines model for ImportScanBookCandidate.
 type ImportScanBookCandidate struct {
-	Author            *string `json:"author,omitempty"`
-	AuthorHardcoverId uint32  `json:"author_hardcover_id"`
-	BookHardcoverId   uint32  `json:"book_hardcover_id"`
-	Title             string  `json:"title"`
-	Year              *uint16 `json:"year,omitempty"`
+	Author          *string `json:"author,omitempty"`
+	BookHardcoverId uint32  `json:"book_hardcover_id"`
+	Title           string  `json:"title"`
+	Year            *uint16 `json:"year,omitempty"`
 }
 
 // ImportScanBookDecisionRequest defines model for ImportScanBookDecisionRequest.
@@ -5036,7 +5449,7 @@ type Movie struct {
 	OriginalTitle string  `json:"original_title"`
 	Overview      *string `json:"overview,omitempty"`
 
-	// QualityProfile Name of the quality profile (empty resolves to the default).
+	// QualityProfile Name of the quality profile (empty resolves to the movie default).
 	QualityProfile *string `json:"quality_profile,omitempty"`
 
 	// Rating TMDB vote average (0–10). Only populated by GET /movies/{id}
@@ -5131,49 +5544,368 @@ type MovieSearchAccepted struct {
 
 // MusicAlbum defines model for MusicAlbum.
 type MusicAlbum struct {
-	Id          uint32              `json:"id"`
-	Mbid        string              `json:"mbid"`
-	Monitored   bool                `json:"monitored"`
-	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
-	Status      MusicAlbumStatus    `json:"status"`
-	Title       string              `json:"title"`
-	TrackCount  uint32              `json:"track_count"`
+	ArtistId      uint32  `json:"artist_id"`
+	CatalogNumber *string `json:"catalog_number,omitempty"`
 
-	// Tracks Populated by the album endpoints.
-	Tracks *[]MusicTrack  `json:"tracks,omitempty"`
-	Type   MusicAlbumType `json:"type"`
+	// Country Two-letter region code of the canonical release.
+	Country *string       `json:"country,omitempty"`
+	Credits []MusicCredit `json:"credits"`
+
+	// Duration Sum of the track durations in seconds; omitted at 0.
+	Duration *uint32 `json:"duration,omitempty"`
+
+	// Format Display label of the worst-tier file, for example "FLAC" or "MP3 320". Omitted with no files.
+	Format *string `json:"format,omitempty"`
+	Id     uint32  `json:"id"`
+	Label  *string `json:"label,omitempty"`
+
+	// Mbid MusicBrainz release-group id.
+	Mbid      string           `json:"mbid"`
+	Media     *[]MusicMedium   `json:"media,omitempty"`
+	Monitored bool             `json:"monitored"`
+	Personnel []MusicPerformer `json:"personnel"`
+
+	// Progress Present while `status` is `downloading`; live torrent progress, 100 while the record is importing.
+	Progress *float32 `json:"progress,omitempty"`
+
+	// Quality Audio quality tier, best first. The canonical order everywhere.
+	Quality     *MusicTier          `json:"quality,omitempty"`
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+
+	// Size Sum of the album's file sizes in bytes; omitted at 0.
+	Size *int64 `json:"size,omitempty"`
+
+	// Status `upcoming` is derived, never stored: a `wanted` album whose release
+	// date is after today (UTC). An undated album is never `upcoming`.
+	Status MusicAlbumStatus `json:"status"`
+
+	// Studio Most frequent "recorded at" place; omitted when none.
+	Studio *string `json:"studio,omitempty"`
+	Title  string  `json:"title"`
+
+	// TrackCount Track rows; the announced count for an upcoming album.
+	TrackCount uint32 `json:"track_count"`
+
+	// Tracks Ordered by disc, then position.
+	Tracks []MusicTrack `json:"tracks"`
+
+	// TracksHave Tracks with at least one media file.
+	TracksHave uint32 `json:"tracks_have"`
+
+	// TracksPending True until the album's tracks have been fetched.
+	TracksPending bool           `json:"tracks_pending"`
+	Type          MusicAlbumType `json:"type"`
 }
 
-// MusicAlbumStatus defines model for MusicAlbum.Status.
+// MusicAlbumStatus `upcoming` is derived, never stored: a `wanted` album whose release
+// date is after today (UTC). An undated album is never `upcoming`.
 type MusicAlbumStatus string
 
-// MusicAlbumType defines model for MusicAlbum.Type.
+// MusicAlbumSummary defines model for MusicAlbumSummary.
+type MusicAlbumSummary struct {
+	ArtistId  uint32 `json:"artist_id"`
+	Id        uint32 `json:"id"`
+	Monitored bool   `json:"monitored"`
+
+	// Progress Present while `status` is `downloading`; live torrent progress, 100 while the record is importing.
+	Progress    *float32            `json:"progress,omitempty"`
+	ReleaseDate *openapi_types.Date `json:"release_date,omitempty"`
+
+	// Status `upcoming` is derived, never stored: a `wanted` album whose release
+	// date is after today (UTC). An undated album is never `upcoming`.
+	Status MusicAlbumStatus `json:"status"`
+	Title  string           `json:"title"`
+
+	// TrackCount Track rows; the announced count for an upcoming album.
+	TrackCount uint32 `json:"track_count"`
+
+	// TracksHave Tracks with at least one media file.
+	TracksHave uint32 `json:"tracks_have"`
+
+	// TracksPending True until the album's tracks have been fetched.
+	TracksPending bool           `json:"tracks_pending"`
+	Type          MusicAlbumType `json:"type"`
+}
+
+// MusicAlbumType defines model for MusicAlbumType.
 type MusicAlbumType string
 
-// MusicArtist defines model for MusicArtist.
+// MusicArtist Artist list item. Albums are tile summaries without tracks.
 type MusicArtist struct {
+	AddedAt time.Time `json:"added_at"`
+
+	// AlbumCount Albums of the artist, upcoming included.
 	AlbumCount uint32 `json:"album_count"`
 
-	// Albums Populated by the detail, patch and refresh responses.
-	Albums         *[]MusicAlbum `json:"albums,omitempty"`
-	Id             uint32        `json:"id"`
-	Mbid           string        `json:"mbid"`
-	Monitored      bool          `json:"monitored"`
-	Name           string        `json:"name"`
-	Overview       *string       `json:"overview,omitempty"`
-	Path           string        `json:"path"`
-	QualityProfile string        `json:"quality_profile"`
-	SortName       string        `json:"sort_name"`
+	// Albums Newest first (release date descending, undated last, then title), upcoming included.
+	Albums []MusicAlbumSummary `json:"albums"`
+
+	// Genre Highest-count MusicBrainz genre, title-cased.
+	Genre *string `json:"genre,omitempty"`
+
+	// Hydrating True while any album still has its tracks to fetch
+	// (`metadata_fetched_at` unset) or a released album with tracks
+	// still has its credits to fetch. The SPA polls the detail every 10
+	// seconds while it holds.
+	Hydrating bool   `json:"hydrating"`
+	Id        uint32 `json:"id"`
+	Mbid      string `json:"mbid"`
+
+	// Monitor Artist monitor policy. `all` monitors every album, `future` only
+	// albums with no release date or one after today, `manual` leaves the
+	// album flags alone and monitors no new release group, `none` monitors
+	// nothing. `Album.monitored` stays the only flag searches, RSS and
+	// imports read.
+	Monitor MusicMonitor `json:"monitor"`
+	Name    string       `json:"name"`
+
+	// Origin Begin area and area joined with ", " and de-duplicated, for example "Gothenburg, Sweden".
+	Origin *string `json:"origin,omitempty"`
+
+	// Overview Wikipedia extract in the `lang` asked for, falling back to English; absent when neither exists. Both are fetched and stored at hydration and refresh.
+	Overview *string `json:"overview,omitempty"`
+
+	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
+	OverviewSource *string `json:"overview_source,omitempty"`
+	Path           string  `json:"path"`
+
+	// QualityProfile Music quality profile name; empty means the default.
+	QualityProfile string `json:"quality_profile"`
+
+	// Since Year of the life-span begin.
+	Since *uint16 `json:"since,omitempty"`
+
+	// Size Sum of the artist's media file sizes, in bytes.
+	Size     int64  `json:"size"`
+	SortName string `json:"sort_name"`
+
+	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
+	// is downloading or paused, else `wanted` if any is wanted, else
+	// `available` (including an artist with nothing monitored).
+	Status MusicArtistStatus `json:"status"`
+
+	// TracksHave Tracks with at least one media file.
+	TracksHave uint32 `json:"tracks_have"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
+}
+
+// MusicArtistCore Fields shared by the artist list item and the artist detail.
+type MusicArtistCore struct {
+	AddedAt time.Time `json:"added_at"`
+
+	// AlbumCount Albums of the artist, upcoming included.
+	AlbumCount uint32 `json:"album_count"`
+
+	// Genre Highest-count MusicBrainz genre, title-cased.
+	Genre *string `json:"genre,omitempty"`
+
+	// Hydrating True while any album still has its tracks to fetch
+	// (`metadata_fetched_at` unset) or a released album with tracks
+	// still has its credits to fetch. The SPA polls the detail every 10
+	// seconds while it holds.
+	Hydrating bool   `json:"hydrating"`
+	Id        uint32 `json:"id"`
+	Mbid      string `json:"mbid"`
+
+	// Monitor Artist monitor policy. `all` monitors every album, `future` only
+	// albums with no release date or one after today, `manual` leaves the
+	// album flags alone and monitors no new release group, `none` monitors
+	// nothing. `Album.monitored` stays the only flag searches, RSS and
+	// imports read.
+	Monitor MusicMonitor `json:"monitor"`
+	Name    string       `json:"name"`
+
+	// Origin Begin area and area joined with ", " and de-duplicated, for example "Gothenburg, Sweden".
+	Origin *string `json:"origin,omitempty"`
+
+	// Overview Wikipedia extract in the `lang` asked for, falling back to English; absent when neither exists. Both are fetched and stored at hydration and refresh.
+	Overview *string `json:"overview,omitempty"`
+
+	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
+	OverviewSource *string `json:"overview_source,omitempty"`
+	Path           string  `json:"path"`
+
+	// QualityProfile Music quality profile name; empty means the default.
+	QualityProfile string `json:"quality_profile"`
+
+	// Since Year of the life-span begin.
+	Since *uint16 `json:"since,omitempty"`
+
+	// Size Sum of the artist's media file sizes, in bytes.
+	Size     int64  `json:"size"`
+	SortName string `json:"sort_name"`
+
+	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
+	// is downloading or paused, else `wanted` if any is wanted, else
+	// `available` (including an artist with nothing monitored).
+	Status MusicArtistStatus `json:"status"`
+
+	// TracksHave Tracks with at least one media file.
+	TracksHave uint32 `json:"tracks_have"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
+}
+
+// MusicArtistCounts Faceted like `TVShowCounts`: every status and monitoring tally is
+// counted with the other facet's filter and the `query` applied and its
+// own left out, and each facet carries its own `*_total` "all" row.
+type MusicArtistCounts struct {
+	// Albums Every album row in the library, upcoming included; filters do not narrow it.
+	Albums         uint32 `json:"albums"`
+	Available      uint32 `json:"available"`
+	Downloading    uint32 `json:"downloading"`
+	Monitored      uint32 `json:"monitored"`
+	MonitoredTotal uint32 `json:"monitored_total"`
+	StatusTotal    uint32 `json:"status_total"`
+
+	// Total The library, filtered by nothing (header, empty state, nav badge).
+	Total       uint32 `json:"total"`
+	Unmonitored uint32 `json:"unmonitored"`
+	Wanted      uint32 `json:"wanted"`
+}
+
+// MusicArtistDetail Artist with its full tree: members, and every album with tracks,
+// credits and personnel. Also the response of add, patch and refresh.
+type MusicArtistDetail struct {
+	AddedAt time.Time `json:"added_at"`
+
+	// AlbumCount Albums of the artist, upcoming included.
+	AlbumCount uint32       `json:"album_count"`
+	Albums     []MusicAlbum `json:"albums"`
+
+	// Genre Highest-count MusicBrainz genre, title-cased.
+	Genre *string `json:"genre,omitempty"`
+
+	// Hydrating True while any album still has its tracks to fetch
+	// (`metadata_fetched_at` unset) or a released album with tracks
+	// still has its credits to fetch. The SPA polls the detail every 10
+	// seconds while it holds.
+	Hydrating bool          `json:"hydrating"`
+	Id        uint32        `json:"id"`
+	Mbid      string        `json:"mbid"`
+	Members   []MusicMember `json:"members"`
+
+	// Monitor Artist monitor policy. `all` monitors every album, `future` only
+	// albums with no release date or one after today, `manual` leaves the
+	// album flags alone and monitors no new release group, `none` monitors
+	// nothing. `Album.monitored` stays the only flag searches, RSS and
+	// imports read.
+	Monitor MusicMonitor `json:"monitor"`
+	Name    string       `json:"name"`
+
+	// Origin Begin area and area joined with ", " and de-duplicated, for example "Gothenburg, Sweden".
+	Origin *string `json:"origin,omitempty"`
+
+	// Overview Wikipedia extract in the `lang` asked for, falling back to English; absent when neither exists. Both are fetched and stored at hydration and refresh.
+	Overview *string `json:"overview,omitempty"`
+
+	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
+	OverviewSource *string `json:"overview_source,omitempty"`
+	Path           string  `json:"path"`
+
+	// QualityProfile Music quality profile name; empty means the default.
+	QualityProfile string `json:"quality_profile"`
+
+	// Since Year of the life-span begin.
+	Since *uint16 `json:"since,omitempty"`
+
+	// Size Sum of the artist's media file sizes, in bytes.
+	Size     int64  `json:"size"`
+	SortName string `json:"sort_name"`
+
+	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
+	// is downloading or paused, else `wanted` if any is wanted, else
+	// `available` (including an artist with nothing monitored).
+	Status MusicArtistStatus `json:"status"`
+
+	// TracksHave Tracks with at least one media file.
+	TracksHave uint32 `json:"tracks_have"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
+}
+
+// MusicArtistKind MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+type MusicArtistKind string
+
+// MusicArtistLookupDetail The hit fields and the detail in one object (no `score`), so the
+// request panel needs no second call. Also the music arm of
+// `GET /requests/{id}/metadata`.
+type MusicArtistLookupDetail struct {
+	AlreadyAdded bool `json:"already_added"`
+
+	// Area Begin area and area joined as for a library artist's `origin`.
+	Area           *string `json:"area,omitempty"`
+	Disambiguation *string `json:"disambiguation,omitempty"`
+	Genre          *string `json:"genre,omitempty"`
+
+	// Genres Highest count first, title-cased, at most 5.
+	Genres *[]string `json:"genres,omitempty"`
+
+	// LibraryId Library artist id when `already_added`.
+	LibraryId *uint32 `json:"library_id,omitempty"`
+	Mbid      string  `json:"mbid"`
+
+	// Members Names of current members.
+	Members *[]string `json:"members,omitempty"`
+	Name    string    `json:"name"`
+
+	// Overview Wikipedia extract.
+	Overview *string `json:"overview,omitempty"`
+
+	// Releases The artist's release groups, newest first.
+	Releases *[]MusicLookupRelease `json:"releases,omitempty"`
+	Since    *uint16               `json:"since,omitempty"`
+	SortName string                `json:"sort_name"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
+}
+
+// MusicArtistLookupHit Fields a MusicBrainz artist lookup carries, in the search list and in the detail alike.
+type MusicArtistLookupHit struct {
+	AlreadyAdded bool `json:"already_added"`
+
+	// Area Begin area and area joined as for a library artist's `origin`.
+	Area           *string `json:"area,omitempty"`
+	Disambiguation *string `json:"disambiguation,omitempty"`
+	Genre          *string `json:"genre,omitempty"`
+
+	// LibraryId Library artist id when `already_added`.
+	LibraryId *uint32 `json:"library_id,omitempty"`
+	Mbid      string  `json:"mbid"`
+	Name      string  `json:"name"`
+	Since     *uint16 `json:"since,omitempty"`
+	SortName  string  `json:"sort_name"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
 }
 
 // MusicArtistSearchResult defines model for MusicArtistSearchResult.
 type MusicArtistSearchResult struct {
-	AlreadyAdded   bool    `json:"already_added"`
+	AlreadyAdded bool `json:"already_added"`
+
+	// Area Begin area and area joined as for a library artist's `origin`.
+	Area           *string `json:"area,omitempty"`
 	Disambiguation *string `json:"disambiguation,omitempty"`
-	Mbid           string  `json:"mbid"`
-	Name           string  `json:"name"`
-	Score          uint8   `json:"score"`
-	SortName       string  `json:"sort_name"`
+	Genre          *string `json:"genre,omitempty"`
+
+	// LibraryId Library artist id when `already_added`.
+	LibraryId *uint32 `json:"library_id,omitempty"`
+	Mbid      string  `json:"mbid"`
+	Name      string  `json:"name"`
+
+	// Score MusicBrainz search ranking. A search artefact, never present on the detail.
+	Score    uint8   `json:"score"`
+	Since    *uint16 `json:"since,omitempty"`
+	SortName string  `json:"sort_name"`
+
+	// Type MusicBrainz Person is `person`; Group, Orchestra and Choir are `group`. Omitted for any other type.
+	Type *MusicArtistKind `json:"type,omitempty"`
 }
 
 // MusicArtistSearchResultList defines model for MusicArtistSearchResultList.
@@ -5181,45 +5913,132 @@ type MusicArtistSearchResultList struct {
 	Items []MusicArtistSearchResult `json:"items"`
 }
 
-// MusicQualityProfile defines model for MusicQualityProfile.
-type MusicQualityProfile struct {
-	Cutoff         MusicQualityProfileCutoff    `json:"cutoff"`
-	Formats        []MusicQualityProfileFormats `json:"formats"`
-	IsDefault      bool                         `json:"is_default"`
-	Name           string                       `json:"name"`
-	UpgradeAllowed bool                         `json:"upgrade_allowed"`
+// MusicArtistStatus Rollup over the monitored, non-upcoming albums: `downloading` if any
+// is downloading or paused, else `wanted` if any is wanted, else
+// `available` (including an artist with nothing monitored).
+type MusicArtistStatus string
+
+// MusicCredit defines model for MusicCredit.
+type MusicCredit struct {
+	// ArtistId Library artist id when this person is an artist in the library; the SPA shows that artist's photo.
+	ArtistId *uint32         `json:"artist_id,omitempty"`
+	Mbid     *string         `json:"mbid,omitempty"`
+	Name     string          `json:"name"`
+	Role     MusicCreditRole `json:"role"`
 }
 
-// MusicQualityProfileCutoff defines model for MusicQualityProfile.Cutoff.
-type MusicQualityProfileCutoff string
+// MusicCreditRole defines model for MusicCreditRole.
+type MusicCreditRole string
 
-// MusicQualityProfileFormats defines model for MusicQualityProfile.Formats.
-type MusicQualityProfileFormats string
+// MusicLookupRelease defines model for MusicLookupRelease.
+type MusicLookupRelease struct {
+	// Mbid Release-group MBID; the key of the lookup cover (`/posters/lookup/albums/{key}/poster.jpg`).
+	Mbid  string         `json:"mbid"`
+	Title string         `json:"title"`
+	Type  MusicAlbumType `json:"type"`
+	Year  *uint16        `json:"year,omitempty"`
+}
+
+// MusicMedium defines model for MusicMedium.
+type MusicMedium string
+
+// MusicMember defines model for MusicMember.
+type MusicMember struct {
+	// ArtistId Library artist id when that member is an artist in the library.
+	ArtistId *uint32 `json:"artist_id,omitempty"`
+
+	// From Year the membership began; falls back to the artist's `since`, omitted when both are missing.
+	From *uint16 `json:"from,omitempty"`
+
+	// Instruments Instrument and vocal attributes; empty when MusicBrainz lists none.
+	Instruments []string `json:"instruments"`
+	Mbid        *string  `json:"mbid,omitempty"`
+	Name        string   `json:"name"`
+
+	// To Year the membership ended; present only for an ended membership.
+	To *uint16 `json:"to,omitempty"`
+}
+
+// MusicMonitor Artist monitor policy. `all` monitors every album, `future` only
+// albums with no release date or one after today, `manual` leaves the
+// album flags alone and monitors no new release group, `none` monitors
+// nothing. `Album.monitored` stays the only flag searches, RSS and
+// imports read.
+type MusicMonitor string
+
+// MusicPerformer defines model for MusicPerformer.
+type MusicPerformer struct {
+	// ArtistId Library artist id when this person is an artist in the library; the SPA shows that artist's photo.
+	ArtistId *uint32 `json:"artist_id,omitempty"`
+
+	// Guest Heuristic: not the album artist, not a member, and credited
+	// on at most half of the release's performer-bearing
+	// recordings.
+	Guest       bool     `json:"guest"`
+	Instruments []string `json:"instruments"`
+	Mbid        *string  `json:"mbid,omitempty"`
+	Name        string   `json:"name"`
+}
+
+// MusicPerson defines model for MusicPerson.
+type MusicPerson struct {
+	// ArtistId Library artist id when this person is an artist in the library; the SPA shows that artist's photo.
+	ArtistId *uint32 `json:"artist_id,omitempty"`
+	Mbid     *string `json:"mbid,omitempty"`
+	Name     string  `json:"name"`
+}
+
+// MusicQualityProfile defines model for MusicQualityProfile.
+type MusicQualityProfile struct {
+	IsDefault bool   `json:"is_default"`
+	Name      string `json:"name"`
+
+	// Preferred Audio quality tier, best first. The canonical order everywhere.
+	Preferred MusicTier `json:"preferred"`
+
+	// Tiers Accepted tiers, returned in canonical order (best first).
+	Tiers          []MusicTier `json:"tiers"`
+	UpgradeAllowed bool        `json:"upgrade_allowed"`
+}
 
 // MusicQualityProfileCreate defines model for MusicQualityProfileCreate.
 type MusicQualityProfileCreate struct {
-	Cutoff         MusicQualityProfileCreateCutoff    `json:"cutoff"`
-	Formats        []MusicQualityProfileCreateFormats `json:"formats"`
-	Name           string                             `json:"name"`
-	UpgradeAllowed bool                               `json:"upgrade_allowed"`
+	Name string `json:"name"`
+
+	// Preferred Must be one of `tiers`, else 422. The upgrade ceiling.
+	Preferred      MusicTier   `json:"preferred"`
+	Tiers          []MusicTier `json:"tiers"`
+	UpgradeAllowed bool        `json:"upgrade_allowed"`
 }
 
-// MusicQualityProfileCreateCutoff defines model for MusicQualityProfileCreate.Cutoff.
-type MusicQualityProfileCreateCutoff string
+// MusicRenamePlan defines model for MusicRenamePlan.
+type MusicRenamePlan struct {
+	ArtistId   uint32            `json:"artist_id"`
+	Operations []RenameOperation `json:"operations"`
+}
 
-// MusicQualityProfileCreateFormats defines model for MusicQualityProfileCreate.Formats.
-type MusicQualityProfileCreateFormats string
+// MusicTier Audio quality tier, best first. The canonical order everywhere.
+type MusicTier string
 
 // MusicTrack defines model for MusicTrack.
 type MusicTrack struct {
-	Disc uint8 `json:"disc"`
+	// Bonus Set only when MusicBrainz says so; never guessed.
+	Bonus *bool `json:"bonus,omitempty"`
+	Disc  uint8 `json:"disc"`
 
 	// Duration Length in seconds, 0 when unknown.
-	Duration uint32 `json:"duration"`
-	Id       uint32 `json:"id"`
-	Mbid     string `json:"mbid"`
-	Position uint16 `json:"position"`
-	Title    string `json:"title"`
+	Duration  uint32         `json:"duration"`
+	Featuring *[]MusicPerson `json:"featuring,omitempty"`
+	HasFile   bool           `json:"has_file"`
+	Id        uint32         `json:"id"`
+
+	// Mbid MusicBrainz recording id.
+	Mbid *string `json:"mbid,omitempty"`
+
+	// Number Position on the disc.
+	Number  uint16         `json:"number"`
+	Title   string         `json:"title"`
+	Writers *[]MusicPerson `json:"writers,omitempty"`
 }
 
 // OIDCProviderCreate defines model for OIDCProviderCreate.
@@ -5264,14 +6083,6 @@ type OpdsToken struct {
 	Token *string `json:"token,omitempty"`
 }
 
-// PaginatedBookAuthors defines model for PaginatedBookAuthors.
-type PaginatedBookAuthors struct {
-	Items []BookAuthor `json:"items"`
-	Limit uint16       `json:"limit"`
-	Page  uint32       `json:"page"`
-	Total uint32       `json:"total"`
-}
-
 // PaginatedMovies defines model for PaginatedMovies.
 type PaginatedMovies struct {
 	Items []Movie `json:"items"`
@@ -5296,6 +6107,14 @@ type PaginatedRequests struct {
 	Total uint32    `json:"total"`
 }
 
+// PaginatedShelf defines model for PaginatedShelf.
+type PaginatedShelf struct {
+	Items []ShelfItem `json:"items"`
+	Limit uint16      `json:"limit"`
+	Page  uint32      `json:"page"`
+	Total uint32      `json:"total"`
+}
+
 // PaginatedTVShows defines model for PaginatedTVShows.
 type PaginatedTVShows struct {
 	Items []TVShow `json:"items"`
@@ -5304,25 +6123,38 @@ type PaginatedTVShows struct {
 	Total uint32   `json:"total"`
 }
 
-// PatchBookAuthorRequest defines model for PatchBookAuthorRequest.
-type PatchBookAuthorRequest struct {
-	AudiobookQualityProfile *string                              `json:"audiobook_quality_profile,omitempty"`
-	EbookQualityProfile     *string                              `json:"ebook_quality_profile,omitempty"`
-	MonitorPolicy           *PatchBookAuthorRequestMonitorPolicy `json:"monitor_policy,omitempty"`
-	Monitored               *bool                                `json:"monitored,omitempty"`
-	WantKinds               *PatchBookAuthorRequestWantKinds     `json:"want_kinds,omitempty"`
-}
-
-// PatchBookAuthorRequestMonitorPolicy defines model for PatchBookAuthorRequest.MonitorPolicy.
-type PatchBookAuthorRequestMonitorPolicy string
-
-// PatchBookAuthorRequestWantKinds defines model for PatchBookAuthorRequest.WantKinds.
-type PatchBookAuthorRequestWantKinds string
-
 // PatchBookRequest defines model for PatchBookRequest.
 type PatchBookRequest struct {
-	AudiobookMonitored *bool `json:"audiobook_monitored,omitempty"`
-	EbookMonitored     *bool `json:"ebook_monitored,omitempty"`
+	// EditionId Edition to use for `format`; the pair is required together (else
+	// 422), and an id that is not one of this book's editions of that
+	// format answers 422. Changing the edition of a slot that holds a
+	// file queues a replacement.
+	EditionId *uint32     `json:"edition_id,omitempty"`
+	Format    *BookFormat `json:"format,omitempty"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind *BookKind `json:"kind,omitempty"`
+
+	// Monitor Derived from the two slot `*_monitored` flags.
+	Monitor *BookMonitor `json:"monitor,omitempty"`
+
+	// PreferredLanguage ISO 639-1. Recomputes the title and re-picks the edition of every slot with no file.
+	PreferredLanguage *string `json:"preferred_language,omitempty"`
+
+	// QualityProfile Empty clears to the default; an unknown name answers 422.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
+// PatchBookSeriesRequest defines model for PatchBookSeriesRequest.
+type PatchBookSeriesRequest struct {
+	// Edition Must equal one of the series' `editions`, else 422. Re-picks only volumes with no ebook file.
+	Edition *string `json:"edition,omitempty"`
+
+	// Monitor Applies to each volume's ebook slot only.
+	Monitor *BookSeriesMonitor `json:"monitor,omitempty"`
+
+	// QualityProfile Written through to every volume.
+	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
 // PatchMusicAlbumRequest defines model for PatchMusicAlbumRequest.
@@ -5332,7 +6164,14 @@ type PatchMusicAlbumRequest struct {
 
 // PatchMusicArtistRequest defines model for PatchMusicArtistRequest.
 type PatchMusicArtistRequest struct {
-	Monitored      *bool   `json:"monitored,omitempty"`
+	// Monitor Artist monitor policy. `all` monitors every album, `future` only
+	// albums with no release date or one after today, `manual` leaves the
+	// album flags alone and monitors no new release group, `none` monitors
+	// nothing. `Album.monitored` stays the only flag searches, RSS and
+	// imports read.
+	Monitor *MusicMonitor `json:"monitor,omitempty"`
+
+	// QualityProfile Empty clears to the default; an unknown name answers 422.
 	QualityProfile *string `json:"quality_profile,omitempty"`
 }
 
@@ -5686,19 +6525,27 @@ type ProbeConfig struct {
 	MinDurationRatio *float64 `json:"min_duration_ratio,omitempty"`
 }
 
+// QualityDefaultMedia defines model for QualityDefaultMedia.
+type QualityDefaultMedia string
+
 // QualityProfile defines model for QualityProfile.
 type QualityProfile struct {
 	// AllowedCodecs ffprobe video codec names ("hevc", "av1"). A grab whose file uses
 	// anything else is held for a decision. Empty means any codec.
 	AllowedCodecs *[]string `json:"allowed_codecs,omitempty"`
 
+	// DefaultFor The media this profile is the default for: the one an item of that
+	// media with an empty quality_profile resolves to.
+	DefaultFor []QualityDefaultMedia `json:"default_for"`
+
 	// Formats Custom formats (built-in or user-defined) scored for this
 	// profile. Each name must resolve to a built-in format or a
 	// custom_formats entry.
 	Formats *[]QualityProfileFormatScore `json:"formats,omitempty"`
 
-	// IsDefault True when quality_default_profile names this profile — the one a
-	// movie or series with an empty quality_profile resolves to.
+	// IsDefault True when this profile is the default for at least one media —
+	// kept for clients that predate the split into per-media defaults.
+	// `default_for` says which.
 	IsDefault     bool                        `json:"is_default"`
 	MinResolution QualityProfileMinResolution `json:"min_resolution"`
 
@@ -5865,16 +6712,16 @@ type ReplacePendingRequest struct {
 // Request defines model for Request.
 type Request struct {
 	ApprovedBy *RequestUser `json:"approved_by,omitempty"`
+	CreatedAt  time.Time    `json:"created_at"`
+	Id         uint32       `json:"id"`
 
-	// BookKind Slot a book request asks for.
-	BookKind  *RequestBookKind `json:"book_kind,omitempty"`
-	CreatedAt time.Time        `json:"created_at"`
-	Id        uint32           `json:"id"`
-
-	// MediaId TMDB id for movies, TVDB id for shows, Hardcover id for authors and books; 0 for artists and albums.
+	// MediaId TMDB id for movies, TVDB id for shows, Hardcover book id for
+	// books, Hardcover series id for book series (a separate id space,
+	// which is why `media_type` is part of the uniqueness key); 0 for
+	// artists.
 	MediaId uint32 `json:"media_id"`
 
-	// MediaMbid MusicBrainz id of an artist or album request.
+	// MediaMbid MusicBrainz id of an artist request; absent for every other type.
 	MediaMbid *string          `json:"media_mbid,omitempty"`
 	MediaType RequestMediaType `json:"media_type"`
 
@@ -5887,12 +6734,6 @@ type Request struct {
 	Title          string        `json:"title"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 }
-
-// RequestBookKind Slot a book request asks for.
-type RequestBookKind string
-
-// RequestMediaType defines model for Request.MediaType.
-type RequestMediaType string
 
 // RequestStatus defines model for Request.Status.
 type RequestStatus string
@@ -5928,6 +6769,19 @@ type RequestMediaDetails struct {
 	TvdbId      *uint32 `json:"tvdb_id,omitempty"`
 	VoteCount   *uint32 `json:"vote_count,omitempty"`
 	Year        *uint16 `json:"year,omitempty"`
+}
+
+// RequestMediaType defines model for RequestMediaType.
+type RequestMediaType string
+
+// RequestMetadata Response of `GET /requests/{id}/metadata`. No discriminator: the
+// caller branches on the request's `media_type`. A movie or tvshow
+// request answers `RequestMediaDetails`, an artist request
+// `MusicArtistLookupDetail` (the hit fields and the detail), and a book
+// or book_series request `BookLookupDetail` (`type: series` for
+// `book_series`).
+type RequestMetadata struct {
+	union json.RawMessage
 }
 
 // RequestUser defines model for RequestUser.
@@ -6017,7 +6871,12 @@ type ScheduleUpdate struct {
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
-	Codec *string `json:"codec,omitempty"`
+	// AudioTier Audio quality tier, best first. The canonical order everywhere.
+	AudioTier *MusicTier `json:"audio_tier,omitempty"`
+
+	// BitrateKbps Audiobook only, when the release name states a bit rate; absent otherwise.
+	BitrateKbps *uint32 `json:"bitrate_kbps,omitempty"`
+	Codec       *string `json:"codec,omitempty"`
 
 	// DownloadUrl In a search or browse response, an opaque handle (prefixed `slr1.`) standing in for the indexer's download link, which authenticates with the indexer's API key. Post it back unchanged in a grab body. Handles stop opening when the session secret rotates; search again. A grab body may also carry a plain magnet or a link to a configured indexer.
 	DownloadUrl string  `json:"download_url"`
@@ -6044,16 +6903,21 @@ type SearchResult struct {
 	Rejected     *bool   `json:"rejected,omitempty"`
 	ReleaseGroup *string `json:"release_group,omitempty"`
 
-	// ReplaceExisting Grab requests only: delete already-present file(s) for the covered media before importing (manual overwrite). Unset/false keeps existing files. Ignored in search-result responses.
+	// ReplaceExisting Grab requests only: delete already-present file(s) for the covered media before importing (manual overwrite). Unset/false keeps existing files. Ignored in search-result responses. For an album, an artist pack or a book slot the old files go only after the new ones are placed and verified: per matched track for an album, per linked album that already had files for a pack, and every file of the grabbed slot for a book. Accepted and a no-op on a title with no files.
 	ReplaceExisting *bool   `json:"replace_existing,omitempty"`
 	Resolution      *string `json:"resolution,omitempty"`
 
 	// Score Total matched-format score against the queried item's quality profile. Relative to that profile only — comparing scores across items with different profiles is meaningless. Ignored on grab request bodies.
-	Score   *int    `json:"score,omitempty"`
-	Seeders uint32  `json:"seeders"`
-	Size    int64   `json:"size"`
-	Source  *string `json:"source,omitempty"`
-	Title   string  `json:"title"`
+	Score   *int   `json:"score,omitempty"`
+	Seeders uint32 `json:"seeders"`
+	Size    int64  `json:"size"`
+
+	// Slot Book only: the slot the release fills, derived from its parsed container. A grab body whose `slot` disagrees with the container is refused with `grab_rejected`.
+	Slot *BookFormat `json:"slot,omitempty"`
+
+	// Source Display label printed verbatim by the releases table. Music and book releases carry the canonical label rather than the raw token: `FLAC`, `FLAC 24/96`, `FLAC 24/192`, `FLAC 24-bit`, `ALAC`, `WAV`, `MP3 320`, `MP3 V0`, `MP3 V2`, `MP3 256`, `MP3 192`, `MP3 128`, `AAC 256`, `AAC 128`, `OGG 320` for music, and the upper-case container (`EPUB`, `M4B`, `CBZ`) for books.
+	Source *string `json:"source,omitempty"`
+	Title  string  `json:"title"`
 }
 
 // SearchResultList defines model for SearchResultList.
@@ -6152,6 +7016,46 @@ type Session struct {
 	IsCurrent  bool       `json:"is_current"`
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 	UserAgent  *string    `json:"user_agent,omitempty"`
+}
+
+// ShelfItem One entry of the books shelf. `id` is only unique together with `type`.
+type ShelfItem struct {
+	AddedAt time.Time `json:"added_at"`
+	Author  string    `json:"author"`
+
+	// CoverId Book id whose poster is the cover; for a series, its lowest-position volume.
+	CoverId uint32 `json:"cover_id"`
+
+	// Formats Books only.
+	Formats *[]BookShelfFormat `json:"formats,omitempty"`
+	Id      uint32             `json:"id"`
+
+	// Kind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+	Kind BookKind `json:"kind"`
+
+	// Progress Books only, while downloading.
+	Progress       *float32 `json:"progress,omitempty"`
+	QualityProfile *string  `json:"quality_profile,omitempty"`
+
+	// Status Book: over the slots whose state is not `unmonitored`, any
+	// `downloading` gives `downloading`, else any `wanted` gives `wanted`,
+	// else `available` (also when every slot is unmonitored). A standalone
+	// book released after today reports `available`. Series: any volume
+	// `downloading`, else `wanted` when `monitor` is not `none` and any
+	// volume is `wanted`, else `available`; upcoming volumes and volumes of
+	// a series that is still `hydrating` never count.
+	Status BookItemStatus `json:"status"`
+	Title  string         `json:"title"`
+	Type   BookShelfType  `json:"type"`
+
+	// VolumesHave Series only; volumes whose state is available.
+	VolumesHave *uint32 `json:"volumes_have,omitempty"`
+
+	// VolumesOut Series only; volumes not upcoming.
+	VolumesOut *uint32 `json:"volumes_out,omitempty"`
+
+	// Year Books only; the first-published year.
+	Year *uint16 `json:"year,omitempty"`
 }
 
 // SpecialsMonitoredResult defines model for SpecialsMonitoredResult.
@@ -6356,7 +7260,7 @@ type TVShow struct {
 	OriginalTitle *string `json:"original_title,omitempty"`
 	Overview      *string `json:"overview,omitempty"`
 
-	// QualityProfile Name of the quality profile (empty resolves to the default).
+	// QualityProfile Name of the quality profile (empty resolves to the series default).
 	QualityProfile *string  `json:"quality_profile,omitempty"`
 	Rating         *float32 `json:"rating,omitempty"`
 
@@ -6889,7 +7793,7 @@ type UpdateMeRequest struct {
 type UpdateMovieRequest struct {
 	Monitored *bool `json:"monitored,omitempty"`
 
-	// QualityProfile Name of the quality profile (empty resolves to the default).
+	// QualityProfile Name of the quality profile (empty resolves to the movie default).
 	QualityProfile *string                   `json:"quality_profile,omitempty"`
 	Status         *UpdateMovieRequestStatus `json:"status,omitempty"`
 }
@@ -6970,11 +7874,41 @@ type ActivityType = []ActivityEventType
 // ApiKeyID defines model for ApiKeyID.
 type ApiKeyID = uint32
 
+// BookDefaultKind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
+type BookDefaultKind = BookKind
+
+// BookLookupTypeParam defines model for BookLookupTypeParam.
+type BookLookupTypeParam = BookShelfType
+
 // BookSearchQuery defines model for BookSearchQuery.
 type BookSearchQuery = string
 
+// BookSearchTypeParam defines model for BookSearchTypeParam.
+type BookSearchTypeParam string
+
+// BookShelfAuthorParam defines model for BookShelfAuthorParam.
+type BookShelfAuthorParam = string
+
+// BookShelfFormatParam defines model for BookShelfFormatParam.
+type BookShelfFormatParam = BookFormat
+
+// BookShelfKindParam defines model for BookShelfKindParam.
+type BookShelfKindParam = []BookKind
+
+// BookShelfOrderParam defines model for BookShelfOrderParam.
+type BookShelfOrderParam string
+
+// BookShelfQueryParam defines model for BookShelfQueryParam.
+type BookShelfQueryParam = string
+
+// BookShelfSortParam defines model for BookShelfSortParam.
+type BookShelfSortParam string
+
+// BookShelfStatusParam defines model for BookShelfStatusParam.
+type BookShelfStatusParam string
+
 // BookSlotKind defines model for BookSlotKind.
-type BookSlotKind string
+type BookSlotKind = BookFormat
 
 // CalendarFrom defines model for CalendarFrom.
 type CalendarFrom = time.Time
@@ -6996,6 +7930,9 @@ type EpisodeID = uint32
 
 // FileID defines model for FileID.
 type FileID = uint32
+
+// HardcoverIDParam defines model for HardcoverIDParam.
+type HardcoverIDParam = uint32
 
 // ImportClassification defines model for ImportClassification.
 type ImportClassification string
@@ -7024,6 +7961,9 @@ type ImportScanFileID = uint32
 // ImportScanShowID defines model for ImportScanShowID.
 type ImportScanShowID = uint32
 
+// MBIDParam defines model for MBIDParam.
+type MBIDParam = string
+
 // MoviesMonitored defines model for MoviesMonitored.
 type MoviesMonitored string
 
@@ -7039,11 +7979,31 @@ type MoviesSort = string
 // MoviesStatus defines model for MoviesStatus.
 type MoviesStatus = string
 
+// MusicArtistMonitoredParam defines model for MusicArtistMonitoredParam.
+type MusicArtistMonitoredParam string
+
+// MusicArtistOrderParam defines model for MusicArtistOrderParam.
+type MusicArtistOrderParam string
+
+// MusicArtistQueryParam defines model for MusicArtistQueryParam.
+type MusicArtistQueryParam = string
+
+// MusicArtistSortParam defines model for MusicArtistSortParam.
+type MusicArtistSortParam string
+
+// MusicArtistStatusParam Rollup over the monitored, non-upcoming albums: `downloading` if any
+// is downloading or paused, else `wanted` if any is wanted, else
+// `available` (including an artist with nothing monitored).
+type MusicArtistStatusParam = MusicArtistStatus
+
 // MusicSearchQuery defines model for MusicSearchQuery.
 type MusicSearchQuery = string
 
 // OIDCProviderName defines model for OIDCProviderName.
 type OIDCProviderName = string
+
+// OverviewLang defines model for OverviewLang.
+type OverviewLang string
 
 // PeopleLimit defines model for PeopleLimit.
 type PeopleLimit = uint16
@@ -7064,7 +8024,7 @@ type RenamePreview = bool
 type RequestLimit = uint32
 
 // RequestMediaTypeParam defines model for RequestMediaTypeParam.
-type RequestMediaTypeParam string
+type RequestMediaTypeParam = []RequestMediaType
 
 // RequestPage defines model for RequestPage.
 type RequestPage = uint16
@@ -7135,38 +8095,61 @@ type UsersOrder string
 // UsersSort defines model for UsersSort.
 type UsersSort string
 
-// AudiobookQualityProfileResponse defines model for AudiobookQualityProfileResponse.
-type AudiobookQualityProfileResponse = AudiobookQualityProfile
-
 // AuthConfig defines model for AuthConfig.
 type AuthConfig = AuthConfigView
 
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
-// BookAuthorCreated defines model for BookAuthorCreated.
-type BookAuthorCreated = BookAuthor
+// BookCountsResponse Faceted like `TVShowCounts`: each facet is counted with the other
+// facets' filters and the `query` applied and its own left out, and
+// carries its own `*_total` "all" row.
+type BookCountsResponse = BookCounts
 
-// BookAuthorDetail defines model for BookAuthorDetail.
-type BookAuthorDetail = BookAuthor
+// BookCreated Book detail; also the response of add, patch and refresh. The cover is `/posters/books/{id}/poster.jpg`.
+type BookCreated = Book
 
-// BookAuthorList defines model for BookAuthorList.
-type BookAuthorList = PaginatedBookAuthors
-
-// BookDetail defines model for BookDetail.
+// BookDetail Book detail; also the response of add, patch and refresh. The cover is `/posters/books/{id}/poster.jpg`.
 type BookDetail = Book
 
-// BookSearchResults defines model for BookSearchResults.
-type BookSearchResults = BookAuthorSearchResultList
+// BookLookupDetailResponse The hit fields and the detail in one object, with `kind` and
+// `original_title` filled. Also the book arm of
+// `GET /requests/{id}/metadata`, where `type: series` serves a
+// `book_series` request.
+type BookLookupDetailResponse = BookLookupDetail
+
+// BookLookupResults defines model for BookLookupResults.
+type BookLookupResults = BookLookupList
+
+// BookQualityProfileList defines model for BookQualityProfileList.
+type BookQualityProfileList = []BookQualityProfile
+
+// BookQualityProfileResponse defines model for BookQualityProfileResponse.
+type BookQualityProfileResponse = BookQualityProfile
+
+// BookRenamePlanResponse defines model for BookRenamePlanResponse.
+type BookRenamePlanResponse = BookRenamePlan
+
+// BookSearchAcceptedResponse defines model for BookSearchAcceptedResponse.
+type BookSearchAcceptedResponse = BookSearchAccepted
+
+// BookSeriesCreated Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+type BookSeriesCreated = BookSeries
+
+// BookSeriesDetail Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+type BookSeriesDetail = BookSeries
+
+// BookSeriesRenamePlanResponse defines model for BookSeriesRenamePlanResponse.
+type BookSeriesRenamePlanResponse = BookSeriesRenamePlan
+
+// BookShelfPage defines model for BookShelfPage.
+type BookShelfPage = PaginatedShelf
 
 // Conflict defines model for Conflict.
 type Conflict = Error
 
 // DownloadConfig defines model for DownloadConfig.
 type DownloadConfig = DownloadConfigView
-
-// EbookQualityProfileResponse defines model for EbookQualityProfileResponse.
-type EbookQualityProfileResponse = EbookQualityProfile
 
 // FFmpegConfig defines model for FFmpegConfig.
 type FFmpegConfig = FFmpegConfigView
@@ -7219,17 +8202,31 @@ type MovieRenamePlan = RenamePlan
 // MusicAlbumDetail defines model for MusicAlbumDetail.
 type MusicAlbumDetail = MusicAlbum
 
-// MusicArtistCreated defines model for MusicArtistCreated.
-type MusicArtistCreated = MusicArtist
+// MusicArtistCountsResponse Faceted like `TVShowCounts`: every status and monitoring tally is
+// counted with the other facet's filter and the `query` applied and its
+// own left out, and each facet carries its own `*_total` "all" row.
+type MusicArtistCountsResponse = MusicArtistCounts
 
-// MusicArtistDetail defines model for MusicArtistDetail.
-type MusicArtistDetail = MusicArtist
+// MusicArtistCreated Artist with its full tree: members, and every album with tracks,
+// credits and personnel. Also the response of add, patch and refresh.
+type MusicArtistCreated = MusicArtistDetail
 
 // MusicArtistList defines model for MusicArtistList.
 type MusicArtistList = PaginatedMusicArtists
 
+// MusicArtistLookupDetailResponse The hit fields and the detail in one object (no `score`), so the
+// request panel needs no second call. Also the music arm of
+// `GET /requests/{id}/metadata`.
+type MusicArtistLookupDetailResponse = MusicArtistLookupDetail
+
+// MusicQualityProfileList defines model for MusicQualityProfileList.
+type MusicQualityProfileList = []MusicQualityProfile
+
 // MusicQualityProfileResponse defines model for MusicQualityProfileResponse.
 type MusicQualityProfileResponse = MusicQualityProfile
+
+// MusicRenamePlanResponse defines model for MusicRenamePlanResponse.
+type MusicRenamePlanResponse = MusicRenamePlan
 
 // MusicSearchResults defines model for MusicSearchResults.
 type MusicSearchResults = MusicArtistSearchResultList
@@ -7261,8 +8258,13 @@ type RequestCreated = Request
 // RequestDetail defines model for RequestDetail.
 type RequestDetail = Request
 
-// RequestMediaDetailResponse defines model for RequestMediaDetailResponse.
-type RequestMediaDetailResponse = RequestMediaDetails
+// RequestMetadataResponse Response of `GET /requests/{id}/metadata`. No discriminator: the
+// caller branches on the request's `media_type`. A movie or tvshow
+// request answers `RequestMediaDetails`, an artist request
+// `MusicArtistLookupDetail` (the hit fields and the detail), and a book
+// or book_series request `BookLookupDetail` (`type: series` for
+// `book_series`).
+type RequestMetadataResponse = RequestMetadata
 
 // RequestsList defines model for RequestsList.
 type RequestsList = PaginatedRequests
@@ -7319,8 +8321,11 @@ type UserUpdated = User
 // UsersList defines model for UsersList.
 type UsersList = UserList
 
-// AddBookAuthor defines model for AddBookAuthor.
-type AddBookAuthor = AddBookAuthorRequest
+// AddBook defines model for AddBook.
+type AddBook = AddBookRequest
+
+// AddBookSeries defines model for AddBookSeries.
+type AddBookSeries = AddBookSeriesRequest
 
 // AddMovie defines model for AddMovie.
 type AddMovie = AddMovieRequest
@@ -7346,17 +8351,14 @@ type ChangePassword = ChangePasswordRequest
 // CreateApiKey defines model for CreateApiKey.
 type CreateApiKey = CreateApiKeyRequest
 
-// CreateAudiobookQualityProfile defines model for CreateAudiobookQualityProfile.
-type CreateAudiobookQualityProfile = AudiobookQualityProfileCreate
+// CreateBookQualityProfile defines model for CreateBookQualityProfile.
+type CreateBookQualityProfile = BookQualityProfileCreate
 
 // CreateCustomFormat defines model for CreateCustomFormat.
 type CreateCustomFormat = CustomFormatCreate
 
 // CreateDownloadClient defines model for CreateDownloadClient.
 type CreateDownloadClient = DownloadClientCreate
-
-// CreateEbookQualityProfile defines model for CreateEbookQualityProfile.
-type CreateEbookQualityProfile = EbookQualityProfileCreate
 
 // CreateIndexer defines model for CreateIndexer.
 type CreateIndexer = IndexerCreate
@@ -7391,6 +8393,9 @@ type DiscoverMediaServer = MediaServerDiscoveryRequest
 // GrabAlbumRelease defines model for GrabAlbumRelease.
 type GrabAlbumRelease = SearchResult
 
+// GrabArtistRelease defines model for GrabArtistRelease.
+type GrabArtistRelease = SearchResult
+
 // GrabBookRelease defines model for GrabBookRelease.
 type GrabBookRelease = SearchResult
 
@@ -7412,8 +8417,8 @@ type MonitorToggle = MonitorToggleRequest
 // PatchBook defines model for PatchBook.
 type PatchBook = PatchBookRequest
 
-// PatchBookAuthor defines model for PatchBookAuthor.
-type PatchBookAuthor = PatchBookAuthorRequest
+// PatchBookSeries defines model for PatchBookSeries.
+type PatchBookSeries = PatchBookSeriesRequest
 
 // PatchMusicAlbum defines model for PatchMusicAlbum.
 type PatchMusicAlbum = PatchMusicAlbumRequest
@@ -7513,34 +8518,132 @@ type ListPendingParams struct {
 	Limit *RequestLimit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// ListBookAuthorsParams defines parameters for ListBookAuthors.
-type ListBookAuthorsParams struct {
+// ListBooksParams defines parameters for ListBooks.
+type ListBooksParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Status Filter by derived item status; `all` is the same as omitting it.
+	Status *ListBooksParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Author Exact creator name (author, writer or artist role), matched accent- and case-folded, so homonyms merge.
+	Author *BookShelfAuthorParam `form:"author,omitempty" json:"author,omitempty"`
+
+	// Format Keep items with that slot monitored or holding a file; a series qualifies for `ebook` only.
+	Format *BookShelfFormatParam `form:"format,omitempty" json:"format,omitempty"`
+
+	// Kind Comma list of kinds, for example `bd,comic`.
+	Kind *BookShelfKindParam `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// Query Accent-folded match over the display title, original title, every edition title and creator names.
+	Query *BookShelfQueryParam  `form:"query,omitempty" json:"query,omitempty"`
+	Sort  *ListBooksParamsSort  `form:"sort,omitempty" json:"sort,omitempty"`
+	Order *ListBooksParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
 
-// DeleteBookAuthorParams defines parameters for DeleteBookAuthor.
-type DeleteBookAuthorParams struct {
+// ListBooksParamsStatus defines parameters for ListBooks.
+type ListBooksParamsStatus string
+
+// ListBooksParamsSort defines parameters for ListBooks.
+type ListBooksParamsSort string
+
+// ListBooksParamsOrder defines parameters for ListBooks.
+type ListBooksParamsOrder string
+
+// GetBookCountsParams defines parameters for GetBookCounts.
+type GetBookCountsParams struct {
+	// Status Filter by derived item status; `all` is the same as omitting it.
+	Status *GetBookCountsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Author Exact creator name (author, writer or artist role), matched accent- and case-folded, so homonyms merge.
+	Author *BookShelfAuthorParam `form:"author,omitempty" json:"author,omitempty"`
+
+	// Format Keep items with that slot monitored or holding a file; a series qualifies for `ebook` only.
+	Format *BookShelfFormatParam `form:"format,omitempty" json:"format,omitempty"`
+
+	// Kind Comma list of kinds, for example `bd,comic`.
+	Kind *BookShelfKindParam `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// Query Accent-folded match over the display title, original title, every edition title and creator names.
+	Query *BookShelfQueryParam `form:"query,omitempty" json:"query,omitempty"`
+}
+
+// GetBookCountsParamsStatus defines parameters for GetBookCounts.
+type GetBookCountsParamsStatus string
+
+// SetDefaultBookQualityProfileParams defines parameters for SetDefaultBookQualityProfile.
+type SetDefaultBookQualityProfileParams struct {
+	// Kind Which book kind the profile becomes the default for.
+	Kind BookDefaultKind `form:"kind" json:"kind"`
+}
+
+// SearchBooksParams defines parameters for SearchBooks.
+type SearchBooksParams struct {
+	// Query Hardcover book and series search query, at least 2 characters.
+	Query BookSearchQuery `form:"query" json:"query"`
+
+	// Type Restricts the lookup to books or series (one Hardcover request instead of two). Defaults to `all`.
+	Type *SearchBooksParamsType `form:"type,omitempty" json:"type,omitempty"`
+}
+
+// SearchBooksParamsType defines parameters for SearchBooks.
+type SearchBooksParamsType string
+
+// GetBookLookupParams defines parameters for GetBookLookup.
+type GetBookLookupParams struct {
+	// Type Whether `hardcover_id` names a book or a series.
+	Type BookLookupTypeParam `form:"type" json:"type"`
+}
+
+// DeleteBookSeriesParams defines parameters for DeleteBookSeries.
+type DeleteBookSeriesParams struct {
 	// DeleteFiles When true, also delete attached media files from disk.
 	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
 }
 
-// SearchBookAuthorsParams defines parameters for SearchBookAuthors.
-type SearchBookAuthorsParams struct {
-	// Query Hardcover author search query.
-	Query BookSearchQuery `form:"query" json:"query"`
+// RenameBookSeriesFilesParams defines parameters for RenameBookSeriesFiles.
+type RenameBookSeriesFilesParams struct {
+	// Preview When true, returns the rename plan without applying it.
+	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
+}
+
+// DeleteBookParams defines parameters for DeleteBook.
+type DeleteBookParams struct {
+	// DeleteFiles When true, also delete attached media files from disk.
+	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
 }
 
 // GrabBookReleaseParams defines parameters for GrabBookRelease.
 type GrabBookReleaseParams struct {
-	// Kind Which slot of the book to search or grab for.
-	Kind BookSlotKind `form:"kind" json:"kind"`
+	// Kind Which slot of the book to search or grab for. On a search, omitted
+	// means both slots merged; on a grab the slot is read from the body's
+	// `slot` and the two must agree when both are present; on `search-now`
+	// omitted means every monitored slot.
+	Kind *BookSlotKind `form:"kind,omitempty" json:"kind,omitempty"`
+}
+
+// RenameBookFilesParams defines parameters for RenameBookFiles.
+type RenameBookFilesParams struct {
+	// Preview When true, returns the rename plan without applying it.
+	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
 // SearchBookReleasesParams defines parameters for SearchBookReleases.
 type SearchBookReleasesParams struct {
-	// Kind Which slot of the book to search or grab for.
-	Kind BookSlotKind `form:"kind" json:"kind"`
+	// Kind Which slot of the book to search or grab for. On a search, omitted
+	// means both slots merged; on a grab the slot is read from the body's
+	// `slot` and the two must agree when both are present; on `search-now`
+	// omitted means every monitored slot.
+	Kind *BookSlotKind `form:"kind,omitempty" json:"kind,omitempty"`
+}
+
+// SearchBookNowParams defines parameters for SearchBookNow.
+type SearchBookNowParams struct {
+	// Kind Which slot of the book to search or grab for. On a search, omitted
+	// means both slots merged; on a grab the slot is read from the body's
+	// `slot` and the two must agree when both are present; on `search-now`
+	// omitted means every monitored slot.
+	Kind *BookSlotKind `form:"kind,omitempty" json:"kind,omitempty"`
 }
 
 // ListUpcomingReleasesParams defines parameters for ListUpcomingReleases.
@@ -7665,12 +8768,76 @@ type RenameMovieFilesParams struct {
 type ListMusicArtistsParams struct {
 	Page  *SeriesPage  `form:"page,omitempty" json:"page,omitempty"`
 	Limit *SeriesLimit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Status Filter by the artist status rollup.
+	Status *MusicArtistStatusParam `form:"status,omitempty" json:"status,omitempty"`
+
+	// Monitored Filter by monitoring; an artist is monitored when its `monitor` is not `none`.
+	Monitored *ListMusicArtistsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
+	// Query Accent-folded match over artist name, sort name, genre and album titles.
+	Query *MusicArtistQueryParam `form:"query,omitempty" json:"query,omitempty"`
+
+	// Sort `recent` is by added time, newest first; `name` is by sort name then name, ascending. `order` overrides either; ties break on id.
+	Sort  *ListMusicArtistsParamsSort  `form:"sort,omitempty" json:"sort,omitempty"`
+	Order *ListMusicArtistsParamsOrder `form:"order,omitempty" json:"order,omitempty"`
 }
+
+// ListMusicArtistsParamsMonitored defines parameters for ListMusicArtists.
+type ListMusicArtistsParamsMonitored string
+
+// ListMusicArtistsParamsSort defines parameters for ListMusicArtists.
+type ListMusicArtistsParamsSort string
+
+// ListMusicArtistsParamsOrder defines parameters for ListMusicArtists.
+type ListMusicArtistsParamsOrder string
+
+// GetMusicArtistCountsParams defines parameters for GetMusicArtistCounts.
+type GetMusicArtistCountsParams struct {
+	// Status Filter by the artist status rollup.
+	Status *MusicArtistStatusParam `form:"status,omitempty" json:"status,omitempty"`
+
+	// Monitored Filter by monitoring; an artist is monitored when its `monitor` is not `none`.
+	Monitored *GetMusicArtistCountsParamsMonitored `form:"monitored,omitempty" json:"monitored,omitempty"`
+
+	// Query Accent-folded match over artist name, sort name, genre and album titles.
+	Query *MusicArtistQueryParam `form:"query,omitempty" json:"query,omitempty"`
+}
+
+// GetMusicArtistCountsParamsMonitored defines parameters for GetMusicArtistCounts.
+type GetMusicArtistCountsParamsMonitored string
 
 // DeleteMusicArtistParams defines parameters for DeleteMusicArtist.
 type DeleteMusicArtistParams struct {
 	// DeleteFiles When true, also delete attached media files from disk.
 	DeleteFiles *DeleteSeriesFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+
+	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+	Lang *OverviewLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// GetMusicArtistParams defines parameters for GetMusicArtist.
+type GetMusicArtistParams struct {
+	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+	Lang *OverviewLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// PatchMusicArtistParams defines parameters for PatchMusicArtist.
+type PatchMusicArtistParams struct {
+	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+	Lang *OverviewLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// RefreshMusicArtistParams defines parameters for RefreshMusicArtist.
+type RefreshMusicArtistParams struct {
+	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+	Lang *OverviewLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// RenameMusicArtistFilesParams defines parameters for RenameMusicArtistFiles.
+type RenameMusicArtistFilesParams struct {
+	// Preview When true, returns the rename plan without applying it.
+	Preview *RenamePreview `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
 // SearchMusicArtistsParams defines parameters for SearchMusicArtists.
@@ -7678,6 +8845,15 @@ type SearchMusicArtistsParams struct {
 	// Query MusicBrainz artist search query.
 	Query MusicSearchQuery `form:"query" json:"query"`
 }
+
+// GetMusicArtistLookupParams defines parameters for GetMusicArtistLookup.
+type GetMusicArtistLookupParams struct {
+	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
+	Lang *GetMusicArtistLookupParamsLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// GetMusicArtistLookupParamsLang defines parameters for GetMusicArtistLookup.
+type GetMusicArtistLookupParamsLang string
 
 // ListPeopleParams defines parameters for ListPeople.
 type ListPeopleParams struct {
@@ -7691,20 +8867,25 @@ type ListPeopleParams struct {
 	Offset *PeopleOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// SetDefaultQualityProfileParams defines parameters for SetDefaultQualityProfile.
+type SetDefaultQualityProfileParams struct {
+	// Media Which library the profile becomes the default for. Absent means both movies and series.
+	Media *QualityDefaultMedia `form:"media,omitempty" json:"media,omitempty"`
+}
+
 // ListRequestsParams defines parameters for ListRequests.
 type ListRequestsParams struct {
 	// Status Filter by request status.
-	Status    *ListRequestsParamsStatus    `form:"status,omitempty" json:"status,omitempty"`
-	MediaType *ListRequestsParamsMediaType `form:"media_type,omitempty" json:"media_type,omitempty"`
-	Page      *RequestPage                 `form:"page,omitempty" json:"page,omitempty"`
-	Limit     *RequestLimit                `form:"limit,omitempty" json:"limit,omitempty"`
+	Status *ListRequestsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// MediaType Comma list of media types, for example `book,book_series`. An unknown member answers 400.
+	MediaType *RequestMediaTypeParam `form:"media_type,omitempty" json:"media_type,omitempty"`
+	Page      *RequestPage           `form:"page,omitempty" json:"page,omitempty"`
+	Limit     *RequestLimit          `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListRequestsParamsStatus defines parameters for ListRequests.
 type ListRequestsParamsStatus string
-
-// ListRequestsParamsMediaType defines parameters for ListRequests.
-type ListRequestsParamsMediaType string
 
 // SearchTMDBMovieParams defines parameters for SearchTMDBMovie.
 type SearchTMDBMovieParams struct {
@@ -7849,23 +9030,20 @@ type CreateMyApiKeyJSONRequestBody = CreateApiKeyRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
-// CreateAudiobookQualityProfileJSONRequestBody defines body for CreateAudiobookQualityProfile for application/json ContentType.
-type CreateAudiobookQualityProfileJSONRequestBody = AudiobookQualityProfileCreate
+// AddBookJSONRequestBody defines body for AddBook for application/json ContentType.
+type AddBookJSONRequestBody = AddBookRequest
 
-// UpdateAudiobookQualityProfileJSONRequestBody defines body for UpdateAudiobookQualityProfile for application/json ContentType.
-type UpdateAudiobookQualityProfileJSONRequestBody = AudiobookQualityProfileCreate
+// CreateBookQualityProfileJSONRequestBody defines body for CreateBookQualityProfile for application/json ContentType.
+type CreateBookQualityProfileJSONRequestBody = BookQualityProfileCreate
 
-// AddBookAuthorJSONRequestBody defines body for AddBookAuthor for application/json ContentType.
-type AddBookAuthorJSONRequestBody = AddBookAuthorRequest
+// UpdateBookQualityProfileJSONRequestBody defines body for UpdateBookQualityProfile for application/json ContentType.
+type UpdateBookQualityProfileJSONRequestBody = BookQualityProfileCreate
 
-// PatchBookAuthorJSONRequestBody defines body for PatchBookAuthor for application/json ContentType.
-type PatchBookAuthorJSONRequestBody = PatchBookAuthorRequest
+// AddBookSeriesJSONRequestBody defines body for AddBookSeries for application/json ContentType.
+type AddBookSeriesJSONRequestBody = AddBookSeriesRequest
 
-// CreateEbookQualityProfileJSONRequestBody defines body for CreateEbookQualityProfile for application/json ContentType.
-type CreateEbookQualityProfileJSONRequestBody = EbookQualityProfileCreate
-
-// UpdateEbookQualityProfileJSONRequestBody defines body for UpdateEbookQualityProfile for application/json ContentType.
-type UpdateEbookQualityProfileJSONRequestBody = EbookQualityProfileCreate
+// PatchBookSeriesJSONRequestBody defines body for PatchBookSeries for application/json ContentType.
+type PatchBookSeriesJSONRequestBody = PatchBookSeriesRequest
 
 // PatchBookJSONRequestBody defines body for PatchBook for application/json ContentType.
 type PatchBookJSONRequestBody = PatchBookRequest
@@ -7993,6 +9171,9 @@ type AddMusicArtistJSONRequestBody = AddMusicArtistRequest
 // PatchMusicArtistJSONRequestBody defines body for PatchMusicArtist for application/json ContentType.
 type PatchMusicArtistJSONRequestBody = PatchMusicArtistRequest
 
+// GrabMusicArtistReleaseJSONRequestBody defines body for GrabMusicArtistRelease for application/json ContentType.
+type GrabMusicArtistReleaseJSONRequestBody = SearchResult
+
 // CreateMusicQualityProfileJSONRequestBody defines body for CreateMusicQualityProfile for application/json ContentType.
 type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
@@ -8061,6 +9242,94 @@ type UpdateUserJSONRequestBody = UpdateUserRequest
 
 // ResetUserPasswordJSONRequestBody defines body for ResetUserPassword for application/json ContentType.
 type ResetUserPasswordJSONRequestBody = ResetPasswordRequest
+
+// AsRequestMediaDetails returns the union data inside the RequestMetadata as a RequestMediaDetails
+func (t RequestMetadata) AsRequestMediaDetails() (RequestMediaDetails, error) {
+	var body RequestMediaDetails
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestMediaDetails overwrites any union data inside the RequestMetadata as the provided RequestMediaDetails
+func (t *RequestMetadata) FromRequestMediaDetails(v RequestMediaDetails) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestMediaDetails performs a merge with any union data inside the RequestMetadata, using the provided RequestMediaDetails
+func (t *RequestMetadata) MergeRequestMediaDetails(v RequestMediaDetails) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMusicArtistLookupDetail returns the union data inside the RequestMetadata as a MusicArtistLookupDetail
+func (t RequestMetadata) AsMusicArtistLookupDetail() (MusicArtistLookupDetail, error) {
+	var body MusicArtistLookupDetail
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMusicArtistLookupDetail overwrites any union data inside the RequestMetadata as the provided MusicArtistLookupDetail
+func (t *RequestMetadata) FromMusicArtistLookupDetail(v MusicArtistLookupDetail) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMusicArtistLookupDetail performs a merge with any union data inside the RequestMetadata, using the provided MusicArtistLookupDetail
+func (t *RequestMetadata) MergeMusicArtistLookupDetail(v MusicArtistLookupDetail) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBookLookupDetail returns the union data inside the RequestMetadata as a BookLookupDetail
+func (t RequestMetadata) AsBookLookupDetail() (BookLookupDetail, error) {
+	var body BookLookupDetail
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBookLookupDetail overwrites any union data inside the RequestMetadata as the provided BookLookupDetail
+func (t *RequestMetadata) FromBookLookupDetail(v BookLookupDetail) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBookLookupDetail performs a merge with any union data inside the RequestMetadata, using the provided BookLookupDetail
+func (t *RequestMetadata) MergeBookLookupDetail(v BookLookupDetail) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RequestMetadata) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RequestMetadata) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -8166,51 +9435,60 @@ type ServerInterface interface {
 	// ChangePassword Change current user's password; revokes all other sessions and all API keys
 	// (POST /auth/password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
-	// ListAudiobookQualityProfiles List audiobook quality profiles
-	// (GET /books/audiobook-quality-profiles)
-	ListAudiobookQualityProfiles(w http.ResponseWriter, r *http.Request)
-	// CreateAudiobookQualityProfile Create an audiobook quality profile
-	// (POST /books/audiobook-quality-profiles)
-	CreateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request)
-	// DeleteAudiobookQualityProfile Delete an audiobook quality profile
-	// (DELETE /books/audiobook-quality-profiles/{name})
-	DeleteAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
-	// UpdateAudiobookQualityProfile Update an audiobook quality profile
-	// (PUT /books/audiobook-quality-profiles/{name})
-	UpdateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
-	// ListBookAuthors List book authors
-	// (GET /books/authors)
-	ListBookAuthors(w http.ResponseWriter, r *http.Request, params ListBookAuthorsParams)
-	// AddBookAuthor Add an author by Hardcover id
-	// (POST /books/authors)
-	AddBookAuthor(w http.ResponseWriter, r *http.Request)
-	// DeleteBookAuthor Remove an author from the library
-	// (DELETE /books/authors/{id})
-	DeleteBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookAuthorParams)
-	// GetBookAuthor Get author details
-	// (GET /books/authors/{id})
-	GetBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// PatchBookAuthor Patch an author
-	// (PATCH /books/authors/{id})
-	PatchBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// RefreshBookAuthor Refresh an author from Hardcover
-	// (POST /books/authors/{id}/refresh)
-	RefreshBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// ListEbookQualityProfiles List ebook quality profiles
-	// (GET /books/ebook-quality-profiles)
-	ListEbookQualityProfiles(w http.ResponseWriter, r *http.Request)
-	// CreateEbookQualityProfile Create an ebook quality profile
-	// (POST /books/ebook-quality-profiles)
-	CreateEbookQualityProfile(w http.ResponseWriter, r *http.Request)
-	// DeleteEbookQualityProfile Delete an ebook quality profile
-	// (DELETE /books/ebook-quality-profiles/{name})
-	DeleteEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
-	// UpdateEbookQualityProfile Update an ebook quality profile
-	// (PUT /books/ebook-quality-profiles/{name})
-	UpdateEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
-	// SearchBookAuthors Search Hardcover for authors to add
+	// ListBooks List the books shelf
+	// (GET /books)
+	ListBooks(w http.ResponseWriter, r *http.Request, params ListBooksParams)
+	// AddBook Add a book by Hardcover id
+	// (POST /books)
+	AddBook(w http.ResponseWriter, r *http.Request)
+	// GetBookCounts Books shelf facet counts
+	// (GET /books/counts)
+	GetBookCounts(w http.ResponseWriter, r *http.Request, params GetBookCountsParams)
+	// ListBookQualityProfiles List book quality profiles
+	// (GET /books/quality-profiles)
+	ListBookQualityProfiles(w http.ResponseWriter, r *http.Request)
+	// CreateBookQualityProfile Create a book quality profile
+	// (POST /books/quality-profiles)
+	CreateBookQualityProfile(w http.ResponseWriter, r *http.Request)
+	// DeleteBookQualityProfile Delete a book quality profile
+	// (DELETE /books/quality-profiles/{name})
+	DeleteBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// UpdateBookQualityProfile Update a book quality profile
+	// (PUT /books/quality-profiles/{name})
+	UpdateBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// SetDefaultBookQualityProfile Make this the default book quality profile
+	// (POST /books/quality-profiles/{name}/default)
+	SetDefaultBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultBookQualityProfileParams)
+	// SearchBooks Search Hardcover for books and series to add
 	// (GET /books/search)
-	SearchBookAuthors(w http.ResponseWriter, r *http.Request, params SearchBookAuthorsParams)
+	SearchBooks(w http.ResponseWriter, r *http.Request, params SearchBooksParams)
+	// GetBookLookup Look up one Hardcover book or series
+	// (GET /books/search/{hardcover_id})
+	GetBookLookup(w http.ResponseWriter, r *http.Request, hardcoverId HardcoverIDParam, params GetBookLookupParams)
+	// AddBookSeries Add a book series by Hardcover id
+	// (POST /books/series)
+	AddBookSeries(w http.ResponseWriter, r *http.Request)
+	// DeleteBookSeries Remove a series and its volumes from the library
+	// (DELETE /books/series/{id})
+	DeleteBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookSeriesParams)
+	// GetBookSeries Get series details
+	// (GET /books/series/{id})
+	GetBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// PatchBookSeries Patch a series
+	// (PATCH /books/series/{id})
+	PatchBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RefreshBookSeries Refresh a series from Hardcover
+	// (POST /books/series/{id}/refresh-metadata)
+	RefreshBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RenameBookSeriesFiles Rename a series' volume files to match the library naming pattern
+	// (POST /books/series/{id}/rename)
+	RenameBookSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookSeriesFilesParams)
+	// SearchBookSeriesNow Dispatch an indexer search for a series' wanted volumes
+	// (POST /books/series/{id}/search-now)
+	SearchBookSeriesNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// DeleteBook Remove a book from the library
+	// (DELETE /books/{id})
+	DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams)
 	// GetBook Get book details
 	// (GET /books/{id})
 	GetBook(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -8220,9 +9498,18 @@ type ServerInterface interface {
 	// GrabBookRelease Grab a specific release for one slot of a book
 	// (POST /books/{id}/grab)
 	GrabBookRelease(w http.ResponseWriter, r *http.Request, id ResourceID, params GrabBookReleaseParams)
-	// SearchBookReleases Search indexers for one slot of a book
+	// RefreshBook Refresh a book from Hardcover
+	// (POST /books/{id}/refresh-metadata)
+	RefreshBook(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// RenameBookFiles Rename a book's files to match the library naming pattern
+	// (POST /books/{id}/rename)
+	RenameBookFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookFilesParams)
+	// SearchBookReleases Search indexers for the releases of a book
 	// (POST /books/{id}/search)
 	SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams)
+	// SearchBookNow Dispatch an indexer search and grab for a book
+	// (POST /books/{id}/search-now)
+	SearchBookNow(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookNowParams)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
@@ -8481,24 +9768,42 @@ type ServerInterface interface {
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
+	// (POST /music/albums/{id}/search-now)
+	SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams)
 	// AddMusicArtist Add an artist by MusicBrainz id
 	// (POST /music/artists)
 	AddMusicArtist(w http.ResponseWriter, r *http.Request)
+	// GetMusicArtistCounts Artist facet counts
+	// (GET /music/artists/counts)
+	GetMusicArtistCounts(w http.ResponseWriter, r *http.Request, params GetMusicArtistCountsParams)
 	// DeleteMusicArtist Remove an artist from the library
 	// (DELETE /music/artists/{id})
 	DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams)
 	// GetMusicArtist Get artist details
 	// (GET /music/artists/{id})
-	GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params GetMusicArtistParams)
 	// PatchMusicArtist Patch an artist
 	// (PATCH /music/artists/{id})
-	PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params PatchMusicArtistParams)
+	// BrowseMusicArtistReleases Search indexers for an artist's discography packs
+	// (POST /music/artists/{id}/browse)
+	BrowseMusicArtistReleases(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GrabMusicArtistRelease Grab a discography pack for this artist
+	// (POST /music/artists/{id}/grab)
+	GrabMusicArtistRelease(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
-	// (POST /music/artists/{id}/refresh)
-	RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// (POST /music/artists/{id}/refresh-metadata)
+	RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams)
+	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
+	// (POST /music/artists/{id}/rename)
+	RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMusicArtistFilesParams)
+	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
+	// (POST /music/artists/{id}/search-now)
+	SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMusicQualityProfiles List music quality profiles
 	// (GET /music/quality-profiles)
 	ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request)
@@ -8511,9 +9816,21 @@ type ServerInterface interface {
 	// UpdateMusicQualityProfile Update a music quality profile
 	// (PUT /music/quality-profiles/{name})
 	UpdateMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// SetDefaultMusicQualityProfile Make this the default music quality profile
+	// (POST /music/quality-profiles/{name}/default)
+	SetDefaultMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// SearchMusicArtists Search MusicBrainz for artists to add
 	// (GET /music/search)
 	SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams)
+	// GetMusicArtistLookup Look up one MusicBrainz artist
+	// (GET /music/search/{mbid})
+	GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams)
+	// DeleteMusicTrackFile Delete a track's media file
+	// (DELETE /music/tracks/{id}/file)
+	DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// SearchMusicTrackNow Dispatch an indexer search for the album holding a track
+	// (POST /music/tracks/{id}/search-now)
+	SearchMusicTrackNow(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(w http.ResponseWriter, r *http.Request, params ListPeopleParams)
@@ -8534,11 +9851,11 @@ type ServerInterface interface {
 	UpdateQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// SetDefaultQualityProfile Make this the default quality profile
 	// (POST /quality-profiles/{name}/default)
-	SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName)
+	SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultQualityProfileParams)
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(w http.ResponseWriter, r *http.Request, params ListRequestsParams)
-	// CreateRequest Request a movie, show, artist, album, author or book
+	// CreateRequest Request a movie, show, artist, book or book series
 	// (POST /requests)
 	CreateRequest(w http.ResponseWriter, r *http.Request)
 	// GetRequestCounts Request counts by status
@@ -8928,93 +10245,111 @@ func (_ Unimplemented) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// ListAudiobookQualityProfiles List audiobook quality profiles
-// (GET /books/audiobook-quality-profiles)
-func (_ Unimplemented) ListAudiobookQualityProfiles(w http.ResponseWriter, r *http.Request) {
+// ListBooks List the books shelf
+// (GET /books)
+func (_ Unimplemented) ListBooks(w http.ResponseWriter, r *http.Request, params ListBooksParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// CreateAudiobookQualityProfile Create an audiobook quality profile
-// (POST /books/audiobook-quality-profiles)
-func (_ Unimplemented) CreateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request) {
+// AddBook Add a book by Hardcover id
+// (POST /books)
+func (_ Unimplemented) AddBook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// DeleteAudiobookQualityProfile Delete an audiobook quality profile
-// (DELETE /books/audiobook-quality-profiles/{name})
-func (_ Unimplemented) DeleteAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+// GetBookCounts Books shelf facet counts
+// (GET /books/counts)
+func (_ Unimplemented) GetBookCounts(w http.ResponseWriter, r *http.Request, params GetBookCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// UpdateAudiobookQualityProfile Update an audiobook quality profile
-// (PUT /books/audiobook-quality-profiles/{name})
-func (_ Unimplemented) UpdateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+// ListBookQualityProfiles List book quality profiles
+// (GET /books/quality-profiles)
+func (_ Unimplemented) ListBookQualityProfiles(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// ListBookAuthors List book authors
-// (GET /books/authors)
-func (_ Unimplemented) ListBookAuthors(w http.ResponseWriter, r *http.Request, params ListBookAuthorsParams) {
+// CreateBookQualityProfile Create a book quality profile
+// (POST /books/quality-profiles)
+func (_ Unimplemented) CreateBookQualityProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// AddBookAuthor Add an author by Hardcover id
-// (POST /books/authors)
-func (_ Unimplemented) AddBookAuthor(w http.ResponseWriter, r *http.Request) {
+// DeleteBookQualityProfile Delete a book quality profile
+// (DELETE /books/quality-profiles/{name})
+func (_ Unimplemented) DeleteBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// DeleteBookAuthor Remove an author from the library
-// (DELETE /books/authors/{id})
-func (_ Unimplemented) DeleteBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookAuthorParams) {
+// UpdateBookQualityProfile Update a book quality profile
+// (PUT /books/quality-profiles/{name})
+func (_ Unimplemented) UpdateBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// GetBookAuthor Get author details
-// (GET /books/authors/{id})
-func (_ Unimplemented) GetBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
+// SetDefaultBookQualityProfile Make this the default book quality profile
+// (POST /books/quality-profiles/{name}/default)
+func (_ Unimplemented) SetDefaultBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultBookQualityProfileParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// PatchBookAuthor Patch an author
-// (PATCH /books/authors/{id})
-func (_ Unimplemented) PatchBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// RefreshBookAuthor Refresh an author from Hardcover
-// (POST /books/authors/{id}/refresh)
-func (_ Unimplemented) RefreshBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// ListEbookQualityProfiles List ebook quality profiles
-// (GET /books/ebook-quality-profiles)
-func (_ Unimplemented) ListEbookQualityProfiles(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// CreateEbookQualityProfile Create an ebook quality profile
-// (POST /books/ebook-quality-profiles)
-func (_ Unimplemented) CreateEbookQualityProfile(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// DeleteEbookQualityProfile Delete an ebook quality profile
-// (DELETE /books/ebook-quality-profiles/{name})
-func (_ Unimplemented) DeleteEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// UpdateEbookQualityProfile Update an ebook quality profile
-// (PUT /books/ebook-quality-profiles/{name})
-func (_ Unimplemented) UpdateEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// SearchBookAuthors Search Hardcover for authors to add
+// SearchBooks Search Hardcover for books and series to add
 // (GET /books/search)
-func (_ Unimplemented) SearchBookAuthors(w http.ResponseWriter, r *http.Request, params SearchBookAuthorsParams) {
+func (_ Unimplemented) SearchBooks(w http.ResponseWriter, r *http.Request, params SearchBooksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetBookLookup Look up one Hardcover book or series
+// (GET /books/search/{hardcover_id})
+func (_ Unimplemented) GetBookLookup(w http.ResponseWriter, r *http.Request, hardcoverId HardcoverIDParam, params GetBookLookupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// AddBookSeries Add a book series by Hardcover id
+// (POST /books/series)
+func (_ Unimplemented) AddBookSeries(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteBookSeries Remove a series and its volumes from the library
+// (DELETE /books/series/{id})
+func (_ Unimplemented) DeleteBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookSeriesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetBookSeries Get series details
+// (GET /books/series/{id})
+func (_ Unimplemented) GetBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchBookSeries Patch a series
+// (PATCH /books/series/{id})
+func (_ Unimplemented) PatchBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RefreshBookSeries Refresh a series from Hardcover
+// (POST /books/series/{id}/refresh-metadata)
+func (_ Unimplemented) RefreshBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameBookSeriesFiles Rename a series' volume files to match the library naming pattern
+// (POST /books/series/{id}/rename)
+func (_ Unimplemented) RenameBookSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookSeriesFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchBookSeriesNow Dispatch an indexer search for a series' wanted volumes
+// (POST /books/series/{id}/search-now)
+func (_ Unimplemented) SearchBookSeriesNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteBook Remove a book from the library
+// (DELETE /books/{id})
+func (_ Unimplemented) DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9036,9 +10371,27 @@ func (_ Unimplemented) GrabBookRelease(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// SearchBookReleases Search indexers for one slot of a book
+// RefreshBook Refresh a book from Hardcover
+// (POST /books/{id}/refresh-metadata)
+func (_ Unimplemented) RefreshBook(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameBookFiles Rename a book's files to match the library naming pattern
+// (POST /books/{id}/rename)
+func (_ Unimplemented) RenameBookFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchBookReleases Search indexers for the releases of a book
 // (POST /books/{id}/search)
 func (_ Unimplemented) SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchBookNow Dispatch an indexer search and grab for a book
+// (POST /books/{id}/search-now)
+func (_ Unimplemented) SearchBookNow(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookNowParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9544,6 +10897,12 @@ func (_ Unimplemented) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
+// (POST /music/albums/{id}/search-now)
+func (_ Unimplemented) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListMusicArtists List music artists
 // (GET /music/artists)
 func (_ Unimplemented) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
@@ -9556,6 +10915,12 @@ func (_ Unimplemented) AddMusicArtist(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetMusicArtistCounts Artist facet counts
+// (GET /music/artists/counts)
+func (_ Unimplemented) GetMusicArtistCounts(w http.ResponseWriter, r *http.Request, params GetMusicArtistCountsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // DeleteMusicArtist Remove an artist from the library
 // (DELETE /music/artists/{id})
 func (_ Unimplemented) DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams) {
@@ -9564,19 +10929,43 @@ func (_ Unimplemented) DeleteMusicArtist(w http.ResponseWriter, r *http.Request,
 
 // GetMusicArtist Get artist details
 // (GET /music/artists/{id})
-func (_ Unimplemented) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+func (_ Unimplemented) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params GetMusicArtistParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // PatchMusicArtist Patch an artist
 // (PATCH /music/artists/{id})
-func (_ Unimplemented) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+func (_ Unimplemented) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params PatchMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// BrowseMusicArtistReleases Search indexers for an artist's discography packs
+// (POST /music/artists/{id}/browse)
+func (_ Unimplemented) BrowseMusicArtistReleases(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GrabMusicArtistRelease Grab a discography pack for this artist
+// (POST /music/artists/{id}/grab)
+func (_ Unimplemented) GrabMusicArtistRelease(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // RefreshMusicArtist Refresh an artist from MusicBrainz
-// (POST /music/artists/{id}/refresh)
-func (_ Unimplemented) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+// (POST /music/artists/{id}/refresh-metadata)
+func (_ Unimplemented) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
+// (POST /music/artists/{id}/rename)
+func (_ Unimplemented) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMusicArtistFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
+// (POST /music/artists/{id}/search-now)
+func (_ Unimplemented) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9604,9 +10993,33 @@ func (_ Unimplemented) UpdateMusicQualityProfile(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// SetDefaultMusicQualityProfile Make this the default music quality profile
+// (POST /music/quality-profiles/{name}/default)
+func (_ Unimplemented) SetDefaultMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // SearchMusicArtists Search MusicBrainz for artists to add
 // (GET /music/search)
 func (_ Unimplemented) SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicArtistLookup Look up one MusicBrainz artist
+// (GET /music/search/{mbid})
+func (_ Unimplemented) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// DeleteMusicTrackFile Delete a track's media file
+// (DELETE /music/tracks/{id}/file)
+func (_ Unimplemented) DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchMusicTrackNow Dispatch an indexer search for the album holding a track
+// (POST /music/tracks/{id}/search-now)
+func (_ Unimplemented) SearchMusicTrackNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9648,7 +11061,7 @@ func (_ Unimplemented) UpdateQualityProfile(w http.ResponseWriter, r *http.Reque
 
 // SetDefaultQualityProfile Make this the default quality profile
 // (POST /quality-profiles/{name}/default)
-func (_ Unimplemented) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+func (_ Unimplemented) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultQualityProfileParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -9658,7 +11071,7 @@ func (_ Unimplemented) ListRequests(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// CreateRequest Request a movie, show, artist, album, author or book
+// CreateRequest Request a movie, show, artist, book or book series
 // (POST /requests)
 func (_ Unimplemented) CreateRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -10832,94 +12245,14 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// ListAudiobookQualityProfiles operation middleware
-func (siw *ServerInterfaceWrapper) ListAudiobookQualityProfiles(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAudiobookQualityProfiles(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateAudiobookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) CreateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateAudiobookQualityProfile(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteAudiobookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) DeleteAudiobookQualityProfile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "name" -------------
-	var name ResourceName
-
-	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteAudiobookQualityProfile(w, r, name)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateAudiobookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) UpdateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "name" -------------
-	var name ResourceName
-
-	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateAudiobookQualityProfile(w, r, name)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListBookAuthors operation middleware
-func (siw *ServerInterfaceWrapper) ListBookAuthors(w http.ResponseWriter, r *http.Request) {
+// ListBooks operation middleware
+func (siw *ServerInterfaceWrapper) ListBooks(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListBookAuthorsParams
+	var params ListBooksParams
 
 	// ------------- Optional query parameter "page" -------------
 
@@ -10947,8 +12280,99 @@ func (siw *ServerInterfaceWrapper) ListBookAuthors(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "author" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "author", r.URL.Query(), &params.Author, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "author"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "author", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "format" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "format", r.URL.Query(), &params.Format, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "format"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "format", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListBookAuthors(w, r, params)
+		siw.Handler.ListBooks(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10958,11 +12382,11 @@ func (siw *ServerInterfaceWrapper) ListBookAuthors(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// AddBookAuthor operation middleware
-func (siw *ServerInterfaceWrapper) AddBookAuthor(w http.ResponseWriter, r *http.Request) {
+// AddBook operation middleware
+func (siw *ServerInterfaceWrapper) AddBook(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AddBookAuthor(w, r)
+		siw.Handler.AddBook(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -10972,8 +12396,317 @@ func (siw *ServerInterfaceWrapper) AddBookAuthor(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// DeleteBookAuthor operation middleware
-func (siw *ServerInterfaceWrapper) DeleteBookAuthor(w http.ResponseWriter, r *http.Request) {
+// GetBookCounts operation middleware
+func (siw *ServerInterfaceWrapper) GetBookCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBookCountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "author" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "author", r.URL.Query(), &params.Author, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "author"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "author", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "format" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "format", r.URL.Query(), &params.Format, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "format"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "format", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBookCounts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBookQualityProfiles operation middleware
+func (siw *ServerInterfaceWrapper) ListBookQualityProfiles(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBookQualityProfiles(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateBookQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) CreateBookQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBookQualityProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBookQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBookQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBookQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateBookQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBookQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBookQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetDefaultBookQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) SetDefaultBookQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetDefaultBookQualityProfileParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDefaultBookQualityProfile(w, r, name, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchBooks operation middleware
+func (siw *ServerInterfaceWrapper) SearchBooks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchBooksParams
+
+	// ------------- Required query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchBooks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBookLookup operation middleware
+func (siw *ServerInterfaceWrapper) GetBookLookup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "hardcover_id" -------------
+	var hardcoverId HardcoverIDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "hardcover_id", chi.URLParam(r, "hardcover_id"), &hardcoverId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hardcover_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBookLookupParams
+
+	// ------------- Required query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBookLookup(w, r, hardcoverId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) AddBookSeries(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddBookSeries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBookSeries(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -10988,7 +12721,7 @@ func (siw *ServerInterfaceWrapper) DeleteBookAuthor(w http.ResponseWriter, r *ht
 	}
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params DeleteBookAuthorParams
+	var params DeleteBookSeriesParams
 
 	// ------------- Optional query parameter "delete_files" -------------
 
@@ -11004,7 +12737,7 @@ func (siw *ServerInterfaceWrapper) DeleteBookAuthor(w http.ResponseWriter, r *ht
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteBookAuthor(w, r, id, params)
+		siw.Handler.DeleteBookSeries(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11014,8 +12747,8 @@ func (siw *ServerInterfaceWrapper) DeleteBookAuthor(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// GetBookAuthor operation middleware
-func (siw *ServerInterfaceWrapper) GetBookAuthor(w http.ResponseWriter, r *http.Request) {
+// GetBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) GetBookSeries(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -11030,7 +12763,7 @@ func (siw *ServerInterfaceWrapper) GetBookAuthor(w http.ResponseWriter, r *http.
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetBookAuthor(w, r, id)
+		siw.Handler.GetBookSeries(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11040,8 +12773,8 @@ func (siw *ServerInterfaceWrapper) GetBookAuthor(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// PatchBookAuthor operation middleware
-func (siw *ServerInterfaceWrapper) PatchBookAuthor(w http.ResponseWriter, r *http.Request) {
+// PatchBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) PatchBookSeries(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -11056,7 +12789,7 @@ func (siw *ServerInterfaceWrapper) PatchBookAuthor(w http.ResponseWriter, r *htt
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PatchBookAuthor(w, r, id)
+		siw.Handler.PatchBookSeries(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11066,8 +12799,8 @@ func (siw *ServerInterfaceWrapper) PatchBookAuthor(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// RefreshBookAuthor operation middleware
-func (siw *ServerInterfaceWrapper) RefreshBookAuthor(w http.ResponseWriter, r *http.Request) {
+// RefreshBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) RefreshBookSeries(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -11082,7 +12815,7 @@ func (siw *ServerInterfaceWrapper) RefreshBookAuthor(w http.ResponseWriter, r *h
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RefreshBookAuthor(w, r, id)
+		siw.Handler.RefreshBookSeries(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11092,110 +12825,107 @@ func (siw *ServerInterfaceWrapper) RefreshBookAuthor(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
-// ListEbookQualityProfiles operation middleware
-func (siw *ServerInterfaceWrapper) ListEbookQualityProfiles(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListEbookQualityProfiles(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateEbookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) CreateEbookQualityProfile(w http.ResponseWriter, r *http.Request) {
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateEbookQualityProfile(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteEbookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) DeleteEbookQualityProfile(w http.ResponseWriter, r *http.Request) {
+// RenameBookSeriesFiles operation middleware
+func (siw *ServerInterfaceWrapper) RenameBookSeriesFiles(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
 
-	// ------------- Path parameter "name" -------------
-	var name ResourceName
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteEbookQualityProfile(w, r, name)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateEbookQualityProfile operation middleware
-func (siw *ServerInterfaceWrapper) UpdateEbookQualityProfile(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "name" -------------
-	var name ResourceName
-
-	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateEbookQualityProfile(w, r, name)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SearchBookAuthors operation middleware
-func (siw *ServerInterfaceWrapper) SearchBookAuthors(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params SearchBookAuthorsParams
+	var params RenameBookSeriesFilesParams
 
-	// ------------- Required query parameter "query" -------------
+	// ------------- Optional query parameter "preview" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "preview", r.URL.Query(), &params.Preview, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
 		}
 		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SearchBookAuthors(w, r, params)
+		siw.Handler.RenameBookSeriesFiles(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchBookSeriesNow operation middleware
+func (siw *ServerInterfaceWrapper) SearchBookSeriesNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchBookSeriesNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBook operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteBookParams
+
+	// ------------- Optional query parameter "delete_files" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "delete_files", r.URL.Query(), &params.DeleteFiles, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "delete_files"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "delete_files", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBook(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11275,9 +13005,9 @@ func (siw *ServerInterfaceWrapper) GrabBookRelease(w http.ResponseWriter, r *htt
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GrabBookReleaseParams
 
-	// ------------- Required query parameter "kind" -------------
+	// ------------- Optional query parameter "kind" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
@@ -11290,6 +13020,74 @@ func (siw *ServerInterfaceWrapper) GrabBookRelease(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GrabBookRelease(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshBook operation middleware
+func (siw *ServerInterfaceWrapper) RefreshBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshBook(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameBookFiles operation middleware
+func (siw *ServerInterfaceWrapper) RenameBookFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RenameBookFilesParams
+
+	// ------------- Optional query parameter "preview" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "preview", r.URL.Query(), &params.Preview, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameBookFiles(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -11317,9 +13115,9 @@ func (siw *ServerInterfaceWrapper) SearchBookReleases(w http.ResponseWriter, r *
 	// Parameter object where we will unmarshal all parameters from the context
 	var params SearchBookReleasesParams
 
-	// ------------- Required query parameter "kind" -------------
+	// ------------- Optional query parameter "kind" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
@@ -11332,6 +13130,48 @@ func (siw *ServerInterfaceWrapper) SearchBookReleases(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchBookReleases(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchBookNow operation middleware
+func (siw *ServerInterfaceWrapper) SearchBookNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchBookNowParams
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchBookNow(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13612,6 +15452,32 @@ func (siw *ServerInterfaceWrapper) SearchMusicAlbumReleases(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// SearchMusicAlbumNow operation middleware
+func (siw *ServerInterfaceWrapper) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMusicAlbumNow(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMusicArtists operation middleware
 func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *http.Request) {
 
@@ -13647,6 +15513,71 @@ func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListMusicArtists(w, r, params)
 	}))
@@ -13663,6 +15594,65 @@ func (siw *ServerInterfaceWrapper) AddMusicArtist(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddMusicArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMusicArtistCounts operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtistCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMusicArtistCountsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "monitored" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "monitored", r.URL.Query(), &params.Monitored, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "monitored"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "monitored", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtistCounts(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13703,6 +15693,19 @@ func (siw *ServerInterfaceWrapper) DeleteMusicArtist(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteMusicArtist(w, r, id, params)
 	}))
@@ -13729,8 +15732,24 @@ func (siw *ServerInterfaceWrapper) GetMusicArtist(w http.ResponseWriter, r *http
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMusicArtistParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMusicArtist(w, r, id)
+		siw.Handler.GetMusicArtist(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13755,8 +15774,76 @@ func (siw *ServerInterfaceWrapper) PatchMusicArtist(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PatchMusicArtistParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PatchMusicArtist(w, r, id)
+		siw.Handler.PatchMusicArtist(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BrowseMusicArtistReleases operation middleware
+func (siw *ServerInterfaceWrapper) BrowseMusicArtistReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BrowseMusicArtistReleases(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GrabMusicArtistRelease operation middleware
+func (siw *ServerInterfaceWrapper) GrabMusicArtistRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GrabMusicArtistRelease(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13781,8 +15868,92 @@ func (siw *ServerInterfaceWrapper) RefreshMusicArtist(w http.ResponseWriter, r *
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RefreshMusicArtistParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RefreshMusicArtist(w, r, id)
+		siw.Handler.RefreshMusicArtist(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameMusicArtistFiles operation middleware
+func (siw *ServerInterfaceWrapper) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RenameMusicArtistFilesParams
+
+	// ------------- Optional query parameter "preview" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "preview", r.URL.Query(), &params.Preview, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "preview"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "preview", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameMusicArtistFiles(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchMusicArtistNow operation middleware
+func (siw *ServerInterfaceWrapper) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMusicArtistNow(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -13872,6 +16043,32 @@ func (siw *ServerInterfaceWrapper) UpdateMusicQualityProfile(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// SetDefaultMusicQualityProfile operation middleware
+func (siw *ServerInterfaceWrapper) SetDefaultMusicQualityProfile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetDefaultMusicQualityProfile(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SearchMusicArtists operation middleware
 func (siw *ServerInterfaceWrapper) SearchMusicArtists(w http.ResponseWriter, r *http.Request) {
 
@@ -13896,6 +16093,100 @@ func (siw *ServerInterfaceWrapper) SearchMusicArtists(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchMusicArtists(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMusicArtistLookup operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "mbid" -------------
+	var mbid MBIDParam
+
+	err = runtime.BindStyledParameterWithOptions("simple", "mbid", chi.URLParam(r, "mbid"), &mbid, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "mbid", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMusicArtistLookupParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtistLookup(w, r, mbid, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMusicTrackFile operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMusicTrackFile(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SearchMusicTrackNow operation middleware
+func (siw *ServerInterfaceWrapper) SearchMusicTrackNow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMusicTrackNow(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -14085,8 +16376,24 @@ func (siw *ServerInterfaceWrapper) SetDefaultQualityProfile(w http.ResponseWrite
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetDefaultQualityProfileParams
+
+	// ------------- Optional query parameter "media" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "media", r.URL.Query(), &params.Media, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "media"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "media", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetDefaultQualityProfile(w, r, name)
+		siw.Handler.SetDefaultQualityProfile(w, r, name, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -14120,7 +16427,7 @@ func (siw *ServerInterfaceWrapper) ListRequests(w http.ResponseWriter, r *http.R
 
 	// ------------- Optional query parameter "media_type" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "media_type", r.URL.Query(), &params.MediaType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "media_type", r.URL.Query(), &params.MediaType, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
@@ -16196,10 +18503,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/music/search", wrapper.SearchMusicArtists)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/search/{mbid}", wrapper.GetMusicArtistLookup)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/artists", wrapper.ListMusicArtists)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/artists", wrapper.AddMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/artists/counts", wrapper.GetMusicArtistCounts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/music/artists/{id}", wrapper.DeleteMusicArtist)
@@ -16211,7 +18524,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/music/artists/{id}", wrapper.PatchMusicArtist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/music/artists/{id}/refresh", wrapper.RefreshMusicArtist)
+		r.Post(options.BaseURL+"/music/artists/{id}/refresh-metadata", wrapper.RefreshMusicArtist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/rename", wrapper.RenameMusicArtistFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/search-now", wrapper.SearchMusicArtistNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/browse", wrapper.BrowseMusicArtistReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/grab", wrapper.GrabMusicArtistRelease)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/albums/{id}", wrapper.GetMusicAlbum)
@@ -16226,6 +18551,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/music/albums/{id}/grab", wrapper.GrabMusicAlbumRelease)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/search-now", wrapper.SearchMusicAlbumNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/tracks/{id}/search-now", wrapper.SearchMusicTrackNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/music/tracks/{id}/file", wrapper.DeleteMusicTrackFile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/quality-profiles", wrapper.ListMusicQualityProfiles)
 	})
 	r.Group(func(r chi.Router) {
@@ -16238,25 +18572,61 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/music/quality-profiles/{name}", wrapper.UpdateMusicQualityProfile)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/books/search", wrapper.SearchBookAuthors)
+		r.Post(options.BaseURL+"/music/quality-profiles/{name}/default", wrapper.SetDefaultMusicQualityProfile)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/books/authors", wrapper.ListBookAuthors)
+		r.Get(options.BaseURL+"/books/search", wrapper.SearchBooks)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/books/authors", wrapper.AddBookAuthor)
+		r.Get(options.BaseURL+"/books/search/{hardcover_id}", wrapper.GetBookLookup)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/books/authors/{id}", wrapper.DeleteBookAuthor)
+		r.Get(options.BaseURL+"/books", wrapper.ListBooks)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/books/authors/{id}", wrapper.GetBookAuthor)
+		r.Post(options.BaseURL+"/books", wrapper.AddBook)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/books/authors/{id}", wrapper.PatchBookAuthor)
+		r.Get(options.BaseURL+"/books/counts", wrapper.GetBookCounts)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/books/authors/{id}/refresh", wrapper.RefreshBookAuthor)
+		r.Post(options.BaseURL+"/books/series", wrapper.AddBookSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/books/series/{id}", wrapper.DeleteBookSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/books/series/{id}", wrapper.GetBookSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/books/series/{id}", wrapper.PatchBookSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/series/{id}/search-now", wrapper.SearchBookSeriesNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/series/{id}/refresh-metadata", wrapper.RefreshBookSeries)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/series/{id}/rename", wrapper.RenameBookSeriesFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/books/quality-profiles", wrapper.ListBookQualityProfiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/quality-profiles", wrapper.CreateBookQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/books/quality-profiles/{name}", wrapper.DeleteBookQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/books/quality-profiles/{name}", wrapper.UpdateBookQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/quality-profiles/{name}/default", wrapper.SetDefaultBookQualityProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/books/{id}", wrapper.DeleteBook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/books/{id}", wrapper.GetBook)
@@ -16271,28 +18641,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/books/{id}/grab", wrapper.GrabBookRelease)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/books/ebook-quality-profiles", wrapper.ListEbookQualityProfiles)
+		r.Post(options.BaseURL+"/books/{id}/search-now", wrapper.SearchBookNow)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/books/ebook-quality-profiles", wrapper.CreateEbookQualityProfile)
+		r.Post(options.BaseURL+"/books/{id}/refresh-metadata", wrapper.RefreshBook)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/books/ebook-quality-profiles/{name}", wrapper.DeleteEbookQualityProfile)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/books/ebook-quality-profiles/{name}", wrapper.UpdateEbookQualityProfile)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/books/audiobook-quality-profiles", wrapper.ListAudiobookQualityProfiles)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/books/audiobook-quality-profiles", wrapper.CreateAudiobookQualityProfile)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/books/audiobook-quality-profiles/{name}", wrapper.DeleteAudiobookQualityProfile)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/books/audiobook-quality-profiles/{name}", wrapper.UpdateAudiobookQualityProfile)
+		r.Post(options.BaseURL+"/books/{id}/rename", wrapper.RenameBookFiles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/quality-profiles", wrapper.ListQualityProfiles)
@@ -16726,31 +19081,44 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 type ActivityListJSONResponse ActivityList
 
-type AlbumReleaseListJSONResponse AlbumReleaseList
-
-type AudiobookQualityProfileDeletedResponse struct {
-}
-
-type AudiobookQualityProfileResponseJSONResponse AudiobookQualityProfile
-
 type AuthConfigJSONResponse AuthConfigView
 
 type BadRequestJSONResponse Error
 
-type BookAuthorCreatedJSONResponse BookAuthor
+type BookCountsResponseJSONResponse BookCounts
 
-type BookAuthorDeletedResponse struct {
+type BookCreatedJSONResponse Book
+
+type BookDeletedResponse struct {
 }
-
-type BookAuthorDetailJSONResponse BookAuthor
-
-type BookAuthorListJSONResponse PaginatedBookAuthors
 
 type BookDetailJSONResponse Book
 
-type BookReleaseListJSONResponse BookReleaseList
+type BookLookupDetailResponseJSONResponse BookLookupDetail
 
-type BookSearchResultsJSONResponse BookAuthorSearchResultList
+type BookLookupResultsJSONResponse BookLookupList
+
+type BookQualityProfileDeletedResponse struct {
+}
+
+type BookQualityProfileListJSONResponse []BookQualityProfile
+
+type BookQualityProfileResponseJSONResponse BookQualityProfile
+
+type BookRenamePlanResponseJSONResponse BookRenamePlan
+
+type BookSearchAcceptedResponseJSONResponse BookSearchAccepted
+
+type BookSeriesCreatedJSONResponse BookSeries
+
+type BookSeriesDeletedResponse struct {
+}
+
+type BookSeriesDetailJSONResponse BookSeries
+
+type BookSeriesRenamePlanResponseJSONResponse BookSeriesRenamePlan
+
+type BookShelfPageJSONResponse PaginatedShelf
 
 type ClearCompletedResultJSONResponse ClearCompletedResult
 
@@ -16764,11 +19132,6 @@ type DownloadConfigJSONResponse DownloadConfigView
 type DownloadHistoryJSONResponse DownloadHistory
 
 type DownloadQueueJSONResponse DownloadQueue
-
-type EbookQualityProfileDeletedResponse struct {
-}
-
-type EbookQualityProfileResponseJSONResponse EbookQualityProfile
 
 type EpisodeUpdatedResponse struct {
 }
@@ -16846,21 +19209,32 @@ type MovieSearchAcceptedJSONResponse MovieSearchAccepted
 
 type MusicAlbumDetailJSONResponse MusicAlbum
 
-type MusicArtistCreatedJSONResponse MusicArtist
+type MusicArtistCountsResponseJSONResponse MusicArtistCounts
+
+type MusicArtistCreatedJSONResponse MusicArtistDetail
 
 type MusicArtistDeletedResponse struct {
 }
 
-type MusicArtistDetailJSONResponse MusicArtist
+type MusicArtistDetailJSONResponse MusicArtistDetail
 
 type MusicArtistListJSONResponse PaginatedMusicArtists
+
+type MusicArtistLookupDetailResponseJSONResponse MusicArtistLookupDetail
 
 type MusicQualityProfileDeletedResponse struct {
 }
 
+type MusicQualityProfileListJSONResponse []MusicQualityProfile
+
 type MusicQualityProfileResponseJSONResponse MusicQualityProfile
 
+type MusicRenamePlanResponseJSONResponse MusicRenamePlan
+
 type MusicSearchResultsJSONResponse MusicArtistSearchResultList
+
+type MusicTrackFileDeletedResponse struct {
+}
 
 type NoContentResponse struct {
 }
@@ -16888,6 +19262,9 @@ type PendingListJSONResponse PendingList
 
 type PendingPreviewJSONResponse PendingPreview
 
+type QualityProfileDefaultSetResponse struct {
+}
+
 type RateLimitedResponseHeaders struct {
 	RetryAfter *int
 }
@@ -16908,7 +19285,15 @@ type RequestCreatedJSONResponse Request
 
 type RequestDetailJSONResponse Request
 
-type RequestMediaDetailResponseJSONResponse RequestMediaDetails
+type RequestMetadataResponseJSONResponse RequestMetadata
+
+func (t RequestMetadataResponseJSONResponse) MarshalJSON() ([]byte, error) {
+	return RequestMetadata(t).MarshalJSON()
+}
+
+func (t *RequestMetadataResponseJSONResponse) UnmarshalJSON(b []byte) error {
+	return (*RequestMetadata)(t).UnmarshalJSON(b)
+}
 
 type RequestsListJSONResponse PaginatedRequests
 
@@ -16921,6 +19306,9 @@ type ScheduleEventsTexteventStreamResponse struct {
 }
 
 type ScheduleListJSONResponse ScheduleList
+
+type SearchNowAcceptedResponse struct {
+}
 
 type SearchResultsJSONResponse SearchResultList
 
@@ -18804,16 +21192,17 @@ func (response ChangePassword422JSONResponse) VisitChangePasswordResponse(w http
 	return err
 }
 
-type ListAudiobookQualityProfilesRequestObject struct {
+type ListBooksRequestObject struct {
+	Params ListBooksParams
 }
 
-type ListAudiobookQualityProfilesResponseObject interface {
-	VisitListAudiobookQualityProfilesResponse(w http.ResponseWriter) error
+type ListBooksResponseObject interface {
+	VisitListBooksResponse(w http.ResponseWriter) error
 }
 
-type ListAudiobookQualityProfiles200JSONResponse []AudiobookQualityProfile
+type ListBooks200JSONResponse struct{ BookShelfPageJSONResponse }
 
-func (response ListAudiobookQualityProfiles200JSONResponse) VisitListAudiobookQualityProfilesResponse(w http.ResponseWriter) error {
+func (response ListBooks200JSONResponse) VisitListBooksResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -18825,309 +21214,9 @@ func (response ListAudiobookQualityProfiles200JSONResponse) VisitListAudiobookQu
 	return err
 }
 
-type ListAudiobookQualityProfiles500JSONResponse struct{ InternalErrorJSONResponse }
+type ListBooks400JSONResponse struct{ BadRequestJSONResponse }
 
-func (response ListAudiobookQualityProfiles500JSONResponse) VisitListAudiobookQualityProfilesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfileRequestObject struct {
-	Body *CreateAudiobookQualityProfileJSONRequestBody
-}
-
-type CreateAudiobookQualityProfileResponseObject interface {
-	VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error
-}
-
-type CreateAudiobookQualityProfile201JSONResponse struct {
-	AudiobookQualityProfileResponseJSONResponse
-}
-
-func (response CreateAudiobookQualityProfile201JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response CreateAudiobookQualityProfile403JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
-
-func (response CreateAudiobookQualityProfile409JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
-
-func (response CreateAudiobookQualityProfile413JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(413)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfile422JSONResponse struct {
-	UnprocessableEntityJSONResponse
-}
-
-func (response CreateAudiobookQualityProfile422JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateAudiobookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response CreateAudiobookQualityProfile500JSONResponse) VisitCreateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DeleteAudiobookQualityProfileRequestObject struct {
-	Name ResourceName `json:"name"`
-}
-
-type DeleteAudiobookQualityProfileResponseObject interface {
-	VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error
-}
-
-type DeleteAudiobookQualityProfile204Response = AudiobookQualityProfileDeletedResponse
-
-func (response DeleteAudiobookQualityProfile204Response) VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type DeleteAudiobookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response DeleteAudiobookQualityProfile403JSONResponse) VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DeleteAudiobookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response DeleteAudiobookQualityProfile404JSONResponse) VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DeleteAudiobookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
-
-func (response DeleteAudiobookQualityProfile409JSONResponse) VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DeleteAudiobookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response DeleteAudiobookQualityProfile500JSONResponse) VisitDeleteAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfileRequestObject struct {
-	Name ResourceName `json:"name"`
-	Body *UpdateAudiobookQualityProfileJSONRequestBody
-}
-
-type UpdateAudiobookQualityProfileResponseObject interface {
-	VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error
-}
-
-type UpdateAudiobookQualityProfile200JSONResponse struct {
-	AudiobookQualityProfileResponseJSONResponse
-}
-
-func (response UpdateAudiobookQualityProfile200JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response UpdateAudiobookQualityProfile403JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response UpdateAudiobookQualityProfile404JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
-
-func (response UpdateAudiobookQualityProfile413JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(413)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfile422JSONResponse struct {
-	UnprocessableEntityJSONResponse
-}
-
-func (response UpdateAudiobookQualityProfile422JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateAudiobookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response UpdateAudiobookQualityProfile500JSONResponse) VisitUpdateAudiobookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListBookAuthorsRequestObject struct {
-	Params ListBookAuthorsParams
-}
-
-type ListBookAuthorsResponseObject interface {
-	VisitListBookAuthorsResponse(w http.ResponseWriter) error
-}
-
-type ListBookAuthors200JSONResponse struct{ BookAuthorListJSONResponse }
-
-func (response ListBookAuthors200JSONResponse) VisitListBookAuthorsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListBookAuthors400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response ListBookAuthors400JSONResponse) VisitListBookAuthorsResponse(w http.ResponseWriter) error {
+func (response ListBooks400JSONResponse) VisitListBooksResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19139,9 +21228,9 @@ func (response ListBookAuthors400JSONResponse) VisitListBookAuthorsResponse(w ht
 	return err
 }
 
-type ListBookAuthors500JSONResponse struct{ InternalErrorJSONResponse }
+type ListBooks500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response ListBookAuthors500JSONResponse) VisitListBookAuthorsResponse(w http.ResponseWriter) error {
+func (response ListBooks500JSONResponse) VisitListBooksResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19153,17 +21242,17 @@ func (response ListBookAuthors500JSONResponse) VisitListBookAuthorsResponse(w ht
 	return err
 }
 
-type AddBookAuthorRequestObject struct {
-	Body *AddBookAuthorJSONRequestBody
+type AddBookRequestObject struct {
+	Body *AddBookJSONRequestBody
 }
 
-type AddBookAuthorResponseObject interface {
-	VisitAddBookAuthorResponse(w http.ResponseWriter) error
+type AddBookResponseObject interface {
+	VisitAddBookResponse(w http.ResponseWriter) error
 }
 
-type AddBookAuthor201JSONResponse struct{ BookAuthorCreatedJSONResponse }
+type AddBook201JSONResponse struct{ BookCreatedJSONResponse }
 
-func (response AddBookAuthor201JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook201JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19175,9 +21264,9 @@ func (response AddBookAuthor201JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor403JSONResponse struct{ ForbiddenJSONResponse }
+type AddBook403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response AddBookAuthor403JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook403JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19189,9 +21278,23 @@ func (response AddBookAuthor403JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor409JSONResponse struct{ ConflictJSONResponse }
+type AddBook404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response AddBookAuthor409JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook404JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBook409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AddBook409JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19203,9 +21306,9 @@ func (response AddBookAuthor409JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor413JSONResponse struct{ PayloadTooLargeJSONResponse }
+type AddBook413JSONResponse struct{ PayloadTooLargeJSONResponse }
 
-func (response AddBookAuthor413JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook413JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19217,11 +21320,11 @@ func (response AddBookAuthor413JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor422JSONResponse struct {
+type AddBook422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
 
-func (response AddBookAuthor422JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook422JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19233,9 +21336,9 @@ func (response AddBookAuthor422JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor429JSONResponse struct{ RateLimitedJSONResponse }
+type AddBook429JSONResponse struct{ RateLimitedJSONResponse }
 
-func (response AddBookAuthor429JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook429JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -19250,9 +21353,9 @@ func (response AddBookAuthor429JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
+type AddBook500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response AddBookAuthor500JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook500JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19264,9 +21367,9 @@ func (response AddBookAuthor500JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type AddBookAuthor503JSONResponse struct{ ServiceUnavailableJSONResponse }
+type AddBook503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
-func (response AddBookAuthor503JSONResponse) VisitAddBookAuthorResponse(w http.ResponseWriter) error {
+func (response AddBook503JSONResponse) VisitAddBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19278,25 +21381,752 @@ func (response AddBookAuthor503JSONResponse) VisitAddBookAuthorResponse(w http.R
 	return err
 }
 
-type DeleteBookAuthorRequestObject struct {
+type GetBookCountsRequestObject struct {
+	Params GetBookCountsParams
+}
+
+type GetBookCountsResponseObject interface {
+	VisitGetBookCountsResponse(w http.ResponseWriter) error
+}
+
+type GetBookCounts200JSONResponse struct{ BookCountsResponseJSONResponse }
+
+func (response GetBookCounts200JSONResponse) VisitGetBookCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookCounts400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetBookCounts400JSONResponse) VisitGetBookCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookCounts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetBookCounts500JSONResponse) VisitGetBookCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBookQualityProfilesRequestObject struct {
+}
+
+type ListBookQualityProfilesResponseObject interface {
+	VisitListBookQualityProfilesResponse(w http.ResponseWriter) error
+}
+
+type ListBookQualityProfiles200JSONResponse struct {
+	BookQualityProfileListJSONResponse
+}
+
+func (response ListBookQualityProfiles200JSONResponse) VisitListBookQualityProfilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBookQualityProfiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListBookQualityProfiles500JSONResponse) VisitListBookQualityProfilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfileRequestObject struct {
+	Body *CreateBookQualityProfileJSONRequestBody
+}
+
+type CreateBookQualityProfileResponseObject interface {
+	VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type CreateBookQualityProfile201JSONResponse struct {
+	BookQualityProfileResponseJSONResponse
+}
+
+func (response CreateBookQualityProfile201JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateBookQualityProfile403JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateBookQualityProfile409JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CreateBookQualityProfile413JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfile422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response CreateBookQualityProfile422JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateBookQualityProfile500JSONResponse) VisitCreateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type DeleteBookQualityProfileResponseObject interface {
+	VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type DeleteBookQualityProfile204Response = BookQualityProfileDeletedResponse
+
+func (response DeleteBookQualityProfile204Response) VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteBookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteBookQualityProfile403JSONResponse) VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteBookQualityProfile404JSONResponse) VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteBookQualityProfile409JSONResponse) VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteBookQualityProfile500JSONResponse) VisitDeleteBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *UpdateBookQualityProfileJSONRequestBody
+}
+
+type UpdateBookQualityProfileResponseObject interface {
+	VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type UpdateBookQualityProfile200JSONResponse struct {
+	BookQualityProfileResponseJSONResponse
+}
+
+func (response UpdateBookQualityProfile200JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateBookQualityProfile403JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBookQualityProfile404JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response UpdateBookQualityProfile413JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfile422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateBookQualityProfile422JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateBookQualityProfile500JSONResponse) VisitUpdateBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultBookQualityProfileRequestObject struct {
+	Name   ResourceName `json:"name"`
+	Params SetDefaultBookQualityProfileParams
+}
+
+type SetDefaultBookQualityProfileResponseObject interface {
+	VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type SetDefaultBookQualityProfile204Response = QualityProfileDefaultSetResponse
+
+func (response SetDefaultBookQualityProfile204Response) VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetDefaultBookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetDefaultBookQualityProfile403JSONResponse) VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultBookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetDefaultBookQualityProfile404JSONResponse) VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultBookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetDefaultBookQualityProfile500JSONResponse) VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBooksRequestObject struct {
+	Params SearchBooksParams
+}
+
+type SearchBooksResponseObject interface {
+	VisitSearchBooksResponse(w http.ResponseWriter) error
+}
+
+type SearchBooks200JSONResponse struct{ BookLookupResultsJSONResponse }
+
+func (response SearchBooks200JSONResponse) VisitSearchBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBooks400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchBooks400JSONResponse) VisitSearchBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBooks429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SearchBooks429JSONResponse) VisitSearchBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBooks500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchBooks500JSONResponse) VisitSearchBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBooks503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response SearchBooks503JSONResponse) VisitSearchBooksResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookupRequestObject struct {
+	HardcoverId HardcoverIDParam `json:"hardcover_id"`
+	Params      GetBookLookupParams
+}
+
+type GetBookLookupResponseObject interface {
+	VisitGetBookLookupResponse(w http.ResponseWriter) error
+}
+
+type GetBookLookup200JSONResponse struct {
+	BookLookupDetailResponseJSONResponse
+}
+
+func (response GetBookLookup200JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookup400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetBookLookup400JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookup404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetBookLookup404JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookup429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response GetBookLookup429JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookup500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetBookLookup500JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBookLookup503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetBookLookup503JSONResponse) VisitGetBookLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeriesRequestObject struct {
+	Body *AddBookSeriesJSONRequestBody
+}
+
+type AddBookSeriesResponseObject interface {
+	VisitAddBookSeriesResponse(w http.ResponseWriter) error
+}
+
+type AddBookSeries201JSONResponse struct{ BookSeriesCreatedJSONResponse }
+
+func (response AddBookSeries201JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddBookSeries403JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddBookSeries404JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AddBookSeries409JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response AddBookSeries413JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddBookSeries422JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response AddBookSeries429JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AddBookSeries500JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBookSeries503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AddBookSeries503JSONResponse) VisitAddBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookSeriesRequestObject struct {
 	Id     ResourceID `json:"id"`
-	Params DeleteBookAuthorParams
+	Params DeleteBookSeriesParams
 }
 
-type DeleteBookAuthorResponseObject interface {
-	VisitDeleteBookAuthorResponse(w http.ResponseWriter) error
+type DeleteBookSeriesResponseObject interface {
+	VisitDeleteBookSeriesResponse(w http.ResponseWriter) error
 }
 
-type DeleteBookAuthor204Response = BookAuthorDeletedResponse
+type DeleteBookSeries204Response = BookSeriesDeletedResponse
 
-func (response DeleteBookAuthor204Response) VisitDeleteBookAuthorResponse(w http.ResponseWriter) error {
+func (response DeleteBookSeries204Response) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type DeleteBookAuthor403JSONResponse struct{ ForbiddenJSONResponse }
+type DeleteBookSeries403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response DeleteBookAuthor403JSONResponse) VisitDeleteBookAuthorResponse(w http.ResponseWriter) error {
+func (response DeleteBookSeries403JSONResponse) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19308,9 +22138,9 @@ func (response DeleteBookAuthor403JSONResponse) VisitDeleteBookAuthorResponse(w 
 	return err
 }
 
-type DeleteBookAuthor404JSONResponse struct{ NotFoundJSONResponse }
+type DeleteBookSeries404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response DeleteBookAuthor404JSONResponse) VisitDeleteBookAuthorResponse(w http.ResponseWriter) error {
+func (response DeleteBookSeries404JSONResponse) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19322,9 +22152,9 @@ func (response DeleteBookAuthor404JSONResponse) VisitDeleteBookAuthorResponse(w 
 	return err
 }
 
-type DeleteBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
+type DeleteBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response DeleteBookAuthor500JSONResponse) VisitDeleteBookAuthorResponse(w http.ResponseWriter) error {
+func (response DeleteBookSeries500JSONResponse) VisitDeleteBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19336,17 +22166,17 @@ func (response DeleteBookAuthor500JSONResponse) VisitDeleteBookAuthorResponse(w 
 	return err
 }
 
-type GetBookAuthorRequestObject struct {
+type GetBookSeriesRequestObject struct {
 	Id ResourceID `json:"id"`
 }
 
-type GetBookAuthorResponseObject interface {
-	VisitGetBookAuthorResponse(w http.ResponseWriter) error
+type GetBookSeriesResponseObject interface {
+	VisitGetBookSeriesResponse(w http.ResponseWriter) error
 }
 
-type GetBookAuthor200JSONResponse struct{ BookAuthorDetailJSONResponse }
+type GetBookSeries200JSONResponse struct{ BookSeriesDetailJSONResponse }
 
-func (response GetBookAuthor200JSONResponse) VisitGetBookAuthorResponse(w http.ResponseWriter) error {
+func (response GetBookSeries200JSONResponse) VisitGetBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19358,9 +22188,9 @@ func (response GetBookAuthor200JSONResponse) VisitGetBookAuthorResponse(w http.R
 	return err
 }
 
-type GetBookAuthor404JSONResponse struct{ NotFoundJSONResponse }
+type GetBookSeries404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response GetBookAuthor404JSONResponse) VisitGetBookAuthorResponse(w http.ResponseWriter) error {
+func (response GetBookSeries404JSONResponse) VisitGetBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19372,9 +22202,9 @@ func (response GetBookAuthor404JSONResponse) VisitGetBookAuthorResponse(w http.R
 	return err
 }
 
-type GetBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
+type GetBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response GetBookAuthor500JSONResponse) VisitGetBookAuthorResponse(w http.ResponseWriter) error {
+func (response GetBookSeries500JSONResponse) VisitGetBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19386,18 +22216,18 @@ func (response GetBookAuthor500JSONResponse) VisitGetBookAuthorResponse(w http.R
 	return err
 }
 
-type PatchBookAuthorRequestObject struct {
+type PatchBookSeriesRequestObject struct {
 	Id   ResourceID `json:"id"`
-	Body *PatchBookAuthorJSONRequestBody
+	Body *PatchBookSeriesJSONRequestBody
 }
 
-type PatchBookAuthorResponseObject interface {
-	VisitPatchBookAuthorResponse(w http.ResponseWriter) error
+type PatchBookSeriesResponseObject interface {
+	VisitPatchBookSeriesResponse(w http.ResponseWriter) error
 }
 
-type PatchBookAuthor200JSONResponse struct{ BookAuthorDetailJSONResponse }
+type PatchBookSeries200JSONResponse struct{ BookSeriesDetailJSONResponse }
 
-func (response PatchBookAuthor200JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries200JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19409,9 +22239,9 @@ func (response PatchBookAuthor200JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type PatchBookAuthor403JSONResponse struct{ ForbiddenJSONResponse }
+type PatchBookSeries403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response PatchBookAuthor403JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries403JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19423,9 +22253,9 @@ func (response PatchBookAuthor403JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type PatchBookAuthor404JSONResponse struct{ NotFoundJSONResponse }
+type PatchBookSeries404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response PatchBookAuthor404JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries404JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19437,9 +22267,9 @@ func (response PatchBookAuthor404JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type PatchBookAuthor413JSONResponse struct{ PayloadTooLargeJSONResponse }
+type PatchBookSeries413JSONResponse struct{ PayloadTooLargeJSONResponse }
 
-func (response PatchBookAuthor413JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries413JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19451,11 +22281,11 @@ func (response PatchBookAuthor413JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type PatchBookAuthor422JSONResponse struct {
+type PatchBookSeries422JSONResponse struct {
 	UnprocessableEntityJSONResponse
 }
 
-func (response PatchBookAuthor422JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries422JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19467,9 +22297,9 @@ func (response PatchBookAuthor422JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type PatchBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
+type PatchBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response PatchBookAuthor500JSONResponse) VisitPatchBookAuthorResponse(w http.ResponseWriter) error {
+func (response PatchBookSeries500JSONResponse) VisitPatchBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19481,17 +22311,17 @@ func (response PatchBookAuthor500JSONResponse) VisitPatchBookAuthorResponse(w ht
 	return err
 }
 
-type RefreshBookAuthorRequestObject struct {
+type RefreshBookSeriesRequestObject struct {
 	Id ResourceID `json:"id"`
 }
 
-type RefreshBookAuthorResponseObject interface {
-	VisitRefreshBookAuthorResponse(w http.ResponseWriter) error
+type RefreshBookSeriesResponseObject interface {
+	VisitRefreshBookSeriesResponse(w http.ResponseWriter) error
 }
 
-type RefreshBookAuthor200JSONResponse struct{ BookAuthorDetailJSONResponse }
+type RefreshBookSeries200JSONResponse struct{ BookSeriesDetailJSONResponse }
 
-func (response RefreshBookAuthor200JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries200JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19503,9 +22333,9 @@ func (response RefreshBookAuthor200JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type RefreshBookAuthor403JSONResponse struct{ ForbiddenJSONResponse }
+type RefreshBookSeries403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response RefreshBookAuthor403JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries403JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19517,9 +22347,9 @@ func (response RefreshBookAuthor403JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type RefreshBookAuthor404JSONResponse struct{ NotFoundJSONResponse }
+type RefreshBookSeries404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response RefreshBookAuthor404JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries404JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19531,9 +22361,9 @@ func (response RefreshBookAuthor404JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type RefreshBookAuthor429JSONResponse struct{ RateLimitedJSONResponse }
+type RefreshBookSeries429JSONResponse struct{ RateLimitedJSONResponse }
 
-func (response RefreshBookAuthor429JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries429JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -19548,9 +22378,9 @@ func (response RefreshBookAuthor429JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type RefreshBookAuthor500JSONResponse struct{ InternalErrorJSONResponse }
+type RefreshBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response RefreshBookAuthor500JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries500JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19562,9 +22392,9 @@ func (response RefreshBookAuthor500JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type RefreshBookAuthor503JSONResponse struct{ ServiceUnavailableJSONResponse }
+type RefreshBookSeries503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
-func (response RefreshBookAuthor503JSONResponse) VisitRefreshBookAuthorResponse(w http.ResponseWriter) error {
+func (response RefreshBookSeries503JSONResponse) VisitRefreshBookSeriesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19576,16 +22406,20 @@ func (response RefreshBookAuthor503JSONResponse) VisitRefreshBookAuthorResponse(
 	return err
 }
 
-type ListEbookQualityProfilesRequestObject struct {
+type RenameBookSeriesFilesRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params RenameBookSeriesFilesParams
 }
 
-type ListEbookQualityProfilesResponseObject interface {
-	VisitListEbookQualityProfilesResponse(w http.ResponseWriter) error
+type RenameBookSeriesFilesResponseObject interface {
+	VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error
 }
 
-type ListEbookQualityProfiles200JSONResponse []EbookQualityProfile
+type RenameBookSeriesFiles200JSONResponse struct {
+	BookSeriesRenamePlanResponseJSONResponse
+}
 
-func (response ListEbookQualityProfiles200JSONResponse) VisitListEbookQualityProfilesResponse(w http.ResponseWriter) error {
+func (response RenameBookSeriesFiles200JSONResponse) VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19597,47 +22431,9 @@ func (response ListEbookQualityProfiles200JSONResponse) VisitListEbookQualityPro
 	return err
 }
 
-type ListEbookQualityProfiles500JSONResponse struct{ InternalErrorJSONResponse }
+type RenameBookSeriesFiles403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response ListEbookQualityProfiles500JSONResponse) VisitListEbookQualityProfilesResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEbookQualityProfileRequestObject struct {
-	Body *CreateEbookQualityProfileJSONRequestBody
-}
-
-type CreateEbookQualityProfileResponseObject interface {
-	VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error
-}
-
-type CreateEbookQualityProfile201JSONResponse struct {
-	EbookQualityProfileResponseJSONResponse
-}
-
-func (response CreateEbookQualityProfile201JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEbookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response CreateEbookQualityProfile403JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response RenameBookSeriesFiles403JSONResponse) VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19649,53 +22445,23 @@ func (response CreateEbookQualityProfile403JSONResponse) VisitCreateEbookQuality
 	return err
 }
 
-type CreateEbookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+type RenameBookSeriesFiles404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response CreateEbookQualityProfile409JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEbookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
-
-func (response CreateEbookQualityProfile413JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response RenameBookSeriesFiles404JSONResponse) VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(413)
+	w.WriteHeader(404)
 	_, err := buf.WriteTo(w)
 	return err
 }
 
-type CreateEbookQualityProfile422JSONResponse struct {
-	UnprocessableEntityJSONResponse
-}
+type RenameBookSeriesFiles500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response CreateEbookQualityProfile422JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateEbookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response CreateEbookQualityProfile500JSONResponse) VisitCreateEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response RenameBookSeriesFiles500JSONResponse) VisitRenameBookSeriesFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19707,24 +22473,91 @@ func (response CreateEbookQualityProfile500JSONResponse) VisitCreateEbookQuality
 	return err
 }
 
-type DeleteEbookQualityProfileRequestObject struct {
-	Name ResourceName `json:"name"`
+type SearchBookSeriesNowRequestObject struct {
+	Id ResourceID `json:"id"`
 }
 
-type DeleteEbookQualityProfileResponseObject interface {
-	VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error
+type SearchBookSeriesNowResponseObject interface {
+	VisitSearchBookSeriesNowResponse(w http.ResponseWriter) error
 }
 
-type DeleteEbookQualityProfile204Response = EbookQualityProfileDeletedResponse
+type SearchBookSeriesNow202JSONResponse struct {
+	BookSearchAcceptedResponseJSONResponse
+}
 
-func (response DeleteEbookQualityProfile204Response) VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response SearchBookSeriesNow202JSONResponse) VisitSearchBookSeriesNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookSeriesNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchBookSeriesNow403JSONResponse) VisitSearchBookSeriesNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookSeriesNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchBookSeriesNow404JSONResponse) VisitSearchBookSeriesNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookSeriesNow500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchBookSeriesNow500JSONResponse) VisitSearchBookSeriesNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBookRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params DeleteBookParams
+}
+
+type DeleteBookResponseObject interface {
+	VisitDeleteBookResponse(w http.ResponseWriter) error
+}
+
+type DeleteBook204Response = BookDeletedResponse
+
+func (response DeleteBook204Response) VisitDeleteBookResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type DeleteEbookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+type DeleteBook403JSONResponse struct{ ForbiddenJSONResponse }
 
-func (response DeleteEbookQualityProfile403JSONResponse) VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response DeleteBook403JSONResponse) VisitDeleteBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19736,9 +22569,9 @@ func (response DeleteEbookQualityProfile403JSONResponse) VisitDeleteEbookQuality
 	return err
 }
 
-type DeleteEbookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+type DeleteBook404JSONResponse struct{ NotFoundJSONResponse }
 
-func (response DeleteEbookQualityProfile404JSONResponse) VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response DeleteBook404JSONResponse) VisitDeleteBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19750,9 +22583,9 @@ func (response DeleteEbookQualityProfile404JSONResponse) VisitDeleteEbookQuality
 	return err
 }
 
-type DeleteEbookQualityProfile409JSONResponse struct{ ConflictJSONResponse }
+type DeleteBook409JSONResponse struct{ ConflictJSONResponse }
 
-func (response DeleteEbookQualityProfile409JSONResponse) VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response DeleteBook409JSONResponse) VisitDeleteBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19764,106 +22597,9 @@ func (response DeleteEbookQualityProfile409JSONResponse) VisitDeleteEbookQuality
 	return err
 }
 
-type DeleteEbookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+type DeleteBook500JSONResponse struct{ InternalErrorJSONResponse }
 
-func (response DeleteEbookQualityProfile500JSONResponse) VisitDeleteEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfileRequestObject struct {
-	Name ResourceName `json:"name"`
-	Body *UpdateEbookQualityProfileJSONRequestBody
-}
-
-type UpdateEbookQualityProfileResponseObject interface {
-	VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error
-}
-
-type UpdateEbookQualityProfile200JSONResponse struct {
-	EbookQualityProfileResponseJSONResponse
-}
-
-func (response UpdateEbookQualityProfile200JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response UpdateEbookQualityProfile403JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response UpdateEbookQualityProfile404JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfile413JSONResponse struct{ PayloadTooLargeJSONResponse }
-
-func (response UpdateEbookQualityProfile413JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(413)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfile422JSONResponse struct {
-	UnprocessableEntityJSONResponse
-}
-
-func (response UpdateEbookQualityProfile422JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(422)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type UpdateEbookQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response UpdateEbookQualityProfile500JSONResponse) VisitUpdateEbookQualityProfileResponse(w http.ResponseWriter) error {
+func (response DeleteBook500JSONResponse) VisitDeleteBookResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -19871,73 +22607,6 @@ func (response UpdateEbookQualityProfile500JSONResponse) VisitUpdateEbookQuality
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchBookAuthorsRequestObject struct {
-	Params SearchBookAuthorsParams
-}
-
-type SearchBookAuthorsResponseObject interface {
-	VisitSearchBookAuthorsResponse(w http.ResponseWriter) error
-}
-
-type SearchBookAuthors200JSONResponse struct{ BookSearchResultsJSONResponse }
-
-func (response SearchBookAuthors200JSONResponse) VisitSearchBookAuthorsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchBookAuthors429JSONResponse struct{ RateLimitedJSONResponse }
-
-func (response SearchBookAuthors429JSONResponse) VisitSearchBookAuthorsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if response.Headers.RetryAfter != nil {
-		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
-	}
-	w.WriteHeader(429)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchBookAuthors500JSONResponse struct{ InternalErrorJSONResponse }
-
-func (response SearchBookAuthors500JSONResponse) VisitSearchBookAuthorsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type SearchBookAuthors503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response SearchBookAuthors503JSONResponse) VisitSearchBookAuthorsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -20053,6 +22722,22 @@ func (response PatchBook413JSONResponse) VisitPatchBookResponse(w http.ResponseW
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchBook422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchBook422JSONResponse) VisitPatchBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -20174,6 +22859,168 @@ func (response GrabBookRelease500JSONResponse) VisitGrabBookReleaseResponse(w ht
 	return err
 }
 
+type RefreshBookRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type RefreshBookResponseObject interface {
+	VisitRefreshBookResponse(w http.ResponseWriter) error
+}
+
+type RefreshBook200JSONResponse struct{ BookDetailJSONResponse }
+
+func (response RefreshBook200JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RefreshBook403JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RefreshBook404JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBook429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response RefreshBook429JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBook500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RefreshBook500JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshBook503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response RefreshBook503JSONResponse) VisitRefreshBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookFilesRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params RenameBookFilesParams
+}
+
+type RenameBookFilesResponseObject interface {
+	VisitRenameBookFilesResponse(w http.ResponseWriter) error
+}
+
+type RenameBookFiles200JSONResponse struct {
+	BookRenamePlanResponseJSONResponse
+}
+
+func (response RenameBookFiles200JSONResponse) VisitRenameBookFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RenameBookFiles403JSONResponse) VisitRenameBookFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RenameBookFiles404JSONResponse) VisitRenameBookFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameBookFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RenameBookFiles500JSONResponse) VisitRenameBookFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchBookReleasesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params SearchBookReleasesParams
@@ -20183,7 +23030,7 @@ type SearchBookReleasesResponseObject interface {
 	VisitSearchBookReleasesResponse(w http.ResponseWriter) error
 }
 
-type SearchBookReleases200JSONResponse struct{ BookReleaseListJSONResponse }
+type SearchBookReleases200JSONResponse struct{ SearchResultsJSONResponse }
 
 func (response SearchBookReleases200JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
 
@@ -20258,6 +23105,73 @@ func (response SearchBookReleases422JSONResponse) VisitSearchBookReleasesRespons
 type SearchBookReleases500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchBookReleases500JSONResponse) VisitSearchBookReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookNowRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params SearchBookNowParams
+}
+
+type SearchBookNowResponseObject interface {
+	VisitSearchBookNowResponse(w http.ResponseWriter) error
+}
+
+type SearchBookNow202JSONResponse struct {
+	BookSearchAcceptedResponseJSONResponse
+}
+
+func (response SearchBookNow202JSONResponse) VisitSearchBookNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchBookNow403JSONResponse) VisitSearchBookNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchBookNow404JSONResponse) VisitSearchBookNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookNow500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchBookNow500JSONResponse) VisitSearchBookNowResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -25835,7 +28749,7 @@ type SearchMusicAlbumReleasesResponseObject interface {
 	VisitSearchMusicAlbumReleasesResponse(w http.ResponseWriter) error
 }
 
-type SearchMusicAlbumReleases200JSONResponse struct{ AlbumReleaseListJSONResponse }
+type SearchMusicAlbumReleases200JSONResponse struct{ SearchResultsJSONResponse }
 
 func (response SearchMusicAlbumReleases200JSONResponse) VisitSearchMusicAlbumReleasesResponse(w http.ResponseWriter) error {
 
@@ -25896,6 +28810,63 @@ func (response SearchMusicAlbumReleases422JSONResponse) VisitSearchMusicAlbumRel
 type SearchMusicAlbumReleases500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicAlbumReleases500JSONResponse) VisitSearchMusicAlbumReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicAlbumNowRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type SearchMusicAlbumNowResponseObject interface {
+	VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error
+}
+
+type SearchMusicAlbumNow202Response = SearchNowAcceptedResponse
+
+func (response SearchMusicAlbumNow202Response) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type SearchMusicAlbumNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMusicAlbumNow403JSONResponse) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicAlbumNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchMusicAlbumNow404JSONResponse) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicAlbumNow500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchMusicAlbumNow500JSONResponse) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -26021,9 +28992,80 @@ func (response AddMusicArtist413JSONResponse) VisitAddMusicArtistResponse(w http
 	return err
 }
 
+type AddMusicArtist422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response AddMusicArtist422JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddMusicArtist429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response AddMusicArtist429JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type AddMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response AddMusicArtist500JSONResponse) VisitAddMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistCountsRequestObject struct {
+	Params GetMusicArtistCountsParams
+}
+
+type GetMusicArtistCountsResponseObject interface {
+	VisitGetMusicArtistCountsResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtistCounts200JSONResponse struct {
+	MusicArtistCountsResponseJSONResponse
+}
+
+func (response GetMusicArtistCounts200JSONResponse) VisitGetMusicArtistCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistCounts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtistCounts500JSONResponse) VisitGetMusicArtistCountsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -26094,7 +29136,8 @@ func (response DeleteMusicArtist500JSONResponse) VisitDeleteMusicArtistResponse(
 }
 
 type GetMusicArtistRequestObject struct {
-	Id ResourceID `json:"id"`
+	Id     ResourceID `json:"id"`
+	Params GetMusicArtistParams
 }
 
 type GetMusicArtistResponseObject interface {
@@ -26144,8 +29187,9 @@ func (response GetMusicArtist500JSONResponse) VisitGetMusicArtistResponse(w http
 }
 
 type PatchMusicArtistRequestObject struct {
-	Id   ResourceID `json:"id"`
-	Body *PatchMusicArtistJSONRequestBody
+	Id     ResourceID `json:"id"`
+	Params PatchMusicArtistParams
+	Body   *PatchMusicArtistJSONRequestBody
 }
 
 type PatchMusicArtistResponseObject interface {
@@ -26238,8 +29282,177 @@ func (response PatchMusicArtist500JSONResponse) VisitPatchMusicArtistResponse(w 
 	return err
 }
 
-type RefreshMusicArtistRequestObject struct {
+type BrowseMusicArtistReleasesRequestObject struct {
 	Id ResourceID `json:"id"`
+}
+
+type BrowseMusicArtistReleasesResponseObject interface {
+	VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error
+}
+
+type BrowseMusicArtistReleases200JSONResponse struct{ SearchResultsJSONResponse }
+
+func (response BrowseMusicArtistReleases200JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response BrowseMusicArtistReleases403JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response BrowseMusicArtistReleases404JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response BrowseMusicArtistReleases422JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BrowseMusicArtistReleases500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response BrowseMusicArtistReleases500JSONResponse) VisitBrowseMusicArtistReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMusicArtistReleaseRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GrabMusicArtistReleaseJSONRequestBody
+}
+
+type GrabMusicArtistReleaseResponseObject interface {
+	VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error
+}
+
+type GrabMusicArtistRelease202Response = ReleaseGrabAcceptedResponse
+
+func (response GrabMusicArtistRelease202Response) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type GrabMusicArtistRelease403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GrabMusicArtistRelease403JSONResponse) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMusicArtistRelease404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GrabMusicArtistRelease404JSONResponse) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMusicArtistRelease413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GrabMusicArtistRelease413JSONResponse) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMusicArtistRelease422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GrabMusicArtistRelease422JSONResponse) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GrabMusicArtistRelease500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GrabMusicArtistRelease500JSONResponse) VisitGrabMusicArtistReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshMusicArtistRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params RefreshMusicArtistParams
 }
 
 type RefreshMusicArtistResponseObject interface {
@@ -26288,9 +29501,150 @@ func (response RefreshMusicArtist404JSONResponse) VisitRefreshMusicArtistRespons
 	return err
 }
 
+type RefreshMusicArtist429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response RefreshMusicArtist429JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RefreshMusicArtist500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response RefreshMusicArtist500JSONResponse) VisitRefreshMusicArtistResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMusicArtistFilesRequestObject struct {
+	Id     ResourceID `json:"id"`
+	Params RenameMusicArtistFilesParams
+}
+
+type RenameMusicArtistFilesResponseObject interface {
+	VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error
+}
+
+type RenameMusicArtistFiles200JSONResponse struct {
+	MusicRenamePlanResponseJSONResponse
+}
+
+func (response RenameMusicArtistFiles200JSONResponse) VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMusicArtistFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RenameMusicArtistFiles403JSONResponse) VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMusicArtistFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RenameMusicArtistFiles404JSONResponse) VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameMusicArtistFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RenameMusicArtistFiles500JSONResponse) VisitRenameMusicArtistFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicArtistNowRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type SearchMusicArtistNowResponseObject interface {
+	VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error
+}
+
+type SearchMusicArtistNow202Response = SearchNowAcceptedResponse
+
+func (response SearchMusicArtistNow202Response) VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type SearchMusicArtistNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMusicArtistNow403JSONResponse) VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicArtistNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchMusicArtistNow404JSONResponse) VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicArtistNow500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchMusicArtistNow500JSONResponse) VisitSearchMusicArtistNowResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -26309,7 +29663,9 @@ type ListMusicQualityProfilesResponseObject interface {
 	VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error
 }
 
-type ListMusicQualityProfiles200JSONResponse []MusicQualityProfile
+type ListMusicQualityProfiles200JSONResponse struct {
+	MusicQualityProfileListJSONResponse
+}
 
 func (response ListMusicQualityProfiles200JSONResponse) VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error {
 
@@ -26601,6 +29957,63 @@ func (response UpdateMusicQualityProfile500JSONResponse) VisitUpdateMusicQuality
 	return err
 }
 
+type SetDefaultMusicQualityProfileRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type SetDefaultMusicQualityProfileResponseObject interface {
+	VisitSetDefaultMusicQualityProfileResponse(w http.ResponseWriter) error
+}
+
+type SetDefaultMusicQualityProfile204Response = QualityProfileDefaultSetResponse
+
+func (response SetDefaultMusicQualityProfile204Response) VisitSetDefaultMusicQualityProfileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SetDefaultMusicQualityProfile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetDefaultMusicQualityProfile403JSONResponse) VisitSetDefaultMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultMusicQualityProfile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetDefaultMusicQualityProfile404JSONResponse) VisitSetDefaultMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultMusicQualityProfile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SetDefaultMusicQualityProfile500JSONResponse) VisitSetDefaultMusicQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchMusicArtistsRequestObject struct {
 	Params SearchMusicArtistsParams
 }
@@ -26623,9 +30036,224 @@ func (response SearchMusicArtists200JSONResponse) VisitSearchMusicArtistsRespons
 	return err
 }
 
+type SearchMusicArtists429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SearchMusicArtists429JSONResponse) VisitSearchMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchMusicArtists500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicArtists500JSONResponse) VisitSearchMusicArtistsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistLookupRequestObject struct {
+	Mbid   MBIDParam `json:"mbid"`
+	Params GetMusicArtistLookupParams
+}
+
+type GetMusicArtistLookupResponseObject interface {
+	VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtistLookup200JSONResponse struct {
+	MusicArtistLookupDetailResponseJSONResponse
+}
+
+func (response GetMusicArtistLookup200JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistLookup404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicArtistLookup404JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistLookup429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response GetMusicArtistLookup429JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistLookup500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtistLookup500JSONResponse) VisitGetMusicArtistLookupResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicTrackFileRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type DeleteMusicTrackFileResponseObject interface {
+	VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error
+}
+
+type DeleteMusicTrackFile204Response = MusicTrackFileDeletedResponse
+
+func (response DeleteMusicTrackFile204Response) VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMusicTrackFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteMusicTrackFile403JSONResponse) VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicTrackFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteMusicTrackFile404JSONResponse) VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicTrackFile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteMusicTrackFile409JSONResponse) VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteMusicTrackFile500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteMusicTrackFile500JSONResponse) VisitDeleteMusicTrackFileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicTrackNowRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type SearchMusicTrackNowResponseObject interface {
+	VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error
+}
+
+type SearchMusicTrackNow202Response = SearchNowAcceptedResponse
+
+func (response SearchMusicTrackNow202Response) VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
+	return nil
+}
+
+type SearchMusicTrackNow403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchMusicTrackNow403JSONResponse) VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicTrackNow404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SearchMusicTrackNow404JSONResponse) VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicTrackNow500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchMusicTrackNow500JSONResponse) VisitSearchMusicTrackNowResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -27034,7 +30662,8 @@ func (response UpdateQualityProfile500JSONResponse) VisitUpdateQualityProfileRes
 }
 
 type SetDefaultQualityProfileRequestObject struct {
-	Name ResourceName `json:"name"`
+	Name   ResourceName `json:"name"`
+	Params SetDefaultQualityProfileParams
 }
 
 type SetDefaultQualityProfileResponseObject interface {
@@ -27363,6 +30992,22 @@ func (response ApproveRequest413JSONResponse) VisitApproveRequestResponse(w http
 	return err
 }
 
+type ApproveRequest422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response ApproveRequest422JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ApproveRequest429JSONResponse struct{ RateLimitedJSONResponse }
 
 func (response ApproveRequest429JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
@@ -27390,6 +31035,20 @@ func (response ApproveRequest500JSONResponse) VisitApproveRequestResponse(w http
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveRequest503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ApproveRequest503JSONResponse) VisitApproveRequestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -27482,7 +31141,7 @@ type GetRequestMetadataResponseObject interface {
 }
 
 type GetRequestMetadata200JSONResponse struct {
-	RequestMediaDetailResponseJSONResponse
+	RequestMetadataResponseJSONResponse
 }
 
 func (response GetRequestMetadata200JSONResponse) VisitGetRequestMetadataResponse(w http.ResponseWriter) error {
@@ -27539,6 +31198,23 @@ func (response GetRequestMetadata404JSONResponse) VisitGetRequestMetadataRespons
 	return err
 }
 
+type GetRequestMetadata429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response GetRequestMetadata429JSONResponse) VisitGetRequestMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetRequestMetadata500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GetRequestMetadata500JSONResponse) VisitGetRequestMetadataResponse(w http.ResponseWriter) error {
@@ -27549,6 +31225,20 @@ func (response GetRequestMetadata500JSONResponse) VisitGetRequestMetadataRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetRequestMetadata503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetRequestMetadata503JSONResponse) VisitGetRequestMetadataResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -31064,51 +34754,60 @@ type StrictServerInterface interface {
 	// ChangePassword Change current user's password; revokes all other sessions and all API keys
 	// (POST /auth/password)
 	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
-	// ListAudiobookQualityProfiles List audiobook quality profiles
-	// (GET /books/audiobook-quality-profiles)
-	ListAudiobookQualityProfiles(ctx context.Context, request ListAudiobookQualityProfilesRequestObject) (ListAudiobookQualityProfilesResponseObject, error)
-	// CreateAudiobookQualityProfile Create an audiobook quality profile
-	// (POST /books/audiobook-quality-profiles)
-	CreateAudiobookQualityProfile(ctx context.Context, request CreateAudiobookQualityProfileRequestObject) (CreateAudiobookQualityProfileResponseObject, error)
-	// DeleteAudiobookQualityProfile Delete an audiobook quality profile
-	// (DELETE /books/audiobook-quality-profiles/{name})
-	DeleteAudiobookQualityProfile(ctx context.Context, request DeleteAudiobookQualityProfileRequestObject) (DeleteAudiobookQualityProfileResponseObject, error)
-	// UpdateAudiobookQualityProfile Update an audiobook quality profile
-	// (PUT /books/audiobook-quality-profiles/{name})
-	UpdateAudiobookQualityProfile(ctx context.Context, request UpdateAudiobookQualityProfileRequestObject) (UpdateAudiobookQualityProfileResponseObject, error)
-	// ListBookAuthors List book authors
-	// (GET /books/authors)
-	ListBookAuthors(ctx context.Context, request ListBookAuthorsRequestObject) (ListBookAuthorsResponseObject, error)
-	// AddBookAuthor Add an author by Hardcover id
-	// (POST /books/authors)
-	AddBookAuthor(ctx context.Context, request AddBookAuthorRequestObject) (AddBookAuthorResponseObject, error)
-	// DeleteBookAuthor Remove an author from the library
-	// (DELETE /books/authors/{id})
-	DeleteBookAuthor(ctx context.Context, request DeleteBookAuthorRequestObject) (DeleteBookAuthorResponseObject, error)
-	// GetBookAuthor Get author details
-	// (GET /books/authors/{id})
-	GetBookAuthor(ctx context.Context, request GetBookAuthorRequestObject) (GetBookAuthorResponseObject, error)
-	// PatchBookAuthor Patch an author
-	// (PATCH /books/authors/{id})
-	PatchBookAuthor(ctx context.Context, request PatchBookAuthorRequestObject) (PatchBookAuthorResponseObject, error)
-	// RefreshBookAuthor Refresh an author from Hardcover
-	// (POST /books/authors/{id}/refresh)
-	RefreshBookAuthor(ctx context.Context, request RefreshBookAuthorRequestObject) (RefreshBookAuthorResponseObject, error)
-	// ListEbookQualityProfiles List ebook quality profiles
-	// (GET /books/ebook-quality-profiles)
-	ListEbookQualityProfiles(ctx context.Context, request ListEbookQualityProfilesRequestObject) (ListEbookQualityProfilesResponseObject, error)
-	// CreateEbookQualityProfile Create an ebook quality profile
-	// (POST /books/ebook-quality-profiles)
-	CreateEbookQualityProfile(ctx context.Context, request CreateEbookQualityProfileRequestObject) (CreateEbookQualityProfileResponseObject, error)
-	// DeleteEbookQualityProfile Delete an ebook quality profile
-	// (DELETE /books/ebook-quality-profiles/{name})
-	DeleteEbookQualityProfile(ctx context.Context, request DeleteEbookQualityProfileRequestObject) (DeleteEbookQualityProfileResponseObject, error)
-	// UpdateEbookQualityProfile Update an ebook quality profile
-	// (PUT /books/ebook-quality-profiles/{name})
-	UpdateEbookQualityProfile(ctx context.Context, request UpdateEbookQualityProfileRequestObject) (UpdateEbookQualityProfileResponseObject, error)
-	// SearchBookAuthors Search Hardcover for authors to add
+	// ListBooks List the books shelf
+	// (GET /books)
+	ListBooks(ctx context.Context, request ListBooksRequestObject) (ListBooksResponseObject, error)
+	// AddBook Add a book by Hardcover id
+	// (POST /books)
+	AddBook(ctx context.Context, request AddBookRequestObject) (AddBookResponseObject, error)
+	// GetBookCounts Books shelf facet counts
+	// (GET /books/counts)
+	GetBookCounts(ctx context.Context, request GetBookCountsRequestObject) (GetBookCountsResponseObject, error)
+	// ListBookQualityProfiles List book quality profiles
+	// (GET /books/quality-profiles)
+	ListBookQualityProfiles(ctx context.Context, request ListBookQualityProfilesRequestObject) (ListBookQualityProfilesResponseObject, error)
+	// CreateBookQualityProfile Create a book quality profile
+	// (POST /books/quality-profiles)
+	CreateBookQualityProfile(ctx context.Context, request CreateBookQualityProfileRequestObject) (CreateBookQualityProfileResponseObject, error)
+	// DeleteBookQualityProfile Delete a book quality profile
+	// (DELETE /books/quality-profiles/{name})
+	DeleteBookQualityProfile(ctx context.Context, request DeleteBookQualityProfileRequestObject) (DeleteBookQualityProfileResponseObject, error)
+	// UpdateBookQualityProfile Update a book quality profile
+	// (PUT /books/quality-profiles/{name})
+	UpdateBookQualityProfile(ctx context.Context, request UpdateBookQualityProfileRequestObject) (UpdateBookQualityProfileResponseObject, error)
+	// SetDefaultBookQualityProfile Make this the default book quality profile
+	// (POST /books/quality-profiles/{name}/default)
+	SetDefaultBookQualityProfile(ctx context.Context, request SetDefaultBookQualityProfileRequestObject) (SetDefaultBookQualityProfileResponseObject, error)
+	// SearchBooks Search Hardcover for books and series to add
 	// (GET /books/search)
-	SearchBookAuthors(ctx context.Context, request SearchBookAuthorsRequestObject) (SearchBookAuthorsResponseObject, error)
+	SearchBooks(ctx context.Context, request SearchBooksRequestObject) (SearchBooksResponseObject, error)
+	// GetBookLookup Look up one Hardcover book or series
+	// (GET /books/search/{hardcover_id})
+	GetBookLookup(ctx context.Context, request GetBookLookupRequestObject) (GetBookLookupResponseObject, error)
+	// AddBookSeries Add a book series by Hardcover id
+	// (POST /books/series)
+	AddBookSeries(ctx context.Context, request AddBookSeriesRequestObject) (AddBookSeriesResponseObject, error)
+	// DeleteBookSeries Remove a series and its volumes from the library
+	// (DELETE /books/series/{id})
+	DeleteBookSeries(ctx context.Context, request DeleteBookSeriesRequestObject) (DeleteBookSeriesResponseObject, error)
+	// GetBookSeries Get series details
+	// (GET /books/series/{id})
+	GetBookSeries(ctx context.Context, request GetBookSeriesRequestObject) (GetBookSeriesResponseObject, error)
+	// PatchBookSeries Patch a series
+	// (PATCH /books/series/{id})
+	PatchBookSeries(ctx context.Context, request PatchBookSeriesRequestObject) (PatchBookSeriesResponseObject, error)
+	// RefreshBookSeries Refresh a series from Hardcover
+	// (POST /books/series/{id}/refresh-metadata)
+	RefreshBookSeries(ctx context.Context, request RefreshBookSeriesRequestObject) (RefreshBookSeriesResponseObject, error)
+	// RenameBookSeriesFiles Rename a series' volume files to match the library naming pattern
+	// (POST /books/series/{id}/rename)
+	RenameBookSeriesFiles(ctx context.Context, request RenameBookSeriesFilesRequestObject) (RenameBookSeriesFilesResponseObject, error)
+	// SearchBookSeriesNow Dispatch an indexer search for a series' wanted volumes
+	// (POST /books/series/{id}/search-now)
+	SearchBookSeriesNow(ctx context.Context, request SearchBookSeriesNowRequestObject) (SearchBookSeriesNowResponseObject, error)
+	// DeleteBook Remove a book from the library
+	// (DELETE /books/{id})
+	DeleteBook(ctx context.Context, request DeleteBookRequestObject) (DeleteBookResponseObject, error)
 	// GetBook Get book details
 	// (GET /books/{id})
 	GetBook(ctx context.Context, request GetBookRequestObject) (GetBookResponseObject, error)
@@ -31118,9 +34817,18 @@ type StrictServerInterface interface {
 	// GrabBookRelease Grab a specific release for one slot of a book
 	// (POST /books/{id}/grab)
 	GrabBookRelease(ctx context.Context, request GrabBookReleaseRequestObject) (GrabBookReleaseResponseObject, error)
-	// SearchBookReleases Search indexers for one slot of a book
+	// RefreshBook Refresh a book from Hardcover
+	// (POST /books/{id}/refresh-metadata)
+	RefreshBook(ctx context.Context, request RefreshBookRequestObject) (RefreshBookResponseObject, error)
+	// RenameBookFiles Rename a book's files to match the library naming pattern
+	// (POST /books/{id}/rename)
+	RenameBookFiles(ctx context.Context, request RenameBookFilesRequestObject) (RenameBookFilesResponseObject, error)
+	// SearchBookReleases Search indexers for the releases of a book
 	// (POST /books/{id}/search)
 	SearchBookReleases(ctx context.Context, request SearchBookReleasesRequestObject) (SearchBookReleasesResponseObject, error)
+	// SearchBookNow Dispatch an indexer search and grab for a book
+	// (POST /books/{id}/search-now)
+	SearchBookNow(ctx context.Context, request SearchBookNowRequestObject) (SearchBookNowResponseObject, error)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
@@ -31379,12 +35087,18 @@ type StrictServerInterface interface {
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(ctx context.Context, request SearchMusicAlbumReleasesRequestObject) (SearchMusicAlbumReleasesResponseObject, error)
+	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
+	// (POST /music/albums/{id}/search-now)
+	SearchMusicAlbumNow(ctx context.Context, request SearchMusicAlbumNowRequestObject) (SearchMusicAlbumNowResponseObject, error)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(ctx context.Context, request ListMusicArtistsRequestObject) (ListMusicArtistsResponseObject, error)
 	// AddMusicArtist Add an artist by MusicBrainz id
 	// (POST /music/artists)
 	AddMusicArtist(ctx context.Context, request AddMusicArtistRequestObject) (AddMusicArtistResponseObject, error)
+	// GetMusicArtistCounts Artist facet counts
+	// (GET /music/artists/counts)
+	GetMusicArtistCounts(ctx context.Context, request GetMusicArtistCountsRequestObject) (GetMusicArtistCountsResponseObject, error)
 	// DeleteMusicArtist Remove an artist from the library
 	// (DELETE /music/artists/{id})
 	DeleteMusicArtist(ctx context.Context, request DeleteMusicArtistRequestObject) (DeleteMusicArtistResponseObject, error)
@@ -31394,9 +35108,21 @@ type StrictServerInterface interface {
 	// PatchMusicArtist Patch an artist
 	// (PATCH /music/artists/{id})
 	PatchMusicArtist(ctx context.Context, request PatchMusicArtistRequestObject) (PatchMusicArtistResponseObject, error)
+	// BrowseMusicArtistReleases Search indexers for an artist's discography packs
+	// (POST /music/artists/{id}/browse)
+	BrowseMusicArtistReleases(ctx context.Context, request BrowseMusicArtistReleasesRequestObject) (BrowseMusicArtistReleasesResponseObject, error)
+	// GrabMusicArtistRelease Grab a discography pack for this artist
+	// (POST /music/artists/{id}/grab)
+	GrabMusicArtistRelease(ctx context.Context, request GrabMusicArtistReleaseRequestObject) (GrabMusicArtistReleaseResponseObject, error)
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
-	// (POST /music/artists/{id}/refresh)
+	// (POST /music/artists/{id}/refresh-metadata)
 	RefreshMusicArtist(ctx context.Context, request RefreshMusicArtistRequestObject) (RefreshMusicArtistResponseObject, error)
+	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
+	// (POST /music/artists/{id}/rename)
+	RenameMusicArtistFiles(ctx context.Context, request RenameMusicArtistFilesRequestObject) (RenameMusicArtistFilesResponseObject, error)
+	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
+	// (POST /music/artists/{id}/search-now)
+	SearchMusicArtistNow(ctx context.Context, request SearchMusicArtistNowRequestObject) (SearchMusicArtistNowResponseObject, error)
 	// ListMusicQualityProfiles List music quality profiles
 	// (GET /music/quality-profiles)
 	ListMusicQualityProfiles(ctx context.Context, request ListMusicQualityProfilesRequestObject) (ListMusicQualityProfilesResponseObject, error)
@@ -31409,9 +35135,21 @@ type StrictServerInterface interface {
 	// UpdateMusicQualityProfile Update a music quality profile
 	// (PUT /music/quality-profiles/{name})
 	UpdateMusicQualityProfile(ctx context.Context, request UpdateMusicQualityProfileRequestObject) (UpdateMusicQualityProfileResponseObject, error)
+	// SetDefaultMusicQualityProfile Make this the default music quality profile
+	// (POST /music/quality-profiles/{name}/default)
+	SetDefaultMusicQualityProfile(ctx context.Context, request SetDefaultMusicQualityProfileRequestObject) (SetDefaultMusicQualityProfileResponseObject, error)
 	// SearchMusicArtists Search MusicBrainz for artists to add
 	// (GET /music/search)
 	SearchMusicArtists(ctx context.Context, request SearchMusicArtistsRequestObject) (SearchMusicArtistsResponseObject, error)
+	// GetMusicArtistLookup Look up one MusicBrainz artist
+	// (GET /music/search/{mbid})
+	GetMusicArtistLookup(ctx context.Context, request GetMusicArtistLookupRequestObject) (GetMusicArtistLookupResponseObject, error)
+	// DeleteMusicTrackFile Delete a track's media file
+	// (DELETE /music/tracks/{id}/file)
+	DeleteMusicTrackFile(ctx context.Context, request DeleteMusicTrackFileRequestObject) (DeleteMusicTrackFileResponseObject, error)
+	// SearchMusicTrackNow Dispatch an indexer search for the album holding a track
+	// (POST /music/tracks/{id}/search-now)
+	SearchMusicTrackNow(ctx context.Context, request SearchMusicTrackNowRequestObject) (SearchMusicTrackNowResponseObject, error)
 	// ListPeople List cast members in the library
 	// (GET /people)
 	ListPeople(ctx context.Context, request ListPeopleRequestObject) (ListPeopleResponseObject, error)
@@ -31436,7 +35174,7 @@ type StrictServerInterface interface {
 	// ListRequests List media requests
 	// (GET /requests)
 	ListRequests(ctx context.Context, request ListRequestsRequestObject) (ListRequestsResponseObject, error)
-	// CreateRequest Request a movie, show, artist, album, author or book
+	// CreateRequest Request a movie, show, artist, book or book series
 	// (POST /requests)
 	CreateRequest(ctx context.Context, request CreateRequestRequestObject) (CreateRequestResponseObject, error)
 	// GetRequestCounts Request counts by status
@@ -32572,139 +36310,25 @@ func (sh *strictHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// ListAudiobookQualityProfiles operation middleware
-func (sh *strictHandler) ListAudiobookQualityProfiles(w http.ResponseWriter, r *http.Request) {
-	var request ListAudiobookQualityProfilesRequestObject
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListAudiobookQualityProfiles(ctx, request.(ListAudiobookQualityProfilesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListAudiobookQualityProfiles")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListAudiobookQualityProfilesResponseObject); ok {
-		if err := validResponse.VisitListAudiobookQualityProfilesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// CreateAudiobookQualityProfile operation middleware
-func (sh *strictHandler) CreateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request) {
-	var request CreateAudiobookQualityProfileRequestObject
-
-	var body CreateAudiobookQualityProfileJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateAudiobookQualityProfile(ctx, request.(CreateAudiobookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateAudiobookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateAudiobookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitCreateAudiobookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DeleteAudiobookQualityProfile operation middleware
-func (sh *strictHandler) DeleteAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	var request DeleteAudiobookQualityProfileRequestObject
-
-	request.Name = name
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteAudiobookQualityProfile(ctx, request.(DeleteAudiobookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteAudiobookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteAudiobookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitDeleteAudiobookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UpdateAudiobookQualityProfile operation middleware
-func (sh *strictHandler) UpdateAudiobookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	var request UpdateAudiobookQualityProfileRequestObject
-
-	request.Name = name
-
-	var body UpdateAudiobookQualityProfileJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateAudiobookQualityProfile(ctx, request.(UpdateAudiobookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateAudiobookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateAudiobookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitUpdateAudiobookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListBookAuthors operation middleware
-func (sh *strictHandler) ListBookAuthors(w http.ResponseWriter, r *http.Request, params ListBookAuthorsParams) {
-	var request ListBookAuthorsRequestObject
+// ListBooks operation middleware
+func (sh *strictHandler) ListBooks(w http.ResponseWriter, r *http.Request, params ListBooksParams) {
+	var request ListBooksRequestObject
 
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListBookAuthors(ctx, request.(ListBookAuthorsRequestObject))
+		return sh.ssi.ListBooks(ctx, request.(ListBooksRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListBookAuthors")
+		handler = middleware(handler, "ListBooks")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListBookAuthorsResponseObject); ok {
-		if err := validResponse.VisitListBookAuthorsResponse(w); err != nil {
+	} else if validResponse, ok := response.(ListBooksResponseObject); ok {
+		if err := validResponse.VisitListBooksResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32712,11 +36336,11 @@ func (sh *strictHandler) ListBookAuthors(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-// AddBookAuthor operation middleware
-func (sh *strictHandler) AddBookAuthor(w http.ResponseWriter, r *http.Request) {
-	var request AddBookAuthorRequestObject
+// AddBook operation middleware
+func (sh *strictHandler) AddBook(w http.ResponseWriter, r *http.Request) {
+	var request AddBookRequestObject
 
-	var body AddBookAuthorJSONRequestBody
+	var body AddBookJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -32724,18 +36348,18 @@ func (sh *strictHandler) AddBookAuthor(w http.ResponseWriter, r *http.Request) {
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.AddBookAuthor(ctx, request.(AddBookAuthorRequestObject))
+		return sh.ssi.AddBook(ctx, request.(AddBookRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "AddBookAuthor")
+		handler = middleware(handler, "AddBook")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(AddBookAuthorResponseObject); ok {
-		if err := validResponse.VisitAddBookAuthorResponse(w); err != nil {
+	} else if validResponse, ok := response.(AddBookResponseObject); ok {
+		if err := validResponse.VisitAddBookResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32743,26 +36367,277 @@ func (sh *strictHandler) AddBookAuthor(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DeleteBookAuthor operation middleware
-func (sh *strictHandler) DeleteBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookAuthorParams) {
-	var request DeleteBookAuthorRequestObject
+// GetBookCounts operation middleware
+func (sh *strictHandler) GetBookCounts(w http.ResponseWriter, r *http.Request, params GetBookCountsParams) {
+	var request GetBookCountsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBookCounts(ctx, request.(GetBookCountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBookCounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBookCountsResponseObject); ok {
+		if err := validResponse.VisitGetBookCountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBookQualityProfiles operation middleware
+func (sh *strictHandler) ListBookQualityProfiles(w http.ResponseWriter, r *http.Request) {
+	var request ListBookQualityProfilesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBookQualityProfiles(ctx, request.(ListBookQualityProfilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBookQualityProfiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBookQualityProfilesResponseObject); ok {
+		if err := validResponse.VisitListBookQualityProfilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateBookQualityProfile operation middleware
+func (sh *strictHandler) CreateBookQualityProfile(w http.ResponseWriter, r *http.Request) {
+	var request CreateBookQualityProfileRequestObject
+
+	var body CreateBookQualityProfileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateBookQualityProfile(ctx, request.(CreateBookQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateBookQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateBookQualityProfileResponseObject); ok {
+		if err := validResponse.VisitCreateBookQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBookQualityProfile operation middleware
+func (sh *strictHandler) DeleteBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request DeleteBookQualityProfileRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBookQualityProfile(ctx, request.(DeleteBookQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBookQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBookQualityProfileResponseObject); ok {
+		if err := validResponse.VisitDeleteBookQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBookQualityProfile operation middleware
+func (sh *strictHandler) UpdateBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request UpdateBookQualityProfileRequestObject
+
+	request.Name = name
+
+	var body UpdateBookQualityProfileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBookQualityProfile(ctx, request.(UpdateBookQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBookQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateBookQualityProfileResponseObject); ok {
+		if err := validResponse.VisitUpdateBookQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetDefaultBookQualityProfile operation middleware
+func (sh *strictHandler) SetDefaultBookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultBookQualityProfileParams) {
+	var request SetDefaultBookQualityProfileRequestObject
+
+	request.Name = name
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetDefaultBookQualityProfile(ctx, request.(SetDefaultBookQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetDefaultBookQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetDefaultBookQualityProfileResponseObject); ok {
+		if err := validResponse.VisitSetDefaultBookQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchBooks operation middleware
+func (sh *strictHandler) SearchBooks(w http.ResponseWriter, r *http.Request, params SearchBooksParams) {
+	var request SearchBooksRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchBooks(ctx, request.(SearchBooksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchBooks")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchBooksResponseObject); ok {
+		if err := validResponse.VisitSearchBooksResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBookLookup operation middleware
+func (sh *strictHandler) GetBookLookup(w http.ResponseWriter, r *http.Request, hardcoverId HardcoverIDParam, params GetBookLookupParams) {
+	var request GetBookLookupRequestObject
+
+	request.HardcoverId = hardcoverId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBookLookup(ctx, request.(GetBookLookupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBookLookup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBookLookupResponseObject); ok {
+		if err := validResponse.VisitGetBookLookupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddBookSeries operation middleware
+func (sh *strictHandler) AddBookSeries(w http.ResponseWriter, r *http.Request) {
+	var request AddBookSeriesRequestObject
+
+	var body AddBookSeriesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddBookSeries(ctx, request.(AddBookSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddBookSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddBookSeriesResponseObject); ok {
+		if err := validResponse.VisitAddBookSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBookSeries operation middleware
+func (sh *strictHandler) DeleteBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookSeriesParams) {
+	var request DeleteBookSeriesRequestObject
 
 	request.Id = id
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteBookAuthor(ctx, request.(DeleteBookAuthorRequestObject))
+		return sh.ssi.DeleteBookSeries(ctx, request.(DeleteBookSeriesRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteBookAuthor")
+		handler = middleware(handler, "DeleteBookSeries")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteBookAuthorResponseObject); ok {
-		if err := validResponse.VisitDeleteBookAuthorResponse(w); err != nil {
+	} else if validResponse, ok := response.(DeleteBookSeriesResponseObject); ok {
+		if err := validResponse.VisitDeleteBookSeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32770,25 +36645,25 @@ func (sh *strictHandler) DeleteBookAuthor(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// GetBookAuthor operation middleware
-func (sh *strictHandler) GetBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
-	var request GetBookAuthorRequestObject
+// GetBookSeries operation middleware
+func (sh *strictHandler) GetBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetBookSeriesRequestObject
 
 	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetBookAuthor(ctx, request.(GetBookAuthorRequestObject))
+		return sh.ssi.GetBookSeries(ctx, request.(GetBookSeriesRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetBookAuthor")
+		handler = middleware(handler, "GetBookSeries")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetBookAuthorResponseObject); ok {
-		if err := validResponse.VisitGetBookAuthorResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetBookSeriesResponseObject); ok {
+		if err := validResponse.VisitGetBookSeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32796,13 +36671,13 @@ func (sh *strictHandler) GetBookAuthor(w http.ResponseWriter, r *http.Request, i
 	}
 }
 
-// PatchBookAuthor operation middleware
-func (sh *strictHandler) PatchBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
-	var request PatchBookAuthorRequestObject
+// PatchBookSeries operation middleware
+func (sh *strictHandler) PatchBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PatchBookSeriesRequestObject
 
 	request.Id = id
 
-	var body PatchBookAuthorJSONRequestBody
+	var body PatchBookSeriesJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -32810,18 +36685,18 @@ func (sh *strictHandler) PatchBookAuthor(w http.ResponseWriter, r *http.Request,
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PatchBookAuthor(ctx, request.(PatchBookAuthorRequestObject))
+		return sh.ssi.PatchBookSeries(ctx, request.(PatchBookSeriesRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PatchBookAuthor")
+		handler = middleware(handler, "PatchBookSeries")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PatchBookAuthorResponseObject); ok {
-		if err := validResponse.VisitPatchBookAuthorResponse(w); err != nil {
+	} else if validResponse, ok := response.(PatchBookSeriesResponseObject); ok {
+		if err := validResponse.VisitPatchBookSeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32829,25 +36704,25 @@ func (sh *strictHandler) PatchBookAuthor(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-// RefreshBookAuthor operation middleware
-func (sh *strictHandler) RefreshBookAuthor(w http.ResponseWriter, r *http.Request, id ResourceID) {
-	var request RefreshBookAuthorRequestObject
+// RefreshBookSeries operation middleware
+func (sh *strictHandler) RefreshBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request RefreshBookSeriesRequestObject
 
 	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RefreshBookAuthor(ctx, request.(RefreshBookAuthorRequestObject))
+		return sh.ssi.RefreshBookSeries(ctx, request.(RefreshBookSeriesRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RefreshBookAuthor")
+		handler = middleware(handler, "RefreshBookSeries")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RefreshBookAuthorResponseObject); ok {
-		if err := validResponse.VisitRefreshBookAuthorResponse(w); err != nil {
+	} else if validResponse, ok := response.(RefreshBookSeriesResponseObject); ok {
+		if err := validResponse.VisitRefreshBookSeriesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -32855,139 +36730,79 @@ func (sh *strictHandler) RefreshBookAuthor(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-// ListEbookQualityProfiles operation middleware
-func (sh *strictHandler) ListEbookQualityProfiles(w http.ResponseWriter, r *http.Request) {
-	var request ListEbookQualityProfilesRequestObject
+// RenameBookSeriesFiles operation middleware
+func (sh *strictHandler) RenameBookSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookSeriesFilesParams) {
+	var request RenameBookSeriesFilesRequestObject
 
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListEbookQualityProfiles(ctx, request.(ListEbookQualityProfilesRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListEbookQualityProfiles")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListEbookQualityProfilesResponseObject); ok {
-		if err := validResponse.VisitListEbookQualityProfilesResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// CreateEbookQualityProfile operation middleware
-func (sh *strictHandler) CreateEbookQualityProfile(w http.ResponseWriter, r *http.Request) {
-	var request CreateEbookQualityProfileRequestObject
-
-	var body CreateEbookQualityProfileJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateEbookQualityProfile(ctx, request.(CreateEbookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateEbookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateEbookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitCreateEbookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DeleteEbookQualityProfile operation middleware
-func (sh *strictHandler) DeleteEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	var request DeleteEbookQualityProfileRequestObject
-
-	request.Name = name
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteEbookQualityProfile(ctx, request.(DeleteEbookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteEbookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DeleteEbookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitDeleteEbookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// UpdateEbookQualityProfile operation middleware
-func (sh *strictHandler) UpdateEbookQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
-	var request UpdateEbookQualityProfileRequestObject
-
-	request.Name = name
-
-	var body UpdateEbookQualityProfileJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UpdateEbookQualityProfile(ctx, request.(UpdateEbookQualityProfileRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UpdateEbookQualityProfile")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UpdateEbookQualityProfileResponseObject); ok {
-		if err := validResponse.VisitUpdateEbookQualityProfileResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// SearchBookAuthors operation middleware
-func (sh *strictHandler) SearchBookAuthors(w http.ResponseWriter, r *http.Request, params SearchBookAuthorsParams) {
-	var request SearchBookAuthorsRequestObject
-
+	request.Id = id
 	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SearchBookAuthors(ctx, request.(SearchBookAuthorsRequestObject))
+		return sh.ssi.RenameBookSeriesFiles(ctx, request.(RenameBookSeriesFilesRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SearchBookAuthors")
+		handler = middleware(handler, "RenameBookSeriesFiles")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SearchBookAuthorsResponseObject); ok {
-		if err := validResponse.VisitSearchBookAuthorsResponse(w); err != nil {
+	} else if validResponse, ok := response.(RenameBookSeriesFilesResponseObject); ok {
+		if err := validResponse.VisitRenameBookSeriesFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchBookSeriesNow operation middleware
+func (sh *strictHandler) SearchBookSeriesNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SearchBookSeriesNowRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchBookSeriesNow(ctx, request.(SearchBookSeriesNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchBookSeriesNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchBookSeriesNowResponseObject); ok {
+		if err := validResponse.VisitSearchBookSeriesNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBook operation middleware
+func (sh *strictHandler) DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams) {
+	var request DeleteBookRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBook(ctx, request.(DeleteBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBookResponseObject); ok {
+		if err := validResponse.VisitDeleteBookResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -33088,6 +36903,59 @@ func (sh *strictHandler) GrabBookRelease(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// RefreshBook operation middleware
+func (sh *strictHandler) RefreshBook(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request RefreshBookRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RefreshBook(ctx, request.(RefreshBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefreshBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RefreshBookResponseObject); ok {
+		if err := validResponse.VisitRefreshBookResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameBookFiles operation middleware
+func (sh *strictHandler) RenameBookFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameBookFilesParams) {
+	var request RenameBookFilesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameBookFiles(ctx, request.(RenameBookFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameBookFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RenameBookFilesResponseObject); ok {
+		if err := validResponse.VisitRenameBookFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SearchBookReleases operation middleware
 func (sh *strictHandler) SearchBookReleases(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookReleasesParams) {
 	var request SearchBookReleasesRequestObject
@@ -33108,6 +36976,33 @@ func (sh *strictHandler) SearchBookReleases(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchBookReleasesResponseObject); ok {
 		if err := validResponse.VisitSearchBookReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchBookNow operation middleware
+func (sh *strictHandler) SearchBookNow(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookNowParams) {
+	var request SearchBookNowRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchBookNow(ctx, request.(SearchBookNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchBookNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchBookNowResponseObject); ok {
+		if err := validResponse.VisitSearchBookNowResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -35561,6 +39456,32 @@ func (sh *strictHandler) SearchMusicAlbumReleases(w http.ResponseWriter, r *http
 	}
 }
 
+// SearchMusicAlbumNow operation middleware
+func (sh *strictHandler) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SearchMusicAlbumNowRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMusicAlbumNow(ctx, request.(SearchMusicAlbumNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMusicAlbumNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMusicAlbumNowResponseObject); ok {
+		if err := validResponse.VisitSearchMusicAlbumNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListMusicArtists operation middleware
 func (sh *strictHandler) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
 	var request ListMusicArtistsRequestObject
@@ -35618,6 +39539,32 @@ func (sh *strictHandler) AddMusicArtist(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// GetMusicArtistCounts operation middleware
+func (sh *strictHandler) GetMusicArtistCounts(w http.ResponseWriter, r *http.Request, params GetMusicArtistCountsParams) {
+	var request GetMusicArtistCountsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtistCounts(ctx, request.(GetMusicArtistCountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtistCounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistCountsResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistCountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteMusicArtist operation middleware
 func (sh *strictHandler) DeleteMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteMusicArtistParams) {
 	var request DeleteMusicArtistRequestObject
@@ -35646,10 +39593,11 @@ func (sh *strictHandler) DeleteMusicArtist(w http.ResponseWriter, r *http.Reques
 }
 
 // GetMusicArtist operation middleware
-func (sh *strictHandler) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+func (sh *strictHandler) GetMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params GetMusicArtistParams) {
 	var request GetMusicArtistRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetMusicArtist(ctx, request.(GetMusicArtistRequestObject))
@@ -35672,10 +39620,11 @@ func (sh *strictHandler) GetMusicArtist(w http.ResponseWriter, r *http.Request, 
 }
 
 // PatchMusicArtist operation middleware
-func (sh *strictHandler) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+func (sh *strictHandler) PatchMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params PatchMusicArtistParams) {
 	var request PatchMusicArtistRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	var body PatchMusicArtistJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -35704,11 +39653,71 @@ func (sh *strictHandler) PatchMusicArtist(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// BrowseMusicArtistReleases operation middleware
+func (sh *strictHandler) BrowseMusicArtistReleases(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request BrowseMusicArtistReleasesRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BrowseMusicArtistReleases(ctx, request.(BrowseMusicArtistReleasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BrowseMusicArtistReleases")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BrowseMusicArtistReleasesResponseObject); ok {
+		if err := validResponse.VisitBrowseMusicArtistReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GrabMusicArtistRelease operation middleware
+func (sh *strictHandler) GrabMusicArtistRelease(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GrabMusicArtistReleaseRequestObject
+
+	request.Id = id
+
+	var body GrabMusicArtistReleaseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GrabMusicArtistRelease(ctx, request.(GrabMusicArtistReleaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GrabMusicArtistRelease")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GrabMusicArtistReleaseResponseObject); ok {
+		if err := validResponse.VisitGrabMusicArtistReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RefreshMusicArtist operation middleware
-func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID) {
+func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams) {
 	var request RefreshMusicArtistRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.RefreshMusicArtist(ctx, request.(RefreshMusicArtistRequestObject))
@@ -35723,6 +39732,59 @@ func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshMusicArtistResponseObject); ok {
 		if err := validResponse.VisitRefreshMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameMusicArtistFiles operation middleware
+func (sh *strictHandler) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMusicArtistFilesParams) {
+	var request RenameMusicArtistFilesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameMusicArtistFiles(ctx, request.(RenameMusicArtistFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameMusicArtistFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RenameMusicArtistFilesResponseObject); ok {
+		if err := validResponse.VisitRenameMusicArtistFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchMusicArtistNow operation middleware
+func (sh *strictHandler) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SearchMusicArtistNowRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMusicArtistNow(ctx, request.(SearchMusicArtistNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMusicArtistNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMusicArtistNowResponseObject); ok {
+		if err := validResponse.VisitSearchMusicArtistNowResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -35844,6 +39906,32 @@ func (sh *strictHandler) UpdateMusicQualityProfile(w http.ResponseWriter, r *htt
 	}
 }
 
+// SetDefaultMusicQualityProfile operation middleware
+func (sh *strictHandler) SetDefaultMusicQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request SetDefaultMusicQualityProfileRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetDefaultMusicQualityProfile(ctx, request.(SetDefaultMusicQualityProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetDefaultMusicQualityProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetDefaultMusicQualityProfileResponseObject); ok {
+		if err := validResponse.VisitSetDefaultMusicQualityProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SearchMusicArtists operation middleware
 func (sh *strictHandler) SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams) {
 	var request SearchMusicArtistsRequestObject
@@ -35863,6 +39951,85 @@ func (sh *strictHandler) SearchMusicArtists(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicArtistsResponseObject); ok {
 		if err := validResponse.VisitSearchMusicArtistsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicArtistLookup operation middleware
+func (sh *strictHandler) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams) {
+	var request GetMusicArtistLookupRequestObject
+
+	request.Mbid = mbid
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtistLookup(ctx, request.(GetMusicArtistLookupRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtistLookup")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistLookupResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistLookupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMusicTrackFile operation middleware
+func (sh *strictHandler) DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request DeleteMusicTrackFileRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMusicTrackFile(ctx, request.(DeleteMusicTrackFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMusicTrackFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteMusicTrackFileResponseObject); ok {
+		if err := validResponse.VisitDeleteMusicTrackFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchMusicTrackNow operation middleware
+func (sh *strictHandler) SearchMusicTrackNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SearchMusicTrackNowRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMusicTrackNow(ctx, request.(SearchMusicTrackNowRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMusicTrackNow")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMusicTrackNowResponseObject); ok {
+		if err := validResponse.VisitSearchMusicTrackNowResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -36037,10 +40204,11 @@ func (sh *strictHandler) UpdateQualityProfile(w http.ResponseWriter, r *http.Req
 }
 
 // SetDefaultQualityProfile operation middleware
-func (sh *strictHandler) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName) {
+func (sh *strictHandler) SetDefaultQualityProfile(w http.ResponseWriter, r *http.Request, name ResourceName, params SetDefaultQualityProfileParams) {
 	var request SetDefaultQualityProfileRequestObject
 
 	request.Name = name
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.SetDefaultQualityProfile(ctx, request.(SetDefaultQualityProfileRequestObject))
