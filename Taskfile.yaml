@@ -71,6 +71,15 @@ tasks:
       - ent/**/*.go
       - exclude: ent/schema/*.go
 
+  cardigann:sync:
+    desc: Re-sync the embedded Cardigann indexer definitions from Prowlarr/Indexers (REF=branch|tag|commit, SRC=existing checkout)
+    # Fetches upstream (network), converts, and rewrites
+    # internal/cardigann/definitions wholesale. Commit the result as its own
+    # change: the diff is exactly what upstream changed since the last sync.
+    vars:
+      REF: '{{.REF | default "master"}}'
+    cmd: go run ./internal/cardigann/cmd/cardigann-sync -ref {{.REF}}{{with .SRC}} -src {{.}}{{end}}
+
   clean:
     desc: Remove build artifacts
     cmds:
