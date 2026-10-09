@@ -90,7 +90,7 @@ curl -s -H "Authorization: Bearer $TOKEN" 127.0.0.1:$PORT/api/v1/...
 |---|---|
 | REST / service logic | `curl` with the Bearer token. The spec is `api/openapi.yaml` |
 | UI (`web/app/**`) | A browser tool if the session has one (Playwright MCP, Chrome); else `go run ./.claude/skills/verify/shot -url http://127.0.0.1:$PORT -out "$S" /movies /settings/indexers` (add `-width 390` for a phone). It screenshots each path and prints console errors, exceptions and failed requests (a 409 from `/transcoding/queue` only means transcoding is off). **Read every PNG** before judging |
-| Grab / download / import | `go run ./e2e/faketracker -listen $TRACKER_HOST:$TRACKER -data "$S/tracker" -magnets -pack "Reacher:1:8"` in the background. It is the instance's indexer already, and `-magnets` skips the indexer-trust check |
+| Grab / download / import | `go run ./e2e/faketracker -listen $TRACKER_HOST:$TRACKER -data "$S/tracker" -magnets -pack "Reacher:1:8" -album "Boards of Canada:Hi Scores:6" -ebook "Ted Chiang:Exhalation" -audiobook "Ted Chiang:Exhalation:3"` in the background. It is the instance's indexer already, and `-magnets` skips the indexer-trust check. Name packs after titles in the instance's library: the feed matchers resolve `Creator - Title`, and album tracks are tagged by number for the importer |
 | Background job | `POST /api/v1/schedules/{name}/run`. `GET /api/v1/schedules` lists the names |
 | DB state | `sqlite3 "$S/data/streamline.db"`, for reading only |
 
