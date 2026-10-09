@@ -1604,7 +1604,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size_rus": {
         "selector": "div.search_res_meta span.search_chip:nth-child(2):contains(\"Б\")",

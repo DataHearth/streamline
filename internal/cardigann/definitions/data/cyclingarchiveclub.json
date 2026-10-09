@@ -240,6 +240,7 @@
         "selector": "td:nth-child(11)"
       },
       "description": {
+        "optional": true,
         "text": " {{ .Result._type }} {{ .Result._language }} {{ .Result._format }}"
       },
       "downloadvolumefactor": {

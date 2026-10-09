@@ -180,6 +180,7 @@
       "poster": {
         "selector": "a[href^=\"torrents-details.php?id=\"]",
         "attribute": "onMouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -196,6 +197,7 @@
       },
       "description": {
         "selector": "font[color=\"red\"]",
+        "optional": true,
         "filters": [
           {
             "name": "append",

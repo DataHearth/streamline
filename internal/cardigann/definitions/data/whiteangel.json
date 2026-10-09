@@ -295,9 +295,11 @@
       },
       "genre": {
         "selector": "tr",
-        "attribute": "data-tt-desc"
+        "attribute": "data-tt-desc",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "date_date": {

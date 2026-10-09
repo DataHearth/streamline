@@ -318,6 +318,7 @@
       },
       "genre": {
         "selector": "td:nth-child(2) > span",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -329,7 +330,8 @@
         ]
       },
       "description": {
-        "selector": "td:nth-child(2) > span"
+        "selector": "td:nth-child(2) > span",
+        "optional": true
       },
       "files": {
         "selector": "td:nth-child(3)"

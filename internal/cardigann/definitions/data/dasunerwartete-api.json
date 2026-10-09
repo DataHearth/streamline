@@ -382,10 +382,12 @@
         "selector": "leechers"
       },
       "imdbid": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdb"
+        "selector": "tmdb",
+        "optional": true
       },
       "_onlyup": {
         "selector": "free_button:contains(Only Upload)",

@@ -2474,6 +2474,11 @@
     "test": {
       "path": "index.php",
       "selector": "a[href=\"./login.php?logout=1\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203"
+      ]
     }
   },
   "search": {
@@ -2538,7 +2543,8 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "a.gen"
+        "selector": "a.gen",
+        "optional": true
       },
       "download": {
         "selector": "a[href^=\"./download.php?id=\"]",

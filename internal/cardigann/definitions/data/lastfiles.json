@@ -455,6 +455,7 @@
       "poster": {
         "selector": "a[href*=\"/torrents/\"]",
         "attribute": "data-bs-title",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -466,6 +467,7 @@
       },
       "genre": {
         "selector": "div.gap-2",
+        "optional": true,
         "remove": "style",
         "filters": [
           {
@@ -779,6 +781,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "download": {

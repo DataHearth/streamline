@@ -213,6 +213,11 @@
     "test": {
       "path": "index.php",
       "selector": "a[href^=\"/logout.php\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {

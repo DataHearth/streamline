@@ -327,6 +327,14 @@
     "test": {
       "path": "/",
       "selector": "button[href=\"account-logout.php\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ],
+      "Referer": [
+        "{{ .Config.sitelink }}index.php?initK&all"
+      ]
     }
   },
   "search": {

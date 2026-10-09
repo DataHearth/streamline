@@ -205,7 +205,8 @@
       },
       "tmdbid": {
         "selector": "a[href*=\"themoviedb.org/movie/\"], a[href*=\"themoviedb.org/tv/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td.rowfollow:nth-child(4) > span[title]",
@@ -294,7 +295,8 @@
         "text": "172800"
       },
       "description": {
-        "selector": "table.torrentname td.embedded:first-child > span:last-child"
+        "selector": "table.torrentname td.embedded:first-child > span:last-child",
+        "optional": true
       }
     }
   },

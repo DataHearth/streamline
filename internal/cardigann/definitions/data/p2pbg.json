@@ -408,6 +408,7 @@
       "poster": {
         "selector": "a:has(img[src*=\"/torrentimg/pic\"])",
         "attribute": "data-overlib",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

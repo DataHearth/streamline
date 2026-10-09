@@ -256,6 +256,7 @@
       "poster": {
         "selector": "a[href^=\"details.php?id=\"][onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

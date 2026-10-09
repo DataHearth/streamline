@@ -634,6 +634,7 @@
         "text": "/torrents/{{ .Result._id }}/download"
       },
       "poster": {
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -714,6 +715,7 @@
         ]
       },
       "genre": {
+        "optional": true,
         "filters": [
           {
             "name": "jsonjoinarray",
@@ -725,6 +727,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

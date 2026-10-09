@@ -467,7 +467,8 @@
         "text": "0.3"
       },
       "description": {
-        "selector": "a[href^=\"details.php?id=\"]"
+        "selector": "a[href^=\"details.php?id=\"]",
+        "optional": true
       }
     }
   },

@@ -312,11 +312,13 @@
       },
       "imdbid": {
         "selector": "a[href^=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "img.imdb-info",
-        "attribute": "data-url"
+        "attribute": "data-url",
+        "optional": true
       },
       "category": {
         "selector": "a[href^=\"/torrentek.php?cat=\"]",
@@ -361,6 +363,7 @@
         "selector": "td:nth-child(4)"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"pic/staff/yes.png\"]": "Verified",
           "*": "Unverified"

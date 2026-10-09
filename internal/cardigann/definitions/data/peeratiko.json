@@ -455,9 +455,11 @@
         "attribute": "href"
       },
       "genre": {
-        "selector": "strong > i"
+        "selector": "strong > i",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"/pic/mod.gif\"]": "verified: {{ .Result.genre }}",
           "*": "Unverified: {{ .Result.genre }}"
@@ -466,6 +468,7 @@
       "poster": {
         "selector": "a[href^=\"details.php?id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

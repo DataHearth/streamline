@@ -217,6 +217,7 @@
       },
       "description": {
         "selector": "td:nth-child(11)",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

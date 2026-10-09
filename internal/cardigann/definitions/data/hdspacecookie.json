@@ -283,6 +283,7 @@
       "poster": {
         "selector": "td a[href^=\"index.php?page=torrent-details\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -295,6 +296,7 @@
       "imdbid": {
         "selector": "td a[href^=\"index.php?page=torrent-details\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -353,9 +355,11 @@
       },
       "genre": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

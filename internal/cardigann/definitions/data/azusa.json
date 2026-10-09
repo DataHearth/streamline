@@ -239,6 +239,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

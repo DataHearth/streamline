@@ -225,7 +225,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "text": "now"
@@ -235,6 +236,7 @@
       },
       "description": {
         "selector": "p",
+        "optional": true,
         "remove": "a"
       },
       "seeders": {

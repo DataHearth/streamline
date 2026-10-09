@@ -366,11 +366,13 @@
       },
       "poster": {
         "selector": "a[href^=\"download.php?id=\"] button",
-        "attribute": "data-poster"
+        "attribute": "data-poster",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "div.torrent-date > strong",
@@ -411,9 +413,11 @@
       },
       "genre": {
         "selector": "div.torrent-meta-line > span:nth-child(2)",
-        "attribute": "title"
+        "attribute": "title",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"/pic/yes.png\"]": "Verified: {{ .Result.genre }}",
           "img[src=\"/pic/nincs.png\"]": "Unverified: {{ .Result.genre }}"

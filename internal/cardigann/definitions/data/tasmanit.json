@@ -336,7 +336,8 @@
       },
       "poster": {
         "selector": "img[src*=\"/torrents/images/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(5)"

@@ -301,6 +301,7 @@
       },
       "description": {
         "selector": "td.rowfollow:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

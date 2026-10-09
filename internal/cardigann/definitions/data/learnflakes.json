@@ -280,10 +280,12 @@
       },
       "poster": {
         "selector": "a[href*=\"data/torrents/torrent_images/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
         "selector": "div.torrentDetails > div:has(a[href*=\"&genre=\"])",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -295,6 +297,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "size": {

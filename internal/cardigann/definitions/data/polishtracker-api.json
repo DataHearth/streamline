@@ -213,10 +213,12 @@
         "text": "/download/{{ .Result._id }}"
       },
       "imdbid": {
-        "selector": "imdb_id"
+        "selector": "imdb_id",
+        "optional": true
       },
       "genre": {
         "selector": "tags",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -227,6 +229,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "seeders": {

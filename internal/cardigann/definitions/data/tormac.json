@@ -313,6 +313,11 @@
     "test": {
       "path": "/",
       "selector": "a[onclick=\"return post2url('/login', {logout: 1});\"]"
+    },
+    "headers": {
+      "Cookie": [
+        "tr_simple=0"
+      ]
     }
   },
   "search": {
@@ -626,6 +631,7 @@
       },
       "description": {
         "selector": "a.hl-tags",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

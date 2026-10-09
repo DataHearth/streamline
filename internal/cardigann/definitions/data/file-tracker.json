@@ -2749,6 +2749,7 @@
       },
       "description": {
         "selector": "a.genmed, a.seedmed",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

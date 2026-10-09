@@ -159,7 +159,8 @@
     },
     "fields": {
       "description": {
-        "selector": "div.name_left > a > b"
+        "selector": "div.name_left > a > b",
+        "optional": true
       },
       "title": {
         "selector": "div.name_left > a > b",
@@ -258,7 +259,8 @@
       },
       "imdbid": {
         "selector": "span.imdb_rate > a",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

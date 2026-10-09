@@ -193,6 +193,7 @@
       "poster": {
         "selector": "div.torrent-poster img",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

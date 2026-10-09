@@ -228,11 +228,13 @@
       },
       "tmdbid": {
         "selector": "[name=tmdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "tvdbid": {
         "selector": "[name=tvdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "date": {
         "selector": "pubDate",
@@ -270,7 +272,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "title"
+        "selector": "title",
+        "optional": true
       }
     }
   },

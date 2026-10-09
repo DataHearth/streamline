@@ -121,7 +121,8 @@
       },
       "poster": {
         "selector": ".thumb a img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "details": {
         "selector": ".thumb a",

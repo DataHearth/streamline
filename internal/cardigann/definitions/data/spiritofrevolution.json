@@ -343,15 +343,18 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "div[id^=\"details-\"] div div img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "description": {
         "selector": "div[class^=\"flag_pic_\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

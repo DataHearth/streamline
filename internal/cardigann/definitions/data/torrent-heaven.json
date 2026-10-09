@@ -258,7 +258,8 @@
       },
       "poster": {
         "selector": "div[id^=\"Style\"] img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "a[href^=\"details_bestanden.php?\"]",

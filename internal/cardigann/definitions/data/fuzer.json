@@ -320,11 +320,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "a[imgsrc]",
-        "attribute": "imgsrc"
+        "attribute": "imgsrc",
+        "optional": true
       },
       "size": {
         "selector": "td.inline_info:nth-last-child(4)"
@@ -391,7 +393,8 @@
         ]
       },
       "description": {
-        "selector": "div.sub_title"
+        "selector": "div.sub_title",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

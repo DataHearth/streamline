@@ -339,10 +339,12 @@
         "optional": true
       },
       "imdb": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdbId"
+        "selector": "tmdbId",
+        "optional": true
       },
       "downloadvolumefactor": {
         "selector": "downloadvolumefactor"

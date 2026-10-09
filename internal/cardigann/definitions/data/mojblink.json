@@ -432,6 +432,11 @@
     "test": {
       "path": "/",
       "selector": "a[href*=\"/odjava?hash_insert=\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203"
+      ]
     }
   },
   "search": {
@@ -487,6 +492,7 @@
       "poster": {
         "selector": "div.bgPreview",
         "attribute": "style",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -498,7 +504,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "files": {
         "selector": "div.release-info__meta span"

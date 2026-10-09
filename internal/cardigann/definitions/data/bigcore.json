@@ -246,7 +246,8 @@
       },
       "poster": {
         "selector": "a[href^=\"kepek/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "files": {
         "selector": "a.viewFileList"
@@ -283,6 +284,7 @@
         "selector": "td:nth-child(11)"
       },
       "description": {
+        "optional": true,
         "case": {
           "i.fa-check": "Verified",
           "i.fa-question": "Unverified"

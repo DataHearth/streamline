@@ -610,7 +610,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-last-child(4)"
@@ -637,6 +638,7 @@
       },
       "genre": {
         "selector": "td:nth-child(2) > span:nth-child(5)",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -654,6 +656,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

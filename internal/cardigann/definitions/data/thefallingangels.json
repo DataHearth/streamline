@@ -502,7 +502,8 @@
       },
       "poster": {
         "selector": "div[id^=\"details\"] img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "div.selection_unter_ad"
@@ -566,7 +567,8 @@
         "text": "{{ if or .Result.date_year .Result.date_day }}{{ or .Result.date_year .Result.date_day }}{{ else }}now{{ end }}"
       },
       "description": {
-        "selector": "selection_unter_af"
+        "selector": "selection_unter_af",
+        "optional": true
       },
       "seeders": {
         "selector": "div.selection_unter_aa"

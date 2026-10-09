@@ -226,7 +226,8 @@
       },
       "poster": {
         "selector": "div#torrents_browse-standard-poster img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "div#torrents_browse-standard-time",

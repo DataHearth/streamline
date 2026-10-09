@@ -834,7 +834,8 @@
         "text": "0.3"
       },
       "description": {
-        "selector": "a.genmed, a.seedmed"
+        "selector": "a.genmed, a.seedmed",
+        "optional": true
       }
     }
   },

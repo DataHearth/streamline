@@ -484,11 +484,13 @@
       },
       "poster": {
         "selector": "img[alt=\"Poster\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "files": {
         "selector": "td:nth-child(6)"

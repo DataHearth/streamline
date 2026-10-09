@@ -196,6 +196,7 @@
       },
       "genre": {
         "selector": "div.tags",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -207,6 +208,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "artist": {
@@ -246,7 +248,8 @@
       },
       "poster": {
         "selector": "img[src^=\"static/images/torrents/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "files": {
         "selector": "td:nth-last-child(6)"

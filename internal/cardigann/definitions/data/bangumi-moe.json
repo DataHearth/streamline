@@ -104,6 +104,7 @@
       },
       "poster": {
         "selector": "introduction",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -114,7 +115,8 @@
         ]
       },
       "description": {
-        "selector": "category_tag.locale.en"
+        "selector": "category_tag.locale.en",
+        "optional": true
       },
       "date": {
         "selector": "publish_time"

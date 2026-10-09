@@ -130,6 +130,11 @@
           }
         ]
       }
+    },
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}"
+      ]
     }
   },
   "source": {

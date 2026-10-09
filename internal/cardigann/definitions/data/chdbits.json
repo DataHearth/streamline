@@ -298,6 +298,7 @@
       },
       "description": {
         "selector": "table.torrentname font.subtitle",
+        "optional": true,
         "remove": "div"
       }
     }

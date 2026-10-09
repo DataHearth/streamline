@@ -306,7 +306,12 @@
     }
   },
   "search": {
-    "path": "browse.php",
+    "paths": [
+      {
+        "path": "browse.php",
+        "inheritinputs": true
+      }
+    ],
     "inputs": {
       "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
       "showsearch": "1",
@@ -345,6 +350,7 @@
       "poster": {
         "selector": "a[href^=\"details.php\"]",
         "attribute": "onMouseOver",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

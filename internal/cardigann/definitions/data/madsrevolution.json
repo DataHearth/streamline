@@ -421,6 +421,7 @@
       "poster": {
         "selector": "a[href^=\"torrents.php?id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -431,9 +432,11 @@
         ]
       },
       "genre": {
-        "selector": "div.tags"
+        "selector": "div.tags",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "date": {

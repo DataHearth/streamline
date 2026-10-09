@@ -186,11 +186,13 @@
       },
       "imdbid": {
         "selector": "a[href$=\"search_area=4\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href$=\"search_area=5\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td.rowfollow:nth-last-child(6) > span[title]",
@@ -265,7 +267,8 @@
         }
       },
       "description": {
-        "selector": "div.torrent-smalldescr > span:last-child"
+        "selector": "div.torrent-smalldescr > span:last-child",
+        "optional": true
       }
     }
   },

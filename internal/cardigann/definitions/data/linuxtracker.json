@@ -1648,6 +1648,7 @@
         "selector": "td:last-child"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.category_desc }}"
       },
       "downloadvolumefactor": {

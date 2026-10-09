@@ -291,7 +291,8 @@
       },
       "poster": {
         "selector": "img.search-poster",
-        "attribute": "data-src"
+        "attribute": "data-src",
+        "optional": true
       },
       "date": {
         "selector": "div.search-date-badge",

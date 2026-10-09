@@ -192,7 +192,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "p.card-text",
@@ -222,6 +223,7 @@
       },
       "description": {
         "selector": "p.card-text",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

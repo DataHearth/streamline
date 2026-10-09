@@ -231,6 +231,7 @@
       "poster": {
         "selector": "a[href^=\"details.php\"]",
         "attribute": "onMouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

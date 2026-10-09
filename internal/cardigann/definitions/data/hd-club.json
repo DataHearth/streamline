@@ -262,7 +262,8 @@
       },
       "poster": {
         "selector": "img.small-img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-last-child(7)",
@@ -306,6 +307,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._exclusive }}{{ .Result._exclusive }} {{ else }}{{ end }}{{ if .Result._vip }}{{ .Result._vip }}{{ else }}{{ end }}"
       },
       "downloadvolumefactor": {

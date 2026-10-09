@@ -703,6 +703,7 @@
       },
       "genre": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -728,6 +729,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "minimumratio": {

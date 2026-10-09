@@ -308,7 +308,8 @@
       },
       "poster": {
         "selector": "a[href^=\"details.php?id=\"]",
-        "attribute": "data-poster"
+        "attribute": "data-poster",
+        "optional": true
       },
       "date": {
         "text": "now"

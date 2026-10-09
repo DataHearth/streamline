@@ -57,6 +57,7 @@ func ParseDate(layouts []string, value string, now time.Time) (time.Time, error)
 	if len(layouts) == 0 {
 		return time.Time{}, errors.New("dateparse: no layout")
 	}
+	value = strings.TrimSpace(value) // as ParseDateTimeGoLang does
 	var err error
 	for _, layout := range layouts {
 		var t time.Time

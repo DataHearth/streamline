@@ -74,7 +74,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "text": "now"
@@ -95,7 +96,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "div.catalog a"
+        "selector": "div.catalog a",
+        "optional": true
       }
     }
   },

@@ -104,7 +104,12 @@
       {
         "selector": ":root:contains(\"Account is Banned\")"
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -177,6 +182,7 @@
       },
       "poster": {
         "selector": "poster",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -188,13 +194,16 @@
         ]
       },
       "imdbid": {
-        "selector": "imdb_id"
+        "selector": "imdb_id",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdb_id"
+        "selector": "tmdb_id",
+        "optional": true
       },
       "tvdbid": {
-        "selector": "tvdb_id"
+        "selector": "tvdb_id",
+        "optional": true
       },
       "files": {
         "selector": "num_file"
@@ -237,6 +246,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}"
       },
       "downloadvolumefactor": {

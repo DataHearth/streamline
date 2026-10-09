@@ -272,10 +272,12 @@
         "text": "{{ if and (.Config.usetoken) (.Result._canUseToken) }}{{ .Result.download_token }}{{ else }}{{ .Result.download_regular }}{{ end }}"
       },
       "imdbid": {
-        "selector": "imdbId"
+        "selector": "imdbId",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdbId"
+        "selector": "tmdbId",
+        "optional": true
       },
       "date": {
         "selector": "time",
@@ -311,6 +313,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result._validation }}"
       },
       "downloadvolumefactor": {

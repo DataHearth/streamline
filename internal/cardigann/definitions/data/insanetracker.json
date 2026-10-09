@@ -292,11 +292,13 @@
       },
       "imdbid": {
         "selector": "a[title=\"IMDb link\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "img[alt=\"offer\"], a.cover",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "files": {
         "selector": "div.files > a.button.small"
@@ -348,6 +350,7 @@
         "remove": "div.contenttitle"
       },
       "description": {
+        "optional": true,
         "case": {
           "span.accepted": "Verified: {{ .Result.description_text }}",
           "span.notchecked": "Unverified: {{ .Result.description_text }}"

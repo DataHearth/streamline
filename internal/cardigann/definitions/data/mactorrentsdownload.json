@@ -88,10 +88,12 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "description": {
-        "selector": "section p"
+        "selector": "section p",
+        "optional": true
       },
       "date": {
         "selector": "time",

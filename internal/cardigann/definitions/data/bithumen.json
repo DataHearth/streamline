@@ -297,6 +297,7 @@
       "poster": {
         "selector": "a[onmouseover^=\"bithumen.UI.images.coverShow\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -308,7 +309,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(6) > u"
@@ -334,7 +336,8 @@
         ]
       },
       "genre": {
-        "selector": "span:has(a[href^=\"browse.php?genre=\"])"
+        "selector": "span:has(a[href^=\"browse.php?genre=\"])",
+        "optional": true
       },
       "downloadvolumefactor": {
         "text": "0"
@@ -348,7 +351,8 @@
         "text": "86400"
       },
       "description": {
-        "selector": "td:nth-child(2) > div"
+        "selector": "td:nth-child(2) > div",
+        "optional": true
       },
       "date_year": {
         "selector": "td:nth-child(5):contains('.')",

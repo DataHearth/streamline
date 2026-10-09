@@ -156,6 +156,7 @@
       },
       "description": {
         "selector": "td.name",
+        "optional": true,
         "remove": "span.title, span.subnote"
       },
       "downloadvolumefactor": {

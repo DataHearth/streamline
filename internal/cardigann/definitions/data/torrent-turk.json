@@ -465,7 +465,8 @@
       },
       "poster": {
         "selector": "a[rel=\"fancybox\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

@@ -242,7 +242,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-last-child(5)",
@@ -264,7 +265,8 @@
       },
       "poster": {
         "selector": "a.preview",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-last-child(4) b"
@@ -282,6 +284,7 @@
         "selector": "td:nth-last-child(1)"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"pic/yes.png\"]": "Verified",
           "img[src=\"pic/nincs.png\"]": "Unverified"

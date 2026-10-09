@@ -157,6 +157,7 @@
       "poster": {
         "selector": "img",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -168,12 +169,14 @@
         ]
       },
       "genre": {
-        "selector": "div.tags"
+        "selector": "div.tags",
+        "optional": true
       },
       "description_info": {
         "selector": "div.torrent_info"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.description_info }}</br>{{ .Result.genre }}"
       },
       "download": {

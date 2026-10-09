@@ -83,7 +83,12 @@
       {
         "selector": ":root:contains(\"Account is Banned\")"
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -140,6 +145,7 @@
         "optional": true
       },
       "poster": {
+        "optional": true,
         "text": "{{ if .Result.poster_https }}{{ .Result.poster_https }}{{ else }}https://pics.dmm.co.jp/{{ .Result.poster_meta }}{{ end }}"
       },
       "files": {

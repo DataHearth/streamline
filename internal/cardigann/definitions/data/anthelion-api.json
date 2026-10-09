@@ -259,13 +259,16 @@
         "selector": "infohash"
       },
       "imdbid": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdb"
+        "selector": "tmdb",
+        "optional": true
       },
       "genre": {
         "selector": "tags",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -277,6 +280,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "files": {

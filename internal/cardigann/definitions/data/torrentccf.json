@@ -218,6 +218,7 @@
       "imdbid": {
         "selector": "a[href^=\"details.php?id=\"][onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -304,6 +305,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, img"
       }
     }

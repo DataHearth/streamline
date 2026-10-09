@@ -276,11 +276,13 @@
         "optional": true
       },
       "imdbid": {
+        "optional": true,
         "text": "{{ if .Result.imdbid_raw }}{{ .Result.imdbid_raw }}{{ else }}{{ .Result.imdbid_global }}{{ end }}"
       },
       "poster": {
         "selector": "div.group_image img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "description_search": {
         "selector": "div.torrent_info",
@@ -291,6 +293,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result.description_search }}{{ .Result.description_search }}{{ else }}{{ .Result.description_group }}{{ end }}"
       },
       "details": {

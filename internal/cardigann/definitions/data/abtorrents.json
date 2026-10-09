@@ -450,7 +450,8 @@
       },
       "poster": {
         "selector": "img[src^=\"/img.php?\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "files": {
         "selector": "a[href^=\"filelist.php?id=\"]"

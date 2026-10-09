@@ -160,6 +160,7 @@
       "poster": {
         "selector": "img[data-src]",
         "attribute": "data-src",
+        "optional": true,
         "filters": [
           {
             "name": "replace",

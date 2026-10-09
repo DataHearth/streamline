@@ -269,7 +269,8 @@
       },
       "poster": {
         "selector": "div.cov-tip > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(6)"

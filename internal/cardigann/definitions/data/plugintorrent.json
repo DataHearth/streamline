@@ -77,7 +77,8 @@
         "attribute": "href"
       },
       "description": {
-        "selector": ".entry-summary"
+        "selector": ".entry-summary",
+        "optional": true
       },
       "date": {
         "selector": "span.date"

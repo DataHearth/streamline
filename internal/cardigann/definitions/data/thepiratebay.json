@@ -480,7 +480,8 @@
         "selector": "info_hash"
       },
       "imdbid": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "date": {
         "selector": "added"
@@ -503,6 +504,7 @@
       },
       "description": {
         "selector": "name",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",
