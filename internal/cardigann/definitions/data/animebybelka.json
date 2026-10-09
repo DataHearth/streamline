@@ -149,6 +149,11 @@
     "test": {
       "path": "/",
       "selector": "a[href^=\"./ucp.php?mode=logout&sid=\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -409,6 +414,7 @@
       },
       "description": {
         "selector": "td:nth-last-child(5)",
+        "optional": true,
         "remove": "a, b, p, span"
       }
     }

@@ -568,6 +568,7 @@
       "poster": {
         "selector": "a[href^=\"#\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -636,6 +637,7 @@
       },
       "genre": {
         "selector": "td:nth-child(3)",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -660,6 +662,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

@@ -195,7 +195,12 @@
           "text": "API is temporary unavailable due to rate limiting. Try going slower please!"
         }
       }
-    ]
+    ],
+    "headers": {
+      "X-Postman-Token": [
+        "{{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [

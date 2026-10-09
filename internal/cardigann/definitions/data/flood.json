@@ -82,7 +82,12 @@
   ],
   "login": {
     "method": "get",
-    "path": "api/test"
+    "path": "api/test",
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -140,13 +145,16 @@
         "selector": "download_url"
       },
       "imdbid": {
-        "selector": "imdb_id"
+        "selector": "imdb_id",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdb_id"
+        "selector": "tmdb_id",
+        "optional": true
       },
       "description": {
-        "selector": "description"
+        "selector": "description",
+        "optional": true
       },
       "seeders": {
         "selector": "seeders"

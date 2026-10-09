@@ -285,11 +285,13 @@
       },
       "imdbid": {
         "selector": "[name=imdb]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "tmdbid": {
         "selector": "[name=tmdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "date": {
         "selector": "pubDate",

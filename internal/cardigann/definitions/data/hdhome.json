@@ -456,11 +456,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "td.rowfollow:nth-child(5)",
@@ -543,7 +545,8 @@
         }
       },
       "description": {
-        "selector": "table.torrentname td.embedded:first-child > span:last-child"
+        "selector": "table.torrentname td.embedded:first-child > span:last-child",
+        "optional": true
       }
     }
   },

@@ -572,7 +572,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "a[rel=\"torrent_size\"]"
@@ -588,10 +589,12 @@
       },
       "poster": {
         "selector": "a[rel=\"fancybox\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "description": {
         "selector": "div.torrentDetails > div:has(span.floatright)",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -604,6 +607,7 @@
       },
       "genre": {
         "selector": "div.torrentDetails > div:has(span.floatright)",
+        "optional": true,
         "remove": "span",
         "filters": [
           {

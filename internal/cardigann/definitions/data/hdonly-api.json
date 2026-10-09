@@ -243,6 +243,7 @@
       },
       "genre": {
         "selector": "group.tags",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -258,7 +259,8 @@
         "optional": true
       },
       "tmdbid": {
-        "selector": "group.tmdb"
+        "selector": "group.tmdb",
+        "optional": true
       },
       "files": {
         "selector": "fileCount"
@@ -586,6 +588,7 @@
         "text": "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.title_filename }}",
         "filters": [
           {

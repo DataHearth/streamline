@@ -88,7 +88,8 @@
       },
       "poster": {
         "selector": "img.thumbnail",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(5)"
@@ -148,7 +149,8 @@
         ]
       },
       "description": {
-        "selector": "div.tag_list_browse"
+        "selector": "div.tag_list_browse",
+        "optional": true
       },
       "downloadvolumefactor": {
         "text": "1"

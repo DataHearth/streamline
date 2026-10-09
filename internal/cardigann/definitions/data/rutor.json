@@ -481,7 +481,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "td:nth-of-type(2) a[href^=\"/torrent/\"]"
+        "selector": "td:nth-of-type(2) a[href^=\"/torrent/\"]",
+        "optional": true
       }
     }
   },

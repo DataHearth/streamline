@@ -295,6 +295,7 @@
       "poster": {
         "selector": "td:nth-child(2) a",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -323,6 +324,7 @@
       },
       "description": {
         "selector": "span.bandpropaganda",
+        "optional": true,
         "remove": "font"
       },
       "seeders": {

@@ -212,15 +212,18 @@
       },
       "poster": {
         "selector": "span.torrent-card-cover-source",
-        "attribute": "data-cover"
+        "attribute": "data-cover",
+        "optional": true
       },
       "imdbid": {
         "selector": "span[data-imdbid]",
-        "attribute": "data-imdbid"
+        "attribute": "data-imdbid",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td.rowfollow:nth-child(5) > span[title]",
@@ -311,6 +314,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span",
         "filters": [
           {

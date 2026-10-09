@@ -272,6 +272,7 @@
       "poster": {
         "selector": "a[href^=\"index.php?page=torrent-details&id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -282,9 +283,11 @@
         ]
       },
       "genre": {
-        "selector": "td:nth-child(2) span"
+        "selector": "td:nth-child(2) span",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "date": {

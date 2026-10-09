@@ -244,7 +244,8 @@
       },
       "poster": {
         "selector": "span.tb-pv-img img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date_day": {
         "selector": "td[data-l=\"Added\"]:contains(\"day\"), td[data-l=\"Added\"]:contains(\"Днес\"), td[data-l=\"Added\"]:contains(\"Вчера\"), td[data-l=\"Добавен\"]:contains(\"day\"), td[data-l=\"Добавен\"]:contains(\"Днес\"), td[data-l=\"Добавен\"]:contains(\"Вчера\")",

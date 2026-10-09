@@ -171,7 +171,8 @@
         "attribute": "href"
       },
       "genre": {
-        "selector": "div.tags a[href*=\"taglist\"]"
+        "selector": "div.tags a[href*=\"taglist\"]",
+        "optional": true
       },
       "download": {
         "selector": "span > a[href^=\"torrents.php?action=download&id=\"]",
@@ -179,9 +180,11 @@
       },
       "poster": {
         "selector": "div.group_image > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "date": {

@@ -347,6 +347,7 @@
       "poster": {
         "selector": "a[href*=\"details.php?id=\"][onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -358,7 +359,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "files": {
         "selector": "td:nth-child(5)"

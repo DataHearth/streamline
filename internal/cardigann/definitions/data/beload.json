@@ -294,11 +294,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "a.preview",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-last-child(6) > a",
@@ -335,6 +337,7 @@
         "selector": "td:nth-last-child(2)"
       },
       "description": {
+        "optional": true,
         "case": {
           "i.fa-check": "Verified",
           "i.fa-question": "Unverified"

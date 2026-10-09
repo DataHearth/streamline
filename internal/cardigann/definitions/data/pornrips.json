@@ -59,7 +59,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "data-src"
+        "attribute": "data-src",
+        "optional": true
       },
       "date": {
         "selector": "time",

@@ -58,7 +58,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "text": "now"

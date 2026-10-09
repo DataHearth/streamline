@@ -216,7 +216,8 @@
       },
       "imdbid": {
         "selector": "div.imdb_100 > a",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td:nth-child(4) > span[title]",
@@ -292,6 +293,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

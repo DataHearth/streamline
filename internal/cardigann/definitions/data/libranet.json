@@ -189,6 +189,7 @@
       "poster": {
         "selector": "a[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -239,9 +240,11 @@
       },
       "genre": {
         "selector": "td > table",
+        "optional": true,
         "remove": "b"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result._format }}{{ if .Result.genre }} - {{ .Result.genre }}{{ else }}{{ end }}"
       }
     }

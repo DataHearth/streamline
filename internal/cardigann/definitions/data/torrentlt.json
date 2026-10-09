@@ -457,7 +457,8 @@
       },
       "poster": {
         "selector": "div[class^=\"torrent-name\"] a",
-        "attribute": "data-poster-preview"
+        "attribute": "data-poster-preview",
+        "optional": true
       },
       "seeders": {
         "selector": "td.seeders_cell:not(:has(i))",
@@ -473,6 +474,7 @@
         "selector": "td.size_cell"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src$=\"/checked.png\"]": "Verified",
           "*": "Unverified"

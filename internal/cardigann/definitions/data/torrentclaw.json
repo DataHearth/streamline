@@ -99,6 +99,11 @@
     "inputs": {
       "t": "search",
       "limit": "1"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
     }
   },
   "search": {
@@ -149,11 +154,13 @@
       },
       "imdbid": {
         "selector": "[name=imdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "tmdbid": {
         "selector": "[name=tmdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "date": {
         "selector": "pubDate",

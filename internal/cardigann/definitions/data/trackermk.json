@@ -285,7 +285,8 @@
       },
       "poster": {
         "selector": "img[src*=\"/torrents/images/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(2)",

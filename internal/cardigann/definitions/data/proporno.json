@@ -190,7 +190,8 @@
       },
       "poster": {
         "selector": "img[src*=\"/uploads/posts/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date_day": {
         "selector": "div.mini:contains(\"Сегодня\"), div.mini:contains(\"Вчера\")",

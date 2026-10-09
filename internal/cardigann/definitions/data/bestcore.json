@@ -373,6 +373,7 @@
       "poster": {
         "selector": "a[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -395,7 +396,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(2)",
@@ -453,6 +455,7 @@
         "selector": "td:nth-child(9)"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"pic/yes.png\"]": "Verified",
           "img[src=\"pic/nincs.png\"]": "Unverified"

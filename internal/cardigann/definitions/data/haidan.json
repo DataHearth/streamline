@@ -236,19 +236,23 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "div.torrent_name_col > a"
+        "selector": "div.torrent_name_col > a",
+        "optional": true
       },
       "poster": {
         "selector": "img#poster",
-        "attribute": "data-src"
+        "attribute": "data-src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "div.group > div.video_size, div.torrent_item > div.video_size"

@@ -337,7 +337,8 @@
       },
       "poster": {
         "selector": "div.tooltip-content > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(2)",

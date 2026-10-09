@@ -206,6 +206,11 @@
     "path": "api/v1/torrents",
     "inputs": {
       "limit": "1"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
     }
   },
   "search": {
@@ -254,7 +259,8 @@
         "text": "{{ .Config.sitelink }}api/v1/torrents/download/{{ .Result._id }}/{{ .Config.passkey }}"
       },
       "poster": {
-        "selector": "firstpic"
+        "selector": "firstpic",
+        "optional": true
       },
       "size": {
         "selector": "size"

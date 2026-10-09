@@ -277,6 +277,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, img"
       }
     }

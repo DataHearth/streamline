@@ -488,7 +488,8 @@
       },
       "poster": {
         "selector": "a.screenshot",
-        "attribute": "rel"
+        "attribute": "rel",
+        "optional": true
       },
       "date": {
         "selector": "span.upload-date > span",

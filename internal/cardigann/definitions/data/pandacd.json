@@ -113,9 +113,11 @@
       },
       "genre": {
         "selector": "[name=genre]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

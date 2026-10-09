@@ -262,7 +262,12 @@
       {
         "selector": ":root:contains(\"Account is Banned\")"
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -324,6 +329,7 @@
       },
       "poster": {
         "selector": "meta.poster",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -342,6 +348,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}"
       },
       "seeders": {

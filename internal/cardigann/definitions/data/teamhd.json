@@ -130,6 +130,11 @@
     "test": {
       "path": "index.php",
       "selector": "a[href*=\"/logout.php\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -290,7 +295,8 @@
         "text": "1.0"
       },
       "description": {
-        "selector": "a[href^=\"/details/id\"]"
+        "selector": "a[href^=\"/details/id\"]",
+        "optional": true
       }
     }
   },

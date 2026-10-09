@@ -282,11 +282,13 @@
       },
       "poster": {
         "selector": "a[href*=\"data/torrents/torrent_images/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "a[rel=\"torrent_size\"]"

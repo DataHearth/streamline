@@ -369,7 +369,8 @@
       },
       "poster": {
         "selector": "img[id=\"img-1\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(1) b:nth-child(1)"

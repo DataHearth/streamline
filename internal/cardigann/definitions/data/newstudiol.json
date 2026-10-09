@@ -259,7 +259,8 @@
       },
       "poster": {
         "selector": "td:nth-child(3) > a > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(5) > a"
@@ -397,7 +398,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "a[href^=\"./viewtopic.php?t=\"] > b"
+        "selector": "a[href^=\"./viewtopic.php?t=\"] > b",
+        "optional": true
       }
     }
   },

@@ -308,7 +308,8 @@
         ]
       },
       "genre": {
-        "selector": "div.span_title span div"
+        "selector": "div.span_title span div",
+        "optional": true
       },
       "_language": {
         "selector": "span.span_style_pl",
@@ -321,6 +322,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._language }}Language: {{ .Result._language }} {{ else }}{{ end }}{{ if .Result._subbed }}Subbed: {{ .Result._subbed }} {{ else }}{{ end }}{{ if .Result.genre }}Genres: {{ .Result.genre }}{{ else }}{{ end }}"
       },
       "date": {

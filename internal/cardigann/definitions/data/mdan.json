@@ -194,7 +194,8 @@
       },
       "poster": {
         "selector": "td:nth-child(9) img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date_day": {
         "selector": "td:nth-child(7):contains(\"e\")",

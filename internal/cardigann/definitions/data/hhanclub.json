@@ -247,7 +247,8 @@
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "div.torrent-info-text:nth-child(2) > span[title]",
@@ -325,7 +326,8 @@
         "text": "172800"
       },
       "description": {
-        "selector": "div.torrent-title > div > div"
+        "selector": "div.torrent-title > div > div",
+        "optional": true
       }
     }
   },

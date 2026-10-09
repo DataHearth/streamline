@@ -31,7 +31,7 @@ import (
 // Version is the converter's output version, recorded in the catalog. Bump
 // it whenever a change here alters what Convert produces for the same input,
 // so a snapshot converted by an older converter is recognisably stale.
-const Version = 4
+const Version = 5
 
 // Modified is the change notice each converted definition carries in its
 // source block (the GPL asks a modified file to say it was changed).
@@ -76,10 +76,7 @@ func Convert(path string, src []byte) (*cardigann.Definition, error) {
 			d.RequestDelay,
 		)
 	}
-	// Both upstream engines default a login block without a method to form.
-	if d.Login != nil && d.Login.Method == "" {
-		d.Login.Method = "form"
-	}
+	clean(d)
 	c := converter{}
 	if err := c.walk(reflect.ValueOf(d).Elem()); err != nil {
 		return nil, err
@@ -95,6 +92,57 @@ func Convert(path string, src []byte) (*cardigann.Definition, error) {
 	}
 	d.RegexNET = c.usesNET
 	return d, nil
+}
+
+// optionalFields are the field names Prowlarr treats as optional whatever the
+// definition says (CardigannBase.OptionalFields, matched on the whole key, so
+// "description|append" is not one). 1,117 fields in 452 definitions rely on
+// it; on a JSON response a failing non-optional field aborts every row.
+var optionalFields = []string{
+	"imdb", "imdbid", "tmdbid", "rageid", "tvdbid", "tvmazeid", "traktid",
+	"doubanid", "poster", "banner", "description", "genre",
+}
+
+// clean applies, once, what Prowlarr does to every definition it loads
+// (IndexerDefinitionUpdateService.CleanIndexerDefinition) and the defaults
+// its request generator falls back on at each use, so the engine reads one
+// shape and never re-derives an upstream default.
+func clean(d *cardigann.Definition) {
+	if d.Settings == nil {
+		d.Settings = []cardigann.Setting{
+			{Name: "username", Label: "Username", Type: "text"},
+			{Name: "password", Label: "Password", Type: "password"},
+		}
+	}
+	if d.Encoding == "" {
+		d.Encoding = "UTF-8"
+	}
+	if d.Login != nil && d.Login.Method == "" {
+		d.Login.Method = "form"
+	}
+	// A single search.path becomes one more entry of paths, inheriting the
+	// search inputs; the request generator only ever walks paths.
+	if d.Search.Path != "" {
+		inherit := true
+		d.Search.Paths = append(d.Search.Paths, cardigann.SearchPath{
+			Path: d.Search.Path, InheritInputs: &inherit,
+		})
+		d.Search.Path = ""
+	}
+	// Login and download requests send the search headers when they have
+	// none of their own (Login?.Headers ?? Search?.Headers): an API tracker's
+	// login is often a GET carrying the search's Authorization header.
+	if d.Login != nil && d.Login.Headers == nil {
+		d.Login.Headers = slices.Clone(d.Search.Headers)
+	}
+	if d.Download != nil && d.Download.Headers == nil {
+		d.Download.Headers = slices.Clone(d.Search.Headers)
+	}
+	for i := range d.Search.Fields {
+		if slices.Contains(optionalFields, d.Search.Fields[i].Key) {
+			d.Search.Fields[i].Value.Optional = true
+		}
+	}
 }
 
 func isSecret(s cardigann.Setting) bool {

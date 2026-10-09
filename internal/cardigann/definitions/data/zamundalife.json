@@ -140,7 +140,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "description"
+        "selector": "description",
+        "optional": true
       }
     }
   },

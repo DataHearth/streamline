@@ -258,7 +258,8 @@
       },
       "poster": {
         "selector": "a[href^=\"/torrent/\"]",
-        "attribute": "data-poster"
+        "attribute": "data-poster",
+        "optional": true
       },
       "files": {
         "selector": "div.tt-files"
@@ -294,9 +295,11 @@
         "selector": "div.tt-leech"
       },
       "genre": {
-        "selector": "span.tb-genre"
+        "selector": "span.tb-genre",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "case": {
           "span.tt-mod-ok": "Verified: {{ .Result.genre }}",
           "*": "Unverified: {{ .Result.genre }}"

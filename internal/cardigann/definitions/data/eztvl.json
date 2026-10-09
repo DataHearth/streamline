@@ -75,6 +75,11 @@
     "test": {
       "path": "home",
       "selector": "a[href=\"/logout/\"]"
+    },
+    "headers": {
+      "cookie": [
+        "sort_no=100; q_filter=all; q_filter_web=on; q_filter_reality=on; q_filter_x265=on; layout=def_wlinks"
+      ]
     }
   },
   "search": {

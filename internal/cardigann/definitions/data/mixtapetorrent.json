@@ -53,7 +53,8 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "p"
+        "selector": "p",
+        "optional": true
       },
       "date": {
         "selector": "p.search-info",

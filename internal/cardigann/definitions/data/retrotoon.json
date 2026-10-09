@@ -158,7 +158,8 @@
       },
       "imdbid": {
         "selector": "[name=imdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "seeders": {
         "selector": "[name=seeders]",

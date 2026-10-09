@@ -210,19 +210,23 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "div.tags"
+        "selector": "div.tags",
+        "optional": true
       },
       "poster": {
         "selector": "img[alt=\"Cover\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "tmdbid": {
         "selector": "a[href*=\"themoviedb.org/movie/\"], a[href*=\"themoviedb.org/tv/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "files": {
         "selector": "td:nth-child(3)"

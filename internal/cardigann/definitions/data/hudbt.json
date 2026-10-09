@@ -414,7 +414,8 @@
         }
       },
       "description": {
-        "selector": "td:nth-child(2) div.torrent-title h3"
+        "selector": "td:nth-child(2) div.torrent-title h3",
+        "optional": true
       }
     }
   },

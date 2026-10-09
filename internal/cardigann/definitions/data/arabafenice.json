@@ -479,6 +479,7 @@
       "poster": {
         "selector": "a[onmouseover][href^=\"index.php?page=torrent-details&id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

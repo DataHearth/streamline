@@ -254,10 +254,12 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "div.tags"
+        "selector": "div.tags",
+        "optional": true
       },
       "poster": {
         "selector": "td:nth-child(2) script",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

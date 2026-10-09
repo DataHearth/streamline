@@ -162,7 +162,12 @@
           "text": "The API key was not accepted by {{ .Config.sitelink }}."
         }
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [

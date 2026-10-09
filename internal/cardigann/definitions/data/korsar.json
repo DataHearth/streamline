@@ -2079,6 +2079,11 @@
     "test": {
       "path": "/",
       "selector": "a[href*=\"ucp.php?mode=logout\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {

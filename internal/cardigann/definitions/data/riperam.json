@@ -4347,7 +4347,8 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "dt a:last-of-type"
+        "selector": "dt a:last-of-type",
+        "optional": true
       },
       "download": {
         "selector": "a[href^=\"./download/file.php?id=\"]",

@@ -345,7 +345,8 @@
       },
       "poster": {
         "selector": "img.browse_poster",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td.descr3",

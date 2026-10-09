@@ -279,6 +279,11 @@
     "test": {
       "path": "/",
       "selector": "form[action$=\"/logout\"]"
+    },
+    "headers": {
+      "x-csrf-token": [
+        "{{ .Config.csrf_token }}"
+      ]
     }
   },
   "search": {
@@ -326,11 +331,13 @@
       },
       "poster": {
         "selector": "span.hidden img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "span[title=\"Zaman\"]",
@@ -435,7 +442,12 @@
         "selector": "a[href$=\"/download\"]",
         "attribute": "href"
       }
-    ]
+    ],
+    "headers": {
+      "x-csrf-token": [
+        "{{ .Config.csrf_token }}"
+      ]
+    }
   },
   "source": {
     "path": "definitions/v11/hdturk.yml",

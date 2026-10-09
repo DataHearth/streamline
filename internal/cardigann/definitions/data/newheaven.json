@@ -411,6 +411,7 @@
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
         "attribute": "href",
+        "optional": true,
         "filters": [
           {
             "name": "querystring",

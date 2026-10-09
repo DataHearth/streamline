@@ -25,8 +25,9 @@ import (
 //
 // Anchors and aliases are refused outright, and so are duplicate keys.
 // Upstream uses neither (its CI runs yamllint), and both are what a hostile
-// file would use: an alias tree is exponential to walk, and a duplicate key
-// is read last-wins by the C# engines and first-wins by OrderedMap.Get.
+// file would use: an alias tree is exponential to walk, and duplicate keys
+// mean different things on each side — Prowlarr keeps every duplicate field
+// in order and reads other duplicates last-wins, OrderedMap.Get first-wins.
 func Decode(src []byte) (*Definition, error) {
 	src, err := protectSlashes(src)
 	if err != nil {

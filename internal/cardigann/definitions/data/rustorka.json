@@ -3724,6 +3724,14 @@
     "test": {
       "path": "forum/index.php",
       "selector": "a[href=\"./login.php?logout=1\"]"
+    },
+    "headers": {
+      "Cookie": [
+        "godbayadblock=godbayadblock"
+      ],
+      "User-Agent": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203"
+      ]
     }
   },
   "search": {
@@ -4042,7 +4050,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "a[href^=\"./viewtopic.php?t=\"]"
+        "selector": "a[href^=\"./viewtopic.php?t=\"]",
+        "optional": true
       }
     }
   },

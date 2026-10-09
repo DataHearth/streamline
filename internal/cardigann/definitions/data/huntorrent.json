@@ -274,6 +274,11 @@
     "test": {
       "path": "browse/",
       "selector": "a[href*=\"logout.php?k=\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -368,10 +373,12 @@
       },
       "genre": {
         "selector": "a[data-mufaj]",
-        "attribute": "data-mufaj"
+        "attribute": "data-mufaj",
+        "optional": true
       },
       "description": {
         "selector": "div.torrent-subtitle",
+        "optional": true,
         "filters": [
           {
             "name": "append",
@@ -383,11 +390,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "a[data-poster]",
         "attribute": "data-poster",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

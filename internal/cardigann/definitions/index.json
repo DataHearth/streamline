@@ -1,6 +1,6 @@
 {
   "schema": 11,
-  "converter": 4,
+  "converter": 5,
   "upstream": {
     "repository": "https://github.com/Prowlarr/Indexers",
     "commit": "8df0764eec2d6d138a60cc461d7a850dda8dee5a",

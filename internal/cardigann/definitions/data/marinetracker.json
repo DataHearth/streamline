@@ -1597,7 +1597,8 @@
         ]
       },
       "description": {
-        "selector": "td span.iconDL"
+        "selector": "td span.iconDL",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-last-child(5) > u",

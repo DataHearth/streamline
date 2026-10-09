@@ -429,7 +429,12 @@
     }
   },
   "search": {
-    "path": "browse.php",
+    "paths": [
+      {
+        "path": "browse.php",
+        "inheritinputs": true
+      }
+    ],
     "inputs": {
       "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
       "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",

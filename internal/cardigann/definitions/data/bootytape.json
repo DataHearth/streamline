@@ -156,11 +156,13 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "div.specg"
+        "selector": "div.specg",
+        "optional": true
       },
       "poster": {
         "selector": "img[src*=\"/thbx/imgx/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "files": {
         "selector": "a[href$=\"filelist=1\"]",

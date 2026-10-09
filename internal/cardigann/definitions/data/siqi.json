@@ -178,7 +178,8 @@
       },
       "poster": {
         "selector": "img[data-src]",
-        "attribute": "data-src"
+        "attribute": "data-src",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td.rowfollow:nth-child(4) > span[title]",
@@ -268,6 +269,7 @@
       },
       "description": {
         "selector": "td.rowfollow:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

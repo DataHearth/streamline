@@ -284,7 +284,8 @@
         "selector": "infohash"
       },
       "tmdbid": {
-        "selector": "tmdbid"
+        "selector": "tmdbid",
+        "optional": true
       },
       "date": {
         "selector": "pubdate",

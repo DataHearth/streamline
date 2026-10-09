@@ -412,6 +412,7 @@
       },
       "genre": {
         "selector": "tags",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -422,10 +423,12 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "imdbid": {
-        "selector": "imdbID"
+        "selector": "imdbID",
+        "optional": true
       },
       "seeders": {
         "selector": "seeders"

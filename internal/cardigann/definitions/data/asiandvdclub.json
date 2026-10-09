@@ -227,6 +227,7 @@
       "poster": {
         "selector": "span[id]",
         "attribute": "data-ot",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

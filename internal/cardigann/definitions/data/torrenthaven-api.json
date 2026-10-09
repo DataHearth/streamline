@@ -211,7 +211,12 @@
       {
         "selector": ":root:contains(\"Account is Banned\")"
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -278,6 +283,7 @@
       },
       "poster": {
         "selector": "meta.poster",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -289,16 +295,20 @@
         ]
       },
       "imdbid": {
-        "selector": "imdb_id"
+        "selector": "imdb_id",
+        "optional": true
       },
       "tmdbid": {
-        "selector": "tmdb_id"
+        "selector": "tmdb_id",
+        "optional": true
       },
       "tvdbid": {
-        "selector": "tvdb_id"
+        "selector": "tvdb_id",
+        "optional": true
       },
       "genre": {
         "selector": "meta.genres",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -324,6 +334,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
       },
       "seeders": {

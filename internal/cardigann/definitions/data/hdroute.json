@@ -173,11 +173,13 @@
       },
       "imdbid": {
         "selector": "div.torrent-imdb",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "div.introForPic img",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "replace",

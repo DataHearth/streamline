@@ -478,7 +478,8 @@
       },
       "poster": {
         "selector": "a[href*=\"data/torrents/torrent_images/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "a[rel=\"torrent_size\"]"

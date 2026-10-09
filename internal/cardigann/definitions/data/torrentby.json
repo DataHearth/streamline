@@ -272,7 +272,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "td:nth-child(3) a"
+        "selector": "td:nth-child(3) a",
+        "optional": true
       }
     }
   },

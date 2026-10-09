@@ -298,6 +298,7 @@
       "poster": {
         "selector": "a[href^=\"torrents-details.php?id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -309,6 +310,7 @@
       },
       "genre": {
         "selector": "div.t-tags",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -354,6 +356,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"images/ro-eng-flag.png\"]": "Verified: {{ .Result.genre }}",
           "*": "Unverified: {{ .Result.genre }}"
@@ -361,7 +364,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(4)"

@@ -145,7 +145,12 @@
       {
         "selector": ":root:contains(\"Account is Banned\")"
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -210,6 +215,7 @@
       },
       "poster": {
         "selector": "meta.poster",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -221,7 +227,8 @@
         ]
       },
       "genre": {
-        "selector": "meta.genres"
+        "selector": "meta.genres",
+        "optional": true
       },
       "_internal": {
         "selector": "internal",
@@ -231,6 +238,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
       },
       "seeders": {

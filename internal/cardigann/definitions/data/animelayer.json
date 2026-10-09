@@ -154,7 +154,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "data-original"
+        "attribute": "data-original",
+        "optional": true
       },
       "size": {
         "selector": "div.info",
@@ -476,6 +477,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._subtitles }}Субтитры: {{ .Result._subtitles }}{{ else }}{{ end }} - {{ if .Result._language }}Язык: {{ .Result._language }}{{ else }}{{ end }}"
       },
       "downloadvolumefactor": {

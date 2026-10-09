@@ -407,7 +407,8 @@
         ]
       },
       "imdbid": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "files": {
         "selector": "numfiles"

@@ -3920,7 +3920,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "a[href^=\"viewtopic.php?t=\"] > b"
+        "selector": "a[href^=\"viewtopic.php?t=\"] > b",
+        "optional": true
       }
     }
   },

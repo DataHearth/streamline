@@ -1130,6 +1130,7 @@
         "default": "0"
       },
       "description": {
+        "optional": true,
         "case": {
           "span.tor-approved": "Verified",
           "span.tor-not-approved": "Unverified"

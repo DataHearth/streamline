@@ -188,6 +188,60 @@ var _ = Describe("Convert", Label("unit", "cardigann"), func() {
 		Expect(Check(d)).To(MatchError(ContainSubstring("Login.Inputs")))
 	})
 
+	It("applies the defaults Prowlarr fills in when it loads a definition", func() {
+		src := strings.Replace(
+			fixture,
+			"  paths:\n    - path: browse.php\n",
+			"  path: browse.php\n  headers: {Authorization: [\"Bearer {{ .Config.cookie }}\"]}\n",
+			1,
+		)
+		src = strings.Replace(src, "encoding: UTF-8\n", "", 1)
+		src = strings.Replace(
+			src,
+			"    size:\n",
+			"    poster:\n      selector: img\n    size:\n",
+			1,
+		)
+		e, err := Convert("x.yml", []byte(src))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(e.Encoding).To(Equal("UTF-8"))
+		Expect(e.Search.Path).To(BeEmpty())
+		Expect(e.Search.Paths).To(HaveLen(1))
+		Expect(e.Search.Paths[0].Path).To(Equal("browse.php"))
+		Expect(e.Search.Paths[0].InheritInputs).To(HaveValue(BeTrue()))
+		Expect(e.Login.Headers).To(Equal(e.Search.Headers))
+		poster, _ := e.Search.Fields.Get("poster")
+		Expect(poster.Optional).To(BeTrue())
+		title, _ := e.Search.Fields.Get("title")
+		Expect(title.Optional).To(BeFalse())
+	})
+
+	It(
+		"gives a definition without settings Prowlarr's username and password",
+		func() {
+			before, rest, _ := strings.Cut(fixture, "settings:\n")
+			_, after, _ := strings.Cut(rest, "login:\n")
+			e, err := Convert("x.yml", []byte(before+"login:\n"+after))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(e.Settings).To(HaveLen(2))
+			Expect(e.Settings[1].Name).To(Equal("password"))
+			Expect(e.Settings[1].Secret).To(BeTrue())
+		},
+	)
+
+	It("has Check refuse a template reading an undeclared setting or field", func() {
+		d.Search.Inputs[0].Value = "{{ .Config.nosuch }}"
+		Expect(
+			Check(d),
+		).To(MatchError(ContainSubstring("undeclared .Config.nosuch")))
+		d.Search.Inputs[0].Value = `{{ (index .Result "no-such") }}`
+		Expect(
+			Check(d),
+		).To(MatchError(ContainSubstring(`undeclared .Result.no-such`)))
+		d.Search.Inputs[0].Value = "{{ .Config.sitelink }}{{ .Result.title }}"
+		Expect(Check(d)).To(Succeed())
+	})
+
 	It("rejects a key the model does not know", func() {
 		src := strings.Replace(fixture, "  rows:\n", "  bogus: 1\n  rows:\n", 1)
 		_, err := Convert("x.yml", []byte(src))

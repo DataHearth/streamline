@@ -187,7 +187,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "td:nth-child(5)"
@@ -263,6 +264,7 @@
       },
       "description": {
         "selector": "td:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

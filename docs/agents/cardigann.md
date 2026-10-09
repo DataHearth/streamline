@@ -105,18 +105,28 @@ the node tree against the Go types itself.
   `!!binary` base64-decodes a string. Upstream writes neither.
 - **Anchors, aliases and duplicate keys are refused.** Upstream uses none (its CI runs
   yamllint), and both are what a hostile file uses: walking an alias tree is quadratic or
-  worse, and duplicate keys read last-wins in the C# engines but first-wins in
-  `OrderedMap.Get`. This matters for the runtime update, which decodes fetched files.
+  worse, and duplicate keys mean something different on each side — Prowlarr keeps every
+  duplicate `fields` entry in order (a `KeyValuePairList`) and reads other duplicates
+  last-wins, `OrderedMap.Get` first-wins. This matters for the runtime update, which decodes fetched files.
 - Decoding happens once, from the already-checked node tree: `checkKnown` is a superset of
   `KnownFields`, so a second parse of the source bought nothing.
 - **Upstream defaults that are not Go zero values stay distinguishable**:
   `testlinktorrent` is `*bool` (absent means true upstream — fetch each non-magnet link and
-  fall through to the next download selector when it is not a torrent), a response's
-  `noResultsMessage` is `*string` (set, even to `""`, it is the "no results" body), and
-  `settings` is always written, `null` when absent (upstream then adds username and
-  password) and `[]` when empty. A search path's `followredirect` is a plain bool: both
-  engines default it to false regardless of the definition-level flag, which only governs
-  the login landing page. A login block without a `method` gets `form`, as both engines do.
+  fall through to the next download selector when it is not a torrent), and a response's
+  `noResultsMessage` is `*string` (set, even to `""`, it is the "no results" body). A
+  search path's `followredirect` is a plain bool: both engines default it to false
+  regardless of the definition-level flag, which only governs the login landing page.
+- **Prowlarr's load-time clean-up is applied by the converter** (`convert.clean`, mirroring
+  `IndexerDefinitionUpdateService.CleanIndexerDefinition` and the request generator's
+  fallbacks), so a converted definition carries every default explicitly and the engine
+  re-derives none: no `settings` → username + password; no `encoding` → UTF-8; a login
+  without `method` → form; a single `search.path` → one more `paths` entry inheriting the
+  inputs (the request generator only walks `paths`); login and download without `headers`
+  → the search headers (`Login?.Headers ?? Search?.Headers` — an API tracker's login is
+  often a GET that needs the search's Authorization header); and the fields Prowlarr
+  treats as optional by name (`imdb`, `imdbid`, `tmdbid`, `rageid`, `tvdbid`, `tvmazeid`,
+  `traktid`, `doubanid`, `poster`, `banner`, `description`, `genre`, whole key only) get
+  `optional: true` — on a JSON response a failing non-optional field aborts every row.
 
 ## Regexes: two engines, chosen at conversion
 
@@ -226,11 +236,46 @@ parser:
 
 Every string containing `{{` — other than a regex pattern, which upstream never templates —
 is then parsed with Go's `text/template` (and `convert.Check` parses them again, compiling
-each `re_replace` pattern on the engine its function name selects) and the stub `FuncMap` (`re_replace`,
+each `re_replace` pattern on the engine its function name selects and refusing undeclared
+`.Config`/`.Result` reads) and the stub `FuncMap` (`re_replace`,
 `re_replace_net`, `join`); a parse failure fails the definition. Those three names, plus
 Go's builtins, are the whole function vocabulary the engine must provide
 (`cardigann.TemplateFunc*`). Parsing checks syntax only; what `.Config`/`.Query`/`.Result`
 evaluate to (including Jackett's `.True`/`.False` truthiness) is the engine's to define.
+
+## Engine contract
+
+What the converter cannot bake into the data, and the engine must therefore do exactly as
+Prowlarr does. Each rule names the definitions that depend on it.
+
+- **Template data is all strings, and null is `""`.** Prowlarr's nulls — `.False`, an
+  unchecked checkbox, every `.Query.*` key (all pre-set), an empty optional field — render
+  as `""`; Go renders a nil or missing value as `<no value>` and compares it unequal to
+  everything. So: every value a string (`.Categories` a `[]string`), every Prowlarr
+  `.Query` key present, every declared field pre-seeded with `""`, `.True` = `"True"`,
+  `.False` = `""`. 150 `case` values are `{{ .False }}`; 68 definitions test
+  `eq .Query.IMDBID .False`. `convert.Check` refuses a template that reads an undeclared
+  setting (`sitelink` aside, which the engine always provides) or field, so a missing key
+  can only ever be a `.Query` one.
+- **`.Result.<field>` holds the normalised value** Prowlarr's `ParseFields` leaves: numbers
+  coerced (`eq .Result.files "1"`, 75 uses), `genre` split and re-joined with `", "`.
+- **JSON values are stringified the Newtonsoft way**: an ISO timestamp becomes
+  `MM/dd/yyyy HH:mm:ss` (86 JSON definitions append an offset and parse that), booleans
+  `True`/`False` (221 `case` keys in 78 definitions), floats in shortest form (`1.0` → `1`),
+  arrays joined with `,`. Selectors: leading `.` trimmed, `..` is the parent row,
+  `:has`/`:not`/`:contains` suffixes, `:contains` a substring test over the value's string
+  form.
+- **In a `paths[].path` or `inputs.$raw`, URL-encode substituted values only**, never the
+  literal text — every variable, `re_replace`/`join` result and `range` item — always as
+  UTF-8, then replace `+` with `%20` in the path. Ordinary inputs are encoded in the
+  definition's `encoding`. Go's templates have no hook for it: append `urlencode` to every
+  action node of those parse trees.
+- **HTML selectors may match the element itself**: a field selector is tried on the row
+  first (`dom.Matches(sel) ? dom : QuerySelector`), a `case` key on the selection first. A
+  leading `:root` is stripped. goquery's `Find` searches descendants only.
+- **Dates**: `cardigann.ParseDate` (trims, tries the layouts, fills a missing year or date
+  from now). A failed `dateparse` is not fatal — the value passes through — and the `date`
+  field always goes through format guessing afterwards.
 
 ## Secrets
 

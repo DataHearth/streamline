@@ -206,7 +206,8 @@
       },
       "poster": {
         "selector": "td.name > a.poster-preview img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "download": {
         "selector": "td.name > div > a[href*=\"-torrent-\"][title]",
@@ -316,6 +317,7 @@
       },
       "description": {
         "selector": "td:nth-child(3) > div:nth-child(2)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

@@ -354,6 +354,7 @@
       },
       "genre": {
         "selector": "td.al div.sub",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",

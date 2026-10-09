@@ -289,6 +289,7 @@
       "poster": {
         "selector": "img[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -350,6 +351,7 @@
       },
       "genre": {
         "selector": "div i",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -360,6 +362,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"pic/yes.png\"]": "Verified: {{ .Result.genre }}",
           "img[src=\"pic/nincs.png\"]": "Unverified: {{ .Result.genre }}"
