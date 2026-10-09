@@ -81,7 +81,8 @@ search:
 		Expect(d.Search.Rows.Selector).To(Equal(`div.w-1\/2 > a`))
 	})
 
-	DescribeTable("refuses what upstream never writes and a hostile file would",
+	DescribeTable(
+		"refuses what upstream never writes and a hostile file would",
 		func(src, want string) {
 			_, err := cardigann.Decode([]byte(src))
 			Expect(err).To(MatchError(ContainSubstring(want)))
@@ -100,6 +101,22 @@ search:
   rows: {selector: tr}
   fields: {}
 `, `duplicate key "a"`),
+		Entry("an explicit tag, which would skip the strict check", `
+id: x
+links: [https://x/]
+search: !!null {rows: {selector: tr}, fields: {}, futurekey: 1}
+`, "explicit YAML tag"),
+		Entry(
+			"a second document",
+			"id: x\n---\nbogus: 1\n",
+			"want one YAML document",
+		),
+		Entry("an unknown top-level key, named as such", `
+id: x
+links: [https://x/]
+bogus: 1
+search: {rows: {selector: tr}, fields: {}}
+`, `unknown key "bogus" at top level`),
 		Entry("a duplicate key in a struct", `
 id: x
 id: y

@@ -782,7 +782,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\w*Temp\\w*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
+              "(?i)[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*Temp[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
               " S$1 "
             ],
             "engine": "regexp2"
@@ -790,7 +790,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
+              "(?i)(\\d{1,2})(ª|\\D)?\\s?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*Temp[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*\\b",
               " S$1 "
             ],
             "engine": "regexp2"
@@ -798,7 +798,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
+              "(?i)(\\d{1,2})(ª|\\D)?\\s?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*Temp[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*\\b",
               " S$1 "
             ],
             "engine": "regexp2"
@@ -902,7 +902,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\w*Temp\\w*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
+              "(?i)[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*Temp[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*\\b\\s?(\\d{1,2})(ª|\\D)?\\b",
               " S$1 "
             ],
             "engine": "regexp2"
@@ -910,7 +910,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d{1,2})(ª|\\D)?\\s?\\w*Temp\\w*\\b",
+              "(?i)(\\d{1,2})(ª|\\D)?\\s?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*Temp[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*\\b",
               " S$1 "
             ],
             "engine": "regexp2"

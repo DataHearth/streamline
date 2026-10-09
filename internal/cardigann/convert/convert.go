@@ -31,7 +31,7 @@ import (
 // Version is the converter's output version, recorded in the catalog. Bump
 // it whenever a change here alters what Convert produces for the same input,
 // so a snapshot converted by an older converter is recognisably stale.
-const Version = 3
+const Version = 4
 
 // Modified is the change notice each converted definition carries in its
 // source block (the GPL asks a modified file to say it was changed).
