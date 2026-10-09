@@ -463,7 +463,8 @@
             "args": [
               "^0$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -520,7 +521,8 @@
             "name": "regexp",
             "args": [
               "(.+?), $"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -533,5 +535,6 @@
     "path": "definitions/v11/digitalcore-api.yml",
     "sha256": "d7c61689e912bea1b301d06ef5d38ddde1ac09c714327a8d374be3f2154a9ad1",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

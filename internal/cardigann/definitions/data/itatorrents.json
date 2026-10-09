@@ -209,9 +209,10 @@
       {
         "name": "re_replace",
         "args": [
-          "^([SE]\\p{Nd}{1,4}){1,2}$",
-          "{{ if or (.Query.Season) (.Query.Ep) }}{{ else }}${1}{{ end }}"
-        ]
+          "^([SE]\\d{1,4}){1,2}$",
+          "{{ if or (.Query.Season) (.Query.Ep) }}{{ else }}$1{{ end }}"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",

@@ -440,8 +440,9 @@
           {
             "name": "regexp",
             "args": [
-              "x \\p{Nd}(\\p{Nd}+) x$"
-            ]
+              "x \\d(\\d+) x$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -486,5 +487,6 @@
     "path": "definitions/v11/bestcore.yml",
     "sha256": "a8440a00ecd142f1956576a9fe0433fdb94e5fd7f4c3146cbc84373f58bbd286",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -383,7 +383,8 @@
             "args": [
               "^0$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -492,7 +493,8 @@
             "name": "regexp",
             "args": [
               "(.+?), $"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -505,5 +507,6 @@
     "path": "definitions/v11/superbits.yml",
     "sha256": "f0ed484fb4e3ae7348263f136035c7ba0eaba29f4d84388ffd62890144214b65",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

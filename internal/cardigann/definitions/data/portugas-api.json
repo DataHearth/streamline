@@ -252,7 +252,8 @@
             "args": [
               "(?i)^None$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
@@ -357,5 +358,6 @@
     "path": "definitions/v11/portugas-api.yml",
     "sha256": "f208f6b9abd9d82a4470075fb59eff480a6b843fae1fe9b68740eee07522a9ea",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

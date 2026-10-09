@@ -141,7 +141,8 @@
         "args": [
           "S[0-9]{2}([^E]|$)",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -188,7 +189,8 @@
             "name": "regexp",
             "args": [
               " in (.+?)[.]?$"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },

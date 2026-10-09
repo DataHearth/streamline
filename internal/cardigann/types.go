@@ -3,7 +3,8 @@ package cardigann
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 
 	"go.yaml.in/yaml/v3"
@@ -12,48 +13,32 @@ import (
 // Str is a scalar read as its literal text. Upstream writes the same key as a
 // string in one definition and an int or bool in the next (a select's default
 // of 1, a category id of "1"), and every consumer treats it as text anyway.
+// yaml.v3 already decodes any scalar into a string as its literal text (and
+// refuses a list or a mapping), so the type only names the intent.
 type Str string
-
-func (s *Str) UnmarshalYAML(n *yaml.Node) error {
-	if n.Kind != yaml.ScalarNode {
-		return fmt.Errorf("line %d: want a scalar, got %s", n.Line, kindName(n))
-	}
-	if n.Tag == "!!null" {
-		*s = ""
-		return nil
-	}
-	*s = Str(n.Value)
-	return nil
-}
 
 // StrList accepts a bare scalar or a list of scalars, normalised to a list.
 type StrList []string
 
 func (l *StrList) UnmarshalYAML(n *yaml.Node) error {
+	items := []*yaml.Node{n}
 	switch n.Kind {
 	case yaml.ScalarNode:
-		var s Str
-		if err := s.UnmarshalYAML(n); err != nil {
-			return err
-		}
-		*l = StrList{string(s)}
-		return nil
 	case yaml.SequenceNode:
-		out := make(StrList, 0, len(n.Content))
-		for _, c := range n.Content {
-			var s Str
-			if err := s.UnmarshalYAML(c); err != nil {
-				return err
-			}
-			out = append(out, string(s))
-		}
-		*l = out
-		return nil
+		items = n.Content
 	default:
 		return fmt.Errorf(
 			"line %d: want a scalar or a list, got %s", n.Line, kindName(n),
 		)
 	}
+	out := make(StrList, len(items))
+	for i, c := range items {
+		if err := c.Decode(&out[i]); err != nil {
+			return err
+		}
+	}
+	*l = out
+	return nil
 }
 
 // Entry is one key/value pair of an OrderedMap.
@@ -94,23 +79,57 @@ func (m *OrderedMap[V]) UnmarshalYAML(n *yaml.Node) error {
 	return nil
 }
 
-func (m OrderedMap[V]) MarshalJSON() ([]byte, error) {
-	var b bytes.Buffer
-	b.WriteByte('{')
-	for i, e := range m {
-		if i > 0 {
-			b.WriteByte(',')
+// MarshalJSONTo writes the entries as one JSON object, in order. It is the
+// json/v2 interface, which encoding/json honours as well; working on the
+// caller's encoder, it inherits the caller's options — no HTML escaping and
+// the indent in EncodeJSON — rather than re-encoding each value apart.
+func (m OrderedMap[V]) MarshalJSONTo(enc *jsontext.Encoder) error {
+	if err := enc.WriteToken(jsontext.BeginObject); err != nil {
+		return err
+	}
+	for _, e := range m {
+		if err := enc.WriteToken(jsontext.String(e.Key)); err != nil {
+			return err
 		}
-		if err := writeJSON(&b, e.Key); err != nil {
-			return nil, err
-		}
-		b.WriteByte(':')
-		if err := writeJSON(&b, e.Value); err != nil {
-			return nil, err
+		if err := jsonv2.MarshalEncode(enc, e.Value); err != nil {
+			return err
 		}
 	}
-	b.WriteByte('}')
-	return b.Bytes(), nil
+	return enc.WriteToken(jsontext.EndObject)
+}
+
+// UnmarshalJSONFrom reads one JSON object back in document order.
+func (m *OrderedMap[V]) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	if dec.PeekKind() == 'n' {
+		_, err := dec.ReadToken()
+		*m = nil
+		return err
+	}
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf("ordered map: want a JSON object, got %s", tok.Kind())
+	}
+	var out OrderedMap[V]
+	for dec.PeekKind() == '"' {
+		tok, err := dec.ReadToken()
+		if err != nil {
+			return err
+		}
+		key := tok.String() // a token is only valid until the next read
+		var v V
+		if err := jsonv2.UnmarshalDecode(dec, &v); err != nil {
+			return err
+		}
+		out = append(out, Entry[V]{Key: key, Value: v})
+	}
+	if _, err := dec.ReadToken(); err != nil { // the closing brace
+		return err
+	}
+	*m = out
+	return nil
 }
 
 // EncodeJSON is the snapshot's on-disk encoding: two-space indent, no HTML
@@ -126,53 +145,6 @@ func EncodeJSON(v any) ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
-}
-
-// writeJSON encodes without HTML escaping. A definition is mostly CSS
-// selectors and HTML snippets; escaped, "td > a" lands on disk as
-// "td \u003e a", and an Encoder's own SetEscapeHTML(false) cannot undo what an
-// inner json.Marshal already escaped.
-func writeJSON(b *bytes.Buffer, v any) error {
-	enc := json.NewEncoder(b)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
-		return err
-	}
-	b.Truncate(b.Len() - 1) // Encode's trailing newline
-	return nil
-}
-
-func (m *OrderedMap[V]) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
-		*m = nil
-		return nil
-	}
-	dec := json.NewDecoder(bytes.NewReader(data))
-	tok, err := dec.Token()
-	if err != nil {
-		return err
-	}
-	if d, ok := tok.(json.Delim); !ok || d != '{' {
-		return errors.New("ordered map: want a JSON object")
-	}
-	var out OrderedMap[V]
-	for dec.More() {
-		tok, err := dec.Token()
-		if err != nil {
-			return err
-		}
-		key, ok := tok.(string)
-		if !ok {
-			return errors.New("ordered map: want a string key")
-		}
-		var v V
-		if err := dec.Decode(&v); err != nil {
-			return err
-		}
-		out = append(out, Entry[V]{Key: key, Value: v})
-	}
-	*m = out
-	return nil
 }
 
 func kindName(n *yaml.Node) string {

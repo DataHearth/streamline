@@ -450,9 +450,10 @@
           {
             "name": "re_replace",
             "args": [
-              "- ([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+-?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*)$",
-              "-${1}"
-            ]
+              "- (\\w+-?\\w*)$",
+              "-$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",

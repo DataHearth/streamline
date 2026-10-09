@@ -405,7 +405,8 @@
             "name": "regexp",
             "args": [
               "(.+?\\.(jpg|jpeg|bmp|png)$)"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -479,5 +480,6 @@
     "path": "definitions/v11/torrentdd.yml",
     "sha256": "b17f19b855e52a474fa41f9c207c278ca8fa880b361cdf42a2aa864ddf0cc362",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -1,6 +1,6 @@
 {
   "schema": 11,
-  "converter": 2,
+  "converter": 3,
   "upstream": {
     "repository": "https://github.com/Prowlarr/Indexers",
     "commit": "8df0764eec2d6d138a60cc461d7a850dda8dee5a",
@@ -867,7 +867,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "anthelion-api",
@@ -1040,7 +1041,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "asiancinema",
@@ -1411,7 +1413,8 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "bibliotik",
@@ -2161,7 +2164,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "byrbt",
@@ -3432,7 +3436,8 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "dimeadozen",
@@ -3520,7 +3525,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "docspedia",
@@ -3973,7 +3979,8 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "exkinoray",
@@ -5830,7 +5837,8 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "hellashut",
@@ -8302,7 +8310,8 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "mousebits",
@@ -10088,7 +10097,8 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "postman",
@@ -11905,7 +11915,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "shareisland-api",
@@ -12474,7 +12485,8 @@
         "season",
         "ep",
         "imdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "swarmazon-api",
@@ -12706,7 +12718,8 @@
         "Books",
         "Other",
         "PC"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "thebrothers",
@@ -12886,7 +12899,8 @@
         "imdbid",
         "tvdbid",
         "tmdbid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "themixingbowl",
@@ -13197,7 +13211,8 @@
         "ep",
         "imdbid",
         "doubanid"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "tlfbits",
@@ -13303,7 +13318,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "tormac",
@@ -13391,7 +13407,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "torrent-pirat",
@@ -13668,7 +13685,8 @@
         "q",
         "season",
         "ep"
-      ]
+      ],
+      "regex_net": true
     },
     {
       "file": "torrentdownload",

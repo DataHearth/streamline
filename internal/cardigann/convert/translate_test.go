@@ -32,20 +32,23 @@ var _ = Describe("translateRegex", Label("unit", "cardigann"), func() {
 			`[\w.]+\W`,
 			`[\p{L}\p{Mn}\p{Nd}\p{Pc}.]+[^\p{L}\p{Mn}\p{Nd}\p{Pc}]`),
 		Entry("escaped backslash is left alone", `a\\u0041`, `a\\u0041`),
+		Entry("a $ inside a class or escaped is a literal", `[$]\$`, `[$]\$`),
 		Entry("a [ inside a class is literal, never POSIX", `[[:]`, `[\[:]`),
 	)
 
 	It("matches non-ASCII letters and digits the way .NET does", func() {
-		w, _, err := translateRegex(`^\w+$`)
+		w, engine, err := translateRegex(`^\w+\z`)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(engine).To(BeEmpty())
 		Expect(regexp.MustCompile(w).MatchString("Amélie")).To(BeTrue())
 		Expect(regexp.MustCompile(w).MatchString("Медведь")).To(BeTrue())
-		d, _, err := translateRegex(`^\d$`)
+		d, _, err := translateRegex(`^\d\z`)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(regexp.MustCompile(d).MatchString("٣")).To(BeTrue())
 	})
 
-	DescribeTable("tags what RE2 cannot express for regexp2, unchanged",
+	DescribeTable(
+		"tags what RE2 cannot express for regexp2, unchanged",
 		func(in string) {
 			out, engine, err := translateRegex(in)
 			Expect(err).NotTo(HaveOccurred())
@@ -58,6 +61,10 @@ var _ = Describe("translateRegex", Label("unit", "cardigann"), func() {
 		Entry("word boundary, ASCII-only in Go", `\bфильм\b`),
 		Entry("negated shorthand inside a class", `[\W\d]+`),
 		Entry("class subtraction", `[a-z-[aeiou]]`),
+		Entry(
+			"end anchor, which .NET also matches before a final newline",
+			`(\d+)$`,
+		),
 	)
 
 	It("gives regexp2 a block name as its range too", func() {

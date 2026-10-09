@@ -31,7 +31,7 @@ import (
 // Version is the converter's output version, recorded in the catalog. Bump
 // it whenever a change here alters what Convert produces for the same input,
 // so a snapshot converted by an older converter is recognisably stale.
-const Version = 2
+const Version = 3
 
 // Modified is the change notice each converted definition carries in its
 // source block (the GPL asks a modified file to say it was changed).
@@ -81,7 +81,7 @@ func Convert(path string, src []byte) (*cardigann.Definition, error) {
 		d.Login.Method = "form"
 	}
 	c := converter{}
-	if err := c.walk(reflect.ValueOf(d).Elem(), ""); err != nil {
+	if err := c.walk(reflect.ValueOf(d).Elem()); err != nil {
 		return nil, err
 	}
 	for i := range d.Settings {
@@ -120,52 +120,16 @@ type converter struct {
 	usesNET bool
 }
 
-var filterType = reflect.TypeFor[cardigann.Filter]()
-
-// walk visits every string in the definition. Filters are handled whole,
-// since which of their arguments is a regex, a layout or a template depends
-// on the filter; every other string is a template candidate.
-func (c *converter) walk(v reflect.Value, path string) error {
-	if v.Type() == filterType {
-		f, _ := reflect.TypeAssert[*cardigann.Filter](v.Addr())
-		if err := c.filter(f); err != nil {
-			return fmt.Errorf("%s: %w", strings.TrimPrefix(path, "."), err)
-		}
-		return nil
-	}
-	switch v.Kind() {
-	case reflect.Pointer:
-		if !v.IsNil() {
-			return c.walk(v.Elem(), path)
-		}
-	case reflect.Struct:
-		t := v.Type()
-		for i := range t.NumField() {
-			if !t.Field(i).IsExported() {
-				continue
-			}
-			if err := c.walk(v.Field(i), path+"."+t.Field(i).Name); err != nil {
-				return err
-			}
-		}
-	case reflect.Slice:
-		for i := range v.Len() {
-			if err := c.walk(
-				v.Index(i),
-				fmt.Sprintf("%s[%d]", path, i),
-			); err != nil {
-				return err
-			}
-		}
-	case reflect.String:
-		out, err := c.template(v.String())
+// walk rewrites every filter and template string in the definition in place.
+func (c *converter) walk(v reflect.Value) error {
+	return visit(v, c.filter, func(s reflect.Value) error {
+		out, err := c.template(s.String())
 		if err != nil {
-			return fmt.Errorf("%s: %w", strings.TrimPrefix(path, "."), err)
+			return err
 		}
-		v.SetString(out)
-	default:
-	}
-	return nil
+		s.SetString(out)
+		return nil
+	})
 }
 
 func (c *converter) template(s string) (string, error) {

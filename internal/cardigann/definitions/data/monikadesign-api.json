@@ -229,7 +229,8 @@
             "args": [
               "(?i)^None$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "replace",
@@ -288,5 +289,6 @@
     "path": "definitions/v11/monikadesign-api.yml",
     "sha256": "8b8e0fa73aedcbf24cc1ab3c8b666c1cf91941047e2008e93549d7d247cc63e6",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

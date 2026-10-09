@@ -77,8 +77,14 @@ the node tree against the Go types itself.
   `options` (display order). Those are `OrderedMap`, which also encodes as an ordered JSON
   object. Never turn one into a Go map.
 - Scalars upstream writes as string, int or bool interchangeably (`default`, category `id`,
-  filter `args`) decode as `Str`/`StrList` — their literal text. Filter `args` is always a
-  list after decoding, whatever shape it was written in.
+  filter `args`) decode as `Str`/`StrList` — their literal text, which is what yaml.v3 does
+  for any scalar decoded into a string. Filter `args` is always a list after decoding,
+  whatever shape it was written in.
+- `OrderedMap` encodes through the json/v2 interfaces (`MarshalJSONTo`/`UnmarshalJSONFrom`),
+  which `encoding/json` honours since Go's json/v2 became the default implementation. It
+  writes on the caller's encoder, so `EncodeJSON`'s no-HTML-escaping and indent apply
+  inside it. A `jsontext.Token` is only valid until the next read — copy a key out of it
+  before decoding its value.
 - **`\/` is read as `/` in double-quoted scalars only** (`protectSlashes` + `sanitize`).
   YAML 1.2 — and the .NET parser upstream is written against — reads `"\/"` as `/` for
   JSON compatibility; yaml.v3 is 1.1 and rejects it, which skipped four definitions.
@@ -124,15 +130,16 @@ split at the `é`.
     literally and Go would take for a POSIX class.
 - **What RE2 cannot say goes to regexp2, unchanged but for block names**: lookarounds,
   backreferences, `\b`/`\B` (Go's boundary is ASCII-only — beside a Cyrillic letter it never
-  matches), a negated shorthand or negated block inside a class, class subtraction, and any
-  pattern whose replacement uses a substitution only .NET has. Its filter gets
+  matches), `$` (.NET's also matches just before a final newline, which RE2 could only say
+  with a lookahead), a negated shorthand or negated block inside a class, class
+  subtraction, and any pattern whose replacement uses a substitution only .NET has. Its filter gets
   `"engine": "regexp2"` (`cardigann.RegexEngineNET`); a templated `re_replace` is renamed
-  `re_replace_net`; the definition and its catalog row get `regex_net: true`. 96 definitions
-  (512 patterns) at `8df0764`, most of them for `\b`.
-- **Checked by differential, not by eye.** Every RE2-assigned pattern at `8df0764` (1,346)
-  was matched against its upstream original on regexp2 over the multilingual corpus: zero
-  disagreements, where the same run with an ASCII `\w` flags 22 definitions. Repeat that
-  check when the rewrite changes.
+  `re_replace_net`; the definition and its catalog row get `regex_net: true`. 114
+  definitions (594 patterns) at `8df0764`, most of them for `\b` and `$`.
+- **Checked by differential, not by eye.** Every pattern left on RE2 at `8df0764` was
+  matched against its upstream original on regexp2 over a 40-string multilingual corpus:
+  zero disagreements, where the same run with an ASCII `\w` flags 22 definitions. Repeat
+  that check when the rewrite changes.
 - **The engine is decided here, never by trial at runtime.** Which definitions run on the
   backtracking engine is then visible in the data itself, and a pattern that compiles on
   neither engine fails the definition at sync time rather than a search.
@@ -140,9 +147,10 @@ split at the `é`.
   failing** — not the search hanging. regexp2 backtracks and has no linear-time
   guarantee; here it runs patterns we do not author over HTML from trackers we do not
   control.
-- Known residual differences, left to the engine: `$` without `(?m)` matches before a
-  final newline in .NET but only at the very end in Go (trim values before filtering), and
-  `(?i)` case folding is Unicode simple folding in Go versus .NET's invariant culture.
+- The one known residual difference: `(?i)` is Unicode simple case folding in Go and
+  per-character lowering in .NET, which disagree only on a handful of letters such as the
+  long s (`ſ` folds to `s` in Go, not in .NET). No upstream pattern is affected that
+  matters; it is not worth sending every case-insensitive pattern to regexp2.
 - **Replacement strings follow their pattern's engine** (`translatePair`). regexp2 speaks
   .NET substitution natively, so a regexp2 replacement is untouched. An RE2 one is
   rewritten for `Regexp.Expand` — the engine must use `ReplaceAllString`, not the literal
@@ -169,10 +177,13 @@ take the offset with or without its colon (`+08:00`, `+0800` — 19 definitions 
 - Refused, failing the definition: a lone `y`, `t` or `z`, fractional seconds, eras, and any
   literal that Go would read as a layout element (a digit, `Jan`, `Mon`, `PM`, `MST`, …) — a
   Go layout has no escape for those.
-- **Left to the engine**: a `dateparse` without a layout (format guessing), and a layout
-  with no year or no date at all (3 at `8df0764`: btetree, torrentsome, comicat's
-  `date_today`). .NET fills the missing parts from the current date; Go yields year 0. Mixed
-  case like `Pm` parses in .NET and in neither Go spelling.
+- **Parse with `cardigann.ParseDate(layouts, value, now)`**, never bare `time.Parse`. It
+  tries the layouts in order, reads a zone-less value in `now`'s location, and fills what a
+  layout lacks the way .NET's ParseExact does: no year takes now's year, no date at all
+  takes now's date (3 layouts at `8df0764`: btetree, torrentsome, comicat's
+  `date_today`); Go alone would give year 0.
+- Left to the engine: a `dateparse` without a layout (format guessing). Mixed case like
+  `Pm` parses in .NET and in neither Go spelling.
 
 ## Templates
 

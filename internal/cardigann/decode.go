@@ -2,9 +2,12 @@ package cardigann
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -38,9 +41,8 @@ func Decode(src []byte) (*Definition, error) {
 	if err := sanitize(root.Content[0]); err != nil {
 		return nil, err
 	}
-	if err := checkKnown(
-		root.Content[0], reflect.TypeFor[Definition](), "",
-	); err != nil {
+	doc := root.Content[0]
+	if err := checkKnown(doc, reflect.TypeFor[Definition]()); err != nil {
 		return nil, err
 	}
 	var d Definition
@@ -120,19 +122,41 @@ type valueTyper interface{ valueType() reflect.Type }
 
 func (OrderedMap[V]) valueType() reflect.Type { return reflect.TypeFor[V]() }
 
-var (
-	strType     = reflect.TypeFor[Str]()
-	strListType = reflect.TypeFor[StrList]()
-)
+var strListType = reflect.TypeFor[StrList]()
 
-func checkKnown(n *yaml.Node, t reflect.Type, path string) error {
+// unknownKey is checkKnown's error. Its path is collected on the way back up
+// the recursion, so a definition that passes — every upstream one — never
+// pays for building path strings it would not print.
+type unknownKey struct {
+	line int
+	key  string
+	path []string // innermost segment first
+}
+
+func (e *unknownKey) Error() string {
+	var b strings.Builder
+	for _, seg := range slices.Backward(e.path) {
+		b.WriteString(seg)
+	}
+	return fmt.Sprintf("line %d: unknown key %q at %s",
+		e.line, e.key, strings.TrimPrefix(b.String(), "."))
+}
+
+func within(err error, seg func() string) error {
+	if u, ok := errors.AsType[*unknownKey](err); ok {
+		u.path = append(u.path, seg())
+	}
+	return err
+}
+
+func checkKnown(n *yaml.Node, t reflect.Type) error {
 	if n.Tag == "!!null" {
 		return nil
 	}
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
-	if t == strType || t == strListType {
+	if t == strListType {
 		return nil
 	}
 	if vt, ok := reflect.TypeAssert[valueTyper](reflect.Zero(t)); ok {
@@ -140,9 +164,9 @@ func checkKnown(n *yaml.Node, t reflect.Type, path string) error {
 			return nil // the unmarshaler reports the shape error
 		}
 		for i := 0; i+1 < len(n.Content); i += 2 {
-			p := path + "." + n.Content[i].Value
-			if err := checkKnown(n.Content[i+1], vt.valueType(), p); err != nil {
-				return err
+			if err := checkKnown(n.Content[i+1], vt.valueType()); err != nil {
+				key := n.Content[i].Value
+				return within(err, func() string { return "." + key })
 			}
 		}
 		return nil
@@ -152,17 +176,15 @@ func checkKnown(n *yaml.Node, t reflect.Type, path string) error {
 		if n.Kind != yaml.MappingNode {
 			return nil
 		}
+		fields := yamlFields(t)
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			key := n.Content[i].Value
-			f, ok := fieldByYAMLName(t, key)
+			ft, ok := fields[key]
 			if !ok {
-				return fmt.Errorf(
-					"line %d: unknown key %q at %s",
-					n.Content[i].Line, key, strings.TrimPrefix(path, "."),
-				)
+				return &unknownKey{line: n.Content[i].Line, key: key}
 			}
-			if err := checkKnown(n.Content[i+1], f.Type, path+"."+key); err != nil {
-				return err
+			if err := checkKnown(n.Content[i+1], ft); err != nil {
+				return within(err, func() string { return "." + key })
 			}
 		}
 	case reflect.Slice:
@@ -170,9 +192,8 @@ func checkKnown(n *yaml.Node, t reflect.Type, path string) error {
 			return nil
 		}
 		for i, c := range n.Content {
-			p := fmt.Sprintf("%s[%d]", path, i)
-			if err := checkKnown(c, t.Elem(), p); err != nil {
-				return err
+			if err := checkKnown(c, t.Elem()); err != nil {
+				return within(err, func() string { return fmt.Sprintf("[%d]", i) })
 			}
 		}
 	default:
@@ -180,12 +201,22 @@ func checkKnown(n *yaml.Node, t reflect.Type, path string) error {
 	return nil
 }
 
-func fieldByYAMLName(t reflect.Type, name string) (reflect.StructField, bool) {
+// fieldCache holds each struct type's YAML key → field type table, built once
+// per type instead of re-parsing tags on every key of every file.
+var fieldCache sync.Map // reflect.Type → map[string]reflect.Type
+
+func yamlFields(t reflect.Type) map[string]reflect.Type {
+	if m, ok := fieldCache.Load(t); ok {
+		fields, _ := m.(map[string]reflect.Type)
+		return fields
+	}
+	m := make(map[string]reflect.Type, t.NumField())
 	for f := range t.Fields() {
 		tag, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
-		if tag != "-" && tag == name {
-			return f, true
+		if tag != "" && tag != "-" {
+			m[tag] = f.Type
 		}
 	}
-	return reflect.StructField{}, false
+	fieldCache.Store(t, m)
+	return m
 }

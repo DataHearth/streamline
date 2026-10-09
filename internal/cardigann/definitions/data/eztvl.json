@@ -150,7 +150,8 @@
             "args": [
               "\\(.*\\)$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "trim"

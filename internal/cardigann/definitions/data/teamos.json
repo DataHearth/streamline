@@ -535,8 +535,9 @@
           {
             "name": "regexp",
             "args": [
-              "\\.(\\p{Nd}+)\\/$"
-            ]
+              "\\.(\\d+)\\/$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -585,5 +586,6 @@
     "path": "definitions/v11/teamos.yml",
     "sha256": "cca47b2d05eabb588df85a6d7b62059e44d91a9035cf4bb40b1af8636ce6a647",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }
