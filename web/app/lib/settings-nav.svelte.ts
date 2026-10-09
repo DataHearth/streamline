@@ -15,21 +15,16 @@ import {
 	Shield,
 	KeyRound,
 	Users,
-	Music,
-	BookOpen,
-	Headphones,
+	FileText,
 } from "@lucide/svelte";
 import { createQuery } from "@tanstack/svelte-query";
 import { auth } from "./auth.svelte";
 import { api } from "./api";
 import type {
-	AudiobookQualityProfile,
 	CustomFormat,
-	EbookQualityProfile,
 	DownloadClient,
 	Indexer,
 	MediaServer,
-	MusicQualityProfile,
 	QualityProfileFull,
 	ScheduleList,
 	UserList,
@@ -49,11 +44,9 @@ export type SettingsGroup = { name: string; items: SettingsItem[] };
 // name itself without instantiating the count queries.
 export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/general": () => i18n.settings_general(),
+	"/settings/logs": () => i18n.settings_logs(),
 	"/settings/advanced": () => i18n.settings_advanced(),
 	"/settings/quality-profiles": () => i18n.settings_quality_profiles(),
-	"/settings/music-profiles": () => i18n.settings_music_profiles(),
-	"/settings/ebook-profiles": () => i18n.settings_ebook_profiles(),
-	"/settings/audiobook-profiles": () => i18n.settings_audiobook_profiles(),
 	"/settings/custom-formats": () => i18n.settings_custom_formats(),
 	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
@@ -100,22 +93,22 @@ export function createSettingsNav(withCounts = true) {
 		queryFn: () => api<QualityProfileFull[]>("/quality-profiles"),
 		enabled: withCounts,
 	}));
-	const musicProfiles = createQuery<MusicQualityProfile[]>(() => ({
-		queryKey: ["music", "quality-profiles"],
-		queryFn: () => api<MusicQualityProfile[]>("/music/quality-profiles"),
+	// Music and books keep their own lists; the row counts all three.
+	const musicProfiles = createQuery<unknown[]>(() => ({
+		queryKey: ["quality-profiles", "music"],
+		queryFn: () => api<unknown[]>("/quality-profiles?media=music"),
 		enabled: withCounts,
 	}));
-	const ebookProfiles = createQuery<EbookQualityProfile[]>(() => ({
-		queryKey: ["books", "ebook-quality-profiles"],
-		queryFn: () => api<EbookQualityProfile[]>("/books/ebook-quality-profiles"),
+	const bookProfiles = createQuery<unknown[]>(() => ({
+		queryKey: ["quality-profiles", "books"],
+		queryFn: () => api<unknown[]>("/quality-profiles?media=books"),
 		enabled: withCounts,
 	}));
-	const audiobookProfiles = createQuery<AudiobookQualityProfile[]>(() => ({
-		queryKey: ["books", "audiobook-quality-profiles"],
-		queryFn: () =>
-			api<AudiobookQualityProfile[]>("/books/audiobook-quality-profiles"),
-		enabled: withCounts,
-	}));
+	let profileCount = $derived(
+		profiles.data
+			? profiles.data.length + (musicProfiles.data?.length ?? 0) + (bookProfiles.data?.length ?? 0)
+			: undefined,
+	);
 	const customFormats = createQuery<CustomFormat[]>(() => ({
 		queryKey: ["custom-formats"],
 		queryFn: () => api<CustomFormat[]>("/custom-formats"),
@@ -144,6 +137,13 @@ export function createSettingsNav(withCounts = true) {
 						Icon: SlidersHorizontal,
 						label: i18n.settings_general(),
 					},
+					// The application and HTTP access logs: what streamline writes, at
+					// what level, where to, and how a log file rotates.
+					{
+						path: "/settings/logs",
+						Icon: FileText,
+						label: i18n.settings_logs(),
+					},
 					{
 						path: "/settings/advanced",
 						Icon: Wrench,
@@ -163,25 +163,7 @@ export function createSettingsNav(withCounts = true) {
 						path: "/settings/quality-profiles",
 						Icon: Gauge,
 						label: i18n.settings_quality_profiles(),
-						count: profiles.data?.length,
-					},
-					{
-						path: "/settings/music-profiles",
-						Icon: Music,
-						label: i18n.settings_music_profiles(),
-						count: musicProfiles.data?.length,
-					},
-					{
-						path: "/settings/ebook-profiles",
-						Icon: BookOpen,
-						label: i18n.settings_ebook_profiles(),
-						count: ebookProfiles.data?.length,
-					},
-					{
-						path: "/settings/audiobook-profiles",
-						Icon: Headphones,
-						label: i18n.settings_audiobook_profiles(),
-						count: audiobookProfiles.data?.length,
+						count: profileCount,
 					},
 					// Counts what the operator can act on: the shipped library is a
 					// constant, so including builtins would show the same 13 on every

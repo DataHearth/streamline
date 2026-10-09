@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Film, FolderInput, Plus, Tv } from "@lucide/svelte";
+	import { BookOpen, Film, FolderInput, Music, Plus, Tv } from "@lucide/svelte";
 	import { activeRoute } from "@roxi/routify";
 	import { auth } from "@lib/auth.svelte";
 	import { cn } from "@lib/cn";
@@ -13,7 +13,7 @@
 	// circle: the fan it opens names each destination, so the trigger doesn't
 	// need to name itself.
 	//
-	// It rides the route rather than the shell: the dashboard and the two library
+	// It rides the route rather than the shell: the dashboard and the four library
 	// screens are where adding follows from what you're looking at, for everyone.
 	// On a detail page the action is about that one title, and Settings has
 	// nothing to add to.
@@ -23,7 +23,7 @@
 	// have no audience there. Requests is the reverse: it is where a member or a
 	// request_only member goes to ask for something, while for an admin it is a
 	// queue of other people's asks and the work there is deciding them.
-	const OPEN_ROUTES = ["/", "/movies", "/series"];
+	const OPEN_ROUTES = ["/", "/movies", "/series", "/music", "/books"];
 
 	let pathname = $state(
 		typeof window !== "undefined" ? window.location.pathname : "/",
@@ -65,10 +65,16 @@
 		auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request_title(),
 	);
 
-	type Item = { id: "movie" | "series" | "import"; label: string; icon: typeof Film };
+	type Item = {
+		id: "movie" | "series" | "artist" | "book" | "import";
+		label: string;
+		icon: typeof Film;
+	};
 	let items = $derived<Item[]>([
 		{ id: "movie", label: i18n.common_movie(), icon: Film },
 		{ id: "series", label: i18n.series_label(), icon: Tv },
+		{ id: "artist", label: i18n.common_artist(), icon: Music },
+		{ id: "book", label: i18n.common_book(), icon: BookOpen },
 		// Adopting files on disk is an admin operation, and not a request. On the
 		// imports list itself the row would only lead back to the page it was
 		// tapped from, and that page carries its own New scan button.
@@ -85,6 +91,10 @@
 			window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
 		else if (id === "series")
 			window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
+		else if (id === "artist")
+			window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
+		else if (id === "book")
+			window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
 	}
 </script>
 

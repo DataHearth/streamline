@@ -264,10 +264,7 @@
 <div class="mx-auto max-w-4xl">
 	<header class="flex flex-wrap items-end justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				{i18n.settings_download_clients()}
-			</h1>
-			<p class="mt-1 text-sm text-fg-muted">
+			<p class="text-sm text-fg-muted">
 				{i18n.dlclient_intro()}
 			</p>
 		</div>

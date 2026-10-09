@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pageTitle } from "@lib/page-title.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
 	import { ChevronDown, ChevronRight, LoaderCircle } from "@lucide/svelte";
@@ -408,6 +409,7 @@
 				: Promise.resolve(),
 		]);
 	}
+	$effect(() => pageTitle.claim(view === "events" ? i18n.activity_events() : i18n.activity_queue_and_history()));
 </script>
 
 <!-- At md and up the page is capped at the viewport and the list inside it does
@@ -441,12 +443,7 @@
 	</div>
 
 	<header class="mb-1">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">
-			{view === "events"
-				? i18n.activity_events()
-				: i18n.activity_queue_and_history()}
-		</h1>
-		<p class="mt-1 text-sm text-fg-muted">
+		<p class="text-sm text-fg-muted">
 			{#if view === "events"}
 				{i18n.activity_events_subtitle()}
 			{:else}

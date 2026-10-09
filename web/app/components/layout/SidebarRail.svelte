@@ -8,7 +8,7 @@
 		Film,
 		Tv,
 		Music,
-		BookOpen,
+		BookMarked,
 		Activity,
 		ListVideo,
 		Magnet,
@@ -62,7 +62,7 @@
 			{ label: i18n.movies_label(), href: "/movies", icon: Film },
 			{ label: i18n.settings_series(), href: "/series", icon: Tv },
 			{ label: i18n.music_label(), href: "/music", icon: Music },
-			{ label: i18n.books_label(), href: "/books", icon: BookOpen },
+			{ label: i18n.books_label(), href: "/books", icon: BookMarked },
 		],
 		Activity: [
 			{ label: i18n.activity_queue_history(), href: "/activity", icon: ListVideo },

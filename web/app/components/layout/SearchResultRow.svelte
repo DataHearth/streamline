@@ -1,10 +1,15 @@
 <script lang="ts">
-	import { ChevronRight, Film, Tv } from "@lucide/svelte";
+	import { BookOpen, ChevronRight, Film, Music, Tv } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
-	import { itemKindLabel, type SearchItem } from "@lib/search-model.svelte";
+	import {
+		isTitleItem,
+		itemKindLabel,
+		itemSubline,
+		type SearchItem,
+	} from "@lib/search-model.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
 
@@ -21,7 +26,7 @@
 		onpick: (item: SearchItem) => void;
 	} = $props();
 
-	let isTitle = $derived(item.kind === "movie" || item.kind === "series");
+	let isTitle = $derived(isTitleItem(item));
 	// A person leads somewhere too, so the row ends in a chevron rather than a
 	// kind label — the same affordance the titles get.
 	let leadsAway = $derived(isTitle || item.kind === "person");
@@ -53,6 +58,26 @@
 				alt={i18n.common_poster_alt({ title: item.label })}
 				class="relative h-full w-full object-cover"
 			/>
+		</div>
+	{:else if item.kind === "artist" || item.kind === "book"}
+		<div
+			class={cn(
+				"relative shrink-0 overflow-hidden bg-surface-2 ring-1 ring-border",
+				item.kind === "artist"
+					? cn("rounded-full", dense ? "h-9 w-9" : "h-10 w-10")
+					: cn("rounded-md", dense ? "h-10 w-[27px]" : "h-[45px] w-[30px]"),
+			)}
+		>
+			<div class="absolute inset-0 grid place-items-center text-fg-muted">
+				{#if item.kind === "artist"}
+					<Music size={14} aria-hidden="true" />
+				{:else}
+					<BookOpen size={14} aria-hidden="true" />
+				{/if}
+			</div>
+			{#if item.image}
+				<Img src={item.image} alt="" class="relative h-full w-full object-cover" />
+			{/if}
 		</div>
 	{:else if item.kind === "person"}
 		<div
@@ -100,6 +125,10 @@
 		{#if item.kind === "movie" || item.kind === "series"}
 			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
 				{item.year ? `${item.year} · ` : ""}{item.kind}
+			</span>
+		{:else if item.kind === "artist" || item.kind === "book"}
+			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
+				{[itemSubline(item), itemKindLabel(item).toLowerCase()].filter(Boolean).join(" · ")}
 			</span>
 		{:else if item.kind === "person"}
 			<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">

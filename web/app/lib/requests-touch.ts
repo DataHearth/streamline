@@ -55,7 +55,7 @@ export const TONE_CLASS: Record<StatusTone, string> = {
 // tab: a request that landed in the library is only reachable under All, which
 // is how the desktop tabs have always behaved.
 export type RequestTab = "pending" | "approved" | "rejected" | "all";
-export type RequestKind = "all" | "movies" | "series";
+export type RequestKind = "all" | "movies" | "series" | "music" | "books";
 
 export function tabStatus(t: RequestTab): RequestStatus | null {
 	if (t === "rejected") return "denied";
@@ -67,13 +67,34 @@ export function requesterName(r: MediaRequest): string {
 	return r.requester.display_name || r.requester.email;
 }
 
-export function kindToken(mediaType: MediaRequest["media_type"]): string {
-	return mediaType === "tvshow" ? "downloading" : "grabbing";
+type MediaType = MediaRequest["media_type"];
+
+export const isMusicBook = (t: MediaType) => t === "artist" || t === "book" || t === "book_series";
+
+// The kind dot. Movie and series keep the two status hues they always had;
+// music and books take the two the status ramp leaves free in this list.
+export function kindColor(mediaType: MediaType): string {
+	if (mediaType === "tvshow") return "var(--status-downloading)";
+	if (mediaType === "artist") return "var(--status-seeding)";
+	if (mediaType === "book" || mediaType === "book_series") return "oklch(0.74 0.14 350)";
+	return "var(--status-grabbing)";
 }
 
-export function kindLabel(mediaType: MediaRequest["media_type"]): string {
-	return mediaType === "tvshow" ? i18n.lc_series() : i18n.lc_movie();
+export function kindLabel(mediaType: MediaType): string {
+	if (mediaType === "tvshow") return i18n.lc_series();
+	if (mediaType === "artist") return i18n.lc_artist();
+	if (mediaType === "book") return i18n.lc_book();
+	if (mediaType === "book_series") return i18n.lc_book_series();
+	return i18n.lc_movie();
 }
+
+// The API's media_type values each chip stands for.
+export const KIND_MEDIA: Record<Exclude<RequestKind, "all">, MediaType[]> = {
+	movies: ["movie"],
+	series: ["tvshow"],
+	music: ["artist"],
+	books: ["book", "book_series"],
+};
 
 export function outcomeWord(
 	r: MediaRequest,
@@ -103,8 +124,7 @@ export function filterRequests(
 	const st = tabStatus(f.tab);
 	return all.filter((r) => {
 		if (st && r.status !== st) return false;
-		if (f.kind === "movies" && r.media_type !== "movie") return false;
-		if (f.kind === "series" && r.media_type !== "tvshow") return false;
+		if (f.kind !== "all" && !KIND_MEDIA[f.kind].includes(r.media_type)) return false;
 		return matches(r, f.query);
 	});
 }
@@ -136,6 +156,8 @@ export const KIND_CHIPS: { key: RequestKind; label: string }[] = [
 	{ key: "all", label: i18n.common_all() },
 	{ key: "movies", label: i18n.movies_label() },
 	{ key: "series", label: i18n.series_label() },
+	{ key: "music", label: i18n.music_label() },
+	{ key: "books", label: i18n.books_label() },
 ];
 
 const byRecent = (a: MediaRequest, b: MediaRequest) =>

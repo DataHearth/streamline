@@ -159,8 +159,7 @@
 
 <div>
 	<header>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_schedules()}</h1>
-		<p class="mt-1 text-sm text-fg-muted">
+		<p class="text-sm text-fg-muted">
 			{i18n.schedules_intro()}
 		</p>
 	</header>

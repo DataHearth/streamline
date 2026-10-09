@@ -287,8 +287,7 @@
 
 	<header class="mb-1 flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.torrent_label()}</h1>
-			<p class="mt-1 text-sm text-fg-muted">
+			<p class="text-sm text-fg-muted">
 				{#if torrentsNotConfigured}
 					{i18n.torrent_engine_disabled()}
 				{:else}

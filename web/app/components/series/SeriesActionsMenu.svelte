@@ -94,8 +94,6 @@
 
 	// Exhaustive by construction — SeriesKebabMenu owns the item list, so an
 	// action this misses would render as a menu entry that does nothing.
-	// "delete-files" never reaches here: it needs the loaded episode list, so
-	// the card menu does not offer it (allowDeleteFiles defaults false).
 	function onPick(a: SeriesAction) {
 		switch (a) {
 			case "search":
@@ -118,8 +116,6 @@
 				break;
 			case "delete":
 				deleteOpen = true;
-				break;
-			case "delete-files":
 				break;
 			default: {
 				const unhandled: never = a;

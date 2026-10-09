@@ -14,6 +14,8 @@
 		RotateCcw,
 		Film,
 		Tv,
+		Music,
+		BookOpen,
 	} from "@lucide/svelte";
 	import { api, apiAllPages, type Paginated } from "@lib/api";
 	import { toast } from "@lib/toast";
@@ -23,6 +25,8 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
+	import { requestHit, type ArtistMeta, type BookMeta } from "@lib/music-books-lookup";
 	import RequestStatLine from "@components/requests/RequestStatLine.svelte";
 	import RequestFilterLine from "@components/requests/RequestFilterLine.svelte";
 	import RequestFilterSheet from "@components/requests/RequestFilterSheet.svelte";
@@ -31,6 +35,10 @@
 	import MyRequestsList from "@components/requests/MyRequestsList.svelte";
 	import {
 		STATUS_META,
+		KIND_CHIPS,
+		KIND_MEDIA,
+		isMusicBook,
+		kindLabel,
 		activeFilterCount,
 		filterRequests,
 		requesterName,
@@ -100,9 +108,9 @@
 		queryFn: () => {
 			const p = new URLSearchParams();
 			// The chips are plural ("movies"/"series"); the API's enum is the
-			// media_type stored on the row.
-			if (kind === "movies") p.set("media_type", "movie");
-			if (kind === "series") p.set("media_type", "tvshow");
+			// media_type stored on the row. Books is two of them: a book and a
+			// series of books are requested, and added, separately.
+			if (kind !== "all") p.set("media_type", KIND_MEDIA[kind].join(","));
 			const qs = p.toString();
 			return apiAllPages<MediaRequest>(`/requests${qs ? `?${qs}` : ""}`);
 		},
@@ -115,9 +123,9 @@
 	// Cover/synopsis for whichever row is open — expanded on desktop, or the
 	// sheet below lg. One query serves both; only one can be open at a time.
 	let detailId = $derived(sheetId ?? expandedId);
-	const detailQuery = createQuery<RequestMediaDetails>(() => ({
+	const detailQuery = createQuery<RequestMediaDetails | ArtistMeta | BookMeta>(() => ({
 		queryKey: ["request-metadata", detailId],
-		queryFn: () => api<RequestMediaDetails>(`/requests/${detailId}/metadata`),
+		queryFn: () => api<RequestMediaDetails | ArtistMeta | BookMeta>(`/requests/${detailId}/metadata`),
 		enabled: detailId !== null,
 		staleTime: 5 * 60 * 1000,
 	}));
@@ -126,6 +134,22 @@
 		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
 		enabled: isReviewer,
 	}));
+	// A music or book request is approved under that medium's own profiles.
+	const musicProfilesQuery = createQuery<QualityProfile[]>(() => ({
+		queryKey: ["quality-profiles", "music"],
+		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=music"),
+		enabled: isReviewer,
+	}));
+	const bookProfilesQuery = createQuery<QualityProfile[]>(() => ({
+		queryKey: ["quality-profiles", "books"],
+		queryFn: () => api<QualityProfile[]>("/quality-profiles?media=books"),
+		enabled: isReviewer,
+	}));
+	function profilesFor(t: MediaRequest["media_type"] | undefined): QualityProfile[] {
+		if (t === "artist") return musicProfilesQuery.data ?? [];
+		if (t === "book" || t === "book_series") return bookProfilesQuery.data ?? [];
+		return profilesQuery.data ?? [];
+	}
 
 	let all = $derived(requestsQuery.data?.items ?? []);
 	let counts = $derived(
@@ -136,6 +160,22 @@
 	let touchVisible = $derived(filterRequests(all, { tab: touchTab, kind, query }));
 	let activeFilters = $derived(activeFilterCount({ tab: touchTab, kind }));
 	let sheetRequest = $derived(all.find((r) => r.id === sheetId) ?? null);
+	// The accordion's open row, read once: its detail is one of two shapes, and
+	// the markup should not have to narrow it on every field.
+	let expandedReq = $derived(all.find((r) => r.id === expandedId) ?? null);
+	let expandedIsMb = $derived(expandedReq ? isMusicBook(expandedReq.media_type) : false);
+	let expandedVideo = $derived(
+		expandedIsMb ? undefined : (detailQuery.data as RequestMediaDetails | undefined),
+	);
+	let expandedMbMeta = $derived(
+		expandedIsMb ? (detailQuery.data as ArtistMeta | BookMeta | undefined) : undefined,
+	);
+	let expandedMbHit = $derived(
+		expandedReq && expandedIsMb ? requestHit(expandedReq, expandedMbMeta) : undefined,
+	);
+	let expandedMbDetail = $derived(
+		expandedMbHit && (expandedMbHit.artist || expandedMbHit.book) ? expandedMbMeta : undefined,
+	);
 	let tabs = $derived(statusChips(counts));
 
 	function resetFilters() {
@@ -151,6 +191,10 @@
 	// movie/show — so the grids and the sidebar counts go stale with it. Deny
 	// and reopen only move the request's own status.
 	function invalidateLibrary(mediaType: MediaRequest["media_type"]) {
+		if (isMusicBook(mediaType)) {
+			qc.invalidateQueries({ queryKey: [mediaType === "artist" ? "music" : "books"] });
+			return;
+		}
 		const root = mediaType === "tvshow" ? "series" : "movies";
 		qc.invalidateQueries({ queryKey: [root] });
 		qc.invalidateQueries({ queryKey: [root, "counts"] });
@@ -218,8 +262,7 @@
 
 <div class="flex flex-col px-4 py-6 md:px-6">
 	<header class="mb-4">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.requests_label()}</h1>
-		<p class="mt-1 text-sm text-fg-muted">
+		<p class="text-sm text-fg-muted">
 			{isReviewer
 				? i18n.requests_intro()
 				: i18n.requests_intro_user()}
@@ -303,19 +346,19 @@
 			role="group"
 			aria-label={i18n.imports_media_type()}
 		>
-			{#each [{ v: "all", l: i18n.common_all() }, { v: "movies", l: i18n.movies_label() }, { v: "series", l: i18n.series_label() }] as opt (opt.v)}
+			{#each KIND_CHIPS as opt (opt.key)}
 				<button
 					type="button"
-					onclick={() => (kind = opt.v as RequestKind)}
-					aria-pressed={kind === opt.v}
+					onclick={() => (kind = opt.key)}
+					aria-pressed={kind === opt.key}
 					class={cn(
 						"rounded-sm px-2.5 py-1 text-[11.5px] font-medium transition",
-						kind === opt.v
+						kind === opt.key
 							? "bg-bg-card text-fg shadow-[var(--shadow-1)]"
 							: "text-fg-subtle hover:text-fg",
 					)}
 				>
-					{opt.l}
+					{opt.label}
 				</button>
 			{/each}
 		</div>
@@ -364,6 +407,10 @@
 							>
 								{#if r.media_type === "tvshow"}
 									<Tv size={16} aria-hidden="true" />
+								{:else if r.media_type === "artist"}
+									<Music size={16} aria-hidden="true" />
+								{:else if r.media_type === "book" || r.media_type === "book_series"}
+									<BookOpen size={16} aria-hidden="true" />
 								{:else}
 									<Film size={16} aria-hidden="true" />
 								{/if}
@@ -374,7 +421,7 @@
 									<span
 										class="shrink-0 font-mono text-[10px] uppercase tracking-wide text-fg-faint"
 									>
-										{r.media_type === "tvshow" ? "series" : "movie"}
+										{kindLabel(r.media_type)}
 									</span>
 								</div>
 								<div class="mt-0.5 truncate text-[12px] text-fg-subtle">
@@ -406,16 +453,25 @@
 								<div class="mb-3">
 									{#if detailQuery.isError}
 										<p class="text-[13px] text-fg-subtle">{i18n.requests_load_failed()}</p>
+									{:else if expandedMbHit}
+										<MusicBookLookupPanel
+											kind={expandedMbHit.kind}
+											hit={expandedMbHit}
+											detail={expandedMbDetail}
+											loading={detailQuery.isLoading}
+											showTitle={false}
+											compact
+										/>
 									{:else}
 										<LookupDetailPanel
 											kind={r.media_type === "tvshow" ? "series" : "movie"}
 											item={{
 												title: r.title,
-												year: detailQuery.data?.year,
-												poster_url: detailQuery.data?.poster_url,
-												overview: detailQuery.data?.overview,
+												year: expandedVideo?.year,
+												poster_url: expandedVideo?.poster_url,
+												overview: expandedVideo?.overview,
 											}}
-											detail={detailQuery.data}
+											detail={expandedVideo}
 											loading={detailQuery.isLoading}
 											showTitle={false}
 											compact
@@ -480,7 +536,7 @@
 													value={selectedProfile}
 													options={[
 														{ value: "", label: i18n.quality_server_default() },
-														...(profilesQuery.data ?? []).map((p) => ({
+														...profilesFor(r.media_type).map((p) => ({
 															value: p.name,
 															label: p.name,
 														})),
@@ -537,7 +593,7 @@
 	detailLoading={detailQuery.isLoading}
 	detailError={detailQuery.isError}
 	reviewer={isReviewer}
-	profiles={profilesQuery.data ?? []}
+	profiles={profilesFor(sheetRequest?.media_type)}
 	profile={selectedProfile}
 	onProfileChange={(v) => (selectedProfile = v)}
 	busy={approve.isPending || reopen.isPending}

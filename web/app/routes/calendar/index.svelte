@@ -158,15 +158,15 @@
 		{/if}
 	</div>
 	<div class="mt-3 flex items-center justify-between gap-3 md:hidden">
-		<h1 class="truncate text-[17px] font-semibold tracking-[-0.02em] text-fg">
+		<h2 class="truncate text-[17px] font-semibold tracking-[-0.02em] text-fg">
 			{view === "month" ? monthLabelShort : i18n.dash_next_30_days()}
-		</h1>
+		</h2>
 		<CalendarFilterSwitch {filter} onChange={(f) => (filter = f)} />
 	</div>
 
 	<header class="hidden flex-wrap items-center justify-between gap-4 md:flex">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">{monthLabel}</h1>
+			<h2 class="text-2xl font-bold tracking-tight text-fg">{monthLabel}</h2>
 			<p class="mt-1 text-sm text-fg-muted">
 				{i18n.calendar_intro()}
 			</p>

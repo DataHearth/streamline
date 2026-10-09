@@ -5,7 +5,7 @@
 	import {
 		STATUS_META,
 		TONE_CLASS,
-		kindToken,
+		kindColor,
 		outcomeWord,
 		requesterName,
 	} from "@lib/requests-touch";
@@ -51,7 +51,7 @@
 	>
 		<span
 			class="h-2 w-2 shrink-0 rounded-full"
-			style:background-color="var(--status-{kindToken(request.media_type)})"
+			style:background-color={kindColor(request.media_type)}
 			aria-hidden="true"
 		></span>
 

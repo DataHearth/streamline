@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from "svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -19,7 +20,34 @@
 		type QualityProfileValues as Values,
 	} from "@components/settings/forms/QualityProfileForm.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
+	import MediaProfilesPanel from "@components/settings/MediaProfilesPanel.svelte";
+	import { onRouteQuery } from "@lib/route-query";
+	import { cn } from "@lib/cn";
+	import type { ProfileMedia } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+
+	// Video, music and books keep separate lists: a resolution means nothing to
+	// a FLAC or an EPUB. ?media= opens a tab directly.
+	type Tab = "video" | ProfileMedia;
+	let media = $state<Tab>("video");
+	onMount(() =>
+		onRouteQuery("/settings/quality-profiles", (p) => {
+			const m = p.get("media");
+			if (m === "music" || m === "books") media = m;
+		}),
+	);
+	let panel = $state<{ openCreate: () => void } | null>(null);
+
+	// Same keys as the panels' own lists, so the counts and the lists share one
+	// request per medium.
+	const musicList = createQuery<unknown[]>(() => ({
+		queryKey: ["quality-profiles", "music"],
+		queryFn: () => api<unknown[]>("/quality-profiles?media=music"),
+	}));
+	const bookList = createQuery<unknown[]>(() => ({
+		queryKey: ["quality-profiles", "books"],
+		queryFn: () => api<unknown[]>("/quality-profiles?media=books"),
+	}));
 
 	const qc = useQueryClient();
 
@@ -151,28 +179,54 @@
 </script>
 
 <div class="mx-auto max-w-4xl">
-	<header class="flex flex-wrap items-end justify-between gap-3">
-		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				{i18n.settings_quality_profiles()}
-			</h1>
-			<p class="mt-1 text-sm text-fg-muted">
-				{i18n.quality_intro()}
-			</p>
+	<header class="flex flex-wrap items-center justify-between gap-3">
+		<div
+			role="tablist"
+			aria-label={i18n.imports_media_type()}
+			class="grid w-full grid-cols-3 gap-0.5 rounded-md border border-border bg-bg-elevated p-1 sm:inline-grid sm:w-auto"
+		>
+			{#each [{ key: "video", label: i18n.qp_media_video(), count: items.length }, { key: "music", label: i18n.music_label(), count: musicList.data?.length }, { key: "books", label: i18n.books_label(), count: bookList.data?.length }] as t (t.key)}
+				{@const active = media === t.key}
+				<button
+					type="button"
+					role="tab"
+					aria-selected={active}
+					onclick={() => (media = t.key === "music" || t.key === "books" ? t.key : "video")}
+					class={cn(
+						"inline-flex h-10 items-center justify-center gap-2 rounded-sm px-3 text-[13px] font-medium transition lg:h-8 lg:text-[12.5px]",
+						active ? "bg-bg-card text-fg shadow-[var(--shadow-1)]" : "text-fg-muted hover:text-fg",
+					)}
+				>
+					{t.label}
+					{#if t.count !== undefined}
+						<span class="rounded-sm bg-white/[0.04] px-1.5 py-px font-mono text-[10px] tabular text-fg-faint">{t.count}</span>
+					{/if}
+				</button>
+			{/each}
 		</div>
 		<button
 			type="button"
-			onclick={openCreate}
+			onclick={() => (media === "video" ? openCreate() : panel?.openCreate())}
 			disabled={config.readOnly}
 			title={config.readOnly ? READONLY_HINT : null}
-			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 py-2.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
 		>
 			<Plus size={16} aria-hidden="true" />
 			{i18n.quality_add()}
 		</button>
 	</header>
+	<p class="mt-4 text-sm text-fg-muted">
+		{media === "music" ? i18n.qp_intro_music() : media === "books" ? i18n.qp_intro_books() : i18n.quality_intro()}
+	</p>
 
-	<div class="mt-6 space-y-3">
+	{#if media !== "video"}
+		<div class="mt-5">
+			{#key media}
+				<MediaProfilesPanel media={media === "music" ? "music" : "books"} bind:this={panel} />
+			{/key}
+		</div>
+	{:else}
+	<div class="mt-5 space-y-3">
 		{#if list.isPending}
 			<SkeletonList variant="row" count={3} />
 		{:else if list.isError}
@@ -208,7 +262,7 @@
 							<Gauge size={20} aria-hidden="true" />
 						</div>
 						<div class="min-w-0 flex-1">
-							<div class="flex items-center gap-2">
+							<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 								<span class="truncate text-sm font-semibold text-fg">
 									{p.name}
 								</span>
@@ -301,6 +355,7 @@
 			{/each}
 		{/if}
 	</div>
+	{/if}
 </div>
 
 <ConfigFormShell

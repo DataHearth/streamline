@@ -10,12 +10,16 @@
 	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
 	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
 	import MediaLookupScreen from "@components/shared/MediaLookupScreen.svelte";
+	import AddMusicBookModal from "@components/shared/AddMusicBookModal.svelte";
+	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { children }: { children: Snippet } = $props();
 
 	let addMovieOpen = $state(false);
 	let addSeriesOpen = $state(false);
+	let addArtistOpen = $state(false);
+	let addBookOpen = $state(false);
 	// Below md the add/request flow is a full-screen search rather than the split
 	// modal, and search itself is a screen rather than the centred palette —
 	// different components, not something CSS can pick.
@@ -24,8 +28,12 @@
 	onMount(() => {
 		const onOpenMovie = () => (addMovieOpen = true);
 		const onOpenSeries = () => (addSeriesOpen = true);
+		const onOpenArtist = () => (addArtistOpen = true);
+		const onOpenBook = () => (addBookOpen = true);
 		window.addEventListener("streamline:open-add-movie", onOpenMovie);
 		window.addEventListener("streamline:open-add-series", onOpenSeries);
+		window.addEventListener("streamline:open-add-artist", onOpenArtist);
+		window.addEventListener("streamline:open-add-book", onOpenBook);
 		const mql = window.matchMedia("(max-width: 767px)");
 		const syncCompact = () => (compact = mql.matches);
 		syncCompact();
@@ -33,6 +41,8 @@
 		return () => {
 			window.removeEventListener("streamline:open-add-movie", onOpenMovie);
 			window.removeEventListener("streamline:open-add-series", onOpenSeries);
+			window.removeEventListener("streamline:open-add-artist", onOpenArtist);
+			window.removeEventListener("streamline:open-add-book", onOpenBook);
 			mql.removeEventListener("change", syncCompact);
 		};
 	});
@@ -77,9 +87,13 @@
 		open={addSeriesOpen}
 		onClose={() => (addSeriesOpen = false)}
 	/>
+	<MusicBookLookupScreen kind="artist" open={addArtistOpen} onClose={() => (addArtistOpen = false)} />
+	<MusicBookLookupScreen kind="book" open={addBookOpen} onClose={() => (addBookOpen = false)} />
 {:else}
 	<AddMovieModal open={addMovieOpen} onClose={() => (addMovieOpen = false)} />
 	<AddSeriesModal open={addSeriesOpen} onClose={() => (addSeriesOpen = false)} />
+	<AddMusicBookModal kind="artist" open={addArtistOpen} onClose={() => (addArtistOpen = false)} />
+	<AddMusicBookModal kind="book" open={addBookOpen} onClose={() => (addBookOpen = false)} />
 {/if}
 
 <style>

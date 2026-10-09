@@ -9,11 +9,14 @@
 		Plus,
 		Film,
 		Tv,
+		Music,
+		BookOpen,
 		FolderInput,
 	} from "@lucide/svelte";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
+	import { pageTitle } from "@lib/page-title.svelte";
 	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
@@ -34,11 +37,12 @@
 		}),
 	);
 
-	type Crumb = { label: string; href?: string };
-	// No top-level page carries a title in the bar: every section sets its own
-	// h1 in the page, so the bar only ever shows breadcrumbs, on a detail page.
-	// A bar title on some tabs and an in-page h1 on others moved the heading
-	// between tabs.
+	type Crumb = { label: string; href?: string; title?: boolean };
+	// Every page's title sits at the left of this bar: a section root shows its
+	// section's name (or what the page claimed through pageTitle), a named
+	// sub-page (settings) ends its breadcrumb on its title, and a record's
+	// detail page keeps a plain trail — its hero carries the h1. Pages no longer
+	// set an h1 of their own, so the heading never moves between tabs.
 	const SECTIONS: { prefix: string; label: string }[] = [
 		{ prefix: "/", label: i18n.nav_dashboard() },
 		{ prefix: "/movies", label: i18n.movies_label() },
@@ -61,8 +65,6 @@
 	// here is a numeric id.
 	const PAGE_LABELS: Record<string, () => string> = {
 		...SETTINGS_TITLES,
-		"/music/add": () => i18n.music_add_artist(),
-		"/books/add": () => i18n.books_add_author(),
 	};
 
 	function segmentLabel(segment: string, href: string): string {
@@ -78,11 +80,20 @@
 			.join(" ");
 	}
 
+	let root = $derived(
+		SECTIONS.find(
+			(s) => pathname === s.prefix || pathname.startsWith(s.prefix + "/"),
+		),
+	);
+	let barTitle = $derived(
+		root && !pathname.slice(root.prefix.length).replace(/^\//, "")
+			? (pageTitle.value ?? root.label)
+			: "",
+	);
+	const titleClass =
+		"truncate text-[17px] font-semibold leading-[22px] tracking-[-0.02em] text-fg";
+
 	let crumbs = $derived.by<Crumb[]>(() => {
-		const root = SECTIONS.find(
-			(s) =>
-				pathname === s.prefix || pathname.startsWith(s.prefix + "/"),
-		);
 		if (!root) return [];
 		const rest = pathname.slice(root.prefix.length).replace(/^\//, "");
 		if (!rest) return [];
@@ -91,9 +102,11 @@
 		let href = root.prefix;
 		segments.forEach((seg, i) => {
 			href += `/${seg}`;
-			if (href === "/books/author") return;
+			// /books/series/3 is one page, not a stop under a "Series" crumb.
+			if (root.prefix === "/books" && seg === "series") return;
 			const label = segmentLabel(seg, href);
-			trail.push(i === segments.length - 1 ? { label } : { label, href });
+			const last = i === segments.length - 1;
+			trail.push(last ? { label, title: !/^\d+$/.test(seg) && !!PAGE_LABELS[href] } : { label, href });
 		});
 		return trail;
 	});
@@ -133,17 +146,23 @@
 	function openAddSeries() {
 		window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
 	}
+	function openAddArtist() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
+	}
+	function openAddBook() {
+		window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
+	}
 
 	// Add-to-library dropdown ------------------------------------------------
 	// md and up, beside the search field. Below that the plus is not in the bar
 	// at all: on a phone it is the pill above the bottom nav (AddButton), since
 	// the top-right corner is the furthest point from a thumb. Both raise the
 	// same two events.
-	// request_only users may only request, so they see a trimmed menu (Movie +
-	// Series, which the modals route to a request) under a "Request a title"
+	// request_only users may only request, so they see a trimmed menu (every
+	// title kind, which the modals route to a request) under a "Request a title"
 	// heading. admins/members get the full "Add to library" menu.
 	type AddItem = {
-		id: "movie" | "import" | "series";
+		id: "movie" | "import" | "series" | "artist" | "book";
 		label: string;
 		desc: string;
 		icon: typeof Film;
@@ -166,6 +185,21 @@
 			icon: Tv,
 			requestable: true,
 		},
+		// An artist rather than an album: adding one follows every release.
+		{
+			id: "artist",
+			label: i18n.common_artist(),
+			desc: i18n.add_artist_desc(),
+			icon: Music,
+			requestable: true,
+		},
+		{
+			id: "book",
+			label: i18n.common_book(),
+			desc: i18n.add_book_desc(),
+			icon: BookOpen,
+			requestable: true,
+		},
 		{
 			id: "import",
 			label: i18n.add_import_existing(),
@@ -178,7 +212,7 @@
 	let addHeading = $derived(
 		auth.canAddDirectly ? i18n.action_add_to_library() : i18n.action_request_title(),
 	);
-	// request_only only sees the requestable items (Movie / Series); Import is
+	// request_only only sees the requestable items (the title kinds); Import is
 	// admin-only, so members lose it too.
 	let addItems = $derived.by(() => {
 		const base = auth.canAddDirectly
@@ -239,6 +273,8 @@
 		}
 		if (item.id === "movie") openAddMovie();
 		else if (item.id === "series") openAddSeries();
+		else if (item.id === "artist") openAddArtist();
+		else if (item.id === "book") openAddBook();
 		else if (item.id === "import") {
 			window.location.href = "/imports";
 		}
@@ -302,6 +338,8 @@
 							>
 								{c.label}
 							</a>
+						{:else if c.title}
+							<h1 aria-current="page" class={titleClass}>{c.label}</h1>
 						{:else}
 							<span aria-current="page" class="truncate text-fg">{c.label}</span>
 						{/if}
@@ -310,6 +348,8 @@
 						{/if}
 					{/each}
 				</nav>
+			{:else if barTitle}
+				<h1 class={titleClass}>{barTitle}</h1>
 			{/if}
 		</div>
 	</div>

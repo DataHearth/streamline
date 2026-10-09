@@ -15,6 +15,8 @@ import {
 	LayoutDashboard,
 	Film,
 	Tv,
+	Music,
+	BookOpen,
 	Inbox,
 	Activity,
 	Magnet,
@@ -30,6 +32,7 @@ import { api, type Paginated } from "./api";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
 import type { Movie, Person, TVShow } from "./types";
+import { kindLabel, type Artist, type BookKind, type ShelfItem } from "./music-books";
 import { m as i18n } from "./paraglide/messages.js";
 
 export type PageItem = {
@@ -63,16 +66,43 @@ export type PersonItem = {
 	profile_url?: string;
 	credits: number;
 };
+// Music and book rows carry their own art: unlike a movie poster, there is no
+// URL to build from the id.
+export type ArtistItem = {
+	kind: "artist";
+	id: number;
+	label: string;
+	image?: string;
+	genre?: string;
+};
+export type BookItem = {
+	kind: "book";
+	id: number;
+	label: string;
+	image?: string;
+	author: string;
+	year?: number;
+	bookKind: BookKind;
+	// A series folds into one row, as it folds into one card on the shelf.
+	series: boolean;
+};
 export type SearchItem =
 	| PageItem
 	| ActionItem
 	| MovieItem
 	| SeriesItem
+	| ArtistItem
+	| BookItem
 	| PersonItem;
+// The four kinds that lead to a title's own page.
+export const isTitleItem = (i: SearchItem): i is MovieItem | SeriesItem | ArtistItem | BookItem =>
+	i.kind === "movie" || i.kind === "series" || i.kind === "artist" || i.kind === "book";
 export type SectionId =
 	| "titles"
 	| "movies"
 	| "series"
+	| "music"
+	| "books"
 	| "people"
 	| "pages"
 	| "actions";
@@ -98,6 +128,8 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.nav_dashboard(), path: "/", icon: LayoutDashboard },
 	{ kind: "page", label: i18n.movies_label(), path: "/movies", icon: Film },
 	{ kind: "page", label: i18n.settings_series(), path: "/series", icon: Tv },
+	{ kind: "page", label: i18n.music_label(), path: "/music", icon: Music },
+	{ kind: "page", label: i18n.books_label(), path: "/books", icon: BookOpen },
 	{ kind: "page", label: i18n.requests_label(), path: "/requests", icon: Inbox },
 	{ kind: "page", label: i18n.nav_activity(), path: "/activity", icon: Activity },
 	{ kind: "page", label: i18n.torrent_label(), path: "/torrents", icon: Magnet },
@@ -112,7 +144,17 @@ export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return i18n.search_kind_navigate();
 	if (item.kind === "action") return i18n.common_action();
 	if (item.kind === "person") return i18n.common_person();
+	if (item.kind === "artist") return i18n.common_artist();
+	if (item.kind === "book") return kindLabel(item.bookKind);
 	return item.kind === "movie" ? i18n.common_movie() : i18n.settings_series();
+}
+
+// The line under a title row: its year, and for music and books who or what.
+export function itemSubline(item: SearchItem): string {
+	if (item.kind === "movie" || item.kind === "series") return item.year ? String(item.year) : "";
+	if (item.kind === "artist") return item.genre ?? "";
+	if (item.kind === "book") return [item.author, item.year].filter(Boolean).join(" · ");
+	return "";
 }
 
 function openAddMovie() {
@@ -120,6 +162,12 @@ function openAddMovie() {
 }
 function openAddSeries() {
 	window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
+}
+function openAddArtist() {
+	window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
+}
+function openAddBook() {
+	window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
 }
 async function signOut() {
 	try {
@@ -166,6 +214,8 @@ export function createSearchModel(
 
 	const moviesQuery = titleSearch<Movie>("/movies");
 	const seriesQuery = titleSearch<TVShow>("/series");
+	const artistsQuery = titleSearch<Artist>("/music/artists");
+	const booksQuery = titleSearch<ShelfItem>("/books");
 	const peopleQuery = titleSearch<Person>("/people");
 
 	function pages(): PageItem[] {
@@ -198,6 +248,18 @@ export function createSearchModel(
 				icon: Tv,
 				run: openAddSeries,
 			},
+			{
+				kind: "action",
+				label: direct ? i18n.search_add_artist() : i18n.search_request_artist(),
+				icon: Music,
+				run: openAddArtist,
+			},
+			{
+				kind: "action",
+				label: direct ? i18n.search_add_book() : i18n.search_request_book(),
+				icon: BookOpen,
+				run: openAddBook,
+			},
 			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
 	}
@@ -229,6 +291,27 @@ export function createSearchModel(
 					credits: p.credits,
 				}))
 			: [];
+		const artistHits: ArtistItem[] = enabled
+			? (artistsQuery.data?.items ?? []).map((a) => ({
+					kind: "artist",
+					id: a.id,
+					label: a.name,
+					image: a.photo_url,
+					genre: a.genre,
+				}))
+			: [];
+		const bookHits: BookItem[] = enabled
+			? (booksQuery.data?.items ?? []).map((b) => ({
+					kind: "book",
+					id: b.id,
+					label: b.title,
+					image: b.cover_url,
+					author: b.author,
+					year: b.year,
+					bookKind: b.kind,
+					series: b.type === "series",
+				}))
+			: [];
 		const matchedPages = pages().filter((p) => fold(p.label).includes(q));
 		const matchedActions = actions().filter((a) => fold(a.label).includes(q));
 
@@ -236,13 +319,17 @@ export function createSearchModel(
 		// is a title far more often than it is a cast member.
 		const titles: SearchSection[] = [];
 		if (opts.compact) {
-			const items = [...movieHits, ...seriesHits];
+			const items = [...movieHits, ...seriesHits, ...artistHits, ...bookHits];
 			if (items.length) titles.push({ id: "titles", label: i18n.dash_titles(), items });
 		} else {
 			if (movieHits.length)
 				titles.push({ id: "movies", label: i18n.movies_label(), items: movieHits });
 			if (seriesHits.length)
 				titles.push({ id: "series", label: i18n.settings_series(), items: seriesHits });
+			if (artistHits.length)
+				titles.push({ id: "music", label: i18n.music_label(), items: artistHits });
+			if (bookHits.length)
+				titles.push({ id: "books", label: i18n.books_label(), items: bookHits });
 		}
 		if (peopleHits.length)
 			titles.push({ id: "people", label: i18n.people_label(), items: peopleHits });
@@ -261,17 +348,16 @@ export function createSearchModel(
 	});
 
 	let flat = $derived(sections.flatMap((s) => s.items));
-	let titleHits = $derived(
-		flat.filter((i) => i.kind === "movie" || i.kind === "series").length,
-	);
+	let titleHits = $derived(flat.filter(isTitleItem).length);
 	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
 	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
 	// absent rather than claiming zero while the panel is still closed.
 	let searchable = $derived.by<number | null>(() => {
-		const m = moviesQuery.data?.total ?? null;
-		const s = seriesQuery.data?.total ?? null;
-		if (m === null && s === null) return null;
-		return (m ?? 0) + (s ?? 0);
+		const totals = [moviesQuery, seriesQuery, artistsQuery, booksQuery].map(
+			(q) => q.data?.total ?? null,
+		);
+		if (totals.every((t) => t === null)) return null;
+		return totals.reduce<number>((n, t) => n + (t ?? 0), 0);
 	});
 
 	return {
@@ -307,6 +393,10 @@ export function searchNav() {
 			navigate("/movies/[id]", { id: String(item.id) });
 		else if (item.kind === "person")
 			navigate("/people/[id]", { id: String(item.id) });
+		else if (item.kind === "artist")
+			navigate("/music/[id]", { id: String(item.id) });
+		else if (item.kind === "book")
+			navigate(item.series ? "/books/series/[id]" : "/books/[id]", { id: String(item.id) });
 		else navigate("/series/[id]", { id: String(item.id) });
 	};
 }

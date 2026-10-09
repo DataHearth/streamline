@@ -193,10 +193,7 @@
 
 	<header class="mb-1 flex flex-wrap items-start justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">
-				{i18n.transcode_label()}
-			</h1>
-			<p class="mt-1 text-sm text-fg-muted">{headline}</p>
+			<p class="text-sm text-fg-muted">{headline}</p>
 		</div>
 		{#if auth.isAdmin && !disabled}
 			<div class="flex flex-wrap items-center gap-2">

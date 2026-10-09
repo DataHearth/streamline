@@ -46,19 +46,23 @@
 		{title}
 		onclick={onSelect}
 		class={cn(
-			"flex min-h-11 w-full items-start gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover focus:outline-none focus-visible:bg-bg-hover lg:min-h-0",
+			"flex min-h-11 w-full gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover focus:outline-none focus-visible:bg-bg-hover lg:min-h-0",
+			// One line centres in the 44px touch row; a hint makes it two, and the
+			// marks then sit on the first line.
+			hint ? "items-start" : "items-center",
 			selected ? "text-accent" : count === 0 ? "text-fg-faint" : "text-fg",
 		)}
 	>
 		{#if dot}
 			<span
-				class={cn("mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full", dot)}
+				class={cn("h-1.5 w-1.5 shrink-0 rounded-full", hint && "mt-[7px]", dot)}
 				aria-hidden="true"
 			></span>
 		{:else if Icon}
 			<Icon
 				class={cn(
-					"mt-[3px] h-3.5 w-3.5 shrink-0",
+					"h-3.5 w-3.5 shrink-0",
+					hint && "mt-[3px]",
 					selected ? "text-accent" : "text-fg-subtle",
 				)}
 				aria-hidden="true"
@@ -79,7 +83,8 @@
 		{#if count != null}
 			<span
 				class={cn(
-					"mt-[3px] shrink-0 font-mono text-[10.5px] tabular",
+					"shrink-0 font-mono text-[10.5px] tabular",
+					hint && "mt-[3px]",
 					selected ? "text-accent/70" : "text-fg-faint",
 				)}
 			>
@@ -87,7 +92,7 @@
 			</span>
 		{/if}
 		{#if selected}
-			<Check size={14} class="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+			<Check size={14} class={cn("shrink-0 text-accent", hint && "mt-0.5")} aria-hidden="true" />
 		{/if}
 	</button>
 </li>

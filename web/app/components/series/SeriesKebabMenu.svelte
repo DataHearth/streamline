@@ -6,7 +6,6 @@
 		| "rename"
 		| "refresh"
 		| "reidentify"
-		| "delete-files"
 		| "delete";
 </script>
 
@@ -28,14 +27,10 @@
 		onPick,
 		disabledActions = [],
 		variant = "toolbar",
-		allowDeleteFiles = false,
 	}: {
 		onPick: (a: SeriesAction) => void;
 		disabledActions?: SeriesAction[];
 		variant?: "toolbar" | "card";
-		// "Delete all files" (keep the series, revert to wanted) needs the loaded
-		// episode list, so it's only offered from the detail hero, not grid cards.
-		allowDeleteFiles?: boolean;
 	} = $props();
 
 	const isDisabled = (a: SeriesAction) => disabledActions.includes(a);
@@ -87,19 +82,6 @@
 					} satisfies KebabItem,
 				]
 			: []),
-		...(allowDeleteFiles
-			? [
-					{
-						key: "delete-files",
-						label: i18n.action_delete_all_files(),
-						icon: Trash2,
-						danger: true,
-						dividerBefore: true,
-						disabled: isDisabled("delete-files"),
-						onSelect: () => onPick("delete-files"),
-					} satisfies KebabItem,
-				]
-			: []),
 		{
 			// Deleting the files is a checkbox in the confirm, not a second entry
 			// one row below the safe one.
@@ -107,7 +89,7 @@
 			label: i18n.action_delete_from_library(),
 			icon: Trash2,
 			danger: true,
-			dividerBefore: !allowDeleteFiles,
+			dividerBefore: true,
 			onSelect: () => onPick("delete"),
 		},
 	]);

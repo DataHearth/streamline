@@ -7,6 +7,7 @@
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
 		KIND_CHIPS,
+		kindColor,
 		statusChips,
 		type RequestKind,
 		type RequestTab,
@@ -62,9 +63,12 @@
 		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint";
 
 	let chips = $derived(statusChips(counts));
+	// The same dot the rows carry, so a chip and the rows it keeps match.
 	const KIND_DOT: Record<string, string> = {
-		movies: "grabbing",
-		series: "downloading",
+		movies: kindColor("movie"),
+		series: kindColor("tvshow"),
+		music: kindColor("artist"),
+		books: kindColor("book"),
 	};
 </script>
 
@@ -144,7 +148,7 @@
 								{#if KIND_DOT[k.key]}
 									<span
 										class="h-1.5 w-1.5 shrink-0 rounded-full"
-										style:background-color="var(--status-{KIND_DOT[k.key]})"
+										style:background-color={KIND_DOT[k.key]}
 										aria-hidden="true"
 									></span>
 								{/if}

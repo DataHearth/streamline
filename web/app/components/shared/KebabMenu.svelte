@@ -31,7 +31,9 @@
 		items: KebabItem[];
 		// "bar" sits inside the bulk-action bar, which already supplies the
 		// elevated surface — so it stays borderless and matches the sibling pills.
-		variant?: "toolbar" | "card" | "bar";
+		// "hero" matches the 44px bordered icon buttons of the music and book
+		// heroes; "row" is a borderless list-row trigger (tracklists below lg).
+		variant?: "toolbar" | "card" | "bar" | "hero" | "row" | "tile";
 	} = $props();
 
 	let open = $state(false);
@@ -153,10 +155,16 @@
 			? "h-10 w-10 lg:h-7 lg:w-7 rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm hover:bg-black/80"
 			: variant === "bar"
 				? "h-11 w-11 lg:h-9 lg:w-9 rounded-md border border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg"
-				: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
+				: variant === "hero"
+					? "h-11 w-11 shrink-0 rounded-lg border border-border bg-bg-elevated/80 text-fg-muted hover:border-border-strong hover:text-fg"
+					: variant === "row"
+						? "h-11 w-11 shrink-0 rounded-md text-fg-subtle hover:bg-surface hover:text-fg"
+						: variant === "tile"
+							? "h-11 w-11 lg:h-7 lg:w-7 shrink-0 rounded-md border border-border bg-bg-elevated text-fg-muted hover:text-fg"
+						: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
 	)}
 >
-	{#if variant === "card"}
+	{#if variant === "card" || variant === "tile"}
 		<EllipsisVertical class="h-3.5 w-3.5" aria-hidden="true" />
 	{:else}
 		<Ellipsis class="h-4 w-4" aria-hidden="true" />

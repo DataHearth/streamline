@@ -333,12 +333,9 @@
 </script>
 
 <div class="flex flex-col">
-	<!-- Same heading as every other section, outside the loading branches so it
-	     is in place before the list is. -->
-	<header class="w-full px-4 pb-1 pt-6 md:px-6">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.movies_label()}</h1>
-		<p class="mt-1 truncate text-sm text-fg-muted md:hidden">{metaLine}</p>
-	</header>
+	<!-- The title is the top bar's; the phone meta line sits outside the loading
+	     branches so it is in place before the list is. -->
+	<p class="truncate px-4 pt-4 text-sm text-fg-muted md:hidden">{metaLine}</p>
 	{#if moviesQuery.isLoading}
 		<span class="sr-only" role="status">{i18n.common_loading_movies()}</span>
 		<SkeletonToolbar triggers={2} />

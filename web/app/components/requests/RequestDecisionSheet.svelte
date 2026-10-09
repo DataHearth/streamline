@@ -5,6 +5,7 @@
 	import { formatRelative } from "@lib/dates";
 	import {
 		STATUS_META,
+		isMusicBook,
 		kindLabel,
 		requesterName,
 	} from "@lib/requests-touch";
@@ -12,6 +13,8 @@
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
+	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
+	import { requestHit, type ArtistMeta, type BookMeta } from "@lib/music-books-lookup";
 	import type {
 		MediaRequest,
 		QualityProfile,
@@ -38,7 +41,7 @@
 		onReopen,
 	}: {
 		request: MediaRequest | null;
-		detail?: RequestMediaDetails;
+		detail?: RequestMediaDetails | ArtistMeta | BookMeta;
 		detailLoading?: boolean;
 		detailError?: boolean;
 		reviewer: boolean;
@@ -66,6 +69,15 @@
 	});
 
 	let meta = $derived(request ? STATUS_META[request.status] : null);
+	// Music and book requests carry MusicBrainz or Hardcover metadata, so they get
+	// that panel; the detail is only ever one shape at a time.
+	let mb = $derived(request ? isMusicBook(request.media_type) : false);
+	let mbMeta = $derived(mb ? (detail as ArtistMeta | BookMeta | undefined) : undefined);
+	let mbHit = $derived(request && mb ? requestHit(request, mbMeta) : undefined);
+	// Only the detail that belongs to this request, never a cached neighbour's.
+	let mbDetail = $derived(mbHit && (mbHit.artist || mbHit.book) ? mbMeta : undefined);
+	let videoDetail = $derived(mb ? undefined : (detail as RequestMediaDetails | undefined));
+	let year = $derived(mb ? mbHit?.year : videoDetail?.year);
 	let pending = $derived(request?.status === "pending");
 	let options = $derived([
 		{ value: "", label: i18n.quality_server_default() },
@@ -105,7 +117,7 @@
 						{request.title}
 					</h2>
 					<p class="mt-1 font-mono text-[11px] text-fg-subtle">
-						{detail?.year ? `${detail.year} · ` : ""}{kindLabel(
+						{year ? `${year} · ` : ""}{kindLabel(
 							request.media_type,
 						)}
 					</p>
@@ -167,16 +179,25 @@
 				<div class="mt-3 border-t border-border pt-4">
 					{#if detailError}
 						<p class="text-[13px] text-fg-subtle">{i18n.requests_load_failed()}</p>
+					{:else if mbHit}
+						<MusicBookLookupPanel
+							kind={mbHit.kind}
+							hit={mbHit}
+							detail={mbDetail}
+							loading={detailLoading}
+							showTitle={false}
+							compact
+						/>
 					{:else}
 						<LookupDetailPanel
 							kind={request.media_type === "tvshow" ? "series" : "movie"}
 							item={{
 								title: request.title,
-								year: detail?.year,
-								poster_url: detail?.poster_url,
-								overview: detail?.overview,
+								year: videoDetail?.year,
+								poster_url: videoDetail?.poster_url,
+								overview: videoDetail?.overview,
 							}}
-							{detail}
+							detail={videoDetail}
 							loading={detailLoading}
 							showTitle={false}
 							compact

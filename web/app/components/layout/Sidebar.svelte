@@ -6,7 +6,7 @@
 		Film,
 		Tv,
 		Music,
-		BookOpen,
+		BookMarked,
 		FolderInput,
 		CalendarDays,
 		Inbox,
@@ -37,6 +37,7 @@
 		SystemInfo,
 	} from "@lib/types";
 	import Avatar from "./Avatar.svelte";
+	import type { ArtistCounts, BookCounts } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	const systemQuery = createQuery<SystemInfo>(() => ({
@@ -67,6 +68,22 @@
 	}));
 	let seriesCount = $derived(seriesCountsQuery.data?.total ?? null);
 
+	const musicCountsQuery = createQuery<ArtistCounts>(() => ({
+		queryKey: ["music", "artists", "counts"],
+		queryFn: () => api<ArtistCounts>("/music/artists/counts"),
+		meta: SILENT,
+		retry: false,
+	}));
+	let musicCount = $derived(musicCountsQuery.data?.total ?? null);
+
+	const booksCountsQuery = createQuery<BookCounts>(() => ({
+		queryKey: ["books", "counts"],
+		queryFn: () => api<BookCounts>("/books/counts"),
+		meta: SILENT,
+		retry: false,
+	}));
+	let booksCount = $derived(booksCountsQuery.data?.total ?? null);
+
 	const requestCountsQuery = createQuery<RequestCounts>(() => ({
 		queryKey: ["requests", "counts"],
 		queryFn: () => api<RequestCounts>("/requests/counts"),
@@ -94,7 +111,7 @@
 		{ label: i18n.movies_label(), href: "/movies", icon: Film },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv },
 		{ label: i18n.music_label(), href: "/music", icon: Music },
-		{ label: i18n.books_label(), href: "/books", icon: BookOpen },
+		{ label: i18n.books_label(), href: "/books", icon: BookMarked },
 	];
 	let opsItems = $derived([
 		...(auth.isAdmin
@@ -303,6 +320,15 @@
 								)}
 							>
 								{seriesCount.toLocaleString()}
+							</span>
+						{:else if (item.href === "/music" && musicCount !== null) || (item.href === "/books" && booksCount !== null)}
+							<span
+								class={cn(
+									"shrink-0 font-mono text-[10.5px] tabular-nums",
+									active ? "text-accent-text opacity-70" : "text-fg-faint",
+								)}
+							>
+								{(item.href === "/music" ? musicCount : booksCount)?.toLocaleString()}
 							</span>
 						{/if}
 					</a>

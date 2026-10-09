@@ -247,10 +247,7 @@
 	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
 </script>
 
-<div class="flex flex-col gap-5 pb-6 md:gap-6">
-	<header class="mx-auto w-full max-w-7xl px-4 pt-6 md:px-8">
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.nav_dashboard()}</h1>
-	</header>
+<div class="flex flex-col gap-5 pb-6 pt-5 md:gap-6 md:pt-6">
 	<Hero
 		item={featured}
 		loading={moviesQuery.isLoading || seriesQuery.isLoading}

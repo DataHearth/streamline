@@ -441,9 +441,6 @@
 			case "delete":
 				deleteOpen = true;
 				break;
-			case "delete-files":
-				openDeleteFiles(i18n.series_this_series(), seriesFileEpisodes);
-				break;
 			default: {
 				const unhandled: never = a;
 				void unhandled;
@@ -682,8 +679,7 @@
 							</button>
 							<SeriesKebabMenu
 								onPick={onKebabPick}
-								allowDeleteFiles
-								disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
+								disabledActions={hasFiles ? [] : ["rename"]}
 							/>
 						</div>
 						<div class="flex items-center gap-2">
@@ -709,25 +705,12 @@
 					</div>
 
 					<div
-						class="mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
+						class="mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
 						aria-label={i18n.series_actions()}
 					>
-						<PlayOnMenu
-							path={`/series/${show.id}/play-on`}
-							queryKey={["series", show.id, "play-on"]}
-							disabled={!hasFiles}
-							disabledTitle={i18n.series_available_after_import()}
-						/>
-
-						<button
-							type="button"
-							onclick={() => openPackSearch("series")}
-							class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
-						>
-							<Search size={14} aria-hidden="true" />
-							{i18n.action_manual_search()}
-						</button>
-
+						<!-- Two lines, as on the music and book heroes: what the show
+						     follows (preset + bookmark), then playing, searching and the
+						     menu. The spacer is what breaks the line. -->
 						<div class="flex items-center gap-2">
 							<label
 								for="series-monitor-preset"
@@ -749,10 +732,7 @@
 							</div>
 						</div>
 
-						<!-- Grouped so the kebab never orphans onto a line of its own when the
-						     row wraps — the two icon buttons move together. -->
-						<div class="flex shrink-0 items-center gap-2.5">
-							<button
+						<button
 								type="button"
 								onclick={() => monitor.mutate(!(show.monitored ?? false))}
 								disabled={monitor.isPending}
@@ -770,12 +750,28 @@
 								</span>
 							</button>
 
-							<SeriesKebabMenu
-								onPick={onKebabPick}
-								allowDeleteFiles
-								disabledActions={hasFiles ? [] : ["rename", "delete-files"]}
-							/>
-						</div>
+						<span class="h-0 basis-full" aria-hidden="true"></span>
+
+						<PlayOnMenu
+							path={`/series/${show.id}/play-on`}
+							queryKey={["series", show.id, "play-on"]}
+							disabled={!hasFiles}
+							disabledTitle={i18n.series_available_after_import()}
+						/>
+
+						<button
+							type="button"
+							onclick={() => openPackSearch("series")}
+							class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+						>
+							<Search size={14} aria-hidden="true" />
+							{i18n.action_manual_search()}
+						</button>
+
+						<SeriesKebabMenu
+							onPick={onKebabPick}
+							disabledActions={hasFiles ? [] : ["rename"]}
+						/>
 					</div>
 				{/if}
 			</div>

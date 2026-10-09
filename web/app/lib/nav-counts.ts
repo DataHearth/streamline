@@ -18,6 +18,7 @@ import type {
 	MovieCounts,
 	TVShowCounts,
 } from "./types";
+import type { ArtistCounts, BookCounts } from "./music-books";
 
 const n = (v: number) => v.toLocaleString();
 
@@ -79,6 +80,18 @@ export function navCountsQuery() {
 		retry: false,
 		meta: SILENT,
 	}));
+	const music = createQuery<ArtistCounts>(() => ({
+		queryKey: ["music", "artists", "counts"],
+		queryFn: () => api<ArtistCounts>("/music/artists/counts"),
+		retry: false,
+		meta: SILENT,
+	}));
+	const books = createQuery<BookCounts>(() => ({
+		queryKey: ["books", "counts"],
+		queryFn: () => api<BookCounts>("/books/counts"),
+		retry: false,
+		meta: SILENT,
+	}));
 	// The activity page polls this key every 2 s while it is mounted; away from
 	// it the nav cadence is plenty for a summary line.
 	const queue = createQuery<DownloadQueue>(() => ({
@@ -137,6 +150,24 @@ export function navCountsQuery() {
 				? ` · ${plural(d.wanted_episodes, i18n.nav_count_episodes_wanted_one, i18n.nav_count_episodes_wanted_other)}`
 				: "";
 			return shows + wanted;
+		},
+		get musicLine(): string {
+			const d = music.data;
+			if (!d) return "";
+			const artists = plural(d.total, i18n.music_artists_one, i18n.music_artists_other);
+			const wanted = d.wanted
+				? ` · ${plural(d.wanted, i18n.nav_count_wanted_one, i18n.nav_count_wanted_other)}`
+				: "";
+			return artists + wanted;
+		},
+		get booksLine(): string {
+			const d = books.data;
+			if (!d) return "";
+			const titles = plural(d.total, i18n.dash_title_count_one, i18n.dash_title_count_other);
+			const wanted = d.wanted
+				? ` · ${plural(d.wanted, i18n.nav_count_wanted_one, i18n.nav_count_wanted_other)}`
+				: "";
+			return titles + wanted;
 		},
 		get queueLine(): string {
 			const items = queue.data?.items;

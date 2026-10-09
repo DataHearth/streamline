@@ -8,7 +8,11 @@
 		History,
 		Info,
 		LoaderCircle,
+		BookOpen,
+		Headphones,
+		Music,
 	} from "@lucide/svelte";
+	import { formatLabel, languageName, releaseFormat, releaseLanguage, releaseTier, tierLabel, type BookFormat } from "@lib/music-books";
 	import { cn } from "@lib/cn";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -56,6 +60,7 @@
 		existing = null,
 		existingCount,
 		onGrabbed,
+		media = "video",
 	}: {
 		// POST endpoint returning ranked SearchResult[] (movie or episode browse).
 		searchPath: string;
@@ -72,7 +77,15 @@
 		// carries replace_existing.
 		existingCount?: number;
 		onGrabbed?: () => void;
+		// "books": the friendly cards show format and plain language instead of
+		// the dub/subtitle chip and a resolution, with an Ebook/Audiobook filter.
+		// "music": the tier and the container (Lossless · FLAC) in their place.
+		media?: "video" | "books" | "music";
 	} = $props();
+	let books = $derived(media === "books");
+	let music = $derived(media === "music");
+	let fmtFilter = $state<"all" | BookFormat>("all");
+	const fmtOk = (r: SearchResult) => !books || fmtFilter === "all" || releaseFormat(r.source) === fmtFilter;
 
 	// The friendly view is everyone's default; the table is one switch away
 	// and the choice sticks per browser.
@@ -224,12 +237,12 @@
 	let friendly = $derived.by(() => {
 		const key = (r: SearchResult) => (scored ? (r.score ?? 0) : r.seeders);
 		const kept = data
-			.filter((r) => !r.rejected)
+			.filter((r) => !r.rejected && fmtOk(r))
 			.sort((a, b) => key(b) - key(a) || b.seeders - a.seeders);
-		const rec = recommended;
+		const rec = recommended && fmtOk(recommended) ? recommended : undefined;
 		return rec ? [rec, ...kept.filter((r) => r !== rec)] : kept;
 	});
-	let setAside = $derived(data.filter((r) => r.rejected));
+	let setAside = $derived(data.filter((r) => r.rejected && fmtOk(r)));
 	let showSetAside = $state(false);
 	// The language chip explains itself on hover; a tap pins the explanation
 	// under the chips, which is the only way a touch screen gets it.
@@ -447,8 +460,29 @@
 				</div>
 			{/if}
 			<div class="flex flex-wrap items-center gap-1.5">
-				{@render langChip(r)}
-				{#if quality}
+				{#if books}
+					{@const f = releaseFormat(r.source)}
+					{@const code = releaseLanguage(r.title)}
+					<span class="inline-flex h-6 whitespace-nowrap items-center gap-1.5 rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
+						{#if f === "audiobook"}<Headphones size={13} aria-hidden="true" />{:else}<BookOpen size={13} aria-hidden="true" />{/if}
+						{formatLabel(f)}
+						{#if r.source}<span class="font-mono text-[10.5px] font-medium text-fg-subtle">{r.source}</span>{/if}
+					</span>
+					{#if code}
+						<span class="inline-flex h-6 whitespace-nowrap items-center rounded-sm border border-border-strong px-2 text-[12px] font-medium text-fg-muted">
+							{languageName(code, true)}
+						</span>
+					{/if}
+				{:else if music}
+					<span class="inline-flex h-6 whitespace-nowrap items-center gap-1.5 rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
+						<Music size={13} aria-hidden="true" />
+						{tierLabel(releaseTier(r.source))}
+						{#if r.source}<span class="font-mono text-[10.5px] font-medium text-fg-subtle">{r.source}</span>{/if}
+					</span>
+				{:else}
+					{@render langChip(r)}
+				{/if}
+				{#if quality && !books}
 					<span
 						class="inline-flex h-6 whitespace-nowrap items-center rounded-sm bg-bg-card px-2 text-[12px] font-medium text-fg-muted"
 					>
@@ -574,6 +608,23 @@
 			{/if}
 		</span>
 		<div class="flex flex-wrap items-center gap-2">
+			{#if books && !technical}
+				<div class="inline-flex rounded-lg border border-border bg-bg-elevated p-0.5" role="group" aria-label={i18n.books_format()}>
+					{#each [{ key: "all" as const, label: i18n.common_all() }, { key: "ebook" as const, label: formatLabel("ebook") }, { key: "audiobook" as const, label: formatLabel("audiobook") }] as seg (seg.key)}
+						<button
+							type="button"
+							aria-pressed={fmtFilter === seg.key}
+							onclick={() => (fmtFilter = seg.key)}
+							class={cn(
+								"inline-flex min-h-11 items-center rounded-md px-3 text-[12.5px] font-medium transition lg:min-h-0 lg:py-1.5",
+								fmtFilter === seg.key ? "bg-surface-2 text-fg" : "text-fg-subtle hover:text-fg",
+							)}
+						>
+							{seg.label}
+						</button>
+					{/each}
+				</div>
+			{/if}
 			{#if technical && groups.length > 0}
 				<div class="w-40">
 					<Select

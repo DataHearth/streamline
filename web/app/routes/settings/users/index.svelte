@@ -191,7 +191,6 @@
 			<Users size={18} aria-hidden="true" />
 		</span>
 		<div>
-			<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.settings_users()}</h1>
 			<p class="mt-0.5 text-sm text-fg-muted">
 				{i18n.users_total_summary({ total })}
 			</p>

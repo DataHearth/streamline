@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
-	import { Search, Film, Tv, ArrowRight } from "@lucide/svelte";
+	import { Search, Film, Tv, ArrowRight, Music, BookOpen } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
@@ -10,6 +10,7 @@
 	import {
 		createSearchModel,
 		itemKindLabel,
+		itemSubline,
 		searchNav,
 		type SearchItem,
 	} from "@lib/search-model.svelte";
@@ -241,6 +242,24 @@
 										class="relative h-full w-full object-cover"
 									/>
 								</div>
+							{:else if item.kind === "artist" || item.kind === "book"}
+								<div
+									class={cn(
+										"relative shrink-0 overflow-hidden bg-surface-2",
+										item.kind === "artist" ? "h-7 w-7 rounded-full" : "h-9 w-6 rounded-md",
+									)}
+								>
+									<div class="absolute inset-0 grid place-items-center text-fg-muted">
+										{#if item.kind === "artist"}
+											<Music size={13} aria-hidden="true" />
+										{:else}
+											<BookOpen size={13} aria-hidden="true" />
+										{/if}
+									</div>
+									{#if item.image}
+										<Img src={item.image} alt="" class="relative h-full w-full object-cover" />
+									{/if}
+								</div>
 							{:else if item.kind === "person"}
 								<div
 									class="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-surface-2"
@@ -277,11 +296,11 @@
 								<div class="truncate text-[13px] font-medium">
 									{item.label}
 								</div>
-								{#if (item.kind === "movie" || item.kind === "series") && item.year}
+								{#if (item.kind === "movie" || item.kind === "series" || item.kind === "artist" || item.kind === "book") && itemSubline(item)}
 									<div
 										class="truncate font-mono text-[10.5px] text-fg-subtle"
 									>
-										{item.year}
+										{itemSubline(item)}
 									</div>
 								{:else if item.kind === "person"}
 									<div

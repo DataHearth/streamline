@@ -1,6 +1,5 @@
 import * as v from "valibot";
 import { m as i18n } from "@lib/paraglide/messages.js";
-import type { AudiobookFormat, EbookFormat, MusicFormat } from "@lib/types";
 
 export const password = v.pipe(
 	v.string(),
@@ -386,84 +385,4 @@ export const importStartForm = v.object({
 	kind: importScanKind,
 	mode: importMode,
 	import_mode: importTransferMode,
-});
-
-// Best first, which is the server's config.MusicFormats order. Which names are
-// accepted is the server's call and it answers 422.
-export const MUSIC_FORMATS = [
-	"flac-24",
-	"flac",
-	"mp3-320",
-	"mp3-v0",
-	"mp3-256",
-	"mp3-192",
-	"other",
-] as const satisfies readonly MusicFormat[];
-
-const musicFormat = v.picklist(MUSIC_FORMATS, i18n.validation_required());
-
-export const musicQualityProfile = v.object({
-	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
-	formats: v.pipe(
-		v.array(musicFormat),
-		v.minLength(1, i18n.validation_required()),
-	),
-	cutoff: musicFormat,
-	upgrade_allowed: v.boolean(),
-});
-
-// "" in quality_profile is the server default.
-export const musicArtistAdd = v.object({
-	monitored: v.boolean(),
-	quality_profile: v.string(),
-});
-
-// Best first, like MUSIC_FORMATS.
-export const EBOOK_FORMATS = [
-	"epub",
-	"azw3",
-	"mobi",
-	"pdf",
-	"other",
-] as const satisfies readonly EbookFormat[];
-
-export const AUDIOBOOK_FORMATS = [
-	"m4b",
-	"mp3",
-	"other",
-] as const satisfies readonly AudiobookFormat[];
-
-const ebookFormat = v.picklist(EBOOK_FORMATS, i18n.validation_required());
-const audiobookFormat = v.picklist(
-	AUDIOBOOK_FORMATS,
-	i18n.validation_required(),
-);
-
-export const ebookQualityProfile = v.object({
-	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
-	formats: v.pipe(
-		v.array(ebookFormat),
-		v.minLength(1, i18n.validation_required()),
-	),
-	cutoff: ebookFormat,
-	upgrade_allowed: v.boolean(),
-});
-
-export const audiobookQualityProfile = v.object({
-	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
-	formats: v.pipe(
-		v.array(audiobookFormat),
-		v.minLength(1, i18n.validation_required()),
-	),
-	cutoff: audiobookFormat,
-	upgrade_allowed: v.boolean(),
-});
-
-// "" in either profile is the server default.
-export const bookAuthorAdd = v.object({
-	monitored: v.boolean(),
-	monitor_policy: v.picklist(["all", "future", "none"]),
-	want_kinds: v.picklist(["ebook", "audiobook", "both"]),
-	ebook_quality_profile: v.string(),
-	audiobook_quality_profile: v.string(),
 });

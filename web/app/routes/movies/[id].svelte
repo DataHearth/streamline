@@ -198,15 +198,7 @@
 {:else if movie}
 	<MovieDetailHero {movie}>
 		{#snippet actions()}
-			{#if movie.status === "downloading"}
-				<span
-					class="inline-flex h-10 items-center gap-2 rounded-md bg-status-downloading/15 px-3 text-sm font-medium text-status-downloading"
-				>
-					<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />
-					{i18n.common_downloading_ellipsis()}
-				</span>
-			{/if}
-
+			<!-- No "Downloading…" chip: the hero's status pill already says it. -->
 			{#if auth.canAddDirectly}
 				<PlayOnMenu
 					path={`/movies/${movie.id}/play-on`}

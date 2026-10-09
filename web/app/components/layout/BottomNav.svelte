@@ -13,7 +13,7 @@
 		Replace,
 		Tv,
 		Music,
-		BookOpen,
+		BookMarked,
 		CalendarDays,
 		Inbox,
 		FolderInput,
@@ -112,8 +112,8 @@
 	let libraryRows = $derived<Row[]>([
 		{ label: i18n.movies_label(), href: "/movies", icon: Film, line: counts.moviesLine },
 		{ label: i18n.settings_series(), href: "/series", icon: Tv, line: counts.seriesLine },
-		{ label: i18n.music_label(), href: "/music", icon: Music },
-		{ label: i18n.books_label(), href: "/books", icon: BookOpen },
+		{ label: i18n.music_label(), href: "/music", icon: Music, line: counts.musicLine },
+		{ label: i18n.books_label(), href: "/books", icon: BookMarked, line: counts.booksLine },
 	]);
 	const transcodeCounts = transcodeCountsQuery();
 	// Words, not dots: this sheet is the phone's entry point and the two numbers
