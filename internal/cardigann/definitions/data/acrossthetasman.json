@@ -107,7 +107,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[\\s]+Uploaded.*",
+              "[\\t-\\r\\x{85}\\p{Z}]+Uploaded.*",
               ""
             ]
           }

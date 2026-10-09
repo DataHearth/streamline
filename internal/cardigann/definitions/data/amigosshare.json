@@ -431,7 +431,7 @@
       {
         "name": "re_replace",
         "args": [
-          "(\\s+:\\s+)",
+          "([\\t-\\r\\x{85}\\p{Z}]+:[\\t-\\r\\x{85}\\p{Z}]+)",
           " "
         ]
       },
@@ -440,14 +440,15 @@
         "args": [
           "(\\s*\\b((19|20)\\d{2})\\b)",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "preprocessingfilters": [
       {
         "name": "regexp",
         "args": [
-          "\"torrents\":\\{\"current_page\":\\d+,\"data\":\\[(.*?)\\],\"first_page_url\""
+          "\"torrents\":\\{\"current_page\":\\p{Nd}+,\"data\":\\[(.*?)\\],\"first_page_url\""
         ]
       },
       {
@@ -468,7 +469,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"id\":(\\d+)"
+              "\"id\":(\\p{Nd}+)"
             ]
           }
         ]
@@ -478,7 +479,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"categoryId\":(\\d+)"
+              "\"categoryId\":(\\p{Nd}+)"
             ]
           }
         ]
@@ -518,7 +519,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"year\":(\\d{4})"
+              "\"year\":(\\p{Nd}{4})"
             ]
           }
         ]
@@ -552,7 +553,8 @@
             "args": [
               "\\b4K\\b",
               "2160p"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "trim"
@@ -603,7 +605,7 @@
           {
             "name": "re_replace",
             "args": [
-              "^(.*?)\\s+-\\s+(S\\d{1,2}(?:E\\d{1,4}(?:E\\d{1,4})*)?)\\s+((?:19|20)\\d{2})(.*)$",
+              "^(.*?)[\\t-\\r\\x{85}\\p{Z}]+-[\\t-\\r\\x{85}\\p{Z}]+(S\\p{Nd}{1,2}(?:E\\p{Nd}{1,4}(?:E\\p{Nd}{1,4})*)?)[\\t-\\r\\x{85}\\p{Z}]+((?:19|20)\\p{Nd}{2})(.*)$",
               "${1} ${3} ${2}${4}"
             ]
           },
@@ -661,7 +663,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006-01-02 -07:00"
+              "2006-01-02 -07:00",
+              "2006-01-02 -0700"
             ]
           }
         ]
@@ -671,7 +674,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"size\":(\\d+)"
+              "\"size\":(\\p{Nd}+)"
             ]
           }
         ]
@@ -681,7 +684,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"seeders\":(\\d+)"
+              "\"seeders\":(\\p{Nd}+)"
             ]
           }
         ]
@@ -691,7 +694,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"leechers\":(\\d+)"
+              "\"leechers\":(\\p{Nd}+)"
             ]
           }
         ]
@@ -701,7 +704,7 @@
           {
             "name": "regexp",
             "args": [
-              "\"timesCompleted\":(\\d+)"
+              "\"timesCompleted\":(\\p{Nd}+)"
             ]
           }
         ]

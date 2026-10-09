@@ -69,7 +69,8 @@
         "args": [
           "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -85,21 +86,21 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d+(?:-\\d+)?)[xх](\\d+(?:-\\d+)?)\\s*из\\s*(\\d+)",
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[xх](\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+)",
               "S${1}E${2} of ${3}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d+(?:-\\d+)?)[xх](\\d+(?:-\\d+)?)",
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[xх](\\p{Nd}+(?:-\\p{Nd}+)?)",
               "S${1}E${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(\\d+(?:-\\d+)?)\\s*из\\s*(\\d+)",
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+)",
               "E${1} of ${2}"
             ]
           },
@@ -108,75 +109,83 @@
             "args": [
               "(?i)\\bFiles-х\\b",
               "Files-x"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)\\sот\\s([\\w\\p{P}\\p{S}]+)$",
+              "(?i)[\\t-\\r\\x{85}\\p{Z}]от[\\t-\\r\\x{85}\\p{Z}]([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}\\p{P}\\p{S}]+)$",
               "-${1}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "\\s\\|\\s(\\w{4,})$",
+              "[\\t-\\r\\x{85}\\p{Z}]\\|[\\t-\\r\\x{85}\\p{Z}]([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]{4,})$",
               "-${1}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
-              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
-            ]
+              "(\\([\\u0400-\\u04FF\\W]+\\))|(^[\\u0400-\\u04FF\\W\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bHDTV[-\\s]?Rip\\b",
               "HDTV"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSAT[-\\s]?Rip\\b",
               "HDTV"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bWEB[-\\s]?DL[-\\s]?Rip\\b",
               "WEB-DL"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bWEB\\sRip\\b",
               "WEBRip"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bWEB\\sDL\\b",
               "WEB-DL"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "[\\[\\(\\{<«][\\s\\W]*[\\]\\)\\}>»]",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "^[\\s&,\\.!\\?\\+\\-_\\|\\/':]+",
+              "^[\\t-\\r\\x{85}\\p{Z}&,\\.!\\?\\+\\-_\\|\\/':]+",
               ""
             ]
           },
@@ -245,7 +254,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006-01-02 -07:00"
+              "2006-01-02 -07:00",
+              "2006-01-02 -0700"
             ]
           }
         ]
@@ -268,5 +278,6 @@
     "path": "definitions/v11/torrentby.yml",
     "sha256": "6f50a1debf750add40e63dd7e87094a0654755cea86e18f311902f45d2c7b7d4",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

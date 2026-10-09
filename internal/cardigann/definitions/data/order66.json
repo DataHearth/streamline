@@ -235,7 +235,7 @@
       {
         "name": "re_replace",
         "args": [
-          "\\W+",
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
           "%"
         ]
       }

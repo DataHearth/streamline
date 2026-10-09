@@ -63,6 +63,51 @@ search:
 		Expect(d.Search.Rows.Selector).To(Equal(`a\\/b /c`))
 	})
 
+	It("reads \\/ as / only in a double-quoted scalar, as YAML 1.2 does", func() {
+		d, err := cardigann.Decode([]byte(`
+id: x
+links: [https://x/]
+search:
+  keywordsfilters:
+    - name: replace
+      args: ['\/', "\/"]
+  rows: {selector: div.w-1\/2 > a}
+  fields: {}
+`))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(
+			d.Search.KeywordsFilters[0].Args,
+		).To(Equal(cardigann.StrList{`\/`, "/"}))
+		Expect(d.Search.Rows.Selector).To(Equal(`div.w-1\/2 > a`))
+	})
+
+	DescribeTable("refuses what upstream never writes and a hostile file would",
+		func(src, want string) {
+			_, err := cardigann.Decode([]byte(src))
+			Expect(err).To(MatchError(ContainSubstring(want)))
+		},
+		Entry("an alias", `
+id: x
+links: &l [https://x/]
+legacylinks: *l
+search: {rows: {selector: tr}, fields: {}}
+`, "anchors and aliases"),
+		Entry("a duplicate key in an ordered map", `
+id: x
+links: [https://x/]
+search:
+  inputs: {a: "1", a: "2"}
+  rows: {selector: tr}
+  fields: {}
+`, `duplicate key "a"`),
+		Entry("a duplicate key in a struct", `
+id: x
+id: y
+links: [https://x/]
+search: {rows: {selector: tr}, fields: {}}
+`, `duplicate key "id"`),
+	)
+
 	It("names the path of a key it does not know", func() {
 		_, err := cardigann.Decode([]byte(`
 id: x

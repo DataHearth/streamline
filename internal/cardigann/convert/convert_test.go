@@ -141,11 +141,51 @@ var _ = Describe("Convert", Label("unit", "cardigann"), func() {
 	})
 
 	It("summarises for the catalog", func() {
-		s := cardigann.Summarize(d)
+		s := cardigann.Summarize("example", d)
+		Expect(s.File).To(Equal("example"))
 		Expect(s.Login).To(Equal("form"))
 		Expect(s.Categories).To(Equal([]string{"Movies", "TV"}))
 		Expect(s.MovieSearch).To(Equal([]string{"q", "imdbid"}))
 		Expect(s.RegexNET).To(BeTrue())
+	})
+
+	It("defaults a login block without a method to form, as upstream does", func() {
+		src := strings.Replace(fixture, "  method: form\n", "", 1)
+		d, err := Convert("x.yml", []byte(src))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Login.Method).To(Equal("form"))
+	})
+
+	It("keeps upstream's non-zero defaults distinguishable from absent", func() {
+		Expect(d.TestLinkTorrent).To(BeNil()) // absent: upstream reads true
+		src := strings.Replace(
+			fixture,
+			"  rows:\n",
+			"  paths:\n    - path: api\n      response: {type: json, noResultsMessage: \"\"}\n  rows:\n",
+			1,
+		)
+		src = strings.Replace(src, "  paths:\n    - path: browse.php\n", "", 1)
+		e, err := Convert("x.yml", []byte(src))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(e.Search.Paths[0].Response.NoResultsMessage).To(HaveValue(BeEmpty()))
+	})
+
+	It("refuses a delay JSON cannot spell", func() {
+		src := strings.Replace(
+			fixture,
+			"encoding: UTF-8\n",
+			"encoding: UTF-8\nrequestDelay: .inf\n",
+			1,
+		)
+		_, err := Convert("x.yml", []byte(src))
+		Expect(err).To(MatchError(ContainSubstring("not a finite number")))
+	})
+
+	It("produces definitions Check accepts, and Check catches a broken one", func() {
+		Expect(Check(d)).To(Succeed())
+		code, _ := d.Login.Inputs.Get("code")
+		d.Login.Inputs[1].Value = code + `{{ re_replace .Keywords "(" "" }}`
+		Expect(Check(d)).To(MatchError(ContainSubstring("Login.Inputs")))
 	})
 
 	It("rejects a key the model does not know", func() {

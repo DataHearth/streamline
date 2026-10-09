@@ -319,7 +319,7 @@
           {
             "name": "regexp",
             "args": [
-              "Added\\:(\\d+ \\w+ \\w+)<"
+              "Added\\:(\\p{Nd}+ [\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+ [\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+)<"
             ]
           },
           {

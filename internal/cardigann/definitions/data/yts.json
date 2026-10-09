@@ -85,7 +85,7 @@
       {
         "name": "re_replace",
         "args": [
-          "[^\\w]+",
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
           " "
         ]
       }

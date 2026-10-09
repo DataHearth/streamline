@@ -3,11 +3,13 @@
 //
 // Upstream definitions are written for a C# engine: .NET regexes, .NET date
 // layouts, and a template dialect that is Go's text/template in syntax but
-// not in string-literal quoting. Everything that is merely spelled
-// differently is rewritten here, once, so the engine never has to know which
-// dialect a value came from; everything that cannot be rewritten fails the
-// definition with a reason, which the sync records instead of shipping a
-// tracker that half-works.
+// not in string-literal quoting. What is only spelled differently is
+// rewritten here, once. A regex RE2 cannot express with .NET's meaning is
+// tagged for regexp2 instead of rewritten; a date layout becomes every Go
+// layout the .NET one accepts. What neither covers fails the definition with
+// a reason, which the sync records instead of shipping a tracker that
+// half-works. The few .NET behaviours left to the engine are listed in
+// docs/agents/cardigann.md.
 //
 // The same Convert runs in two places: the build-time sync that produces the
 // embedded snapshot, and the runtime definition update. A definition
@@ -18,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -28,7 +31,7 @@ import (
 // Version is the converter's output version, recorded in the catalog. Bump
 // it whenever a change here alters what Convert produces for the same input,
 // so a snapshot converted by an older converter is recognisably stale.
-const Version = 1
+const Version = 2
 
 // Modified is the change notice each converted definition carries in its
 // source block (the GPL asks a modified file to say it was changed).
@@ -64,6 +67,18 @@ func Convert(path string, src []byte) (*cardigann.Definition, error) {
 	}
 	if len(d.Links) == 0 {
 		return nil, fmt.Errorf("definition has no links")
+	}
+	// JSON has no spelling for either, so one such value would fail the
+	// whole snapshot's encoding rather than this definition.
+	if math.IsInf(d.RequestDelay, 0) || math.IsNaN(d.RequestDelay) {
+		return nil, fmt.Errorf(
+			"requestDelay %v is not a finite number",
+			d.RequestDelay,
+		)
+	}
+	// Both upstream engines default a login block without a method to form.
+	if d.Login != nil && d.Login.Method == "" {
+		d.Login.Method = "form"
 	}
 	c := converter{}
 	if err := c.walk(reflect.ValueOf(d).Elem(), ""); err != nil {
@@ -180,11 +195,7 @@ func (c *converter) filter(f *cardigann.Filter) error {
 		if len(f.Args) < 2 {
 			return fmt.Errorf("re_replace filter needs a pattern and a replacement")
 		}
-		pat, engine, err := translateRegex(f.Args[0])
-		if err != nil {
-			return err
-		}
-		rep, err := translateReplacement(f.Args[1], engine)
+		pat, rep, engine, err := translatePair(f.Args[0], f.Args[1])
 		if err != nil {
 			return err
 		}
@@ -199,11 +210,12 @@ func (c *converter) filter(f *cardigann.Filter) error {
 		if len(f.Args) == 0 || f.Args[0] == "" {
 			return nil
 		}
-		layout, err := translateDateLayout(f.Args[0])
+		// Args becomes every Go layout the .NET one accepts, tried in order.
+		layouts, err := translateDateLayout(f.Args[0])
 		if err != nil {
 			return err
 		}
-		f.Args[0] = layout
+		f.Args = layouts
 	default:
 		for i, a := range f.Args {
 			out, err := c.template(a)

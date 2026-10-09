@@ -182,7 +182,8 @@
         "args": [
           "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -207,9 +208,10 @@
           {
             "name": "re_replace",
             "args": [
-              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
-              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
-            ]
+              "(\\([\\u0400-\\u04FF\\W]+\\))|(^[\\u0400-\\u04FF\\W\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "append",
@@ -390,7 +392,8 @@
           {
             "name": "dateparse",
             "args": [
-              "02 Jan 2006, 15:04 -07:00"
+              "02 Jan 2006, 15:04 -07:00",
+              "02 Jan 2006, 15:04 -0700"
             ]
           }
         ]
@@ -414,5 +417,6 @@
     "path": "definitions/v11/animebybelka.yml",
     "sha256": "f2c36ce5a2f357bbb170a11a764b84c5b9382e7ebb87caaff4b07bbd2e2a51bf",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -780,7 +780,7 @@
       {
         "name": "re_replace",
         "args": [
-          "\\W+",
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
           " "
         ]
       },
@@ -810,9 +810,10 @@
           {
             "name": "re_replace",
             "args": [
-              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
-              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
-            ]
+              "(\\([\\u0400-\\u04FF\\W]+\\))|(^[\\u0400-\\u04FF\\W\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "trim"
@@ -859,5 +860,6 @@
     "path": "definitions/v11/pornolab.yml",
     "sha256": "4e856108acea86245ec22605421b16b6b284d6a12c5eb39961b7a0bb8eb88b27",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

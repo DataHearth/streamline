@@ -382,14 +382,14 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)^(Filme|Serien|Musik|Audio|Spiele|Games|Apps|Software|Sonstiges)\\s+",
+              "(?i)^(Filme|Serien|Musik|Audio|Spiele|Games|Apps|Software|Sonstiges)[\\t-\\r\\x{85}\\p{Z}]+",
               ""
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "\\s*\\[[^\\]]+\\]\\s*$",
+              "[\\t-\\r\\x{85}\\p{Z}]*\\[[^\\]]+\\][\\t-\\r\\x{85}\\p{Z}]*$",
               ""
             ]
           },
@@ -436,7 +436,7 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)^\\s*vor\\s+(.+)$",
+              "(?i)^[\\t-\\r\\x{85}\\p{Z}]*vor[\\t-\\r\\x{85}\\p{Z}]+(.+)$",
               "${1} ago"
             ]
           },
@@ -445,56 +445,64 @@
             "args": [
               "(?i)\\bund\\b",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSekunde(n)?\\b",
               "seconds"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bMinute(n)?\\b",
               "minutes"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStunde(n)?\\b",
               "hours"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bTag(e|en)?\\b",
               "days"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bWoche(n)?\\b",
               "weeks"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bMonat(e|en)?\\b",
               "months"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bJahr(e|en)?\\b",
               "years"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "trim"
@@ -528,5 +536,6 @@
     "path": "definitions/v11/world-of-tomorrow.yml",
     "sha256": "e36133cc70571ad2b44f3c107acb50f9e47bcb045abf53fca4404d555e81fa88",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -9,43 +9,54 @@ catalog UI are not built yet. Nothing outside `internal/cardigann` imports it.
 | Path | What it is |
 |---|---|
 | `internal/cardigann/` | The model (`Definition` and friends, upstream v11 schema key for key), the strict `Decode`, `Catalog`/`Summarize`, `EncodeJSON` |
-| `internal/cardigann/convert/` | `Convert(path, yaml)` — every .NET-to-Go rewrite. Pure; no I/O |
+| `internal/cardigann/convert/` | `Convert(path, yaml)` — the .NET-to-Go rewrites — and `Check(def)`, which validates a converted definition as stored. Pure; no I/O |
 | `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream, `Convert` each file, write the snapshot |
-| `internal/cardigann/definitions/` | `//go:embed`s the snapshot; `Catalog()`, `Load(id)`, `Notice()`. Only `definitions.go` (and its tests) is hand-written |
+| `internal/cardigann/definitions/` | `//go:embed`s the snapshot; `Catalog()` (a fresh copy per call), `Load(file)`, `Notice()`. Only `definitions.go` (and its tests) is hand-written |
 
 ## The snapshot is generated
 
 `task cardigann:sync` (optionally `REF=<branch|tag|commit>` or `SRC=<checkout>`) makes a
 sparse, shallow, blob-filtered git fetch of `Prowlarr/Indexers` — only
 `definitions/v11/` and `VERSIONS` — converts every file, and rewrites
-`internal/cardigann/definitions/{data/<id>.json,index.json,NOTICE}` **wholesale**, so a
+`internal/cardigann/definitions/{data/<file>.json,index.json,NOTICE}` **wholesale**, so a
 definition deleted upstream disappears here too.
 
 - **Never hand-edit the snapshot.** Fix the converter and re-sync. The
   `definitions` suite re-encodes every embedded definition and compares it byte for byte
-  with the committed file; an edit, or a model field that fails to round-trip, fails it.
+  with the committed file, so a model field that fails to round-trip fails it; it also runs
+  `convert.Check` over every file, so an edited regex (in a filter or a template) or
+  template that no longer compiles fails it. A *well-formed* hand edit still passes — the
+  rule is a rule, not a guard.
 - **The output is a pure function of (upstream commit, converter).** No timestamp but the
   upstream commit's own, sorted listings, one file per definition. Re-running a sync
   against the same revision is a no-op diff, so a sync commit shows exactly what upstream
   changed. Commit a sync as its own change (`chore(cardigann): sync definitions to <sha>`).
 - **`convert.Version` is bumped whenever the converter's output changes for the same
-  input**, and the sync re-run in the same change. The catalog records the version; the
-  test fails when the two disagree, which is what stops a converter fix landing without the
-  data it was for.
+  input**, and the sync re-run in the same change. The catalog records the version and the
+  test fails when it disagrees with `convert.Version` — but nothing can notice a converter
+  change made *without* the bump, since the upstream YAML is not in the repo to re-convert.
+  The bump is a manual rule; reviewers enforce it.
 - Git rather than a tarball: a fetch by ref accepts a commit as well as a branch, and the
-  commit SHA comes straight from the checkout for the NOTICE. A `-src` checkout with local
-  changes is refused — the NOTICE would name a revision the files are not.
+  commit SHA comes straight from the checkout for the NOTICE. A `-src` directory must be
+  the **root of its own repository** (inside any other work tree git answers for that one —
+  a copied `definitions/` under streamline's gitignored `tmp/` read as clean and stamped
+  streamline's HEAD into the NOTICE), and any local change under `definitions/` or
+  `VERSIONS` — tracked, untracked or ignored, flags set explicitly so no git config can hide
+  one — is refused: the NOTICE would name a revision the files are not. `-ref` and `-src`
+  together are refused too, since `-ref` would be silently ignored.
 - `cardigann.SchemaVersion` (11) pins the upstream directory read. The sync fails when
   upstream's `VERSIONS` puts it below `MIN_VERSION` — a frozen version still reads fine and
   is never updated again, so syncing it would ship a snapshot that looks fresh and is not —
   and warns when `CURRENT_VERSION` has moved past it. Moving to a new schema is a port of
   the model, not a flag.
-- Definitions are keyed by their `id`, not their file name: a few files upstream are named
-  apart from the id inside them (`bluebird.yml` is `bluebirdhd`), and the id is what
-  Prowlarr and an indexer entry refer to. A duplicate id is skipped with a reason.
-- A definition the converter refuses is **skipped, recorded in `index.json`'s `skipped` with
-  the reason, and printed** — never a failed sync. One broken upstream file must not block
-  every other tracker's update.
+- Definitions are keyed by their **upstream file name** (`Summary.File`, `Load(file)`), not
+  their `id`: Prowlarr stores an indexer under its definition file and fetches updates by
+  it (`/master/11/bluebird`), and six files upstream are named apart from the id inside
+  them (`bluebird.yml` holds `bluebirdhd`). It also means no upstream value decides where
+  the sync writes — an id of `../../package` once overwrote `package.json`.
+- A definition the converter refuses — or whose JSON encoding fails — is **skipped,
+  recorded in `index.json`'s `skipped` with the reason, and printed**, never a failed sync.
+  One broken upstream file must not block every other tracker's update.
 
 At `8df0764` (2026-10-09): 580 v11 files, 579 converted, 1 skipped — `1337x.yml`, an
 unbalanced `)` in a search-path template that Jackett's regex-driven template engine
@@ -68,30 +79,60 @@ the node tree against the Go types itself.
 - Scalars upstream writes as string, int or bool interchangeably (`default`, category `id`,
   filter `args`) decode as `Str`/`StrList` — their literal text. Filter `args` is always a
   list after decoding, whatever shape it was written in.
-- **`\/` is unescaped before YAML parsing** (`unescapeSlashes`). YAML 1.2 — and the .NET
-  parser upstream is written against — reads `"\/"` as `/` for JSON compatibility; yaml.v3
-  is 1.1 and rejects it, which skipped four definitions. Outside double quotes the backslash
-  was literal, but every such use upstream is a regex or a CSS selector, where `\/` and `/`
-  match the same thing. An escaped backslash before a slash (`\\/`) is left alone.
+- **`\/` is read as `/` in double-quoted scalars only** (`protectSlashes` + `sanitize`).
+  YAML 1.2 — and the .NET parser upstream is written against — reads `"\/"` as `/` for
+  JSON compatibility; yaml.v3 is 1.1 and rejects it, which skipped four definitions.
+  Everywhere else (plain, single-quoted, block) the backslash is literal text and must
+  survive: `\/` in a CSS identifier or a `replace` argument is not `/`. So each unescaped
+  `\/` is swapped for an escape yaml.v3 knows for `/` before parsing, and put back as `\/`
+  in every scalar that is not double-quoted, where the escape was never read. A source that
+  already contains that escape is refused rather than guessed at.
+- **Anchors, aliases and duplicate keys are refused.** Upstream uses none (its CI runs
+  yamllint), and both are what a hostile file uses: walking an alias tree is quadratic or
+  worse, and duplicate keys read last-wins in the C# engines but first-wins in
+  `OrderedMap.Get`. This matters for the runtime update, which decodes fetched files.
+- Decoding happens once, from the already-checked node tree: `checkKnown` is a superset of
+  `KnownFields`, so a second parse of the source bought nothing.
+- **Upstream defaults that are not Go zero values stay distinguishable**:
+  `testlinktorrent` is `*bool` (absent means true upstream — fetch each non-magnet link and
+  fall through to the next download selector when it is not a torrent), a response's
+  `noResultsMessage` is `*string` (set, even to `""`, it is the "no results" body), and
+  `settings` is always written, `null` when absent (upstream then adds username and
+  password) and `[]` when empty. A search path's `followredirect` is a plain bool: both
+  engines default it to false regardless of the definition-level flag, which only governs
+  the login landing page. A login block without a `method` gets `form`, as both engines do.
 
 ## Regexes: two engines, chosen at conversion
 
-Upstream patterns are .NET regexes; Go's `regexp` is RE2. At `8df0764`, 87 of 1,890
-patterns fail to compile in Go, across 67 definitions.
+Upstream patterns are .NET regexes, compiled with `RegexOptions.None`; Go's `regexp` is
+RE2. At `8df0764`, 87 of 1,890 patterns fail to compile in Go at all — but compiling is
+not the bar. **A pattern that compiles on both can still mean different things**, and that
+was the larger problem: .NET's `\w \d \s \b` are Unicode-aware and Go's are ASCII, so
+before the rewrite below, 125 RE2-assigned patterns in 75 definitions matched differently
+on a 40-string multilingual corpus — Cyrillic titles stripped to their year, `Amélie`
+split at the `é`.
 
-- **Spelling differences are rewritten** (`rewriteRegex`), and the result runs on RE2:
-  .NET Unicode block names onto Go scripts (`\p{IsCyrillic}` → `\p{Cyrillic}`,
-  `\p{IsCJKUnifiedIdeographs}` → `\p{Han}`, table in `dotnetBlocks`), `\uXXXX` →
-  `\x{XXXX}`, and a backslash before a non-ASCII rune dropped (.NET reads `\<NBSP>` as the
-  rune; Go rejects it). A block is a code-point range and a script is a set of assigned
-  characters, so the Go side is a slight superset — every use upstream is "strip or keep
-  this alphabet", where the superset is what was meant.
-- **Semantic differences are not rewritten.** Lookarounds and backreferences have no RE2
-  form, and hand-rewriting each one means changing the code that consumes its result. Such
-  a pattern keeps its original text and its filter gets `"engine": "regexp2"`
-  (`cardigann.RegexEngineNET`); a templated `re_replace` is renamed `re_replace_net`. The
-  definition gets `regex_net: true`, and so does its catalog row. 38 definitions at
-  `8df0764`.
+- **Spelled out for RE2** (`rewriteRE2`), so the result means what .NET means:
+  - the shorthand classes as the Unicode sets .NET uses: `\d` → `\p{Nd}`; `\w` → letters,
+    non-spacing marks, decimal digits, connector punctuation; `\s` → `char.IsWhiteSpace`
+    (`\t-\r`, U+0085, `\p{Z}`); negations likewise, outside a class;
+  - .NET block names as **the block's own code-point range** (`dotnetBlocks`), not a Go
+    script — a script is not a block (Go's Cyrillic script misses U+0485–0486), and regexp2
+    has no block table either, so its path gets the same range;
+  - `\uXXXX` → `\x{XXXX}`; a backslash before a non-ASCII rune dropped (.NET reads
+    `\<NBSP>` as the rune; Go rejects it); a `[` inside a class escaped, which .NET reads
+    literally and Go would take for a POSIX class.
+- **What RE2 cannot say goes to regexp2, unchanged but for block names**: lookarounds,
+  backreferences, `\b`/`\B` (Go's boundary is ASCII-only — beside a Cyrillic letter it never
+  matches), a negated shorthand or negated block inside a class, class subtraction, and any
+  pattern whose replacement uses a substitution only .NET has. Its filter gets
+  `"engine": "regexp2"` (`cardigann.RegexEngineNET`); a templated `re_replace` is renamed
+  `re_replace_net`; the definition and its catalog row get `regex_net: true`. 96 definitions
+  (512 patterns) at `8df0764`, most of them for `\b`.
+- **Checked by differential, not by eye.** Every RE2-assigned pattern at `8df0764` (1,346)
+  was matched against its upstream original on regexp2 over the multilingual corpus: zero
+  disagreements, where the same run with an ASCII `\w` flags 22 definitions. Repeat that
+  check when the rewrite changes.
 - **The engine is decided here, never by trial at runtime.** Which definitions run on the
   backtracking engine is then visible in the data itself, and a pattern that compiles on
   neither engine fails the definition at sync time rather than a search.
@@ -99,25 +140,39 @@ patterns fail to compile in Go, across 67 definitions.
   failing** — not the search hanging. regexp2 backtracks and has no linear-time
   guarantee; here it runs patterns we do not author over HTML from trackers we do not
   control.
-- .NET semantics that survive the rewrite unchanged are accepted as-is: `\d` and `\w` are
-  Unicode-aware in .NET and ASCII in Go. Whether any upstream pattern relies on the
-  difference has not been audited.
-- **Replacement strings follow their pattern's engine.** regexp2 speaks .NET substitution
-  natively, so a regexp2 replacement is untouched. An RE2 one is rewritten for
-  `Regexp.Expand`: every numbered group is braced (`$1x` in Go is the group named `1x`, not
-  group 1 then `x`), `$&` becomes `${0}`, a lone `$` becomes `$$`; `` $` ``, `$'`, `$+` and
-  `$_` have no Go form and fail the definition.
+- Known residual differences, left to the engine: `$` without `(?m)` matches before a
+  final newline in .NET but only at the very end in Go (trim values before filtering), and
+  `(?i)` case folding is Unicode simple folding in Go versus .NET's invariant culture.
+- **Replacement strings follow their pattern's engine** (`translatePair`). regexp2 speaks
+  .NET substitution natively, so a regexp2 replacement is untouched. An RE2 one is
+  rewritten for `Regexp.Expand` — the engine must use `ReplaceAllString`, not the literal
+  variant: every numbered group is braced (`$1x` in Go is the group named `1x`, not group 1
+  then `x`), `$&` becomes `${0}`, a lone `$` becomes `$$`, and a reference to a group the
+  pattern does not have is written as literal text, as .NET leaves it (Go would substitute
+  nothing). `` $` ``, `$'`, `$+` and `$_` send the pattern to regexp2.
 
 ## Date layouts
 
 `dateparse`/`timeparse` carry .NET custom formats (`yyyy-MM-dd HH:mm:ss zzz`); every one
 upstream is .NET, none Go. `translateDateLayout` maps each letter run onto Go's reference
-time (`dotnetDateTokens`). Go parses `15`, `3`, `4`, `5`, `2`, `1` as one *or* two digits,
-so .NET's unpadded `H`/`h`/`m`/`s`/`d`/`M` share the padded spelling — definitions only
-ever parse. Refused, failing the definition: a lone `y`, `t` or `z`, fractional seconds,
-eras, and any literal that Go would read as a layout element (a digit, `Jan`, `Mon`, `PM`,
-`MST`, …) — a Go layout has no escape for those. A `dateparse` without a layout is left for
-the engine's own format guessing.
+time (`dotnetDateTokens`), and **a converted filter's `args` is a list of Go layouts, tried
+in order** — one per combination where .NET accepts two shapes Go spells apart: `zzz`/`K`
+take the offset with or without its colon (`+08:00`, `+0800` — 19 definitions feed
+`pubDate` straight in with the colon-less form), and `tt` matches AM/PM in either case
+(`PM`, `pm`).
+
+- Padding is meaningful when parsing, on both sides: `dd MM hh mm ss` demand two digits in
+  .NET's ParseExact and in Go (`02 01 03 04 05`), `d M h m s` take one or two (`2 1 3 4 5`).
+  Go has no padded 24-hour form, so `HH` shares `H`'s `15` and is the one token laxer than
+  .NET. Do not "simplify" an unpadded token onto the padded spelling — `h:mm tt` would
+  then reject `9:05 PM`.
+- Refused, failing the definition: a lone `y`, `t` or `z`, fractional seconds, eras, and any
+  literal that Go would read as a layout element (a digit, `Jan`, `Mon`, `PM`, `MST`, …) — a
+  Go layout has no escape for those.
+- **Left to the engine**: a `dateparse` without a layout (format guessing), and a layout
+  with no year or no date at all (3 at `8df0764`: btetree, torrentsome, comicat's
+  `date_today`). .NET fills the missing parts from the current date; Go yields year 0. Mixed
+  case like `Pm` parses in .NET and in neither Go spelling.
 
 ## Templates
 
@@ -135,7 +190,8 @@ parser:
   engine must hand `.Config` and `.Result` to templates as maps**, never structs.
 
 Every string containing `{{` — other than a regex pattern, which upstream never templates —
-is then parsed with Go's `text/template` and the stub `FuncMap` (`re_replace`,
+is then parsed with Go's `text/template` (and `convert.Check` parses them again, compiling
+each `re_replace` pattern on the engine its function name selects) and the stub `FuncMap` (`re_replace`,
 `re_replace_net`, `join`); a parse failure fails the definition. Those three names, plus
 Go's builtins, are the whole function vocabulary the engine must provide
 (`cardigann.TemplateFunc*`). Parsing checks syntax only; what `.Config`/`.Query`/`.Result`
@@ -178,7 +234,7 @@ Hence, and **never to be dropped**:
 
 ## Size
 
-The snapshot is ~6.3 MB of indented JSON (579 files) plus a ~300 KB index, embedded
+The snapshot is ~6.4 MB of indented JSON (579 files) plus a ~330 KB index, embedded
 uncompressed. That is deliberate: indented per-file JSON is what makes a sync reviewable as
 a diff. Compressing it at embed time is the lever if binary size ever matters; the
 committed form should stay diffable either way.

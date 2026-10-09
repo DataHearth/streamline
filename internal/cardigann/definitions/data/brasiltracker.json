@@ -172,7 +172,8 @@
         "args": [
           "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -239,7 +240,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Jan 2 2006, 15:04 -07:00"
+              "Jan 2 2006, 15:04 -07:00",
+              "Jan 2 2006, 15:04 -0700"
             ]
           }
         ]
@@ -276,7 +278,7 @@
           {
             "name": "regexp",
             "args": [
-              "\\[((?:19|20)\\d{2})\\]"
+              "\\[((?:19|20)\\p{Nd}{2})\\]"
             ]
           }
         ]
@@ -316,14 +318,16 @@
             "args": [
               "(?i)\\b4K\\b",
               "2160p"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bFull HD\\b",
               "1080p"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
@@ -338,7 +342,8 @@
             "args": [
               "(?i)\\bLegendado\\b",
               "Subs"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",

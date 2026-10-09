@@ -229,7 +229,8 @@
             "args": [
               "\\b0\\b",
               "38"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -286,7 +287,7 @@
           {
             "name": "regexp",
             "args": [
-              "src=\\./(.+?)\\s"
+              "src=\\./(.+?)[\\t-\\r\\x{85}\\p{Z}]"
             ]
           }
         ]
@@ -298,7 +299,7 @@
           {
             "name": "regexp",
             "args": [
-              "/(\\d{8}).jpg"
+              "/(\\p{Nd}{8}).jpg"
             ]
           }
         ]
@@ -310,7 +311,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[ ]at|[// \\s,]+",
+              "[ ]at|[// \\t-\\r\\x{85}\\p{Z},]+",
               " "
             ]
           }
@@ -323,7 +324,7 @@
           {
             "name": "re_replace",
             "args": [
-              "[// \\s,]+",
+              "[// \\t-\\r\\x{85}\\p{Z},]+",
               " "
             ]
           },
@@ -380,5 +381,6 @@
     "path": "definitions/v11/hdspacecookie.yml",
     "sha256": "95859c685b9c9920aeb084074b51bfb42dc4268f5be08a743f36d2af5350e50f",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

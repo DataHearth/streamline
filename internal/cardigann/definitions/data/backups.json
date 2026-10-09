@@ -448,7 +448,8 @@
         "args": [
           "(?:^|\\s)[_\\+\\/\\.\\-\\(\\)]*[\\S]{0,3}[_\\+\\/\\.\\-\\(\\)]*(?:\\s|$)",
           " "
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -538,7 +539,8 @@
           {
             "name": "dateparse",
             "args": [
-              "02-01-2006 15:04 -07:00"
+              "02-01-2006 15:04 -07:00",
+              "02-01-2006 15:04 -0700"
             ]
           }
         ]
@@ -552,5 +554,6 @@
     "path": "definitions/v11/backups.yml",
     "sha256": "ff7c9afb75e787dc33d1c39ded4194d12a45d4a6c0594fca6abfa1030a0ea8bd",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

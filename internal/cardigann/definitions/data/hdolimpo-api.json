@@ -184,145 +184,165 @@
             "args": [
               "(?i)\\b(full uhd|(uhd )?full\\s?(blu-?ray|uhd))\\b",
               "BRDISK"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "\\bE-AC-3\\b",
               "EAC3"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-cat?-en|es-en-cat?|en-cat?-es|en-es-cat?|cat?-es-en|cat?-en-es)\\b",
               "MULTi SPANiSH CATALAN ENGLiSH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-cat?-(ja|ja?p)|es-(ja|ja?p)-cat?|cat?-es-(ja|ja?p)|cat?-(ja|ja?p)-es|(ja|ja?p)-es-cat?|(ja|ja?p)-cat?-es)\\b",
               "MULTi SPANiSH CATALAN JAPANES"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-en|en-es)\\b",
               "MULTi SPANiSH ENGLiSH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-cat?|cat?-es)\\b",
               "MULTi SPANiSH CATALAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-(ja|ja?p)|(ja|ja?p)-es)\\b",
               "MULTi SPANiSH JAPANES"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-fr[ae]?n?|fr[ae]?n?-es)\\b",
               "MULTi SPANiSH FRENCHx"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-ita?|ita?-es)\\b",
               "MULTi SPANiSH iTALiAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-rus?|rus?-es)\\b",
               "MULTi SPANiSH RUSSiAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(es-(ger?|al(e|em)?)|(ger?|al(e|em)?)-es)\\b",
               "MULTi SPANiSH GERMANx"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\btriaudio\\b",
               "MULTi SPANiSH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(espa[ñn]ol|castellano|esp)\\b",
               "SPANiSH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(ingl[ée]s|[ei]ng)\\b",
               "ENGLiSH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bcat\\b",
               "CATALAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bfr[ae]?n?\\b",
               "FRENCHx"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(jap|jp)\\b",
               "JAPANES"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bita\\b",
               "iTALiAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\brus?\\b",
               "RUSSiAN"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\b(ger?|alem)\\b",
               "GERMANx"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(\\s|\\.)+",
+              "([\\t-\\r\\x{85}\\p{Z}]|\\.)+",
               "${1}"
             ]
           },
@@ -339,21 +359,24 @@
             "args": [
               "\\bFRENCHx\\b",
               "FRENCH"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "\\bJAPANES\\b",
               "JAPANESE"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "\\bGERMANx\\b",
               "GERMAN"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -463,7 +486,8 @@
           {
             "name": "dateparse",
             "args": [
-              "01/02/2006 15:04:05 -07:00"
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
             ]
           }
         ]

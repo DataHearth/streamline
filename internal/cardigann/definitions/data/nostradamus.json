@@ -296,7 +296,7 @@
       {
         "name": "re_replace",
         "args": [
-          "\\W+",
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
           "%"
         ]
       }
@@ -320,7 +320,8 @@
             "args": [
               "(?i)\\b(vostfr|subfrench)\\b",
               "ENGLISH"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -360,7 +361,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Mon, 02 Jan 2006 15:04:05 -07:00"
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
             ]
           }
         ]

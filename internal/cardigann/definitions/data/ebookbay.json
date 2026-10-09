@@ -277,6 +277,7 @@
       ]
     }
   },
+  "settings": [],
   "search": {
     "paths": [
       {
@@ -328,12 +329,13 @@
             "args": [
               "(?i)\\bE-?books?\\b",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "regexp",
             "args": [
-              "E book under:\\s+(.+?)\\s? "
+              "E book under:[\\t-\\r\\x{85}\\p{Z}]+(.+?)[\\t-\\r\\x{85}\\p{Z}]? "
             ]
           }
         ]
@@ -395,7 +397,7 @@
           {
             "name": "regexp",
             "args": [
-              "Seeds: (\\d+)"
+              "Seeds: (\\p{Nd}+)"
             ]
           }
         ]
@@ -408,7 +410,7 @@
           {
             "name": "regexp",
             "args": [
-              "Peers: (\\d+)"
+              "Peers: (\\p{Nd}+)"
             ]
           }
         ]
@@ -421,7 +423,7 @@
           {
             "name": "regexp",
             "args": [
-              "Completed Downloads: (\\d+)"
+              "Completed Downloads: (\\p{Nd}+)"
             ]
           }
         ]
@@ -464,5 +466,6 @@
     "path": "definitions/v11/ebookbay.yml",
     "sha256": "29c8db9ba9dc2766cd62cbd01d9c67dd9a74172ab484e2346d1711082810a9b3",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -9,13 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/datahearth/streamline/internal/cardigann"
 )
 
-// ErrNotFound means the snapshot carries no definition under that id.
+// ErrNotFound means the snapshot carries no definition under that name.
 var ErrNotFound = errors.New("cardigann definition not found")
 
 //go:embed index.json NOTICE data
@@ -34,24 +35,43 @@ var catalog = sync.OnceValues(func() (cardigann.Catalog, error) {
 })
 
 // Catalog returns the snapshot's index: every definition's summary, the
-// upstream revision it was converted from, and what the sync skipped.
-func Catalog() (cardigann.Catalog, error) { return catalog() }
-
-// Load decodes one embedded definition by id.
-func Load(id string) (*cardigann.Definition, error) {
-	if id == "" || strings.ContainsAny(id, `/\`) || !fs.ValidPath(id) {
-		return nil, fmt.Errorf("%w: %q", ErrNotFound, id)
+// upstream revision it was converted from, and what the sync skipped. The
+// result is the caller's to filter, sort or edit: every slice is a copy, so
+// nothing done to it reaches the next caller.
+func Catalog() (cardigann.Catalog, error) {
+	c, err := catalog()
+	if err != nil {
+		return c, err
 	}
-	b, err := files.ReadFile("data/" + id + ".json")
+	c.Definitions = slices.Clone(c.Definitions)
+	for i := range c.Definitions {
+		s := &c.Definitions[i]
+		s.Links = slices.Clone(s.Links)
+		s.Replaces = slices.Clone(s.Replaces)
+		s.Categories = slices.Clone(s.Categories)
+		s.MovieSearch = slices.Clone(s.MovieSearch)
+		s.TVSearch = slices.Clone(s.TVSearch)
+	}
+	c.Skipped = slices.Clone(c.Skipped)
+	return c, nil
+}
+
+// Load decodes one embedded definition by its file name (Summary.File) —
+// not its id, which a few upstream files spell differently.
+func Load(file string) (*cardigann.Definition, error) {
+	if file == "" || strings.ContainsAny(file, `/\`) || !fs.ValidPath(file) {
+		return nil, fmt.Errorf("%w: %q", ErrNotFound, file)
+	}
+	b, err := files.ReadFile("data/" + file + ".json")
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%w: %q", ErrNotFound, id)
+		return nil, fmt.Errorf("%w: %q", ErrNotFound, file)
 	}
 	if err != nil {
 		return nil, err
 	}
 	var d cardigann.Definition
 	if err := json.Unmarshal(b, &d); err != nil {
-		return nil, fmt.Errorf("embedded cardigann definition %q: %w", id, err)
+		return nil, fmt.Errorf("embedded cardigann definition %q: %w", file, err)
 	}
 	return &d, nil
 }

@@ -277,14 +277,14 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)(SEASON|SAISON) (\\d\\d)",
+              "(?i)(SEASON|SAISON) (\\p{Nd}\\p{Nd})",
               "S${2}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)(SEASON|SAISON) (\\d)",
+              "(?i)(SEASON|SAISON) (\\p{Nd})",
               "S0${2}"
             ]
           }
@@ -298,7 +298,8 @@
             "args": [
               "(?i)\\b(vostfr|subfrench)\\b",
               "ENGLISH"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
