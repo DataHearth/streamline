@@ -9,7 +9,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"cmp"
 	"errors"
@@ -18,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -67,38 +67,28 @@ func run(src, ref, out string) error {
 	if err != nil {
 		return err
 	}
-	if err := checkVersions(filepath.Join(src, "VERSIONS")); err != nil {
-		return err
-	}
-
-	dir := filepath.Join(
-		src,
-		"definitions",
-		fmt.Sprintf("v%d", cardigann.SchemaVersion),
-	)
-	files, err := filepath.Glob(filepath.Join(dir, "*.yml"))
+	versions, err := git(src, "cat-file", "blob", "HEAD:VERSIONS")
 	if err != nil {
 		return err
 	}
-	if len(files) == 0 {
-		return fmt.Errorf("no definitions under %s", dir)
+	if err := checkVersions(versions); err != nil {
+		return err
 	}
-	slices.Sort(files)
 
 	cat := cardigann.Catalog{
 		Schema:    cardigann.SchemaVersion,
 		Converter: convert.Version,
 		Upstream:  up,
 	}
+	files, skipped, err := definitionBlobs(src)
+	if err != nil {
+		return err
+	}
+	cat.Skipped = skipped
 	defs := make(map[string][]byte, len(files))
 	for _, f := range files {
-		name := filepath.Base(f)
+		name, raw := f.name, f.data
 		rel := fmt.Sprintf("definitions/v%d/%s", cardigann.SchemaVersion, name)
-		//nolint:gosec // G304: a file listed from the checkout this run made
-		raw, err := os.ReadFile(f)
-		if err != nil {
-			return err
-		}
 		// Keyed by file name, not id: that is what Prowlarr stores an indexer
 		// under and fetches an update by, and a handful of files upstream
 		// are named apart from the id inside them (bluebird.yml holds
@@ -120,6 +110,9 @@ func run(src, ref, out string) error {
 		cat.Definitions = append(cat.Definitions, cardigann.Summarize(file, d))
 	}
 	slices.SortFunc(cat.Definitions, func(a, b cardigann.Summary) int {
+		return cmp.Compare(a.File, b.File)
+	})
+	slices.SortFunc(cat.Skipped, func(a, b cardigann.Skipped) int {
 		return cmp.Compare(a.File, b.File)
 	})
 
@@ -199,6 +192,104 @@ func upstream(dir string) (cardigann.Upstream, error) {
 	}, nil
 }
 
+// definitionName is the shape of a file name this snapshot can carry: one
+// //go:embed accepts (no leading . or _, no :), and one that is only ever a
+// plain path segment under data/.
+var definitionName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.yml$`)
+
+type definitionBlob struct {
+	name string
+	data []byte
+}
+
+// definitionBlobs reads the schema directory's .yml files out of HEAD's tree
+// rather than the work tree. What is converted is then exactly the commit the
+// NOTICE names — nothing git status cannot see (an assume-unchanged or
+// skip-worktree edit, a sparse checkout leaving files out) can change it, and
+// a committed symlink is a symlink, never the file outside the checkout it
+// points at. Anything but a plain file with an embeddable name is skipped
+// with a reason, not fatal.
+func definitionBlobs(dir string) ([]definitionBlob, []cardigann.Skipped, error) {
+	prefix := fmt.Sprintf("definitions/v%d/", cardigann.SchemaVersion)
+	list, err := git(dir, "ls-tree", "-z", "HEAD", "--", prefix)
+	if err != nil {
+		return nil, nil, err
+	}
+	var (
+		names, shas []string
+		skipped     []cardigann.Skipped
+	)
+	for entry := range strings.SplitSeq(strings.TrimSuffix(list, "\x00"), "\x00") {
+		meta, path, ok := strings.Cut(entry, "\t")
+		fields := strings.Fields(meta)
+		if !ok || len(fields) != 3 {
+			continue
+		}
+		name := strings.TrimPrefix(path, prefix)
+		if !strings.HasSuffix(name, ".yml") {
+			continue
+		}
+		switch {
+		case fields[0] != "100644" || fields[1] != "blob":
+			skipped = append(skipped, cardigann.Skipped{
+				File:   name,
+				Reason: fmt.Sprintf("not a plain file (mode %s)", fields[0]),
+			})
+		case !definitionName.MatchString(name):
+			skipped = append(skipped, cardigann.Skipped{
+				File: name, Reason: "file name cannot be embedded",
+			})
+		default:
+			names = append(names, name)
+			shas = append(shas, fields[2])
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil, fmt.Errorf("no definitions under %s at HEAD", prefix)
+	}
+	blobs, err := catBlobs(dir, shas)
+	if err != nil {
+		return nil, nil, err
+	}
+	out := make([]definitionBlob, len(names))
+	for i := range names {
+		out[i] = definitionBlob{name: names[i], data: blobs[i]}
+	}
+	return out, skipped, nil
+}
+
+// catBlobs reads many objects through one git cat-file --batch.
+func catBlobs(dir string, shas []string) ([][]byte, error) {
+	//nolint:gosec // G204: fixed git subcommand over object names git itself listed
+	cmd := exec.Command("git", "-C", dir, "cat-file", "--batch")
+	cmd.Stdin = strings.NewReader(strings.Join(shas, "\n") + "\n")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	raw, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"git cat-file: %w: %s",
+			err,
+			strings.TrimSpace(stderr.String()),
+		)
+	}
+	out := make([][]byte, 0, len(shas))
+	for range shas {
+		header, rest, ok := bytes.Cut(raw, []byte("\n"))
+		f := strings.Fields(string(header))
+		if !ok || len(f) != 3 || f[1] != "blob" {
+			return nil, fmt.Errorf("git cat-file: unexpected %q", header)
+		}
+		size, err := strconv.Atoi(f[2])
+		if err != nil || size+1 > len(rest) {
+			return nil, fmt.Errorf("git cat-file: bad size in %q", header)
+		}
+		out = append(out, rest[:size])
+		raw = rest[size+1:]
+	}
+	return out, nil
+}
+
 func samePath(a, b string) (bool, error) {
 	ra, err := filepath.EvalSymlinks(a)
 	if err != nil {
@@ -232,26 +323,16 @@ func git(dir string, args ...string) (string, error) {
 // checkVersions reads upstream's VERSIONS file. A schema below MIN_VERSION
 // is frozen upstream — still readable, never updated again — so syncing it
 // would ship a snapshot that looks fresh and is not.
-func checkVersions(path string) error {
-	//nolint:gosec // G304: inside the checkout this run made
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+func checkVersions(content string) error {
 	vals := map[string]int{}
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		k, v, ok := strings.Cut(strings.TrimSpace(sc.Text()), "=")
+	for line := range strings.Lines(content) {
+		k, v, ok := strings.Cut(strings.TrimSpace(line), "=")
 		if !ok || strings.HasPrefix(k, "#") {
 			continue
 		}
 		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
 			vals[strings.TrimSpace(k)] = n
 		}
-	}
-	if err := sc.Err(); err != nil {
-		return err
 	}
 	lo, okLo := vals["MIN_VERSION"]
 	hi, okHi := vals["MAX_VERSION"]
