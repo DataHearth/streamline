@@ -5,6 +5,7 @@
 	import ReleaseTile from "./ReleaseTile.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import { artistTally, releasesCount, type Artist } from "@lib/music-books";
+	import { artistPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// An artist and every release beside it. From md the strip shows as many
@@ -64,7 +65,7 @@
 		<div class="absolute inset-0 grid place-items-center text-fg-faint">
 			<UserRound class="h-1/2 w-1/2" aria-hidden="true" />
 		</div>
-		<Poster src={a.photo_url} alt="" class="relative h-full w-full object-cover" />
+		<Poster src={artistPosterUrl(a.id)} alt="" class="relative h-full w-full object-cover" />
 	</div>
 {/snippet}
 

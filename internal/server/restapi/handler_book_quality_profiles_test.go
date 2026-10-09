@@ -218,6 +218,17 @@ var _ = Describe(
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
+		It("answers 422 setting a default for an unknown kind", func() {
+			resp := send(
+				http.MethodPost,
+				base+"/retail/default?kind=bogus",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		})
+
 		It("answers 404 for a missing profile on delete", func() {
 			resp := send(http.MethodDelete, base+"/ghost", app.adminKey, "")
 			defer resp.Body.Close()

@@ -8,6 +8,7 @@
 		creditRoleLabel,
 		mediumLabel,
 		personHref,
+		personPhoto,
 		type Person,
 		type Release,
 	} from "@lib/music-books";
@@ -34,7 +35,7 @@
 		return [...by.values()].map((x) => ({
 			key: x.person.name,
 			name: x.person.name,
-			photo_url: x.person.photo_url,
+			photo: personPhoto(x.person),
 			href: personHref(x.person),
 			role: x.tracks.join(", "),
 		}));

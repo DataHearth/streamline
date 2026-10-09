@@ -85,6 +85,15 @@ var _ = Describe("book profiles", Label("unit", "quality"), func() {
 			},
 		)
 
+		It(
+			"does not replace a folder under the floor with an unstated rate",
+			func() {
+				Expect(
+					quality.AudiobookReplaces(audiobook, "M4B", 32, "M4B", 0),
+				).To(BeFalse())
+			},
+		)
+
 		It("does not replace under the floor with an unacceptable release", func() {
 			Expect(
 				quality.AudiobookReplaces(audiobook, "M4B", 32, "FLAC", 0),

@@ -4,13 +4,11 @@ import (
 	"context"
 	"log/slog"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
-	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -25,40 +23,6 @@ type albumFileQuality struct {
 	probed bool
 }
 
-// cbrRatesKbps are the constant rates an encoder offers. A file reporting one
-// of them exactly is constant-rate; ffprobe cannot read the LAME preset, so
-// only a rate that is none of them is taken to be a VBR average.
-var cbrRatesKbps = []uint32{64, 96, 128, 160, 192, 224, 256, 320}
-
-// Average bit rates of the LAME presets, in kbps.
-const (
-	vbrV0MinKbps = 220
-	vbrV2MinKbps = 175
-)
-
-func audioFactsFromProbe(info *ffmpeg.AudioInfo) quality.AudioFacts {
-	codec := strings.ToLower(info.Codec)
-	f := quality.AudioFacts{Codec: codec}
-	switch {
-	case slices.Contains([]string{"flac", "alac", "wavpack", "ape"}, codec),
-		strings.HasPrefix(codec, "pcm_"):
-		f.Lossless = true
-		f.BitDepth = info.BitDepth
-		f.SampleRateHz = info.SampleRateHz
-	default:
-		f.BitrateKbps = info.BitrateKbps
-		if codec == "mp3" && !slices.Contains(cbrRatesKbps, info.BitrateKbps) {
-			switch {
-			case info.BitrateKbps >= vbrV0MinKbps:
-				f.VBR = "V0"
-			case info.BitrateKbps >= vbrV2MinKbps:
-				f.VBR = "V2"
-			}
-		}
-	}
-	return f
-}
-
 // assessAlbumFile classifies one source file: measured when ffprobe is
 // available and answers, otherwise read off the extension (a lossless one is
 // lossless, never hi-res) or, for a lossy file, off what the grabbed release's
@@ -71,7 +35,7 @@ func (w *Worker) assessAlbumFile(
 	if config.Get().FFmpeg.Enabled && w.probe != nil && w.probe.Available() {
 		info, err := w.probe.ProbeAudio(ctx, path)
 		if err == nil {
-			t, ok := quality.AudioTierOf(audioFactsFromProbe(info))
+			t, ok := quality.AudioTierOf(library.AudioFactsFromProbe(info))
 			return albumFileQuality{tier: t, known: ok, probed: true}
 		}
 		slog.WarnContext(ctx, "album import: probe failed, tier not verified",

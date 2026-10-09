@@ -392,6 +392,25 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		Expect(rec.Body.String()).To(Equal(imageBytes))
 	})
 
+	It("serves a stale copy for a key remembered as failed", func() {
+		Expect(get("albums", albumMBID).Code).To(Equal(http.StatusOK))
+		path := filepath.Join(
+			dir, "posters", "lookup", "albums", albumMBID, "poster.jpg",
+		)
+		old := fileTime(-48)
+		Expect(os.Chtimes(path, old, old)).To(Succeed())
+		reply = func(*http.Request) (*http.Response, error) {
+			return respond(404, "text/html", "no"), nil
+		}
+		Expect(get("albums", albumMBID).Body.String()).To(Equal(imageBytes))
+
+		rec := get("albums", albumMBID)
+
+		Expect(rec.Code).To(Equal(http.StatusOK))
+		Expect(rec.Body.String()).To(Equal(imageBytes))
+		Expect(fetched).To(HaveLen(2))
+	})
+
 	It("refetches a copy older than a day", func() {
 		Expect(get("albums", albumMBID).Code).To(Equal(http.StatusOK))
 		path := filepath.Join(

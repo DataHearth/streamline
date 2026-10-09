@@ -24,6 +24,7 @@ const slotDownloading = "downloading"
 
 type ReleaseResult struct {
 	indexer.SearchResult
+	Parsed   library.ParsedBookRelease
 	Format   string
 	Score    int
 	Rejected bool
@@ -72,7 +73,7 @@ func (s *Service) SearchBookReleases(
 	}
 	author := b.Edges.Author
 
-	var score func(library.ParsedBookRelease) int
+	var judge func(library.ParsedBookRelease) (int, string)
 	if kind == string(mediafile.BookKindEbook) {
 		profile, ok := config.ResolveBookQualityProfile(
 			author.EbookQualityProfile,
@@ -81,8 +82,8 @@ func (s *Service) SearchBookReleases(
 		if !ok {
 			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
-		score = func(p library.ParsedBookRelease) int {
-			return library.ScoreEbookRelease(p, profile)
+		judge = func(p library.ParsedBookRelease) (int, string) {
+			return library.JudgeEbookRelease(p, profile)
 		}
 	} else {
 		profile, ok := config.ResolveBookQualityProfile(
@@ -91,8 +92,8 @@ func (s *Service) SearchBookReleases(
 		if !ok {
 			return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
 		}
-		score = func(p library.ParsedBookRelease) int {
-			return library.ScoreAudiobookRelease(p, profile)
+		judge = func(p library.ParsedBookRelease) (int, string) {
+			return library.JudgeAudiobookRelease(p, profile)
 		}
 	}
 
@@ -110,15 +111,17 @@ func (s *Service) SearchBookReleases(
 	out := make([]ReleaseResult, len(found))
 	for i, r := range found {
 		parsed := library.ParseBookRelease(r.Title)
+		score, reason := judge(parsed)
 		res := ReleaseResult{
 			SearchResult: r,
+			Parsed:       parsed,
 			Format:       parsed.Format,
-			Score:        score(parsed),
+			Score:        score,
 		}
 		switch {
-		case res.Score < 0:
+		case score < 0:
 			res.Rejected = true
-			res.Reason = "format not accepted by the quality profile"
+			res.Reason = reason
 		case parsed.Collection:
 			res.Rejected = true
 			res.Reason = "collection or box set"

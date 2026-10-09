@@ -4,6 +4,7 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import { releaseTypeLabel, releaseYear, type Release } from "@lib/music-books";
+	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One release in an artist row. A cover with no pill is complete; the pill
@@ -33,7 +34,7 @@
 	title={r.title}
 >
 	<div class="relative overflow-hidden rounded-md transition group-hover/tile:brightness-110">
-		<ReleaseCover src={r.cover_url} dim={up || none} dashed={up} />
+		<ReleaseCover src={albumPosterUrl(r.id)} dim={up || none} dashed={up} />
 		{#if badge}
 			<span class="absolute left-1.5 top-1.5">
 				<LabelPill token={badge.token} label={badge.label} live={badge.live} />

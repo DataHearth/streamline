@@ -7,6 +7,7 @@ import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
 import { formatDate } from "./dates";
 import { formatBytes } from "./format";
+import { artistPosterUrl, authorPosterUrl } from "./posters";
 
 export type MediaState = "available" | "wanted" | "downloading";
 
@@ -23,7 +24,7 @@ export type ArtistMonitor = "all" | "future" | "manual" | "none";
 // they are an artist in the music library, `shelf` when they write books in
 // it (the author name the shelf filters by); either makes them a link.
 // Providers have photos for artists and authors, rarely for anyone else.
-export type Person = { name: string; photo_url?: string; artist_id?: number; shelf?: string };
+export type Person = { name: string; artist_id?: number; author_id?: number; shelf?: string };
 
 // A group's line-up as MusicBrainz dates it. `to` is set for a former member.
 export type Member = Person & { instruments: string[]; from: number; to?: number };
@@ -62,7 +63,6 @@ export type Release = {
 	size?: number;
 	duration?: number;
 	progress?: number;
-	cover_url: string;
 	// Detail only; the list leaves them out.
 	tracks?: Track[];
 	mbid?: string;
@@ -86,7 +86,6 @@ export type Artist = {
 	origin?: string;
 	since?: number;
 	overview?: string;
-	photo_url: string;
 	monitor: ArtistMonitor;
 	// A music or book profile name; empty is the server default.
 	quality_profile?: string;
@@ -160,7 +159,6 @@ export type Book = {
 	genre?: string;
 	first_published: number;
 	overview?: string;
-	cover_url: string;
 	status: MediaState;
 	monitor: BookMonitor;
 	// A music or book profile name; empty is the server default.
@@ -173,9 +171,10 @@ export type Book = {
 };
 
 export type Volume = {
+	// The Book whose poster is the volume's cover.
+	id: number;
 	number: number;
 	status: MediaState | "upcoming";
-	cover_url: string;
 	release_date?: string;
 };
 
@@ -194,7 +193,6 @@ export type BookSeries = {
 	ongoing: boolean;
 	since: number;
 	overview?: string;
-	cover_url: string;
 	monitor: SeriesMonitor;
 	// A music or book profile name; empty is the server default.
 	quality_profile?: string;
@@ -336,6 +334,17 @@ export function defaultRelease(releases: Release[]): Release | undefined {
 }
 
 // ── People helpers ───────────────────────────────────────────────────────
+// The API sends ids, never photo URLs. A person has art only when they are an
+// artist in the library, or a book creator with an author row; anyone else
+// gets the monogram.
+const CREATOR_ROLES: BookRole[] = ["author", "writer", "artist"];
+
+export function personPhoto(p: Person, role?: BookRole): string | undefined {
+	if (p.artist_id) return artistPosterUrl(p.artist_id);
+	if (p.author_id && role && CREATOR_ROLES.includes(role)) return authorPosterUrl(p.author_id);
+	return undefined;
+}
+
 export function personHref(p: Person): string | undefined {
 	if (p.artist_id) return `/music/${p.artist_id}`;
 	if (p.shelf) return `/books?author=${encodeURIComponent(p.shelf)}`;
@@ -490,7 +499,7 @@ export function bookPeople(credits: BookCredit[], editions: Edition[] = [], inUs
 	for (const e of sorted) {
 		const known = (name: string): Person => {
 			const m = makers.get(name);
-			return m ? { name, photo_url: m.photo_url, shelf: m.shelf } : { name };
+			return m ? { name, artist_id: m.artist_id, author_id: m.author_id, shelf: m.shelf } : { name };
 		};
 		if (e.translator) add(known(e.translator), "translator", e.language);
 		if (e.narrator) add(known(e.narrator), "narrator", e.language);

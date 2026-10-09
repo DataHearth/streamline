@@ -10,6 +10,7 @@
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
 	import { qualityNote, releaseFacts, releaseGroups, releasePill, releaseTypeLabel, releaseYear, type Release, type Track } from "@lib/music-books";
+	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone shape of the discography, the way SeasonAccordion is for seasons:
@@ -54,7 +55,7 @@
 		>
 			<div class="w-12 shrink-0">
 				<ReleaseCover
-					src={r.cover_url}
+					src={albumPosterUrl(r.id)}
 					dim={up || (r.status === "wanted" && r.tracks_have === 0)}
 					dashed={up}
 					class="rounded"

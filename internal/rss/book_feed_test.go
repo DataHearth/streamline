@@ -104,6 +104,10 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		Title:    "Author Name - Book Title (2015) M4B",
 		Category: "3030",
 	}
+	ratedAudioItem := indexer.SearchResult{
+		Title:    "Author Name - Book Title (2015) M4B 128kbps",
+		Category: "3030",
+	}
 
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -283,8 +287,21 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 			books.EXPECT().GrabBookRelease(mock.Anything, uint32(1), mock.Anything).
 				Return(nil).Once()
 			expectFlag(downloadrecord.BookKindAudiobook)
-			upgrade(heldBook(mediafile.BookKindAudiobook, "M4B", 32000), audioItem)
+			upgrade(
+				heldBook(mediafile.BookKindAudiobook, "M4B", 32000),
+				ratedAudioItem,
+			)
 		})
+
+		It(
+			"does not upgrade a folder under the floor to a release stating no rate",
+			func() {
+				upgrade(
+					heldBook(mediafile.BookKindAudiobook, "M4B", 32000),
+					audioItem,
+				)
+			},
+		)
 
 		It("leaves a healthy audiobook at the preferred format alone", func() {
 			upgrade(heldBook(mediafile.BookKindAudiobook, "M4B", 128000), audioItem)

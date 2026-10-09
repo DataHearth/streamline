@@ -37,6 +37,9 @@ var (
 	// ErrAlreadyInLibrary is what an adder returns for an item the library
 	// already holds; approving then only has to mark the request available.
 	ErrAlreadyInLibrary = errors.New("request: already in library")
+	// ErrUnavailable is what an adder returns for a medium the library cannot
+	// hold yet; Approve leaves the request pending.
+	ErrUnavailable = errors.New("request: adding this item is not available yet")
 )
 
 // Monitor values an approval adds with. A requester never chooses one.

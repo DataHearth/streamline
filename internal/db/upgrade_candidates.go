@@ -24,10 +24,7 @@ func (db *DB) ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, err
 			album.Monitored(true),
 			album.HasTracksWith(track.HasMediaFiles()),
 			album.Not(album.HasDownloadRecordsWith(
-				downloadrecord.StatusIn(
-					downloadrecord.StatusDownloading,
-					downloadrecord.StatusImporting,
-				),
+				downloadrecord.StatusIn(inFlightRecordStatuses...),
 			)),
 		).
 		WithArtist().
@@ -68,10 +65,7 @@ func (db *DB) ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error
 			book.HasMediaFilesWith(mediafile.BookKindEQ(kind)),
 			book.Not(book.HasDownloadRecordsWith(
 				downloadrecord.BookKindEQ(rec),
-				downloadrecord.StatusIn(
-					downloadrecord.StatusDownloading,
-					downloadrecord.StatusImporting,
-				),
+				downloadrecord.StatusIn(inFlightRecordStatuses...),
 			)),
 		)
 	}

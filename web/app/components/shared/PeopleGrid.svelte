@@ -4,7 +4,7 @@
 		name: string;
 		role?: string;
 		note?: string;
-		photo_url?: string;
+		photo?: string;
 		href?: string;
 		// A former member: there, but no longer in the line-up.
 		dim?: boolean;
@@ -35,8 +35,8 @@
 </script>
 
 {#snippet face(p: PersonTile, small: boolean)}
-	{#if p.photo_url}
-		<Img src={p.photo_url} alt="" loading="lazy" class="h-full w-full object-cover" />
+	{#if p.photo}
+		<Img src={p.photo} alt="" loading="lazy" class="h-full w-full object-cover" />
 	{:else}
 		<span class={cn("grid h-full w-full place-items-center font-mono font-bold text-fg-faint", small ? "text-[12px]" : "text-2xl")}>
 			{initials(p.name)}

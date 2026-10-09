@@ -397,15 +397,19 @@ func notFound(err error) error {
 	return err
 }
 
-// AlbumRelease is one indexer result that fits the artist's quality profile.
+// AlbumRelease is one indexer result judged against the artist's quality
+// profile. A rejected one carries the reason and sorts after every accepted one.
 type AlbumRelease struct {
-	Result indexer.SearchResult
-	Format string
-	Score  int
+	Result   indexer.SearchResult
+	Parsed   library.ParsedMusicRelease
+	Format   string
+	Score    int
+	Rejected bool
+	Reason   string
 }
 
-// SearchAlbumReleases queries the indexers for the album and returns the
-// results the artist's profile accepts, best first.
+// SearchAlbumReleases queries the indexers for the album and returns every
+// result, accepted ones first and best first, rejected ones flagged with why.
 func (s *Service) SearchAlbumReleases(
 	ctx context.Context,
 	albumID uint32,
@@ -443,15 +447,20 @@ func (s *Service) SearchAlbumReleases(
 	releases := make([]AlbumRelease, 0, len(results))
 	for _, r := range results {
 		parsed := library.ParseMusicRelease(r.Title)
-		score := library.ScoreMusicRelease(parsed, profile, library.MusicScopeAlbum)
-		if score < 0 {
-			continue
-		}
+		score, reason := library.JudgeMusicRelease(
+			parsed, profile, library.MusicScopeAlbum)
 		releases = append(releases, AlbumRelease{
-			Result: r, Format: parsed.Source, Score: score,
+			Result: r, Parsed: parsed, Format: parsed.Source,
+			Score: max(score, 0), Rejected: score < 0, Reason: reason,
 		})
 	}
 	slices.SortStableFunc(releases, func(x, y AlbumRelease) int {
+		if x.Rejected != y.Rejected {
+			if x.Rejected {
+				return 1
+			}
+			return -1
+		}
 		if x.Score != y.Score {
 			return y.Score - x.Score
 		}

@@ -23,10 +23,12 @@
 		kindLabel,
 		languageName,
 		personHref,
+		personPhoto,
 		volumeLabel,
 		type BookSeries,
 		type SeriesMonitor,
 	} from "@lib/music-books";
+	import { bookPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Where a stacked BD or manga card leads: monitoring and edition are set
@@ -83,11 +85,13 @@
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
 
+	// The first volume's poster is the series' cover.
+	let coverSrc = $derived(s?.volumes[0] ? bookPosterUrl(s.volumes[0].id) : undefined);
 	let people = $derived(
 		(s ? bookPeople(s.contributors ?? []) : []).map((x) => ({
 			key: `${x.role}:${x.person.name}`,
 			name: x.person.name,
-			photo_url: x.person.photo_url,
+			photo: personPhoto(x.person, x.role),
 			href: personHref(x.person),
 			role: bookRoleLabel(x.role),
 			note: x.languages.map((l) => languageName(l, true)).join(", "),
@@ -144,7 +148,7 @@
 {:else}
 	<div class={cn(canEdit && wanted > 0 && "pb-24 md:pb-0")}>
 		<MediaHero
-			backdrop={s.cover_url}
+			backdrop={coverSrc}
 			backHref="/books"
 			backLabel={i18n.books_label()}
 			cols="md:grid-cols-[170px_1fr] lg:grid-cols-[200px_1fr]"
@@ -157,7 +161,7 @@
 		>
 			{#snippet art()}
 				<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-					<BookCover src={s.cover_url} alt={i18n.common_poster_alt({ title: s.title })} />
+					<BookCover src={coverSrc} alt={i18n.common_poster_alt({ title: s.title })} />
 				</div>
 			{/snippet}
 			{#snippet pills()}
@@ -267,7 +271,7 @@
 					{@const missing = v.status === "wanted"}
 					<li>
 						<div class="relative">
-							<BookCover src={v.cover_url} dim={up || missing} dashed={up} class="rounded-md" />
+							<BookCover src={bookPosterUrl(v.id)} dim={up || missing} dashed={up} class="rounded-md" />
 							{#if up && v.release_date}
 								<span class="absolute bottom-1.5 left-1.5"><LabelPill token="unaired" label={formatDateShort(v.release_date)} /></span>
 							{:else if missing}

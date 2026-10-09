@@ -155,7 +155,8 @@ func (s *Server) ApproveRequest(
 		return ApproveRequest429JSONResponse{
 			RateLimitedJSONResponse: errRateLimited(err),
 		}, nil
-	case errors.Is(err, book.ErrNotConfigured):
+	case errors.Is(err, book.ErrNotConfigured),
+		errors.Is(err, requestsvc.ErrUnavailable):
 		return ApproveRequest503JSONResponse{
 			ServiceUnavailableJSONResponse: errServiceUnavailable(err.Error()),
 		}, nil
@@ -321,6 +322,13 @@ func (s *Server) GetRequestMetadata(
 		resp, err := s.GetMusicArtistLookup(ctx, GetMusicArtistLookupRequestObject{
 			Mbid: r.MediaMbid,
 		})
+		if errors.Is(err, errNotImplemented) {
+			return GetRequestMetadata503JSONResponse{
+				ServiceUnavailableJSONResponse: errServiceUnavailable(
+					"artist metadata is not available yet",
+				),
+			}, nil
+		}
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
 				InternalErrorJSONResponse: errInternal(ctx, err),
@@ -360,6 +368,13 @@ func (s *Server) GetRequestMetadata(
 			HardcoverId: r.MediaID,
 			Params:      GetBookLookupParams{Type: lookupType},
 		})
+		if errors.Is(err, errNotImplemented) {
+			return GetRequestMetadata503JSONResponse{
+				ServiceUnavailableJSONResponse: errServiceUnavailable(
+					"book metadata is not available yet",
+				),
+			}, nil
+		}
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
 				InternalErrorJSONResponse: errInternal(ctx, err),

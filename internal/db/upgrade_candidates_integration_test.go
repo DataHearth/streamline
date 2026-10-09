@@ -117,6 +117,22 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 			},
 		)
 
+		It("drops an album a held record already covers", func() {
+			a := albumByMBID("rg-1")
+			tracks := client.Album.GetX(ctx, a.ID).QueryTracks().AllX(ctx)
+			client.MediaFile.Create().SetPath("/x/a.mp3").SetSize(1).
+				SetQuality("high").
+				SetFormat("mp3").SetTrackID(tracks[0].ID).SaveX(ctx)
+			client.DownloadRecord.Create().SetTitle("held").
+				SetAlbumID(a.ID).SetSavePath("/dl").
+				SetStatus(downloadrecord.StatusHeld).SaveX(ctx)
+
+			got, err := store.ListUpgradeCandidateAlbums(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
+
 		It(
 			"flags the newest downloading record of the album and nothing else",
 			func() {
@@ -207,6 +223,18 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 				Expect(got).To(BeEmpty())
 			},
 		)
+
+		It("drops a book whose slot has a held record", func() {
+			addFile(mediafile.BookKindAudiobook, "MP3")
+			client.DownloadRecord.Create().SetTitle("x").SetBookID(bk.ID).
+				SetBookKind(downloadrecord.BookKindAudiobook).SetSavePath("/dl").
+				SetStatus(downloadrecord.StatusHeld).SaveX(ctx)
+
+			got, err := store.ListUpgradeCandidateBooks(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		})
 
 		It("keeps a book whose other slot is the one in flight", func() {
 			addFile(mediafile.BookKindEbook, "AZW3")

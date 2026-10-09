@@ -19,6 +19,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -128,6 +129,7 @@ func (s *Service) commitBook(
 			Quality:  adoptedBookQuality(ext),
 			Format:   ext,
 			Source:   entmediafile.SourceOrphan,
+			Probe:    s.probeAudiobookFile(ctx, kind, p),
 		}); cerr != nil {
 			return commitBookFail(span, "record file "+p, cerr, target.ID)
 		}
@@ -249,6 +251,31 @@ func knownAuthorID(sc *ent.ImportScanBook, bookHC uint32) uint32 {
 		}
 	}
 	return 0
+}
+
+// probeAudiobookFile measures an adopted audiobook file so its bit rate is on
+// the row, which is what an upgrade is later compared against. Nil leaves
+// probed_at unset for the backfill.
+func (s *Service) probeAudiobookFile(
+	ctx context.Context,
+	kind entmediafile.BookKind,
+	path string,
+) *ffmpeg.Info {
+	if kind != entmediafile.BookKindAudiobook || !s.probing() {
+		return nil
+	}
+	info, err := s.prober.ProbeAudio(ctx, path)
+	if err != nil {
+		slog.WarnContext(ctx, "book adopt: probe failed, bit rate not recorded",
+			"file", filepath.Base(path), "error", err)
+		return nil
+	}
+	return &ffmpeg.Info{
+		DurationSec: info.DurationSec,
+		AudioCodec:  info.Codec,
+		AudioTracks: 1,
+		BitrateBPS:  info.BitrateKbps * 1000,
+	}
 }
 
 // adoptedBookQuality is the format recorded for an adopted book file: the

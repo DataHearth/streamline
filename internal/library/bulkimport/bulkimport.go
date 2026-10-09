@@ -11,6 +11,7 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
@@ -90,6 +91,17 @@ type Service struct {
 	seriesPath  string
 	musicmeta   metadata.MusicProvider
 	musicAdder  MusicAdder
+	prober      ffmpeg.Prober
+}
+
+// Option tunes optional collaborators of the bulk-import service.
+type Option func(*Service)
+
+// WithProber lets adoption measure audio files, so an adopted album track gets
+// its real tier and an adopted audiobook its real bit rate. Without it, or with
+// ffmpeg disabled, adoption falls back to what the extension says.
+func WithProber(p ffmpeg.Prober) Option {
+	return func(s *Service) { s.prober = p }
 }
 
 // NewService constructs the bulk-import service.
@@ -107,8 +119,9 @@ func NewService(
 	musicAdder MusicAdder,
 	bookmeta metadata.BookProvider,
 	bookAdder BookAdder,
+	opts ...Option,
 ) *Service {
-	return &Service{
+	s := &Service{
 		store:       store,
 		metadata:    meta,
 		tvmeta:      tvmeta,
@@ -123,6 +136,10 @@ func NewService(
 		bookmeta:    bookmeta,
 		bookAdder:   bookAdder,
 	}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // AbortInflight is the boot-time helper. Called from wire.go before the HTTP server starts.

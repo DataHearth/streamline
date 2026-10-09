@@ -176,6 +176,10 @@ func (s *Server) SetDefaultBookQualityProfile(
 		return SetDefaultBookQualityProfile404JSONResponse{
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
+	case errors.Is(err, config.ErrBookKindUnknown):
+		return SetDefaultBookQualityProfile422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
 	case configLocked(err):
 		return SetDefaultBookQualityProfile403JSONResponse{
 			ForbiddenJSONResponse: forbiddenResp(err.Error()),

@@ -70,7 +70,8 @@ func EbookReplaces(p EbookProfile, have, incoming string) bool {
 
 // AudiobookReplaces is EbookReplaces over the audiobook ladder, and also true
 // when the held folder's measured rate is known and under the floor while the
-// incoming release is acceptable.
+// incoming release states a rate at or above it. A release that states none
+// could measure under the floor again, so it only replaces by the ladder.
 func AudiobookReplaces(
 	p AudiobookProfile,
 	have string,
@@ -84,7 +85,8 @@ func AudiobookReplaces(
 	if ScoreAudiobook(incoming, incomingKbps, p) < 0 {
 		return false
 	}
-	if haveKbps > 0 && haveKbps < uint32(p.MinBitrate) {
+	floor := uint32(p.MinBitrate)
+	if haveKbps > 0 && haveKbps < floor && incomingKbps >= floor {
 		return true
 	}
 	return ladderReplaces(

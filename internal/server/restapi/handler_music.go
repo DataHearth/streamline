@@ -3,8 +3,10 @@ package restapi
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"slices"
 
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -145,6 +147,14 @@ func (s *Server) GrabMusicAlbumRelease(
 		return GrabMusicAlbumRelease500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
+	}
+	if replaceExisting(request.Body) {
+		if err := s.store.SetLiveAlbumRecordReplaceMode(
+			ctx, request.Id, downloadrecord.ReplaceModeAll,
+		); err != nil {
+			slog.WarnContext(ctx, "grab album: set replace mode failed",
+				"album.id", request.Id, "error", err)
+		}
 	}
 	return GrabMusicAlbumRelease202Response{}, nil
 }

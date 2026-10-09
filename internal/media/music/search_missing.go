@@ -3,6 +3,7 @@ package music
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -86,11 +87,14 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		slog.WarnContext(ctx, "music missing-search: stamp last_search_at failed",
 			"album.id", a.ID, "error", err)
 	}
-	if len(releases) == 0 {
+	pick := slices.IndexFunc(releases, func(r AlbumRelease) bool {
+		return !r.Rejected
+	})
+	if pick < 0 {
 		return false
 	}
 
-	if err := s.GrabAlbumRelease(ctx, a.ID, releases[0].Result); err != nil {
+	if err := s.GrabAlbumRelease(ctx, a.ID, releases[pick].Result); err != nil {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music missing-search: grab failed",
 			"album.id", a.ID, "error", err)

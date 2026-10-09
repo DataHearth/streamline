@@ -32,11 +32,13 @@
 		kindLabel,
 		languageName,
 		personHref,
+		personPhoto,
 		type Book,
 		type BookFormat,
 		type BookMonitor,
 		type Edition,
 	} from "@lib/music-books";
+	import { bookPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let id = $state("");
@@ -140,7 +142,7 @@
 			? bookPeople(book.contributors ?? [], book.editions, [inUse.ebook, inUse.audiobook]).map((x) => ({
 					key: `${x.role}:${x.person.name}`,
 					name: x.person.name,
-					photo_url: x.person.photo_url,
+					photo: personPhoto(x.person, x.role),
 					href: personHref(x.person),
 					role: bookRoleLabel(x.role),
 					note: x.languages.map((l) => languageName(l, true)).join(", "),
@@ -197,7 +199,7 @@
 	</div>
 {:else}
 	<MediaHero
-		backdrop={book.cover_url}
+		backdrop={bookPosterUrl(book.id)}
 		backHref="/books"
 		backLabel={i18n.books_label()}
 		cols="md:grid-cols-[190px_1fr] lg:grid-cols-[240px_1fr]"
@@ -210,7 +212,7 @@
 	>
 		{#snippet art()}
 			<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-				<BookCover src={book.cover_url} alt={i18n.common_poster_alt({ title: book.title })} />
+				<BookCover src={bookPosterUrl(book.id)} alt={i18n.common_poster_alt({ title: book.title })} />
 			</div>
 		{/snippet}
 		{#snippet pills()}

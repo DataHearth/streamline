@@ -224,6 +224,10 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			return nil, fmt.Errorf("create library path %s: %w", p, err)
 		}
 	}
+	// Constructed once and kept: bulk import, the media-probe backfill job and
+	// the restapi Server (system-info + config/ffmpeg endpoints) reuse this
+	// same prober.
+	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	libSvc := library.NewImportService()
 	bulkImportSvc := bulkimport.NewService(
 		store,
@@ -239,6 +243,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		musicSvc,
 		bookMeta,
 		bookSvc,
+		bulkimport.WithProber(prober),
 	)
 	hygieneSvc := hygiene.New(store, tmdb, tvdb, &cfg.Library)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {
@@ -265,10 +270,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	)
 	pathMigrations := pathmigrate.NewService(store)
 	pathMigrations.WarnOnDrift(ctx)
-	// Constructed once and kept: the media-probe backfill job and the
-	// restapi Server (system-info + config/ffmpeg endpoints) reuse this same
-	// prober.
-	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	hygieneSvc.Probe = prober
 	imp := importer.NewWorker(importer.Deps{
 		DB:          store,
@@ -351,7 +352,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		movieSvc,
 		tvSvc,
 		artistRequestAdder{svc: musicSvc},
-		bookRequestAdder{client: dbClient},
+		bookRequestAdder{
+			client: dbClient,
+			store:  store,
+			svc:    bookSvc,
+			meta:   bookMeta,
+		},
 	)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)

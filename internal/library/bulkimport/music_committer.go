@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
@@ -107,7 +108,7 @@ func (s *Service) commitAlbum(
 		return commitAlbumFail(span, "resolve album", err, 0)
 	}
 
-	plan, unmatched, adopted, uncovered, err := planAlbumFiles(
+	plan, unmatched, adopted, uncovered, err := s.planAlbumFiles(
 		ctx,
 		sc.FolderPath,
 		alb,
@@ -216,7 +217,7 @@ func (s *Service) resolveArtist(
 // holds at the same path (an idempotent re-scan); unmatched counts files that
 // bind to no track or to a track another file in the folder already claimed;
 // uncovered counts tracks left without any file once the plan lands.
-func planAlbumFiles(
+func (s *Service) planAlbumFiles(
 	ctx context.Context, folder string, alb *ent.Album,
 ) ([]db.AdoptAlbumFile, int, int, int, error) {
 	entries, err := os.ReadDir(folder)
@@ -276,7 +277,7 @@ func planAlbumFiles(
 		plan = append(plan, db.AdoptAlbumFile{
 			TrackID: tr.ID,
 			Path:    path,
-			Quality: adoptedTier(path),
+			Quality: s.adoptedTier(ctx, path),
 			Format:  info.Format,
 			Size:    stat.Size(),
 		})
@@ -284,14 +285,30 @@ func planAlbumFiles(
 	return plan, unmatched, adopted, len(alb.Edges.Tracks) - len(covered), nil
 }
 
-// adoptedTier is the tier recorded for an adopted file. Nothing is probed, so
-// only the extension can speak: a lossless one is lossless, never hi-res, and
-// every other file is left without a tier rather than guessed at.
-func adoptedTier(path string) string {
+// adoptedTier is the tier recorded for an adopted file: measured when ffprobe
+// is available, otherwise read off the extension, where a lossless one is
+// lossless, never hi-res, and every other file is left without a tier rather
+// than guessed at.
+func (s *Service) adoptedTier(ctx context.Context, path string) string {
+	if s.probing() {
+		info, err := s.prober.ProbeAudio(ctx, path)
+		if err == nil {
+			if t, ok := quality.AudioTierOf(library.AudioFactsFromProbe(info)); ok {
+				return t.String()
+			}
+		} else {
+			slog.WarnContext(ctx, "music adopt: probe failed, tier from extension",
+				"file", filepath.Base(path), "error", err)
+		}
+	}
 	if strings.EqualFold(filepath.Ext(path), ".flac") {
 		return quality.TierLossless.String()
 	}
 	return ""
+}
+
+func (s *Service) probing() bool {
+	return s.prober != nil && s.prober.Available() && config.Get().FFmpeg.Enabled
 }
 
 func commitAlbumFail(

@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/sync/singleflight"
+	"golang.org/x/time/rate"
 
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -63,6 +64,11 @@ const (
 	maxCacheEntries = 2000
 	pruneBatch      = 200
 	maxRedirects    = 5
+	// fetchRate and fetchBurst bound the outbound image fetches: any session
+	// user can ask for unlimited well-formed keys, and each unseen one costs an
+	// upstream request.
+	fetchRate  = 10
+	fetchBurst = 20
 )
 
 var (
@@ -114,7 +120,8 @@ type Service struct {
 	sources *Sources
 	client  *http.Client
 
-	flight singleflight.Group
+	flight  singleflight.Group
+	limiter *rate.Limiter
 
 	mu     sync.Mutex
 	failed map[sourceKey]time.Time
@@ -132,6 +139,7 @@ func New(d Deps) (*Service, error) {
 		deezer:  d.Deezer,
 		sources: d.Sources,
 		failed:  make(map[sourceKey]time.Time),
+		limiter: rate.NewLimiter(fetchRate, fetchBurst),
 	}
 	if s.sources == nil {
 		s.sources = defaultSources
@@ -213,23 +221,24 @@ func (s *Service) Serve(w http.ResponseWriter, r *http.Request, kind, key string
 	}
 
 	err := s.resolve(ctx, k, key)
-	switch {
-	case err == nil:
+	if err == nil {
 		record("miss")
 		serveFile(w, r, path)
-	case errors.Is(err, errNoArt):
-		record("none")
-		http.NotFound(w, r)
-	default:
-		// A refetch that fails still has the stale copy to show.
-		if _, statErr := os.Stat(path); statErr == nil {
-			record("stale")
-			serveFile(w, r, path)
-			return
-		}
-		record("error")
-		http.NotFound(w, r)
+		return
 	}
+	// A refetch that fails, or a key remembered as failed, still has the
+	// stale copy to show.
+	if _, statErr := os.Stat(path); statErr == nil {
+		record("stale")
+		serveFile(w, r, path)
+		return
+	}
+	if errors.Is(err, errNoArt) {
+		record("none")
+	} else {
+		record("error")
+	}
+	http.NotFound(w, r)
 }
 
 func (s *Service) serveLibrary(
@@ -318,6 +327,16 @@ func (s *Service) markFailed(k sourceKey) {
 			}
 		}
 	}
+	for len(s.failed) >= maxCacheEntries {
+		var oldest sourceKey
+		var oldestAt time.Time
+		for key, at := range s.failed {
+			if oldestAt.IsZero() || at.Before(oldestAt) {
+				oldest, oldestAt = key, at
+			}
+		}
+		delete(s.failed, oldest)
+	}
 	s.failed[k] = time.Now()
 }
 
@@ -334,6 +353,11 @@ func (s *Service) fetch(ctx context.Context, kind Kind, key string) error {
 			attribute.String("outcome", outcome),
 		))
 	}()
+
+	if err := s.limiter.Wait(ctx); err != nil {
+		outcome = "error"
+		return otelx.RecordSpanError(span, err)
+	}
 
 	src, err := s.imageURL(ctx, kind, key)
 	if err != nil {

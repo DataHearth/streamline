@@ -307,7 +307,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 
 	Describe("SearchAlbumReleases", func() {
 		It(
-			"scores, drops rejects and orders best first with seeders as tiebreak",
+			"scores, flags rejects last and orders best first with seeders as tiebreak",
 			func() {
 				artist := addSeeded()
 				al := artist.Edges.Albums[0]
@@ -343,9 +343,13 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 					"Nirvana - Nevermind (1991) [FLAC] rip",
 					"Nirvana - Nevermind (1991) [FLAC]",
 					"Nirvana - Nevermind (1991) [MP3 320]",
+					"Nirvana - Nevermind (1991) [MP3 192]",
 				}))
 				Expect(got[0].Format).To(Equal("FLAC 24-bit"))
 				Expect(got[0].Score).To(BeNumerically(">", got[3].Score))
+				Expect(got[3].Rejected).To(BeFalse())
+				Expect(got[4].Rejected).To(BeTrue())
+				Expect(got[4].Reason).NotTo(BeEmpty())
 			},
 		)
 

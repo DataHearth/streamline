@@ -30,6 +30,7 @@
 		defaultRelease,
 		memberYears,
 		personHref,
+		personPhoto,
 		reachRole,
 		releasesCount,
 		tracksCount,
@@ -40,6 +41,7 @@
 		type Release,
 		type Track,
 	} from "@lib/music-books";
+	import { artistPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let id = $state("");
@@ -169,7 +171,7 @@
 	const memberTile = (m: Member): PersonTile => ({
 		key: m.name,
 		name: m.name,
-		photo_url: m.photo_url,
+		photo: personPhoto(m),
 		href: personHref(m),
 		role: m.instruments.join(", "),
 		note: memberYears(m),
@@ -178,7 +180,7 @@
 	const reachTile = (x: Reach, role: string): PersonTile => ({
 		key: x.person.name,
 		name: x.person.name,
-		photo_url: x.person.photo_url,
+		photo: personPhoto(x.person),
 		href: personHref(x.person),
 		role,
 		note: releasesCount(x.releases),
@@ -243,7 +245,7 @@
 {:else}
 	<div class={cn(canEdit && "pb-24 md:pb-0")}>
 		<MediaHero
-			backdrop={artist.photo_url}
+			backdrop={artistPosterUrl(artist.id)}
 			backHref="/music"
 			backLabel={i18n.music_label()}
 			cols="md:grid-cols-[180px_1fr] lg:grid-cols-[220px_1fr]"
@@ -258,7 +260,7 @@
 					<div class="absolute inset-0 grid place-items-center text-fg-faint">
 						<UserRound class="h-1/3 w-1/3" aria-hidden="true" />
 					</div>
-					<Poster src={artist.photo_url} alt="" loading="eager" class="relative h-full w-full object-cover" />
+					<Poster src={artistPosterUrl(artist.id)} alt="" loading="eager" class="relative h-full w-full object-cover" />
 				</div>
 			{/snippet}
 			{#snippet pills()}
