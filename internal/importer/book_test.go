@@ -94,12 +94,12 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		DeferCleanup(client.Close)
 		w = NewWorker(Deps{DB: db.New(client), Library: library.NewImportService()})
 
-		a := client.Author.Create().
-			SetHardcoverID(1).SetName("Brandon Sanderson").SaveX(ctx)
 		b = client.Book.Create().
 			SetHardcoverID(2).SetTitle("Elantris").
 			SetReleaseDate(time.Date(2005, 4, 21, 0, 0, 0, 0, time.UTC)).
-			SetAuthor(a).
+			SetAuthorName("Brandon Sanderson").
+			SetReleaseYear(2005).
+			SetLastRefreshedAt(time.Now()).
 			SetEbookStatus(book.EbookStatusDownloading).
 			SetAudiobookStatus(book.AudiobookStatusDownloading).
 			SaveX(ctx)
@@ -301,6 +301,88 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 
 		Expect(run(id)).To(MatchError(library.ErrDestExists))
 
+		Expect(reload().EbookStatus).To(Equal(book.EbookStatusAvailable))
+	})
+	Describe("a book not ready to be named", func() {
+		It("parks the record held while the book has not been hydrated", func() {
+			client.Book.UpdateOneID(b.ID).ClearLastRefreshedAt().ExecX(ctx)
+			src := filepath.Join(tmp, "dl")
+			write(src, "x.epub", "epub")
+			id := record(
+				downloadrecord.BookKindEbook,
+				src,
+				downloadrecord.ReplaceModeNone,
+			)
+
+			Expect(run(id)).To(Succeed())
+
+			rec := client.DownloadRecord.GetX(ctx, id)
+			Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
+			Expect(
+				rec.HoldReasons,
+			).To(ContainElement(HaveField("Check", "metadata")))
+			Expect(client.MediaFile.Query().CountX(ctx)).To(BeZero())
+			Expect(ebooks).NotTo(BeADirectory())
+		})
+
+		It("parks the record held when the book has no author yet", func() {
+			client.Book.UpdateOneID(b.ID).SetAuthorName("").ExecX(ctx)
+			src := filepath.Join(tmp, "dl")
+			write(src, "x.epub", "epub")
+			id := record(
+				downloadrecord.BookKindEbook,
+				src,
+				downloadrecord.ReplaceModeNone,
+			)
+
+			Expect(run(id)).To(Succeed())
+
+			Expect(client.DownloadRecord.GetX(ctx, id).Status).
+				To(Equal(downloadrecord.StatusHeld))
+			Expect(ebooks).NotTo(BeADirectory())
+		})
+	})
+
+	It("names a file from the slot edition and the profile of its series", func() {
+		series := client.BookSeries.Create().
+			SetHardcoverID(7).SetTitle("Mistborn").SetQualityProfile("e").SaveX(ctx)
+		ed := client.BookEdition.Create().
+			SetBook(b).SetHardcoverEditionID(70).SetLanguage("fr").
+			SetTitle("L'Empire ultime").SetFormat("ebook").SaveX(ctx)
+		client.Book.UpdateOneID(b.ID).
+			SetSeries(series).SetSeriesPosition(1).SetEbookEdition(ed).ExecX(ctx)
+		src := filepath.Join(tmp, "dl")
+		write(src, "x.epub", "epub")
+		id := record(
+			downloadrecord.BookKindEbook,
+			src,
+			downloadrecord.ReplaceModeNone,
+		)
+
+		Expect(run(id)).To(Succeed())
+
+		Expect(filepath.Join(
+			ebooks, "Brandon Sanderson", "Mistborn", "Mistborn - Vol. 01.epub",
+		)).To(BeAnExistingFile())
+	})
+
+	It("clears the replacing language once the replacement is placed", func() {
+		old := write(ebooks, "Brandon Sanderson/Elantris (2005).epub", "old")
+		client.MediaFile.Create().
+			SetPath(old).SetSize(3).SetQuality("EPUB").SetFormat("epub").
+			SetBookID(b.ID).SetBookKind(mediafile.BookKindEbook).SaveX(ctx)
+		client.Book.UpdateOneID(b.ID).SetEbookReplacingLanguage("en").ExecX(ctx)
+		src := filepath.Join(tmp, "dl")
+		write(src, "x.epub", "new")
+		id := record(
+			downloadrecord.BookKindEbook,
+			src,
+			downloadrecord.ReplaceModeAll,
+		)
+
+		Expect(run(id)).To(Succeed())
+
+		Expect(reload().EbookReplacingLanguage).To(BeEmpty())
 		Expect(reload().EbookStatus).To(Equal(book.EbookStatusAvailable))
 	})
 })

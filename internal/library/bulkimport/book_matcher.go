@@ -16,11 +16,10 @@ const scoreAuthorAgrees = 2
 
 // BookClassification is the book analogue of ShowClassification.
 type BookClassification struct {
-	Kind              entimportscanbook.Classification
-	BookHardcoverID   uint32
-	AuthorHardcoverID uint32
-	ExistingBookID    uint32
-	Candidates        []schema.ScannedBookCandidate
+	Kind            entimportscanbook.Classification
+	BookHardcoverID uint32
+	ExistingBookID  uint32
+	Candidates      []schema.ScannedBookCandidate
 }
 
 // ClassifyBook ranks Hardcover search hits for a parsed title and author.
@@ -57,23 +56,20 @@ func ClassifyBook(
 			Candidates: cands,
 		}
 	}
-	return classifyResolvedBook(
-		m.HardcoverID, m.AuthorHardcoverID, bookCandidate(m), indexed,
-	)
+	return classifyResolvedBook(m.HardcoverID, bookCandidate(m), indexed)
 }
 
 // classifyResolvedBook is the outcome once a single Hardcover book is known,
 // whether by ISBN or by a sole title-and-author match.
 func classifyResolvedBook(
-	bookID, authorID uint32,
+	bookID uint32,
 	cand schema.ScannedBookCandidate,
 	indexed map[uint32]uint32,
 ) BookClassification {
 	c := BookClassification{
-		Kind:              entimportscanbook.ClassificationConfirmed,
-		BookHardcoverID:   bookID,
-		AuthorHardcoverID: authorID,
-		Candidates:        []schema.ScannedBookCandidate{cand},
+		Kind:            entimportscanbook.ClassificationConfirmed,
+		BookHardcoverID: bookID,
+		Candidates:      []schema.ScannedBookCandidate{cand},
 	}
 	if id, tracked := indexed[bookID]; tracked {
 		c.Kind = entimportscanbook.ClassificationExisting
@@ -84,11 +80,10 @@ func classifyResolvedBook(
 
 func bookCandidate(h metadata.BookSearchResult) schema.ScannedBookCandidate {
 	return schema.ScannedBookCandidate{
-		BookHardcoverID:   h.HardcoverID,
-		AuthorHardcoverID: h.AuthorHardcoverID,
-		Title:             h.Title,
-		Author:            h.Author,
-		Year:              h.Year,
+		BookHardcoverID: h.HardcoverID,
+		Title:           h.Title,
+		Author:          h.Author,
+		Year:            h.Year,
 	}
 }
 

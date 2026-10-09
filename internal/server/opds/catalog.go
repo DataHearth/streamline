@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/internal/config"
@@ -92,7 +93,10 @@ func (h *Handler) root(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) authors(w http.ResponseWriter, r *http.Request) {
 	authors, err := h.client.Author.Query().
-		Where(author.HasBooksWith(hasEbookFile())).
+		Where(author.HasContributionsWith(
+			creatorRole(),
+			bookcontribution.HasBookWith(hasEbookFile()),
+		)).
 		All(r.Context())
 	if err != nil {
 		h.fail(w, r, "listing OPDS authors failed", err)
@@ -143,7 +147,10 @@ func (h *Handler) authorBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	books, err := h.ebookBooks().
-		Where(book.HasAuthorWith(author.IDEQ(a.ID))).
+		Where(book.HasContributionsWith(
+			creatorRole(),
+			bookcontribution.HasAuthorWith(author.IDEQ(a.ID)),
+		)).
 		Order(ent.Asc(book.FieldSortTitle), ent.Asc(book.FieldTitle)).
 		All(r.Context())
 	if err != nil {
@@ -171,7 +178,7 @@ func (h *Handler) recent(w http.ResponseWriter, r *http.Request) {
 			Order(ent.Desc(mediafile.FieldCreateTime), ent.Desc(mediafile.FieldID)).
 			Limit(page).Offset(offset).
 			WithBook(func(q *ent.BookQuery) {
-				q.WithAuthor().WithMediaFiles(ebookFiles)
+				q.WithContributions(withAuthor).WithMediaFiles(ebookFiles)
 			}).
 			All(ctx)
 		if err != nil {
@@ -226,7 +233,12 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	books, err := h.ebookBooks().
-		Where(book.Or(book.TitleContainsFold(q), book.HasAuthorWith(author.NameContainsFold(q)))).
+		Where(book.Or(
+			book.TitleContainsFold(q),
+			book.HasContributionsWith(
+				bookcontribution.HasAuthorWith(author.NameContainsFold(q)),
+			),
+		)).
 		Order(ent.Asc(book.FieldSortTitle), ent.Asc(book.FieldTitle)).
 		All(r.Context())
 	if err != nil {
@@ -243,6 +255,25 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// creatorRole matches the contributions an author is listed under in the
+// catalog: the people who wrote the book, not those who coloured its pages.
+func creatorRole() predicate.BookContribution {
+	return bookcontribution.RoleIn(
+		bookcontribution.RoleAuthor, bookcontribution.RoleWriter,
+	)
+}
+
+func withAuthor(q *ent.BookContributionQuery) { q.WithAuthor() }
+
+// atomMakers are the roles an entry credits.
+var atomMakers = []bookcontribution.Role{
+	bookcontribution.RoleAuthor,
+	bookcontribution.RoleWriter,
+	bookcontribution.RoleArtist,
+	bookcontribution.RoleColorist,
+	bookcontribution.RoleCover,
+}
+
 func hasEbookFile() predicate.Book {
 	return book.HasMediaFilesWith(mediafile.BookKindEQ(mediafile.BookKindEbook))
 }
@@ -254,7 +285,7 @@ func ebookFiles(q *ent.MediaFileQuery) {
 func (h *Handler) ebookBooks() *ent.BookQuery {
 	return h.client.Book.Query().
 		Where(hasEbookFile()).
-		WithAuthor().
+		WithContributions(withAuthor).
 		WithMediaFiles(ebookFiles)
 }
 
@@ -307,8 +338,13 @@ func bookEntry(bk *ent.Book) *entry {
 			},
 		},
 	}
-	if a := bk.Edges.Author; a != nil {
-		e.Authors = []atomAuthor{{Name: a.Name}}
+	for _, c := range bk.Edges.Contributions {
+		if c.Edges.Author != nil && slices.Contains(atomMakers, c.Role) &&
+			!slices.ContainsFunc(e.Authors, func(a atomAuthor) bool {
+				return a.Name == c.Edges.Author.Name
+			}) {
+			e.Authors = append(e.Authors, atomAuthor{Name: c.Edges.Author.Name})
+		}
 	}
 	if bk.Overview != "" {
 		e.Content = &content{Type: "text", Text: bk.Overview}

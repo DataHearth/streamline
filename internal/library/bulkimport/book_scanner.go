@@ -123,16 +123,15 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 		lookupErrors += errs
 		tally[c.Kind]++
 		queue = append(queue, db.CreateImportScanBookParams{
-			FilePaths:         cand.paths,
-			Slot:              cand.slot,
-			ParsedTitle:       info.Title,
-			ParsedAuthor:      info.Author,
-			ParsedISBN:        info.ISBN,
-			Classification:    c.Kind,
-			BookHardcoverID:   c.BookHardcoverID,
-			AuthorHardcoverID: c.AuthorHardcoverID,
-			Candidates:        c.Candidates,
-			ExistingBookID:    existingID(c.ExistingBookID),
+			FilePaths:       cand.paths,
+			Slot:            cand.slot,
+			ParsedTitle:     info.Title,
+			ParsedAuthor:    info.Author,
+			ParsedISBN:      info.ISBN,
+			Classification:  c.Kind,
+			BookHardcoverID: c.BookHardcoverID,
+			Candidates:      c.Candidates,
+			ExistingBookID:  existingID(c.ExistingBookID),
 		})
 
 		if err := s.store.IncrementImportScanProgress(ctx, scan.ID, 1); err != nil {
@@ -394,24 +393,12 @@ func (s *Service) classifyBookCandidate(
 			slog.WarnContext(ctx, "book scan: isbn lookup failed",
 				"isbn", info.ISBN, "error", err)
 		case id != 0:
-			d, gerr := s.bookmeta.GetBook(ctx, id)
-			if errors.Is(gerr, metadata.ErrRateLimited) {
-				return BookClassification{}, errs, gerr
-			}
-			if gerr != nil {
-				errs++
-				slog.WarnContext(ctx, "book scan: hardcover book fetch failed",
-					"book.hardcover_id", id, "error", gerr)
-				break
-			}
 			return classifyResolvedBook(
 				id,
-				d.AuthorHardcover,
 				schema.ScannedBookCandidate{
-					BookHardcoverID:   id,
-					AuthorHardcoverID: d.AuthorHardcover,
-					Title:             d.Title,
-					Author:            info.Author,
+					BookHardcoverID: id,
+					Title:           info.Title,
+					Author:          info.Author,
 				},
 				indexed,
 			), errs, nil
@@ -436,24 +423,5 @@ func (s *Service) classifyBookCandidate(
 			"title", info.Title, "error", err)
 	}
 	c := ClassifyBook(info.Title, info.Author, hits, indexed)
-
-	// Search hits never carry the author id. Resolve it for the one book
-	// that will be adopted without review; ambiguous candidates leave it to
-	// the committer, which resolves it from the reviewer's pick.
-	if c.Kind == entimportscanbook.ClassificationConfirmed ||
-		c.Kind == entimportscanbook.ClassificationExisting {
-		d, gerr := s.bookmeta.GetBook(ctx, c.BookHardcoverID)
-		if errors.Is(gerr, metadata.ErrRateLimited) {
-			return BookClassification{}, errs, gerr
-		}
-		if gerr != nil {
-			errs++
-			slog.WarnContext(ctx, "book scan: hardcover book fetch failed",
-				"book.hardcover_id", c.BookHardcoverID, "error", gerr)
-		} else {
-			c.AuthorHardcoverID = d.AuthorHardcover
-			c.Candidates[0].AuthorHardcoverID = d.AuthorHardcover
-		}
-	}
 	return c, errs, nil
 }

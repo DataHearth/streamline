@@ -24,10 +24,14 @@ import (
 	"github.com/datahearth/streamline/internal/quality"
 )
 
+// commitBatch is how many books the committer reads from Hardcover in one
+// request before adding them: C books cost ceil(C/20) requests, and the
+// provider's memo keeps each batch alive until its books have been added.
+const commitBatch = 20
+
 // runCommitBooks adopts every reviewed book in a book scan in place: it
-// resolves (or creates) the author and links the files already on disk to the
-// matched book. Sequential, with one author lookup per author for the run — a
-// 300-book library must not re-fetch the same author for each of its books.
+// resolves (or adds, unmonitored) the matched book and links the files already
+// on disk to it. Sequential, a batch of books prefetched at a time.
 func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 	ctx, span := tracer.Start(ctx, "bulkimport.run_commit_books",
 		trace.WithAttributes(attribute.Int64("scan.id", int64(scan.ID))))
@@ -47,10 +51,12 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 		return
 	}
 
-	authors := map[uint32]*ent.Author{}
 	var success, failed uint32
-	for _, sb := range books {
-		outcome, msg, createdID := s.commitBook(ctx, sb, authors)
+	for i, sb := range books {
+		if i%commitBatch == 0 {
+			s.prefetchBooks(ctx, books[i:min(i+commitBatch, len(books))])
+		}
+		outcome, msg, createdID := s.commitBook(ctx, sb)
 		if uerr := s.store.UpdateImportScanBookOutcome(
 			ctx,
 			sb.ID,
@@ -90,16 +96,36 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 	countCommit(ctx, "book", "failed", int64(failed))
 }
 
+// prefetchBooks reads the Hardcover books a batch will add in one request. The
+// answers are memoised by the provider, so each add that follows costs nothing;
+// a failure is only logged, since an add fetches its own book when the memo
+// has nothing.
+func (s *Service) prefetchBooks(ctx context.Context, batch []*ent.ImportScanBook) {
+	ids := make([]uint32, 0, len(batch))
+	for _, sc := range batch {
+		if sc.DecisionBookHardcoverID != 0 {
+			ids = append(ids, sc.DecisionBookHardcoverID)
+		} else if sc.ExistingBookID == nil && sc.BookHardcoverID != 0 {
+			ids = append(ids, sc.BookHardcoverID)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	if _, err := s.bookmeta.GetBooks(ctx, ids); err != nil {
+		slog.WarnContext(ctx, "book commit: prefetch failed", "error", err)
+	}
+}
+
 func (s *Service) commitBook(
 	ctx context.Context,
 	sc *ent.ImportScanBook,
-	authors map[uint32]*ent.Author,
 ) (entimportscanbook.Outcome, string, uint32) {
 	ctx, span := tracer.Start(ctx, "bulkimport.commit_book",
 		trace.WithAttributes(attribute.Int64("scan_book.id", int64(sc.ID))))
 	defer span.End()
 
-	target, err := s.resolveBook(ctx, sc, authors)
+	target, err := s.resolveBook(ctx, sc)
 	if err != nil {
 		return commitBookFail(span, "resolve book", err, 0)
 	}
@@ -154,11 +180,11 @@ func (s *Service) commitBook(
 
 // resolveBook returns the eager-loaded book to adopt into. The reviewer's pick
 // wins over the classifier's match, and a scan-time existing book is only used
-// when the reviewer made no pick.
+// when the reviewer made no pick. A matched book the library does not hold yet
+// is added unmonitored.
 func (s *Service) resolveBook(
 	ctx context.Context,
 	sc *ent.ImportScanBook,
-	authors map[uint32]*ent.Author,
 ) (*ent.Book, error) {
 	bookHC := sc.BookHardcoverID
 	picked := sc.DecisionBookHardcoverID != 0
@@ -172,83 +198,26 @@ func (s *Service) resolveBook(
 		return nil, errors.New("no hardcover match to adopt")
 	}
 
-	author, err := s.resolveBookAuthor(ctx, sc, bookHC, authors)
+	row, err := s.store.FindBookByHardcoverID(ctx, bookHC)
 	if err != nil {
-		return nil, err
-	}
-	for _, b := range author.Edges.Books {
-		if b.HardcoverID == bookHC {
-			return s.store.FindBookByID(ctx, b.ID)
-		}
-	}
-	return nil, fmt.Errorf(
-		"hardcover book %d is missing from author %q's bibliography",
-		bookHC, author.Name,
-	)
-}
-
-func (s *Service) resolveBookAuthor(
-	ctx context.Context,
-	sc *ent.ImportScanBook,
-	bookHC uint32,
-	authors map[uint32]*ent.Author,
-) (*ent.Author, error) {
-	authorHC := knownAuthorID(sc, bookHC)
-	if authorHC == 0 {
-		// Search hits never carry the author id.
-		details, err := s.bookmeta.GetBook(ctx, bookHC)
-		if err != nil {
-			return nil, fmt.Errorf("get book: %w", err)
-		}
-		authorHC = details.AuthorHardcover
-	}
-	if cached, ok := authors[authorHC]; ok {
-		return cached, nil
-	}
-
-	row, err := s.store.FindAuthorByHardcoverID(ctx, authorHC)
-	if err != nil {
-		return nil, fmt.Errorf("look up author: %w", err)
+		return nil, fmt.Errorf("look up book: %w", err)
 	}
 	if row == nil {
-		row, err = s.bookAdder.Add(ctx, book.AddParams{
-			HardcoverID:   authorHC,
-			Monitored:     true,
-			MonitorPolicy: "none",
+		row, err = s.bookAdder.AddBook(ctx, book.AddBookParams{
+			HardcoverID: bookHC,
+			Monitor:     book.MonitorNone,
 		})
-		if errors.Is(err, book.ErrAuthorExists) {
-			row, err = s.store.FindAuthorByHardcoverID(ctx, authorHC)
+		if errors.Is(err, book.ErrBookExists) {
+			row, err = s.store.FindBookByHardcoverID(ctx, bookHC)
 			if err == nil && row == nil {
-				err = fmt.Errorf(
-					"author %d vanished after a concurrent add",
-					authorHC,
-				)
+				err = fmt.Errorf("book %d vanished after a concurrent add", bookHC)
 			}
 		}
 		if err != nil {
-			return nil, fmt.Errorf("add author: %w", err)
+			return nil, fmt.Errorf("add book: %w", err)
 		}
 	}
-	full, err := s.store.FindAuthorByID(ctx, row.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load author: %w", err)
-	}
-	authors[authorHC] = full
-	return full, nil
-}
-
-// knownAuthorID is the author id recorded at scan time for this exact book, or
-// 0. A reviewer's pick of a different book invalidates the scan's author id.
-func knownAuthorID(sc *ent.ImportScanBook, bookHC uint32) uint32 {
-	if bookHC == sc.BookHardcoverID && sc.AuthorHardcoverID != 0 {
-		return sc.AuthorHardcoverID
-	}
-	for _, c := range sc.Candidates {
-		if c.BookHardcoverID == bookHC && c.AuthorHardcoverID != 0 {
-			return c.AuthorHardcoverID
-		}
-	}
-	return 0
+	return s.store.FindBookByID(ctx, row.ID)
 }
 
 // adoptedBookQuality is the format recorded for an adopted book file: the

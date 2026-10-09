@@ -241,6 +241,11 @@ type LibraryConfig struct {
 	EbookNaming     string `koanf:"ebook_naming"     validate:"required"`
 	AudiobookPath   string `koanf:"audiobook_path"   validate:"required"`
 	AudiobookNaming string `koanf:"audiobook_naming" validate:"required"`
+	// BookSeriesNaming names the ebook volumes of a book series. It is not
+	// SeriesNaming, which is the TV template.
+	BookSeriesNaming string `koanf:"book_series_naming" validate:"required"`
+	// BookLanguage (ISO 639-1) is the preferred language a book starts with.
+	BookLanguage string `koanf:"book_language" validate:"required,len=2"`
 	// MonitorSpecials opts season 0 into monitoring when a series is added or
 	// a refresh discovers the season. Off by default: specials are usually
 	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
@@ -843,6 +848,8 @@ func defaults() map[string]any {
 		"library.ebook_naming":             "{Author}/{Title} ({Year})",
 		"library.audiobook_path":           "/data/audiobooks",
 		"library.audiobook_naming":         "{Author}/{Title} ({Year})",
+		"library.book_series_naming":       "{Author}/{Series}/{Series} - Vol. {Volume:02}",
+		"library.book_language":            "en",
 		"library.download_path":            "/downloads",
 		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":              "hardlink",

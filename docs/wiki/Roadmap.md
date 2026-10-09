@@ -11,7 +11,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | Movies | ✅ Shipped |
 | TV shows | ✅ Shipped |
 | Music | 🚧 In progress — the backend is complete: library management, adoption of existing files, a Subsonic server, searching and grabbing with tag writing, RSS and scheduled searches, and requests. The web pages for adoption, searching and requests are being built |
-| Books | 🚧 In progress — the backend is complete: library management with ebook and audiobook slots, adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests. The web pages for adoption, searching and requests are being built |
+| Books | 🚧 In progress — the backend is complete: a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests. The web pages for adoption, searching and requests are being built |
 
 Music and books follow the same path as movies and TV: browse and organise your existing library first, then automatic searching and grabbing, then requests. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books).
 

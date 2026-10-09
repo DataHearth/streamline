@@ -31,7 +31,7 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 			mediafile.BookKindEQ(mediafile.BookKindEbook),
 			mediafile.QualityEqualFold(format),
 		).
-		WithBook(func(q *ent.BookQuery) { q.WithAuthor() }).
+		WithBook().
 		First(r.Context())
 	if ent.IsNotFound(err) {
 		http.NotFound(w, r)
@@ -69,7 +69,7 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 }
 
 func downloadName(bk *ent.Book, ext string) string {
-	name := bk.Title + " - " + bk.Edges.Author.Name
+	name := bk.Title + " - " + bk.AuthorName
 	if ext != "" {
 		name += "." + ext
 	}

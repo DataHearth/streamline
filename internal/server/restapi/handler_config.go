@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"regexp"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/restart"
 )
+
+var iso639_1 = regexp.MustCompile(`^[a-z]{2}$`)
 
 // GetConfigAuth returns the runtime-safe auth configuration. Admin only.
 func (s *Server) GetConfigAuth(
@@ -125,7 +128,11 @@ func (s *Server) UpdateConfigLibrary(
 	drift, errDrift := narrowUint8(
 		"drift_grace_ticks", req.Body.DriftGraceTicks, 20,
 	)
-	if err := errors.Join(errGrab, errAttempts, errDrift); err != nil {
+	var errLang error
+	if l := req.Body.BookLanguage; l != nil && !iso639_1.MatchString(*l) {
+		errLang = errors.New("book_language must be a two-letter ISO 639-1 code")
+	}
+	if err := errors.Join(errGrab, errAttempts, errDrift, errLang); err != nil {
 		return UpdateConfigLibrary422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
@@ -133,6 +140,7 @@ func (s *Server) UpdateConfigLibrary(
 
 	patch := config.LibraryPatch{
 		MonitorSpecials:      req.Body.MonitorSpecials,
+		BookLanguage:         req.Body.BookLanguage,
 		MovieNaming:          req.Body.MovieNaming,
 		SeriesNaming:         req.Body.SeriesNaming,
 		KeepTorrentSeeding:   req.Body.KeepTorrentSeeding,
@@ -745,6 +753,7 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 	moviePath, seriesPath, downloadPath := l.MoviePath, l.SeriesPath, l.DownloadPath
 	return LibraryConfigJSONResponse{
 		MonitorSpecials:      l.MonitorSpecials,
+		BookLanguage:         l.BookLanguage,
 		MovieNaming:          l.MovieNaming,
 		SeriesNaming:         l.SeriesNaming,
 		ImportMode:           LibraryConfigViewImportMode(l.ImportMode),

@@ -159,18 +159,11 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 	})
 
 	Describe("books", func() {
-		var (
-			author *ent.Author
-			bk     *ent.Book
-		)
+		var bk *ent.Book
 
 		BeforeEach(func() {
-			author = client.Author.Create().
-				SetHardcoverID(1).
-				SetName("Sanderson").
-				SaveX(ctx)
 			bk = client.Book.Create().SetHardcoverID(2).SetTitle("Elantris").
-				SetAuthor(author).SaveX(ctx)
+				SetAuthorName("Sanderson").SaveX(ctx)
 		})
 
 		addFile := func(kind mediafile.BookKind, quality string) {
@@ -187,7 +180,6 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(HaveLen(1))
-			Expect(got[0].Edges.Author).NotTo(BeNil())
 			Expect(got[0].Edges.MediaFiles).To(HaveLen(1))
 		})
 
@@ -218,16 +210,6 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(HaveLen(1))
-		})
-
-		It("drops the books of an unmonitored author", func() {
-			client.Author.UpdateOneID(author.ID).SetMonitored(false).ExecX(ctx)
-			addFile(mediafile.BookKindEbook, "AZW3")
-
-			got, err := store.ListUpgradeCandidateBooks(ctx)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(got).To(BeEmpty())
 		})
 
 		It("flags the newest downloading record of one slot", func() {

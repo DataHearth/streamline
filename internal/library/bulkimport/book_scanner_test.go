@@ -156,12 +156,6 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		BeforeEach(func() {
 			bookmeta.EXPECT().BookByISBN(mock.Anything, "9780765311771").
 				Return(uint32(1), nil).Once()
-			bookmeta.EXPECT().GetBook(mock.Anything, uint32(1)).
-				Return(&metadata.BookDetails{
-					HardcoverID:     1,
-					Title:           "Elantris",
-					AuthorHardcover: 10,
-				}, nil).Once()
 			bookmeta.EXPECT().SearchBooks(mock.Anything, "Some Unknown Book loose").
 				Return(nil, nil).Once()
 			rows = scan(ebookRoot)
@@ -186,7 +180,6 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 					elantris.Classification,
 				).To(Equal(entimportscanbook.ClassificationConfirmed))
 				Expect(elantris.BookHardcoverID).To(Equal(uint32(1)))
-				Expect(elantris.AuthorHardcoverID).To(Equal(uint32(10)))
 			},
 		)
 
@@ -206,13 +199,15 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 	})
 
 	It("flags a hit already held in the slot as existing", func() {
-		a, err := store.CreateAuthor(ctx, db.CreateAuthorParams{
-			HardcoverID: 10, Name: "Brandon Sanderson", MonitorPolicy: "none",
-			WantKinds: "ebook",
-			Books:     []db.BookSeed{{HardcoverID: 1, Title: "Elantris"}},
+		now := time.Now()
+		held, err := store.CreateBook(ctx, db.BookSeed{
+			HardcoverID: 1, Title: "Elantris", AuthorName: "Brandon Sanderson",
+			Kind: "novel", PreferredLanguage: "en", RefreshedAt: &now,
+			Credits: []db.CreditSeed{{
+				AuthorHardcoverID: 10, Name: "Brandon Sanderson", Role: "author",
+			}},
 		})
 		Expect(err).NotTo(HaveOccurred())
-		held := a.Edges.Books[0]
 		client.MediaFile.Create().
 			SetPath("/elsewhere/elantris.epub").SetSize(1).
 			SetQuality("epub").SetFormat("epub").
@@ -225,8 +220,6 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 				{HardcoverID: 1, Title: "Elantris", Author: "Brandon Sanderson"},
 				{HardcoverID: 2, Title: "Elantris Reissue", Author: "Other Person"},
 			}, nil).Once()
-		bookmeta.EXPECT().GetBook(mock.Anything, uint32(1)).
-			Return(&metadata.BookDetails{AuthorHardcover: 10}, nil).Once()
 
 		rows := scan(ebookRoot)
 		Expect(rows).To(HaveLen(1))
@@ -275,8 +268,6 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		writeEpub(filepath.Join(dir, "Elantris - Brandon Sanderson.epub"), testOPF)
 		bookmeta.EXPECT().BookByISBN(mock.Anything, "9780765311771").
 			Return(uint32(1), nil).Once()
-		bookmeta.EXPECT().GetBook(mock.Anything, uint32(1)).
-			Return(&metadata.BookDetails{AuthorHardcover: 10}, nil).Once()
 
 		rows := scan(ebookRoot)
 		Expect(rows).To(HaveLen(1))

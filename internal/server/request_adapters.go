@@ -7,14 +7,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entbook "github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/request"
-)
-
-// errBookAddUnavailable is what approving a book or series request answers
-// until the books service exposes AddBook and AddSeries.
-var errBookAddUnavailable = errors.New(
-	"adding a requested book or series is not available yet",
 )
 
 // artistRequestAdder lets the request service add an artist without knowing
@@ -36,16 +32,44 @@ func (a artistRequestAdder) AddArtist(
 	return err
 }
 
-// bookRequestAdder answers the request service's in-library questions from
-// the library tables.
-type bookRequestAdder struct{ client *ent.Client }
-
-func (bookRequestAdder) AddBook(context.Context, uint32, string, string) error {
-	return errBookAddUnavailable
+// bookRequestAdder adds a requested book or series through the books service
+// and answers the request service's in-library questions from the library
+// tables.
+type bookRequestAdder struct {
+	svc    book.Manager
+	client *ent.Client
 }
 
-func (bookRequestAdder) AddSeries(context.Context, uint32, string, string) error {
-	return errBookAddUnavailable
+func (b bookRequestAdder) AddBook(
+	ctx context.Context,
+	hardcoverID uint32,
+	monitor, qualityProfile string,
+) error {
+	_, err := b.svc.AddBook(ctx, book.AddBookParams{
+		HardcoverID:    hardcoverID,
+		Monitor:        monitor,
+		QualityProfile: qualityProfile,
+	})
+	if errors.Is(err, book.ErrBookExists) {
+		return fmt.Errorf("%w: %w", request.ErrAlreadyInLibrary, err)
+	}
+	return err
+}
+
+func (b bookRequestAdder) AddSeries(
+	ctx context.Context,
+	hardcoverID uint32,
+	monitor, qualityProfile string,
+) error {
+	_, err := b.svc.AddSeries(ctx, book.AddSeriesParams{
+		HardcoverID:    hardcoverID,
+		Monitor:        monitor,
+		QualityProfile: qualityProfile,
+	})
+	if errors.Is(err, book.ErrSeriesExists) {
+		return fmt.Errorf("%w: %w", request.ErrAlreadyInLibrary, err)
+	}
+	return err
 }
 
 func (b bookRequestAdder) HasBook(
@@ -56,7 +80,10 @@ func (b bookRequestAdder) HasBook(
 		Where(entbook.HardcoverID(hardcoverID)).Exist(ctx)
 }
 
-// HasSeries is false until the library holds series.
-func (bookRequestAdder) HasSeries(context.Context, uint32) (bool, error) {
-	return false, nil
+func (b bookRequestAdder) HasSeries(
+	ctx context.Context,
+	hardcoverID uint32,
+) (bool, error) {
+	return b.client.BookSeries.Query().
+		Where(bookseries.HardcoverID(hardcoverID)).Exist(ctx)
 }

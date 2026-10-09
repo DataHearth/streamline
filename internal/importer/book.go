@@ -29,10 +29,9 @@ func (w *Worker) importBookRecord(
 	libCfg config.LibraryConfig,
 ) error {
 	b := rec.Edges.Book
-	author := b.Edges.Author
-	if author == nil {
+	if b == nil {
 		return otelx.RecordSpanError(
-			span, fmt.Errorf("book %d missing author context", b.ID),
+			span, fmt.Errorf("record %d has no book", rec.ID),
 		)
 	}
 	span.SetAttributes(
@@ -40,6 +39,10 @@ func (w *Worker) importBookRecord(
 		attribute.String("book.kind", string(rec.BookKind)),
 	)
 	defer w.lockEntity(fmt.Sprintf("book:%d:%s", b.ID, rec.BookKind))()
+
+	if reasons := bookHoldReasons(b); len(reasons) > 0 {
+		return w.hold(ctx, span, rec, reasons)
+	}
 
 	kind := mediafile.BookKind(rec.BookKind)
 	switch rec.BookKind {
@@ -67,10 +70,7 @@ func (w *Worker) importBookRecord(
 	)
 	switch rec.BookKind {
 	case downloadrecord.BookKindEbook:
-		profile, ok := config.ResolveBookQualityProfile(
-			author.EbookQualityProfile,
-			"",
-		)
+		profile, ok := bookProfile(b)
 		if !ok {
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
@@ -78,16 +78,14 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		f, err := w.lib.ImportEbook(ctx, rec.SavePath, author, b, profile, replace)
+		f, err := w.lib.ImportEbook(ctx, rec.SavePath, b, profile, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
 		}
 		placed = []library.ImportedFile{f}
 	case downloadrecord.BookKindAudiobook:
-		profile, ok := config.ResolveBookQualityProfile(
-			author.AudiobookQualityProfile, "",
-		)
+		profile, ok := bookProfile(b)
 		if !ok {
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
@@ -102,7 +100,7 @@ func (w *Worker) importBookRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
-		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, author, b, replace)
+		placed, err = w.lib.ImportAudiobook(ctx, rec.SavePath, b, replace)
 		if err != nil {
 			putBack(ctx, aside)
 			return otelx.RecordSpanError(span, err)
@@ -144,6 +142,9 @@ func (w *Worker) importBookRecord(
 		"book.id", b.ID, "book.kind", string(rec.BookKind), "files", len(placed))
 
 	w.markRequestsAvailable(ctx, "book", b.HardcoverID)
+	if series := b.Edges.Series; series != nil {
+		w.markRequestsAvailable(ctx, "book_series", series.HardcoverID)
+	}
 	w.cleanupTorrent(ctx, rec, libCfg)
 	return nil
 }

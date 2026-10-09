@@ -38,6 +38,7 @@ type LockoutPatch struct {
 // fields are left untouched.
 type LibraryPatch struct {
 	MonitorSpecials *bool
+	BookLanguage    *string
 	// The three roots are pathmigrate's to write. It rewrites every stored
 	// path first and repoints the root afterwards; a caller that sets one of
 	// these on its own leaves the library pointing at the old prefix.
@@ -284,6 +285,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 	err := Update(ctx, func(c *Config) error {
 		if patch.MonitorSpecials != nil {
 			c.Library.MonitorSpecials = *patch.MonitorSpecials
+		}
+		if patch.BookLanguage != nil {
+			c.Library.BookLanguage = *patch.BookLanguage
 		}
 		if patch.MoviePath != nil {
 			c.Library.MoviePath = *patch.MoviePath

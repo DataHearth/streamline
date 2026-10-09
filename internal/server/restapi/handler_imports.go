@@ -7,6 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
+	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
@@ -530,6 +531,110 @@ func (s *Server) UpdateImportAlbumDecision(
 	return UpdateImportAlbumDecision200JSONResponse{
 		ImportScanAlbumJSONResponse: ImportScanAlbumJSONResponse(
 			toAPIImportScanAlbum(row),
+		),
+	}, nil
+}
+
+func (s *Server) ListImportBooks(
+	ctx context.Context,
+	req ListImportBooksRequestObject,
+) (ListImportBooksResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ListImportBooks403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	page, ok := positiveOr(req.Params.Page, uint16(1))
+	if !ok {
+		return ListImportBooks400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(msgZeroPage),
+		}, nil
+	}
+	limit, ok := limitOr(req.Params.Limit, 50, importMaxLimit)
+	if !ok {
+		return ListImportBooks400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
+		}, nil
+	}
+	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+		if ent.IsNotFound(err) {
+			return ListImportBooks404JSONResponse{
+				NotFoundJSONResponse: errNotFound("scan not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	cls := entimportscanbook.Classification("")
+	if req.Params.Classification != nil {
+		cls = entimportscanbook.Classification(*req.Params.Classification)
+	}
+	q := ""
+	if req.Params.Q != nil {
+		q = *req.Params.Q
+	}
+	items, total, err := s.store.ListImportScanBooks(
+		ctx,
+		db.ListImportScanBooksParams{
+			ScanID:         req.Id,
+			Classification: cls,
+			Query:          q,
+			Offset:         uint32(page-1) * uint32(limit),
+			Limit:          uint32(limit),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	apiItems := make([]ImportScanBook, 0, len(items))
+	for _, it := range items {
+		apiItems = append(apiItems, toAPIImportScanBook(it))
+	}
+	return ListImportBooks200JSONResponse{
+		Items: apiItems,
+		Total: total,
+	}, nil
+}
+
+func (s *Server) UpdateImportBookDecision(
+	ctx context.Context,
+	req UpdateImportBookDecisionRequestObject,
+) (UpdateImportBookDecisionResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return UpdateImportBookDecision403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	var hardcoverID *uint32
+	if req.Body.BookHardcoverId != nil {
+		v := *req.Body.BookHardcoverId
+		hardcoverID = &v
+	}
+	if err := s.store.UpdateImportScanBookDecision(
+		ctx,
+		req.Id,
+		req.BookId,
+		entimportscanbook.Decision(req.Body.Decision),
+		hardcoverID,
+	); err != nil {
+		if errors.Is(err, db.ErrImportScanBookNotFound) {
+			return UpdateImportBookDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan book not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	row, err := s.store.FindImportScanBook(ctx, req.Id, req.BookId)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return UpdateImportBookDecision404JSONResponse{
+				NotFoundJSONResponse: errNotFound("import scan book not found"),
+			}, nil
+		}
+		return nil, err
+	}
+	return UpdateImportBookDecision200JSONResponse{
+		ImportScanBookJSONResponse: ImportScanBookJSONResponse(
+			toAPIImportScanBook(row),
 		),
 	}, nil
 }

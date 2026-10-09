@@ -203,28 +203,35 @@ A music release in a search result carries `source` as a display label (`FLAC 24
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| `GET` | `/books/search?query=` | Search Hardcover for authors; each hit carries `already_added` | Authenticated |
-| `GET` | `/books/authors` | Paginated list (`?page=`, `?limit=` 1-100); items carry `book_count` but no `books` | Authenticated |
-| `POST` | `/books/authors` | Add an author by `hardcover_id` (`monitored` defaults to true, optional `monitor_policy`, `want_kinds`, `ebook_quality_profile`, `audiobook_quality_profile`); `409` if already added, `422` for an unknown profile name or enum value, `429` with `Retry-After` and `code: rate_limited` when Hardcover's rate limit or daily budget is spent | Member |
-| `GET` | `/books/authors/{id}` | Fetch an author with its `books` | Authenticated |
-| `PATCH` | `/books/authors/{id}` | Update `monitored`, `monitor_policy`, `want_kinds` and the two profile names; `422` for an unknown profile name or enum value | Member |
-| `DELETE` | `/books/authors/{id}` | Remove an author; `?delete_files=true` also deletes files from disk | Member |
-| `POST` | `/books/authors/{id}/refresh` | Re-fetch the bibliography from Hardcover; `429` with `Retry-After` and `code: rate_limited` when its rate limit or daily budget is spent | Member |
-| `GET` | `/books/{id}` | Fetch a book with its `ebook` and `audiobook` slots | Authenticated |
-| `PATCH` | `/books/{id}` | Update `ebook_monitored` / `audiobook_monitored` | Member |
-| `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Search the indexers for one slot of a book; returns `{items: [{format, release}]}` ranked, rejected releases kept at the end with `release.rejected` and `release.reject_reason` | Member |
-| `POST` | `/books/{id}/grab?kind=ebook\|audiobook` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
+| `GET` | `/books/search?query=&type=` | Search Hardcover for books and series to add (`type` is `book`, `series` or `all`, the default; at least 2 characters). Two Hardcover requests, one with `type`, memoised for 5 minutes. Series named like the query come first, then books, capped at 20. Each hit carries `already_added`, its `library_id`, and for an added series the `cover_id` of its first volume | Authenticated |
+| `GET` | `/books/search/{hardcover_id}?type=book\|series` | One hit plus its detail (overview, genres, pages, editions, `volume_book_ids`), memoised for 10 minutes; also the book arm of `GET /requests/{id}/metadata` | Authenticated |
+| `GET` | `/books` | The shelf: standalone books and series merged into one paged list (`?page=`, `?limit=` 1-100, `?status=`, `?author=`, `?format=`, `?kind=` comma list, `?query=`, `?sort=added\|title\|year`, `?order=`). `type` says which an item is; ids are only unique per `type`. A series volume is never an item of its own | Authenticated |
+| `GET` | `/books/counts` | Faceted counts (status, author, format), each with its own `*_total`; with no parameters the whole library | Authenticated |
+| `POST` | `/books` | Add a book by `hardcover_id` (one Hardcover request; optional `monitor` `both\|ebook\|audiobook\|none` and `quality_profile`). `404` for an unknown Hardcover id, `409` if already in the library, `422` for an unknown monitor or profile, `429` with `Retry-After` and `code: rate_limited`, `503` without a Hardcover key | Member |
+| `GET` | `/books/{id}` | A book with its contributors, editions and the two format slots (state, edition, file, live progress, a replacement under way) | Authenticated |
+| `PATCH` | `/books/{id}` | `monitor`, `preferred_language`, `quality_profile` (empty clears), `kind`, and the pair `format` + `edition_id`; `422` for anything it cannot apply. Changing the edition of a slot that holds a file queues a replacement | Member |
+| `DELETE` | `/books/{id}` | Remove a book; `?delete_files=true` also deletes files. A series volume answers `409` with `code: series_volume`: it goes with its series | Member |
+| `POST` | `/books/{id}/refresh-metadata` | Re-read the book from Hardcover (one request); `404`, `429`, `503` | Member |
+| `POST` | `/books/{id}/rename?preview=` | The rename plan of a book's files, applied unless `preview=true` | Member |
+| `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Interactive search; `kind` omitted searches both slots and merges them. Flat releases (`slot`, the upper-case container in `source`, `bitrate_kbps` for an audiobook), rejected ones kept at the end with `rejected` and `reject_reason`. The language tag of a release is shown, never filtered on | Member |
+| `POST` | `/books/{id}/grab` | Grab a release: a search item, unchanged (`slot` included). The slot is read from the release's container; a `slot` that disagrees answers `422` `code: grab_rejected`, and `?kind=` disagreeing with the body's `slot` answers `400`. `replace_existing: true` removes the slot's old files once the new ones are placed. `202` with no body | Member |
+| `POST` | `/books/{id}/search-now?kind=` | Search the monitored wanted slots in the background and grab the best release; `202 {queued}` is how many slots | Member |
+| `POST` | `/books/series` | Add a series by `hardcover_id` (optional `monitor` `all\|future\|none`, `quality_profile`). Two Hardcover requests on the HTTP request, the first 20 volumes hydrated and a stub for every other position; the answer has `hydrating: true` and the rest is filled in the background | Member |
+| `GET` | `/books/series/{id}` | A series with its volumes, contributors, `edition` and the `editions` it can be switched to; `hydrating` is true while a volume is still a stub (clients poll) | Authenticated |
+| `PATCH` | `/books/series/{id}` | `monitor` (applied to every volume's ebook slot), `quality_profile` (written through to every volume), `edition` (must be one of `editions`; re-picks only volumes without an ebook file) | Member |
+| `DELETE` | `/books/series/{id}` | Remove a series with its volumes; `?delete_files=true` also deletes files | Member |
+| `POST` | `/books/series/{id}/refresh-metadata` | Re-read the series and its volumes (`1 + ceil(N/20)` requests), adding volumes the skeleton gained | Member |
+| `POST` | `/books/series/{id}/rename?preview=` | The rename plan over every volume | Member |
+| `POST` | `/books/series/{id}/search-now` | Search the wanted volumes with one series query; `202 {queued}` | Member |
 | `GET` `POST` | `/books/quality-profiles` | List / create book quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/books/quality-profiles/{name}` | Update / delete a book quality profile | 🔒 Admin |
 | `POST` | `/books/quality-profiles/{name}/default?kind=novel\|bd\|comic\|manga` | Make this the default profile for one book kind (`kind` is required) | 🔒 Admin |
 
 A book quality profile is `{name, upgrade_allowed, ebook: {formats, preferred}, audiobook: {formats, preferred, min_bitrate}, default_for}`: one profile covers both slots, `upgrade_allowed` is one switch for both, ebook `formats` come from `EPUB`, `AZW3`, `MOBI`, `PDF`, `CBZ`, `CBR` and audiobook `formats` from `M4B`, `MP3`, `M4A`, `FLAC` (upper case, best first), `preferred` must be one of the slot's `formats` and `min_bitrate` is kbps from `0` (no floor) to `1024`, else `422`. A book with no profile of its own takes the default of its kind, so `default_for` lists the kinds a profile is the default of; deleting a profile that is any kind's default is a `409`. A grab body also accepts `replace_existing: true`: every file of the grabbed slot is replaced after the new one is placed and verified, and the other slot is never touched.
 
-A book search or grab without a valid `kind` answers `400`; a slot with no usable quality profile answers `422` with `code: no_quality_profile`, and a refused grab `422` with `code: grab_rejected`. The grab flips the slot to `downloading`.
+A slot with no usable quality profile answers `422` with `code: no_quality_profile`, and a refused grab `422` with `code: grab_rejected`. The grab flips the slot to `downloading`. A book's profile is its own, else its series', else the default of its kind.
 
-Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add and refresh endpoints answer `503` while browsing the library keeps working. A book carries an `ebook` and an `audiobook` slot, each `{monitored, status, file_count}`. Poster URLs are not in the payloads: clients build `/posters/authors/{id}/poster.jpg` and `/posters/books/{id}/poster.jpg` themselves.
-
-The ebook (`epub`, `azw3`, `mobi`, `pdf`, `other`) and audiobook (`m4b`, `mp3`, `other`) quality profiles are `{name, formats, cutoff, upgrade_allowed}` and follow the music profile semantics: `is_default` marks the profile an author with an empty profile name resolves to, deleting it is a `409`, and `PUT` takes the same body as `POST` and ignores the name in the body.
+Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add and refresh endpoints answer `503` while browsing the library keeps working. There are no authors to follow: people are credits on a book or a series. Poster URLs are not in the payloads: clients build `/posters/books/{id}/poster.jpg` (a series uses `cover_id`, a book's own id), `/posters/authors/{author_id}/poster.jpg` for the author, writer and artist credits, and `/posters/lookup/books/{hardcover_id}/poster.jpg` for a lookup hit not in the library yet.
 
 ### People (cast)
 

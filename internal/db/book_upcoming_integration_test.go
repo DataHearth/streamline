@@ -15,7 +15,6 @@ var _ = Describe("Store.ListUpcomingBooks", Label("integration", "db"), func() {
 		ctx    context.Context
 		client *ent.Client
 		store  *DB
-		author *ent.Author
 		from   time.Time
 		to     time.Time
 		id     uint32
@@ -28,10 +27,6 @@ var _ = Describe("Store.ListUpcomingBooks", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { client.Close() })
 		store = New(client)
-		author = client.Author.Create().
-			SetHardcoverID(1).
-			SetName("Frank Herbert").
-			SaveX(ctx)
 		from = time.Now().UTC().Truncate(time.Minute)
 		to = from.Add(7 * 24 * time.Hour)
 		id = 0
@@ -45,7 +40,7 @@ var _ = Describe("Store.ListUpcomingBooks", Label("integration", "db"), func() {
 			SetTitle(title).
 			SetEbookMonitored(ebook).
 			SetAudiobookMonitored(audiobook).
-			SetAuthor(author)
+			SetAuthorName("Frank Herbert")
 		if date != nil {
 			c = c.SetReleaseDate(*date)
 		}
@@ -76,7 +71,6 @@ var _ = Describe("Store.ListUpcomingBooks", Label("integration", "db"), func() {
 		got, err := store.ListUpcomingBooks(ctx, from, to)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(titles(got)).To(Equal([]string{"ebook-only", "both", "audio-only"}))
-		Expect(got[0].Edges.Author).NotTo(BeNil())
-		Expect(got[0].Edges.Author.Name).To(Equal("Frank Herbert"))
+		Expect(got[0].AuthorName).To(Equal("Frank Herbert"))
 	})
 })

@@ -351,7 +351,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		movieSvc,
 		tvSvc,
 		artistRequestAdder{svc: musicSvc},
-		bookRequestAdder{client: dbClient},
+		bookRequestAdder{svc: bookSvc, client: dbClient},
 	)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)

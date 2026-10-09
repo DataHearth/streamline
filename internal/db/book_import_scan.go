@@ -26,16 +26,15 @@ type ListImportScanBooksParams struct {
 }
 
 type CreateImportScanBookParams struct {
-	FilePaths         []string
-	Slot              entimportscanbook.Slot
-	ParsedTitle       string
-	ParsedAuthor      string
-	ParsedISBN        string
-	Classification    entimportscanbook.Classification
-	BookHardcoverID   uint32
-	AuthorHardcoverID uint32
-	Candidates        []schema.ScannedBookCandidate
-	ExistingBookID    *uint32
+	FilePaths       []string
+	Slot            entimportscanbook.Slot
+	ParsedTitle     string
+	ParsedAuthor    string
+	ParsedISBN      string
+	Classification  entimportscanbook.Classification
+	BookHardcoverID uint32
+	Candidates      []schema.ScannedBookCandidate
+	ExistingBookID  *uint32
 }
 
 type UpdateScanBookOutcomeOpts struct {
@@ -60,7 +59,6 @@ func (db *DB) BulkCreateImportScanBooks(
 			SetParsedIsbn(p.ParsedISBN).
 			SetClassification(p.Classification).
 			SetBookHardcoverID(p.BookHardcoverID).
-			SetAuthorHardcoverID(p.AuthorHardcoverID).
 			SetNillableExistingBookID(p.ExistingBookID)
 		if len(p.Candidates) > 0 {
 			c.SetCandidates(p.Candidates)

@@ -69,10 +69,10 @@ type MusicAdder interface {
 	music.CoverResolver
 }
 
-// BookAdder creates an author and its bibliography from a Hardcover id.
-// Satisfied by *book.Service; used to adopt books on book-scan commit.
+// BookAdder adds a book from a Hardcover id. Satisfied by *book.Service; used
+// to adopt books on book-scan commit.
 type BookAdder interface {
-	Add(ctx context.Context, p book.AddParams) (*ent.Author, error)
+	AddBook(ctx context.Context, p book.AddBookParams) (*ent.Book, error)
 }
 
 // Service implements Manager.

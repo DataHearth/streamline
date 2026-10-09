@@ -84,13 +84,12 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 
 		It("links the book edge and stores the slot kind", func() {
-			a, err := store.CreateAuthor(ctx, CreateAuthorParams{
-				HardcoverID: 10, Name: "Sanderson", Monitored: true,
-				MonitorPolicy: "all", WantKinds: "both",
-				Books: []BookSeed{{HardcoverID: 1, Title: "Elantris"}},
+			b, err := store.CreateBook(ctx, BookSeed{
+				HardcoverID: 1, Title: "Elantris", Kind: "novel",
+				PreferredLanguage: "en",
 			})
 			Expect(err).NotTo(HaveOccurred())
-			bookID := a.Edges.Books[0].ID
+			bookID := b.ID
 
 			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
 				Title:              "t",

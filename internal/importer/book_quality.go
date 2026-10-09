@@ -9,12 +9,46 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
 	"github.com/datahearth/streamline/internal/quality"
 )
+
+// bookProfile resolves the profile that governs a book: its own, else its
+// series', else the default of its kind.
+func bookProfile(b *ent.Book) (config.BookQualityProfileEntry, bool) {
+	name := b.QualityProfile
+	if name == "" && b.Edges.Series != nil {
+		name = b.Edges.Series.QualityProfile
+	}
+	return config.ResolveBookQualityProfile(name, string(b.Kind))
+}
+
+// bookHoldReasons names what keeps a book from being placed yet. A series stub
+// the hydration worker has not reached, or a row a pre-redesign database left
+// without its makers, would be named after nothing; the record is parked and
+// the reviewer retries once the metadata refresh has filled it in, instead of
+// the file landing at a wrong path.
+func bookHoldReasons(b *ent.Book) []schema.HoldReason {
+	switch {
+	case b.LastRefreshedAt == nil:
+		return []schema.HoldReason{{
+			Check:    "metadata",
+			Expected: "book metadata from hardcover",
+			Actual:   "not fetched yet",
+		}}
+	case b.AuthorName == "":
+		return []schema.HoldReason{{
+			Check:    "metadata",
+			Expected: "a named author",
+			Actual:   "none recorded",
+		}}
+	}
+	return nil
+}
 
 // bookQuality is what MediaFile.quality stores for a book file: the upper-case
 // format when the ladder names it, empty otherwise.

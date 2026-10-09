@@ -497,6 +497,16 @@
         "ebook_naming": { "type": "string" },
         "audiobook_path": { "type": "string" },
         "audiobook_naming": { "type": "string" },
+        "book_series_naming": {
+          "type": "string",
+          "description": "Naming of a book series' ebook volumes: {Author}, {Series}, {Volume} and {Volume:02}, {Title}, {Year}, {Language}."
+        },
+        "book_language": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "description": "ISO 639-1 language a new book prefers; picks the edition of each slot."
+        },
         "download_path": {
           "type": "string",
           "description": "Host-side directory streamline reads completed torrents from. Combined with the torrent name to locate content (<download_path>/<torrent.Name>)."

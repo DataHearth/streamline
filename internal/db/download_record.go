@@ -38,7 +38,14 @@ func withEpisodeContext(q *ent.EpisodeQuery) {
 	})
 }
 
-func withBookAuthor(q *ent.BookQuery) { q.WithAuthor() }
+// withBookContext gives the importer what it names and places a book by: the
+// makers, the slot editions and the series.
+func withBookContext(q *ent.BookQuery) {
+	q.WithSeries().
+		WithEbookEdition().
+		WithAudiobookEdition().
+		WithContributions(func(cq *ent.BookContributionQuery) { cq.WithAuthor() })
+}
 
 // withAlbumContext eager-loads an album record's artist and its tracks in disc
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
@@ -546,7 +553,7 @@ func (db *DB) ListImportingDownloadRecords(
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
-		WithBook(withBookAuthor).
+		WithBook(withBookContext).
 		WithAlbum(withAlbumContext).
 		All(ctx)
 }
@@ -566,7 +573,7 @@ func (db *DB) FindImportingDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
-		WithBook(withBookAuthor).
+		WithBook(withBookContext).
 		WithAlbum(withAlbumContext).
 		Only(ctx)
 }
@@ -918,9 +925,11 @@ func (db *DB) RecordBookImportSuccess(
 	u := tx.Book.UpdateOneID(p.BookID)
 	switch p.Kind {
 	case mediafile.BookKindEbook:
-		u = u.SetEbookStatus(book.EbookStatusAvailable)
+		u = u.SetEbookStatus(book.EbookStatusAvailable).
+			SetEbookReplacingLanguage("")
 	case mediafile.BookKindAudiobook:
-		u = u.SetAudiobookStatus(book.AudiobookStatusAvailable)
+		u = u.SetAudiobookStatus(book.AudiobookStatusAvailable).
+			SetAudiobookReplacingLanguage("")
 	default:
 		tx.Rollback()
 		return fmt.Errorf("unknown book kind %q", p.Kind)
