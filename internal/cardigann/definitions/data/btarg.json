@@ -332,15 +332,17 @@
             "name": "re_replace",
             "args": [
               "^(\\[ARG\\]) (.+?)$",
-              "${2} ${1}"
-            ]
+              "$2 $1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "^(\\[.+?\\]) (.+?)$",
-              "${2} ${1}"
-            ]
+              "$2 $1"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -452,15 +454,17 @@
             "name": "re_replace",
             "args": [
               "^(\\[ARG\\]) (.+?)$",
-              "${2} ${1}"
-            ]
+              "$2 $1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "^(\\[.+?\\]) (.+?)$",
-              "${2} ${1}"
-            ]
+              "$2 $1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "prepend",
@@ -513,8 +517,9 @@
           {
             "name": "regexp",
             "args": [
-              "/ (\\p{Nd}+)$"
-            ]
+              "/ (\\d+)$"
+            ],
+            "engine": "regexp2"
           }
         ]
       },

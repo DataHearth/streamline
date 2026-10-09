@@ -3877,16 +3877,18 @@
           {
             "name": "re_replace",
             "args": [
-              "(?i)[\\t-\\r\\x{85}\\p{Z}]от[\\t-\\r\\x{85}\\p{Z}]([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}\\p{P}\\p{S}]+)$",
-              "-${1}"
-            ]
+              "(?i)\\sот\\s([\\w\\p{P}\\p{S}]+)$",
+              "-$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "[\\t-\\r\\x{85}\\p{Z}]\\|[\\t-\\r\\x{85}\\p{Z}]([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]{4,})$",
-              "-${1}"
-            ]
+              "\\s\\|\\s(\\w{4,})$",
+              "-$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",

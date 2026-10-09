@@ -491,8 +491,9 @@
         "name": "re_replace",
         "args": [
           "^(.+)$",
-          "*${1}*"
-        ]
+          "*$1*"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -589,5 +590,6 @@
     "path": "definitions/v11/arabtorrents.yml",
     "sha256": "487d41f878947f831f8def7f98ad3dae542da990ae25921b2660165df6395180",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

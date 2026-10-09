@@ -20,48 +20,10 @@ import (
 // what comes back from storage, so the embedded snapshot's test runs it over
 // every file and a hand edit cannot slip past.
 func Check(d *cardigann.Definition) error {
-	return check(reflect.ValueOf(d), "")
-}
-
-func check(v reflect.Value, path string) error {
-	at := func(err error) error {
-		return fmt.Errorf("%s: %w", strings.TrimPrefix(path, "."), err)
-	}
-	if v.Type() == filterType {
-		f, _ := reflect.TypeAssert[cardigann.Filter](v)
-		if err := checkFilter(f); err != nil {
-			return at(err)
-		}
-		return nil
-	}
-	switch v.Kind() {
-	case reflect.Pointer:
-		if !v.IsNil() {
-			return check(v.Elem(), path)
-		}
-	case reflect.Struct:
-		t := v.Type()
-		for i := range t.NumField() {
-			if !t.Field(i).IsExported() {
-				continue
-			}
-			if err := check(v.Field(i), path+"."+t.Field(i).Name); err != nil {
-				return err
-			}
-		}
-	case reflect.Slice:
-		for i := range v.Len() {
-			if err := check(v.Index(i), fmt.Sprintf("%s[%d]", path, i)); err != nil {
-				return err
-			}
-		}
-	case reflect.String:
-		if err := checkTemplate(v.String()); err != nil {
-			return at(err)
-		}
-	default:
-	}
-	return nil
+	return visit(reflect.ValueOf(d).Elem(),
+		func(f *cardigann.Filter) error { return checkFilter(*f) },
+		func(s reflect.Value) error { return checkTemplate(s.String()) },
+	)
 }
 
 func checkFilter(f cardigann.Filter) error {

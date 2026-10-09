@@ -218,7 +218,8 @@
             "args": [
               "(?i)^None$",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
@@ -316,5 +317,6 @@
     "path": "definitions/v11/theleachzone-api.yml",
     "sha256": "94adb38d0c7201563134a0daaa09fbae092f09ce3c79324c37bcf3eb845cfef2",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

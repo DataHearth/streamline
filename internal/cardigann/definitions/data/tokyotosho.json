@@ -199,7 +199,8 @@
             "name": "regexp",
             "args": [
               "Size: (.+?) ?$"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -217,7 +218,8 @@
             "name": "regexp",
             "args": [
               "Date: (.+?) ?$"
-            ]
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "replace",
@@ -253,5 +255,6 @@
     "path": "definitions/v11/tokyotosho.yml",
     "sha256": "4a33ed637454594a00ba78a645dace8ce71e53383689a320da9ce2ec8d839e2b",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

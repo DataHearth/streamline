@@ -385,7 +385,8 @@
             "name": "regexp",
             "args": [
               "File Size: (.+?)s?$"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },

@@ -707,8 +707,9 @@
           {
             "name": "regexp",
             "args": [
-              "Genre:[\\t-\\r\\x{85}\\p{Z}](.+?)$"
-            ]
+              "Genre:\\s(.+?)$"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "replace",
@@ -741,5 +742,6 @@
     "path": "definitions/v11/bwtorrents.yml",
     "sha256": "1e33cc44613637e3798f266d1eae79a966e4279c9fba4acca5ba2eedb279cb51",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }
