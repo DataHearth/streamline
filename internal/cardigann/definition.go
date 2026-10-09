@@ -16,6 +16,12 @@ package cardigann
 // retired must be ported to the new schema rather than reading stale files.
 const SchemaVersion = 11
 
+// Definition fields whose upstream default is not Go's zero value are
+// pointers, so "absent" survives into the JSON: TestLinkTorrent defaults to
+// true (fetch each non-magnet link and move to the next download selector
+// when it is not a bencoded torrent), and Settings is written even when empty
+// because upstream treats a missing list (add username and password) unlike
+// an empty one.
 type Definition struct {
 	ID              string    `yaml:"id"              json:"id"`
 	Replaces        []string  `yaml:"replaces"        json:"replaces,omitempty"`
@@ -25,13 +31,13 @@ type Definition struct {
 	Type            string    `yaml:"type"            json:"type"`
 	Encoding        string    `yaml:"encoding"        json:"encoding"`
 	FollowRedirect  bool      `yaml:"followredirect"  json:"followredirect,omitempty"`
-	TestLinkTorrent bool      `yaml:"testlinktorrent" json:"testlinktorrent,omitempty"`
+	TestLinkTorrent *bool     `yaml:"testlinktorrent" json:"testlinktorrent,omitempty"`
 	RequestDelay    float64   `yaml:"requestDelay"    json:"requestDelay,omitempty"`
 	Links           []string  `yaml:"links"           json:"links"`
 	LegacyLinks     []string  `yaml:"legacylinks"     json:"legacylinks,omitempty"`
 	Certificates    []string  `yaml:"certificates"    json:"certificates,omitempty"`
 	Caps            Caps      `yaml:"caps"            json:"caps"`
-	Settings        []Setting `yaml:"settings"        json:"settings,omitempty"`
+	Settings        []Setting `yaml:"settings"        json:"settings"`
 	Login           *Login    `yaml:"login"           json:"login,omitempty"`
 	Search          Search    `yaml:"search"          json:"search"`
 	Download        *Download `yaml:"download"        json:"download,omitempty"`
@@ -149,13 +155,16 @@ type Search struct {
 	Fields               OrderedMap[Selector] `yaml:"fields"               json:"fields"`
 }
 
-// SearchPath leaves FollowRedirect and InheritInputs as pointers: unset
-// means "inherit from the definition" and "true" respectively, which a plain
-// bool would flatten into an explicit false.
+// SearchPath leaves InheritInputs a pointer: unset means true, which a plain
+// bool would flatten into an explicit false. FollowRedirect is plain on
+// purpose — both upstream engines default a path to not following redirects,
+// whatever the definition-level followredirect says (that one only governs
+// the form login's landing page). An unfollowed redirect on a search is
+// upstream's cue to log in again.
 type SearchPath struct {
 	Path           string          `yaml:"path"           json:"path"`
 	Method         string          `yaml:"method"         json:"method,omitempty"`
-	FollowRedirect *bool           `yaml:"followredirect" json:"followredirect,omitempty"`
+	FollowRedirect bool            `yaml:"followredirect" json:"followredirect,omitempty"`
 	Categories     StrList         `yaml:"categories"     json:"categories,omitempty"`
 	Inputs         OrderedMap[Str] `yaml:"inputs"         json:"inputs,omitempty"`
 	InheritInputs  *bool           `yaml:"inheritinputs"  json:"inheritinputs,omitempty"`
@@ -163,9 +172,12 @@ type SearchPath struct {
 	Response       *Response       `yaml:"response"       json:"response,omitempty"`
 }
 
+// Response keeps NoResultsMessage a pointer: set — even to "" — it is the
+// body upstream reads as "no results" instead of a parse failure, and an
+// empty body matches an empty message.
 type Response struct {
-	Type             string `yaml:"type"             json:"type"`
-	NoResultsMessage string `yaml:"noResultsMessage" json:"noResultsMessage,omitempty"`
+	Type             string  `yaml:"type"             json:"type"`
+	NoResultsMessage *string `yaml:"noResultsMessage" json:"noResultsMessage,omitempty"`
 }
 
 type Rows struct {

@@ -422,7 +422,7 @@
           {
             "name": "re_replace",
             "args": [
-              "12:(\\d\\d) PM",
+              "12:(\\p{Nd}\\p{Nd}) PM",
               "00:${1} PM"
             ]
           }

@@ -140,7 +140,7 @@
     ],
     "inputs": {
       "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
-      "search": "{{ re_replace .Keywords \"[\\\\s]+\" \"%\" }}",
+      "search": "{{ re_replace .Keywords \"[\\\\t-\\\\r\\\\x{85}\\\\p{Z}]+\" \"%\" }}",
       "incldead": "1",
       "free": "{{ if .Config.freeleech }}1{{ else }}{{ end }}"
     },
@@ -153,21 +153,21 @@
       {
         "name": "re_replace",
         "args": [
-          " +(?:19|20)\\d{2} *$",
+          " +(?:19|20)\\p{Nd}{2} *$",
           ""
         ]
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i) S0(\\d{1})$",
+          "(?i) S0(\\p{Nd}{1})$",
           " Season ${1}"
         ]
       },
       {
         "name": "re_replace",
         "args": [
-          "(?i) S(\\d{2})$",
+          "(?i) S(\\p{Nd}{2})$",
           " Season ${1}"
         ]
       }
@@ -186,21 +186,22 @@
           {
             "name": "re_replace",
             "args": [
-              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
-              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
-            ]
+              "(\\([\\u0400-\\u04FF\\W]+\\))|(^[\\u0400-\\u04FF\\W\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)Season (\\d{2})",
+              "(?i)Season (\\p{Nd}{2})",
               "S${1}"
             ]
           },
           {
             "name": "re_replace",
             "args": [
-              "(?i)Season (\\d{1})",
+              "(?i)Season (\\p{Nd}{1})",
               "S0${1}"
             ]
           },
@@ -224,7 +225,7 @@
           {
             "name": "regexp",
             "args": [
-              "(\\d+)"
+              "(\\p{Nd}+)"
             ]
           }
         ]
@@ -294,5 +295,6 @@
     "path": "definitions/v11/teamhd.yml",
     "sha256": "cf9ddd16a4dbbe8e37185fdc4d18559e5f53cf8f7ad4a5246395f1c259fad0fb",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

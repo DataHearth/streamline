@@ -174,7 +174,7 @@
           {
             "name": "regexp",
             "args": [
-              "/categories/(\\d+)"
+              "/categories/(\\p{Nd}+)"
             ]
           }
         ]

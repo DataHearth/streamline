@@ -182,7 +182,8 @@
             "name": "regexp",
             "args": [
               "\\b(S\\d+(?:E\\d+)?)\\b"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -214,7 +215,7 @@
           {
             "name": "regexp",
             "args": [
-              "-torrent-(\\d+).html"
+              "-torrent-(\\p{Nd}+).html"
             ]
           },
           {
@@ -323,5 +324,6 @@
     "path": "definitions/v11/nethd.yml",
     "sha256": "c7c2925041892834dfbc33ecb02a0a80e4d9742eed64a7452fadb38523b1dbb3",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

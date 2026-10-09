@@ -65,6 +65,7 @@
       ]
     }
   },
+  "settings": [],
   "login": {
     "method": "form",
     "path": "addon.php?r=document/view&page=visitor-test",
@@ -147,7 +148,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006/01/02 -07:00"
+              "2006/01/02 -07:00",
+              "2006/01/02 -0700"
             ]
           }
         ]

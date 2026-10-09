@@ -273,7 +273,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Jan 02 2006 03:04 PM"
+              "Jan 02 2006 03:04 PM",
+              "Jan 02 2006 03:04 pm"
             ]
           }
         ]

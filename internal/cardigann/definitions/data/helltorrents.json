@@ -382,7 +382,8 @@
             "args": [
               "(?i)\\b(pl)\\b",
               "POLISH"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -407,7 +408,7 @@
           {
             "name": "regexp",
             "args": [
-              "Dodano: (\\d{2}/\\d{2}/\\d{4})"
+              "Dodano: (\\p{Nd}{2}/\\p{Nd}{2}/\\p{Nd}{4})"
             ]
           },
           {
@@ -424,7 +425,7 @@
           {
             "name": "regexp",
             "args": [
-              "Rozmiar: (\\d+\\.\\d+ [T|G|M|K|k]B)"
+              "Rozmiar: (\\p{Nd}+\\.\\p{Nd}+ [T|G|M|K|k]B)"
             ]
           }
         ]
@@ -435,7 +436,7 @@
           {
             "name": "regexp",
             "args": [
-              "Seedów: (\\d+)"
+              "Seedów: (\\p{Nd}+)"
             ]
           }
         ]
@@ -446,7 +447,7 @@
           {
             "name": "regexp",
             "args": [
-              "Leecherów: (\\d+)"
+              "Leecherów: (\\p{Nd}+)"
             ]
           }
         ]
@@ -457,7 +458,7 @@
           {
             "name": "regexp",
             "args": [
-              "Ukończone: (\\d+)"
+              "Ukończone: (\\p{Nd}+)"
             ]
           }
         ]

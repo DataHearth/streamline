@@ -191,8 +191,9 @@
         "name": "re_replace",
         "args": [
           "\\b(S\\d{2,})?(?:E\\d{2,})\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -206,7 +207,7 @@
           {
             "name": "regexp",
             "args": [
-              "第(\\d+(?:-\\d+)?)集"
+              "第(\\p{Nd}+(?:-\\p{Nd}+)?)集"
             ]
           }
         ]
@@ -230,8 +231,9 @@
             "name": "re_replace",
             "args": [
               "\\b(S\\d+)\\b",
-              "{{ if .Result._episode_number }}${1}E{{ .Result._episode_number }}{{ else }}${1}{{ end }}"
-            ]
+              "{{ if .Result._episode_number }}$1E{{ .Result._episode_number }}{{ else }}$1{{ end }}"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -261,7 +263,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006-01-02 15:04:05 -07:00"
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
             ]
           }
         ]
@@ -279,7 +282,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006-01-0215:04:05 -07:00"
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
             ]
           }
         ]
@@ -329,5 +333,6 @@
     "path": "definitions/v11/hhanclub.yml",
     "sha256": "dfb932bc7f0775f01e7202468caa49e139cb8c66238df89cc8f0ea02a1f79c28",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -200,7 +200,7 @@
           {
             "name": "regexp",
             "args": [
-              "([\\d\\.]+[T|G|M|K]iB)"
+              "([\\p{Nd}\\.]+[T|G|M|K]iB)"
             ]
           }
         ]

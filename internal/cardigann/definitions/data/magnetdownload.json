@@ -81,7 +81,7 @@
           {
             "name": "regexp",
             "args": [
-              "Files. (\\d+)"
+              "Files. (\\p{Nd}+)"
             ]
           }
         ]
@@ -103,7 +103,7 @@
           {
             "name": "regexp",
             "args": [
-              "requests. (\\d+)"
+              "requests. (\\p{Nd}+)"
             ]
           }
         ]

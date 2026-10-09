@@ -613,7 +613,8 @@
             "args": [
               "\\b0\\b",
               "48"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -691,5 +692,6 @@
     "path": "definitions/v11/sportscult.yml",
     "sha256": "a06f3289d6091849fa6603f971eee4f833e62ec2b94947f99ecac0b2e59464d7",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

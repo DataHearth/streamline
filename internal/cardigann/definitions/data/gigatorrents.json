@@ -405,7 +405,7 @@
           {
             "name": "regexp",
             "args": [
-              "Feltöltve:\\s*([\\d-]+\\s*[\\d:]+)"
+              "Feltöltve:[\\t-\\r\\x{85}\\p{Z}]*([\\p{Nd}-]+[\\t-\\r\\x{85}\\p{Z}]*[\\p{Nd}:]+)"
             ]
           }
         ]

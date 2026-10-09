@@ -209,7 +209,7 @@
       {
         "name": "re_replace",
         "args": [
-          "^([SE]\\d{1,4}){1,2}$",
+          "^([SE]\\p{Nd}{1,4}){1,2}$",
           "{{ if or (.Query.Season) (.Query.Ep) }}{{ else }}${1}{{ end }}"
         ]
       },
@@ -217,8 +217,9 @@
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)\\b",
-          "Stagione ${1}"
-        ]
+          "Stagione $1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -253,15 +254,17 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{1})\\b|\\bSeason'?s?\\s?(\\d{1})\\b",
-              "S0${1}${2}"
-            ]
+              "S0$1$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bStagion[ei]\\s?(\\d{2,})\\b|\\bSeason'?s?\\s?(\\d{2,})\\b",
-              "S${1}${2}"
-            ]
+              "S$1$2"
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -342,7 +345,8 @@
           {
             "name": "dateparse",
             "args": [
-              "01/02/2006 15:04:05 -07:00"
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
             ]
           }
         ]
@@ -390,5 +394,6 @@
     "path": "definitions/v11/itatorrents.yml",
     "sha256": "46b67f841d508c5e33759c5e146da74149e08d9602d169f22c1c5f607fad12e7",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -153,15 +153,17 @@
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "re_replace",
         "args": [
           "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
-          "${1}"
-        ]
+          "$1"
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -175,7 +177,7 @@
           {
             "name": "regexp",
             "args": [
-              "\\[(\\d+)\\]"
+              "\\[(\\p{Nd}+)\\]"
             ]
           }
         ]
@@ -187,43 +189,49 @@
             "name": "re_replace",
             "args": [
               "(?i)\\bSeasons?\\s*(\\d)\\s*-\\s*(\\d)\\b",
-              "S0${1}-S0${2}"
-            ]
+              "S0$1-S0$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSeasons?\\s*(\\d)\\s*-\\s*(\\d+)\\b",
-              "S0${1}-S${2}"
-            ]
+              "S0$1-S$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSeasons?\\s*(\\d+)\\s*-\\s*(\\d+)\\b",
-              "S${1}-S${2}"
-            ]
+              "S$1-S$2"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSeasons?\\s*(\\d)\\b",
-              "S0${1}"
-            ]
+              "S0$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bSeasons?\\s*(\\d+)\\b",
-              "S${1}"
-            ]
+              "S$1"
+            ],
+            "engine": "regexp2"
           },
           {
             "name": "re_replace",
             "args": [
               "(?i)\\bComplete\\s+Series\\b",
               ""
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -330,5 +338,6 @@
     "path": "definitions/v11/cathoderaytube.yml",
     "sha256": "386f9e3783749a2b080eeeb205ab698482dd5f241166ef351ad8efcbf015e3a3",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -94,7 +94,8 @@
         "args": [
           "\\bS\\d{2,3}\\b",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       },
       {
         "name": "trim"
@@ -198,5 +199,6 @@
     "path": "definitions/v11/eztvl.yml",
     "sha256": "427a82cd664eaa1586e589608fefc41e12c735cf32011fa15c9a1fdb2ad41378",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

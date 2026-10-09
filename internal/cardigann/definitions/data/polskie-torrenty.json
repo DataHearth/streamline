@@ -523,7 +523,8 @@
             "args": [
               "(?i)\\b(pl)\\b",
               "POLISH"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },

@@ -37,6 +37,14 @@ func main() {
 			"output directory")
 	)
 	flag.Parse()
+	// -ref only chooses what to fetch, so beside -src it would be silently
+	// ignored and the NOTICE would name whatever the checkout holds instead.
+	refSet := false
+	flag.Visit(func(f *flag.Flag) { refSet = refSet || f.Name == "ref" })
+	if refSet && *src != "" {
+		fmt.Fprintln(os.Stderr, "cardigann-sync: pass -ref or -src, not both")
+		os.Exit(2)
+	}
 	if err := run(*src, *ref, *out); err != nil {
 		fmt.Fprintln(os.Stderr, "cardigann-sync:", err)
 		os.Exit(1)
@@ -91,12 +99,16 @@ func run(src, ref, out string) error {
 		if err != nil {
 			return err
 		}
-		// Keyed by id, not file name: a handful of files upstream are named
-		// apart from the id inside them (bluebird.yml is bluebirdhd), and
-		// the id is what Prowlarr and a config entry refer to.
+		// Keyed by file name, not id: that is what Prowlarr stores an indexer
+		// under and fetches an update by, and a handful of files upstream
+		// are named apart from the id inside them (bluebird.yml holds
+		// bluebirdhd). It also keeps every write inside data/, whatever an
+		// upstream id says.
+		file := strings.TrimSuffix(name, ".yml")
 		d, err := convert.Convert(rel, raw)
-		if err == nil && defs[d.ID] != nil {
-			err = fmt.Errorf("id %q is already taken by another file", d.ID)
+		var b []byte
+		if err == nil {
+			b, err = cardigann.EncodeJSON(d)
 		}
 		if err != nil {
 			cat.Skipped = append(cat.Skipped, cardigann.Skipped{
@@ -104,15 +116,11 @@ func run(src, ref, out string) error {
 			})
 			continue
 		}
-		b, err := cardigann.EncodeJSON(d)
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-		defs[d.ID] = b
-		cat.Definitions = append(cat.Definitions, cardigann.Summarize(d))
+		defs[file] = b
+		cat.Definitions = append(cat.Definitions, cardigann.Summarize(file, d))
 	}
 	slices.SortFunc(cat.Definitions, func(a, b cardigann.Summary) int {
-		return cmp.Compare(a.ID, b.ID)
+		return cmp.Compare(a.File, b.File)
 	})
 
 	if err := write(out, cat, defs); err != nil {
@@ -149,8 +157,28 @@ func fetch(dir, ref string) error {
 
 // upstream reads the checkout's revision and refuses local edits: the
 // snapshot's notice names an upstream commit, which a dirty tree is not.
+//
+// dir must be the top of its own repository: inside any other work tree, git
+// would answer for that one — a copied definitions/ folder under a streamline
+// checkout's gitignored tmp/ reads as clean and stamps streamline's HEAD into
+// the NOTICE. Untracked and ignored files count as changes, set explicitly so
+// no git configuration can hide one the glob would still read.
 func upstream(dir string) (cardigann.Upstream, error) {
-	status, err := git(dir, "status", "--porcelain", "--", "definitions", "VERSIONS")
+	top, err := git(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return cardigann.Upstream{}, err
+	}
+	same, err := samePath(dir, strings.TrimSpace(top))
+	if err != nil {
+		return cardigann.Upstream{}, err
+	}
+	if !same {
+		return cardigann.Upstream{}, fmt.Errorf(
+			"%s is not the root of a Prowlarr/Indexers checkout", dir,
+		)
+	}
+	status, err := git(dir, "status", "--porcelain", "--untracked-files=all",
+		"--ignored=matching", "--", "definitions", "VERSIONS")
 	if err != nil {
 		return cardigann.Upstream{}, err
 	}
@@ -169,6 +197,23 @@ func upstream(dir string) (cardigann.Upstream, error) {
 		Commit:     commit,
 		Date:       date,
 	}, nil
+}
+
+func samePath(a, b string) (bool, error) {
+	ra, err := filepath.EvalSymlinks(a)
+	if err != nil {
+		return false, err
+	}
+	rb, err := filepath.EvalSymlinks(b)
+	if err != nil {
+		return false, err
+	}
+	ra, err = filepath.Abs(ra)
+	if err != nil {
+		return false, err
+	}
+	rb, err = filepath.Abs(rb)
+	return ra == rb, err
 }
 
 func git(dir string, args ...string) (string, error) {
@@ -238,8 +283,8 @@ func write(out string, cat cardigann.Catalog, defs map[string][]byte) error {
 	if err := os.MkdirAll(data, 0o750); err != nil {
 		return err
 	}
-	for id, b := range defs {
-		if err := writeFile(filepath.Join(data, id+".json"), b); err != nil {
+	for file, b := range defs {
+		if err := writeFile(filepath.Join(data, file+".json"), b); err != nil {
 			return err
 		}
 	}

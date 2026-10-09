@@ -62,12 +62,7 @@ func translateTemplate(s string) (string, bool, error) {
 	)
 	out := reReplaceCall.ReplaceAllStringFunc(s, func(call string) string {
 		m := reReplaceCall.FindStringSubmatch(call)
-		pat, engine, err := translateRegex(m[2])
-		if err != nil {
-			failed = err
-			return call
-		}
-		rep, err := translateReplacement(m[3], engine)
+		pat, rep, engine, err := translatePair(m[2], m[3])
 		if err != nil {
 			failed = err
 			return call

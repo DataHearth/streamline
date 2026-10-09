@@ -316,7 +316,8 @@
       {
         "path": "api/v1/torrents",
         "response": {
-          "type": "json"
+          "type": "json",
+          "noResultsMessage": ""
         }
       }
     ],
@@ -397,7 +398,8 @@
           {
             "name": "dateparse",
             "args": [
-              "2006-01-02 15:04:05 -07:00"
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
             ]
           }
         ]

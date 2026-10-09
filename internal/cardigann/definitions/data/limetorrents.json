@@ -155,7 +155,7 @@
           {
             "name": "regexp",
             "args": [
-              "/(.+?)-torrent-\\d+\\.html"
+              "/(.+?)-torrent-\\p{Nd}+\\.html"
             ]
           },
           {
@@ -174,7 +174,8 @@
             "name": "regexp",
             "args": [
               "\\b(S\\d+(?:E\\d+)?)\\b"
-            ]
+            ],
+            "engine": "regexp2"
           }
         ]
       },
@@ -276,5 +277,6 @@
     "path": "definitions/v11/limetorrents.yml",
     "sha256": "6a315c4e13fe39438fb0dcaa18218dd573f09bdefbe8d42905bc334ede51dd88",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

@@ -216,7 +216,8 @@
         "args": [
           "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
           ""
-        ]
+        ],
+        "engine": "regexp2"
       }
     ],
     "rows": {
@@ -231,7 +232,7 @@
           {
             "name": "regexp",
             "args": [
-              "(?i)filter_cat(?:\\[|%5b|%5B)(\\d+)(?:\\]|%5d|%5D)"
+              "(?i)filter_cat(?:\\[|%5b|%5B)(\\p{Nd}+)(?:\\]|%5d|%5D)"
             ]
           }
         ]
@@ -244,7 +245,7 @@
           {
             "name": "regexp",
             "args": [
-              "(?i)filter_cat(?:\\[|%5b|%5B)(\\d+)(?:\\]|%5d|%5D)"
+              "(?i)filter_cat(?:\\[|%5b|%5B)(\\p{Nd}+)(?:\\]|%5d|%5D)"
             ]
           }
         ]
@@ -326,7 +327,8 @@
           {
             "name": "dateparse",
             "args": [
-              "Jan 02 2006, 15:04 -07:00"
+              "Jan 02 2006, 15:04 -07:00",
+              "Jan 02 2006, 15:04 -0700"
             ]
           }
         ]
@@ -352,5 +354,6 @@
     "path": "definitions/v11/bjshare.yml",
     "sha256": "2ee4899f354b3f42604d30e6955776136d878013b19142fccf2738b90de8f23d",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
-  }
+  },
+  "regex_net": true
 }

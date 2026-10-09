@@ -3,10 +3,7 @@ package definitions_test
 import (
 	"os"
 	"path/filepath"
-	"reflect"
-	"regexp"
 
-	"github.com/dlclark/regexp2/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -17,7 +14,10 @@ import (
 
 // The snapshot is generated, so these specs guard the generator's output as
 // committed: that it is current, that the model round-trips every byte of
-// it, and that every regex runs on the engine it was assigned.
+// it, and that convert.Check accepts every file — each regex, in a filter or
+// a template, compiles on the engine it was assigned, and each template
+// parses. They cannot tell whether the converter changed since the sync ran;
+// that is what bumping convert.Version is for.
 var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 	var cat cardigann.Catalog
 
@@ -40,70 +40,47 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 		Expect(definitions.Notice()).To(ContainSubstring("Jackett"))
 	})
 
-	It(
-		"round-trips every definition byte for byte, and its regexes compile",
-		func() {
-			seen := map[string]bool{}
-			for _, s := range cat.Definitions {
-				Expect(seen[s.ID]).To(BeFalse(), "duplicate id %s", s.ID)
-				seen[s.ID] = true
+	It("round-trips every definition byte for byte, and Check accepts it", func() {
+		for _, s := range cat.Definitions {
+			d, err := definitions.Load(s.File)
+			Expect(err).NotTo(HaveOccurred(), s.File)
+			Expect(cardigann.Summarize(s.File, d)).To(Equal(s), s.File)
+			Expect(d.Source.Path).To(HaveSuffix("/"+s.File+".yml"), s.File)
 
-				d, err := definitions.Load(s.ID)
-				Expect(err).NotTo(HaveOccurred(), s.ID)
-				Expect(cardigann.Summarize(d)).To(Equal(s), s.ID)
+			b, err := cardigann.EncodeJSON(d)
+			Expect(err).NotTo(HaveOccurred())
+			raw, err := os.ReadFile(filepath.Join("data", s.File+".json"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				string(b),
+			).To(Equal(string(raw)), "%s does not round-trip", s.File)
 
-				b, err := cardigann.EncodeJSON(d)
-				Expect(err).NotTo(HaveOccurred())
-				raw, err := os.ReadFile(filepath.Join("data", s.ID+".json"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(
-					string(b),
-				).To(Equal(string(raw)), "%s does not round-trip", s.ID)
+			Expect(convert.Check(d)).To(Succeed(), s.File)
+		}
+	})
 
-				for _, f := range filters(reflect.ValueOf(d)) {
-					if f.Name != "regexp" && f.Name != "re_replace" {
-						continue
-					}
-					if f.Engine == cardigann.RegexEngineNET {
-						_, err = regexp2.Compile(f.Args[0], regexp2.None)
-					} else {
-						_, err = regexp.Compile(f.Args[0])
-					}
-					Expect(err).NotTo(HaveOccurred(), "%s: %q", s.ID, f.Args[0])
-				}
-			}
-		},
-	)
+	It("loads by upstream file name, which is not always the id", func() {
+		d, err := definitions.Load("bluebird")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.ID).To(Equal("bluebirdhd"))
+	})
 
-	It("refuses an id that is not a plain name", func() {
+	It("hands each caller its own copy of the catalog", func() {
+		cat.Definitions[0].Categories = append(
+			cat.Definitions[0].Categories[:0],
+			"x",
+		)
+		cat.Definitions = cat.Definitions[:1]
+		again, err := definitions.Catalog()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(again.Definitions)).To(BeNumerically(">", 1))
+		Expect(again.Definitions[0].Categories).NotTo(ContainElement("x"))
+	})
+
+	It("refuses a name that is not a plain file name", func() {
 		for _, id := range []string{"", "../index", "a/b", `a\b`, "nope"} {
 			_, err := definitions.Load(id)
 			Expect(err).To(MatchError(definitions.ErrNotFound), id)
 		}
 	})
 })
-
-func filters(v reflect.Value) []cardigann.Filter {
-	var out []cardigann.Filter
-	switch v.Kind() {
-	case reflect.Pointer:
-		if !v.IsNil() {
-			out = append(out, filters(v.Elem())...)
-		}
-	case reflect.Struct:
-		if f, ok := reflect.TypeAssert[cardigann.Filter](v); ok {
-			return []cardigann.Filter{f}
-		}
-		for i := range v.NumField() {
-			if v.Type().Field(i).IsExported() {
-				out = append(out, filters(v.Field(i))...)
-			}
-		}
-	case reflect.Slice:
-		for i := range v.Len() {
-			out = append(out, filters(v.Index(i))...)
-		}
-	default:
-	}
-	return out
-}
