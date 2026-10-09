@@ -77,7 +77,12 @@ func translatePair(pat, rep string) (string, string, string, error) {
 		return "", "", "", err
 	}
 	if engine == "" {
-		if goRep, ok := expandRE2(rep, regexp.MustCompile(out)); ok {
+		re := regexp.MustCompile(out)
+		// Go's ReplaceAll skips an empty match right after a non-empty one
+		// ("a*" over "baaac" gives -b-c-); .NET replaces it (-b--c-). The
+		// context-dependent empty assertions are already on regexp2, so a
+		// pattern that can match empty anywhere matches the empty string.
+		if goRep, ok := expandRE2(rep, re); ok && !re.MatchString("") {
 			return out, goRep, "", nil
 		}
 		out = rewriteNET(pat)
@@ -119,6 +124,12 @@ func rewriteRE2(pat string) (string, bool) {
 			continue
 		case inClass && c == '-' && i+1 < len(pat) && pat[i+1] == '[':
 			return "", false // .NET class subtraction
+		case !inClass && (strings.HasPrefix(pat[i:], "(?<") &&
+			!strings.HasPrefix(pat[i:], "(?<=") && !strings.HasPrefix(pat[i:], "(?<!") ||
+			strings.HasPrefix(pat[i:], "(?'")):
+			// .NET numbers unnamed groups first and named ones after them;
+			// Go numbers all of them left to right, so $1 would differ.
+			return "", false
 		case !inClass && c == '$':
 			// .NET's $ also matches just before a final newline, which RE2
 			// can only say with a lookahead it does not have.
@@ -184,6 +195,18 @@ func rewriteEscapeRE2(b *strings.Builder, s string, inClass bool) (int, bool) {
 		set(map[byte]string{'W': netWord, 'S': netSpace}[next], true)
 	case next == 'b' || next == 'B':
 		return 0, false
+	case next >= '0' && next <= '7':
+		// An octal escape: .NET keeps the low byte of one above \377, Go
+		// takes the whole value.
+		j := 1
+		for j < len(s) && j < 4 && s[j] >= '0' && s[j] <= '7' {
+			j++
+		}
+		if v, _ := strconv.ParseUint(s[1:j], 8, 16); v > 0o377 {
+			return 0, false
+		}
+		b.WriteString(s[:j])
+		return j, true
 	case next >= utf8.RuneSelf:
 		// .NET: an escaped non-word character is itself. Go grants that only
 		// to ASCII punctuation, and no non-ASCII rune is special to RE2.
@@ -203,6 +226,22 @@ func rewriteNET(pat string) string {
 	inClass := false
 	for i := 0; i < len(pat); {
 		c := pat[i]
+		if c == '\\' && i+1 < len(pat) && (pat[i+1] == 'w' || pat[i+1] == 'W') {
+			// regexp2's \w also takes ZWNJ and ZWJ (U+200C/D), which .NET's
+			// does not — only its \b counts them as word characters.
+			switch {
+			case pat[i+1] == 'w' && inClass:
+				b.WriteString(netWord)
+			case pat[i+1] == 'w':
+				b.WriteString("[" + netWord + "]")
+			case inClass:
+				b.WriteString(`\W\u200C\u200D`)
+			default:
+				b.WriteString(`[\W\u200C\u200D]`)
+			}
+			i += 2
+			continue
+		}
 		if c == '\\' && i+1 < len(pat) {
 			name, n, ok := propertyName(pat[i:])
 			r, isBlock := dotnetBlocks[name]
@@ -302,15 +341,26 @@ func expandRE2(rep string, re *regexp.Regexp) (string, bool) {
 			for j < len(rep) && rep[j] >= '0' && rep[j] <= '9' {
 				j++
 			}
-			ref(&b, rep[i+1:j], rep[i:j], re)
+			if ref, ok := groupRef(rep[i+1:j], re); ok {
+				b.WriteString(ref)
+			} else {
+				b.WriteString("$$" + rep[i+1:j])
+			}
 			i = j - 1
 		case next == '{':
+			// .NET reads ${name} only when name is a group; otherwise the $
+			// alone is literal and scanning resumes at the brace, so any
+			// reference inside it still counts.
 			end := strings.IndexByte(rep[i:], '}')
-			if end < 0 {
+			ref, ok := "", false
+			if end >= 0 {
+				ref, ok = groupRef(rep[i+2:i+end], re)
+			}
+			if !ok {
 				b.WriteString("$$")
 				continue
 			}
-			ref(&b, rep[i+2:i+end], rep[i:i+end+1], re)
+			b.WriteString(ref)
 			i += end
 		case next == '`' || next == '\'' || next == '+' || next == '_':
 			return "", false
@@ -321,16 +371,16 @@ func expandRE2(rep string, re *regexp.Regexp) (string, bool) {
 	return b.String(), true
 }
 
-// ref writes a group reference that exists as ${name}, and one that does not
-// as the literal text .NET would leave in place.
-func ref(b *strings.Builder, name, literal string, re *regexp.Regexp) {
-	exists := re.SubexpIndex(name) >= 0
-	if n, err := strconv.Atoi(name); err == nil {
-		exists = n <= re.NumSubexp()
+// groupRef spells a reference to a group the pattern has, numbered ones by
+// value (Go would read $01 as the group named "01"); ok is false for a group
+// it does not have, which .NET leaves as literal text and Go would expand to
+// nothing.
+func groupRef(name string, re *regexp.Regexp) (string, bool) {
+	if n, err := strconv.Atoi(name); err == nil && n >= 0 && name[0] != '+' {
+		return "${" + strconv.Itoa(n) + "}", n <= re.NumSubexp()
 	}
-	if exists {
-		b.WriteString("${" + name + "}")
-		return
+	if re.SubexpIndex(name) >= 0 {
+		return "${" + name + "}", true
 	}
-	b.WriteString("$" + literal)
+	return "", false
 }

@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/dlclark/regexp2/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -59,13 +60,49 @@ var _ = Describe("translateRegex", Label("unit", "cardigann"), func() {
 		Entry("negative lookahead", `(?i)(MULTI(?!.*(?:FRENCH|VOSTFR)))`),
 		Entry("backreference", `(\.MULTI)\1`),
 		Entry("word boundary, ASCII-only in Go", `\bфильм\b`),
-		Entry("negated shorthand inside a class", `[\W\d]+`),
 		Entry("class subtraction", `[a-z-[aeiou]]`),
 		Entry(
 			"end anchor, which .NET also matches before a final newline",
 			`(\d+)$`,
 		),
 	)
+
+	It("gives regexp2 .NET's \\w, which leaves out ZWNJ and ZWJ", func() {
+		out, engine, err := translateRegex(`(?<=x)\w+`)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(engine).To(Equal(cardigann.RegexEngineNET))
+		re := regexp2.MustCompile(out, regexp2.None)
+		m, err := re.FindStringMatch("xmulti" + string(rune(0x200D)) + "zwj")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.String()).To(Equal("multi"))
+	})
+
+	It(
+		"sends a negated shorthand inside a class to regexp2, as .NET means it",
+		func() {
+			out, engine, err := translateRegex(`[\W\d]+`)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(engine).To(Equal(cardigann.RegexEngineNET))
+			Expect(out).To(Equal(`[\W\u200C\u200D\d]+`))
+		},
+	)
+
+	DescribeTable("sends .NET-only meanings to regexp2",
+		func(in string) {
+			_, engine, err := translateRegex(in)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(engine).To(Equal(cardigann.RegexEngineNET))
+		},
+		Entry("named group, numbered after unnamed ones in .NET", `(?<x>a)(b)`),
+		Entry("octal escape above \\377, which .NET masks to a byte", `\400`),
+	)
+
+	It("keeps an octal escape .NET and Go read alike on RE2", func() {
+		out, engine, err := translateRegex(`\101`)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(engine).To(BeEmpty())
+		Expect(out).To(Equal(`\101`))
+	})
 
 	It("gives regexp2 a block name as its range too", func() {
 		out, engine, err := translateRegex(`(?<=\s)[\p{IsCyrillic}]+`)
@@ -96,7 +133,17 @@ var _ = Describe("translatePair", Label("unit", "cardigann"), func() {
 		Entry("escaped dollar", `a`, "$$5", "$$5"),
 		Entry("lone dollar", `a`, "a $ b", "a $$ b"),
 		Entry("trailing dollar", `a`, "b$", "b$$"),
+		Entry("leading zeros read as a number", `(a)(b)`, "[$01]", "[${1}]"),
+		Entry("an unreadable ${...} leaves its inner references live",
+			`(x)`, "${a$1b}", "$${a${1}b}"),
 	)
+
+	It("sends a pattern that can match empty to regexp2", func() {
+		// Go skips an empty match right after a non-empty one; .NET does not.
+		_, _, engine, err := translatePair(`a*`, "-")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(engine).To(Equal(cardigann.RegexEngineNET))
+	})
 
 	It("sends a .NET-only substitution to regexp2, untouched", func() {
 		_, rep, engine, err := translatePair(`a`, "$`")

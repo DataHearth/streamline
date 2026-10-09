@@ -422,7 +422,7 @@
       {
         "name": "re_replace",
         "args": [
-          "([\\u4E00-\\u9FFF\\W]+)",
+          "([\\u4E00-\\u9FFF\\W\\u200C\\u200D]+)",
           "."
         ],
         "engine": "regexp2"
@@ -450,7 +450,7 @@
           {
             "name": "re_replace",
             "args": [
-              "- (\\w+-?\\w*)$",
+              "- ([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+-?[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]*)$",
               "-$1"
             ],
             "engine": "regexp2"

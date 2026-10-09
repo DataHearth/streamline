@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"slices"
 	"strings"
@@ -31,9 +32,16 @@ func Decode(src []byte) (*Definition, error) {
 	if err != nil {
 		return nil, err
 	}
+	// yaml.Unmarshal reads the first document and ignores the rest, so a
+	// second one — parseable or not — would ride along unseen.
 	var root yaml.Node
-	if err := yaml.Unmarshal(src, &root); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(src))
+	if err := dec.Decode(&root); err != nil {
 		return nil, err
+	}
+	var extra yaml.Node
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("want one YAML document")
 	}
 	if root.Kind != yaml.DocumentNode || len(root.Content) != 1 {
 		return nil, fmt.Errorf("want one YAML document")
@@ -87,13 +95,23 @@ func protectSlashes(src []byte) ([]byte, error) {
 	return out, nil
 }
 
-// sanitize refuses anchors, aliases and duplicate keys, and restores \/ in
-// the scalars protectSlashes reached but the YAML parser did not unescape.
+// sanitize refuses anchors, aliases, explicit tags and duplicate keys, and
+// restores \/ in the scalars protectSlashes reached but the YAML parser did
+// not unescape. Upstream writes no tags, and each one changes decoding behind
+// the strict check's back: !!null on a mapping still fills the struct while
+// skipping the unknown-key walk, !!binary base64-decodes a string.
 func sanitize(n *yaml.Node) error {
 	if n.Kind == yaml.AliasNode || n.Anchor != "" {
 		return fmt.Errorf(
 			"line %d: YAML anchors and aliases are not accepted",
 			n.Line,
+		)
+	}
+	if n.Style&yaml.TaggedStyle != 0 {
+		return fmt.Errorf(
+			"line %d: explicit YAML tag %s is not accepted",
+			n.Line,
+			n.Tag,
 		)
 	}
 	if n.Kind == yaml.ScalarNode && n.Style&yaml.DoubleQuotedStyle == 0 {
@@ -138,8 +156,11 @@ func (e *unknownKey) Error() string {
 	for _, seg := range slices.Backward(e.path) {
 		b.WriteString(seg)
 	}
-	return fmt.Sprintf("line %d: unknown key %q at %s",
-		e.line, e.key, strings.TrimPrefix(b.String(), "."))
+	at := strings.TrimPrefix(b.String(), ".")
+	if at == "" {
+		at = "top level"
+	}
+	return fmt.Sprintf("line %d: unknown key %q at %s", e.line, e.key, at)
 }
 
 func within(err error, seg func() string) error {
@@ -150,7 +171,7 @@ func within(err error, seg func() string) error {
 }
 
 func checkKnown(n *yaml.Node, t reflect.Type) error {
-	if n.Tag == "!!null" {
+	if n.Kind == yaml.ScalarNode && n.Tag == "!!null" {
 		return nil
 	}
 	for t.Kind() == reflect.Pointer {

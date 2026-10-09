@@ -37,7 +37,13 @@ definition deleted upstream disappears here too.
   change made *without* the bump, since the upstream YAML is not in the repo to re-convert.
   The bump is a manual rule; reviewers enforce it.
 - Git rather than a tarball: a fetch by ref accepts a commit as well as a branch, and the
-  commit SHA comes straight from the checkout for the NOTICE. A `-src` directory must be
+  commit SHA comes straight from the checkout for the NOTICE. **The definitions and
+  `VERSIONS` are read from `HEAD`'s git objects** (`ls-tree` + `cat-file --batch`), never
+  the work tree: what is converted is exactly the commit the NOTICE names, whatever `git
+  status` cannot see (assume-unchanged or skip-worktree edits, a narrower sparse checkout),
+  and a committed symlink is skipped as "not a plain file" rather than followed out of the
+  checkout. A file whose name `//go:embed` could not serve (leading `.`/`_`, a `:`, anything
+  outside `[A-Za-z0-9._-]`) is skipped with a reason too. A `-src` directory must be
   the **root of its own repository** (inside any other work tree git answers for that one —
   a copied `definitions/` under streamline's gitignored `tmp/` read as clean and stamped
   streamline's HEAD into the NOTICE), and any local change under `definitions/` or
@@ -93,6 +99,10 @@ the node tree against the Go types itself.
   `\/` is swapped for an escape yaml.v3 knows for `/` before parsing, and put back as `\/`
   in every scalar that is not double-quoted, where the escape was never read. A source that
   already contains that escape is refused rather than guessed at.
+- **A second YAML document, and any explicit tag, are refused.** `yaml.Unmarshal` reads the
+  first document and ignores the rest; and a tag changes decoding behind the strict check's
+  back — `!!null` on a mapping still fills the struct while skipping the unknown-key walk,
+  `!!binary` base64-decodes a string. Upstream writes neither.
 - **Anchors, aliases and duplicate keys are refused.** Upstream uses none (its CI runs
   yamllint), and both are what a hostile file uses: walking an alias tree is quadratic or
   worse, and duplicate keys read last-wins in the C# engines but first-wins in
@@ -131,15 +141,27 @@ split at the `é`.
 - **What RE2 cannot say goes to regexp2, unchanged but for block names**: lookarounds,
   backreferences, `\b`/`\B` (Go's boundary is ASCII-only — beside a Cyrillic letter it never
   matches), `$` (.NET's also matches just before a final newline, which RE2 could only say
-  with a lookahead), a negated shorthand or negated block inside a class, class
-  subtraction, and any pattern whose replacement uses a substitution only .NET has. Its filter gets
+  with a lookahead), named groups (.NET numbers unnamed groups first, Go left to right, so
+  `$1` differs), an octal escape above `\377` (.NET keeps its low byte), a negated
+  shorthand or negated block inside a class, class subtraction, any `re_replace` whose
+  pattern can match the empty string (Go's `ReplaceAll` skips an empty match right after a
+  non-empty one, .NET replaces it), and any pattern whose replacement uses a substitution
+  only .NET has.
+- **regexp2 is not .NET either, and gets the same spelling where they differ**: its bare
+  `\w` also takes ZWNJ/ZWJ (U+200C/D), which .NET's does not (only .NET's `\b` counts
+  them), so `\w`/`\W` are written out on the regexp2 path too. That matters for Persian
+  text, where ZWNJ is everywhere. Its filter gets
   `"engine": "regexp2"` (`cardigann.RegexEngineNET`); a templated `re_replace` is renamed
-  `re_replace_net`; the definition and its catalog row get `regex_net: true`. 114
-  definitions (594 patterns) at `8df0764`, most of them for `\b` and `$`.
+  `re_replace_net`; the definition and its catalog row get `regex_net: true`. Most
+  regexp2 assignments are for `\b` and `$`; the current count is in `index.json`.
 - **Checked by differential, not by eye.** Every pattern left on RE2 at `8df0764` was
-  matched against its upstream original on regexp2 over a 40-string multilingual corpus:
-  zero disagreements, where the same run with an ASCII `\w` flags 22 definitions. Repeat
-  that check when the rewrite changes.
+  matched against its upstream original on regexp2 (with `rewriteNET`'s spelling, so the
+  reference is .NET's meaning) over a multilingual corpus plus ZWNJ/ZWJ, trailing-newline
+  and empty inputs, comparing match positions and `re_replace` output: zero
+  disagreements, where the same run with an ASCII `\w` flags 22 definitions. A
+  randomised run (4,000 inputs per pattern) found only the ZWNJ/ZWJ reference issue above. Repeat that check when the rewrite
+  changes. The one RE2 behaviour no rewrite can change: a repeated group's capture
+  (`(a*)*` on `a` captures `a` in Go, `""` in .NET); nothing upstream relies on it.
 - **The engine is decided here, never by trial at runtime.** Which definitions run on the
   backtracking engine is then visible in the data itself, and a pattern that compiles on
   neither engine fails the definition at sync time rather than a search.
@@ -155,9 +177,11 @@ split at the `é`.
   .NET substitution natively, so a regexp2 replacement is untouched. An RE2 one is
   rewritten for `Regexp.Expand` — the engine must use `ReplaceAllString`, not the literal
   variant: every numbered group is braced (`$1x` in Go is the group named `1x`, not group 1
-  then `x`), `$&` becomes `${0}`, a lone `$` becomes `$$`, and a reference to a group the
-  pattern does not have is written as literal text, as .NET leaves it (Go would substitute
-  nothing). `` $` ``, `$'`, `$+` and `$_` send the pattern to regexp2.
+  then `x`), a numbered reference is written by value (Go reads `$01` as the group named
+  `01`), `$&` becomes `${0}`, a lone `$` becomes `$$`, and a reference to a group the
+  pattern does not have is literal text, as .NET leaves it (Go would substitute nothing) —
+  for an unreadable `${…}` only the `$` is literal, so references inside the braces still
+  expand, as in .NET. `` $` ``, `$'`, `$+` and `$_` send the pattern to regexp2.
 
 ## Date layouts
 
