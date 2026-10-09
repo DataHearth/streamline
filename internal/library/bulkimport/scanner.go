@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
@@ -98,6 +100,11 @@ func (s *Service) StartScan(
 	if n > 0 {
 		return nil, otelx.RecordSpanError(span, ErrScanRunning)
 	}
+	if p.BeforeCreate != nil {
+		if err := p.BeforeCreate(ctx); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+	}
 
 	params := db.CreateImportScanParams{
 		SourcePath: resolved,
@@ -107,7 +114,7 @@ func (s *Service) StartScan(
 	}
 	if arrSource {
 		params.Source = p.Source
-		params.SourceURL = p.SourceURL
+		params.SourceURL = storedSourceURL(p.SourceURL)
 		params.Mappings = &p.Mappings
 	}
 	scan, err := s.store.CreateImportScan(ctx, params)
@@ -122,12 +129,12 @@ func (s *Service) StartScan(
 	bg := context.WithoutCancel(ctx)
 	switch {
 	case arrSource:
-		apiKey := p.APIKey
+		sourceURL, apiKey := p.SourceURL, p.APIKey
 		go func() {
 			defer observability.RecoverPanic(bg, "bulk import arr fetch", func() {
 				s.markScanFailed(bg, scan.ID, "the fetch from the source panicked")
 			})
-			s.runScanArr(bg, scan, apiKey)
+			s.runScanArr(bg, scan, sourceURL, apiKey)
 		}()
 	case p.Kind == entimportscan.KindSeries:
 		go s.runScanSeries(bg, scan)
@@ -144,6 +151,19 @@ func (s *Service) StartScan(
 		"scan.source_path", resolved)
 
 	return scan, nil
+}
+
+// storedSourceURL is a migration's instance URL as its scan row keeps it:
+// scheme, host and path only. The row is shown to every admin for as long as
+// the scan exists, and a URL can carry a credential besides the address — the
+// userinfo a basic-auth proxy takes, a pasted ?apikey=. The fetch gets the
+// URL as given, by value, the way it gets the API key.
+func storedSourceURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return otelx.RedactURL(u)
 }
 
 // libraryRoot is the resolved library root for a media kind: in_place and
@@ -188,7 +208,9 @@ func (s *Service) validateArrScanParams(p StartScanParams) error {
 			m.From,
 			m.To,
 		)
-		if !filepath.IsAbs(m.From) || !filepath.IsAbs(m.To) {
+		// From is the source's path, in its own style — a Windows *arr
+		// reports D:\Movies — while To is one of this host's.
+		if !arr.IsAbsSourcePath(m.From) || !filepath.IsAbs(m.To) {
 			return invalid
 		}
 		resolved, err := filepath.EvalSymlinks(m.To)

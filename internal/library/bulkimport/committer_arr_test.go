@@ -2,6 +2,8 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
+	"os"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -174,5 +176,56 @@ var _ = Describe("commitOne — migrated rows", Label("unit", "bulkimport"), fun
 		Expect(outcome).To(Equal(entimportscanfile.OutcomeCreated))
 		Expect(msg).To(BeEmpty())
 		Expect(id).To(Equal(uint32(6)))
+	})
+
+	It("still applies the source's flags when the file step fails after Add",
+		func() {
+			configtest.Setup(profiles("HD"))
+			path := filepath.Join(lib, "Heat (1995)", "Heat.mkv")
+			touch(path)
+
+			movies.EXPECT().Add(mock.Anything, uint32(949), "").
+				Return(&ent.Movie{ID: 7}, "", nil).Once()
+			store.EXPECT().CreateMediaFile(mock.Anything, mock.Anything).
+				Return(nil, errors.New("disk full")).Once()
+			// Add created the movie monitored; the source had it unmonitored.
+			movies.EXPECT().Update(mock.Anything, uint32(7), flags(false, nil)).
+				Return(&ent.Movie{ID: 7}, nil).Once()
+
+			outcome, msg, id := svc.commitOne(ctx, scan, &ent.ImportScanFile{
+				TmdbID: 949, SourcePath: path, Size: 1, Monitored: false,
+				Classification: entimportscanfile.ClassificationConfirmed,
+			})
+
+			Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+			Expect(msg).To(ContainSubstring("disk full"))
+			Expect(id).To(Equal(uint32(7)))
+		})
+
+	It("treats a symlinked spelling of the tracked file as that file", func() {
+		configtest.Setup(profiles("HD"))
+		real := filepath.Join(lib, "real")
+		tracked := filepath.Join(real, "X (2010)", "x.mkv")
+		touch(tracked)
+		alias := filepath.Join(lib, "alias")
+		Expect(os.Symlink(real, alias)).To(Succeed())
+
+		// A folder scan recorded the resolved path; the migration maps the
+		// same file through the alias. No DeleteMediaFile expectation: the
+		// mock fails the spec if the tracked file is "replaced".
+		store.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(8)).
+			Return([]*ent.MediaFile{{ID: 1, Path: tracked}}, nil).Once()
+		movies.EXPECT().Update(mock.Anything, uint32(8), flags(true, nil)).
+			Return(&ent.Movie{ID: 8}, nil).Once()
+
+		outcome, _, id := svc.commitOne(ctx, scan, &ent.ImportScanFile{
+			TmdbID: 1, ExistingMovieID: 8, Monitored: true,
+			SourcePath:     filepath.Join(alias, "X (2010)", "x.mkv"),
+			Classification: entimportscanfile.ClassificationExisting,
+		})
+
+		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+		Expect(id).To(Equal(uint32(8)))
+		Expect(tracked).To(BeAnExistingFile())
 	})
 })

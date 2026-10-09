@@ -108,6 +108,11 @@ var _ = Describe("fetchRadarr", Label("unit", "bulkimport"), func() {
 			},
 		}, nil).Once()
 
+		// Polled once the list is in and once the last row is written: three
+		// movies never fill a batch, so the in-loop poll does not run.
+		store.EXPECT().FindImportScan(mock.Anything, uint32(1)).
+			Return(&ent.ImportScan{ID: 1, Status: entimportscan.StatusRunning}, nil).
+			Twice()
 		store.EXPECT().MovieTMDBIndex(mock.Anything).
 			Return(map[uint32]uint32{157336: 9}, nil).Once()
 		store.EXPECT().
@@ -172,6 +177,30 @@ var _ = Describe("fetchRadarr", Label("unit", "bulkimport"), func() {
 			TMDBID: 1, Title: "Gone", Year: 2001,
 		}))
 	})
+
+	It("stops without touching the status when a cancel landed during the list",
+		func() {
+			store := dbmocks.NewMockStore(GinkgoT())
+			lib := arrmocks.NewMockLibrary(GinkgoT())
+			lib.EXPECT().Movies(mock.Anything).
+				Return([]arr.Movie{{TMDBID: 1, Title: "One"}}, nil).Once()
+			// No UpdateImportScanStatus expectation: writing running back over
+			// the cancel is what the mock would fail on.
+			store.EXPECT().FindImportScan(mock.Anything, uint32(1)).
+				Return(&ent.ImportScan{
+					ID: 1, Status: entimportscan.StatusCancelled,
+				}, nil).Once()
+
+			svc := &Service{store: store}
+			scan := &ent.ImportScan{
+				ID:   1,
+				Kind: entimportscan.KindMovie,
+				Mode: entimportscan.ModeInPlace,
+			}
+			_, active, err := svc.fetchRadarr(context.Background(), scan, lib)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(active).To(BeFalse())
+		})
 })
 
 var _ = Describe("buildMonitoring", Label("unit", "bulkimport"), func() {
@@ -265,6 +294,10 @@ var _ = Describe("fetchSonarr", Label("unit", "bulkimport"), func() {
 			{SeasonNumber: 2, EpisodeNumber: 1, Monitored: true},
 		}, nil).Once()
 
+		// Polled once the list is in and once the last row is written; the
+		// per-show poll only runs after cancellationPollEvery.
+		store.EXPECT().FindImportScan(mock.Anything, uint32(2)).
+			Return(&ent.ImportScan{ID: 2, Status: entimportscan.StatusRunning}, nil)
 		store.EXPECT().TVShowTVDBIndex(mock.Anything).
 			Return(map[uint32]uint32{}, nil).Once()
 		store.EXPECT().

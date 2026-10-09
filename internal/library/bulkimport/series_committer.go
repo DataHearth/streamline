@@ -119,6 +119,14 @@ func (s *Service) commitShow(
 	profile, profileNote := "", ""
 	if migration {
 		profile, profileNote = migratedProfile(sc.QualityProfile)
+		// A reviewer can point a migrated row at another show than the one
+		// the source tracks. The source's episode numbers, series type and
+		// monitoring then describe a different series, so the row commits the
+		// way a folder-scan row does: files matched by name under the
+		// half-match guard below, and none of the source's flags applied.
+		if rematched(sc) {
+			migration = false
+		}
 	}
 	show, reused, outcome, msg, id := s.resolveShow(ctx, sc, profile)
 	if show == nil {
@@ -128,6 +136,7 @@ func (s *Service) commitShow(
 	var (
 		plan    []episodeMatch
 		skipped int
+		shared  int
 		total   int
 	)
 	if migration {
@@ -138,15 +147,26 @@ func (s *Service) commitShow(
 		// weak evidence for which show a folder belongs to; here the source
 		// states the tvdb id and the episode of every file.
 		files := s.usableSourceFiles(scan, sc.SourceFiles)
-		plan, skipped = planFromSource(show, files)
+		plan, skipped, shared = planFromSource(show, files)
 		skipped += len(sc.SourceFiles) - len(files)
 		total = len(sc.SourceFiles)
 		if total > 0 && len(plan) == 0 {
-			return entimportscanshow.OutcomeFailed, fmt.Sprintf(
-				"none of the %d files could be adopted (missing, outside the library, or naming an episode this library lacks)",
-				total,
+			// The show exists by now — resolveShow added it if it was new — so
+			// it still takes the source's monitoring: left at Add's defaults, a
+			// show the source had unmonitored would be searched in full.
+			return entimportscanshow.OutcomeFailed, joinNotes(
+				fmt.Sprintf(
+					"none of the %d files could be adopted (missing, outside the library, or naming an episode this library lacks)",
+					total,
+				),
+				profileNote,
+				s.applyShowState(ctx, show, sc, profile),
 			), show.ID
 		}
+	} else if isMigration(scan) && len(sc.SourceFiles) == 0 {
+		// A re-pointed row the source tracks without a file: nothing to match,
+		// so nothing for the guard below to refuse. The show is added bare,
+		// the way a title-only row commits, minus the source's flags.
 	} else {
 		files, err := library.ListVideoFilesRecursive(sc.FolderPath)
 		if err != nil {
@@ -197,10 +217,11 @@ func (s *Service) commitShow(
 			continue
 		}
 		// An episode holds at most one media file: committing an accepted show
-		// replaces whatever file a matched episode already has. The same path
-		// being re-scanned is already adopted, so it needs no rewrite.
+		// replaces whatever file a matched episode already has. The same file
+		// being re-scanned is already adopted, so it needs no rewrite — compared
+		// as a file, since a symlinked root gives it a second spelling.
 		if mf, err := s.store.FindMediaFileByEpisodeID(ctx, target.ID); err == nil {
-			if mf.Path == f {
+			if sameFile(mf.Path, f) {
 				continue
 			}
 			if rmErr := os.Remove(mf.Path); rmErr != nil && !os.IsNotExist(rmErr) {
@@ -287,9 +308,9 @@ func (s *Service) commitShow(
 		}
 	}
 	if !migration {
-		return success, "", show.ID
+		return success, profileNote, show.ID
 	}
-	var skippedNote string
+	var skippedNote, sharedNote string
 	if skipped > 0 {
 		skippedNote = fmt.Sprintf(
 			"%d of %d files were missing, outside the library, or named an episode this library lacks",
@@ -297,8 +318,17 @@ func (s *Service) commitShow(
 			total,
 		)
 	}
+	if shared > 0 {
+		sharedNote = fmt.Sprintf(
+			"%d episodes share a file with an earlier episode; the file is linked to the first of them only, and the others stay wanted",
+			shared,
+		)
+	}
 	return success, joinNotes(
-		profileNote, s.applyShowState(ctx, show, sc, profile), skippedNote,
+		profileNote,
+		s.applyShowState(ctx, show, sc, profile),
+		skippedNote,
+		sharedNote,
 	), show.ID
 }
 
@@ -309,15 +339,31 @@ func importSource(scan *ent.ImportScan) string {
 	return "bulk_import"
 }
 
+// rematched reports a migrated row the reviewer pointed at another show than
+// the one the source tracks it under. A row resolved through
+// ExistingTvshowID ignores the reviewer's pick, so it never counts.
+func rematched(sc *ent.ImportScanShow) bool {
+	return sc.ExistingTvshowID == nil &&
+		sc.DecisionTvdbID != nil && sc.TvdbID != nil &&
+		*sc.DecisionTvdbID != *sc.TvdbID
+}
+
 // planFromSource resolves files by episode number instead of by filename. The
 // source already identified every one of them, so re-parsing is strictly worse
 // evidence: it re-opens every parser edge case and can fail a folder the
 // source knows perfectly. The second return counts entries naming an episode
 // this library has no row for, which happens when the source's metadata is
 // ahead of TVDB's.
+//
+// A multi-episode file arrives once per episode it covers — the source embeds
+// the one file under each of them — and is bound to the first only: a file
+// belongs to one episode here, the way the importer binds a multi-episode
+// release, and binding it to each would record twin rows on one path, or, in
+// rename mode, transfer it once per episode. The third return counts the
+// episodes left without it.
 func planFromSource(
 	show *ent.TVShow, files []schema.SourceEpisodeFile,
-) ([]episodeMatch, int) {
+) ([]episodeMatch, int, int) {
 	byNumber := map[[2]uint16]*ent.Episode{}
 	for _, season := range show.Edges.Seasons {
 		for _, e := range season.Edges.Episodes {
@@ -325,19 +371,25 @@ func planFromSource(
 		}
 	}
 	var plan []episodeMatch
-	skipped := 0
+	skipped, shared := 0, 0
+	bound := map[string]bool{}
 	for _, f := range files {
 		ep, ok := byNumber[[2]uint16{f.Season, f.Episode}]
 		if !ok {
 			skipped++
 			continue
 		}
+		if bound[f.Path] {
+			shared++
+			continue
+		}
+		bound[f.Path] = true
 		plan = append(
 			plan,
 			episodeMatch{path: f.Path, season: f.Season, episode: ep},
 		)
 	}
-	return plan, skipped
+	return plan, skipped, shared
 }
 
 func (s *Service) usableSourceFiles(

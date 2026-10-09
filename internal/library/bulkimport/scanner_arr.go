@@ -26,9 +26,10 @@ import (
 
 // runScanArr fetches an identified library instead of walking a directory.
 // Nothing here searches a metadata provider: every title already carries the
-// id the provider would have been asked for.
+// id the provider would have been asked for. sourceURL is the URL as the
+// caller gave it; the scan row keeps only its address (storedSourceURL).
 func (s *Service) runScanArr(
-	ctx context.Context, scan *ent.ImportScan, apiKey string,
+	ctx context.Context, scan *ent.ImportScan, sourceURL, apiKey string,
 ) {
 	ctx, span := tracer.Start(ctx, "bulkimport.fetch_arr",
 		trace.WithAttributes(
@@ -48,7 +49,7 @@ func (s *Service) runScanArr(
 	if scan.Source == entimportscan.SourceSonarr {
 		app = arr.Sonarr
 	}
-	client, err := s.arrClients.Client(app, scan.SourceURL, apiKey)
+	client, err := s.arrClients.Client(app, sourceURL, apiKey)
 	if err != nil {
 		fail(err)
 		return
@@ -149,6 +150,12 @@ func (s *Service) fileUsable(scan *ent.ImportScan, path string) bool {
 
 // stillRunning polls the scan's status so a cancel from the API stops the
 // fetch between batches.
+//
+// It is also checked once the whole-library list is in and again once the
+// last row is written: the status write that records the total, and the
+// caller's flip to awaiting_review, would otherwise put a scan cancelled
+// meanwhile back to running — the list alone takes seconds on a large
+// library, and the batch poll never runs for one smaller than a batch.
 func (s *Service) stillRunning(ctx context.Context, scanID uint32) bool {
 	cur, err := s.store.FindImportScan(ctx, scanID)
 	return err != nil || cur.Status == entimportscan.StatusRunning
@@ -160,6 +167,9 @@ func (s *Service) fetchRadarr(
 	movies, err := client.Movies(ctx)
 	if err != nil {
 		return nil, false, fmt.Errorf("list movies: %w", err)
+	}
+	if !s.stillRunning(ctx, scan.ID) {
+		return nil, false, nil
 	}
 	total := len(movies)
 	if err := s.store.UpdateImportScanStatus(
@@ -212,7 +222,10 @@ func (s *Service) fetchRadarr(
 			return tally, false, nil
 		}
 	}
-	return tally, true, flush()
+	if err := flush(); err != nil {
+		return nil, false, err
+	}
+	return tally, s.stillRunning(ctx, scan.ID), nil
 }
 
 func (s *Service) radarrRow(
@@ -311,6 +324,9 @@ func (s *Service) fetchSonarr(
 	if err != nil {
 		return nil, false, fmt.Errorf("list series: %w", err)
 	}
+	if !s.stillRunning(ctx, scan.ID) {
+		return nil, false, nil
+	}
 	total := len(shows)
 	if err := s.store.UpdateImportScanStatus(
 		ctx, scan.ID, entimportscan.StatusRunning,
@@ -369,7 +385,10 @@ func (s *Service) fetchSonarr(
 				"scan.id", scan.ID, "error", err)
 		}
 	}
-	return tally, true, flush()
+	if err := flush(); err != nil {
+		return nil, false, err
+	}
+	return tally, s.stillRunning(ctx, scan.ID), nil
 }
 
 func (s *Service) sonarrRow(
@@ -380,6 +399,12 @@ func (s *Service) sonarrRow(
 	tracked map[uint32]uint32,
 ) db.CreateImportScanShowParams {
 	files := buildSourceFiles(eps, roots)
+	// A multi-episode file is listed once per episode it covers; the count
+	// shown in review is of files.
+	paths := make(map[string]struct{}, len(files))
+	for _, f := range files {
+		paths[f.Path] = struct{}{}
+	}
 	folder, _ := arr.MapRoot(sh.Path, roots)
 	tvdbID := sh.TVDBID
 	monitored := sh.Monitored
@@ -395,7 +420,7 @@ func (s *Service) sonarrRow(
 		SeriesType:     sh.SeriesType,
 		Monitoring:     &monitoring,
 		SourceFiles:    files,
-		FileCount:      numeric.SaturateU16(len(files)),
+		FileCount:      numeric.SaturateU16(len(paths)),
 	}
 	if sh.Year > 0 {
 		year := sh.Year

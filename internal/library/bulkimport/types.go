@@ -1,6 +1,7 @@
 package bulkimport
 
 import (
+	"context"
 	"time"
 
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
@@ -22,6 +23,12 @@ type StartScanParams struct {
 	// APIKey is handed to the fetch goroutine by value and never persisted.
 	APIKey   string
 	Mappings schema.ScanMappings
+
+	// BeforeCreate runs once the start has passed every check StartScan makes
+	// and before the scan row is written; an error from it refuses the start
+	// and is returned as is. A migration writes the quality profiles it
+	// creates here, so a start refused for any reason leaves none behind.
+	BeforeCreate func(context.Context) error
 }
 
 const (

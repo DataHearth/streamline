@@ -261,9 +261,13 @@ func (s *Service) commitMigrated(
 	default:
 		outcome, msg, movieID = s.commitNew(ctx, scan, f, profile)
 	}
-	if outcome == entimportscanfile.OutcomeFailed || movieID == 0 {
+	if movieID == 0 {
 		return outcome, msg, movieID
 	}
+	// A failed file step can still leave the title behind — commitRename and
+	// commitAdoptInPlace add the movie before they touch its file — and that
+	// title carries the source's flags like any other: left at Add's
+	// defaults, one the source had unmonitored would be searched and grabbed.
 	return outcome, joinNotes(
 		msg,
 		note,
@@ -432,6 +436,26 @@ func (s *Service) linkAndMarkAvailable(
 	return success, "", params.MovieID
 }
 
+// sameFile reports whether a and b name one file. The strings alone cannot
+// say: the same file reached through a symlinked root has two spellings — a
+// folder scan records the resolved path, a migration the mapped one — and
+// taking them for two files would delete the only copy as the "replaced" one.
+// Paths that cannot both be stat'ed fall back to the string comparison.
+func sameFile(a, b string) bool {
+	if a == b {
+		return true
+	}
+	ai, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	bi, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(ai, bi)
+}
+
 func (s *Service) commitAttach(
 	ctx context.Context,
 	scan *ent.ImportScan,
@@ -442,7 +466,7 @@ func (s *Service) commitAttach(
 		return commitFail("list existing files", err, 0)
 	}
 	for _, mf := range existing {
-		if mf.Path == f.SourcePath {
+		if sameFile(mf.Path, f.SourcePath) {
 			return entimportscanfile.OutcomeAttached, "", f.ExistingMovieID
 		}
 	}
