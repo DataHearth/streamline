@@ -436,6 +436,7 @@
       "description": {
         "selector": "a[href^=\"details.php?slug=\"]",
         "attribute": "title",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",

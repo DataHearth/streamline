@@ -196,11 +196,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "div.torrent-info-text-added > span[title]",
@@ -286,6 +288,7 @@
       },
       "description": {
         "selector": "div.text-start",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

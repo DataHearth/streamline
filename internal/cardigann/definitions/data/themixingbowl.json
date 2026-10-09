@@ -164,6 +164,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "text": "Artist=[{{ .Result.artist }}] , Tags={{ .Result.genre }} , Codec=[{{ .Result._codec }}] , BitRate=[{{ .Result._bit }}]"
       },
       "grabs": {

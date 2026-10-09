@@ -188,6 +188,7 @@
       },
       "poster": {
         "selector": "..large_cover_image",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",
@@ -199,7 +200,8 @@
         ]
       },
       "imdbid": {
-        "selector": "..imdb_code"
+        "selector": "..imdb_code",
+        "optional": true
       },
       "date": {
         "selector": "date_uploaded_unix"

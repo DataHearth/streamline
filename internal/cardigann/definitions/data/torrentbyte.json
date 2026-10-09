@@ -148,6 +148,7 @@
       },
       "description": {
         "selector": "td:nth-child(6)",
+        "optional": true,
         "remove": "a"
       }
     }

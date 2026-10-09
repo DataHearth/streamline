@@ -375,7 +375,8 @@
         "selector": "download_link"
       },
       "poster": {
-        "selector": "cover"
+        "selector": "cover",
+        "optional": true
       },
       "size": {
         "selector": "size"

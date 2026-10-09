@@ -682,7 +682,8 @@
         "text": "1"
       },
       "description": {
-        "selector": "td:nth-child(2) a:last-of-type"
+        "selector": "td:nth-child(2) a:last-of-type",
+        "optional": true
       }
     }
   },

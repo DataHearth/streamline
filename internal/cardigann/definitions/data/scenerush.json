@@ -367,6 +367,7 @@
       },
       "poster": {
         "selector": "script",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

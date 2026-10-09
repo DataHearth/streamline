@@ -137,15 +137,18 @@
       },
       "imdbid": {
         "selector": "[name=imdb]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "tmdbid": {
         "selector": "[name=tmdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "tvdbid": {
         "selector": "[name=tvdbid]",
-        "attribute": "value"
+        "attribute": "value",
+        "optional": true
       },
       "seeders": {
         "selector": "[name=seeders]",

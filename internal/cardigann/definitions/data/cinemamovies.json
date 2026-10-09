@@ -297,6 +297,7 @@
       "poster": {
         "selector": "a[href^=\"details.php?id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -308,10 +309,12 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
         "selector": "td[align=\"right\"][width=\"66%\"][valign=\"bottom\"]",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -331,6 +334,7 @@
       "description": {
         "selector": "img[src=\"pic/Poland.png\"]",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",

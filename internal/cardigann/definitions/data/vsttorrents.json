@@ -57,10 +57,12 @@
       },
       "poster": {
         "selector": ".wp-post-image",
-        "attribute": "data-src"
+        "attribute": "data-src",
+        "optional": true
       },
       "description": {
-        "selector": ".entry-summary"
+        "selector": ".entry-summary",
+        "optional": true
       },
       "date_year": {
         "selector": ".post-date",

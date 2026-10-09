@@ -371,7 +371,8 @@
       },
       "poster": {
         "selector": "img#img-1",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "td.content_wrap > table > tbody > tr:nth-child(2) > td:nth-child(1) > b:nth-child(1)"

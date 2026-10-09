@@ -163,6 +163,7 @@
       "poster": {
         "selector": "td:nth-child(2) div a[href*=\"torrent/\"]",
         "attribute": "data-bs-content",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

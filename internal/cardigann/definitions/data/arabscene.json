@@ -569,7 +569,8 @@
       },
       "poster": {
         "selector": "div.tooltip-content > img[src*=\"/torrents/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

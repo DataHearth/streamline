@@ -236,6 +236,7 @@
       "imdbid": {
         "selector": "img[class*=\"imdb_\"]",
         "attribute": "class",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -247,7 +248,8 @@
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "_staff_edit": {
         "selector": "a[href^=\"edit.php?\"]",
@@ -342,6 +344,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result.title_raw_has_cjk }}{{ .Result.title_raw }}{{ else }}{{ .Result.title_alt }}{{ end }}"
       },
       "title": {

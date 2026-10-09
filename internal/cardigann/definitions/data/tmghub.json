@@ -303,6 +303,7 @@
       "poster": {
         "selector": "a.torr-link",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

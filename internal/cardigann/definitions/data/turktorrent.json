@@ -367,6 +367,11 @@
     "test": {
       "path": "?p=home&pid=1",
       "selector": "a#logout"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {

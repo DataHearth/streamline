@@ -1182,6 +1182,11 @@
     "test": {
       "path": "index.php",
       "selector": "a[href=\"./login.php?logout=1\"]"
+    },
+    "headers": {
+      "Cookie": [
+        "tapochek_april_2026=1"
+      ]
     }
   },
   "search": {
@@ -1476,7 +1481,8 @@
         "text": "0.5"
       },
       "description": {
-        "selector": "a.genmed, a.seedmed"
+        "selector": "a.genmed, a.seedmed",
+        "optional": true
       }
     }
   },

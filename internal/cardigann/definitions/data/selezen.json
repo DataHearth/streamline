@@ -420,14 +420,17 @@
       },
       "poster": {
         "selector": "img.card-img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
         "selector": "div.cats",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -439,6 +442,7 @@
       },
       "description": {
         "selector": "p.card-text",
+        "optional": true,
         "filters": [
           {
             "name": "append",

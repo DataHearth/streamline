@@ -179,6 +179,7 @@
       "poster": {
         "selector": "a[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

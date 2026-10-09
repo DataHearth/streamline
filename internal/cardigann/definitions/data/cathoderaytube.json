@@ -245,6 +245,7 @@
       },
       "genre": {
         "selector": "div.tags",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -258,6 +259,7 @@
         "selector": "div.tags"
       },
       "description": {
+        "optional": true,
         "case": {
           "span.icon_okay": "Verified: {{ .Result.description_tags }}",
           "*": "Unverified: {{ .Result.description_tags }}"
@@ -265,6 +267,7 @@
       },
       "poster": {
         "selector": "td:nth-child(2) > script",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

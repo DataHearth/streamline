@@ -408,7 +408,8 @@
       },
       "poster": {
         "selector": "a[href^=\"content.php?id=\"] img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "span.date-bottom",
@@ -456,10 +457,12 @@
         "selector": "span.leechers-bottom"
       },
       "genre": {
-        "selector": "div.info-row:has(i.fa-tags)"
+        "selector": "div.info-row:has(i.fa-tags)",
+        "optional": true
       },
       "description": {
         "selector": "div.info-row:has(i.fa-globe)",
+        "optional": true,
         "filters": [
           {
             "name": "append",

@@ -257,6 +257,11 @@
     "test": {
       "path": "/",
       "selector": "a[href*=\"logout.php?logout=\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -340,6 +345,7 @@
       "poster": {
         "selector": "a[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -351,7 +357,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(4)",
@@ -393,6 +400,7 @@
       },
       "genre": {
         "selector": "td:nth-child(2) > div > i.small",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -403,6 +411,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result._verified }} - {{ .Result.genre }}"
       },
       "downloadvolumefactor": {

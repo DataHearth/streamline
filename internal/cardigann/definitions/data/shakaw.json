@@ -219,6 +219,7 @@
       },
       "genre": {
         "selector": "div.tags_da_linha_da_tabela",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -229,7 +230,8 @@
         ]
       },
       "description": {
-        "selector": "td:nth-child(10)"
+        "selector": "td:nth-child(10)",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

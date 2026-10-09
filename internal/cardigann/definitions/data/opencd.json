@@ -227,6 +227,7 @@
       "poster": {
         "selector": "img[id^=\"attach\"]",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",
@@ -322,6 +323,7 @@
       },
       "description": {
         "selector": "td:nth-child(3)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

@@ -507,7 +507,8 @@
         "text": "0.2"
       },
       "description": {
-        "selector": "a[href^=\"details.php?id=\"]"
+        "selector": "a[href^=\"details.php?id=\"]",
+        "optional": true
       }
     }
   },

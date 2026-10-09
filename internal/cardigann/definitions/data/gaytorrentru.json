@@ -332,6 +332,11 @@
     "test": {
       "path": "my.php",
       "selector": "a[href$=\"/logout.php\"]"
+    },
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}search.php?view=legacy"
+      ]
     }
   },
   "search": {
@@ -406,6 +411,7 @@
       "poster": {
         "selector": "a[href^=\"details.php?id=\"]",
         "attribute": "data-hover-thumbs",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -459,7 +465,8 @@
         ]
       },
       "description": {
-        "selector": "div.browsedesc span:last-child"
+        "selector": "div.browsedesc span:last-child",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

@@ -273,6 +273,7 @@
       "poster": {
         "selector": "span[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -283,9 +284,11 @@
         ]
       },
       "genre": {
-        "selector": "a[href^=\"/letoltes.php?cimke=\"]"
+        "selector": "a[href^=\"/letoltes.php?cimke=\"]",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"/fajlok/kepek/yes.svg\"]": "Verified: {{ .Result.genre }}",
           "*": "Unverified: {{ .Result.genre }}"
@@ -293,7 +296,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(5)",

@@ -250,14 +250,17 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "a[rel^=\"prettyPhoto[\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
         "selector": "font.line",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -268,6 +271,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "files": {

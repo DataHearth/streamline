@@ -173,6 +173,7 @@
       },
       "description": {
         "selector": "title",
+        "optional": true,
         "filters": [
           {
             "name": "re_replace",

@@ -409,6 +409,7 @@
       "poster": {
         "selector": "a.cover_a",
         "attribute": "title",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -420,13 +421,15 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "description_text": {
         "selector": "div.torrent_row_magyarcim",
         "remove": "span.torrent_row_new"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"/pic/browse/yes.png\"]": "Verified: {{ .Result.description_text}}",
           "*": "Unverified: {{ .Result.description_text}}"

@@ -128,7 +128,8 @@
       },
       "description": {
         "selector": "img",
-        "attribute": "title"
+        "attribute": "title",
+        "optional": true
       },
       "downloadvolumefactor": {
         "text": "0"

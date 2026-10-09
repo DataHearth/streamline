@@ -135,6 +135,7 @@
       },
       "description": {
         "selector": "td.edition_info",
+        "optional": true,
         "filters": [
           {
             "name": "append",

@@ -400,6 +400,7 @@
       "poster": {
         "selector": "a.box-poster",
         "attribute": "href",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

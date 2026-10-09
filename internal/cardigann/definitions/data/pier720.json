@@ -431,6 +431,11 @@
     "test": {
       "path": "/",
       "selector": ":has(a[href^=\"./ucp.php?mode=logout&\"])"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -533,7 +538,12 @@
         "selector": "a[href*=\"/download/torrent?id=\"]",
         "attribute": "href"
       }
-    ]
+    ],
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
+    }
   },
   "source": {
     "path": "definitions/v11/pier720.yml",

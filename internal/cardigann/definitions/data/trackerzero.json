@@ -236,7 +236,12 @@
   ],
   "login": {
     "method": "get",
-    "path": "api/torrents/latest"
+    "path": "api/torrents/latest",
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -287,7 +292,8 @@
         "text": "{{ .Config.sitelink }}api/torrents/{{ .Result._id }}/download-rss?passkey={{ .Config.passkey }}"
       },
       "poster": {
-        "selector": "poster"
+        "selector": "poster",
+        "optional": true
       },
       "date": {
         "selector": "created_at",

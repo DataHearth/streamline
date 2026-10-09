@@ -264,11 +264,13 @@
       },
       "poster": {
         "selector": "a[href^=\"/details/\"] img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-last-child(4)",

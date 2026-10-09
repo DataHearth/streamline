@@ -286,6 +286,7 @@
       },
       "genre": {
         "selector": "td.row2 span[style=\"float:left\"]",
+        "optional": true,
         "filters": [
           {
             "name": "validate",
@@ -296,6 +297,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "minimumratio": {

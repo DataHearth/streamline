@@ -320,10 +320,12 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
-        "selector": "td:nth-child(3) span"
+        "selector": "td:nth-child(3) span",
+        "optional": true
       },
       "_internal": {
         "case": {
@@ -332,6 +334,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
       },
       "date": {

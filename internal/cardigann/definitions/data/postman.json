@@ -223,9 +223,11 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "td.torrentname span"
+        "selector": "td.torrentname span",
+        "optional": true
       },
       "imdbid": {
+        "optional": true,
         "text": "{{ .Result.description }}",
         "filters": [
           {
@@ -237,6 +239,7 @@
         ]
       },
       "tmdbid": {
+        "optional": true,
         "text": "{{ .Result.description }}",
         "filters": [
           {

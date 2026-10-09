@@ -58,7 +58,8 @@
         "attribute": "href"
       },
       "description": {
-        "selector": "div.eDetails"
+        "selector": "div.eDetails",
+        "optional": true
       },
       "date": {
         "selector": "div.eDetails",

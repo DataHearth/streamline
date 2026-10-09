@@ -128,7 +128,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "text": "4 GB"
@@ -156,7 +157,12 @@
         "selector": "a.dwn-load",
         "attribute": "href"
       }
-    ]
+    ],
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}"
+      ]
+    }
   },
   "source": {
     "path": "definitions/v11/skidrowrepack.yml",

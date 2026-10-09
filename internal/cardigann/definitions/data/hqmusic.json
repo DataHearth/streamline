@@ -130,6 +130,7 @@
       "poster": {
         "selector": "img[src^=\"imagescover\"]",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",
@@ -233,6 +234,7 @@
       },
       "description": {
         "selector": "td:nth-child(1)",
+        "optional": true,
         "remove": "a, b, font, img, span"
       }
     }

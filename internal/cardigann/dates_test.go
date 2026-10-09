@@ -45,6 +45,12 @@ var _ = Describe("ParseDate", Label("unit", "cardigann"), func() {
 		Expect(t.Location()).To(Equal(paris))
 	})
 
+	It("trims the value first, as Prowlarr does", func() {
+		t, err := cardigann.ParseDate([]string{"2006-01-02"}, "  2024-03-05\n", now)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Day()).To(Equal(5))
+	})
+
 	It("fails when no layout accepts the value", func() {
 		_, err := cardigann.ParseDate([]string{"2006-01-02"}, "yesterday", now)
 		Expect(err).To(HaveOccurred())

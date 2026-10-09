@@ -309,7 +309,12 @@
   ],
   "login": {
     "method": "get",
-    "path": "/api/v1/torrents"
+    "path": "/api/v1/torrents",
+    "headers": {
+      "X-API-KEY": [
+        "{{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -369,7 +374,8 @@
         "text": "/api/v1/torrents/download/{{ .Result._id }}"
       },
       "imdbid": {
-        "selector": "imdbid2"
+        "selector": "imdbid2",
+        "optional": true
       },
       "imdbid_full": {
         "selector": "imdbid2",
@@ -384,6 +390,7 @@
         "text": "{{ if .Result.imdbid }}/img/imdb/{{ .Result.imdbid_full }}.jpg{{ else }}{{ end }}"
       },
       "poster": {
+        "optional": true,
         "text": "{{ if .Result.poster_imdb }}{{ .Result.poster_imdb }}{{ else }}{{ .Result.poster_normal }}{{ end }}"
       },
       "date": {
@@ -444,7 +451,8 @@
         "optional": true
       },
       "genre": {
-        "selector": "genres"
+        "selector": "genres",
+        "optional": true
       },
       "_tagline_desc": {
         "selector": "tagline",
@@ -527,6 +535,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result.title_desc }}Title: {{ .Result.title_desc }}</br>{{ else }}{{ end }}{{ if .Result.year }}Year: {{ .Result.year }}</br>{{ else }}{{ end }}{{ if .Result.genre }}Genres: {{ .Result.genre }}</br>{{ else }}{{ end }}{{ if .Result._tagline_desc }}Tagline: {{ .Result._tagline_desc }}</br>{{ else }}{{ end }}{{ if .Result._cast_desc }}Cast: {{ .Result._cast_desc }}</br>{{ else }}{{ end }}{{ if .Result._rating_desc }}Rating: {{ .Result._rating_desc }}</br>{{ else }}{{ end }}{{ if .Result._tag_desc }}Tags: {{ .Result._tag_desc }}</br>{{ else }}{{ end }}{{ if .Result._predate_desc }}PRE: {{ .Result._predate_desc }}</br>{{ else }}{{ end }}{{ if .Result._section_desc }}Section: {{ .Result._section_desc }}{{ else }}{{ end }}"
       }
     }

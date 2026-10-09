@@ -511,7 +511,8 @@
       },
       "poster": {
         "selector": "div.tooltip-content > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

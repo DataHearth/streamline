@@ -232,7 +232,8 @@
         "selector": "category_id"
       },
       "imdbid": {
-        "selector": "imdb"
+        "selector": "imdb",
+        "optional": true
       },
       "seeders": {
         "selector": "seeders"
@@ -282,7 +283,8 @@
         }
       },
       "genre": {
-        "selector": "tags"
+        "selector": "tags",
+        "optional": true
       },
       "_internal": {
         "selector": "internal",
@@ -292,6 +294,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
       },
       "minimumseedtime": {

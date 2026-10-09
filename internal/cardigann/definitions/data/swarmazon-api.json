@@ -150,6 +150,7 @@
       },
       "poster": {
         "selector": "media_poster",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -161,16 +162,19 @@
         ]
       },
       "genre": {
-        "selector": "media_genre"
+        "selector": "media_genre",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "infohash": {
         "selector": "hash"
       },
       "imdbid": {
-        "selector": "ref_id:contains(tt)"
+        "selector": "ref_id:contains(tt)",
+        "optional": true
       },
       "seeders": {
         "selector": "seeders"

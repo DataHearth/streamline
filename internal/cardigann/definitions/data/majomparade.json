@@ -311,6 +311,11 @@
     "test": {
       "path": "index",
       "selector": "a[href^=\"/logout/\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
     }
   },
   "search": {
@@ -439,11 +444,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "poster": {
         "selector": "a.torrent-title",
-        "attribute": "data-cover"
+        "attribute": "data-cover",
+        "optional": true
       },
       "size": {
         "selector": "div.torrent-card__meta-short span:nth-child(3)"
@@ -496,9 +503,11 @@
       },
       "genre": {
         "selector": "div.torrent-card__actions-row",
+        "optional": true,
         "remove": "a, span.torrent-chip--boost, span.torrent-chip--mod-ok, span.torrent-chip--mod-unknown"
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result._verification }}: {{ if .Result.genre }}{{ .Result.genre }}{{ else }}{{ end }}"
       },
       "minimumratio": {

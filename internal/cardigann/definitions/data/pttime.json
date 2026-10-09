@@ -336,15 +336,18 @@
       },
       "poster": {
         "selector": "td.torrentimg > img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "doubanid": {
         "selector": "a[href*=\"movie.douban.com/subject/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date_elapsed": {
         "selector": "td:nth-child(5) > span[title]",
@@ -419,7 +422,8 @@
         }
       },
       "description": {
-        "selector": "td:nth-child(2) > font:last-child"
+        "selector": "td:nth-child(2) > font:last-child",
+        "optional": true
       }
     }
   },

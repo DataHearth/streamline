@@ -137,7 +137,8 @@
         "selector": "title"
       },
       "description": {
-        "selector": "animeTitle"
+        "selector": "animeTitle",
+        "optional": true
       },
       "details": {
         "selector": "link"

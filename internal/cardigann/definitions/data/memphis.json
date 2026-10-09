@@ -234,6 +234,7 @@
       },
       "tmdbid": {
         "selector": "comments",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",

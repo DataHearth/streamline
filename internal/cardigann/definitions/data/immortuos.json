@@ -201,6 +201,7 @@
       "poster": {
         "selector": "div.torrent-poster img",
         "attribute": "src",
+        "optional": true,
         "filters": [
           {
             "name": "prepend",
@@ -225,6 +226,7 @@
       },
       "genre": {
         "selector": "td:nth-last-child(6)",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -249,6 +251,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "size": {
@@ -265,11 +268,13 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "tmdbid": {
         "selector": "a[href*=\"themoviedb.org/movie/\"], a[href*=\"themoviedb.org/tv/\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "time",

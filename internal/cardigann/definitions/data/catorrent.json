@@ -166,12 +166,15 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "genre": {
-        "selector": "div.short_game_genre"
+        "selector": "div.short_game_genre",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "date": {
@@ -200,7 +203,12 @@
         "selector": "a[href*=\"/index.php?do=download&id=\"]",
         "attribute": "href"
       }
-    ]
+    ],
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}"
+      ]
+    }
   },
   "source": {
     "path": "definitions/v11/catorrent.yml",

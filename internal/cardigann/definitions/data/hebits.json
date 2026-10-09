@@ -226,10 +226,12 @@
         "text": "/torrents.php?action=download&id={{ .Result._id }}"
       },
       "poster": {
-        "selector": "..cover"
+        "selector": "..cover",
+        "optional": true
       },
       "imdbid": {
-        "selector": "..catalogue"
+        "selector": "..catalogue",
+        "optional": true
       },
       "files": {
         "selector": "fileCount"
@@ -265,7 +267,8 @@
         "selector": "leechers"
       },
       "description": {
-        "selector": "..tags"
+        "selector": "..tags",
+        "optional": true
       },
       "_half": {
         "selector": "isHalfFreeleech"

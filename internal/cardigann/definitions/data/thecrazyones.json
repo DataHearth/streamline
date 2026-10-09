@@ -403,7 +403,8 @@
       },
       "poster": {
         "selector": "div[id^=\"details\"] img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size": {
         "selector": "div.selection_unter_ad"

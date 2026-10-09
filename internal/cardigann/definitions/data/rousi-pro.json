@@ -180,10 +180,12 @@
         "text": "{{ .Config.sitelink }}api/v1/torrents/{{ .Result._id }}/download"
       },
       "poster": {
+        "optional": true,
         "text": "{{ .Config.sitelink }}api/v1/torrents/{{ .Result._id }}/cover"
       },
       "description": {
-        "selector": "subtitle"
+        "selector": "subtitle",
+        "optional": true
       },
       "seeders": {
         "selector": "seeders"

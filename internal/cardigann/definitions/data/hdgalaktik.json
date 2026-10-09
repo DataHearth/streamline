@@ -172,6 +172,11 @@
     "test": {
       "path": "/",
       "selector": "a[href=\"mybonus.php\"]"
+    },
+    "headers": {
+      "Cookie": [
+        "torrentviewblock=1"
+      ]
     }
   },
   "search": {
@@ -463,7 +468,8 @@
       },
       "poster": {
         "selector": "img.tv-avatars",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "size_nodl": {
         "selector": "span.tv-dl-btn",
@@ -493,7 +499,8 @@
         "text": "1.0"
       },
       "description": {
-        "selector": "div.tv-card-tags"
+        "selector": "div.tv-card-tags",
+        "optional": true
       }
     }
   },

@@ -309,6 +309,7 @@
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
         "attribute": "href",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -365,6 +366,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "case": {
           "div.torrent_ok": "Verified",
           "div.torrent_unchecked": "Unverified"

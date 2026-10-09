@@ -285,7 +285,8 @@
         "selector": "times_completed"
       },
       "genre": {
-        "selector": "genre"
+        "selector": "genre",
+        "optional": true
       },
       "_verified": {
         "selector": "ellenorizve",
@@ -295,6 +296,7 @@
         }
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result._verified }} | {{ .Result.genre }}"
       },
       "downloadvolumefactor": {

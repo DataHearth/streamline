@@ -19,9 +19,10 @@ const SchemaVersion = 11
 // Definition fields whose upstream default is not Go's zero value are
 // pointers, so "absent" survives into the JSON: TestLinkTorrent defaults to
 // true (fetch each non-magnet link and move to the next download selector
-// when it is not a bencoded torrent), and Settings is written even when empty
-// because upstream treats a missing list (add username and password) unlike
-// an empty one.
+// when it is not a bencoded torrent). Defaults Prowlarr fills in when it
+// loads a definition — settings, encoding, login method, search paths,
+// header fallbacks, optional fields — are already applied by the converter
+// (convert.clean), so a converted definition carries them explicitly.
 type Definition struct {
 	ID              string    `yaml:"id"              json:"id"`
 	Replaces        []string  `yaml:"replaces"        json:"replaces,omitempty"`

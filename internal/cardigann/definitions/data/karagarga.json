@@ -173,7 +173,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(9)",
@@ -214,6 +215,7 @@
       },
       "genre": {
         "selector": "td:nth-child(5)",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -230,6 +232,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ if .Result._subs }}Subs: {{ .Result._subs }}</br>{{ else }}{{ end }}{{ if .Result.genre }}Genre: {{ .Result.genre }}</br>{{ else }}{{ end }}{{ if .Result._mom }}Current MoM{{ else }}{{ end }}"
       },
       "downloadvolumefactor": {

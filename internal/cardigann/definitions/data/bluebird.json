@@ -185,7 +185,8 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "grabs": {
         "selector": "td:nth-child(7) > nobr > a, td:nth-child(7) > nobr > b"
@@ -221,6 +222,7 @@
       },
       "genre": {
         "selector": "div#cleft",
+        "optional": true,
         "filters": [
           {
             "name": "replace",
@@ -232,6 +234,7 @@
         ]
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "downloadvolumefactor": {

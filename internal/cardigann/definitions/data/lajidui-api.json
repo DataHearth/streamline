@@ -180,7 +180,12 @@
           "text": "The API token was not accepted by {{ .Config.sitelink }}."
         }
       }
-    ]
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
   },
   "search": {
     "paths": [
@@ -234,10 +239,12 @@
         "selector": "hash"
       },
       "poster": {
-        "selector": "cover"
+        "selector": "cover",
+        "optional": true
       },
       "description": {
-        "selector": "small_descr"
+        "selector": "small_descr",
+        "optional": true
       },
       "size": {
         "selector": "size"

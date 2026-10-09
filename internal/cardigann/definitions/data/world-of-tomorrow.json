@@ -412,11 +412,13 @@
       },
       "poster": {
         "selector": "div.sr-cover img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "imdbid": {
         "selector": "a.sr-link-badge[href*=\"imdb.com\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "size": {
         "selector": "span.sr-detail-size, div.sr-dup-meta span:nth-child(1)"

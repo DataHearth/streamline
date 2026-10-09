@@ -271,6 +271,7 @@
       "poster": {
         "selector": "a[href^=\"details.php?id=\"]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -324,6 +325,7 @@
         "selector": "td:nth-last-child(2)"
       },
       "description": {
+        "optional": true,
         "case": {
           "img[src=\"./pic/mod.gif\"]": "Verified",
           "*": "Unverified"

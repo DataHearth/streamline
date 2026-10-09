@@ -428,7 +428,8 @@
       },
       "poster": {
         "selector": "img[src*=\"/torrents/images/\"]",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td:nth-child(2)",
@@ -460,7 +461,8 @@
         "selector": "td:nth-last-child(2)"
       },
       "description": {
-        "selector": "div.tooltip-content > div:last-child"
+        "selector": "div.tooltip-content > div:last-child",
+        "optional": true
       },
       "downloadvolumefactor": {
         "case": {

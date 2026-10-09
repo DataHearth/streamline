@@ -54,7 +54,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "_actress": {
         "selector": "a[href^=\"/actress/\"]",
@@ -85,6 +86,7 @@
         "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.description_text }}</br>{{ .Result._actress }}</br>{{ .Result._tags }}"
       },
       "date": {

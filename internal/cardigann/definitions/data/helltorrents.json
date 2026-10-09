@@ -400,7 +400,8 @@
       },
       "poster": {
         "selector": "img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date": {
         "selector": "td.pole1",

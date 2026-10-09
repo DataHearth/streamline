@@ -351,6 +351,7 @@
       "poster": {
         "selector": "a[onmouseover]",
         "attribute": "onmouseover",
+        "optional": true,
         "filters": [
           {
             "name": "regexp",
@@ -369,12 +370,15 @@
       },
       "imdbid": {
         "selector": "a[href*=\"imdb.com/title/tt\"]",
-        "attribute": "href"
+        "attribute": "href",
+        "optional": true
       },
       "genre": {
-        "selector": "span.box"
+        "selector": "span.box",
+        "optional": true
       },
       "description": {
+        "optional": true,
         "text": "{{ .Result.genre }}"
       },
       "files": {

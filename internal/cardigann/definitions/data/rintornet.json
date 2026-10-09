@@ -164,7 +164,8 @@
       },
       "poster": {
         "selector": "div.entry_content a.entry__content-image img",
-        "attribute": "src"
+        "attribute": "src",
+        "optional": true
       },
       "date_day": {
         "selector": "span.entry__date:contains(\"Вчера\"), span.entry__date:contains(\"Сегодня\")",
