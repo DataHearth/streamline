@@ -3,6 +3,7 @@ package arr
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -23,12 +24,17 @@ type RootMapping struct {
 // carries a trailing separator so /media/movies cannot swallow a path under
 // /media/movies-4k. A path under no mapping comes back unchanged with false,
 // which the caller surfaces rather than guessing at.
-func MapRoot(path string, roots []RootMapping) (string, bool) {
-	clean := filepath.Clean(path)
+//
+// The source side is read in the source's own path style (SourcePath), not
+// this host's: a Radarr on Windows reports D:\Movies\X, and a mapping from it
+// onto a Linux path is exactly what root mappings exist for. Only the result,
+// under To, is a path of this host.
+func MapRoot(p string, roots []RootMapping) (string, bool) {
+	clean := SourcePath(p)
 	best, bestLen := -1, -1
 	for i, r := range roots {
-		from := filepath.Clean(r.From)
-		if !underRoot(clean, from) {
+		from := SourcePath(r.From)
+		if !UnderSourceRoot(clean, from) {
 			continue
 		}
 		if len(from) > bestLen {
@@ -36,25 +42,49 @@ func MapRoot(path string, roots []RootMapping) (string, bool) {
 		}
 	}
 	if best < 0 {
-		return path, false
+		return p, false
 	}
-	from := filepath.Clean(roots[best].From)
+	from := SourcePath(roots[best].From)
 	to := filepath.Clean(roots[best].To)
 	if clean == from {
 		return to, true
 	}
-	rel := strings.TrimPrefix(clean, from)
-	return filepath.Join(
-		to,
-		strings.TrimPrefix(rel, string(filepath.Separator)),
-	), true
+	rel := strings.TrimPrefix(strings.TrimPrefix(clean, from), "/")
+	return filepath.Join(to, filepath.FromSlash(rel)), true
 }
 
-func underRoot(path, root string) bool {
-	if path == root || root == string(filepath.Separator) {
+// SourcePath normalises a path the *arr reported into slash form for
+// comparison. A Windows path (a drive letter or a \\server\share UNC prefix)
+// has its backslashes turned into slashes; any other path keeps them, since a
+// backslash is an ordinary character in a Unix file name.
+func SourcePath(p string) string {
+	if windowsPath(p) {
+		p = strings.ReplaceAll(p, `\`, "/")
+	}
+	return path.Clean(p)
+}
+
+// UnderSourceRoot reports whether p sits at or under root, both already
+// normalised by SourcePath.
+func UnderSourceRoot(p, root string) bool {
+	if p == root || root == "/" {
 		return true
 	}
-	return strings.HasPrefix(path, root+string(filepath.Separator))
+	return strings.HasPrefix(p, root+"/")
+}
+
+// IsAbsSourcePath reports whether p is absolute in the source's path style:
+// /x on Unix, C:\x or \\server\share on Windows.
+func IsAbsSourcePath(p string) bool {
+	return strings.HasPrefix(p, "/") || windowsPath(p)
+}
+
+func windowsPath(p string) bool {
+	if strings.HasPrefix(p, `\\`) {
+		return true
+	}
+	return len(p) >= 3 && p[1] == ':' && (p[2] == '\\' || p[2] == '/') &&
+		(('a' <= p[0] && p[0] <= 'z') || ('A' <= p[0] && p[0] <= 'Z'))
 }
 
 // FieldValue reads one provider setting by name. The value is untyped in the
@@ -151,11 +181,12 @@ func TranslateProfile(
 ) (config.QualityProfileEntry, []string) {
 	var notes []string
 
-	minRes := 0
+	minRes, maxRes := 0, 0
 	for _, r := range allowedResolutions(p.Items, false) {
 		if minRes == 0 || r < minRes {
 			minRes = r
 		}
+		maxRes = max(maxRes, r)
 	}
 	switch {
 	case minRes == 0:
@@ -186,6 +217,20 @@ func TranslateProfile(
 		UpgradeAllowed:      p.UpgradeAllowed,
 		MinScore:            p.MinFormatScore,
 		UpgradeUntilScore:   p.CutoffFormatScore,
+	}
+	// The source's cutoff only says where upgrades stop — every allowed
+	// quality above it is still taken — but preferred_resolution is a hard
+	// ceiling here. A profile allowing more than its cutoff (the stock "Any"
+	// and "HD - 720p/1080p" do) therefore refuses those releases after the
+	// migration, which the operator has to read before creating it.
+	top := bandFor(maxRes)
+	if maxRes > cutoffRes && top != entry.PreferredResolution {
+		notes = append(notes, fmt.Sprintf(
+			"the source also accepts up to %dp above its cutoff, but preferred resolution is a hard ceiling here: releases above %s will be refused (raise preferred resolution to %s to keep them)",
+			maxRes,
+			entry.PreferredResolution,
+			top,
+		))
 	}
 
 	var dropped []string
@@ -265,12 +310,16 @@ type TranslatedClient struct {
 	Entry       config.DownloadClientEntry
 }
 
-func secretField(fields []Field, name string) string {
+// secretField reads a secret setting. masked reports the placeholder in place
+// of a secret that is set, whose value is then unknown — as opposed to one
+// that is simply empty, which the *arr apps return as is (they mask only a
+// non-empty value).
+func secretField(fields []Field, name string) (value string, masked bool) {
 	v, _ := FieldValue(fields, name)
 	if maskedSecretRe.MatchString(v) {
-		return ""
+		return "", true
 	}
-	return v
+	return v, false
 }
 
 // streamlinePriority inverts the source's scale: an *arr ranks 1 (best) to 50,
@@ -350,7 +399,9 @@ func TranslateIndexers(ps []Provider) []TranslatedIndexer {
 		// The source splits the endpoint into baseUrl + apiPath (default /api);
 		// streamline stores it whole in Path.
 		apiPath, _ := FieldValue(p.Fields, "apiPath")
-		key := secretField(p.Fields, "apiKey")
+		// An indexer cannot run without its key, so an empty one needs a
+		// secret just like a masked one.
+		key, _ := secretField(p.Fields, "apiKey")
 		enabled := p.EnableRSS || p.EnableAutomaticSearch
 
 		if m := prowlarrPathRe.FindStringSubmatch(base.path); m != nil {
@@ -398,7 +449,40 @@ func TranslateIndexers(ps []Provider) []TranslatedIndexer {
 			},
 		})
 	}
+	uniqueIndexerNames(out)
 	return out
+}
+
+// uniqueIndexerNames suffixes repeated names. A name keys the preview's row,
+// the operator's selection and the config entry, but two translations can
+// share one: every collapsed instance is "Prowlarr", and trimming the
+// " (Prowlarr)" suffix turns a synced "NZBgeek (Prowlarr)" into the name of a
+// manual "NZBgeek". The source's own names are unique, so the first keeps its
+// name and only a repeat changes.
+func uniqueIndexerNames(out []TranslatedIndexer) {
+	taken := make(map[string]bool, len(out))
+	for i := range out {
+		name := out[i].Name
+		for n := 2; taken[name]; n++ {
+			name = fmt.Sprintf("%s (%d)", out[i].Name, n)
+		}
+		taken[name] = true
+		out[i].Name = name
+		if out[i].Kind != IndexerUnsupported {
+			out[i].Entry.Name = name
+		}
+	}
+}
+
+// defaultURLBase reports whether a client's URL base is the one streamline's
+// client for that type assumes: Transmission's RPC lives under /transmission/,
+// qBittorrent's and Deluge's APIs at the root.
+func defaultURLBase(clientType, urlBase string) bool {
+	b := strings.Trim(urlBase, "/")
+	if clientType == "transmission" {
+		return b == "" || b == "transmission"
+	}
+	return b == ""
 }
 
 // TranslateDownloadClients renders the source's download clients. As with
@@ -428,11 +512,25 @@ func TranslateDownloadClients(ps []Provider) []TranslatedClient {
 		portStr, _ := FieldValue(p.Fields, "port")
 		sslStr, _ := FieldValue(p.Fields, "useSsl")
 		user, _ := FieldValue(p.Fields, "username")
-		pass := secretField(p.Fields, "password")
+		pass, masked := secretField(p.Fields, "password")
+		urlBase, _ := FieldValue(p.Fields, "urlBase")
 
 		port, err := strconv.ParseUint(portStr, 10, 16)
 		if host == "" || err != nil || port == 0 {
 			t.Reason = "the client has no usable host and port"
+			out = append(out, t)
+			continue
+		}
+		// streamline reaches each client at host:port under its fixed API
+		// path, and an entry has nowhere to keep a URL base: one behind a
+		// reverse-proxy sub-path would come across pointing at the wrong
+		// endpoint — and at the source's priority, the client every grab goes
+		// to.
+		if !defaultURLBase(clientType, urlBase) {
+			t.Reason = fmt.Sprintf(
+				"the client is reached under the URL base %q, which streamline cannot address",
+				urlBase,
+			)
 			out = append(out, t)
 			continue
 		}
@@ -442,7 +540,9 @@ func TranslateDownloadClients(ps []Provider) []TranslatedClient {
 			user = ""
 		}
 
-		t.NeedsSecret = pass == ""
+		// Only a masked password is unknown. An empty one is a client set up
+		// without authentication, which the entry carries as it is.
+		t.NeedsSecret = masked
 		t.Entry = config.DownloadClientEntry{
 			Name:       p.Name,
 			ClientType: clientType,

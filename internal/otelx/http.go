@@ -30,9 +30,22 @@ import (
 // handler — and any mutex it holds — for the process lifetime.
 //
 // spanURLRedactor sits *under* otelhttp, not above it: see its doc comment.
-var HTTPClient = &http.Client{
-	Transport: otelhttp.NewTransport(spanURLRedactor{base: http.DefaultTransport}),
-	Timeout:   30 * time.Second,
+var HTTPClient = NewHTTPClient(30*time.Second, MaxResponseBody)
+
+// NewHTTPClient builds a client exactly like HTTPClient — the same
+// instrumented, URL-redacting, body-capping transport — with its own
+// whole-exchange timeout and body cap. It is for the rare caller whose honest
+// answer outgrows HTTPClient's backstops, such as an *arr returning its whole
+// library in one unpaged response; such a caller decodes the body as a stream
+// and bounds what it keeps itself. A cap at or below zero means
+// MaxResponseBody.
+func NewHTTPClient(timeout time.Duration, maxBody int64) *http.Client {
+	return &http.Client{
+		Transport: otelhttp.NewTransport(
+			spanURLRedactor{base: http.DefaultTransport, maxBody: maxBody},
+		),
+		Timeout: timeout,
+	}
 }
 
 // spanURLRedactor rewrites the client span's url.full attribute so the request
@@ -59,6 +72,8 @@ var HTTPClient = &http.Client{
 // reaches this transport under the caller's own span.
 type spanURLRedactor struct {
 	base http.RoundTripper
+	// maxBody caps every response body; zero or less means MaxResponseBody.
+	maxBody int64
 }
 
 // The guard mirrors everything RedactURL strips, not just the query: gating on
@@ -73,7 +88,11 @@ func (t spanURLRedactor) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	resp, err := t.base.RoundTrip(req)
 	if resp != nil && resp.Body != nil {
-		resp.Body = &cappedBody{ReadCloser: resp.Body, left: MaxResponseBody}
+		limit := t.maxBody
+		if limit <= 0 {
+			limit = MaxResponseBody
+		}
+		resp.Body = &cappedBody{ReadCloser: resp.Body, left: limit}
 	}
 	return resp, err
 }

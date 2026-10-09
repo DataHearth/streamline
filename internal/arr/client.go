@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,7 +25,21 @@ type factory struct{}
 func NewFactory() Factory { return factory{} }
 
 func (factory) Client(app App, baseURL, apiKey string) (Library, error) {
-	u, err := url.Parse(strings.TrimRight(baseURL, "/"))
+	u, err := ParseBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	return &client{app: app, base: u.String(), key: apiKey}, nil
+}
+
+// ParseBaseURL checks an instance URL the way Client does — an http or https
+// address with a host — without connecting, so a caller can refuse a bad one
+// before anything else runs. The query and fragment are dropped, and the
+// path's trailing slash with them: trimmed from the raw string instead, a
+// pasted "http://radarr:7878/?apikey=…" kept its "/" and every route went to
+// "//api/v3/…".
+func ParseBaseURL(raw string) (*url.URL, error) {
+	u, err := url.Parse(raw)
 	if err != nil {
 		return nil, ErrInvalidURL
 	}
@@ -33,8 +49,11 @@ func (factory) Client(app App, baseURL, apiKey string) (Library, error) {
 	if u.Host == "" {
 		return nil, fmt.Errorf("%w: no host", ErrInvalidURL)
 	}
-	u.RawQuery, u.Fragment = "", ""
-	return &client{app: app, base: u.String(), key: apiKey}, nil
+	u.RawQuery, u.ForceQuery = "", false
+	u.Fragment, u.RawFragment = "", ""
+	u.Path = strings.TrimRight(u.Path, "/")
+	u.RawPath = strings.TrimRight(u.RawPath, "/")
+	return u, nil
 }
 
 type client struct {
@@ -43,10 +62,81 @@ type client struct {
 	key  string
 }
 
-// get decodes one v3 route. route is a constant template, never interpolated
-// with a secret: it lands on the span as an attribute.
+const (
+	// maxSmallResponse bounds every route but the two whole-library ones:
+	// status, root folders, profiles, indexers, download clients and one
+	// show's episodes are kilobytes — a few MiB for a long daily show.
+	maxSmallResponse = 16 << 20
+	// maxLibraryResponse and maxLibraryItems bound GET /movie and GET
+	// /series, the one unpaged answer an *arr gives for its whole library:
+	// several KB per movie once its file, media info and alternate titles are
+	// embedded, so a large library outgrows otelx.MaxResponseBody. It is
+	// decoded one element at a time, so the item cap is what bounds memory.
+	maxLibraryResponse = 1 << 30
+	maxLibraryItems    = 250_000
+	// libraryTimeout replaces HTTPClient's 30 s for the same two routes:
+	// building and streaming the whole list takes minutes on a NAS.
+	libraryTimeout = 10 * time.Minute
+)
+
+// libraryClient is otelx.HTTPClient with bounds sized for a whole library;
+// every other route goes through otelx.HTTPClient itself.
+var libraryClient = otelx.NewHTTPClient(libraryTimeout, maxLibraryResponse)
+
+// get decodes one small v3 route. route is a constant template, never
+// interpolated with a secret: it lands on the span as an attribute.
 func get[T any](ctx context.Context, c *client, route, query string) (T, error) {
-	var zero T
+	var out T
+	err := c.do(ctx, otelx.HTTPClient, route, query, func(body io.Reader) error {
+		return otelx.DecodeJSON(body, maxSmallResponse, &out)
+	})
+	if err != nil {
+		var zero T
+		return zero, err
+	}
+	return out, nil
+}
+
+// list decodes a whole-library route — a JSON array of every title — one
+// element at a time, so it is bounded by its item count rather than by
+// holding the whole document in memory at once.
+func list[T any](ctx context.Context, c *client, route string) ([]T, error) {
+	var out []T
+	err := c.do(ctx, libraryClient, route, "", func(body io.Reader) error {
+		dec := json.NewDecoder(body)
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if d, ok := tok.(json.Delim); !ok || d != '[' {
+			return errors.New("expected a JSON array")
+		}
+		for dec.More() {
+			if len(out) >= maxLibraryItems {
+				return fmt.Errorf("more than %d titles", maxLibraryItems)
+			}
+			var v T
+			if err := dec.Decode(&v); err != nil {
+				return err
+			}
+			out = append(out, v)
+		}
+		_, err = dec.Token()
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// do issues one GET against a v3 route and hands the body to decode.
+func (c *client) do(
+	ctx context.Context,
+	hc *http.Client,
+	route, query string,
+	decode func(io.Reader) error,
+) error {
 	ctx, span := tracer.Start(ctx, "arr.request", trace.WithAttributes(
 		attribute.String("arr.app", string(c.app)),
 		attribute.String("arr.route", route),
@@ -59,14 +149,14 @@ func get[T any](ctx context.Context, c *client, route, query string) (T, error) 
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return zero, otelx.RecordSpanError(span, err)
+		return otelx.RecordSpanError(span, err)
 	}
 	req.Header.Set("X-Api-Key", c.key)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := otelx.HTTPClient.Do(req)
+	resp, err := hc.Do(req)
 	if err != nil {
-		return zero, otelx.RecordSpanError(
+		return otelx.RecordSpanError(
 			span, fmt.Errorf("%w: %s", ErrUnreachable, transportReason(err)),
 		)
 	}
@@ -75,20 +165,19 @@ func get[T any](ctx context.Context, c *client, route, query string) (T, error) 
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized,
 		resp.StatusCode == http.StatusForbidden:
-		return zero, otelx.RecordSpanError(span, ErrUnauthorized)
+		return otelx.RecordSpanError(span, ErrUnauthorized)
 	case resp.StatusCode >= 300:
-		return zero, otelx.RecordSpanError(span, fmt.Errorf(
+		return otelx.RecordSpanError(span, fmt.Errorf(
 			"%w: %s answered %s", ErrUnreachable, route, resp.Status,
 		))
 	}
 
-	var out T
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return zero, otelx.RecordSpanError(
+	if err := decode(resp.Body); err != nil {
+		return otelx.RecordSpanError(
 			span, fmt.Errorf("decode %s: %w", route, err),
 		)
 	}
-	return out, nil
+	return nil
 }
 
 // transportReason drops the request URL net/http wraps every transport error

@@ -53,6 +53,36 @@ var _ = Describe("MapRoot", Label("unit", "arr"), func() {
 		Expect(ok).To(BeTrue())
 		Expect(got).To(Equal("/media/movies/a.mkv"))
 	})
+
+	It("maps a Windows source onto a path of this host", func() {
+		got, ok := MapRoot(`D:\Movies\Heat (1995)\Heat.mkv`,
+			[]RootMapping{{From: `D:\Movies\`, To: "/data/movies"}})
+		Expect(ok).To(BeTrue())
+		Expect(got).To(Equal("/data/movies/Heat (1995)/Heat.mkv"))
+	})
+
+	It("maps a UNC source onto a path of this host", func() {
+		got, ok := MapRoot(`\\nas\media\Movies\Heat.mkv`,
+			[]RootMapping{{From: `\\nas\media\Movies`, To: "/data/movies"}})
+		Expect(ok).To(BeTrue())
+		Expect(got).To(Equal("/data/movies/Heat.mkv"))
+	})
+
+	It("keeps a backslash in a Unix file name", func() {
+		got, ok := MapRoot(`/media/movies/AC\DC Live.mkv`, roots)
+		Expect(ok).To(BeTrue())
+		Expect(got).To(Equal(`/srv/films/AC\DC Live.mkv`))
+	})
+})
+
+var _ = Describe("IsAbsSourcePath", Label("unit", "arr"), func() {
+	It("accepts absolute paths in either style and nothing relative", func() {
+		Expect(IsAbsSourcePath("/movies")).To(BeTrue())
+		Expect(IsAbsSourcePath(`D:\Movies`)).To(BeTrue())
+		Expect(IsAbsSourcePath(`\\nas\share`)).To(BeTrue())
+		Expect(IsAbsSourcePath("movies")).To(BeFalse())
+		Expect(IsAbsSourcePath(`Movies\x`)).To(BeFalse())
+	})
 })
 
 var _ = Describe("FieldValue", Label("unit", "arr"), func() {
@@ -145,6 +175,37 @@ var _ = Describe("TranslateProfile", Label("unit", "arr"), func() {
 		Expect(got.MinResolution).To(Equal("720p"))
 		Expect(got.PreferredResolution).To(Equal("720p"))
 		Expect(notes).To(ContainElement(ContainSubstring("480")))
+	})
+
+	It("says so when the ceiling refuses qualities the source allows", func() {
+		// The stock "HD - 720p/1080p": 1080p allowed, cutoff at 720p.
+		got, notes := TranslateProfile(QualityProfile{
+			Name:   "HD - 720p/1080p",
+			Cutoff: 4,
+			Items: []QualityItem{
+				leaf(4, "HDTV-720p", 720, true),
+				leaf(9, "Bluray-1080p", 1080, true),
+			},
+		}, known)
+
+		Expect(got.PreferredResolution).To(Equal("720p"))
+		Expect(notes).To(ContainElement(SatisfyAll(
+			ContainSubstring("1080p"),
+			ContainSubstring("hard ceiling"),
+		)))
+	})
+
+	It("adds no ceiling note when the cutoff is the top allowed band", func() {
+		_, notes := TranslateProfile(QualityProfile{
+			Name:   "HD-1080p",
+			Cutoff: 9,
+			Items: []QualityItem{
+				leaf(4, "HDTV-720p", 720, true),
+				leaf(9, "Bluray-1080p", 1080, true),
+			},
+		}, known)
+
+		Expect(notes).NotTo(ContainElement(ContainSubstring("hard ceiling")))
 	})
 
 	It("resolves a cutoff that names a group to the group's top resolution", func() {
@@ -324,7 +385,25 @@ var _ = Describe("TranslateIndexers", Label("unit", "arr"), func() {
 				},
 			}
 		}
-		Expect(TranslateIndexers([]Provider{mk("a"), mk("b")})).To(HaveLen(2))
+		got := TranslateIndexers([]Provider{mk("a"), mk("b")})
+		Expect(got).To(HaveLen(2))
+		// A name keys the preview row, the selection and the config entry.
+		Expect(got[0].Name).To(Equal("Prowlarr"))
+		Expect(got[1].Name).To(Equal("Prowlarr (2)"))
+		Expect(got[1].Entry.Name).To(Equal("Prowlarr (2)"))
+	})
+
+	It("keeps a manual indexer and its prowlarr-synced twin apart", func() {
+		got := TranslateIndexers([]Provider{
+			{Name: "NZBgeek", Implementation: "Newznab", Protocol: "usenet"},
+			{
+				Name:           "NZBgeek (Prowlarr)",
+				Implementation: "Newznab",
+				Protocol:       "usenet",
+			},
+		})
+		Expect(got).To(HaveLen(2))
+		Expect(got[0].Name).NotTo(Equal(got[1].Name))
 	})
 
 	It("marks usenet and unknown implementations unsupported with a reason", func() {
@@ -410,5 +489,36 @@ var _ = Describe("TranslateDownloadClients", Label("unit", "arr"), func() {
 		Expect(got[0].Entry.ClientType).To(BeEmpty())
 		Expect(got[0].Reason).To(ContainSubstring("usenet"))
 		Expect(got[1].Reason).To(ContainSubstring("RTorrent"))
+	})
+
+	It("carries a client without authentication as it is", func() {
+		// The *arr apps mask a set password and return an unset one empty.
+		got := TranslateDownloadClients([]Provider{{
+			Name: "tr", Implementation: "Transmission", Protocol: "torrent",
+			Fields: []Field{
+				{Name: "host", Value: "transmission"},
+				{Name: "port", Value: float64(9091)},
+				{Name: "urlBase", Value: "/transmission/"},
+				{Name: "username", Value: ""},
+				{Name: "password", Value: "", Privacy: "password"},
+			},
+		}})
+		Expect(got[0].Reason).To(BeEmpty())
+		Expect(got[0].NeedsSecret).To(BeFalse())
+		Expect(got[0].Entry.Password).To(BeEmpty())
+	})
+
+	It("refuses a client reached under a URL base", func() {
+		got := TranslateDownloadClients([]Provider{{
+			Name: "qbit", Implementation: "QBittorrent", Protocol: "torrent",
+			Fields: []Field{
+				{Name: "host", Value: "proxy.lan"},
+				{Name: "port", Value: float64(443)},
+				{Name: "useSsl", Value: true},
+				{Name: "urlBase", Value: "/qbittorrent"},
+			},
+		}})
+		Expect(got[0].Reason).To(ContainSubstring("/qbittorrent"))
+		Expect(got[0].Entry.ClientType).To(BeEmpty())
 	})
 })

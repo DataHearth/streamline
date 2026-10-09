@@ -1,0 +1,23 @@
+[
+  {
+    "seasonNumber": 1,
+    "episodeNumber": 1,
+    "monitored": true,
+    "hasFile": true,
+    "episodeFileId": 41
+  },
+  {
+    "seasonNumber": 1,
+    "episodeNumber": 2,
+    "monitored": true,
+    "hasFile": true,
+    "episodeFileId": 41
+  },
+  {
+    "seasonNumber": 2,
+    "episodeNumber": 1,
+    "monitored": true,
+    "hasFile": false,
+    "episodeFileId": 0
+  }
+]

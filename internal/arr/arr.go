@@ -151,6 +151,7 @@ type SeriesStatistics struct {
 }
 
 type EpisodeFile struct {
+	ID   uint32 `json:"id"`
 	Path string `json:"path"`
 	Size int64  `json:"size"`
 }
@@ -162,7 +163,8 @@ type Episode struct {
 	HasFile       bool   `json:"hasFile"`
 	// EpisodeFileID is the authoritative file link: EpisodeFileResource has no
 	// episodeIds of its own, the episode points at the file. Fetching with
-	// includeEpisodeFile=true fills EpisodeFile in the same response.
+	// includeEpisodeFile=true fills EpisodeFile in the same response on a
+	// Sonarr that honours it; Episodes joins the rest from /episodefile.
 	EpisodeFileID uint32       `json:"episodeFileId"`
 	EpisodeFile   *EpisodeFile `json:"episodeFile"`
 }

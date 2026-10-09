@@ -86,6 +86,44 @@ var _ = Describe("Client", Label("unit", "arr"), func() {
 		Expect(eps[1].EpisodeFile).To(BeNil())
 	})
 
+	It("fills the episode files an older Sonarr does not embed", func() {
+		// Sonarr before 4.0.10 ignores includeEpisodeFile: the episodes name
+		// their file by id only, and /episodefile carries the records.
+		srv = newServer(map[string]string{
+			"/api/v3/episode":     "sonarr_episode_unembedded.json",
+			"/api/v3/episodefile": "sonarr_episodefile.json",
+		})
+		c, err := NewFactory().Client(Sonarr, srv.URL, "k")
+		Expect(err).NotTo(HaveOccurred())
+
+		eps, err := c.Episodes(context.Background(), 7)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(queries).To(Equal([]string{
+			"seriesId=7&includeEpisodeFile=true", "seriesId=7",
+		}))
+		Expect(eps).To(HaveLen(3))
+		Expect(eps[0].EpisodeFile).NotTo(BeNil())
+		Expect(eps[0].EpisodeFile.Path).
+			To(Equal("/media/series/Breaking Bad/Season 01/S01E01E02.mkv"))
+		Expect(eps[1].EpisodeFile).To(Equal(eps[0].EpisodeFile))
+		Expect(eps[2].EpisodeFile).To(BeNil())
+	})
+
+	It("refuses a whole-library answer that is not an array", func() {
+		srv = httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`{"message":"sign in"}`))
+				Expect(err).NotTo(HaveOccurred())
+			}),
+		)
+		c, err := NewFactory().Client(Radarr, srv.URL, "k")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = c.Movies(context.Background())
+		Expect(err).To(MatchError(ContainSubstring("expected a JSON array")))
+	})
+
 	It("accepts the application it was built for", func() {
 		srv = newServer(map[string]string{
 			"/api/v3/system/status": "status_sonarr.json",
@@ -132,6 +170,18 @@ var _ = Describe("Client", Label("unit", "arr"), func() {
 		_, err = c.Movies(context.Background())
 		Expect(err).To(MatchError(ErrUnreachable))
 		Expect(err.Error()).NotTo(ContainSubstring(base))
+	})
+
+	It("drops a pasted query along with the path's trailing slash", func() {
+		srv = newServer(map[string]string{
+			"/api/v3/episode": "sonarr_episode.json",
+		})
+		c, err := NewFactory().Client(Sonarr, srv.URL+"/?apikey=k#top", "k")
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = c.Episodes(context.Background(), 7)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(queries).To(ConsistOf("seriesId=7&includeEpisodeFile=true"))
 	})
 
 	It("rejects a base URL that is not http or https", func() {
