@@ -302,7 +302,8 @@ export function releasePill(r: Release): { token: string; label: string; live?: 
 			label: `${i18n.status_downloading()} · ${Math.round(r.progress ?? 0)}%`,
 			live: true,
 		};
-	if (r.status === "wanted" || r.status === "skipped") {
+	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
+	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
 		if (r.tracks_have > 0)
 			return {

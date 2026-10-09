@@ -123,6 +123,10 @@
 				onSearch={onSearchTrack}
 				onDeleteFile={onDeleteTrack}
 			/>
+		{:else if r.tracks_pending}
+			<div class="rounded-lg border border-dashed border-border-strong px-6 py-10 text-center">
+				<p class="text-[14px] font-medium text-fg-muted">{i18n.music_tracks_fetching()}</p>
+			</div>
 		{:else}
 			<div class="rounded-lg border border-dashed border-border-strong px-6 py-10 text-center">
 				<p class="text-[14px] font-medium text-fg-muted">{i18n.music_tracklist_unannounced()}</p>

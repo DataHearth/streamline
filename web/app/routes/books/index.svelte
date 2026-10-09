@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { pageTitle } from "@lib/page-title.svelte";
 	import { onMount } from "svelte";
-	import { createQuery, keepPreviousData } from "@tanstack/svelte-query";
+	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { ArrowLeft, Layers, UserRound } from "@lucide/svelte";
-	import { api, apiAllPages, errorText } from "@lib/api";
+	import { api, apiAllPages, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { formatRelative } from "@lib/dates";
 	import { onRouteQuery } from "@lib/route-query";
@@ -90,17 +90,40 @@
 		return p;
 	}
 
-	// The landing page folds every kind into its shelves, so it needs the whole
-	// matching shelf; a kind's grid asks the server for that kind alone.
-	const listQuery = createQuery<{ items: ShelfItem[]; total: number }>(() => ({
-		queryKey: ["books", "list", kind, status, author, format, debounced, sort],
+	// The landing page folds every kind into its shelves, so it walks the whole
+	// matching shelf; a kind's grid pages the server for that kind alone.
+	const shelvesQuery = createQuery<{ items: ShelfItem[]; total: number }>(() => ({
+		queryKey: ["books", "list", "shelves", status, author, format, debounced],
 		queryFn: () => {
-			const p = filterParams(true);
-			p.set("sort", sort);
+			const p = filterParams(false);
+			p.set("sort", "added");
 			return apiAllPages<ShelfItem>(`/books?${p}`);
 		},
+		enabled: kind === "all",
 		placeholderData: keepPreviousData,
 	}));
+	const gridQuery = createInfiniteQuery<
+		Paginated<ShelfItem>,
+		Error,
+		{ pages: Paginated<ShelfItem>[]; pageParams: number[] },
+		readonly ["books", "list", "grid", Kind, string, string, string, string, string],
+		number
+	>(() => ({
+		queryKey: ["books", "list", "grid", kind, status, author, format, debounced, sort] as const,
+		queryFn: ({ pageParam }) => {
+			const p = filterParams(true);
+			p.set("sort", sort);
+			p.set("page", String(pageParam));
+			p.set("limit", String(PAGE_LIMIT));
+			return api<Paginated<ShelfItem>>(`/books?${p}`);
+		},
+		initialPageParam: 1,
+		getNextPageParam: (last, pages) =>
+			pages.flatMap((p) => p.items).length < last.total ? pages.length + 1 : undefined,
+		enabled: kind !== "all",
+		placeholderData: keepPreviousData,
+	}));
+	let listQuery = $derived(kind === "all" ? shelvesQuery : gridQuery);
 	// Carries the page's filters so the facet rows count against them; the nav
 	// badge keeps the unfiltered ["books", "counts"] entry.
 	const countsQuery = createQuery<BookCounts>(() => ({
@@ -117,7 +140,8 @@
 		enabled: auth.isAdmin,
 	}));
 
-	let items = $derived(listQuery.data?.items ?? []);
+	let items = $derived(shelvesQuery.data?.items ?? []);
+	let kindItems = $derived((gridQuery.data?.pages ?? []).flatMap((p) => p.items));
 	let counts = $derived(countsQuery.data);
 	const inKind = (i: ShelfItem, k: Kind) =>
 		k === "all" || (k === "bd" ? i.kind === "bd" || i.kind === "comic" : i.kind === k);
@@ -133,12 +157,24 @@
 			.filter((s) => s.items.length > 0),
 	);
 	let recent = $derived([...items].sort((a, b) => b.added_at.localeCompare(a.added_at)).slice(0, 8));
-	let kindItems = $derived(items.filter((i) => inKind(i, kind)));
 	let kindTitle = $derived(
 		kind === "novel" ? i18n.books_shelf_novel() : kind === "bd" ? i18n.books_shelf_bd() : kind === "manga" ? i18n.books_shelf_manga() : "",
 	);
 	let shown = $derived(kind === "all" ? items : kindItems);
 	let filtering = $derived(status !== "all" || author !== "all" || format !== "all" || !!debounced);
+	let pageSentinel = $state<HTMLDivElement | null>(null);
+	$effect(() => {
+		const el = pageSentinel;
+		if (!el) return;
+		const io = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting && gridQuery.hasNextPage && !gridQuery.isFetchingNextPage) gridQuery.fetchNextPage();
+			},
+			{ rootMargin: "600px" },
+		);
+		io.observe(el);
+		return () => io.disconnect();
+	});
 	let lastFinished = $derived.by(() => {
 		let latest: string | null = null;
 		for (const s of schedulesQuery.data?.items ?? [])
@@ -265,5 +301,6 @@
 				<ShelfCard item={it} />
 			{/each}
 		</div>
+		<div bind:this={pageSentinel} aria-hidden="true"></div>
 	{/if}
 </div>

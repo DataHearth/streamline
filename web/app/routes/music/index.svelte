@@ -68,6 +68,7 @@
 		initialPageParam: 1,
 		getNextPageParam: (last, pages) =>
 			pages.flatMap((p) => p.items).length < last.total ? pages.length + 1 : undefined,
+		refetchInterval: (q) => (q.state.data?.pages.some((pg) => pg.items.some((a) => a.hydrating)) ? 10_000 : false),
 		placeholderData: keepPreviousData,
 	}));
 	// The facet rows only mean something against the page's own filters; the

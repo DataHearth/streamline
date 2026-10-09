@@ -154,6 +154,12 @@
 		const original = book.editions.find((e) => e.original);
 		const pages = (editionOf(inUse.ebook) ?? original)?.pages;
 		const rows: InfoRow[] = [{ label: i18n.common_type(), value: kindLabel(book.kind), mono: false }];
+		if (book.series)
+			rows.push({
+				label: i18n.books_series(),
+				value: [{ text: i18n.books_volume_of({ n: String(book.series.number), title: book.series.title }), href: `/books/series/${book.series.id}` }],
+				mono: false,
+			});
 		if (book.genre) rows.push({ label: i18n.music_fact_genre(), value: book.genre, mono: false });
 		rows.push({ label: i18n.lookup_first_published(), value: String(book.first_published) });
 		if (book.original_title) rows.push({ label: i18n.books_fact_original_title(), value: book.original_title, mono: false });
@@ -275,6 +281,7 @@
 						profile={book.quality_profile}
 						removeBody={i18n.books_remove_body()}
 						filesLabel={i18n.books_delete_files_label()}
+						canRemove={!book.series}
 					/>
 				</div>
 			{/if}

@@ -30,6 +30,7 @@
 		onSearch,
 		removeBody,
 		filesLabel,
+		canRemove = true,
 		variant = "hero",
 	}: {
 		base: string;
@@ -43,6 +44,7 @@
 		onSearch?: () => void;
 		removeBody: string;
 		filesLabel: string;
+		canRemove?: boolean;
 		variant?: "hero" | "row" | "tile" | "card";
 	} = $props();
 
@@ -108,7 +110,9 @@
 		{ key: "refresh", label: i18n.action_refresh_metadata(), icon: RefreshCw, onSelect: refresh },
 		// One destructive entry: whether the files go too is the confirm's
 		// checkbox, not a second item beside this one.
-		{ key: "delete", label: i18n.action_delete_from_library(), icon: Trash2, danger: true, dividerBefore: true, onSelect: () => (deleteOpen = true) },
+		...(canRemove
+			? [{ key: "delete", label: i18n.action_delete_from_library(), icon: Trash2, danger: true, dividerBefore: true, onSelect: () => (deleteOpen = true) } satisfies KebabItem]
+			: []),
 	]);
 </script>
 

@@ -15,7 +15,8 @@
 	let none = $derived(r.status === "wanted" && r.tracks_have === 0);
 	let badge = $derived.by(() => {
 		if (up) return { token: "unaired", label: formatDateShort(r.release_date), live: false };
-		if (r.status === "wanted" || r.status === "skipped")
+		if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped(), live: false };
+		if (r.status === "wanted")
 			return {
 				token: "wanted",
 				label: r.tracks_have > 0 ? `${r.tracks_have}/${r.track_count}` : i18n.status_wanted(),

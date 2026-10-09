@@ -130,6 +130,10 @@
 							onSearch={onSearchTrack}
 							onDeleteFile={onDeleteTrack}
 						/>
+					{:else if r.tracks_pending}
+						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">
+							{i18n.music_tracks_fetching()}
+						</p>
 					{:else}
 						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">
 							{i18n.music_tracklist_unannounced()}

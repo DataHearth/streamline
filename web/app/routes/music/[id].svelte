@@ -209,7 +209,7 @@
 		if (artist.since) rows.push({ label: i18n.music_fact_since(), value: String(artist.since) });
 		if (labels.length) rows.push({ label: labels.length === 1 ? i18n.music_fact_label() : i18n.music_fact_labels(), value: labels.join(", "), mono: false });
 		if (artist.overview_source)
-			rows.push({ label: "Wikipedia", value: [{ text: "CC BY-SA", href: artist.overview_source, external: true }], mono: false });
+			rows.push({ label: i18n.music_overview_source(), value: [{ text: i18n.music_overview_license(), href: artist.overview_source, external: true }], mono: false });
 		if (artist.mbid)
 			rows.push({ label: "MusicBrainz", value: [{ text: artist.mbid.slice(0, 8), href: `https://musicbrainz.org/artist/${artist.mbid}`, external: true }], mono: true });
 		return rows;
