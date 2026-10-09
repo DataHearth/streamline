@@ -32,13 +32,15 @@ A migration is an [import scan](Importing-an-Existing-Library) whose titles come
 
 What does **not** come across: usenet indexers and clients (Streamline is torrent-only), history, blocklists, custom-format *definitions*, tags, import lists, notifications, and anything about release *source* (Bluray, WEB-DL, HDTV) in a quality profile — see [below](#how-quality-profiles-translate).
 
-Sonarr already knows which file is which episode, so a migrated show is matched **by episode number**, never by re-reading filenames. A file name no parser could read still lands on the right episode.
+Sonarr already knows which file is which episode, so a migrated show is matched **by episode number**, never by re-reading filenames. A file name no parser could read still lands on the right episode. A file holding several episodes (`S01E01E02`) is linked to the first of them; the others stay wanted, and the row's note says so.
 
 ---
 
 ## Before you start
 
-You need the instance's URL and API key (**Settings → General → Security → API Key** in Radarr and Sonarr). The key is used for the calls below and **never stored** — every request carries it again.
+You need the instance's URL and API key (**Settings → General → Security → API Key** in Radarr and Sonarr). The key is used for the calls below and **never stored** — every request carries it again. The scan keeps the URL's address only: a username and password in it (for a basic-auth proxy) or a query string are used for the fetch and then dropped.
+
+Any Radarr or Sonarr serving the v3 API works, Sonarr 3 included, and so does one running on Windows: map its `D:\Movies` or `\\nas\media` root folders onto the paths Streamline sees, like any other.
 
 Run one migration per instance: one for Radarr (movies), one for Sonarr (series).
 
@@ -82,7 +84,7 @@ Nothing is written. The answer lists:
 
 - **`root_folders`** — each with a `sample_path`, one real file under it. You use these in the next step.
 - **`quality_profiles`** — each with the instance's `id` and `name`, `in_use` (how many of its titles use it), its translation into a Streamline profile (`translation`), and every lossy step spelled out in `notes`. `existing` names the Streamline profile spelled exactly the same, or is empty when there is none.
-- **`indexers`** and **`download_clients`** — with a `reason` on anything that cannot come across (an indexer's `kind` and a client's `client_type` read `unsupported` then), `needs_secret` where the instance did not return the API key or password, and `conflict` where the name is already taken here.
+- **`indexers`** and **`download_clients`** — with a `reason` on anything that cannot come across (an indexer's `kind` and a client's `client_type` read `unsupported` then — a client reached under a URL base, for instance), `needs_secret` where the instance did not return the API key or password (a client set up without a password needs none), and `conflict` where the name is already taken here. Names are unique: a second Prowlarr instance reads `Prowlarr (2)`.
 - **`counts`** — titles, how many have a file, how many are monitored.
 
 A wrong URL, a rejected key, or pointing a Radarr migration at a Sonarr answers `422` with a message that says which.
@@ -152,7 +154,7 @@ scan=$(api -X POST -d "{
 
 If another import scan is still running the request answers `409` **before** any profile is created, so nothing is left behind; wait for it and send the same request again.
 
-The request is refused (`422`, `code: migration_rejected`) before any scan starts when a `sample_path` does not resolve through its mapping, a root breaks the rule in the table above, or a profile to create collides with a different one of the same name — every colliding name is listed at once. The message says which, and the web UI shows it as is. Re-sending a start that already created its profiles is fine — an identical profile is not a collision.
+The request is refused (`422`, `code: migration_rejected`) before any scan starts — and before any profile is created — when `source_url` is not an `http(s)://` address, a `sample_path` does not resolve through its mapping, a root breaks the rule in the table above, or a profile to create collides with a different one of the same name — every colliding name is listed at once. The message says which, and the web UI shows it as is. Re-sending a start that already created its profiles is fine — an identical profile is not a collision.
 
 The scan then reads the instance in the background. Poll it until `status` is `awaiting_review`:
 
@@ -174,6 +176,8 @@ Rows are classified the way a directory scan's are, with one difference: there i
 
 A movie row with an empty `source_path` is a title Radarr tracks without a file; it commits as a wanted entry.
 
+Pointing a migrated show at a different series with **Change match** makes it commit the way a folder-scan row does — files matched by name, refused when half or more of them do not match, and none of Sonarr's flags applied — because Sonarr's episode numbers belong to the show it named.
+
 ```bash
 api -X POST "$SL/api/v1/library/imports/$scan/commit"
 ```
@@ -194,7 +198,7 @@ Streamline gates a release on a resolution band and a custom-format score. Radar
 | *arr profile | Streamline profile |
 | --- | --- |
 | Lowest allowed quality | `min_resolution` — 720p, 1080p or 2160p |
-| Cutoff | `preferred_resolution`, the band's ceiling (a cutoff naming a group takes the group's highest resolution) |
+| Cutoff | `preferred_resolution`, the band's ceiling (a cutoff naming a group takes the group's highest resolution). The *arr cutoff only stops upgrades, while the ceiling refuses anything above it — when the profile allows more than its cutoff (the stock `Any` and `HD - 720p/1080p` do), `notes` says which releases will be refused and what to raise `preferred_resolution` to |
 | Upgrades allowed | `upgrade_allowed` |
 | Minimum custom format score | `min_score` |
 | Upgrade until custom format score | `upgrade_until_score` |

@@ -142,15 +142,12 @@
 			source_url: url,
 			api_key: apiKey,
 			mode,
-			// A root holding no titles maps nothing, and the server refuses any
-			// mapping whose target does not exist on this host — so an empty
-			// root the operator left at its identity default would block the
-			// whole migration over a folder it never reads.
-			root_mappings: $state.snapshot(roots).filter(
-				(r) =>
-					(preview?.root_folders.find((f) => f.path === r.from)?.title_count ??
-						0) > 0,
-			),
+			// Only a root holding a file maps anything — a title with no file
+			// commits without a path — and the server refuses any mapping whose
+			// target does not exist on this host. A root of wanted titles only
+			// (no sample, never checked) left at its identity default would
+			// otherwise block the whole migration over a folder it never reads.
+			root_mappings: $state.snapshot(roots).filter((r) => !!r.sample_path),
 			profile_mappings: profileMappings(preview, choices),
 		};
 		if (mode === "rename" && importMode) body.import_mode = importMode;
