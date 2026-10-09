@@ -1,0 +1,110 @@
+{
+  "id": "mixtapetorrent",
+  "name": "MixtapeTorrent",
+  "description": "MixtapeTorrent is a Public Music site for MixTapes",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "http://www.mixtapetorrent.com/"
+  ],
+  "caps": {
+    "categories": {
+      "1": "Audio"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "search/node/{{ if .Keywords }}{{ .Keywords }}{{ else }}2020{{ end }} type:story"
+      }
+    ],
+    "rows": {
+      "after": 1,
+      "selector": "dl.search-results > dt, dl.search-results > dd",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "a"
+      },
+      "details": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "description": {
+        "selector": "p"
+      },
+      "date": {
+        "selector": "p.search-info",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\w{3} \\d{1,2} \\d{4} - \\d{1,2}:\\d{2}[a|p]m)"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " -07:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Jan 2 2006 - 3:04PM -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "text": "128 MB"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "table#attachments > tbody > tr.odd > td > a",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/mixtapetorrent.yml",
+    "sha256": "f3cd585a4c71b9dd5ea1bdaef5e4bd9a82ba5dd7a44fe6ff0e2dc65bed2fb07b",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

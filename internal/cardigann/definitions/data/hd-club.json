@@ -1,0 +1,333 @@
+{
+  "id": "hd-club",
+  "name": "HD-CLUB",
+  "description": "HD-CLUB is a CZECH Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "cs-CZ",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://hd-czech.eu/"
+  ],
+  "legacylinks": [
+    "https://freecztorrent.eu/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "11",
+        "cat": "Movies/HD",
+        "desc": "H265-720/1080/2160"
+      },
+      {
+        "id": "31",
+        "cat": "Movies/SD",
+        "desc": "Divx - Avi"
+      },
+      {
+        "id": "19",
+        "cat": "Movies",
+        "desc": "Kreslené Filmy"
+      },
+      {
+        "id": "32",
+        "cat": "TV/Documentary",
+        "desc": "Dokumentární  Filmy"
+      },
+      {
+        "id": "28",
+        "cat": "TV",
+        "desc": "Seriály"
+      },
+      {
+        "id": "18",
+        "cat": "TV/HD",
+        "desc": "Film Retro"
+      },
+      {
+        "id": "14",
+        "cat": "TV/WEB-DL",
+        "desc": "TV - WEB- DL x264"
+      },
+      {
+        "id": "16",
+        "cat": "TV/HD",
+        "desc": "MP4"
+      },
+      {
+        "id": "15",
+        "cat": "TV/WEB-DL",
+        "desc": "TV - WEB- DL x265"
+      },
+      {
+        "id": "38",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "29",
+        "cat": "Movies/DVD",
+        "desc": "DVD5 / DVD9"
+      },
+      {
+        "id": "23",
+        "cat": "Movies/UHD",
+        "desc": "Bluray / 4K-UHD"
+      },
+      {
+        "id": "26",
+        "cat": "Movies/HD",
+        "desc": "HD-720/1080/2160"
+      },
+      {
+        "id": "34",
+        "cat": "Movies/3D",
+        "desc": "3 D"
+      },
+      {
+        "id": "35",
+        "cat": "Movies",
+        "desc": "V.I.P Extra"
+      },
+      {
+        "id": "39",
+        "cat": "PC",
+        "desc": "APP WINDOWS"
+      },
+      {
+        "id": "41",
+        "cat": "PC/Mobile-Other",
+        "desc": "Mobil-PDA"
+      },
+      {
+        "id": "25",
+        "cat": "Audio/Lossless",
+        "desc": "Flac"
+      },
+      {
+        "id": "20",
+        "cat": "Audio/MP3",
+        "desc": "Mp3"
+      },
+      {
+        "id": "36",
+        "cat": "Audio",
+        "desc": "Retro Hudba"
+      },
+      {
+        "id": "22",
+        "cat": "Audio/Audiobook",
+        "desc": "Audio kniha"
+      },
+      {
+        "id": "3",
+        "cat": "Console",
+        "desc": "Games"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "ip_filtering",
+      "label": "IP Filtering",
+      "type": "info",
+      "default": "HD-CLUB allows only certain IP addressess. The error <b>Redirected to https://hd-czech.eu/blocked.php?country=xx</b> means your IP was not accepted."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "3",
+      "options": {
+        "3": "created",
+        "5": "seeders",
+        "4": "size",
+        "2": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "desc",
+        "1": "asc"
+      }
+    },
+    {
+      "name": "info",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "index.php?page=login",
+    "inputs": {
+      "uid": "{{ .Config.username }}",
+      "pwd": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td.lista span[style=\"color:#FF0000;\"]"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php"
+      }
+    ],
+    "inputs": {
+      "page": "torrents",
+      "search": "{{ .Keywords }}",
+      "category": "{{ if .Categories }}{{ range .Categories }}{{.}};{{end}}{{ else }}0{{ end }}",
+      "active": "0",
+      "order": "{{ .Config.sort }}",
+      "by": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.benylista > tbody > tr:has(a[href^=\"download.php\"]):not(:has(a[href$=\"category=0\"]))"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"category=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "category"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"index.php?page=torrent-details\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"index.php?page=torrent-details\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img.small-img",
+        "attribute": "src"
+      },
+      "date": {
+        "selector": "td:nth-last-child(7)",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2})"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04:05"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(5)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "_exclusive": {
+        "optional": true,
+        "case": {
+          "img[src=\"beny/exclusive.png\"]": "Exclusive"
+        }
+      },
+      "_vip": {
+        "optional": true,
+        "case": {
+          "img[src=\"gold/free.gif\"]": "VIP"
+        }
+      },
+      "description": {
+        "text": "{{ if .Result._exclusive }}{{ .Result._exclusive }} {{ else }}{{ end }}{{ if .Result._vip }}{{ .Result._vip }}{{ else }}{{ end }}"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"gold/gold.gif\"]": "0",
+          "img[src=\"gold/gold75.gif\"]": "0.25",
+          "img[src=\"gold/gold50.gif\"]": "0.5",
+          "img[src=\"gold/gold25.gif\"]": "0.75",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.6"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/hd-club.yml",
+    "sha256": "f45216d997fe45589488fced74e89a91d79322afa24dbdf47b5e9af98adba7d6",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

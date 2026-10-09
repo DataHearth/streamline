@@ -1,0 +1,492 @@
+{
+  "id": "hdgalaktik",
+  "name": "HDGalaKtik",
+  "description": "HDGalaKtik is a RUSSIAN Semi-Private tracker for MOVIES / TV / GENERAL",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.trackerpmr.com/",
+    "https://freetmd.com/",
+    "https://kinoradiomagia.tv/"
+  ],
+  "legacylinks": [
+    "https://hdgalaktik.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "13",
+        "cat": "Movies",
+        "desc": "Фильмы"
+      },
+      {
+        "id": "11",
+        "cat": "TV",
+        "desc": "Сериалы"
+      },
+      {
+        "id": "6",
+        "cat": "TV",
+        "desc": "Мультфильмы"
+      },
+      {
+        "id": "10",
+        "cat": "Audio",
+        "desc": "Музыка"
+      },
+      {
+        "id": "26",
+        "cat": "PC",
+        "desc": "Программы"
+      },
+      {
+        "id": "5",
+        "cat": "Console",
+        "desc": "Игры"
+      },
+      {
+        "id": "25",
+        "cat": "Other",
+        "desc": "Картинки"
+      },
+      {
+        "id": "12",
+        "cat": "TV/Anime",
+        "desc": "Аниме"
+      },
+      {
+        "id": "16",
+        "cat": "Books",
+        "desc": "Книги"
+      },
+      {
+        "id": "18",
+        "cat": "Audio/Video",
+        "desc": "Клипы / Ролики"
+      },
+      {
+        "id": "22",
+        "cat": "TV",
+        "desc": "ТВ / Передачи"
+      },
+      {
+        "id": "27",
+        "cat": "PC/Mobile-Other",
+        "desc": "Игры - Мобила / КПК"
+      },
+      {
+        "id": "1",
+        "cat": "PC/ISO",
+        "desc": "Образы"
+      },
+      {
+        "id": "4",
+        "cat": "Other",
+        "desc": "Другое"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "addrussiantotitle",
+      "label": "Add RUS to end of all titles to improve language detection by Sonarr and Radarr. Will cause English-only results to be misidentified.",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "1": "title",
+        "5": "size",
+        "7": "seeders"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "/",
+      "selector": "a[href=\"mybonus.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}0{{ end }}",
+      "search": "{{ .Keywords }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "headers": {
+      "Cookie": [
+        "torrentviewblock=1"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bS0*(\\d+)\\b",
+          "сезон ${1}"
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bE0*(\\d+)\\b",
+          "сери ${1}"
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
+          "сезон ${1} сери ${2}"
+        ]
+      }
+    ],
+    "rows": {
+      "dateheaders": {
+        "selector": "a[href*=\"date=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "date"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02"
+            ]
+          }
+        ]
+      },
+      "selector": "div.tv-card"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "span.tv-card-cat"
+      },
+      "title": {
+        "selector": "a.tv-card-title",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?).+?(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\s:]*(\\d+(?:-\\d+)?)\\s*из\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езоны?.+?(\\d+(?:-\\d+)?)\\s*из\\s*(\\w?)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езоны?.+?(\\d+(?:-\\d+)?)\\s*(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))\\s+из\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)\\s*из\\s*(\\w?)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)\\s*(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))\\s+из\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?).+?(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\s:]*(\\d+(?:-\\d+)?)",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езоны?.+?(\\d+(?:-\\d+)?)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\s:]*(\\d+(?:-\\d+)?)",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+[CС]езоны?",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\s:]*(\\d+(?:-\\d+)?)\\s*из\\s*(\\w?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*из\\s*(\\w?)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))\\s+из\\s*(\\w?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\s:]*(\\d+(?:-\\d+)?)",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+(?:\\s*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bFiles-х\\b",
+              "Files-x"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\sот\\s([\\w\\p{P}\\p{S}]+)$",
+              "-${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\s\\|\\s(\\w{4,})$",
+              "-${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bHDTV[-\\s]?Rip\\b",
+              "HDTV"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bSAT[-\\s]?Rip\\b",
+              "HDTV"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB[-\\s]?DL[-\\s]?Rip\\b",
+              "WEB-DL"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sRip\\b",
+              "WEBRip"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sDL\\b",
+              "WEB-DL"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "[\\[\\(\\{<«][\\s\\W]*[\\]\\)\\}>»]",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^[\\s&,\\.!\\?\\+\\-_\\|\\/':]+",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)^\\(\\s*([SE]\\d+.*?)\\s*\\)[\\s\\/\\|]*(.+)",
+              "${2} ${1}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Config.addrussiantotitle }} RUS{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "poster": {
+        "selector": "img.tv-avatars",
+        "attribute": "src"
+      },
+      "size_nodl": {
+        "selector": "span.tv-dl-btn",
+        "optional": true
+      },
+      "size": {
+        "selector": "a.tv-dl-btn",
+        "optional": true,
+        "default": "{{ .Result.size_nodl }}"
+      },
+      "seeders": {
+        "selector": "span.up"
+      },
+      "leechers": {
+        "selector": "span.down"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.tv-badge-free": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "description": {
+        "selector": "div.tv-card-tags"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/hdgalaktik.yml",
+    "sha256": "f0edb70500a877b45410ab825181f5a0c7bb17d017fc86986cc5cf038e85548b",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,251 @@
+{
+  "id": "slobitgames",
+  "name": "Slobit Games",
+  "description": "Slobit Games is a Private Torrent Tracker for GAMES",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://games.slo-bitcloud.eu/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "10",
+        "cat": "PC/Games",
+        "desc": "Games - PC"
+      },
+      {
+        "id": "11",
+        "cat": "Console/PS3",
+        "desc": "Games - PS2"
+      },
+      {
+        "id": "12",
+        "cat": "Console/PSP",
+        "desc": "Games - PSP"
+      },
+      {
+        "id": "43",
+        "cat": "Console/PS3",
+        "desc": "Games - PS3"
+      },
+      {
+        "id": "13",
+        "cat": "Console/XBox",
+        "desc": "Games - Xbox"
+      },
+      {
+        "id": "14",
+        "cat": "Console/XBox 360",
+        "desc": "Games - Xbox360"
+      },
+      {
+        "id": "15",
+        "cat": "Console/PS3",
+        "desc": "Games - PS1"
+      },
+      {
+        "id": "44",
+        "cat": "Console/Wii",
+        "desc": "Games - Wii"
+      },
+      {
+        "id": "45",
+        "cat": "Console/NDS",
+        "desc": "Games - DS"
+      },
+      {
+        "id": "46",
+        "cat": "Console/Other",
+        "desc": "Games - GameCube"
+      },
+      {
+        "id": "27",
+        "cat": "Other",
+        "desc": "Music - Other"
+      },
+      {
+        "id": "33",
+        "cat": "PC",
+        "desc": "Other - Emulation"
+      },
+      {
+        "id": "28",
+        "cat": "Console/PS4",
+        "desc": "PS4 - PS4"
+      },
+      {
+        "id": "47",
+        "cat": "Console/PS4",
+        "desc": "PS5 - PS"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "id",
+      "options": {
+        "id": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_results",
+      "label": "Search results",
+      "type": "info",
+      "default": "If you are getting <b>0 results</b> then access the site with your browser and <b>mark as read</b> all PMs."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "account-login.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "div.myFrame:contains(\"Access denied\")",
+        "message": {
+          "text": "The specified username or password was incorrect."
+        }
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"account-logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents-search.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "cat": "0",
+      "incldead": "1",
+      "freeleech": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "inclexternal": "0",
+      "lang": "0",
+      "sort": "{{ .Config.sort }}",
+      "order": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.ttable_headinner > tbody > tr.t-row",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"torrents.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"torrents-details.php?id=\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"torrents-details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "date": {
+        "text": "now"
+      },
+      "seeders": {
+        "selector": "td:nth-child(7)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(8)"
+      },
+      "description": {
+        "selector": "td:nth-child(11)",
+        "filters": [
+          {
+            "name": "prepend",
+            "args": [
+              "Wait: "
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.badge-free": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/slobitgames.yml",
+    "sha256": "fc7224420dae9ec97c53f7f2552b4a9faf438426ecd61b3afc0d75fd511b83bd",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

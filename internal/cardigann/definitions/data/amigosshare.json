@@ -1,0 +1,782 @@
+{
+  "id": "amigosshare",
+  "name": "Amigos Share Club",
+  "description": "Amigos Share Club (ASC) is a BRAZILIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "pt-BR",
+  "type": "private",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://amigos-share.club/"
+  ],
+  "legacylinks": [
+    "http://amigos-share.club/",
+    "https://cliente.amigos-share.club/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "2",
+        "cat": "XXX",
+        "desc": "Adultos"
+      },
+      {
+        "id": "23",
+        "cat": "XXX",
+        "desc": "Adultos: Gay"
+      },
+      {
+        "id": "48",
+        "cat": "XXX",
+        "desc": "Adultos: Hentai"
+      },
+      {
+        "id": "18",
+        "cat": "XXX",
+        "desc": "Adultos: OnlyFans"
+      },
+      {
+        "id": "21",
+        "cat": "XXX",
+        "desc": "Adultos: Transex/Female"
+      },
+      {
+        "id": "42",
+        "cat": "XXX",
+        "desc": "Adultos: XXX"
+      },
+      {
+        "id": "11",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "60",
+        "cat": "TV/Anime",
+        "desc": "Anime: Anime"
+      },
+      {
+        "id": "59",
+        "cat": "TV/Anime",
+        "desc": "Anime: Filmes"
+      },
+      {
+        "id": "61",
+        "cat": "TV/Anime",
+        "desc": "Anime: Séries"
+      },
+      {
+        "id": "6",
+        "cat": "PC",
+        "desc": "Aplicativos"
+      },
+      {
+        "id": "26",
+        "cat": "PC/Mobile-Android",
+        "desc": "Aplicativos: Android"
+      },
+      {
+        "id": "29",
+        "cat": "PC/Mobile-iOS",
+        "desc": "Aplicativos: iPad"
+      },
+      {
+        "id": "28",
+        "cat": "PC/Mobile-iOS",
+        "desc": "Aplicativos: iPhone"
+      },
+      {
+        "id": "30",
+        "cat": "PC/Mobile-iOS",
+        "desc": "Aplicativos: iPod"
+      },
+      {
+        "id": "27",
+        "cat": "PC",
+        "desc": "Aplicativos: Linux"
+      },
+      {
+        "id": "25",
+        "cat": "PC/Mac",
+        "desc": "Aplicativos: Mac"
+      },
+      {
+        "id": "24",
+        "cat": "PC/0day",
+        "desc": "Aplicativos: Windows"
+      },
+      {
+        "id": "8",
+        "cat": "Other",
+        "desc": "Cursos"
+      },
+      {
+        "id": "54",
+        "cat": "Other",
+        "desc": "Cursos: Apostila"
+      },
+      {
+        "id": "44",
+        "cat": "Other",
+        "desc": "Cursos: Cursos"
+      },
+      {
+        "id": "47",
+        "cat": "Other",
+        "desc": "Cursos: Video Aula"
+      },
+      {
+        "id": "5",
+        "cat": "Books",
+        "desc": "Ebook"
+      },
+      {
+        "id": "56",
+        "cat": "Audio/Audiobook",
+        "desc": "Ebook: Audio-book"
+      },
+      {
+        "id": "20",
+        "cat": "Books/Comics",
+        "desc": "Ebook: HQs"
+      },
+      {
+        "id": "58",
+        "cat": "Books/EBook",
+        "desc": "Ebook: Livros"
+      },
+      {
+        "id": "57",
+        "cat": "Books/Comics",
+        "desc": "Ebook: Mangas"
+      },
+      {
+        "id": "62",
+        "cat": "Books/Mags",
+        "desc": "Ebook: Revistas"
+      },
+      {
+        "id": "4",
+        "cat": "Movies",
+        "desc": "Filmes"
+      },
+      {
+        "id": "10",
+        "cat": "XXX",
+        "desc": "Fotos"
+      },
+      {
+        "id": "55",
+        "cat": "XXX",
+        "desc": "Fotos: Revistas, Livros e Fotos"
+      },
+      {
+        "id": "7",
+        "cat": "Console",
+        "desc": "Jogos"
+      },
+      {
+        "id": "49",
+        "cat": "Console",
+        "desc": "Jogos: Android"
+      },
+      {
+        "id": "40",
+        "cat": "Console",
+        "desc": "Jogos: Dreamcast"
+      },
+      {
+        "id": "31",
+        "cat": "Console",
+        "desc": "Jogos: Emulação"
+      },
+      {
+        "id": "35",
+        "cat": "Console",
+        "desc": "Jogos: Emuladores e Roms"
+      },
+      {
+        "id": "36",
+        "cat": "PC/Mac",
+        "desc": "Jogos: Mac"
+      },
+      {
+        "id": "46",
+        "cat": "Console/NDS",
+        "desc": "Jogos: Nintendo DS"
+      },
+      {
+        "id": "32",
+        "cat": "Console",
+        "desc": "Jogos: Nintendo Switch"
+      },
+      {
+        "id": "34",
+        "cat": "PC/Games",
+        "desc": "Jogos: PC"
+      },
+      {
+        "id": "37",
+        "cat": "Console",
+        "desc": "Jogos: PS1"
+      },
+      {
+        "id": "38",
+        "cat": "Console",
+        "desc": "Jogos: PS2"
+      },
+      {
+        "id": "39",
+        "cat": "Console/PS3",
+        "desc": "Jogos: PS3"
+      },
+      {
+        "id": "33",
+        "cat": "Console/PS4",
+        "desc": "Jogos: PS4"
+      },
+      {
+        "id": "50",
+        "cat": "Console/PSP",
+        "desc": "Jogos: PSP"
+      },
+      {
+        "id": "45",
+        "cat": "Console/Wii",
+        "desc": "Jogos: Wii"
+      },
+      {
+        "id": "41",
+        "cat": "Console/XBox 360",
+        "desc": "Jogos: X360"
+      },
+      {
+        "id": "43",
+        "cat": "Console/XBox",
+        "desc": "Jogos: Xbox"
+      },
+      {
+        "id": "53",
+        "cat": "Console/XBox One",
+        "desc": "Jogos: Xbox One"
+      },
+      {
+        "id": "1",
+        "cat": "Other",
+        "desc": "Outros"
+      },
+      {
+        "id": "14",
+        "cat": "Other",
+        "desc": "Outros: Add-ons"
+      },
+      {
+        "id": "19",
+        "cat": "Other",
+        "desc": "Outros: Extensões"
+      },
+      {
+        "id": "16",
+        "cat": "Other",
+        "desc": "Outros: Fonts"
+      },
+      {
+        "id": "17",
+        "cat": "Other",
+        "desc": "Outros: MOD"
+      },
+      {
+        "id": "13",
+        "cat": "Other",
+        "desc": "Outros: Pack de Imagens"
+      },
+      {
+        "id": "15",
+        "cat": "Other",
+        "desc": "Outros: Plug-ins"
+      },
+      {
+        "id": "12",
+        "cat": "Other",
+        "desc": "Outros: Scripts"
+      },
+      {
+        "id": "22",
+        "cat": "Other",
+        "desc": "Outros: Vetores"
+      },
+      {
+        "id": "3",
+        "cat": "TV",
+        "desc": "Series"
+      },
+      {
+        "id": "9",
+        "cat": "TV",
+        "desc": "Tv"
+      },
+      {
+        "id": "51",
+        "cat": "TV",
+        "desc": "Tv: Aberta"
+      },
+      {
+        "id": "52",
+        "cat": "TV/Sport",
+        "desc": "Tv: Esportes"
+      },
+      {
+        "id": "63",
+        "cat": "TV",
+        "desc": "Tv: Fechada"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "book-search": [
+        "q"
+      ]
+    },
+    "allowrawsearch": true
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "info_login",
+      "label": "About the Cookie",
+      "type": "info",
+      "default": "Remeber to tick <b>Lembrar-me</b> when logging in so the cookie will lasts longer."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "released_at",
+      "options": {
+        "released_at": "created",
+        "seeders": "seeders",
+        "times_completed": "grabs",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts, that is, without access for 90 days (3 months), will be automatically deleted by the system; with no possibility of reactivation."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "dashboard",
+      "selector": "script[data-page=\"app\"]:contains('\"user\":{\"id\":')"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents"
+      }
+    ],
+    "inputs": {
+      "q": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "freeleech": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "direction": "{{ .Config.type }}",
+      "per_page": "96"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(\\s+:\\s+)",
+          " "
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(\\s*\\b((19|20)\\d{2})\\b)",
+          ""
+        ]
+      }
+    ],
+    "preprocessingfilters": [
+      {
+        "name": "regexp",
+        "args": [
+          "\"torrents\":\\{\"current_page\":\\d+,\"data\":\\[(.*?)\\],\"first_page_url\""
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(\\{\"id\":\\d+,.*?\\})(?=,\\{\"id\":\\d+,|$)",
+          "<div class=\"torrent\">$1</div>"
+        ],
+        "engine": "regexp2"
+      }
+    ],
+    "rows": {
+      "selector": "div.torrent"
+    },
+    "fields": {
+      "_id": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"id\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "category": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"categoryId\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "_name": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"name\":(\"(?:[^\"\\\\]|\\\\.)*\")"
+            ]
+          },
+          {
+            "name": "prepend",
+            "args": [
+              "{\"v\":["
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "]}"
+            ]
+          },
+          {
+            "name": "jsonjoinarray",
+            "args": [
+              "$.v",
+              ""
+            ]
+          }
+        ]
+      },
+      "_year": {
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"year\":(\\d{4})"
+            ]
+          }
+        ]
+      },
+      "_badges": {
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"badges\":\\[(.*?)\\]"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\{\"label\":\"(?:[^\"\\\\]|\\\\.)*\",\"kind\":\"(?!(?:resolution|source|hdr|codec)\")[^\"]*\"\\},?",
+              ""
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\{\"label\":\"((?:[^\"\\\\]|\\\\.)*)\",\"kind\":\"[^\"]*\"\\},?",
+              "${1} "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\b4K\\b",
+              "2160p"
+            ]
+          },
+          {
+            "name": "trim"
+          }
+        ]
+      },
+      "_audio": {
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\\{\"label\":\"((?:[^\"\\\\]|\\\\.)*)\",\"kind\":\"audio\"\\}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^Dual.*$",
+              "Dual-Audio Brazilian Original"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^Dublado$",
+              "Dublado Brazilian"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ .Result._name }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^(.*?)[\\(](.*?)[\\)](.*?)$",
+              "${2}${3}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result._year }} {{ .Result._year }}{{ else }}{{ end }}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^(.*?)\\s+-\\s+(S\\d{1,2}(?:E\\d{1,4}(?:E\\d{1,4})*)?)\\s+((?:19|20)\\d{2})(.*)$",
+              "${1} ${3} ${2}${4}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result._badges }} {{ .Result._badges }}{{ else }}{{ end }}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result._audio }} {{ .Result._audio }}{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "text": "/torrents/{{ .Result._id }}"
+      },
+      "download": {
+        "text": "/torrents/{{ .Result._id }}/download"
+      },
+      "poster": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"cover\":\"([^\"]+)\""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "\\/",
+              "/"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"releasedAt\":\"([^\"]+)\""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +00:01"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"size\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"seeders\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"leechers\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"timesCompleted\":(\\d+)"
+            ]
+          }
+        ]
+      },
+      "genre": {
+        "filters": [
+          {
+            "name": "jsonjoinarray",
+            "args": [
+              "$.genres",
+              ", "
+            ]
+          }
+        ]
+      },
+      "description": {
+        "text": "{{ .Result.genre }}"
+      },
+      "downloadvolumefactor": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"freeleech\":(true|false)"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "true",
+              "0"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "false",
+              "1"
+            ]
+          }
+        ]
+      },
+      "uploadvolumefactor": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\"doubleUpload\":(true|false)"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "true",
+              "2"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "false",
+              "1"
+            ]
+          }
+        ]
+      },
+      "minimumratio": {
+        "text": "1.0"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/amigosshare.yml",
+    "sha256": "0ba15f7e86257520141fc783e0a67e1893d095f0834483533516723b6c201d9f",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

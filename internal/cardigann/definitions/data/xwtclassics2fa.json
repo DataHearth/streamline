@@ -1,0 +1,259 @@
+{
+  "id": "xwtclassics2fa",
+  "name": "XWT-Classics2FA",
+  "description": "XWT-Classics is a Private Torrent Tracker for CLASSIC PROFESSIONAL WRESTLING. This indexer uses cookie login for 2FA.",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://xwt-classics.net/"
+  ],
+  "legacylinks": [
+    "http://xwt-classics.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Sport",
+        "desc": "DVD"
+      },
+      {
+        "id": "9",
+        "cat": "TV/Sport",
+        "desc": "Florida"
+      },
+      {
+        "id": "7",
+        "cat": "TV/Sport",
+        "desc": "International"
+      },
+      {
+        "id": "6",
+        "cat": "TV/Sport",
+        "desc": "Japan"
+      },
+      {
+        "id": "8",
+        "cat": "TV/Sport",
+        "desc": "Misc"
+      },
+      {
+        "id": "11",
+        "cat": "TV/Sport",
+        "desc": "NWA"
+      },
+      {
+        "id": "4",
+        "cat": "TV/Sport",
+        "desc": "UWF/Mid-South"
+      },
+      {
+        "id": "12",
+        "cat": "TV/Sport",
+        "desc": "WCW"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Sport",
+        "desc": "World Class"
+      },
+      {
+        "id": "10",
+        "cat": "TV/Sport",
+        "desc": "WWE 24/7"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Sport",
+        "desc": "WWE Network"
+      },
+      {
+        "id": "2",
+        "cat": "TV/Sport",
+        "desc": "WWF"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "seedbox",
+      "label": "Use SeedBox Download Link",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Accounts inactive for more than 42 days are automatically deleted."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "search": "{{ .Keywords }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table[border=\"0\"][cellspacing=\"0\"][cellpadding=\"5\"] tr:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category_optional": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "optional": true,
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "category": {
+        "text": "{{ if .Result.category_optional }}{{ .Result.category_optional }}{{ else }}8{{ end }}"
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "title"
+      },
+      "download_1": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "download_2": {
+        "selector": "a[href^=\"download2.php\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "text": "{{ if .Config.seedbox }}{{ .Result.download_2 }}{{ else }}{{ .Result.download_1 }}{{ end }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "files": {
+        "selector": "td:nth-child(3)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " -02:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/freeleech.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.7"
+      },
+      "minimumseedtime": {
+        "text": "86400"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/xwtclassics2fa.yml",
+    "sha256": "ad6bc7adc44914c8113c985a4d7e9352282852525466bb038132a8b486613f7d",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

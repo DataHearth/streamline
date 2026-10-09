@@ -1,0 +1,179 @@
+{
+  "id": "pussytorrents",
+  "name": "PussyTorrents",
+  "description": "PussyTorrents is a Semi-Private Torrent Tracker for 3X",
+  "language": "en-US",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://pussytorrents.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "nameSort": "title",
+        "score": "score"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_score",
+      "label": "About sorting by score",
+      "type": "info",
+      "default": "In order to sort by score you first must have edited your <a href=\"https://pussytorrents.org/\" target=\"_blank\">PussyTorrents</a> account profile and changed <b>Results default sorting method</b> to <b>By Score</b>."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "user/account/login/",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "remember_me": "on"
+    },
+    "error": [
+      {
+        "selector": "div.alert-error"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href=\"/user/account/logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents/browse"
+      }
+    ],
+    "inputs": {
+      "query": "{{ .Keywords }}",
+      "page": "1",
+      "orderby": "{{ if ne .Config.sort \"score\" }}{{ .Config.sort }}{{ else }}{{ end }}",
+      "order": "{{ if ne .Config.sort \"score\" }}{{ .Config.type }}{{ else }}{{ end }}"
+    },
+    "rows": {
+      "selector": "table#torrenttable > tbody > tr:has(a[href^=\"/download/\"])",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "a[href^=\"/torrent/\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"/torrent/\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"/download/\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "span.subnote",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Added on ",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(5)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "description": {
+        "selector": "td.name",
+        "remove": "span.title, span.subnote"
+      },
+      "downloadvolumefactor": {
+        "text": "1"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.4"
+      },
+      "minimumseedtime": {
+        "text": "216000"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/pussytorrents.yml",
+    "sha256": "c5128fd2bcba20f9a52c27f9322f6abc3d760c929cdfb457c115b4b7bd10df02",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

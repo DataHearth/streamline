@@ -1,0 +1,385 @@
+{
+  "id": "bitgamer",
+  "name": "bitGAMER",
+  "description": "bitGAMER is a Private Torrent Tracker for GAMES",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://bitgamer.ch/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "XXX/Other",
+        "desc": "Adult Games"
+      },
+      {
+        "id": "3",
+        "cat": "PC/0day",
+        "desc": "Burning/Ripping Tools"
+      },
+      {
+        "id": "4",
+        "cat": "Books/Other",
+        "desc": "Guides/Game Documents"
+      },
+      {
+        "id": "13",
+        "cat": "Movies/Other",
+        "desc": "Movies/TV/Video"
+      },
+      {
+        "id": "48",
+        "cat": "Audio/Other",
+        "desc": "Music/OST"
+      },
+      {
+        "id": "52",
+        "cat": "Console/Other",
+        "desc": "Amiga"
+      },
+      {
+        "id": "18",
+        "cat": "PC/Mobile-iOS",
+        "desc": "Apple - iPhone/iPod/iPad"
+      },
+      {
+        "id": "54",
+        "cat": "Console/Other",
+        "desc": "Arcade"
+      },
+      {
+        "id": "19",
+        "cat": "Console/Other",
+        "desc": "Atari"
+      },
+      {
+        "id": "51",
+        "cat": "Console/Other",
+        "desc": "Commodore 64"
+      },
+      {
+        "id": "22",
+        "cat": "PC/Mobile-Android",
+        "desc": "Google - Android"
+      },
+      {
+        "id": "61",
+        "cat": "Console/Other",
+        "desc": "Hyperspin"
+      },
+      {
+        "id": "24",
+        "cat": "Console/XBox",
+        "desc": "Microsoft - Xbox"
+      },
+      {
+        "id": "25",
+        "cat": "Console/XBox 360",
+        "desc": "Microsoft - Xbox 360"
+      },
+      {
+        "id": "49",
+        "cat": "Console/XBox 360",
+        "desc": "Microsoft - Xbox 360 JTAG"
+      },
+      {
+        "id": "57",
+        "cat": "Console/XBox One",
+        "desc": "Microsoft - Xbox One"
+      },
+      {
+        "id": "27",
+        "cat": "Console/Other",
+        "desc": "Neo Geo"
+      },
+      {
+        "id": "55",
+        "cat": "Console/3DS",
+        "desc": "Nintendo - 3DS"
+      },
+      {
+        "id": "28",
+        "cat": "Console/NDS",
+        "desc": "Nintendo - DS"
+      },
+      {
+        "id": "29",
+        "cat": "Console/Other",
+        "desc": "Nintendo - Game Boy Advance"
+      },
+      {
+        "id": "30",
+        "cat": "Console/Other",
+        "desc": "Nintendo - Gameboy"
+      },
+      {
+        "id": "31",
+        "cat": "Console/Other",
+        "desc": "Nintendo - Gamecube "
+      },
+      {
+        "id": "33",
+        "cat": "Console/Other",
+        "desc": "Nintendo - N64 "
+      },
+      {
+        "id": "35",
+        "cat": "Console/Other",
+        "desc": "Nintendo - NES"
+      },
+      {
+        "id": "50",
+        "cat": "Console/Other",
+        "desc": "Nintendo - SNES"
+      },
+      {
+        "id": "63",
+        "cat": "Console/Other",
+        "desc": "Nintendo - Switch"
+      },
+      {
+        "id": "37",
+        "cat": "Console/Wii",
+        "desc": "Nintendo - Wii"
+      },
+      {
+        "id": "59",
+        "cat": "Console/WiiU",
+        "desc": "Nintendo - Wii U"
+      },
+      {
+        "id": "53",
+        "cat": "PC/Games",
+        "desc": "PC - DOS"
+      },
+      {
+        "id": "64",
+        "cat": "PC/Games",
+        "desc": "PC - Linux"
+      },
+      {
+        "id": "39",
+        "cat": "PC/Mac",
+        "desc": "PC - Mac OS X"
+      },
+      {
+        "id": "40",
+        "cat": "PC/Games",
+        "desc": "PC - Windows"
+      },
+      {
+        "id": "41",
+        "cat": "Console/Other",
+        "desc": "Sega"
+      },
+      {
+        "id": "42",
+        "cat": "Console/Other",
+        "desc": "Sega - Dreamcast"
+      },
+      {
+        "id": "43",
+        "cat": "Console/Other",
+        "desc": "Sega - Megadrive"
+      },
+      {
+        "id": "44",
+        "cat": "Console/Other",
+        "desc": "Sony - Playstation"
+      },
+      {
+        "id": "45",
+        "cat": "Console/Other",
+        "desc": "Sony - Playstation 2"
+      },
+      {
+        "id": "46",
+        "cat": "Console/PS3",
+        "desc": "Sony - Playstation 3"
+      },
+      {
+        "id": "56",
+        "cat": "Console/PS4",
+        "desc": "Sony - Playstation 4"
+      },
+      {
+        "id": "47",
+        "cat": "Console/PSP",
+        "desc": "Sony - Playstation Portable "
+      },
+      {
+        "id": "58",
+        "cat": "Console/PS Vita",
+        "desc": "Sony - Playstation Vita"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    },
+    "allowrawsearch": true
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td:has(:contains(\"Login failed\"))"
+      }
+    ],
+    "test": {
+      "path": "my.php",
+      "selector": "a[href^=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "category": "0",
+      "blah": "0",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}0{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table[cellpadding=\"5\"] > tbody > tr:has(a[href^=\"download.php\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php\"][title]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "td:nth-child(5):not(:contains(\"000-00-0000:00:00\"))",
+        "optional": true,
+        "default": "now",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(10)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(11)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src*=\"/freeleech.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/bitgamer.yml",
+    "sha256": "2a4d04c1eb9cf0b8161dae5f1bc587d30032aad3dfa3b0cfca3b96996182234d",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

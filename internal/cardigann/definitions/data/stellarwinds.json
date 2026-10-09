@@ -1,0 +1,259 @@
+{
+  "id": "stellarwinds",
+  "name": "Stellarwinds",
+  "description": " Stellarwinds is a Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://stellarwinds.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1000",
+        "cat": "Console",
+        "desc": "Console"
+      },
+      {
+        "id": "2000",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "2030",
+        "cat": "Movies/SD",
+        "desc": "Movies/SD"
+      },
+      {
+        "id": "2040",
+        "cat": "Movies/HD",
+        "desc": "Movies/HD"
+      },
+      {
+        "id": "3000",
+        "cat": "Audio",
+        "desc": "Audio"
+      },
+      {
+        "id": "3030",
+        "cat": "Audio/Audiobook",
+        "desc": "Audio/Audiobook"
+      },
+      {
+        "id": "4000",
+        "cat": "PC",
+        "desc": "PC"
+      },
+      {
+        "id": "4030",
+        "cat": "PC/Mac",
+        "desc": "PC/Mac"
+      },
+      {
+        "id": "4050",
+        "cat": "PC/Games",
+        "desc": "PC/Games"
+      },
+      {
+        "id": "4060",
+        "cat": "PC/Mobile-Other",
+        "desc": "PC/Mobile"
+      },
+      {
+        "id": "5000",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "5030",
+        "cat": "TV/SD",
+        "desc": "TV/SD"
+      },
+      {
+        "id": "5040",
+        "cat": "TV/HD",
+        "desc": "TV/HD"
+      },
+      {
+        "id": "5080",
+        "cat": "TV/Documentary",
+        "desc": "TV/Documentary"
+      },
+      {
+        "id": "6000",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "7000",
+        "cat": "Books",
+        "desc": "Books"
+      },
+      {
+        "id": "7020",
+        "cat": "Books/EBook",
+        "desc": "Books/Ebook"
+      },
+      {
+        "id": "7040",
+        "cat": "Books/Technical",
+        "desc": "Books/Technical"
+      },
+      {
+        "id": "8000",
+        "cat": "Other",
+        "desc": "Other"
+      },
+      {
+        "id": "8010",
+        "cat": "Other/Misc",
+        "desc": "Other/Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Key",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API Key",
+      "type": "info",
+      "default": "You can find your API Key by accessing your <a href=\"https://stellarwinds.me/profile.php#security\" target=\"_blank\">Stellarwinds account profile</a> page and scrolling down to the <b>Auth Key</b> section."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention:<ol><li>6 months since your last login → your account is automatically disabled (contact staff to reactivate).</li><li>12 months since your last login → your account is automatically banned.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "torznab.php",
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "search",
+      "limit": "1"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torznab.php",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "{{ .Query.Type }}",
+      "q": "{{ .Keywords }}",
+      "cat": "{{ join .Categories \",\" }}",
+      "limit": "100"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\W+",
+          "\\."
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title": {
+        "selector": "title",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^\\[.*\\] ",
+              ""
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "comments"
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "[name=size]",
+        "attribute": "value"
+      },
+      "infohash": {
+        "selector": "[name=infohash]",
+        "attribute": "value"
+      },
+      "seeders": {
+        "selector": "[name=seeders]",
+        "attribute": "value"
+      },
+      "leechers": {
+        "selector": "[name=peers]",
+        "attribute": "value"
+      },
+      "grabs": {
+        "selector": "[name=grabs]",
+        "attribute": "value"
+      },
+      "downloadvolumefactor": {
+        "text": "1"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/stellarwinds.yml",
+    "sha256": "2206310fd67ec03c54c5687323efd9ac1afe3646ef85acf9b907e452bf2fb6b6",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,508 @@
+{
+  "id": "0daykiev",
+  "name": "0day.kiev",
+  "description": "0day.kiev.ua is a UKRAINIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "uk-UA",
+  "type": "private",
+  "encoding": "windows-1251",
+  "links": [
+    "https://tracker.0day.community/"
+  ],
+  "legacylinks": [
+    "https://tracker.0day.kiev.ua/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "10",
+        "cat": "Movies",
+        "desc": "Фильмы (Movies)"
+      },
+      {
+        "id": "16",
+        "cat": "Movies/HD",
+        "desc": "HD / Фильмы (HD / Movies)"
+      },
+      {
+        "id": "30",
+        "cat": "TV/HD",
+        "desc": "HD / Сериалы (HD / TV Shows)"
+      },
+      {
+        "id": "27",
+        "cat": "Movies/HD",
+        "desc": "HD / Мультфильмы (HD / Cartoons)"
+      },
+      {
+        "id": "17",
+        "cat": "PC/Games",
+        "desc": "Игры / ПК (Games / PC)"
+      },
+      {
+        "id": "14",
+        "cat": "Audio",
+        "desc": "Музыка / Аудио (Music / Audio)"
+      },
+      {
+        "id": "29",
+        "cat": "TV",
+        "desc": "Мультсериалы (TV Series)"
+      },
+      {
+        "id": "11",
+        "cat": "Movies",
+        "desc": "Мультфильмы (Cartoons)"
+      },
+      {
+        "id": "28",
+        "cat": "TV/Documentary",
+        "desc": "HD / Документальное (HD / Documentary)"
+      },
+      {
+        "id": "18",
+        "cat": "PC/0day",
+        "desc": "Софт / Windows (Software / Windows)"
+      },
+      {
+        "id": "19",
+        "cat": "TV",
+        "desc": "TV / Сериалы (TV shows)"
+      },
+      {
+        "id": "31",
+        "cat": "Other",
+        "desc": "Прочее (Other)"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "The tracker has a system for deleting inactive accounts after 6 months from your last visit to the tracker."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "returnto": "/browse.php"
+    },
+    "error": [
+      {
+        "selector": "div.maintitle:contains(\"Ошибка\")",
+        "message": {
+          "selector": "div.borderwrap table.embedded"
+        }
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"/logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "where": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "diacritics",
+        "args": [
+          "replace"
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bS0*(\\d+)\\b",
+          "сезон ${1}"
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bE0*(\\d+)\\b",
+          "сері ${1}"
+        ]
+      },
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\bS0*(\\d+)E0*(\\d+)\\b",
+          "сезон ${1} сері ${2}"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "table > tbody > tr.rowtorrentinfo"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?).+?(?:[CС]ері[їяй]|Епізоди?)[\\s:]*(\\d+(?:-\\d+)?)\\s*з\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езони?.+?(\\d+(?:-\\d+)?)\\s*з\\s*(\\w?)(?:\\s*(?:[CС]ері[їяй]|Епізоди?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езони?.+?(\\d+(?:-\\d+)?)\\s*(?:[CС]ері[їяй]|Епізоди?)\\s+з\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)\\s*з\\s*(\\w?)(?:\\s*(?:[CС]ері[їяй]|Епізоди?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)\\s*(?:[CС]ері[їяй]|Епізоди?)\\s+з\\s*(\\w?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?).+?(?:[CС]ері[їяй]|Епізоди?)[\\s:]*(\\d+(?:-\\d+)?)",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*[CС]езони?.+?(\\d+(?:-\\d+)?)(?:\\s*(?:[CС]ері[їяй]|Епізоди?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?).+?(\\d+(?:-\\d+)?)(?:\\s*(?:[CС]ері[їяй]|Епізоди?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езони?[\\s:]*(\\d+(?:-\\d+)?)",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+[CС]езони?",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:[CС]ері[їяй]|Епізоди?)[\\s:]*(\\d+(?:-\\d+)?)\\s*з\\s*(\\w?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s*з\\s*(\\w?)(?:\\s*(?:[CС]ері[їяй]|Епізоди?))",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+(?:[CС]ері[їяй]|Епізоди?)\\s+з\\s*(\\w?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:[CС]ері[їяй]|Епізоди?)[\\s:]*(\\d+(?:-\\d+)?)",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\d+(?:-\\d+)?)\\s+(?:[CС]ері[їяй]|Епізоди?)",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\p{Cyrillic}\\W]+\\))|(^[\\p{Cyrillic}\\W\\d]+\\/ )|([\\p{Cyrillic} \\-]+,+)|([\\p{Cyrillic}]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}${1}${2}${3}${4}{{ end }}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bHDTV\\s?Rip\\b",
+              "HDTV"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bSAT\\s?Rip\\b",
+              "HDTV"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\s?DL\\s?Rip\\b",
+              "WEBDL"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB Rip\\b",
+              "WEBRip"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB DL\\b",
+              "WEBDL"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "[\\[\\(\\{<«][\\s\\W]*[\\]\\)\\}>»]",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^[\\s&,\\.!\\?\\+\\-_\\|\\/':]+",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)^\\(\\s*([SE]\\d+.*?)\\s*\\)[\\s\\/\\|]*(.+)",
+              "${2} ${1}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "td:nth-child(2) i",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +02:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(4)",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "ТБ",
+              "TB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "ГБ",
+              "GB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "МБ",
+              "MB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "КБ",
+              "KB"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "td:nth-child(5)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(6)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "0"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "1"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/freedownload.gif\"]": "0",
+          "img[src=\"pic/silverdownload.gif\"]": "0.5",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.2"
+      },
+      "description": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/0daykiev.yml",
+    "sha256": "0ab55191544a0803b3dada554746b2f81e8249bfe4e02e6f6c5d7287bf253712",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

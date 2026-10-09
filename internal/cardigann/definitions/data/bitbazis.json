@@ -1,0 +1,316 @@
+{
+  "id": "bitbazis",
+  "name": "Bit-Bázis",
+  "description": "Bit-Bázis is a HUNGARIAN Private Tracker for MOVIES / TV",
+  "language": "hu-HU",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://bitbazis.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "66",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX"
+      },
+      {
+        "id": "33",
+        "cat": "XXX/SD",
+        "desc": "XXX-SD"
+      },
+      {
+        "id": "89",
+        "cat": "XXX/x264",
+        "desc": "XXX-HD"
+      },
+      {
+        "id": "15",
+        "cat": "Movies/SD",
+        "desc": "Film-SD"
+      },
+      {
+        "id": "83",
+        "cat": "Movies/HD",
+        "desc": "Film-HD"
+      },
+      {
+        "id": "94",
+        "cat": "Movies/HD",
+        "desc": "Film-FHD"
+      },
+      {
+        "id": "22",
+        "cat": "TV",
+        "desc": "Sorozat-Hun"
+      },
+      {
+        "id": "25",
+        "cat": "Audio/MP3",
+        "desc": "Mp3-Hun"
+      },
+      {
+        "id": "26",
+        "cat": "Audio/MP3",
+        "desc": "Mp3-Eng"
+      },
+      {
+        "id": "84",
+        "cat": "Audio/Lossless",
+        "desc": "FLAC-Hun"
+      },
+      {
+        "id": "71",
+        "cat": "Audio/Lossless",
+        "desc": "FLAC-Eng"
+      },
+      {
+        "id": "27",
+        "cat": "Books/EBook",
+        "desc": "Könyv"
+      },
+      {
+        "id": "81",
+        "cat": "PC/0day",
+        "desc": "Program"
+      },
+      {
+        "id": "31",
+        "cat": "PC/Games",
+        "desc": "Játék"
+      },
+      {
+        "id": "69",
+        "cat": "TV/Anime",
+        "desc": "Mese-SD"
+      },
+      {
+        "id": "91",
+        "cat": "TV/Anime",
+        "desc": "Mese-HD"
+      },
+      {
+        "id": "64",
+        "cat": "Movies",
+        "desc": "Film-Pack"
+      },
+      {
+        "id": "92",
+        "cat": "Movies/UHD",
+        "desc": "Film-UHD"
+      },
+      {
+        "id": "24",
+        "cat": "Audio/Video",
+        "desc": "Klip"
+      },
+      {
+        "id": "14",
+        "cat": "Other",
+        "desc": "Egyéb"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "1": "title",
+        "4": "added",
+        "5": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrentek száma egy oldalon:</b> setting to <b>50</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "If the user does not access the site for 1 month, he will receive an e-mail notification. If you stay away for 9 months, your account will be suspended and deleted. After the 9-month absence, the user cannot register again."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[onclick^=\"confirmLogout()\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "q": "{{ .Keywords }}",
+      "incl": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "ajax": "1"
+    },
+    "rows": {
+      "selector": "torrents"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "cat_name"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "_id": {
+        "selector": "id"
+      },
+      "details": {
+        "text": "details.php?id={{ .Result._id }}"
+      },
+      "download": {
+        "text": "download.php?torrent={{ .Result._id }}"
+      },
+      "size": {
+        "selector": "size"
+      },
+      "date": {
+        "selector": "added",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "és ",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "perce",
+              "minute"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "órája",
+              "hour"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "napja",
+              "day"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "hete",
+              "week"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "éve",
+              "year"
+            ]
+          },
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "genre": {
+        "selector": "genre"
+      },
+      "_verified": {
+        "selector": "ellenorizve",
+        "case": {
+          "yes": "Verified",
+          "*": "Not Verified"
+        }
+      },
+      "description": {
+        "text": "{{ .Result._verified }} | {{ .Result.genre }}"
+      },
+      "downloadvolumefactor": {
+        "text": "1"
+      },
+      "uploadvolumefactor": {
+        "selector": "upload_multiplier"
+      },
+      "minimumseedtime": {
+        "text": "57600"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/bitbazis.yml",
+    "sha256": "900f849303936f6a20e8d939e335dc6884f34b767e40dd18b5236fcbed391336",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "id": "hawke-uno",
+  "name": "hawke-uno",
+  "description": "hawke-uno (HUNO) is a Private Torrent Tracker for HD MOVIES / TV",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://hawke.uno/"
+  ],
+  "legacylinks": [
+    "https://www.hawke.uno/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Movie"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "TV"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid",
+        "tmdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://www.hawke.uno/\" target=\"_blank\">hawke-uno</a> account <i>My Security</i> page and clicking on the <b>API Token</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "SS and IF members must either login or register any seeding activity in a rolling window of 180 days to retain their account. Failure to do so will result in their account being disabled by the site automatically."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "imdbId": "{{ .Query.IMDBIDShort }}",
+      "tmdbId": "{{ .Query.TMDBID }}",
+      "tvdbId": "{{ .Query.TVDBID }}",
+      "free": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "category"
+      },
+      "title": {
+        "selector": "name",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "\\(((?>[^()]+|(?<o>)\\(|(?<-o>)\\))*(?(o)(?!)))(?<!\\bHONE)(?<=\\s*- [\\w]+)\\)$",
+              "$1"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\s*-\\s+(\\w+)$",
+              "-${1}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "poster": {
+        "selector": "poster",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "imdb_id"
+      },
+      "tmdbid": {
+        "selector": "tmdb_id"
+      },
+      "tvdbid": {
+        "selector": "tvdb_id"
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_internal": {
+        "selector": "internal",
+        "case": {
+          "0": "{{ .False }}",
+          "1": "{{ .True }}"
+        }
+      },
+      "description": {
+        "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}"
+      },
+      "downloadvolumefactor": {
+        "selector": "freeleech",
+        "case": {
+          "0": "1",
+          "1": "0"
+        }
+      },
+      "uploadvolumefactor": {
+        "selector": "double_upload",
+        "case": {
+          "0": "1",
+          "1": "2"
+        }
+      },
+      "minimumseedtime": {
+        "text": "432000"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/hawke-uno.yml",
+    "sha256": "6a31061f017a5ac1c9d49c653fac3ec6ff306267b4f3751e5448c050d3813992",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

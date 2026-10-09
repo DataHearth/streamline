@@ -1,0 +1,494 @@
+{
+  "id": "animelayer",
+  "name": "AnimeLayer",
+  "description": "AnimeLayer is a RUSSIAN Semi-Private Torrent Tracker for ANIME",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://animelayer.ru/"
+  ],
+  "legacylinks": [
+    "https://www.animelayer.ru/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "аниме",
+        "cat": "TV/Anime",
+        "desc": "Аниме"
+      },
+      {
+        "id": "музыка",
+        "cat": "Audio",
+        "desc": "Музыка"
+      },
+      {
+        "id": "манга",
+        "cat": "Books",
+        "desc": "Манга"
+      },
+      {
+        "id": "дорама",
+        "cat": "TV",
+        "desc": "Дорама"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "category-id",
+      "label": "Category",
+      "type": "select",
+      "default": "anime",
+      "options": {
+        "anime": "Аниме",
+        "music": "Музыка",
+        "manga": "Манга",
+        "dorama": "Дорама"
+      }
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "layer/login/",
+    "form": "form#loginForm",
+    "inputs": {
+      "login": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "div.error"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href^=\"/auth/logout/\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents/{{ (index .Config \"category-id\") }}/"
+      }
+    ],
+    "inputs": {
+      "q": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "ul.torrents-list li.torrent-item:has(a[href^=\"/torrent/\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "label.category"
+      },
+      "_resolution": {
+        "selector": "div.description",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Разрешение:\\s+\\d{3,4}\\D(\\d{3,4})"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "img",
+        "attribute": "alt",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result._resolution }} [{{ .Result._resolution }}p]{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"/torrent/\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"/torrent/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "download/"
+            ]
+          }
+        ]
+      },
+      "poster": {
+        "selector": "img",
+        "attribute": "data-original"
+      },
+      "size": {
+        "selector": "div.info",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "2"
+            ]
+          }
+        ]
+      },
+      "date_noyear": {
+        "selector": "div.info",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "н:\\s(\\d{1,2} \\D{3,8} в\\s\\d{1,2}:\\d{2})"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Обновлён:",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Добавлен:",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " в ",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "января",
+              "January {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "февраля",
+              "February {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "марта",
+              "March {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "апреля",
+              "April {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "мая",
+              "May {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июня",
+              "June {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июля",
+              "July {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "августа",
+              "August {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "сентября",
+              "September {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "октября",
+              "October {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "ноября",
+              "November {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "декабря",
+              "December {{ .Today.Year }}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\s(\\d\\:)",
+              " 0${1}"
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "div.info",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "н:\\s(\\d{1,2} \\D{3,8} \\d{4} в\\s\\d{1,2}:\\d{2})"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Обновлён:",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Добавлен:",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " в ",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "января",
+              "January"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "февраля",
+              "February"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "марта",
+              "March"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "апреля",
+              "April"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "мая",
+              "May"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июня",
+              "June"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июля",
+              "July"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "августа",
+              "August"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "сентября",
+              "September"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "октября",
+              "October"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "ноября",
+              "November"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "декабря",
+              "December"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\s(\\d\\:)",
+              " 0${1}"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_year .Result.date_noyear }}{{ or .Result.date_year .Result.date_noyear }}{{ else }}now{{ end }}"
+      },
+      "seeders": {
+        "selector": "div.info",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "0"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "div.info",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "1"
+            ]
+          }
+        ]
+      },
+      "_subtitles": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Субтитры:(.+?)\\n"
+            ]
+          }
+        ]
+      },
+      "_language": {
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Язык:(.+?)\\n"
+            ]
+          }
+        ]
+      },
+      "description": {
+        "text": "{{ if .Result._subtitles }}Субтитры: {{ .Result._subtitles }}{{ else }}{{ end }} - {{ if .Result._language }}Язык: {{ .Result._language }}{{ else }}{{ end }}"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/animelayer.yml",
+    "sha256": "151fb1645c67ce181bf8df2508d313af3b29232bec25fb618893d15cb41e92a7",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

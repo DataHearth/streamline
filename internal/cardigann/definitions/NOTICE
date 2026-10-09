@@ -1,0 +1,25 @@
+Cardigann indexer definitions
+=============================
+
+The files under data/ are converted from the Cardigann YAML indexer
+definitions maintained by the Prowlarr project:
+
+    https://github.com/Prowlarr/Indexers (definitions/v11)
+    revision 8df0764eec2d6d138a60cc461d7a850dda8dee5a, committed 2026-10-09T02:26:31+02:00
+
+Most of those definitions are synced from Jackett
+(https://github.com/Jackett/Jackett). All credit for them belongs to the
+Prowlarr and Jackett contributors.
+
+Licence: Jackett is distributed under the GNU General Public License without
+specifying a version; section 9 of the GPL version 2 lets a recipient choose
+any version published by the Free Software Foundation in that case. The
+Prowlarr/Indexers repository carries no licence file of its own. Streamline
+distributes these files, as modified, under the GNU General Public License
+version 3, like the rest of streamline (LICENSE at the repository root).
+
+Modification notice: converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go.
+Each file records, under "source", the upstream path and the sha256 of the
+file it was converted from. The converter is internal/cardigann/convert; the
+sync that wrote this directory is internal/cardigann/cmd/cardigann-sync
+(task cardigann:sync). Do not edit these files by hand — re-run the sync.
