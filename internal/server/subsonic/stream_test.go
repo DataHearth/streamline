@@ -84,8 +84,25 @@ var _ = g.Describe("stream", g.Label("integration"), func() {
 		serve("getCoverArt", fmt.Sprintf("al-%d", f.album.ID), nil)
 	})
 
-	g.It("answers 70 for artist cover art without calling the manager", func() {
-		rec := serve("getCoverArt", fmt.Sprintf("ar-%d", f.artist.ID), nil)
+	g.It("delegates artist cover art to the posters manager", func() {
+		posters.EXPECT().
+			Serve(mock.Anything, mock.Anything, "artists", f.artist.ID).
+			Once()
+		serve("getCoverArt", fmt.Sprintf("ar-%d", f.artist.ID), nil)
+	})
+
+	g.It("answers 70 for cover art of a track id", func() {
+		rec := serve("getCoverArt", fmt.Sprintf("tr-%d", f.withFile.ID), nil)
+		Expect(rec.Body.String()).To(ContainSubstring(`"code":70`))
+	})
+
+	g.It("answers 10 for cover art without an id", func() {
+		rec := serve("getCoverArt", "", nil)
+		Expect(rec.Body.String()).To(ContainSubstring(`"code":10`))
+	})
+
+	g.It("answers 70 for a malformed cover art id", func() {
+		rec := serve("getCoverArt", "nonsense", nil)
 		Expect(rec.Body.String()).To(ContainSubstring(`"code":70`))
 	})
 })

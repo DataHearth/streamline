@@ -44,6 +44,18 @@ A stock install has no music profile, so a music search answers with `no_quality
 
 When a download completes, music is imported with corrected tags and MusicBrainz ids written into the library copy, renamed per `library.music_naming`. Because tags are written, music imports copy instead of hardlinking (and instead of moving when seeding is kept on), or the torrent you are still seeding would be corrupted. Books are never modified: an ebook is placed as one file named per `library.ebook_naming`, an audiobook as one folder per `library.audiobook_naming` with its original file names.
 
+## Adding an artist
+
+Adding an artist returns at once with one album per MusicBrainz release group. Streamline then fills in the tracks, labels, credits, covers, a Wikipedia overview and a Deezer photo in the background, queued so that no single artist holds the rest up and always behind anything you are waiting on (MusicBrainz allows one request a second for everyone). The artist page shows what has arrived and keeps checking until it is done.
+
+An artist's **monitor** policy decides which albums are searched for: *all* monitors every release group, *future* only the ones with no date or a date still ahead, *manual* leaves the choice to you album by album, *none* monitors nothing. Changing the policy re-applies it to the albums already there, and a refresh applies it to release groups new to the artist. An album dated in the future is *upcoming*, not missing, until its release date.
+
+The overview comes from Wikipedia in English and French, linked through MusicBrainz's Wikidata entry, and is shown in your language when there is an article in it. The photo is Deezer's, found through MusicBrainz's own Deezer link, or by name when exactly one Deezer artist has that name: a namesake never gets the wrong face.
+
+## Discography packs and per-artist actions
+
+An artist's page can search the indexers for a **discography pack** (only packs named for that artist are listed, each judged against the artist's quality profile) and grab one. The pack is linked to every wanted, released album of the artist; when it finishes, each folder is matched to one of those albums by its name (and year, when it names one) and imported like an ordinary album download. Albums no folder names go back to wanted, nothing counted against them. *Search now* on an artist, album or track runs one search-and-grab pass at once, ignoring the cooldown. *Rename* previews or applies the library naming pattern to every file of the artist, from the database, without touching tags. Deleting a track's file puts an available album back to wanted.
+
 ## Album covers
 
 Streamline stores one cover per album, taken from the first of these that has an image:
@@ -62,11 +74,11 @@ RSS sync, the missing search and the metadata refresh ([Scheduled Jobs](Schedule
 
 ## Requests
 
-Users can request an artist (its whole discography), a single album, an author (per the author monitor policy) or a single book with a kind: ebook, audiobook or both. Approving an artist or author adds them monitored. Approving an album or a book adds the parent unmonitored and monitors just what was asked for. See [Requests and Users](Requests-and-Users).
+Users can request an artist (its whole discography), a single album, an author (per the author monitor policy) or a single book with a kind: ebook, audiobook or both. Approving an artist adds them with every album monitored, and the request turns available on the artist's first imported album. Approving an author adds them monitored; approving an album or a book adds the parent unmonitored and monitors just what was asked for. See [Requests and Users](Requests-and-Users).
 
 ## Known gaps
 
-- Adding a prolific artist fetches every release group's track list up front and can take minutes.
+- A big bulk import hydrates in the background at one album every four seconds, so an artist's tracks can take a while to fill in.
 - Adopting music or books does not trigger a media-server library refresh.
 - Multi-disc albums split into `CD1`, `CD2` folders are adopted as separate candidates.
 - OPDS covers need a web session, so readers show no thumbnails.

@@ -176,24 +176,32 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added` | Authenticated |
-| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100); items carry `album_count` but no `albums` | Authenticated |
-| `POST` | `/music/artists` | Add an artist by `mbid` (`monitored` defaults to true, optional `quality_profile`); `409` if already added | Member |
-| `GET` | `/music/artists/{id}` | Fetch an artist with its `albums` | Authenticated |
-| `PATCH` | `/music/artists/{id}` | Update `monitored` (cascades to every album) and `quality_profile` (`422` for an unknown profile name) | Member |
+| `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added`, `library_id`, `genre`, `area`, `since`. `429` (`code: rate_limited`, `Retry-After`) when MusicBrainz is limiting | Authenticated |
+| `GET` | `/music/search/{mbid}` | The hit fields and the detail of one MusicBrainz artist: `overview` (`?lang=en\|fr`, English when that language has no article), `genres`, current `members`, `releases` | Authenticated |
+| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks | Authenticated |
+| `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facet's filter applied, each with its own `*_total` row; with no parameters, the whole library | Authenticated |
+| `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
+| `GET` | `/music/artists/{id}` | Fetch an artist with its full tree: members, and every album with tracks, credits and personnel (`?lang=en\|fr` picks the overview) | Authenticated |
+| `PATCH` | `/music/artists/{id}` | Update `monitor` (`all`, `future`, `manual`, `none`; re-applied to the existing albums, never touching their status) and `quality_profile` (`422` for an unknown name; empty clears to the default) | Member |
 | `DELETE` | `/music/artists/{id}` | Remove an artist; `?delete_files=true` also deletes files from disk | Member |
-| `POST` | `/music/artists/{id}/refresh` | Re-fetch the discography from MusicBrainz | Member |
-| `GET` | `/music/albums/{id}` | Fetch an album with its `tracks` | Authenticated |
-| `PATCH` | `/music/albums/{id}` | Update `monitored` | Member |
-| `POST` | `/music/albums/{id}/search` | Search the indexers for one album; returns `{items: [{format, release}]}` ranked, rejected releases dropped | Member |
-| `POST` | `/music/albums/{id}/grab` | Grab a chosen release: the `release` object of a search item, unchanged. `202` with no body | Member |
+| `POST` | `/music/artists/{id}/refresh-metadata` | Re-fetch the artist and its discography from MusicBrainz; new release groups follow the monitor policy and are hydrated in the background | Member |
+| `POST` | `/music/artists/{id}/rename` | Rename every track file of the artist to `library.music_naming` from database metadata (`?preview=true` returns the plan without applying it); `{artist_id, operations}` | Member |
+| `POST` | `/music/artists/{id}/search-now` | Search and grab the artist's wanted, released albums in the background. `202` | Member |
+| `POST` | `/music/artists/{id}/browse` | Search the indexers for the artist's discography packs; items are plain search results | Member |
+| `POST` | `/music/artists/{id}/grab` | Grab a discography pack: the item of a browse, unchanged. `202`; `422 grab_rejected` when no album of the artist can take it | Member |
+| `GET` | `/music/albums/{id}` | Fetch an album with its tracks, credits and personnel (the object an artist detail embeds) | Authenticated |
+| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy | Member |
+| `POST` | `/music/albums/{id}/search` | Search the indexers for one album; plain search results, ranked, with the releases the profile rejects kept at the end flagged `rejected` and `reject_reason` | Member |
+| `POST` | `/music/albums/{id}/grab` | Grab a chosen release: an item of a search, unchanged. `202` with no body | Member |
+| `POST` | `/music/albums/{id}/search-now` · `/music/tracks/{id}/search-now` | Run one search-and-grab pass for the album (a track searches its album). `202`; a no-op for an album that is available, upcoming or already downloading | Member |
+| `DELETE` | `/music/tracks/{id}/file` | Delete the track's files from disk and the library, and put an available album back to wanted; `409` when a path is outside the music root | Member |
 | `GET` `POST` | `/music/quality-profiles` | List / create music quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/music/quality-profiles/{name}` | Update / delete a music quality profile | 🔒 Admin |
 | `POST` | `/music/quality-profiles/{name}/default` | Make this the default music profile; the way out of the `409` a delete of the default answers | 🔒 Admin |
 
-Adding an artist fetches its whole discography from MusicBrainz, which allows one request per second, so a large catalogue makes `POST /music/artists` slow. Poster URLs are not in the payloads: clients build `/posters/artists/{id}/poster.jpg` and `/posters/albums/{id}/poster.jpg` themselves.
+Adding an artist is two-phase: the request fetches only the artist and its release-group list (`1 + ceil(n/100)` MusicBrainz requests) and answers `201` with one stub album per release group and `hydrating: true`. Tracks, credits, covers, the Wikipedia overview and the photo arrive in the background; poll the detail (`tracks_pending` marks an album still waiting) until `hydrating` is false. MusicBrainz allows one request per second process-wide, shared with every lookup, so the background work yields to interactive requests and spends at most half the budget, about four seconds per album. Poster URLs are not in the payloads: clients build `/posters/artists/{id}/poster.jpg` and `/posters/albums/{id}/poster.jpg` themselves, and `/posters/lookup/...` for a hit not yet added.
 
-An album search answers `422` with `code: no_quality_profile` when the album has no usable profile; a refused grab answers `422` with `code: grab_rejected`. The grab flips the album to `downloading`.
+An album search or an artist browse answers `422` with `code: no_quality_profile` when there is no usable profile; a refused grab answers `422` with `code: grab_rejected`. A grab flips the album (or, for a pack, every album it links) to `downloading`. The `status` of an album is `upcoming` while it is wanted and dated after today; that of an artist is the rollup over its monitored, non-upcoming albums.
 
 A music quality profile is `{name, tiers, preferred, upgrade_allowed, is_default}`: `tiers` are the quality tiers it accepts, drawn from `hires`, `lossless`, `high`, `standard`, `low` and returned best first, and `preferred` (one of `tiers`, else `422`) is the tier an upgrade stops at. `is_default` marks the profile an artist with an empty `quality_profile` resolves to; deleting it is a `409`, and the first profile created while none resolves becomes the default. `PUT` takes the same body as `POST` and ignores the name in the body.
 

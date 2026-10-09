@@ -79,7 +79,6 @@ type apiKeyApp struct {
 	tvshows       *tvshowmocks.MockManager
 	metadataTV    *metadatamocks.MockTVProvider
 	music         *musicmocks.MockManager
-	metadataMusic *metadatamocks.MockMusicProvider
 	books         *bookmocks.MockManager
 	metadataBook  *metadatamocks.MockBookProvider
 	requests      *reqmocks.MockManager
@@ -88,6 +87,7 @@ type apiKeyApp struct {
 	store         *dbmocks.MockStore
 	renamer       *librarymocks.MockRenamer
 	seriesRenamer *librarymocks.MockRenamer
+	musicRenamer  *librarymocks.MockRenamer
 	prober        *ffmpegmocks.MockProber
 	importer      *importermocks.MockEnqueuer
 
@@ -118,7 +118,6 @@ func newAPIKeyApp() *apiKeyApp {
 		tvshows:        tvshowmocks.NewMockManager(t),
 		metadataTV:     metadatamocks.NewMockTVProvider(t),
 		music:          musicmocks.NewMockManager(t),
-		metadataMusic:  metadatamocks.NewMockMusicProvider(t),
 		books:          bookmocks.NewMockManager(t),
 		metadataBook:   metadatamocks.NewMockBookProvider(t),
 		requests:       reqmocks.NewMockManager(t),
@@ -127,6 +126,7 @@ func newAPIKeyApp() *apiKeyApp {
 		store:          dbmocks.NewMockStore(t),
 		renamer:        librarymocks.NewMockRenamer(t),
 		seriesRenamer:  librarymocks.NewMockRenamer(t),
+		musicRenamer:   librarymocks.NewMockRenamer(t),
 		prober:         ffmpegmocks.NewMockProber(t),
 		importer:       importermocks.NewMockEnqueuer(t),
 		adminKey:       "test-admin-token",
@@ -146,7 +146,6 @@ func newAPIKeyApp() *apiKeyApp {
 		TVShows:        a.tvshows,
 		MetadataTV:     a.metadataTV,
 		Music:          a.music,
-		MetadataMusic:  a.metadataMusic,
 		Books:          a.books,
 		MetadataBook:   a.metadataBook,
 		Requests:       a.requests,
@@ -155,6 +154,7 @@ func newAPIKeyApp() *apiKeyApp {
 		Store:          a.store,
 		Renamer:        a.renamer,
 		SeriesRenamer:  a.seriesRenamer,
+		MusicRenamer:   a.musicRenamer,
 		PathMigrations: pathmigrate.NewService(a.store),
 		Prober:         a.prober,
 		Importer:       a.importer,

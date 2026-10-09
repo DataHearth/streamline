@@ -85,6 +85,7 @@ func (DownloadRecord) Indexes() []ent.Index {
 		// episode scans this table for children to cascade.
 		index.Edges("movie"),
 		index.Edges("anchor_episode"),
+		index.Edges("artist"),
 	}
 }
 
@@ -93,6 +94,11 @@ func (DownloadRecord) Edges() []ent.Edge {
 		edge.From("movie", Movie.Type).Ref("download_records").Unique(),
 		edge.From("album", Album.Type).Ref("download_records").Unique(),
 		edge.From("book", Book.Type).Ref("download_records").Unique(),
+		// A discography pack is filed under the artist and links, through
+		// albums, every album it is expected to cover. A record has album xor
+		// artist.
+		edge.From("artist", Artist.Type).Ref("download_records").Unique(),
+		edge.To("albums", Album.Type),
 		// The one episode the record is filed under: what the importer resolves
 		// the show from and what grab failures are counted against. Always a
 		// member of episodes.

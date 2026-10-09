@@ -67,6 +67,7 @@ type SeriesAdder interface {
 type MusicAdder interface {
 	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
 	music.CoverResolver
+	music.AlbumHydrator
 }
 
 // BookAdder creates an author and its bibliography from a Hardcover id.

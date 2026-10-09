@@ -49,21 +49,21 @@ func newFixture(ctx context.Context) *fixture {
 	g.DeferCleanup(func() { client.Close() })
 
 	released := time.Date(1991, 9, 24, 0, 0, 0, 0, time.UTC)
-	ar, err := db.New(client).CreateArtist(ctx, db.CreateArtistParams{
-		MBID: "a-1", Name: "Nirvana", Monitored: true,
+	store := db.New(client)
+	ar, err := store.CreateArtist(ctx, db.CreateArtistParams{
+		MBID: "a-1", Name: "Nirvana",
 		Albums: []db.AlbumSeed{{
 			MBID: "rg-1", Title: "Nevermind", Type: "album", ReleaseDate: &released,
-			Tracks: []db.TrackSeed{
-				{
-					MBID:     "t-1",
-					Title:    "Smells Like Teen Spirit",
-					Disc:     1,
-					Position: 1,
-				},
-				{MBID: "t-2", Title: "In Bloom", Disc: 1, Position: 2},
-			},
 		}},
 	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(store.SetAlbumHydration(ctx, ar.Edges.Albums[0].ID, db.HydrationParams{
+		Tracks: []db.TrackSeed{
+			{MBID: "t-1", Title: "Smells Like Teen Spirit", Disc: 1, Position: 1},
+			{MBID: "t-2", Title: "In Bloom", Disc: 1, Position: 2},
+		},
+	}, time.Now())).To(Succeed())
+	ar, err = store.FindArtistByID(ctx, ar.ID)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(
 		client.Artist.UpdateOneID(ar.ID).SetSortName("Nirvana").Exec(ctx),
@@ -158,6 +158,7 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		entry := idx[0].(map[string]any)["artist"].([]any)[0].(map[string]any)
 		Expect(entry["id"]).To(Equal(fmt.Sprintf("ar-%d", f.artist.ID)))
 		Expect(entry["albumCount"]).To(BeEquivalentTo(1))
+		Expect(entry["coverArt"]).To(Equal(fmt.Sprintf("ar-%d", f.artist.ID)))
 	})
 
 	g.It("falls back to name when sort_name is empty", func() {

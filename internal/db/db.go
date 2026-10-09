@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -44,21 +45,61 @@ type Store interface {
 
 	// music
 	CreateArtist(ctx context.Context, p CreateArtistParams) (*ent.Artist, error)
-	// FindArtistByID eager-loads albums (release_date, then title) with their
-	// tracks (disc, position) and the tracks' media files.
+	// FindArtistByID eager-loads the members and the albums with their
+	// tracks (disc, position), the tracks' media files and every credit.
 	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindArtistRow returns the artist alone, with no edges loaded.
+	FindArtistRow(ctx context.Context, id uint32) (*ent.Artist, error)
 	// FindAlbumByID eager-loads the album's tracks (disc, then position) with
-	// their media files, and its artist, which SearchAlbumReleases needs for
-	// the artist name and quality profile.
+	// their media files and credits, the album's credits, and its artist.
 	FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error)
+	// FindTrackByID eager-loads the track's files and its album with artist.
+	FindTrackByID(ctx context.Context, id uint32) (*ent.Track, error)
 	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	// FindArtistByMBID returns nil, nil when no artist has the mbid.
 	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
-	CountArtists(ctx context.Context) (int, error)
-	ListArtists(ctx context.Context, offset, limit uint32) ([]*ent.Artist, error)
-	RefreshArtist(ctx context.Context, id uint32, p RefreshArtistParams) error
-	// SetArtistMonitored flips the artist and every one of its albums.
-	SetArtistMonitored(ctx context.Context, id uint32, monitored bool) error
+	// ArtistIDsByMBID maps each mbid that is a library artist to its id.
+	ArtistIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
+	// CountArtistsFiltered counts what ListArtists's filters match.
+	CountArtistsFiltered(ctx context.Context, p ListArtistsParams) (int, error)
+	// ListArtists returns one filtered, sorted page with each artist's albums
+	// loaded as tiles (no tracks).
+	ListArtists(ctx context.Context, p ListArtistsParams) ([]*ent.Artist, error)
+	// ArtistCounts is the faceted tally behind the artist list's toolbar.
+	ArtistCounts(ctx context.Context, p ListArtistsParams) (ArtistCounts, error)
+	// AlbumRollups tallies tracks, files, bytes and runtime per album for the
+	// given artists.
+	AlbumRollups(
+		ctx context.Context,
+		artistIDs []uint32,
+	) (map[uint32]AlbumRollup, error)
+	// HydratingArtists reports which of the artists still have an album being
+	// filled in.
+	HydratingArtists(
+		ctx context.Context,
+		artistIDs []uint32,
+		now time.Time,
+	) (map[uint32]bool, error)
+	// RefreshArtist reconciles the discography and returns the created albums.
+	RefreshArtist(
+		ctx context.Context,
+		id uint32,
+		p RefreshArtistParams,
+	) ([]uint32, error)
+	SetArtistDetails(
+		ctx context.Context,
+		id uint32,
+		p ArtistDetailsParams,
+		at time.Time,
+	) error
+	// SetArtistMonitor stores the policy and applies it to the existing
+	// albums; it never touches album status.
+	SetArtistMonitor(
+		ctx context.Context,
+		id uint32,
+		monitor artist.Monitor,
+		now time.Time,
+	) error
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetAlbumStatus(
 		ctx context.Context,
@@ -66,16 +107,44 @@ type Store interface {
 		from []album.Status,
 		to album.Status,
 	) (bool, error)
-	// ListWantedAlbums returns monitored wanted albums under the grab-failure
-	// cap with no live download record, artist loaded.
+	// SetAlbumHydration stores an album's release call: facts, tracks, credits.
+	SetAlbumHydration(
+		ctx context.Context,
+		albumID uint32,
+		p HydrationParams,
+		at time.Time,
+	) error
+	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsTrackless(
+		ctx context.Context,
+		staleBefore, releasedBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
+	// ArtistMemberMBIDs returns the MusicBrainz ids of the artist's members.
+	ArtistMemberMBIDs(ctx context.Context, artistID uint32) ([]string, error)
+	// AlbumHasLiveRecord reports whether a download for the album, single or
+	// as part of a pack, is in flight.
+	AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error)
+	// ListArtistAlbumsForSearch returns the artist's monitored, released,
+	// hydrated, wanted albums.
+	ListArtistAlbumsForSearch(
+		ctx context.Context,
+		artistID uint32,
+	) ([]*ent.Album, error)
+	// ListPackAlbums returns the artist's monitored, released, hydrated albums
+	// that are wanted or paused: what a discography pack may cover.
+	ListPackAlbums(ctx context.Context, artistID uint32) ([]*ent.Album, error)
+	// ListWantedAlbums returns monitored, released, hydrated, wanted albums
+	// under the grab-failure cap with no live download record, artist loaded.
 	ListWantedAlbums(
 		ctx context.Context,
 		maxGrabFailures uint8,
 	) ([]*ent.Album, error)
 	DeleteArtist(ctx context.Context, id uint32) error
-	// ListEligibleAlbumsForSync returns wanted, monitored albums under the
-	// failure cap and past cooldown with no in-flight record, least recently
-	// searched first. The artist is eager-loaded.
+	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
+	// albums under the failure cap and past cooldown with no in-flight record,
+	// least recently searched first. The artist is eager-loaded.
 	ListEligibleAlbumsForSync(
 		ctx context.Context,
 		maxGrabFailures uint8,
@@ -123,6 +192,13 @@ type Store interface {
 	SetLiveAlbumRecordReplaceMode(
 		ctx context.Context,
 		albumID uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// SetLiveArtistRecordReplaceMode flags the artist's newest downloading
+	// discography record.
+	SetLiveArtistRecordReplaceMode(
+		ctx context.Context,
+		artistID uint32,
 		mode downloadrecord.ReplaceMode,
 	) error
 	// ListUpgradeCandidateBooks returns the books of monitored authors that
@@ -485,6 +561,13 @@ type Store interface {
 	RecordAlbumImportSuccess(
 		ctx context.Context,
 		p RecordAlbumImportSuccessParams,
+	) error
+	// CompletePackRecord completes a discography pack's record and returns
+	// the linked albums it did not fill to wanted.
+	CompletePackRecord(
+		ctx context.Context,
+		recordID uint32,
+		unmatchedAlbumIDs []uint32,
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	RetryFailedDownloadRecord(ctx context.Context, id uint32) error

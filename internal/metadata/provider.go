@@ -187,6 +187,16 @@ type ArtistResult struct {
 	SortName       string
 	Disambiguation string
 	Score          uint8
+	// Type is "group" or "person"; empty for a character, an "other" and a
+	// hit that states none.
+	Type string
+	// Genre is the highest-count tag that MusicBrainz also lists as a genre,
+	// so a folksonomy tag like "seen live" never reaches the screen.
+	Genre string
+	// Area is the begin area and the area, joined: "Gothenburg, Sweden".
+	Area string
+	// Since is the year the artist began, 0 when unknown.
+	Since uint16
 }
 
 // AlbumType mirrors the Album schema enum values.
@@ -218,6 +228,13 @@ type ReleaseGroupSearchResult struct {
 	Score      uint8
 }
 
+// PersonInfo is a credited person, with the MusicBrainz artist id when the
+// relationship names one.
+type PersonInfo struct {
+	Name string
+	MBID string
+}
+
 // TrackInfo is one track of the canonical release picked for a release-group.
 type TrackInfo struct {
 	MBID     string // recording MBID
@@ -225,16 +242,67 @@ type TrackInfo struct {
 	Disc     uint8
 	Position uint16
 	Duration uint32 // seconds, 0 when unknown
+	// Featuring are the artists credited after a "feat." join phrase.
+	Featuring []PersonInfo
+	// Writers are the writers, composers and lyricists of the recorded work.
+	Writers []PersonInfo
+	// Bonus is set only when MusicBrainz says so: a medium titled "bonus" or a
+	// track titled "(bonus track)".
+	Bonus bool
+}
+
+// CreditInfo is one production credit of an album.
+type CreditInfo struct {
+	PersonInfo
+	// Role is producer, recording, mix, mastering or artwork.
+	Role string
+}
+
+// PerformerInfo is one performer of an album, folded over its recordings.
+type PerformerInfo struct {
+	PersonInfo
+	Instruments []string
+	// Recordings counts the recordings the person performs on, which is what
+	// the guest heuristic divides by PerformerRecordings.
+	Recordings int
 }
 
 // ReleaseGroupDetails carries the canonical release pick and its track list.
 type ReleaseGroupDetails struct {
 	ReleaseGroupInfo
-	ArtistMBID  string
 	ReleaseMBID string
 	// Barcode is the canonical release's UPC/EAN, empty when MusicBrainz has none.
-	Barcode string
-	Tracks  []TrackInfo
+	Barcode       string
+	Label         string
+	CatalogNumber string
+	// Country is a two-letter region; XW, XE and the like are dropped.
+	Country string
+	// Media is the union of the release group's physical media: cd, vinyl,
+	// digital, cassette.
+	Media  []string
+	Studio string
+	Tracks []TrackInfo
+	// Credits and Performers come from the heavy release call only.
+	Credits    []CreditInfo
+	Performers []PerformerInfo
+	// PerformerRecordings is how many recordings carry a performer
+	// relationship at all.
+	PerformerRecordings int
+	// CreditsComplete is false when the heavy call failed and the light one
+	// supplied the tracks: the album is hydrated but its credits are not.
+	CreditsComplete bool
+}
+
+// ArtistMemberInfo is one member of a group.
+type ArtistMemberInfo struct {
+	Name        string
+	MBID        string
+	Instruments []string
+	// FromYear and ToYear are 0 when the relationship carries no date.
+	FromYear uint16
+	ToYear   uint16
+	// Ended is set when the relationship is over; ToYear may still be 0.
+	Ended bool
 }
 
 // CoverHit is one cover-art search result.
@@ -257,8 +325,45 @@ type CoverProvider interface {
 // ArtistDetails is the full artist record used to seed an artist and its albums.
 type ArtistDetails struct {
 	ArtistResult
-	Overview      string
+	// Origin is the begin area and the area, joined; empty when unknown.
+	Origin string
+	// Genres are the artist's MusicBrainz genres, most-voted first,
+	// title-cased.
+	Genres  []string
+	Members []ArtistMemberInfo
+	// DeezerID comes from MusicBrainz's own url-rel, 0 when it has none.
+	DeezerID uint32
+	// WikidataID is the Q-number of the artist's Wikidata item.
+	WikidataID    string
 	ReleaseGroups []ReleaseGroupInfo
+}
+
+// ArtistPhotoProvider finds an artist's picture outside MusicBrainz, which has
+// none. Implemented by *Deezer.
+type ArtistPhotoProvider interface {
+	// ArtistByID returns the artist with the provider's id, nil when it has
+	// none.
+	ArtistByID(ctx context.Context, id uint32) (*DeezerArtist, error)
+	// SearchArtists returns the provider's first page of hits. Whether a hit
+	// is the right artist is the caller's call.
+	SearchArtists(ctx context.Context, name string) ([]DeezerArtist, error)
+}
+
+// Overview is an artist biography extract with the page it came from.
+type Overview struct {
+	Text      string
+	SourceURL string
+}
+
+// OverviewProvider fetches artist overviews. Implemented by *Wikipedia.
+type OverviewProvider interface {
+	// Overviews returns the extract of the Wikidata item's article in each of
+	// langs that has one; a language without an article is absent from the map.
+	Overviews(
+		ctx context.Context,
+		wikidataID string,
+		langs []string,
+	) (map[string]Overview, error)
 }
 
 // MusicProvider fetches music metadata. Implemented by *MusicBrainz.

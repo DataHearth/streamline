@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -58,7 +59,7 @@ var _ = Describe(
 				Return(nil).Maybe()
 			svc = NewService(
 				store, nil, nil, nil, nil, nil, nil, root, root,
-				mb, music.NewService(store, mb, covers, nil, nil, nil),
+				mb, music.NewService(store, mb, covers, nil, nil, nil, nil, nil),
 				nil,
 				nil,
 			)
@@ -77,13 +78,16 @@ var _ = Describe(
 						MBID: rg + t, Title: t, Disc: 1, Position: uint16(i + 1),
 					}
 				}
+				// Maybe: the add queues every album for the background worker,
+				// which races the commit's own hydration of the album it adopts.
 				mb.EXPECT().GetReleaseGroup(mock.Anything, rg).
 					Return(&metadata.ReleaseGroupDetails{
-						MBID:        rg,
-						Title:       rg,
-						ReleaseMBID: rg + "-rel",
-						Tracks:      tracks,
-					}, nil).Once()
+						MBID:            rg,
+						Title:           rg,
+						ReleaseMBID:     rg + "-rel",
+						Tracks:          tracks,
+						CreditsComplete: true,
+					}, nil).Maybe()
 			}
 			mb.EXPECT().GetArtist(mock.Anything, artistMBID).
 				Return(&metadata.ArtistDetails{
@@ -178,21 +182,31 @@ var _ = Describe(
 		})
 
 		It("reuses an artist the library already holds", func() {
-			_, err := store.CreateArtist(ctx, db.CreateArtistParams{
-				MBID: "a-1", Name: "Nirvana",
-				Albums: []db.AlbumSeed{{
-					MBID: "rg-1", Title: "Nevermind", Type: "album",
-					Tracks: []db.TrackSeed{
-						{
-							MBID:     "t-1",
-							Title:    "Smells Like Teen Spirit",
-							Disc:     1,
-							Position: 1,
-						},
-					},
-				}},
+			held, err := store.CreateArtist(ctx, db.CreateArtistParams{
+				MBID: "a-1",
+				Name: "Nirvana",
+				Albums: []db.AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				store.SetAlbumHydration(
+					ctx,
+					held.Edges.Albums[0].ID,
+					db.HydrationParams{
+						Tracks: []db.TrackSeed{
+							{
+								MBID:     "t-1",
+								Title:    "Smells Like Teen Spirit",
+								Disc:     1,
+								Position: 1,
+							},
+						},
+					},
+					time.Now(),
+				),
+			).To(Succeed())
 			dir := folder("Nevermind", "tagged.mp3")
 
 			scan := commit(confirmed(dir, "rg-1", "a-1"))

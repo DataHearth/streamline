@@ -69,6 +69,7 @@ type Config struct {
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
+	MusicRenamer    library.Renamer
 	Auth            auth.Manager
 	Limiter         auth.Limiter
 	OIDC            auth.OIDCManager
@@ -80,7 +81,6 @@ type Config struct {
 	TVSearcher      *rss.EpisodeMissingSearcher
 	MetadataTV      metadata.TVProvider
 	Music           music.Manager
-	MetadataMusic   metadata.MusicProvider
 	Books           book.Manager
 	MetadataBook    metadata.BookProvider
 	Hardcover       interface{ AuthRejected() bool }
@@ -114,6 +114,7 @@ func New(cfg Config) *Server {
 		DeepLinker:      cfg.DeepLinker,
 		Renamer:         cfg.Renamer,
 		SeriesRenamer:   cfg.SeriesRenamer,
+		MusicRenamer:    cfg.MusicRenamer,
 		Scheduler:       cfg.Scheduler,
 		BulkImports:     cfg.BulkImports,
 		MissingSearcher: cfg.MissingSearcher,
@@ -122,7 +123,6 @@ func New(cfg Config) *Server {
 		TVSearcher:      cfg.TVSearcher,
 		MetadataTV:      cfg.MetadataTV,
 		Music:           cfg.Music,
-		MetadataMusic:   cfg.MetadataMusic,
 		Books:           cfg.Books,
 		MetadataBook:    cfg.MetadataBook,
 		Hardcover:       cfg.Hardcover,

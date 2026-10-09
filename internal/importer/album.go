@@ -82,10 +82,60 @@ func (w *Worker) importAlbumRecord(
 	rec *ent.DownloadRecord,
 	libCfg config.LibraryConfig,
 ) error {
-	alb := rec.Edges.Album
+	files, err := listAudioFiles(rec.SavePath)
+	if err != nil {
+		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
+	}
+	held, err := w.importAlbumFiles(
+		ctx, span, rec, rec.Edges.Album, files, libCfg, false,
+	)
+	if err != nil || held {
+		return err
+	}
+	// The torrent is judged by what the import actually did: a forced copy left
+	// the source untouched, so a configured "move" must not delete it.
+	libCfg.ImportMode = albumImportMode(libCfg)
+	w.cleanupTorrent(ctx, rec, libCfg)
+	w.refreshMediaServers(ctx, "music", libCfg.MusicPath)
+	return nil
+}
+
+// hydratedAlbum returns the album with its tracks: one added as a stub has
+// none until its release data is fetched, and a download for it cannot be
+// matched before that.
+func (w *Worker) hydratedAlbum(
+	ctx context.Context,
+	alb *ent.Album,
+) (*ent.Album, error) {
+	if alb.MetadataFetchedAt != nil || w.albums == nil {
+		return alb, nil
+	}
+	if err := w.albums.HydrateAlbum(ctx, alb.ID); err != nil {
+		return nil, fmt.Errorf("hydrate album %d: %w", alb.ID, err)
+	}
+	return w.db.FindAlbumByID(ctx, alb.ID)
+}
+
+// importAlbumFiles places the given source files into one album. pack is set
+// when the album is one of a discography pack's: the record is then left for
+// the caller to complete, and the torrent is not cleaned up here. held reports
+// that the record was parked for review instead of imported.
+func (w *Worker) importAlbumFiles(
+	ctx context.Context,
+	span trace.Span,
+	rec *ent.DownloadRecord,
+	alb *ent.Album,
+	files []string,
+	libCfg config.LibraryConfig,
+	pack bool,
+) (bool, error) {
+	alb, err := w.hydratedAlbum(ctx, alb)
+	if err != nil {
+		return false, otelx.RecordSpanError(span, err)
+	}
 	artist := alb.Edges.Artist
 	if artist == nil {
-		return otelx.RecordSpanError(
+		return false, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("album %d missing artist context", alb.ID),
 		)
@@ -96,23 +146,19 @@ func (w *Worker) importAlbumRecord(
 	)
 	defer w.lockEntity(fmt.Sprintf("album:%d", alb.ID))()
 
-	files, err := listAudioFiles(rec.SavePath)
-	if err != nil {
-		return otelx.RecordSpanError(span, fmt.Errorf("list album files: %w", err))
-	}
 	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
 	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
 	if len(plan) == 0 {
 		if skippedCovered > 0 {
-			return otelx.RecordSpanError(span, library.ErrDestExists)
+			return false, otelx.RecordSpanError(span, library.ErrDestExists)
 		}
-		return otelx.RecordSpanError(span, ErrNoAlbumTracks)
+		return false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
 	}
 	// Verified before anything is set aside or transferred, so a hold leaves
 	// the library exactly as it was.
 	if haveProfile && !rec.VerificationBypassed {
 		if reasons := tierHoldReasons(plan, profile); len(reasons) > 0 {
-			return w.hold(ctx, span, rec, reasons)
+			return true, w.hold(ctx, span, rec, reasons)
 		}
 	}
 
@@ -189,22 +235,23 @@ func (w *Worker) importAlbumRecord(
 		})
 	}
 	if len(rows) == 0 {
-		return otelx.RecordSpanError(span, firstErr)
+		return false, otelx.RecordSpanError(span, firstErr)
 	}
 
 	for _, mf := range replaced {
 		if err := w.db.DeleteMediaFile(ctx, mf.ID); err != nil {
-			return otelx.RecordSpanError(
+			return false, otelx.RecordSpanError(
 				span, fmt.Errorf("delete replaced track media file: %w", err),
 			)
 		}
 	}
 	if err := w.db.RecordAlbumImportSuccess(ctx, db.RecordAlbumImportSuccessParams{
-		RecordID: rec.ID,
-		AlbumID:  alb.ID,
-		Files:    rows,
+		RecordID:   rec.ID,
+		AlbumID:    alb.ID,
+		Files:      rows,
+		KeepRecord: pack,
 	}); err != nil {
-		return otelx.RecordSpanError(
+		return false, otelx.RecordSpanError(
 			span, fmt.Errorf("record album import success: %w", err),
 		)
 	}
@@ -221,13 +268,7 @@ func (w *Worker) importAlbumRecord(
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
-
-	// The torrent is judged by what the import actually did: a forced copy left
-	// the source untouched, so a configured "move" must not delete it.
-	libCfg.ImportMode = mode
-	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, "music", libCfg.MusicPath)
-	return nil
+	return false, nil
 }
 
 // planAlbumImport binds each source file to the track it fills. A track

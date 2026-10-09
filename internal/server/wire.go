@@ -209,6 +209,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
+		metadata.NewWikipedia(), deezer,
 	)
 	bookSvc := book.NewService(store, bookMeta, postersSvc, indexerSvc, dlManager)
 	mediaServerSvc := mediaserver.New()
@@ -256,6 +257,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			n,
 		)
 	}
+	musicSvc.ResumeHydration(ctx)
 	deepLinker := mediaserver.NewDeepLinker(nil)
 	renamer := movie.NewRenameService(
 		store, dispatcher, cfg.Library.MoviePath, cfg.Library.MovieNaming,
@@ -277,6 +279,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MediaServer: dispatcher,
 		Prober:      prober,
 		Covers:      musicSvc,
+		Albums:      musicSvc,
 	})
 	go imp.Start(ctx)
 
@@ -505,6 +508,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		DeepLinker:      deepLinker,
 		Renamer:         renamer,
 		SeriesRenamer:   seriesRenamer,
+		MusicRenamer:    music.NewRenamer(store),
 		Auth:            authSvc,
 		Limiter:         limiter,
 		OIDC:            oidcMgr,
@@ -523,7 +527,6 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Prober:          prober,
 		Transcoder:      transcoder,
 		Music:           musicSvc,
-		MetadataMusic:   mb,
 		Books:           bookSvc,
 		MetadataBook:    bookMeta,
 		Hardcover:       hardcoverHealth,

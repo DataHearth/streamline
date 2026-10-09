@@ -26,6 +26,7 @@ func (Track) Fields() []ent.Field {
 		field.Uint8("disc").Default(1),
 		field.Uint16("position"),
 		field.Uint32("duration").Optional().Default(0),
+		field.Bool("bonus").Default(false),
 	}
 }
 
@@ -33,6 +34,8 @@ func (Track) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("album", Album.Type).Ref("tracks").Unique().Required(),
 		edge.To("media_files", MediaFile.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("credits", MusicCredit.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

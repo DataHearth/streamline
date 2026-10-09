@@ -56,6 +56,9 @@ type Deps struct {
 	Prober      ffmpeg.Prober
 	// Covers is optional: without it an imported album gets no cover resolved.
 	Covers music.CoverResolver
+	// Albums is optional: without it an album added as a stub is not hydrated
+	// before its download is matched to tracks.
+	Albums music.AlbumHydrator
 }
 
 const (
@@ -70,6 +73,7 @@ type Worker struct {
 	ms     mediaserver.Refresher
 	probe  ffmpeg.Prober
 	covers music.CoverResolver
+	albums music.AlbumHydrator
 
 	ch   chan uint32
 	stop chan struct{}
@@ -102,6 +106,7 @@ func NewWorker(d Deps) *Worker {
 		ms:       d.MediaServer,
 		probe:    d.Prober,
 		covers:   d.Covers,
+		albums:   d.Albums,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),
@@ -263,10 +268,13 @@ func (w *Worker) runImport(ctx context.Context, recordID uint32) error {
 		return w.importBookRecord(ctx, span, rec, libCfg)
 	case rec.Edges.Album != nil:
 		return w.importAlbumRecord(ctx, span, rec, libCfg)
+	case rec.Edges.Artist != nil:
+		return w.importPackRecord(ctx, span, rec, libCfg)
 	default:
 		return otelx.RecordSpanError(
 			span,
-			fmt.Errorf("record %d has no movie, episode, album or book", recordID),
+			fmt.Errorf(
+				"record %d has no movie, episode, album, artist or book", recordID),
 		)
 	}
 }
@@ -993,6 +1001,9 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	}
 	if rec.Edges.Album != nil {
 		params.AlbumID = rec.Edges.Album.ID
+	}
+	for _, a := range rec.Edges.Albums {
+		params.PackAlbumIDs = append(params.PackAlbumIDs, a.ID)
 	}
 	if rec.Edges.Book != nil {
 		params.BookID = rec.Edges.Book.ID

@@ -43,7 +43,9 @@ func (s *Server) ListMusicQualityProfiles(
 			items = append(items, musicProfileToAPI(p))
 		}
 	}
-	return ListMusicQualityProfiles200JSONResponse(items), nil
+	return ListMusicQualityProfiles200JSONResponse{
+		MusicQualityProfileListJSONResponse: items,
+	}, nil
 }
 
 func (s *Server) CreateMusicQualityProfile(

@@ -68,7 +68,9 @@ func (s *Server) ListBookQualityProfiles(
 			items = append(items, bookProfileToAPI(p))
 		}
 	}
-	return ListBookQualityProfiles200JSONResponse(items), nil
+	return ListBookQualityProfiles200JSONResponse{
+		BookQualityProfileListJSONResponse: items,
+	}, nil
 }
 
 func (s *Server) CreateBookQualityProfile(

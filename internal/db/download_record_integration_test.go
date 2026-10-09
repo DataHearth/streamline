@@ -60,9 +60,8 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 	Describe("CreateDownloadRecord media edges", func() {
 		It("links the album edge and no movie or anchor episode", func() {
 			a, err := store.CreateArtist(ctx, CreateArtistParams{
-				MBID:      "a-1",
-				Name:      "Nirvana",
-				Monitored: true,
+				MBID: "a-1",
+				Name: "Nirvana",
 				Albums: []AlbumSeed{
 					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
 				},
@@ -713,7 +712,7 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 		BeforeEach(func() {
 			a, err := store.CreateArtist(ctx, CreateArtistParams{
-				MBID: "a-1", Name: "Nirvana", Monitored: true,
+				MBID: "a-1", Name: "Nirvana",
 				Albums: []AlbumSeed{
 					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
 				},

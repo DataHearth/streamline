@@ -5,6 +5,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -23,12 +24,8 @@ func (db *DB) ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, err
 		Where(
 			album.Monitored(true),
 			album.HasTracksWith(track.HasMediaFiles()),
-			album.Not(album.HasDownloadRecordsWith(
-				downloadrecord.StatusIn(
-					downloadrecord.StatusDownloading,
-					downloadrecord.StatusImporting,
-				),
-			)),
+			album.Not(album.HasDownloadRecordsWith(liveRecord())),
+			album.Not(album.HasPackRecordsWith(liveRecord())),
 		).
 		WithArtist().
 		WithTracks(func(q *ent.TrackQuery) { q.WithMediaFiles() }).
@@ -46,6 +43,26 @@ func (db *DB) SetLiveAlbumRecordReplaceMode(
 	id, err := db.client.DownloadRecord.Query().
 		Where(
 			downloadrecord.HasAlbumWith(album.ID(albumID)),
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+		).
+		Order(ent.Desc(downloadrecord.FieldID)).
+		FirstID(ctx)
+	if err != nil {
+		return err
+	}
+	return db.SetDownloadRecordReplaceMode(ctx, id, mode)
+}
+
+// SetLiveArtistRecordReplaceMode flags the artist's newest downloading
+// discography record, the pack twin of SetLiveAlbumRecordReplaceMode.
+func (db *DB) SetLiveArtistRecordReplaceMode(
+	ctx context.Context,
+	artistID uint32,
+	mode downloadrecord.ReplaceMode,
+) error {
+	id, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.HasArtistWith(artist.ID(artistID)),
 			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
 		).
 		Order(ent.Desc(downloadrecord.FieldID)).

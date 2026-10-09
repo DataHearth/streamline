@@ -106,6 +106,17 @@ func (s *Service) commitAlbum(
 	if err != nil {
 		return commitAlbumFail(span, "resolve album", err, 0)
 	}
+	// An artist added by this commit has only album stubs: the tracks the
+	// files are matched to have to exist first. Only the albums actually
+	// adopted pay for it, at interactive priority.
+	if alb.MetadataFetchedAt == nil {
+		if err := s.musicAdder.HydrateAlbum(ctx, alb.ID); err != nil {
+			return commitAlbumFail(span, "hydrate album", err, alb.ID)
+		}
+		if alb, err = s.store.FindAlbumByID(ctx, alb.ID); err != nil {
+			return commitAlbumFail(span, "reload album", err, alb.ID)
+		}
+	}
 
 	plan, unmatched, adopted, uncovered, err := planAlbumFiles(
 		ctx,
@@ -202,7 +213,9 @@ func (s *Service) resolveArtist(
 		return fmt.Errorf("look up artist: %w", err)
 	}
 	if existing == nil {
-		_, err := s.musicAdder.Add(ctx, music.AddParams{MBID: artistMBID})
+		_, err := s.musicAdder.Add(ctx, music.AddParams{
+			MBID: artistMBID, Monitor: "none",
+		})
 		if err != nil && !errors.Is(err, music.ErrArtistExists) {
 			return fmt.Errorf("add artist: %w", err)
 		}

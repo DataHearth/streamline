@@ -27,7 +27,7 @@ func (a artistRequestAdder) AddArtist(
 ) error {
 	_, err := a.svc.Add(ctx, music.AddParams{
 		MBID:           mbid,
-		Monitored:      true,
+		Monitor:        "all",
 		QualityProfile: qualityProfile,
 	})
 	if errors.Is(err, music.ErrArtistExists) {

@@ -34,32 +34,36 @@ var _ = Describe("Upgrade candidates", Label("integration", "db"), func() {
 		BeforeEach(func() {
 			var err error
 			artist, err = store.CreateArtist(ctx, CreateArtistParams{
-				MBID: "a-1", Name: "Nirvana", Monitored: true,
+				MBID: "a-1", Name: "Nirvana",
 				Albums: []AlbumSeed{
 					{
-						MBID:  "rg-1",
-						Title: "Nevermind",
-						Type:  "album",
-						Tracks: []TrackSeed{
-							{MBID: "t-1", Title: "Drain You", Disc: 1, Position: 1},
-						},
+						MBID:      "rg-1",
+						Title:     "Nevermind",
+						Type:      "album",
+						Monitored: true,
 					},
 					{
-						MBID:  "rg-2",
-						Title: "In Utero",
-						Type:  "album",
-						Tracks: []TrackSeed{
-							{
-								MBID:     "t-2",
-								Title:    "Heart-Shaped Box",
-								Disc:     1,
-								Position: 1,
-							},
-						},
+						MBID:      "rg-2",
+						Title:     "In Utero",
+						Type:      "album",
+						Monitored: true,
 					},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+			hydrateAlbum(ctx, store, "rg-1",
+				TrackSeed{MBID: "t-1", Title: "Drain You", Disc: 1, Position: 1})
+			hydrateAlbum(
+				ctx,
+				store,
+				"rg-2",
+				TrackSeed{
+					MBID:     "t-2",
+					Title:    "Heart-Shaped Box",
+					Disc:     1,
+					Position: 1,
+				},
+			)
 		})
 
 		albumByMBID := func(mbid string) *ent.Album {

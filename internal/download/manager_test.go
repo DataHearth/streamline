@@ -20,6 +20,7 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -767,6 +768,81 @@ var _ = Describe("GrabAlbum and GrabBook", Label("unit", "downloads"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rec.ID).To(BeEquivalentTo(42))
 		Expect(client.addTorrentCalls).To(Equal(1))
+	})
+
+	Describe("GrabArtistPack", func() {
+		It(
+			"files the record under the artist and links the linkable albums",
+			func() {
+				store.EXPECT().ListPackAlbums(mock.Anything, uint32(3)).
+					Return([]*ent.Album{{ID: 10}, {ID: 11}}, nil).Once()
+				store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+					func(p db.CreateDownloadRecordParams) bool {
+						return p.ArtistID == 3 && p.AlbumID == 0 &&
+							len(
+								p.AlbumIDs,
+							) == 2 && p.AlbumIDs[0] == 10 && p.AlbumIDs[1] == 11
+					},
+				)).Return(&ent.DownloadRecord{ID: 44}, nil).Once()
+				for _, id := range []uint32{10, 11} {
+					store.EXPECT().SetAlbumStatus(
+						mock.Anything, id,
+						[]album.Status{album.StatusWanted, album.StatusPaused},
+						album.StatusDownloading,
+					).Return(true, nil).Once()
+				}
+
+				rec, err := mgr.GrabArtistPack(ctx, result, 3)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.ID).To(BeEquivalentTo(44))
+				Expect(client.addTorrentCalls).To(Equal(1))
+			},
+		)
+
+		It(
+			"refuses a pack with no linkable album before touching the client",
+			func() {
+				store.EXPECT().ListPackAlbums(mock.Anything, uint32(3)).
+					Return(nil, nil).Once()
+
+				_, err := mgr.GrabArtistPack(ctx, result, 3)
+
+				Expect(err).To(MatchError(ErrNoWantedFiles))
+				Expect(client.addTorrentCalls).To(BeZero())
+			},
+		)
+
+		It("leaves the albums alone when the torrent is not added", func() {
+			store.EXPECT().ListPackAlbums(mock.Anything, uint32(3)).
+				Return([]*ent.Album{{ID: 10}}, nil).Once()
+			client.addErr = errors.New("client refused")
+
+			_, err := mgr.GrabArtistPack(ctx, result, 3)
+
+			Expect(err).To(MatchError(ContainSubstring("client refused")))
+		})
+
+		It("carries on when an album's status write fails", func() {
+			store.EXPECT().ListPackAlbums(mock.Anything, uint32(3)).
+				Return([]*ent.Album{{ID: 10}}, nil).Once()
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Return(&ent.DownloadRecord{ID: 44}, nil).Once()
+			store.EXPECT().
+				SetAlbumStatus(mock.Anything, uint32(10), mock.Anything, mock.Anything).
+				Return(false, errors.New("locked")).
+				Once()
+
+			_, err := mgr.GrabArtistPack(ctx, result, 3)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("surfaces a failed album listing", func() {
+			store.EXPECT().ListPackAlbums(mock.Anything, uint32(3)).
+				Return(nil, errors.New("locked")).Once()
+			_, err := mgr.GrabArtistPack(ctx, result, 3)
+			Expect(err).To(MatchError(ContainSubstring("list pack albums")))
+		})
 	})
 
 	It("GrabBook files the record under the book with the slot kind", func() {

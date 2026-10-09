@@ -158,6 +158,9 @@ type Manager interface {
 		artist, album string,
 		year uint16,
 	) ([]SearchResult, error)
+	// SearchArtist queries every enabled indexer for the artist's name in the
+	// music category: one request per indexer. It is the discography browse.
+	SearchArtist(ctx context.Context, artist string) ([]SearchResult, error)
 	// SearchBook queries every enabled indexer for one slot of a book.
 	// kind is ebook (newznab 7000 Books + 7020 Books/EBook) or audiobook
 	// (3030 Audio/Audiobook); q is "<author> <title>", then
@@ -390,6 +393,35 @@ func (i *indexer) SearchAlbum(
 	}
 
 	results := i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic})
+	span.SetAttributes(attribute.Int("results.total", len(results)))
+	return results, nil
+}
+
+func (i *indexer) SearchArtist(
+	ctx context.Context,
+	artist string,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.search_artist",
+		trace.WithAttributes(attribute.String("album.artist", artist)),
+	)
+	defer span.End()
+
+	start := time.Now()
+	defer func() {
+		searchDuration.Record(ctx, time.Since(start).Seconds())
+		searchCounter.Add(ctx, 1)
+	}()
+
+	artist = strings.TrimSpace(artist)
+	if artist == "" {
+		return nil, nil
+	}
+	results := i.searchAll(
+		ctx,
+		span,
+		[]string{artist},
+		SearchParams{Kind: KindMusic},
+	)
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }
