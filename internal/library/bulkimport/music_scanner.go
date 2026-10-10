@@ -111,6 +111,9 @@ type albumFolder struct {
 func walkAlbumFolders(
 	ctx context.Context, root string, skip map[string]struct{},
 ) ([]albumFolder, int) {
+	// WalkDir yields cleaned paths; an unclean root (a trailing slash) would never
+	// equal a child's parent and fold the disc folders into the root itself.
+	root = filepath.Clean(root)
 	byDir := map[string][]string{}
 	sizes := map[string]int64{}
 	walkErrors := 0

@@ -371,3 +371,24 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 		Expect(n).To(Equal(2))
 	})
 })
+
+var _ = Describe("walkAlbumFolders", Label("unit", "bulkimport"), func() {
+	It(
+		"never folds disc folders that sit directly under the scan root, slash or not",
+		func() {
+			root := GinkgoT().TempDir()
+			copyFixture("untagged.mp3", filepath.Join(root, "CD1", "01.mp3"))
+			copyFixture("untagged.mp3", filepath.Join(root, "CD2", "01.mp3"))
+
+			for _, given := range []string{root, root + string(filepath.Separator)} {
+				folders, walkErrors := walkAlbumFolders(
+					context.Background(),
+					given,
+					nil,
+				)
+				Expect(walkErrors).To(BeZero())
+				Expect(folders).To(HaveLen(2), "root %q", given)
+			}
+		},
+	)
+})
