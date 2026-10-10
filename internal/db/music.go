@@ -1084,10 +1084,7 @@ func (db *DB) ListEligibleAlbumsForSync(
 }
 
 func liveRecord() predicate.DownloadRecord {
-	return downloadrecord.StatusIn(
-		downloadrecord.StatusDownloading,
-		downloadrecord.StatusImporting,
-	)
+	return downloadrecord.StatusIn(inFlightRecordStatuses...)
 }
 
 // ListArtistAlbumsForSearch returns the artist's albums a search-now pass may
