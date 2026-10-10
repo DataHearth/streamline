@@ -118,6 +118,15 @@ func errNoQualityProfile(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
+// codeAlbumNotFound marks the 422 of approving an album request whose release
+// group is not among its artist's: nothing in the request body is wrong.
+const codeAlbumNotFound = "album_not_found"
+
+func errAlbumNotFound(msg string) UnprocessableEntityJSONResponse {
+	code := codeAlbumNotFound
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
 // codeRateLimited marks a 429 raised because Hardcover's rate limit or daily
 // request budget is spent. Retry-After carries the wait; the message names the
 // provider, which the SPA cannot otherwise tell from a rate-limited login.

@@ -36,6 +36,9 @@ type CreateImportScanAlbumParams struct {
 	Candidates       []schema.ScannedAlbumCandidate
 	ExistingAlbumID  *uint32
 	FileCount        uint16
+	TaggedYear       uint16
+	Format           string
+	Size             int64
 }
 
 type UpdateScanAlbumOutcomeOpts struct {
@@ -79,7 +82,14 @@ func (db *DB) BulkCreateImportScanAlbums(
 			SetScanID(scanID).
 			SetFolderPath(p.FolderPath).
 			SetFileCount(p.FileCount).
+			SetSize(p.Size).
 			SetClassification(p.Classification)
+		if p.TaggedYear != 0 {
+			c.SetTaggedYear(p.TaggedYear)
+		}
+		if p.Format != "" {
+			c.SetFormat(p.Format)
+		}
 		if p.TaggedArtist != "" {
 			c.SetTaggedArtist(p.TaggedArtist)
 		}
@@ -178,6 +188,14 @@ func (db *DB) AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error) {
 		idx[a.Mbid] = a.ID
 	}
 	return idx, nil
+}
+
+func (db *DB) IsAlbumMonitoredByMBID(
+	ctx context.Context, mbid string,
+) (bool, error) {
+	return db.client.Album.Query().
+		Where(album.MbidEQ(mbid), album.Monitored(true)).
+		Exist(ctx)
 }
 
 // FindAlbumByMBID returns nil, nil on a miss.

@@ -268,6 +268,7 @@ func (w *Worker) importAlbumFiles(
 		"album.id", alb.ID, "artist.id", artist.ID, "files", len(rows))
 
 	w.markRequestsAvailableByMBID(ctx, "artist", artist.Mbid)
+	w.markRequestsAvailableByMBID(ctx, "album", alb.Mbid)
 	return false, nil
 }
 

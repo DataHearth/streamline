@@ -19,6 +19,7 @@ import (
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -91,6 +92,7 @@ func albumCandidate(
 		ArtistMBID:       h.ArtistMBID,
 		Title:            h.Title,
 		Artist:           h.ArtistName,
+		Type:             string(h.Type),
 	}
 	if h.ReleaseDate != nil {
 		c.Year = numeric.SaturateU16(h.ReleaseDate.Year())
@@ -102,12 +104,14 @@ func albumCandidate(
 type albumFolder struct {
 	path  string
 	files []string
+	size  int64
 }
 
 func walkAlbumFolders(
 	ctx context.Context, root string, skip map[string]struct{},
 ) ([]albumFolder, int) {
 	byDir := map[string][]string{}
+	sizes := map[string]int64{}
 	walkErrors := 0
 	// WalkDir only fails here through the callback, which swallows per-entry
 	// errors so one unreadable directory does not abort the scan.
@@ -128,6 +132,9 @@ func walkAlbumFolders(
 			}
 			dir := filepath.Dir(path)
 			byDir[dir] = append(byDir[dir], path)
+			if info, ierr := d.Info(); ierr == nil {
+				sizes[dir] += info.Size()
+			}
 			return nil
 		},
 	); err != nil {
@@ -146,17 +153,28 @@ func walkAlbumFolders(
 	out := make([]albumFolder, 0, len(dirs))
 	for _, dir := range dirs {
 		slices.Sort(byDir[dir])
-		out = append(out, albumFolder{path: dir, files: byDir[dir]})
+		out = append(
+			out,
+			albumFolder{path: dir, files: byDir[dir], size: sizes[dir]},
+		)
 	}
 	return out, walkErrors
 }
 
+// folderTags is what a folder's embedded tags agree on.
+type folderTags struct {
+	artist, album string
+	year          uint16
+	readErrors    int
+}
+
 // majorityTags returns the most common non-empty (artist, album) pair across
-// the folder's files, preferring album artist over track artist. Empty when no
-// file carries an album tag.
-func majorityTags(ctx context.Context, files []string) (string, string, int) {
+// the folder's files, preferring album artist over track artist, and the most
+// common year among them. Empty when no file carries an album tag.
+func majorityTags(ctx context.Context, files []string) folderTags {
 	type pair struct{ artist, album string }
 	counts := map[pair]int{}
+	years := map[uint16]int{}
 	readErrors := 0
 	for _, f := range files {
 		info, err := audiotags.Read(f)
@@ -174,6 +192,9 @@ func majorityTags(ctx context.Context, files []string) (string, string, int) {
 			artist = info.Artist
 		}
 		counts[pair{artist, info.Album}]++
+		if info.Year != 0 {
+			years[info.Year]++
+		}
 	}
 	var best pair
 	bestN := 0
@@ -182,7 +203,36 @@ func majorityTags(ctx context.Context, files []string) (string, string, int) {
 			best, bestN = p, n
 		}
 	}
-	return best.artist, best.album, readErrors
+	var year uint16
+	yearN := 0
+	for y, n := range years {
+		if n > yearN || (n == yearN && y < year) {
+			year, yearN = y, n
+		}
+	}
+	return folderTags{
+		artist: best.artist, album: best.album, year: year, readErrors: readErrors,
+	}
+}
+
+// folderFormat labels a folder by its first audio file: measured when ffprobe
+// is available, else by the extension.
+func (s *Service) folderFormat(ctx context.Context, files []string) string {
+	if len(files) == 0 {
+		return ""
+	}
+	first := files[0]
+	ext := filepath.Ext(first)
+	if !s.probing() {
+		return library.MusicFormatLabel(ext, nil)
+	}
+	info, err := s.prober.ProbeAudio(ctx, first)
+	if err != nil {
+		slog.DebugContext(ctx, "music scan: probe failed, format from extension",
+			"file", filepath.Base(first), "error", err)
+		return library.MusicFormatLabel(ext, nil)
+	}
+	return library.MusicFormatLabel(ext, info)
 }
 
 // folderNames derives (artist, album) from the last two path segments under
@@ -260,8 +310,9 @@ func (s *Service) runScanMusic(ctx context.Context, scan *ent.ImportScan) {
 			}
 		}
 
-		artist, album, readErrors := majorityTags(ctx, f.files)
-		walkErrors += readErrors
+		tags := majorityTags(ctx, f.files)
+		artist, album := tags.artist, tags.album
+		walkErrors += tags.readErrors
 		if album == "" {
 			artist, album = folderNames(scan.SourcePath, f.path)
 		}
@@ -288,6 +339,9 @@ func (s *Service) runScanMusic(ctx context.Context, scan *ent.ImportScan) {
 			ArtistMBID:       c.ArtistMBID,
 			Candidates:       c.Candidates,
 			FileCount:        numeric.SaturateU16(len(f.files)),
+			TaggedYear:       tags.year,
+			Format:           s.folderFormat(ctx, f.files),
+			Size:             f.size,
 		}
 		if c.ExistingAlbumID != 0 {
 			id := c.ExistingAlbumID

@@ -100,6 +100,8 @@ func (s *Server) CreateRequest(
 		MediaType:      string(req.Body.MediaType),
 		MediaID:        mediaID,
 		MediaMBID:      deref(req.Body.MediaMbid),
+		ArtistMBID:     deref(req.Body.ArtistMbid),
+		ArtistName:     deref(req.Body.ArtistName),
 		Title:          req.Body.Title,
 		RequesterID:    claims.UserID,
 		QualityProfile: deref(req.Body.QualityProfile),
@@ -150,9 +152,13 @@ func (s *Server) ApproveRequest(
 		return ApproveRequest422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
+	case errors.Is(err, requestsvc.ErrAlbumNotFound):
+		return ApproveRequest422JSONResponse{
+			UnprocessableEntityJSONResponse: errAlbumNotFound(err.Error()),
+		}, nil
 	case errors.Is(err, metadata.ErrRateLimited):
 		return ApproveRequest429JSONResponse{
-			RateLimitedJSONResponse: errRateLimited(err),
+			RateLimitedJSONResponse: s.approveRateLimited(ctx, req.Id, err),
 		}, nil
 	case providerUnavailable(err):
 		return ApproveRequest503JSONResponse{
@@ -248,6 +254,11 @@ func requestToAPI(r *ent.Request) Request {
 	if r.MediaMbid != "" {
 		out.MediaMbid = &r.MediaMbid
 	}
+	if r.MediaType == request.MediaTypeAlbum {
+		out.ArtistMbid = optString(r.ArtistMbid)
+		out.ArtistName = optString(r.ArtistName)
+		out.RequestedAs = optString(r.RequestedAs)
+	}
 	if u := r.Edges.Requester; u != nil {
 		out.Requester = requestUserToAPI(u)
 	}
@@ -320,9 +331,22 @@ func (s *Server) GetRequestMetadata(
 				InternalErrorJSONResponse: errInternal(ctx, err),
 			}, nil
 		}
-	case "artist":
+	case "artist", "album":
+		artistMBID := r.MediaMbid
+		if r.MediaType == "album" {
+			var ok bool
+			artistMBID, ok, err = s.verifiedAlbumArtist(ctx, r.MediaMbid)
+			if err != nil {
+				return albumMetadataError(ctx, err), nil
+			}
+			if !ok {
+				return GetRequestMetadata404JSONResponse{
+					NotFoundJSONResponse: notFoundResp("album not found"),
+				}, nil
+			}
+		}
 		resp, err := s.GetMusicArtistLookup(ctx, GetMusicArtistLookupRequestObject{
-			Mbid: r.MediaMbid,
+			Mbid: artistMBID,
 		})
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
@@ -399,6 +423,37 @@ func (s *Server) GetRequestMetadata(
 			out,
 		),
 	}, nil
+}
+
+// verifiedAlbumArtist is the artist MusicBrainz names for a release group. An
+// album request's stored artist_mbid is requester-controlled, so the reviewer's
+// panel never reads it.
+func (s *Server) verifiedAlbumArtist(
+	ctx context.Context,
+	albumMBID string,
+) (string, bool, error) {
+	rg, err := s.metadataMusic.GetReleaseGroup(ctx, albumMBID)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return rg.ArtistMBID, rg.ArtistMBID != "", nil
+}
+
+func albumMetadataError(
+	ctx context.Context,
+	err error,
+) GetRequestMetadataResponseObject {
+	if errors.Is(err, metadata.ErrRateLimited) {
+		return GetRequestMetadata429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}
+	}
+	return GetRequestMetadata500JSONResponse{
+		InternalErrorJSONResponse: errInternal(ctx, err),
+	}
 }
 
 func (s *Server) GetRequestCounts(
@@ -539,4 +594,15 @@ func toLookupDetail(d RequestMediaDetails) LookupDetail {
 		TvdbId:           d.TvdbId,
 		VoteCount:        d.VoteCount,
 	}
+}
+
+func (s *Server) approveRateLimited(
+	ctx context.Context, id uint32, err error,
+) RateLimitedJSONResponse {
+	r, getErr := s.requests.Get(ctx, id)
+	if getErr == nil && r != nil &&
+		(r.MediaType == request.MediaTypeArtist || r.MediaType == request.MediaTypeAlbum) {
+		return errMusicBrainzRateLimited(err)
+	}
+	return errRateLimited(err)
 }

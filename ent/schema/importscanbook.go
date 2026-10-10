@@ -37,6 +37,8 @@ func (ImportScanBook) Fields() []ent.Field {
 		field.String("parsed_title").Optional(),
 		field.String("parsed_author").Optional(),
 		field.String("parsed_isbn").Optional(),
+		field.Uint16("parsed_year").Optional(),
+		field.Int64("size").Default(0),
 		field.Enum("classification").
 			Values("confirmed", "ambiguous", "unmatched", "existing").
 			Default("unmatched"),
@@ -50,7 +52,7 @@ func (ImportScanBook) Fields() []ent.Field {
 		field.Uint32("decision_book_hardcover_id").Optional(),
 
 		field.Enum("outcome").
-			Values("pending", "created", "failed").
+			Values("pending", "created", "attached", "failed").
 			Default("pending"),
 		field.String("outcome_message").Optional(),
 		field.Uint32("created_book_id").Optional().Nillable(),

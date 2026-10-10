@@ -67,6 +67,7 @@ type Manager interface {
 	RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error)
 
 	SearchArtists(ctx context.Context, query string) ([]LookupHit, error)
+	SearchReleaseGroups(ctx context.Context, query string) ([]ReleaseHit, error)
 	LookupArtist(ctx context.Context, mbid, lang string) (*LookupDetail, error)
 
 	SearchAlbumReleases(ctx context.Context, albumID uint32) ([]AlbumRelease, error)
@@ -109,9 +110,10 @@ type Service struct {
 	overviews metadata.OverviewProvider
 	photos    metadata.ArtistPhotoProvider
 
-	details *memo[*metadata.ArtistDetails]
-	lookups *memo[*lookupBody]
-	hydrate hydrator
+	details         *memo[*metadata.ArtistDetails]
+	lookups         *memo[*lookupBody]
+	releaseSearches *memo[[]metadata.ReleaseGroupSearchResult]
+	hydrate         hydrator
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
@@ -131,6 +133,9 @@ func NewService(
 		indexer: idx, download: dl, overviews: overviews, photos: photos,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
+		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](
+			detailsTTL, detailsCacheLimit,
+		),
 	}
 }
 

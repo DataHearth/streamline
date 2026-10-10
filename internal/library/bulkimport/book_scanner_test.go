@@ -349,6 +349,76 @@ var _ = Describe("Book scan", Label("unit", "bulkimport"), func() {
 		)
 	})
 
+	Describe("a Hardcover key that stops working", func() {
+		runScan := func() *ent.ImportScan {
+			GinkgoHelper()
+			sc, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+				SourcePath: ebookRoot,
+				Kind:       entimportscan.KindBook,
+				Mode:       entimportscan.ModeInPlace,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			svc.runScanBooks(ctx, sc)
+			cur, err := store.FindImportScan(ctx, sc.ID)
+			Expect(err).NotTo(HaveOccurred())
+			return cur
+		}
+
+		BeforeEach(func() {
+			touch(filepath.Join(ebookRoot, "Elantris - Brandon Sanderson.epub"))
+		})
+
+		It("fails the scan with the rejected-key code, not a per-row miss", func() {
+			bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
+				Return(nil, metadata.ErrHardcoverUnauthorized).Once()
+
+			cur := runScan()
+			Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+			Expect(cur.FailureCode).To(Equal("hardcover_key_rejected"))
+			Expect(cur.FailureReason).To(Equal(
+				"Hardcover rejected the API key; check Settings -> Metadata",
+			))
+			Expect(client.ImportScanBook.Query().CountX(ctx)).To(BeZero())
+		})
+
+		It(
+			"fails with the not-configured code when the key vanished before the run",
+			func() {
+				svc.bookmeta = nil
+
+				cur := runScan()
+				Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+				Expect(cur.FailureCode).To(Equal("hardcover_not_configured"))
+			},
+		)
+
+		It("leaves a rate limit without a code", func() {
+			bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+
+			cur := runScan()
+			Expect(cur.Status).To(Equal(entimportscan.StatusFailed))
+			Expect(cur.FailureCode).To(BeEmpty())
+		})
+	})
+
+	Describe("review fields", func() {
+		It("stores the year and the size of an item's files", func() {
+			dir := filepath.Join(ebookRoot, "Brandon Sanderson", "Elantris (1)")
+			writeEpub(filepath.Join(dir, "Elantris.epub"), testOPF)
+			bookmeta.EXPECT().BookByISBN(mock.Anything, mock.Anything).
+				Return(uint32(0), nil).Maybe()
+			bookmeta.EXPECT().SearchBooks(mock.Anything, mock.Anything).
+				Return(nil, nil).Maybe()
+
+			rows := scan(ebookRoot)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].ParsedYear).To(Equal(uint16(2005)))
+			Expect(rows[0].Size).To(BeNumerically(">", 0))
+		})
+	})
+
 	Describe("StartScan dispatch", func() {
 		It("rejects a kind with no scanner before writing a scan row", func() {
 			_, err := svc.StartScan(ctx, StartScanParams{

@@ -53,6 +53,49 @@ var _ = Describe("Artist lookup", Label("unit", "integration", "music"), func() 
 		}
 	}
 
+	Describe("SearchReleaseGroups", func() {
+		hit := func(mbid string) metadata.ReleaseGroupSearchResult {
+			return metadata.ReleaseGroupSearchResult{
+				MBID: mbid, Title: mbid, Type: metadata.AlbumTypeAlbum,
+				ArtistMBID: "mbid-n", ArtistName: "Nirvana",
+			}
+		}
+
+		It("flags the albums the library holds and remembers the answer", func() {
+			e.seedArtist("Nirvana", albumSeed{mbid: "rg-held", title: "Held"})
+			e.provider.EXPECT().
+				SearchReleaseGroupsFreeText(mock.Anything, "Nirvana").
+				Return([]metadata.ReleaseGroupSearchResult{
+					hit("rg-held"), hit("rg-new"),
+				}, nil).
+				Once()
+
+			hits, err := e.svc.SearchReleaseGroups(e.ctx, "Nirvana")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits).To(HaveLen(2))
+			Expect(hits[0].AlreadyAdded).To(BeTrue())
+			Expect(hits[1].AlreadyAdded).To(BeFalse())
+
+			again, err := e.svc.SearchReleaseGroups(e.ctx, "  nirvana ")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(again).To(HaveLen(2))
+		})
+
+		It("passes a provider failure through and does not cache it", func() {
+			e.provider.EXPECT().SearchReleaseGroupsFreeText(mock.Anything, "x1").
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+			_, err := e.svc.SearchReleaseGroups(e.ctx, "x1")
+			Expect(err).To(MatchError(metadata.ErrRateLimited))
+
+			e.provider.EXPECT().SearchReleaseGroupsFreeText(mock.Anything, "x1").
+				Return(nil, nil).Once()
+			hits, err := e.svc.SearchReleaseGroups(e.ctx, "x1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits).To(BeEmpty())
+		})
+	})
+
 	Describe("SearchArtists", func() {
 		It("flags the hits already in the library with one query", func() {
 			a, _ := e.seedArtist("Nirvana")

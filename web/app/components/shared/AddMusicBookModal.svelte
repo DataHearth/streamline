@@ -30,12 +30,16 @@
 		requestBody,
 		volumesCount,
 		LOOKUP_SOURCE,
+		hardcoverIssue,
+		type HardcoverIssue,
 		type LookupHit,
 		type LookupKind,
+		type LookupRelease,
 	} from "@lib/music-books-lookup";
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import MusicBookLookupPanel from "./MusicBookLookupPanel.svelte";
+	import ProviderKeyNotice from "./ProviderKeyNotice.svelte";
 	import Img from "./Img.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -61,6 +65,15 @@
 	// until the next lookup marks the hit as already added.
 	let sessionAdds = $state(new Map<string, number>());
 	let requested = $state(new Set<string>());
+	// The album picked off the highlighted artist's discography, for a request
+	// of that album alone. It belongs to that artist, so it clears with it.
+	let album = $state<LookupRelease | null>(null);
+	let pendingAlbum: LookupRelease | null = null;
+	const requestKey = (h: LookupHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
+	$effect(() => {
+		void selectedKey;
+		album = null;
+	});
 	let failedImages = $state(new Set<string>());
 	let searchInput = $state<HTMLInputElement | null>(null);
 	let resultsList = $state<HTMLUListElement | null>(null);
@@ -69,7 +82,11 @@
 	$effect(() => {
 		const q = query;
 		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => (debounced = q.trim()), 300);
+		debounceTimer = setTimeout(() => {
+			const next = q.trim();
+			if (next !== debounced) refused = null;
+			debounced = next;
+		}, 300);
 		return () => clearTimeout(debounceTimer);
 	});
 
@@ -81,6 +98,7 @@
 		monitor = "";
 		selectedKey = null;
 		showPanelOnNarrow = false;
+		refused = null;
 		sessionAdds = new Map();
 		requested = new Set();
 		failedImages = new Set();
@@ -99,12 +117,26 @@
 		staleTime: 60_000,
 	}));
 
-	let results = $derived(searchQuery.data ?? []);
+	// Hardcover refusing any call here (the search, a hit's detail, the add)
+	// leaves the modal as a refused search does: the notice in place of the
+	// results, nothing selected, no Add. Every call after it would fail the same
+	// way, so the state holds until the next search: set where a call fails,
+	// cleared where the next search starts, never from an effect.
+	let refused = $state<HardcoverIssue | null>(null);
+	let keyIssue = $derived(hardcoverIssue(searchQuery.error) ?? refused);
+	let results = $derived(keyIssue ? [] : (searchQuery.data ?? []));
 	let selected = $derived(results.find((r) => r.key === selectedKey));
 
 	const detailQuery = createQuery(() => ({
 		queryKey: ["mb-lookup-detail", selected?.key ?? null],
-		queryFn: () => lookupDetail(selected!),
+		queryFn: async () => {
+			try {
+				return await lookupDetail(selected!);
+			} catch (e) {
+				refused = hardcoverIssue(e) ?? refused;
+				throw e;
+			}
+		},
 		enabled: open && !!selected,
 		staleTime: 5 * 60_000,
 	}));
@@ -123,10 +155,11 @@
 	const addMutation = createMutation<{ id: number } | null, Error, LookupHit>(() => ({
 		onMutate: (h) => {
 			pendingKey = h.key;
+			pendingAlbum = canAdd ? null : album;
 		},
 		mutationFn: async (h) => {
 			if (!canAdd) {
-				await api("/requests", { method: "POST", body: requestBody(h, qualityProfileName) });
+				await api("/requests", { method: "POST", body: requestBody(h, qualityProfileName, pendingAlbum) });
 				return null;
 			}
 			const { path, body } = addRequest(h, qualityProfileName, effectiveMonitor);
@@ -134,16 +167,20 @@
 		},
 		onSuccess: (item, h) => {
 			if (!canAdd || !item) {
-				requested = new Set(requested).add(h.key);
+				requested = new Set(requested).add(requestKey(h, pendingAlbum));
 				qc.invalidateQueries({ queryKey: ["requests"] });
-				toast.ok(i18n.toast_requested({ title: h.title }));
+				toast.ok(i18n.toast_requested({ title: pendingAlbum?.title ?? h.title }));
 				return;
 			}
 			sessionAdds = new Map(sessionAdds).set(h.key, item.id);
 			qc.invalidateQueries({ queryKey: [libraryRoot(kind)] });
 			toast.ok(i18n.toast_added({ title: h.title }));
 		},
-		onError: (e) => toast.err(addErrorText(e, canAdd)),
+		onError: (e) => {
+			const issue = hardcoverIssue(e);
+			if (issue) refused = issue;
+			else toast.err(addErrorText(e, canAdd));
+		},
 		onSettled: () => {
 			pendingKey = null;
 		},
@@ -165,11 +202,13 @@
 	let selectedLocalId = $derived(selected ? localId(selected) : undefined);
 	let selectedHeld = $derived(selected ? isHeld(selected) : false);
 	let selectedPending = $derived(selected ? pendingKey === selected.key : false);
-	let selectedRequested = $derived(selected ? requested.has(selected.key) : false);
+	let selectedRequested = $derived(selected ? requested.has(requestKey(selected, album)) : false);
 
 	let addLabel = $derived(
 		!canAdd
-			? i18n.action_request()
+			? album
+				? i18n.action_request_album()
+				: i18n.action_request()
 			: isArtist
 				? i18n.action_add_artist()
 				: selected?.series
@@ -290,6 +329,8 @@
 							</li>
 						{/each}
 					</ul>
+				{:else if keyIssue}
+					<ProviderKeyNotice reason={keyIssue} onNavigate={onClose} />
 				{:else if searchQuery.isError}
 					<p
 						role="alert"
@@ -384,6 +425,9 @@
 				loading={detailQuery.isLoading}
 				error={detailQuery.isError ? errorText(detailQuery.error, i18n.torrent_details_failed()) : undefined}
 				onBack={() => (showPanelOnNarrow = false)}
+				albumPick={!canAdd && isArtist
+					? { selected: album?.mbid ?? null, onToggle: (r) => (album = album?.mbid === r.mbid ? null : r) }
+					: undefined}
 			/>
 		</div>
 	</div>
@@ -414,7 +458,7 @@
 	</div>
 
 	{#if selected}
-		{#if selectedHeld && selectedLocalId !== undefined}
+		{#if selectedHeld && !album && selectedLocalId !== undefined}
 			<a
 				href={libraryHref(selected, selectedLocalId)}
 				onclick={onClose}
@@ -423,7 +467,7 @@
 				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
 			</a>
-		{:else if selectedHeld}
+		{:else if selectedHeld && !album}
 			<span class="inline-flex h-9 items-center rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted">
 				{i18n.status_in_library()}
 			</span>

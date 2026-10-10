@@ -1,4 +1,4 @@
-import type { MusicTier } from "./music-books";
+import type { MusicTier, ReleaseType } from "./music-books";
 
 export type MovieStatus =
 	| "wanted"
@@ -462,12 +462,20 @@ export type RequestUser = {
 
 export type MediaRequest = {
 	id: number;
-	// artist / book / book_series are the music and book requests. An artist is
-	// keyed by its MusicBrainz id (media_mbid, media_id is 0); a book and a
-	// series by Hardcover ids, which are separate spaces.
-	media_type: "movie" | "tvshow" | "artist" | "book" | "book_series";
+	// artist / album / book / book_series are the music and book requests. An
+	// artist is keyed by its MusicBrainz id and an album by its release group's
+	// (media_mbid, media_id is 0); a book and a series by Hardcover ids, which are
+	// separate spaces. An album request also names its artist, since approving
+	// one adds the artist if the library lacks it.
+	media_type: "movie" | "tvshow" | "artist" | "album" | "book" | "book_series";
 	media_id: number;
 	media_mbid?: string;
+	artist_mbid?: string;
+	artist_name?: string;
+	// Album requests only: the requester's own wording, exactly as typed.
+	// Untrusted and display-only, a caption beside the verified artist name when
+	// the two differ.
+	requested_as?: string;
 	title: string;
 	status: RequestStatus;
 	reason?: string;
@@ -536,9 +544,39 @@ export type UpcomingEpisode = {
 	monitored?: boolean;
 };
 
+// A release on a monitored artist's discography, dated to the day. Album and
+// book rows carry the item's real state: a release day that has passed can be
+// grabbed, paused or skipped like any episode.
+export type UpcomingStatus = "wanted" | "downloading" | "available" | "paused" | "skipped";
+
+export type UpcomingAlbum = {
+	id: number;
+	title: string;
+	type: ReleaseType;
+	artist_id: number;
+	artist_name: string;
+	release_date: string;
+	status: UpcomingStatus;
+};
+
+// A monitored book, or the next volume of a monitored series, with its
+// publication date from Hardcover.
+export type UpcomingBook = {
+	id: number;
+	title: string;
+	author: string;
+	release_date: string;
+	status: UpcomingStatus;
+	series_id?: number;
+	series_title?: string;
+	position?: number;
+};
+
 export type UpcomingList = {
 	movies: UpcomingMovie[];
 	episodes: UpcomingEpisode[];
+	albums?: UpcomingAlbum[];
+	books?: UpcomingBook[];
 };
 
 export type ActivityType =
@@ -807,8 +845,10 @@ export type MetadataConfig = {
 	tmdb_region: string;
 	tmdb_api_key_set: boolean;
 	tvdb_api_key_set: boolean;
+	hardcover_api_key_set: boolean;
 	tmdb_api_key_file_managed?: boolean;
 	tvdb_api_key_file_managed?: boolean;
+	hardcover_api_key_file_managed?: boolean;
 	restart_required: boolean;
 };
 
@@ -857,6 +897,7 @@ export type MetadataConfigPatch = {
 	tmdb_region?: string;
 	tmdb_api_key?: string;
 	tvdb_api_key?: string;
+	hardcover_api_key?: string;
 };
 
 export type ProbeConfig = {
@@ -1343,7 +1384,7 @@ export type ImportStatus =
 export type ImportMode = "in_place" | "rename";
 export type ImportTransferMode = "hardlink" | "copy" | "move";
 
-export type ImportScanKind = "movie" | "series";
+export type ImportScanKind = "movie" | "series" | "music" | "book";
 
 export type ImportScan = {
 	id: number;
@@ -1356,7 +1397,13 @@ export type ImportScan = {
 	processed_count: number;
 	commit_success_count: number;
 	commit_failed_count: number;
+	// The provider's own words, shown as given. `failure_code` is set only on a
+	// failed scan with a cause the page can act on, and absent for every other
+	// failure: `hardcover_key_rejected` when Hardcover refused the key partway
+	// through a book scan, `hardcover_not_configured` when the key went away
+	// mid-run.
 	failure_reason?: string | null;
+	failure_code?: string | null;
 	scanned_at?: string | null;
 	committed_at?: string | null;
 	created_at: string;
@@ -1447,6 +1494,103 @@ export type ImportScanShow = {
 export type ImportBulkDecisionResult = {
 	updated: number;
 };
+
+// Music scans review one row per album folder, matched against a MusicBrainz
+// release group. A confirmed album whose artist the library lacks adds the
+// artist with it (`artist_id` absent); an existing one attaches its files to an
+// album the library already tracks.
+export type ImportScanAlbumCandidate = {
+	release_group_mbid: string;
+	artist_mbid?: string;
+	title: string;
+	artist?: string;
+	year?: number;
+	// The release group's primary type. A group has no track count of its own:
+	// its releases differ.
+	type?: ReleaseType;
+};
+
+export type ImportScanAlbum = {
+	id: number;
+	folder_path: string;
+	tagged_artist?: string;
+	tagged_album?: string;
+	tagged_year?: number;
+	// "FLAC 24/96", "MP3 320".
+	format?: string;
+	// Audio files in the folder, not MusicBrainz's track count.
+	file_count: number;
+	size: number;
+	classification: ImportFileClassification;
+	release_group_mbid?: string;
+	artist_mbid?: string;
+	candidates?: ImportScanAlbumCandidate[];
+	artist_id?: number | null;
+	existing_album_id?: number | null;
+	decision: ImportFileDecision;
+	decision_release_group_mbid?: string;
+	outcome: ImportShowOutcome;
+	outcome_message?: string;
+	created_album_id?: number | null;
+	created_at: string;
+	updated_at: string;
+};
+
+// Book scans review one row per book: an ebook, or an audiobook — one file or a
+// folder of parts. Matched against Hardcover. Its search hits carry no series
+// position, so a candidate is named by its author alone.
+export type ImportScanBookCandidate = {
+	book_hardcover_id: number;
+	title: string;
+	author?: string;
+	year?: number;
+};
+
+export type ImportScanBook = {
+	id: number;
+	file_paths: string[];
+	// An audiobook's folder, an ebook's best-format file.
+	source_path: string;
+	slot: "ebook" | "audiobook";
+	// EPUB, PDF, CBZ, M4B, MP3.
+	format: string;
+	file_count: number;
+	size: number;
+	parsed_title?: string;
+	parsed_author?: string;
+	parsed_isbn?: string;
+	parsed_year?: number;
+	classification: ImportFileClassification;
+	book_hardcover_id?: number;
+	candidates?: ImportScanBookCandidate[];
+	existing_book_id?: number | null;
+	decision: ImportFileDecision;
+	decision_book_hardcover_id?: number;
+	outcome: ImportShowOutcome;
+	outcome_message?: string;
+	created_book_id?: number | null;
+	created_at: string;
+	updated_at: string;
+};
+
+// Subsonic and OPDS access (/account/subsonic-password, /account/opds-token).
+// Both sign in with the account's email and a secret; neither puts the secret in
+// a URL, where logs and referrers would keep it. The secret is only in the POST
+// response.
+export type AppAccessKind = "subsonic" | "opds";
+export type AppAccess = {
+	enabled: boolean;
+	// The name a client signs in with: the account's email.
+	username: string;
+	created_at?: string;
+	// Written in batches, so it can trail a client's first call by up to five
+	// minutes.
+	last_used_at?: string;
+	// The client's product name on its last call, e.g. "Symfonium".
+	last_client?: string;
+};
+// POST: the Subsonic password or the OPDS token, shown once.
+export type AppAccessCreated = AppAccess & { secret: string };
 
 export type ImportStartRequest = {
 	source_path: string;

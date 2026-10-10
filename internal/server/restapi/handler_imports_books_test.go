@@ -38,6 +38,8 @@ var _ = Describe("Handler: Import scan books",
 					ParsedTitle:     "Elantris",
 					ParsedAuthor:    "Brandon Sanderson",
 					ParsedIsbn:      "9780765311771",
+					ParsedYear:      2005,
+					Size:            4096,
 					Classification:  entimportscanbook.ClassificationAmbiguous,
 					BookHardcoverID: 1,
 					Candidates: []schema.ScannedBookCandidate{
@@ -68,6 +70,11 @@ var _ = Describe("Handler: Import scan books",
 				Expect(body.Items).To(HaveLen(1))
 				row := body.Items[0]
 				Expect(row.FilePaths).To(HaveLen(2))
+				Expect(row.FileCount).To(Equal(uint16(2)))
+				Expect(row.Format).To(Equal("EPUB"))
+				Expect(row.SourcePath).To(Equal("/books/a.epub"))
+				Expect(row.Size).To(Equal(int64(4096)))
+				Expect(row.ParsedYear).To(HaveValue(Equal(uint16(2005))))
 				Expect(*row.ParsedTitle).To(Equal("Elantris"))
 				Expect(*row.BookHardcoverId).To(Equal(uint32(1)))
 				Expect(*row.Candidates).To(HaveLen(2))

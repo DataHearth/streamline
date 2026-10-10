@@ -20,6 +20,7 @@ type ScannedAlbumCandidate struct {
 	Title            string `json:"title"`
 	Artist           string `json:"artist"`
 	Year             uint16 `json:"year,omitempty"`
+	Type             string `json:"type,omitempty"`
 }
 
 // ImportScanAlbum is one detected album folder in a music import scan.
@@ -44,6 +45,9 @@ func (ImportScanAlbum) Fields() []ent.Field {
 		field.JSON("candidates", []ScannedAlbumCandidate{}).Optional(),
 		field.Uint32("existing_album_id").Optional().Nillable(),
 		field.Uint16("file_count").Default(0),
+		field.Uint16("tagged_year").Optional(),
+		field.String("format").Optional(),
+		field.Int64("size").Default(0),
 
 		field.Enum("decision").
 			Values("pending", "accept", "skip").
@@ -51,7 +55,7 @@ func (ImportScanAlbum) Fields() []ent.Field {
 		field.String("decision_release_group_mbid").Optional(),
 
 		field.Enum("outcome").
-			Values("pending", "created", "failed").
+			Values("pending", "created", "attached", "failed").
 			Default("pending"),
 		field.String("outcome_message").Optional(),
 		field.Uint32("created_album_id").Optional().Nillable(),

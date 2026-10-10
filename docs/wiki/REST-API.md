@@ -177,6 +177,7 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
 | `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added`, `library_id`, `genre`, `area`, `since`. `429` (`code: rate_limited`, `Retry-After`) when MusicBrainz is limiting | Authenticated |
+| `GET` | `/music/search/releases?query=&limit=` | Search MusicBrainz release groups by title or artist (2 to 200 characters, `limit` 1 to 20, `400` outside); each hit carries `mbid`, `title`, `artist`, `artist_mbid`, `year`, `type` and `already_added`. Memoised for 10 minutes. `429` (`code: rate_limited`) when MusicBrainz limits | Authenticated |
 | `GET` | `/music/search/{mbid}` | The hit fields and the detail of one MusicBrainz artist: `overview` (`?lang=en\|fr`, English when that language has no article), `genres`, current `members`, `releases` | Authenticated |
 | `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks | Authenticated |
 | `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facet's filter applied, each with its own `*_total` row; with no parameters, the whole library | Authenticated |
@@ -327,7 +328,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/requests` | List / create requests. `?media_type=` takes a comma list (`book,book_series`; an unknown member is a `400`). A request is a `movie`, `tvshow`, `artist` (by `media_mbid`), `book` or `book_series` (by Hardcover `media_id`) | Any (scoped for `request_only`) |
+| `GET` `POST` | `/requests` | List / create requests. `?media_type=` takes a comma list (`book,book_series`; an unknown member is a `400`). A request is a `movie`, `tvshow`, `artist` (by `media_mbid`), `album` (by the release-group `media_mbid`, with `artist_mbid` and `artist_name` as display hints; the response carries the requester's wording as `requested_as` and the verified artist after approval, and approving answers `422` `code: album_not_found` when the release group is not on its artist), `book` or `book_series` (by Hardcover `media_id`) | Any (scoped for `request_only`) |
 | `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata (an artist, book or series request answers the same detail as its lookup; `429` / `503` mean the provider is out of budget or unconfigured) | Any (scoped for `request_only`) |
 | `POST` | `/requests/{id}/approve` | Approve a request with the reviewer's `quality_profile` (empty means the medium's default; a name outside the medium's profiles is a `422`; `429` with `Retry-After` when a book or series request hits Hardcover's limit, `503` without a Hardcover key; the request stays pending). An artist is added monitored `all`, a book `both`, a series `all`; the request turns `available` on the first imported album, or the first imported slot or volume | admin, member |
 | `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin, member |
@@ -384,7 +385,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
 
-An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` scans album folders against MusicBrainz and rejects `mode=rename` with `422`. `book` scans ebook and audiobook items against Hardcover; starting or committing one without a Hardcover API key answers `503`.
+An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and `book` adopt in place only and reject `mode=rename` with `422`. `music` scans album folders against MusicBrainz; each row carries `tagged_year`, `format` (`FLAC 24/96`, `MP3 320`; the extension when ffprobe is off), `size`, `file_count` and a live `artist_id` (absent when the library lacks the artist, which a commit then adds), and each candidate its `type`. `book` scans ebook and audiobook items against Hardcover; each row carries `parsed_year`, `format`, `size`, `file_count` and `source_path`; starting or committing one without a Hardcover API key answers `503`. A row whose files joined an album or book the library already held ends `attached` rather than `created`. A scan that fails because Hardcover refused the key mid-run carries `failure_code: hardcover_key_rejected` (`hardcover_not_configured` if the key vanished before it ran); every other failure has the free-text `failure_reason` alone.
 
 ### Auth and users
 

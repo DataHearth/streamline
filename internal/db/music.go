@@ -313,6 +313,27 @@ func (db *DB) ArtistIDsByMBID(
 	return out, nil
 }
 
+func (db *DB) AlbumIDsByMBID(
+	ctx context.Context,
+	mbids []string,
+) (map[string]uint32, error) {
+	out := make(map[string]uint32, len(mbids))
+	if len(mbids) == 0 {
+		return out, nil
+	}
+	rows, err := db.client.Album.Query().
+		Where(album.MbidIn(mbids...)).
+		Select(album.FieldID, album.FieldMbid).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("album ids by mbid: %w", err)
+	}
+	for _, r := range rows {
+		out[r.Mbid] = r.ID
+	}
+	return out, nil
+}
+
 // ListArtistsParams filters, sorts and pages the artist list. Status is
 // "wanted", "downloading", "available" or ""; Monitored is "monitored",
 // "unmonitored" or ""; Sort is "recent" or "name".

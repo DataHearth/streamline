@@ -358,7 +358,7 @@ var _ = Describe(
 			})
 
 			commit()
-			Expect(reload(row).Outcome).To(Equal(entimportscanbook.OutcomeCreated))
+			Expect(reload(row).Outcome).To(Equal(entimportscanbook.OutcomeAttached))
 			Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(2))
 		})
 

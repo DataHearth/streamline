@@ -35,6 +35,7 @@ func (ImportScan) Fields() []ent.Field {
 		field.Uint32("commit_success_count").Default(0),
 		field.Uint32("commit_failed_count").Default(0),
 		field.String("failure_reason").Optional(),
+		field.String("failure_code").Optional(),
 		field.Time("scanned_at").Optional().Nillable(),
 		field.Time("committed_at").Optional().Nillable(),
 	}

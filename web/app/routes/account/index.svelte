@@ -7,6 +7,7 @@
 	import SessionsCard from "@components/account/SessionsCard.svelte";
 	import JWTRotateCard from "@components/account/JWTRotateCard.svelte";
 	import LanguageCard from "@components/account/LanguageCard.svelte";
+	import AppAccessCard from "@components/account/AppAccessCard.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -39,6 +40,12 @@
 			i18n.account_section_devices(),
 			i18n.account_section_devices_sub(),
 			devicesSection,
+		)}
+
+		{@render section(
+			i18n.account_section_apps(),
+			i18n.account_section_apps_sub(),
+			appsSection,
 		)}
 
 		{#if isAdmin}
@@ -96,6 +103,13 @@
 	<div class="grid items-start gap-4">
 		<APIKeysCard />
 		<SessionsCard />
+	</div>
+{/snippet}
+
+{#snippet appsSection()}
+	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+		<AppAccessCard kind="subsonic" />
+		<AppAccessCard kind="opds" />
 	</div>
 {/snippet}
 

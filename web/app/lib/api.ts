@@ -7,12 +7,25 @@ export type ApiErrorBody = { message?: string; code?: string } | null;
 export class ApiError extends Error {
 	status: number;
 	body: ApiErrorBody;
-	constructor(status: number, message: string, body: ApiErrorBody) {
+	// Seconds to wait, from a 429's Retry-After. Absent when the header is.
+	retryAfter?: number;
+	constructor(status: number, message: string, body: ApiErrorBody, retryAfter?: number) {
 		super(message);
 		this.status = status;
 		this.body = body;
+		this.retryAfter = retryAfter;
 	}
 }
+
+// Retry-After is delta-seconds or an HTTP date; either becomes seconds from now.
+function retryAfterOf(res: Response): number | undefined {
+	const v = res.headers.get("Retry-After")?.trim();
+	if (!v) return undefined;
+	const s = /^\d+$/.test(v) ? Number(v) : Math.ceil((Date.parse(v) - Date.now()) / 1000);
+	return Number.isFinite(s) && s > 0 ? s : undefined;
+}
+const waitText = (s: number) =>
+	s < 60 ? i18n.err_rate_limited_seconds({ seconds: s }) : i18n.err_rate_limited_minutes({ minutes: Math.ceil(s / 60) });
 
 export type ApiOptions = {
 	method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -40,6 +53,10 @@ const BY_CODE: Record<string, () => string> = {
 	series_volume: i18n.err_series_volume,
 	bad_request: i18n.err_bad_request,
 	body_too_large: i18n.err_body_too_large,
+	// Hardcover, on any book call: search, lookup, add, refresh. Where there is
+	// room to say who fixes the key, the caller checks hardcoverIssue() first.
+	hardcover_key_rejected: i18n.books_lookup_key_rejected,
+	hardcover_not_configured: i18n.err_hardcover_not_configured,
 };
 
 function byStatus(status: number): string {
@@ -92,6 +109,9 @@ export function errorText(err: unknown, fallback?: string): string {
 		// the request body, which sent an operator hunting through releases for
 		// a reason this message had already named.
 		if (code === "grab_rejected" && err.message) return err.message;
+		// A 429 that says how long to wait: the sentence says it too (a login,
+		// a Hardcover add or approve).
+		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter);
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}
@@ -121,7 +141,7 @@ function errorFrom(res: Response, parsed: unknown, text: string): ApiError {
 		parsed && typeof parsed === "object" ? (parsed as ApiErrorBody) : null;
 	const message =
 		body?.message || (text ? text.trim().slice(0, 300) : "") || res.statusText;
-	return new ApiError(res.status, message, body);
+	return new ApiError(res.status, message, body, res.status === 429 ? retryAfterOf(res) : undefined);
 }
 
 export async function api<T = unknown>(

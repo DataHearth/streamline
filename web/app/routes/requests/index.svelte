@@ -16,8 +16,9 @@
 		Tv,
 		Music,
 		BookOpen,
+		TriangleAlert,
 	} from "@lucide/svelte";
-	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
 	import { SILENT } from "@lib/query";
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
@@ -28,7 +29,15 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
-	import { requestHit, type ArtistMeta, type BookMeta, type RequestMetadata } from "@lib/music-books-lookup";
+	import {
+		hardcoverCode,
+		hardcoverFix,
+		hardcoverTitle,
+		requestHit,
+		type ArtistMeta,
+		type BookMeta,
+		type RequestMetadata,
+	} from "@lib/music-books-lookup";
 	import RequestStatLine from "@components/requests/RequestStatLine.svelte";
 	import RequestFilterLine from "@components/requests/RequestFilterLine.svelte";
 	import RequestFilterSheet from "@components/requests/RequestFilterSheet.svelte";
@@ -40,6 +49,8 @@
 		KIND_CHIPS,
 		KIND_MEDIA,
 		isMusicBook,
+		albumBy,
+		requestedAs,
 		kindLabel,
 		activeFilterCount,
 		filterRequests,
@@ -155,7 +166,7 @@
 		enabled: isReviewer,
 	}));
 	function profilesFor(t: MediaRequest["media_type"] | undefined): QualityProfile[] {
-		if (t === "artist") return musicProfilesQuery.data ?? [];
+		if (t === "artist" || t === "album") return musicProfilesQuery.data ?? [];
 		if (t === "book" || t === "book_series") return bookProfilesQuery.data ?? [];
 		return profilesQuery.data ?? [];
 	}
@@ -182,6 +193,9 @@
 	let expandedMbHit = $derived(
 		expandedReq && expandedIsMb ? requestHit(expandedReq, expandedMbMeta) : undefined,
 	);
+	// The artist approval will act on, from the metadata and not from what the
+	// requester typed.
+	let verifiedArtist = $derived(expandedMbHit?.artist?.name ?? expandedReq?.artist_name ?? "");
 	let expandedMbDetail = $derived(
 		expandedMbHit && (expandedMbHit.artist || expandedMbHit.book) ? expandedMbMeta : undefined,
 	);
@@ -201,7 +215,7 @@
 	// and reopen only move the request's own status.
 	function invalidateLibrary(mediaType: MediaRequest["media_type"]) {
 		if (isMusicBook(mediaType)) {
-			qc.invalidateQueries({ queryKey: [mediaType === "artist" ? "music" : "books"] });
+			qc.invalidateQueries({ queryKey: [mediaType === "artist" || mediaType === "album" ? "music" : "books"] });
 			return;
 		}
 		const root = mediaType === "tvshow" ? "series" : "movies";
@@ -209,10 +223,21 @@
 		qc.invalidateQueries({ queryKey: [root, "counts"] });
 	}
 
+	// Approval failures the page answers in place rather than in a toast, by
+	// request id, none of which a retry fixes: `album_not_found` when
+	// MusicBrainz no longer lists the album asked for, and Hardcover's two key
+	// codes on a book or a series, which approving adds.
+	let approveErrors = $state<Record<number, string>>({});
+	const forgetError = (id: number) => {
+		if (!(id in approveErrors)) return;
+		const { [id]: _gone, ...rest } = approveErrors;
+		approveErrors = rest;
+	};
+
 	const approve = createMutation<
 		unknown,
 		Error,
-		{ r: MediaRequest; profile: string }
+		{ r: MediaRequest; profile: string; fromRow?: boolean }
 	>(() => ({
 		mutationFn: ({ r, profile }) =>
 			api(`/requests/${r.id}/approve`, {
@@ -220,13 +245,28 @@
 				body: { quality_profile: profile },
 			}),
 		onSuccess: (_d, { r }) => {
+			forgetError(r.id);
 			invalidate();
 			invalidateLibrary(r.media_type);
 			toast.ok(i18n.requests_approved_toast({ title: r.title }));
 			expandedId = null;
 			sheetId = null;
 		},
-		onError: (e) => toast.err(e.message ?? i18n.requests_approve_failed()),
+		onError: (e, { r, fromRow }) => {
+			const code = (e as { body?: { code?: string } | null }).body?.code;
+			if (code && (code === "album_not_found" || hardcoverCode(code))) {
+				approveErrors = { ...approveErrors, [r.id]: code };
+				// A tablet row's inline Approve has nowhere to say it: open the
+				// request's sheet, where the alert sits over the buttons. Asked of
+				// the caller, not of expandedId: a row expanded at lg stays expanded
+				// when the window narrows below it, with its panel hidden.
+				if (fromRow && sheetId !== r.id) openSheet(r);
+				return;
+			}
+			// Anything else, Hardcover's 429 included, reads as it does on an add:
+			// the code's sentence, never the server's English message.
+			toast.err(errorText(e, i18n.requests_approve_failed()));
+		},
 	}));
 
 	const reopen = createMutation<unknown, Error, MediaRequest>(() => ({
@@ -236,7 +276,7 @@
 			toast.ok(i18n.requests_reopened_toast({ title: r.title }));
 			sheetId = null;
 		},
-		onError: (e) => toast.err(e.message ?? i18n.requests_reopen_failed()),
+		onError: (e) => toast.err(errorText(e, i18n.requests_reopen_failed())),
 	}));
 
 	let denyTarget = $state<MediaRequest | null>(null);
@@ -252,7 +292,7 @@
 				denyReason = "";
 				expandedId = null;
 			},
-			onError: (e) => toast.err(e.message ?? i18n.requests_deny_failed()),
+			onError: (e) => toast.err(errorText(e, i18n.requests_deny_failed())),
 		}),
 	);
 
@@ -384,7 +424,7 @@
 				busy={approve.isPending}
 				onOpen={openSheet}
 				onApprove={(req) =>
-					approve.mutate({ r: req, profile: req.quality_profile ?? "" })}
+					approve.mutate({ r: req, profile: req.quality_profile ?? "", fromRow: true })}
 				onReject={openDeny}
 			/>
 		{/if}
@@ -416,7 +456,7 @@
 							>
 								{#if r.media_type === "tvshow"}
 									<Tv size={16} aria-hidden="true" />
-								{:else if r.media_type === "artist"}
+								{:else if r.media_type === "artist" || r.media_type === "album"}
 									<Music size={16} aria-hidden="true" />
 								{:else if r.media_type === "book" || r.media_type === "book_series"}
 									<BookOpen size={16} aria-hidden="true" />
@@ -434,7 +474,7 @@
 									</span>
 								</div>
 								<div class="mt-0.5 truncate text-[12px] text-fg-subtle">
-									{requesterName(r)} · {formatRelative(r.created_at)}
+									{#if albumBy(r)}{albumBy(r)}{#if requestedAs(r)}<span class="text-fg-faint">{" ("}{requestedAs(r)}{")"}</span>{/if}{" · "}{/if}{requesterName(r)} · {formatRelative(r.created_at)}
 								</div>
 							</div>
 							<span
@@ -470,7 +510,15 @@
 											loading={detailQuery.isLoading}
 											showTitle={false}
 											compact
+											markedAlbum={r.media_type === "album" ? r.media_mbid : undefined}
 										/>
+										{#if r.media_type === "album" && verifiedArtist}
+											<p class="mt-3 text-[12px] text-fg-muted">
+												{expandedMbHit.held
+													? i18n.requests_album_note_held({ artist: verifiedArtist })
+													: i18n.requests_album_note_new({ artist: verifiedArtist })}
+											</p>
+										{/if}
 									{:else}
 										<LookupDetailPanel
 											kind={r.media_type === "tvshow" ? "series" : "movie"}
@@ -530,6 +578,30 @@
 
 								{#if isReviewer}
 									{#if r.status === "pending"}
+										{@const profileLocked = r.media_type === "album" && !!expandedMbHit?.held}
+										{@const keyIssue = hardcoverCode(approveErrors[r.id])}
+										{#if approveErrors[r.id] === "album_not_found" || keyIssue}
+											<div
+												role="alert"
+												class="mt-4 flex items-start gap-2.5 rounded-md border border-status-failed/30 bg-status-failed/10 px-3.5 py-3 text-status-failed"
+											>
+												<TriangleAlert size={15} class="mt-0.5 shrink-0" aria-hidden="true" />
+												<div class="min-w-0">
+													<p class="text-[13px] font-semibold">
+														{keyIssue ? hardcoverTitle(keyIssue) : i18n.requests_album_not_found()}
+													</p>
+													<p class="mt-0.5 text-[12px] leading-relaxed text-fg-muted">
+														{keyIssue
+															? hardcoverFix(keyIssue, auth.user?.role === "admin")
+															: i18n.requests_album_not_found_body({
+																	album: r.title,
+																	artist: verifiedArtist,
+																	requester: requesterName(r),
+																})}
+													</p>
+												</div>
+											</div>
+										{/if}
 										<div
 											class="mt-4 flex flex-wrap items-end justify-between gap-3"
 										>
@@ -543,6 +615,7 @@
 												<Select
 													id="qp-{r.id}"
 													value={selectedProfile}
+													disabled={profileLocked}
 													options={[
 														{ value: "", label: i18n.quality_server_default() },
 														...profilesFor(r.media_type).map((p) => ({
@@ -552,6 +625,11 @@
 													]}
 													onChange={(v) => (selectedProfile = v)}
 												/>
+												{#if profileLocked && verifiedArtist}
+													<p class="mt-1 text-[12px] text-fg-muted">
+														{i18n.requests_album_profile_held({ artist: verifiedArtist })}
+													</p>
+												{/if}
 											</div>
 											<div class="flex items-center gap-2">
 												<button
@@ -605,6 +683,7 @@
 	profiles={profilesFor(sheetRequest?.media_type)}
 	profile={selectedProfile}
 	onProfileChange={(v) => (selectedProfile = v)}
+	approveError={sheetRequest ? (approveErrors[sheetRequest.id] ?? null) : null}
 	busy={approve.isPending || reopen.isPending}
 	onClose={() => (sheetId = null)}
 	onApprove={(r, profile) => approve.mutate({ r, profile })}

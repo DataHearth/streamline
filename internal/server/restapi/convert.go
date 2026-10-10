@@ -525,6 +525,10 @@ func toAPIImportScan(s *ent.ImportScan) ImportScan {
 		fr := s.FailureReason
 		out.FailureReason = &fr
 	}
+	if s.FailureCode != "" {
+		fc := s.FailureCode
+		out.FailureCode = &fc
+	}
 	if s.ScannedAt != nil {
 		out.ScannedAt = s.ScannedAt
 	}

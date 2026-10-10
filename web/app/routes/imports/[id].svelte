@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { NOUN_FILE, NOUN_SHOW } from "@lib/nouns";
 	import {
 		createMutation,
 		createQuery,
@@ -26,13 +25,18 @@
 		commitSummary,
 		importModeLabel,
 		importStatusMeta,
+		IMPORT_KIND,
+		pendingRowsKey,
 	} from "@lib/imports";
 	import { toast } from "@lib/toast";
+	import { hardcoverCode } from "@lib/music-books-lookup";
 	import type {
 		ImportFileClassification,
 		ImportFileDecision,
 		ImportBulkDecisionResult,
 		ImportScan,
+		ImportScanAlbum,
+		ImportScanBook,
 		ImportScanFile,
 		ImportScanShow,
 		SeriesLookupResult,
@@ -51,9 +55,15 @@
 	import ImportDecisionSheet from "@components/library/ImportDecisionSheet.svelte";
 	import ImportCommitBar from "@components/library/ImportCommitBar.svelte";
 	import ImportMatchSheet from "@components/library/ImportMatchSheet.svelte";
+	import ImportEntryRow from "@components/library/ImportEntryRow.svelte";
 	import {
+		albumEntry,
+		bookEntry,
 		fileEntry,
+		pendingDecision,
 		showEntry,
+		unitText,
+		type MatchId,
 		type TouchEntry,
 	} from "@lib/imports-touch";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -93,6 +103,13 @@
 
 	const scan = $derived(scanQuery.data);
 	const isSeries = $derived(scan?.kind === "series");
+	// Music and book scans review album folders and books through one path —
+	// one row list, one unfiltered list for the counts, one pick — over the
+	// entry the touch list already normalises to.
+	const kind = $derived(scan?.kind ?? "movie");
+	const kindMeta = $derived(IMPORT_KIND[kind]);
+	const text = $derived(unitText(kind));
+	const isMB = $derived(kind === "music" || kind === "book");
 
 	// Toast once when commit finishes — observed by watching the live→terminal
 	// transition rather than threading a callback through the mutation.
@@ -197,6 +214,38 @@
 			scan?.status === "awaiting_review",
 	}));
 
+	type MBRow = ImportScanAlbum | ImportScanBook;
+	const mbQuery = createQuery<Paginated<MBRow>>(() => ({
+		queryKey: ["import", importId, kindMeta.rows, { q: debouncedQ, classification }],
+		queryFn: () => {
+			const sp = new URLSearchParams();
+			if (debouncedQ) sp.set("q", debouncedQ);
+			if (classification) sp.set("classification", classification);
+			return apiAllPages<MBRow>(`/library/imports/${importId}/${kindMeta.rows}?${sp}`);
+		},
+		enabled:
+			Number.isFinite(importId) && importId > 0 && isMB && scan != null &&
+			scan.status !== "running" && scan.status !== "committing",
+	}));
+	const mbAllQuery = createQuery<Paginated<MBRow>>(() => ({
+		queryKey: ["import", importId, pendingRowsKey(kindMeta.rows)],
+		queryFn: () => apiAllPages<MBRow>(`/library/imports/${importId}/${kindMeta.rows}`),
+		enabled: Number.isFinite(importId) && importId > 0 && isMB && scan?.status === "awaiting_review",
+	}));
+	const toEntry = (row: MBRow) =>
+		kind === "music" ? albumEntry(row as ImportScanAlbum) : bookEntry(row as ImportScanBook);
+	let mbEntries = $derived((mbQuery.data?.items ?? []).map(toEntry));
+	let mbTotal = $derived(mbQuery.data?.total ?? 0);
+	let mbAll = $derived((mbAllQuery.data?.items ?? []).map(toEntry));
+	let mbPending = $derived(mbAll.filter(pendingDecision));
+	let mbCommitable = $derived(
+		mbAll.filter(
+			(e) =>
+				e.decision !== "skip" &&
+				(e.decision === "accept" || e.classification === "confirmed" || e.classification === "existing"),
+		).length,
+	);
+
 	let pendingShows = $derived(
 		(pendingShowsQuery.data?.items ?? []).filter(
 			(sh) =>
@@ -245,9 +294,11 @@
 	);
 
 	// Kind-aware values fed to the shared DecisionStrip.
-	let stripPendingCount = $derived(isSeries ? pendingShowCount : pendingCount);
+	let stripPendingCount = $derived(
+		isMB ? mbPending.length : isSeries ? pendingShowCount : pendingCount,
+	);
 	let stripCommitableCount = $derived(
-		isSeries ? commitableShowCount : commitableCount,
+		isMB ? mbCommitable : isSeries ? commitableShowCount : commitableCount,
 	);
 
 	const cancel = createMutation<null, Error, void>(() => ({
@@ -258,7 +309,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok(i18n.imports_scan_cancelled());
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const commit = createMutation<ImportScan, Error, void>(() => ({
@@ -271,7 +322,7 @@
 			qc.invalidateQueries({ queryKey: ["imports"] });
 			toast.ok(i18n.imports_commit_started());
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	const discard = createMutation<null, Error, void>(() => ({
@@ -282,7 +333,7 @@
 			toast.ok(i18n.imports_scan_discarded());
 			navigate("/imports");
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// "Skip all unmatched" goes through the bulk endpoint by explicit ids. The
@@ -307,7 +358,7 @@
 					: i18n.imports_skipped_file_other({ count: updated }),
 			);
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	// Series edition of the bulk skip. The same endpoint dispatches on the
@@ -333,8 +384,43 @@
 						: i18n.imports_skipped_show_other({ count: updated }),
 				);
 			},
-			onError: (err) => toast.err(err.message),
+			onError: (err) => toast.err(errorText(err)),
 		}),
+	);
+
+	// Album and book editions of the bulk skip and the pick. The PATCH names the
+	// match in the provider's own id: a MusicBrainz release group, a Hardcover book.
+	const skipAllMB = createMutation<ImportBulkDecisionResult, Error, void>(() => ({
+		mutationFn: () =>
+			api<ImportBulkDecisionResult>(`/library/imports/${importId}/decisions`, {
+				method: "POST",
+				body: { decision: "skip", ids: mbPending.map((e) => e.id) },
+			}),
+		onSuccess: ({ updated }) => {
+			invalidateRows();
+			toast.ok(text.skipped(updated));
+		},
+		onError: (err) => toast.err(errorText(err)),
+	}));
+	const pickMB = createMutation<unknown, Error, { rowId: number; matchId: MatchId }>(() => ({
+		mutationFn: ({ rowId, matchId }) =>
+			api(`/library/imports/${importId}/${kindMeta.rows}/${rowId}`, {
+				method: "PATCH",
+				body:
+					kind === "music"
+						? { decision: "accept", release_group_mbid: matchId }
+						: { decision: "accept", book_hardcover_id: matchId },
+			}),
+		onSuccess: () => {
+			invalidateRows();
+			toast.ok(i18n.imports_match_selected());
+		},
+		onError: (err) => toast.err(errorText(err)),
+	}));
+	// The row the provider search is open for, by id for the same reason as the sheet.
+	let mbPickerId = $state<number | null>(null);
+	let mbPickerEntry = $derived(
+		mbPickerId == null ? null : (mbEntries.find((e) => e.id === mbPickerId) ?? null),
 	);
 
 	// Match-picker: opening the AddMovieModal in "pick" mode for one file.
@@ -364,7 +450,7 @@
 			qc.invalidateQueries({ queryKey: ["import", importId, "pending"] });
 			toast.ok(i18n.imports_match_selected());
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	function onPickMatch(result: TMDBMovieResult) {
@@ -399,7 +485,7 @@
 			});
 			toast.ok(i18n.imports_match_selected());
 		},
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
 	function onPickShowMatch(result: SeriesLookupResult) {
@@ -456,14 +542,15 @@
 	// movie files and series folders render through the same list. Desktop keeps
 	// its two tables and its two row components.
 	let touchEntries = $derived<TouchEntry[]>(
-		isSeries ? showItems.map(showEntry) : sortedItems.map(fileEntry),
+		isMB ? mbEntries : isSeries ? showItems.map(showEntry) : sortedItems.map(fileEntry),
 	);
 	let touchPending = $derived(
-		isSeries ? showsQuery.isPending : filesQuery.isPending,
+		isMB ? mbQuery.isPending : isSeries ? showsQuery.isPending : filesQuery.isPending,
 	);
-	let touchError = $derived(
-		isSeries ? showsQuery.error?.message : filesQuery.error?.message,
-	);
+	let touchError = $derived.by(() => {
+		const e = isMB ? mbQuery.error : isSeries ? showsQuery.error : filesQuery.error;
+		return e ? errorText(e) : undefined;
+	});
 
 	// The sheet tracks an id, not the entry: a refetch replaces the objects, and
 	// holding one would leave the sheet showing a stale decision.
@@ -476,10 +563,10 @@
 
 	function invalidateRows() {
 		qc.invalidateQueries({
-			queryKey: ["import", importId, isSeries ? "shows" : "files"],
+			queryKey: ["import", importId, kindMeta.rows],
 		});
 		qc.invalidateQueries({
-			queryKey: ["import", importId, isSeries ? "pending-shows" : "pending"],
+			queryKey: ["import", importId, pendingRowsKey(kindMeta.rows)],
 		});
 	}
 
@@ -492,22 +579,27 @@
 	>(() => ({
 		mutationFn: ({ id, decision }) =>
 			api(
-				`/library/imports/${importId}/${isSeries ? "shows" : "files"}/${id}`,
+				`/library/imports/${importId}/${kindMeta.rows}/${id}`,
 				{ method: "PATCH", body: { decision } },
 			),
 		onSuccess: invalidateRows,
-		onError: (err) => toast.err(err.message),
+		onError: (err) => toast.err(errorText(err)),
 	}));
 
-	function onSheetPick(entry: TouchEntry, candidateId: number) {
-		if (isSeries)
-			pickShowMatch.mutate({ showId: entry.id, tvdbId: candidateId });
-		else pickMatch.mutate({ fileId: entry.id, tmdbId: candidateId });
+	function onSheetPick(entry: TouchEntry, candidateId: MatchId) {
+		if (isMB) pickMB.mutate({ rowId: entry.id, matchId: candidateId });
+		else if (isSeries) pickShowMatch.mutate({ showId: entry.id, tvdbId: Number(candidateId) });
+		else pickMatch.mutate({ fileId: entry.id, tmdbId: Number(candidateId) });
 	}
 
 	// Hands off to the lookup surface the app already has, seeded with the parsed
 	// title. The sheet closes first so the picker owns the screen.
 	function onSheetSearch(entry: TouchEntry) {
+		if (isMB) {
+			sheetId = null;
+			mbPickerId = entry.id;
+			return;
+		}
 		const rawShow = showItems.find((s) => s.id === entry.id);
 		const rawFile = items.find((f) => f.id === entry.id);
 		sheetId = null;
@@ -547,9 +639,9 @@
 		pickerShow = null;
 	}
 
-	function onSheetMatch(id: number) {
-		if (pickerShow) pickShowMatch.mutate({ showId: pickerShow.id, tvdbId: id });
-		else if (pickerFile) pickMatch.mutate({ fileId: pickerFile.id, tmdbId: id });
+	function onSheetMatch(id: MatchId) {
+		if (pickerShow) pickShowMatch.mutate({ showId: pickerShow.id, tvdbId: Number(id) });
+		else if (pickerFile) pickMatch.mutate({ fileId: pickerFile.id, tmdbId: Number(id) });
 		closePicker();
 	}
 </script>
@@ -591,6 +683,8 @@
 					>
 						{importModeLabel(scan.mode, scan.import_mode)}
 					</span>
+					<span aria-hidden="true" class="text-fg-faint">·</span>
+					<span>{kindMeta.label()}</span>
 					<span aria-hidden="true" class="text-fg-faint">·</span>
 					<span title={formatDateTime(scan.created_at)}>
 						{formatRelative(scan.created_at)}
@@ -655,10 +749,15 @@
 		</header>
 
 		<div class="mt-5">
-			<ImportSteps status={scan.status} series={isSeries} />
+			<ImportSteps status={scan.status} {kind} />
 		</div>
 
 		{#if scan.status === "failed"}
+			{@const keyIssue = hardcoverCode(scan.failure_code)}
+			<!-- A book scan that stopped on the Hardcover key says so: a key
+			     Hardcover refused partway through, or no key left at all. Then the
+			     provider's own words and the one place that fixes it. Imports are
+			     admin-only, so the link is always theirs to follow. -->
 			<div
 				class="mt-5 flex items-start gap-2 rounded-lg border border-status-failed/30 bg-status-failed/10 px-4 py-3 text-sm text-status-failed"
 				role="alert"
@@ -668,12 +767,35 @@
 					class="mt-0.5 shrink-0"
 					aria-hidden="true"
 				/>
-				<div class="min-w-0">
-					<p class="font-semibold">{i18n.imports_scan_failed()}</p>
+				<div class="min-w-0 flex-1">
+					<p class="font-semibold">
+						{keyIssue === "rejected"
+							? i18n.imports_failed_hardcover()
+							: keyIssue === "unset"
+								? i18n.imports_failed_hardcover_unset()
+								: i18n.imports_scan_failed()}
+					</p>
+					{#if keyIssue}
+						<p class="mt-0.5 text-xs text-fg-muted">
+							{(keyIssue === "rejected" ? i18n.imports_failed_hardcover_body : i18n.imports_failed_hardcover_unset_body)({
+								done: scan.processed_count,
+								total: scan.total_count,
+							})}
+						</p>
+					{/if}
 					{#if scan.failure_reason}
-						<p class="mt-0.5 break-words text-xs">
+						<p class={cn("break-words text-xs", keyIssue ? "mt-2 font-mono" : "mt-0.5")}>
 							{scan.failure_reason}
 						</p>
+					{/if}
+					{#if keyIssue}
+						<a
+							href="/settings/metadata#hardcover"
+							onclick={() => sessionStorage.setItem("streamline:focus-field", "hardcover")}
+							class="mt-3 inline-flex min-h-11 items-center rounded-md border border-status-failed/40 px-3 text-sm font-medium text-fg transition hover:bg-status-failed/10 lg:h-8 lg:min-h-0"
+						>
+							{keyIssue === "rejected" ? i18n.books_lookup_check_key() : i18n.books_lookup_add_key()}
+						</a>
 					{/if}
 				</div>
 			</div>
@@ -684,12 +806,12 @@
 				<DecisionStrip
 					pendingCount={stripPendingCount}
 					commitableCount={stripCommitableCount}
-					noun={isSeries ? NOUN_SHOW : NOUN_FILE}
+					noun={kindMeta.noun}
 					commitNote={commitNote(scan.mode, scan.import_mode)}
-					skipBusy={isSeries ? skipAllShows.isPending : skipAll.isPending}
+					skipBusy={isMB ? skipAllMB.isPending : isSeries ? skipAllShows.isPending : skipAll.isPending}
 					commitBusy={commit.isPending}
 					onSkipAll={() =>
-						isSeries ? skipAllShows.mutate() : skipAll.mutate()}
+						isMB ? skipAllMB.mutate() : isSeries ? skipAllShows.mutate() : skipAll.mutate()}
 					onCommit={() => commit.mutate()}
 				/>
 			</div>
@@ -700,6 +822,102 @@
 				class="mt-6 rounded-lg border border-border bg-bg-elevated p-6 md:p-8"
 			>
 				<ImportProgress {scan} />
+			</section>
+		{:else if isMB}
+			<section class="mt-6 hidden rounded-lg border border-border bg-bg-elevated lg:block">
+				<header
+					class="flex items-center justify-between border-b border-border px-5 py-3.5 md:px-6"
+				>
+					<h2 class="text-base font-semibold text-fg">{text.heading}</h2>
+					{#if mbTotal > 0}
+						<span class="font-mono text-xs tabular-nums text-fg-subtle">
+							{mbTotal}
+						</span>
+					{/if}
+				</header>
+
+				<div
+					class="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 md:px-5"
+				>
+					<label class="relative min-w-0 flex-1">
+						<span class="sr-only">{text.search}</span>
+						<input
+							type="search"
+							bind:value={q}
+							placeholder={text.search}
+							class="w-full rounded-md border border-border bg-bg-card py-1.5 pl-3 pr-9 text-sm text-fg placeholder:text-fg-faint focus:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent-ring"
+						/>
+						{#if q}
+							<button
+								type="button"
+								onclick={() => (q = "")}
+								aria-label={i18n.common_clear_search()}
+								class="absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-fg-faint transition hover:text-fg active:bg-surface"
+							>
+								<X size={14} aria-hidden="true" />
+							</button>
+						{/if}
+					</label>
+					<div class="w-52 shrink-0">
+						<Select
+							value={classification}
+							ariaLabel={i18n.imports_filter_by_classification()}
+							onChange={(v) => (classification = v)}
+							options={[
+								{ value: "", label: i18n.imports_all_classifications() },
+								{ value: "confirmed", label: i18n.imports_confirmed() },
+								{ value: "ambiguous", label: i18n.imports_ambiguous() },
+								{ value: "unmatched", label: i18n.imports_unmatched() },
+								{ value: "existing", label: i18n.imports_existing() },
+							]}
+						/>
+					</div>
+				</div>
+
+				<div class="overflow-x-auto">
+					{#if mbQuery.isPending}
+						<p class="px-5 py-8 text-sm text-fg-subtle">{text.loading}</p>
+					{:else if mbQuery.isError}
+						<p class="px-5 py-8 text-sm text-status-failed">
+							{i18n.common_failed_with({ error: errorText(mbQuery.error) })}
+						</p>
+					{:else if mbEntries.length === 0}
+						<p class="px-5 py-8 text-sm text-fg-muted">
+							{text.empty}
+						</p>
+					{:else}
+						<table class="w-full text-sm">
+							<thead
+								class="bg-surface text-left text-[10px] uppercase tracking-[0.14em] text-fg-faint"
+							>
+								<tr>
+									<th class="px-4 py-2.5 font-semibold">{text.column}</th>
+									<th class="px-4 py-2.5 font-semibold">
+										{i18n.imports_classification()}
+									</th>
+									<th class="px-4 py-2.5 font-semibold">
+										{i18n.common_outcome()}
+									</th>
+									<th class="px-4 py-2.5 text-right font-semibold">
+										{i18n.common_decision()}
+									</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-border">
+								{#each mbEntries as e (e.id)}
+									<ImportEntryRow
+										entry={e}
+										{kind}
+										reviewing={isReviewing}
+										busy={decideOne.isPending || pickMB.isPending}
+										onChooseMatch={(en) => (mbPickerId = en.id)}
+										onSkipToggle={onSheetSkip}
+									/>
+								{/each}
+							</tbody>
+						</table>
+					{/if}
+				</div>
 			</section>
 		{:else if isSeries}
 			<section class="mt-6 hidden rounded-lg border border-border bg-bg-elevated lg:block">
@@ -757,7 +975,7 @@
 						<p class="px-5 py-8 text-sm text-fg-subtle">{i18n.common_loading_shows()}</p>
 					{:else if showsQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							{i18n.common_failed_with({ error: showsQuery.error?.message ?? "" })}
+							{i18n.common_failed_with({ error: errorText(showsQuery.error) })}
 						</p>
 					{:else if showItems.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
@@ -856,7 +1074,7 @@
 						</p>
 					{:else if filesQuery.isError}
 						<p class="px-5 py-8 text-sm text-status-failed">
-							{i18n.common_failed_with({ error: filesQuery.error?.message ?? "" })}
+							{i18n.common_failed_with({ error: errorText(filesQuery.error) })}
 						</p>
 					{:else if items.length === 0}
 						<p class="px-5 py-8 text-sm text-fg-muted">
@@ -900,8 +1118,8 @@
 		{#if !isLive}
 			<ImportTouchList
 				entries={touchEntries}
-				total={isSeries ? showTotal : total}
-				series={isSeries}
+				total={isMB ? mbTotal : isSeries ? showTotal : total}
+				{kind}
 				query={q}
 				onQueryChange={(v) => (q = v)}
 				{classification}
@@ -914,12 +1132,12 @@
 				<ImportCommitBar
 					pendingCount={stripPendingCount}
 					commitableCount={stripCommitableCount}
-					series={isSeries}
+					{kind}
 					commitSummary={commitSummary(scan.mode, scan.import_mode)}
-					skipBusy={isSeries ? skipAllShows.isPending : skipAll.isPending}
+					skipBusy={isMB ? skipAllMB.isPending : isSeries ? skipAllShows.isPending : skipAll.isPending}
 					commitBusy={commit.isPending}
 					onSkipAll={() =>
-						isSeries ? skipAllShows.mutate() : skipAll.mutate()}
+						isMB ? skipAllMB.mutate() : isSeries ? skipAllShows.mutate() : skipAll.mutate()}
 					onCommit={() => commit.mutate()}
 				/>
 			{/if}
@@ -929,9 +1147,9 @@
 
 <ImportDecisionSheet
 	entry={sheetEntry}
-	series={isSeries}
+	{kind}
 	reviewing={isReviewing}
-	busy={decideOne.isPending || pickMatch.isPending || pickShowMatch.isPending}
+	busy={decideOne.isPending || pickMatch.isPending || pickShowMatch.isPending || pickMB.isPending}
 	onClose={() => (sheetId = null)}
 	onPick={onSheetPick}
 	onSearch={onSheetSearch}
@@ -970,10 +1188,26 @@
 	</th>
 {/snippet}
 
-{#if isTouch}
+{#if isMB}
+	<!-- No add modal has a pick mode for music or books, so one surface serves
+	     every width: a sheet on a phone, a centred panel from md. -->
+	<ImportMatchSheet
+		open={mbPickerEntry !== null}
+		{kind}
+		dialog
+		seed={mbPickerEntry?.seed ?? ""}
+		context={mbPickerEntry?.path ?? ""}
+		busy={pickMB.isPending}
+		onClose={() => (mbPickerId = null)}
+		onPick={(id) => {
+			if (mbPickerId != null) pickMB.mutate({ rowId: mbPickerId, matchId: id });
+			mbPickerId = null;
+		}}
+	/>
+{:else if isTouch}
 	<ImportMatchSheet
 		open={pickerOpen}
-		series={isSeries}
+		kind={isSeries ? "series" : "movie"}
 		seed={isSeries ? pickerShowSeed : pickerSeed}
 		context={pickerContext}
 		busy={pickMatch.isPending || pickShowMatch.isPending}

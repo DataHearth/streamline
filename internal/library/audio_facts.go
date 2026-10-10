@@ -1,7 +1,9 @@
 package library
 
 import (
+	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -42,4 +44,27 @@ func AudioFactsFromProbe(info *ffmpeg.AudioInfo) quality.AudioFacts {
 		}
 	}
 	return f
+}
+
+// MusicFormatLabel is the short quality string an import row prints: "FLAC
+// 24/96", "MP3 320", "MP3 V0". A file that was not measured is labelled by its
+// extension alone.
+func MusicFormatLabel(ext string, info *ffmpeg.AudioInfo) string {
+	if info == nil || info.Codec == "" {
+		return strings.ToUpper(strings.TrimPrefix(ext, "."))
+	}
+	f := AudioFactsFromProbe(info)
+	name := strings.ToUpper(f.Codec)
+	switch {
+	case f.Lossless && f.BitDepth > 0 && f.SampleRateHz > 0:
+		khz := strconv.FormatFloat(float64(f.SampleRateHz)/1000, 'f', -1, 64)
+		return fmt.Sprintf("%s %d/%s", name, f.BitDepth, khz)
+	case f.Lossless:
+		return name
+	case f.VBR != "":
+		return name + " " + f.VBR
+	case f.BitrateKbps > 0:
+		return fmt.Sprintf("%s %d", name, f.BitrateKbps)
+	}
+	return name
 }

@@ -52,6 +52,7 @@ type Server struct {
 	music           music.Manager
 	books           book.Manager
 	metadataBook    metadata.BookProvider
+	metadataMusic   metadata.MusicProvider
 	deepLinker      *mediaserver.DeepLinker
 	renamer         library.Renamer
 	seriesRenamer   library.Renamer
@@ -90,6 +91,7 @@ type Deps struct {
 	Music           music.Manager
 	Books           book.Manager
 	MetadataBook    metadata.BookProvider
+	MetadataMusic   metadata.MusicProvider
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
@@ -124,6 +126,7 @@ func New(d Deps) *Server {
 		music:           d.Music,
 		books:           d.Books,
 		metadataBook:    d.MetadataBook,
+		metadataMusic:   d.MetadataMusic,
 		deepLinker:      d.DeepLinker,
 		renamer:         d.Renamer,
 		seriesRenamer:   d.SeriesRenamer,

@@ -35,6 +35,8 @@ type CreateImportScanBookParams struct {
 	BookHardcoverID uint32
 	Candidates      []schema.ScannedBookCandidate
 	ExistingBookID  *uint32
+	ParsedYear      uint16
+	Size            int64
 }
 
 type UpdateScanBookOutcomeOpts struct {
@@ -59,7 +61,11 @@ func (db *DB) BulkCreateImportScanBooks(
 			SetParsedIsbn(p.ParsedISBN).
 			SetClassification(p.Classification).
 			SetBookHardcoverID(p.BookHardcoverID).
-			SetNillableExistingBookID(p.ExistingBookID)
+			SetNillableExistingBookID(p.ExistingBookID).
+			SetSize(p.Size)
+		if p.ParsedYear != 0 {
+			c.SetParsedYear(p.ParsedYear)
+		}
 		if len(p.Candidates) > 0 {
 			c.SetCandidates(p.Candidates)
 		}

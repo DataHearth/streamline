@@ -232,15 +232,29 @@ func (s *Service) addOrFindMovie(
 }
 
 func (s *Service) markScanFailed(ctx context.Context, scanID uint32, reason string) {
+	s.markScanFailedWithCode(ctx, scanID, reason, "")
+}
+
+// markScanFailedWithCode also records the machine-readable cause a client keys
+// a remedy on; an empty code leaves the free-text reason as the whole story.
+func (s *Service) markScanFailedWithCode(
+	ctx context.Context,
+	scanID uint32,
+	reason, code string,
+) {
 	now := time.Now()
+	opts := db.UpdateScanStatusOpts{
+		FailureReason: &reason,
+		CommittedAt:   &now,
+	}
+	if code != "" {
+		opts.FailureCode = &code
+	}
 	if err := s.store.UpdateImportScanStatus(
 		ctx,
 		scanID,
 		entimportscan.StatusFailed,
-		db.UpdateScanStatusOpts{
-			FailureReason: &reason,
-			CommittedAt:   &now,
-		},
+		opts,
 	); err != nil {
 		slog.ErrorContext(ctx, "bulk import commit: failed to mark scan failed",
 			"scan.id", scanID, "error", err)

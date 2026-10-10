@@ -6,7 +6,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { TriangleAlert, Check } from "@lucide/svelte";
+	import { TriangleAlert, Check, RotateCw } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
@@ -43,6 +43,7 @@
 			tmdb_region: cfg.data?.tmdb_region ?? "",
 			tmdb_api_key: "",
 			tvdb_api_key: "",
+			hardcover_api_key: "",
 		},
 		validators: { onChange: metadataConfigPatch },
 		onSubmit: ({ value }) => save.mutate(value),
@@ -56,6 +57,7 @@
 			tmdb_region: data.tmdb_region,
 			tmdb_api_key: "",
 			tvdb_api_key: "",
+			hardcover_api_key: "",
 		});
 	}
 
@@ -64,6 +66,20 @@
 	$effect(() => {
 		if (!cfg.data || form.state.isDirty) return;
 		seedFrom(cfg.data);
+	});
+
+	// Sent here to add the Hardcover key (the book lookups' notice links to it):
+	// once the form is on screen, put the cursor in that field, which also
+	// scrolls it into view.
+	let focused = false;
+	$effect(() => {
+		if (!cfg.data || focused) return;
+		const wanted =
+			location.hash === "#hardcover" || sessionStorage.getItem("streamline:focus-field") === "hardcover";
+		if (!wanted) return;
+		focused = true;
+		sessionStorage.removeItem("streamline:focus-field");
+		setTimeout(() => document.querySelector<HTMLInputElement>("#hardcover input")?.focus(), 0);
 	});
 
 	function keyPlaceholder(set: boolean, fileManaged: boolean) {
@@ -151,6 +167,32 @@
 								/>
 							{/snippet}
 						</form.Field>
+
+						<!-- The book lookups' "not configured" and "key rejected" notices link
+						     here. A new key is read at startup, as TMDB's and TVDB's are; said
+						     under this field because it is the one people are sent to fix. -->
+						<div id="hardcover" class="scroll-mt-24">
+							<form.Field name="hardcover_api_key">
+								{#snippet children(field)}
+									<TextField
+										{field}
+										type="password"
+										autocomplete="off"
+										label={i18n.metadata_hardcover_key()}
+										readonly={data.hardcover_api_key_file_managed ?? false}
+										placeholder={keyPlaceholder(
+											data.hardcover_api_key_set,
+											data.hardcover_api_key_file_managed ?? false,
+										)}
+										help={i18n.metadata_hardcover_key_help()}
+									/>
+								{/snippet}
+							</form.Field>
+							<p class="mt-1.5 flex items-start gap-1.5 text-xs text-fg-subtle">
+								<RotateCw size={12} class="mt-0.5 shrink-0" aria-hidden="true" />
+								<span>{i18n.metadata_hardcover_restart()}</span>
+							</p>
+						</div>
 					</div>
 				</section>
 

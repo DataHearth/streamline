@@ -179,6 +179,9 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
 			Return(nil).Maybe()
+		storeMk.EXPECT().
+			MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
+			Return(nil).Maybe()
 
 		nevermind = trackAlbum(1, "Nevermind", 1991, "Drain You", "Lithium")
 		inUtero = trackAlbum(2, "In Utero", 1993, "Serve the Servants", "Rape Me")

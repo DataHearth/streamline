@@ -4,7 +4,9 @@
 	import { goto } from "@roxi/routify";
 	import { FileEdit, Gauge, Radar, RefreshCw, Trash2 } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
+	import { hardcoverFix, hardcoverIssue } from "@lib/music-books-lookup";
 	import type { QualityProfile } from "@lib/types";
 	import { profilesPath } from "@lib/music-books";
 	import KebabMenu, { type KebabItem } from "./KebabMenu.svelte";
@@ -69,7 +71,10 @@
 		try {
 			await fn();
 		} catch (e) {
-			toast.err(errorText(e, fail));
+			// A book or a series Hardcover would not refresh: the reason, then who
+			// fixes the key and where.
+			const issue = hardcoverIssue(e);
+			toast.err(errorText(e, fail), issue ? { description: hardcoverFix(issue, auth.user?.role === "admin") } : undefined);
 		} finally {
 			pending = false;
 		}

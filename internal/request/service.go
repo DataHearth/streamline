@@ -8,11 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
+	"unicode/utf8"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,6 +40,10 @@ var (
 	// ErrAlreadyInLibrary is what an adder returns for an item the library
 	// already holds; approving then only has to mark the request available.
 	ErrAlreadyInLibrary = errors.New("request: already in library")
+	// ErrAlbumNotFound is returned by Approve for an album request whose
+	// release group MusicBrainz does not know, or does not list on its artist.
+	// The request stays pending.
+	ErrAlbumNotFound = errors.New("request: album not found on its artist")
 	// ErrUnavailable is what an adder returns for a medium the library cannot
 	// hold yet; Approve leaves the request pending.
 	ErrUnavailable = errors.New("request: adding this item is not available yet")
@@ -47,6 +54,17 @@ const (
 	artistMonitor = "all"
 	bookMonitor   = "both"
 	seriesMonitor = "all"
+
+	// albumArtistMonitor adds the artist of a requested album with every other
+	// release group unmonitored, so the rest of its discography stays out of
+	// the want list.
+	albumArtistMonitor = "manual"
+
+	artistNameMaxLen = 200
+)
+
+var mbidRe = regexp.MustCompile(
+	`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`,
 )
 
 // MovieAdder / ShowAdder are the slices of the media services this needs —
@@ -77,6 +95,18 @@ type ArtistAdder interface {
 	) error
 }
 
+// AlbumMonitor monitors one album of an artist the library already holds. An
+// album the artist's stored release groups lack is looked for once after a
+// refresh and reported as ErrAlbumNotFound when it is still absent; held says
+// the album was already monitored and has its files, so approving it has
+// nothing left to do.
+type AlbumMonitor interface {
+	MonitorAlbum(
+		ctx context.Context,
+		artistMBID, albumMBID string,
+	) (held bool, err error)
+}
+
 // BookAdder adds a requested book or series to the library and answers the two
 // in-library questions Create asks. AddBook and AddSeries report an item the
 // library already holds as ErrAlreadyInLibrary, and an unconfigured Hardcover
@@ -97,11 +127,13 @@ type BookAdder interface {
 }
 
 type Service struct {
-	db      db.Store
-	movies  MovieAdder
-	shows   ShowAdder
-	artists ArtistAdder
-	books   BookAdder
+	db        db.Store
+	movies    MovieAdder
+	shows     ShowAdder
+	artists   ArtistAdder
+	albums    AlbumMonitor
+	books     BookAdder
+	musicMeta metadata.MusicProvider
 }
 
 func NewService(
@@ -109,14 +141,18 @@ func NewService(
 	movies MovieAdder,
 	shows ShowAdder,
 	artists ArtistAdder,
+	albums AlbumMonitor,
 	books BookAdder,
+	musicMeta metadata.MusicProvider,
 ) *Service {
 	return &Service{
-		db:      store,
-		movies:  movies,
-		shows:   shows,
-		artists: artists,
-		books:   books,
+		db:        store,
+		movies:    movies,
+		shows:     shows,
+		artists:   artists,
+		albums:    albums,
+		books:     books,
+		musicMeta: musicMeta,
 	}
 }
 
@@ -127,16 +163,47 @@ type CreateParams struct {
 	Title          string
 	RequesterID    uint32
 	QualityProfile string
+	// ArtistMBID and ArtistName are an album request's hints: display data
+	// from the requester, never trusted for approval.
+	ArtistMBID string
+	ArtistName string
 }
 
-// validate checks the media identity fits the type: an artist is keyed by
-// MBID, every other type by id.
+func isMusicType(mediaType string) bool {
+	return mediaType == "artist" || mediaType == "album"
+}
+
+// validate checks the media identity fits the type: an artist or album is keyed
+// by MBID, every other type by id.
 func validate(p CreateParams) error {
+	if p.MediaType != "album" && (p.ArtistMBID != "" || p.ArtistName != "") {
+		return fmt.Errorf(
+			"%w: artist_mbid and artist_name only apply to an album",
+			ErrInvalidRequest,
+		)
+	}
 	switch p.MediaType {
 	case "artist":
 		if p.MediaMBID == "" || p.MediaID != 0 {
 			return fmt.Errorf(
 				"%w: artist needs a media_mbid and no media_id", ErrInvalidRequest,
+			)
+		}
+	case "album":
+		if p.MediaMBID == "" || p.MediaID != 0 {
+			return fmt.Errorf(
+				"%w: album needs a media_mbid and no media_id", ErrInvalidRequest,
+			)
+		}
+		if !mbidRe.MatchString(p.ArtistMBID) {
+			return fmt.Errorf(
+				"%w: album needs an artist_mbid that is a UUID", ErrInvalidRequest,
+			)
+		}
+		if n := utf8.RuneCountInString(p.ArtistName); n < 1 || n > artistNameMaxLen {
+			return fmt.Errorf(
+				"%w: album needs an artist_name of 1 to %d characters",
+				ErrInvalidRequest, artistNameMaxLen,
 			)
 		}
 	case "movie", "tvshow", "book", "book_series":
@@ -174,7 +241,7 @@ func (s *Service) Create(
 		existing *ent.Request
 		err      error
 	)
-	if p.MediaType == "artist" {
+	if isMusicType(p.MediaType) {
 		existing, err = s.db.FindActiveRequestByMBID(
 			ctx, p.MediaType, p.MediaMBID,
 		)
@@ -205,6 +272,14 @@ func (s *Service) Create(
 		if a != nil {
 			return nil, ErrDuplicate
 		}
+	case "album":
+		monitored, err := s.db.IsAlbumMonitoredByMBID(ctx, p.MediaMBID)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		if monitored {
+			return nil, ErrDuplicate
+		}
 	case "book":
 		in, err := s.books.HasBook(ctx, p.MediaID)
 		if err != nil {
@@ -229,6 +304,9 @@ func (s *Service) Create(
 		Title:          p.Title,
 		RequesterID:    p.RequesterID,
 		QualityProfile: p.QualityProfile,
+		ArtistMBID:     p.ArtistMBID,
+		ArtistName:     p.ArtistName,
+		RequestedAs:    p.ArtistName,
 	})
 	if err != nil {
 		// The partial unique indexes over active (media_type, media_id) and
@@ -283,6 +361,7 @@ func (s *Service) Approve(
 		scope            events.Scope
 		ownerID          uint32
 		alreadyInLibrary bool
+		verifiedArtist   *metadata.ReleaseGroupDetails
 	)
 	switch req.MediaType {
 	case "movie":
@@ -310,6 +389,12 @@ func (s *Service) Approve(
 				span, fmt.Errorf("approve: add artist: %w", err),
 			)
 		}
+	case "album":
+		rg, held, err := s.approveAlbum(ctx, req.MediaMbid, qualityProfile)
+		if err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+		verifiedArtist, alreadyInLibrary = rg, held
 	case "book":
 		err := s.books.AddBook(ctx, req.MediaID, bookMonitor, qualityProfile)
 		if errors.Is(err, ErrAlreadyInLibrary) {
@@ -329,7 +414,14 @@ func (s *Service) Approve(
 			)
 		}
 	}
-	if err := s.db.ApproveRequest(ctx, id, adminID); err != nil {
+	if verifiedArtist != nil {
+		err = s.db.ApproveAlbumRequest(
+			ctx, id, adminID, verifiedArtist.ArtistMBID, verifiedArtist.ArtistName,
+		)
+	} else {
+		err = s.db.ApproveRequest(ctx, id, adminID)
+	}
+	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	if alreadyInLibrary {
@@ -354,6 +446,47 @@ func (s *Service) Approve(
 	return s.db.GetRequest(ctx, id)
 }
 
+// approveAlbum makes exactly one album monitored. The artist is the one
+// MusicBrainz names for the release group, never the requester's hint; a
+// missing artist is added with every other album unmonitored, and an artist
+// already held keeps its own profile.
+func (s *Service) approveAlbum(
+	ctx context.Context,
+	albumMBID, qualityProfile string,
+) (*metadata.ReleaseGroupDetails, bool, error) {
+	rg, err := s.musicMeta.GetReleaseGroup(ctx, albumMBID)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return nil, false, fmt.Errorf("%w: %s", ErrAlbumNotFound, albumMBID)
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: get release group: %w", err)
+	}
+	if rg.ArtistMBID == "" {
+		return nil, false, fmt.Errorf(
+			"%w: %s has no artist",
+			ErrAlbumNotFound,
+			albumMBID,
+		)
+	}
+	held, err := s.db.FindArtistByMBID(ctx, rg.ArtistMBID)
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: find artist: %w", err)
+	}
+	if held == nil {
+		err = s.artists.AddArtist(
+			ctx, rg.ArtistMBID, albumArtistMonitor, qualityProfile,
+		)
+		if err != nil && !errors.Is(err, ErrAlreadyInLibrary) {
+			return nil, false, fmt.Errorf("approve: add artist: %w", err)
+		}
+	}
+	monitoredAndHeld, err := s.albums.MonitorAlbum(ctx, rg.ArtistMBID, albumMBID)
+	if err != nil {
+		return nil, false, fmt.Errorf("approve: monitor album: %w", err)
+	}
+	return rg, monitoredAndHeld, nil
+}
+
 // checkProfile rejects a non-empty profile name that the request's medium
 // family does not hold. Empty is the family default and always passes.
 func checkProfile(mediaType, name string) error {
@@ -362,7 +495,7 @@ func checkProfile(mediaType, name string) error {
 	}
 	var ok bool
 	switch mediaType {
-	case "artist":
+	case "artist", "album":
 		_, ok = config.LookupMusicQualityProfile(name)
 	case "book", "book_series":
 		_, ok = config.LookupBookQualityProfile(name)

@@ -218,12 +218,25 @@ var _ = Describe("Handler: Import scan albums",
 					ID: 1, FolderPath: "/music/Nirvana/Nevermind",
 					TaggedArtist:   "Nirvana",
 					TaggedAlbum:    "Nevermind",
+					TaggedYear:     1991,
+					Format:         "FLAC 24/96",
+					Size:           512,
+					ArtistMbid:     "artist-1",
 					Classification: entimportscanalbum.ClassificationConfirmed,
 					FileCount:      12,
 					Decision:       entimportscanalbum.DecisionPending,
+					Outcome:        entimportscanalbum.OutcomeAttached,
+				},
+				{
+					ID: 2, FolderPath: "/music/Unknown", ArtistMbid: "artist-2",
+					Classification: entimportscanalbum.ClassificationConfirmed,
+					Decision:       entimportscanalbum.DecisionPending,
 					Outcome:        entimportscanalbum.OutcomePending,
 				},
-			}, 1, nil).Once()
+			}, 2, nil).Once()
+			app.store.EXPECT().
+				ArtistIDsByMBID(mock.Anything, []string{"artist-1", "artist-2"}).
+				Return(map[string]uint32{"artist-1": 7}, nil).Once()
 
 			resp := app.do(app.req(http.MethodGet,
 				"/api/v1/library/imports/5/albums", app.adminKey, nil))
@@ -231,10 +244,18 @@ var _ = Describe("Handler: Import scan albums",
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			var body ImportScanAlbumList
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-			Expect(body.Total).To(Equal(uint32(1)))
-			Expect(body.Items).To(HaveLen(1))
+			Expect(body.Total).To(Equal(uint32(2)))
+			Expect(body.Items).To(HaveLen(2))
 			Expect(body.Items[0].FolderPath).To(Equal("/music/Nirvana/Nevermind"))
 			Expect(*body.Items[0].TaggedAlbum).To(Equal("Nevermind"))
+			Expect(body.Items[0].TaggedYear).To(HaveValue(Equal(uint16(1991))))
+			Expect(body.Items[0].Format).To(HaveValue(Equal("FLAC 24/96")))
+			Expect(body.Items[0].Size).To(Equal(int64(512)))
+			Expect(
+				body.Items[0].Outcome,
+			).To(Equal(ImportScanAlbumOutcome("attached")))
+			Expect(body.Items[0].ArtistId).To(HaveValue(Equal(uint32(7))))
+			Expect(body.Items[1].ArtistId).To(BeNil())
 		})
 
 		It("returns an empty page for a known, empty scan", func() {

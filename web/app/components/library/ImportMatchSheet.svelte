@@ -7,21 +7,38 @@
 	import { cn } from "@lib/cn";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { IMPORT_KIND } from "@lib/imports";
+	import { shortId, type MatchId } from "@lib/imports-touch";
+	import { hardcoverIssue, type BookHit } from "@lib/music-books-lookup";
+	import { releaseTypeLabel, type ReleaseType } from "@lib/music-books";
 	import type {
+		ImportScanKind,
 		SeriesLookupResultList,
 		TMDBMovieResult,
 	} from "@lib/types";
+	import ProviderKeyNotice from "@components/shared/ProviderKeyNotice.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The match picker below md. Deliberately NOT AddMovieModal/AddSeriesModal —
 	// those add to the library; picking here only PATCHes the scan row, so the
 	// quality profile, the monitoring preset and the request path are all absent
 	// and the confirm verb is "Use", not "Add".
-	type Hit = { id: number; title: string; year?: number | null; sub?: string };
+	//
+	// Music and books have no add modal with a pick mode to defer to from md up,
+	// so `dialog` keeps this one surface at every width: a sheet on a phone, a
+	// centred panel from md.
+	// `by` and `tag` frame the year on the id line, as the review's candidate
+	// rows do: "artist · year · type" for an album, "author · year" for a book.
+	// A MusicBrainz release group has no track count and a Hardcover hit no
+	// series position, so neither is offered. `sub` is the overview, which only
+	// TMDB and TVDB send.
+	type Hit = { id: MatchId; title: string; year?: number | null; by?: string; tag?: string; sub?: string };
+	type ReleaseHit = { mbid: string; title: string; artist: string; year?: number; type?: ReleaseType };
 
 	let {
 		open,
-		series = false,
+		kind = "movie",
+		dialog = false,
 		seed = "",
 		// The file/folder the pick lands on. Nothing else on this screen says
 		// which one it is, and a scan under review usually has several.
@@ -31,12 +48,13 @@
 		onPick,
 	}: {
 		open: boolean;
-		series?: boolean;
+		kind?: ImportScanKind;
+		dialog?: boolean;
 		seed?: string;
 		context?: string;
 		busy?: boolean;
 		onClose: () => void;
-		onPick: (id: number) => void;
+		onPick: (id: MatchId) => void;
 	} = $props();
 
 	let q = $state("");
@@ -77,9 +95,24 @@
 	});
 
 	const results = createQuery<Hit[]>(() => ({
-		queryKey: ["import-match", series ? "series" : "movie", debounced],
+		queryKey: ["import-match", kind, debounced],
 		queryFn: async () => {
-			if (!series) {
+			const query = encodeURIComponent(debounced);
+			if (kind === "music") {
+				const res = await api<{ items: ReleaseHit[] }>(`/music/search/releases?query=${query}`);
+				return (res.items ?? []).map((r) => ({
+					id: r.mbid,
+					title: r.title,
+					year: r.year,
+					by: r.artist,
+					tag: r.type ? releaseTypeLabel(r.type) : undefined,
+				}));
+			}
+			if (kind === "book") {
+				const res = await api<{ items: BookHit[] }>(`/books/search?query=${query}&type=book`);
+				return (res.items ?? []).map((b) => ({ id: b.hardcover_id, title: b.title, year: b.year, by: b.author }));
+			}
+			if (kind !== "series") {
 				const items = await api<TMDBMovieResult[]>(
 					`/search/movie?q=${encodeURIComponent(debounced)}`,
 				);
@@ -104,12 +137,22 @@
 	}));
 
 	let hits = $derived(results.data ?? []);
-	let source = $derived(series ? "TVDB" : "TMDB");
+	let source = $derived(IMPORT_KIND[kind].source);
+	// The touch floor only applies below lg, as everywhere else.
+	let wide = $state(false);
+	$effect(() => {
+		const mq = window.matchMedia("(min-width: 768px)");
+		const sync = () => (wide = mq.matches);
+		sync();
+		mq.addEventListener("change", sync);
+		return () => mq.removeEventListener("change", sync);
+	});
+	let centred = $derived(dialog && wide);
 </script>
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 md:hidden"
+		class={cn("fixed inset-0 z-50", !dialog && "md:hidden")}
 		role="dialog"
 		aria-modal="true"
 		aria-label={i18n.imports_pick_match()}
@@ -124,15 +167,19 @@
 
 		<div
 			use:sheetSwipe={{ onDismiss: onClose }}
-			transition:fly={{ y: 420, duration: 280, easing: cubicOut }}
-			class="absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
+			transition:fly={{ y: centred ? 16 : 420, duration: centred ? 180 : 280, easing: cubicOut }}
+			class={cn(
+				"absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4",
+				dialog &&
+					"md:inset-x-auto md:bottom-auto md:left-[calc(50%-17.5rem)] md:top-[10dvh] md:max-h-[80dvh] md:w-[35rem] md:rounded-2xl md:border",
+			)}
 		>
 			<div
 				class="relative flex cursor-grab touch-none select-none items-center justify-between px-5 pb-3 pt-4 active:cursor-grabbing"
 			>
 				<span
 					aria-hidden="true"
-					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
+					class={cn("absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong", dialog && "md:hidden")}
 				></span>
 				<h2 class="text-[17px] font-semibold tracking-tight text-fg">
 					{i18n.imports_pick_match()}
@@ -205,6 +252,8 @@
 						/>
 						{i18n.common_searching()}
 					</p>
+				{:else if results.isError && hardcoverIssue(results.error)}
+					<div class="px-5 py-6"><ProviderKeyNotice reason={hardcoverIssue(results.error) ?? undefined} onNavigate={onClose} /></div>
 				{:else if results.isError}
 					<p class="px-5 py-10 text-center text-sm text-status-failed">
 						{i18n.err_load_failed_detail({ reason: errorText(results.error) })}
@@ -232,9 +281,9 @@
 											{h.title}
 										</span>
 										<span
-											class="mt-0.5 block font-mono text-[10.5px] text-fg-subtle"
+											class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle"
 										>
-											{h.year ?? "—"} · {source} {h.id}
+											{#if h.by}{h.by}{" · "}{/if}{h.year ?? "—"}{#if h.tag}{" · "}{h.tag}{/if} · {source} {shortId(h.id)}
 										</span>
 										{#if h.sub}
 											<span

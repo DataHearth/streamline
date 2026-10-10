@@ -22,10 +22,14 @@
 		profileMedia,
 		requestBody,
 		LOOKUP_SOURCE,
+		hardcoverIssue,
+		type HardcoverIssue,
 		type LookupHit,
 		type LookupKind,
+		type LookupRelease,
 	} from "@lib/music-books-lookup";
 	import LookupSheet from "./LookupSheet.svelte";
+	import ProviderKeyNotice from "./ProviderKeyNotice.svelte";
 	import MusicBookLookupPanel from "./MusicBookLookupPanel.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import Img from "./Img.svelte";
@@ -51,6 +55,14 @@
 	let pendingKey = $state<string | null>(null);
 	let sessionAdds = $state(new Map<string, number>());
 	let requested = $state(new Set<string>());
+	// See AddMusicBookModal: one album off the artist's discography.
+	let album = $state<LookupRelease | null>(null);
+	let pendingAlbum: LookupRelease | null = null;
+	const requestKey = (h: LookupHit, a: LookupRelease | null) => (a?.mbid ? `${h.key}:${a.mbid}` : h.key);
+	$effect(() => {
+		void selectedKey;
+		album = null;
+	});
 	let failedImages = $state(new Set<string>());
 	let input = $state<HTMLInputElement | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -58,7 +70,11 @@
 	$effect(() => {
 		const q = query;
 		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => (debounced = q.trim()), 300);
+		debounceTimer = setTimeout(() => {
+			const next = q.trim();
+			if (next !== debounced) refused = null;
+			debounced = next;
+		}, 300);
 		return () => clearTimeout(debounceTimer);
 	});
 
@@ -69,6 +85,7 @@
 			qualityProfileName = "";
 			selectedKey = null;
 			sheetExpanded = false;
+			refused = null;
 			sessionAdds = new Map();
 			requested = new Set();
 			failedImages = new Set();
@@ -90,11 +107,29 @@
 		enabled: open && debounced.length >= 2,
 		staleTime: 60_000,
 	}));
-	let results = $derived(searchQuery.data ?? []);
+	// As in AddMusicBookModal: a refusal on the search, a hit's detail or the
+	// add puts the notice in place of the grid until the next search. The sheet
+	// closes with it, since there is nothing it could add. Set where a call
+	// fails, cleared where the next search starts, never from an effect.
+	let refused = $state<HardcoverIssue | null>(null);
+	const refuse = (issue: HardcoverIssue) => {
+		refused = issue;
+		selectedKey = null;
+	};
+	let keyIssue = $derived(hardcoverIssue(searchQuery.error) ?? refused);
+	let results = $derived(keyIssue ? [] : (searchQuery.data ?? []));
 	let selected = $derived(results.find((r) => r.key === selectedKey));
 	const detailQuery = createQuery(() => ({
 		queryKey: ["mb-lookup-detail", selected?.key ?? null],
-		queryFn: () => lookupDetail(selected!),
+		queryFn: async () => {
+			try {
+				return await lookupDetail(selected!);
+			} catch (e) {
+				const issue = hardcoverIssue(e);
+				if (issue) refuse(issue);
+				throw e;
+			}
+		},
 		enabled: open && !!selected,
 		staleTime: 5 * 60_000,
 	}));
@@ -103,10 +138,11 @@
 	const addMutation = createMutation<{ id: number } | null, Error, LookupHit>(() => ({
 		onMutate: (h) => {
 			pendingKey = h.key;
+			pendingAlbum = canAdd ? null : album;
 		},
 		mutationFn: async (h) => {
 			if (!canAdd) {
-				await api("/requests", { method: "POST", body: requestBody(h, qualityProfileName) });
+				await api("/requests", { method: "POST", body: requestBody(h, qualityProfileName, pendingAlbum) });
 				return null;
 			}
 			const { path, body } = addRequest(h, qualityProfileName, monitorOptions(h)[0]?.value ?? "");
@@ -114,9 +150,9 @@
 		},
 		onSuccess: (item, h) => {
 			if (!canAdd || !item) {
-				requested = new Set(requested).add(h.key);
+				requested = new Set(requested).add(requestKey(h, pendingAlbum));
 				qc.invalidateQueries({ queryKey: ["requests"] });
-				toast.ok(i18n.toast_requested({ title: h.title }));
+				toast.ok(i18n.toast_requested({ title: pendingAlbum?.title ?? h.title }));
 			} else {
 				sessionAdds = new Map(sessionAdds).set(h.key, item.id);
 				qc.invalidateQueries({ queryKey: [libraryRoot(kind)] });
@@ -125,7 +161,11 @@
 			// Back to the grid: the badge carries the new state.
 			selectedKey = null;
 		},
-		onError: (e) => toast.err(addErrorText(e, canAdd)),
+		onError: (e) => {
+			const issue = hardcoverIssue(e);
+			if (issue) refuse(issue);
+			else toast.err(addErrorText(e, canAdd));
+		},
 		onSettled: () => {
 			pendingKey = null;
 		},
@@ -140,12 +180,14 @@
 	let heldCount = $derived(results.filter(isHeld).length);
 	let selectedHeld = $derived(selected ? isHeld(selected) : false);
 	let selectedLocalId = $derived(selected ? (selected.library_id ?? sessionAdds.get(selected.key)) : undefined);
-	let selectedRequested = $derived(selected ? requested.has(selected.key) : false);
+	let selectedRequested = $derived(selected ? requested.has(requestKey(selected, album)) : false);
 	let selectedPending = $derived(selected ? pendingKey === selected.key : false);
 	let synopsis = $derived(detailQuery.data?.overview ?? "");
 	let addLabel = $derived(
 		!canAdd
-			? i18n.action_request()
+			? album
+				? i18n.action_request_album()
+				: i18n.action_request()
 			: isArtist
 				? i18n.action_add_artist()
 				: selected?.series
@@ -227,6 +269,8 @@
 						</div>
 					{/each}
 				</div>
+			{:else if keyIssue}
+				<ProviderKeyNotice reason={keyIssue} onNavigate={onClose} />
 			{:else if searchQuery.isError}
 				<p
 					role="alert"
@@ -356,12 +400,15 @@
 					error={detailQuery.isError ? errorText(detailQuery.error, i18n.torrent_details_failed()) : undefined}
 					compact
 					headless
+					albumPick={!canAdd && isArtist
+						? { selected: album?.mbid ?? null, onToggle: (r) => (album = album?.mbid === r.mbid ? null : r) }
+						: undefined}
 				/>
 			</div>
 		{/snippet}
 
 		{#snippet footer()}
-			{#if selectedHeld}
+			{#if selectedHeld && !album}
 				{#if selectedLocalId !== undefined && selected}
 					<a
 						href={libraryHref(selected, selectedLocalId)}

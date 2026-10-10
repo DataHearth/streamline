@@ -84,6 +84,7 @@ type Config struct {
 	Music           music.Manager
 	Books           book.Manager
 	MetadataBook    metadata.BookProvider
+	MetadataMusic   metadata.MusicProvider
 	Hardcover       interface{ AuthRejected() bool }
 	Posters         posters.Manager
 	LookupArt       LookupArt
@@ -126,6 +127,7 @@ func New(cfg Config) *Server {
 		Music:           cfg.Music,
 		Books:           cfg.Books,
 		MetadataBook:    cfg.MetadataBook,
+		MetadataMusic:   cfg.MetadataMusic,
 		Hardcover:       cfg.Hardcover,
 		Torrents:        cfg.Torrents,
 		PathMigrations:  cfg.PathMigrations,

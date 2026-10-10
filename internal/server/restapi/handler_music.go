@@ -3,16 +3,24 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 const (
 	defaultMusicLimit = 20
+
+	releaseSearchMinQuery = 2
+	releaseSearchMaxQuery = 200
+	releaseSearchMaxLimit = 20
 
 	msgMusicParam = "unknown value for a music filter"
 )
@@ -48,6 +56,69 @@ func (s *Server) SearchMusicArtists(
 	return SearchMusicArtists200JSONResponse{
 		Items: items,
 	}, nil
+}
+
+func (s *Server) SearchMusicReleases(
+	ctx context.Context,
+	request SearchMusicReleasesRequestObject,
+) (SearchMusicReleasesResponseObject, error) {
+	query := strings.TrimSpace(request.Params.Query)
+	if n := utf8.RuneCountInString(query); n < releaseSearchMinQuery ||
+		n > releaseSearchMaxQuery {
+		return SearchMusicReleases400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(fmt.Sprintf(
+				"query must be %d to %d characters",
+				releaseSearchMinQuery, releaseSearchMaxQuery,
+			)),
+		}, nil
+	}
+	limit, ok := limitOr(
+		request.Params.Limit,
+		releaseSearchMaxLimit,
+		releaseSearchMaxLimit,
+	)
+	if !ok {
+		return SearchMusicReleases400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(
+				limitRangeMsg(releaseSearchMaxLimit),
+			),
+		}, nil
+	}
+	hits, err := s.music.SearchReleaseGroups(ctx, query)
+	switch {
+	case errors.Is(err, metadata.ErrRateLimited):
+		return SearchMusicReleases429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}, nil
+	case err != nil:
+		return SearchMusicReleases500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	items := make([]MusicReleaseSearchResult, 0, min(len(hits), limit))
+	for _, h := range hits[:min(len(hits), limit)] {
+		items = append(items, toMusicReleaseHit(h))
+	}
+	return SearchMusicReleases200JSONResponse{Items: items}, nil
+}
+
+func toMusicReleaseHit(h music.ReleaseHit) MusicReleaseSearchResult {
+	out := MusicReleaseSearchResult{
+		Mbid:         h.MBID,
+		Title:        h.Title,
+		Artist:       h.ArtistName,
+		ArtistMbid:   h.ArtistMBID,
+		AlreadyAdded: h.AlreadyAdded,
+	}
+	if h.ReleaseDate != nil {
+		y := numeric.SaturateU16(h.ReleaseDate.Year())
+		out.Year = &y
+	}
+	if h.Type != "" {
+		t := MusicAlbumType(h.Type)
+		out.Type = &t
+	}
+	return out
 }
 
 func (s *Server) GetMusicArtistLookup(

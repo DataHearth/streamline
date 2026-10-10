@@ -4,9 +4,10 @@
 	import { dragScroll } from "@lib/drag-scroll";
 	import {
 		CLASS_CHIPS,
+		unitText,
 		type TouchEntry,
 	} from "@lib/imports-touch";
-	import type { ImportFileClassification } from "@lib/types";
+	import type { ImportFileClassification, ImportScanKind } from "@lib/types";
 	import ImportTouchRow from "./ImportTouchRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -16,7 +17,7 @@
 	let {
 		entries,
 		total,
-		series = false,
+		kind = "movie",
 		query,
 		onQueryChange,
 		classification,
@@ -27,7 +28,7 @@
 	}: {
 		entries: TouchEntry[];
 		total: number;
-		series?: boolean;
+		kind?: ImportScanKind;
 		query: string;
 		onQueryChange: (q: string) => void;
 		classification: "" | ImportFileClassification;
@@ -37,6 +38,7 @@
 		onOpen: (entry: TouchEntry) => void;
 	} = $props();
 
+	let text = $derived(unitText(kind));
 	const DOT: Record<string, string> = {
 		confirmed: "available",
 		ambiguous: "wanted",
@@ -47,7 +49,7 @@
 
 <section class="mt-5 overflow-hidden rounded-lg border border-border bg-bg-elevated lg:hidden">
 	<header class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-		<h2 class="text-base font-semibold text-fg">{series ? i18n.common_shows() : i18n.common_files()}</h2>
+		<h2 class="text-base font-semibold text-fg">{text.heading}</h2>
 		{#if total > 0}
 			<span class="font-mono text-xs tabular-nums text-fg-subtle">{total}</span>
 		{/if}
@@ -62,7 +64,7 @@
 				type="search"
 				value={query}
 				oninput={(e) => onQueryChange(e.currentTarget.value)}
-				placeholder={series ? i18n.imports_search_folder_title() : i18n.imports_search_filename()}
+				placeholder={text.search}
 				class="min-w-0 flex-1 bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-faint"
 			/>
 			{#if query}
@@ -109,7 +111,7 @@
 
 	{#if pending}
 		<p class="px-4 py-8 text-sm text-fg-subtle">
-			{series ? i18n.common_loading_shows() : i18n.common_loading_files()}
+			{text.loading}
 		</p>
 	{:else if error}
 		<p class="px-4 py-8 text-sm text-status-failed">
@@ -117,13 +119,13 @@
 		</p>
 	{:else if entries.length === 0}
 		<p class="px-4 py-8 text-sm text-fg-muted">
-			{series ? i18n.imports_no_match_shows() : i18n.imports_no_match_files()}
+			{text.empty}
 		</p>
 	{:else}
 		<ul class="divide-y divide-border">
 			{#each entries as e (e.id)}
 				<li>
-					<ImportTouchRow entry={e} {series} wide {onOpen} />
+					<ImportTouchRow entry={e} {kind} wide {onOpen} />
 				</li>
 			{/each}
 		</ul>

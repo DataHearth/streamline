@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { Check, LoaderCircle } from "@lucide/svelte";
-	import type { ImportStatus } from "@lib/types";
+	import type { ImportScanKind, ImportStatus } from "@lib/types";
+	import { IMPORT_KIND } from "@lib/imports";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	let { status, series = false }: { status: ImportStatus; series?: boolean } =
+	let { status, kind = "movie" }: { status: ImportStatus; kind?: ImportScanKind } =
 		$props();
 
 	type State = "done" | "current" | "pending";
 
 	const STEPS = $derived([
 		{ label: i18n.imports_discovery(), sub: i18n.imports_step_indexing() },
-		{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: series ? "TVDB" : "TMDB" }) },
+		{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: IMPORT_KIND[kind].source }) },
 		{ label: i18n.common_review(), sub: i18n.imports_step_resolve() },
 		{ label: i18n.imports_commit(), sub: i18n.imports_step_import() },
 	]);

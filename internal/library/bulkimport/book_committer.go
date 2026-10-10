@@ -68,7 +68,7 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 				"scan.id", scan.ID, "scan_book.id", sb.ID, "error", uerr)
 		}
 		switch outcome {
-		case entimportscanbook.OutcomeCreated:
+		case entimportscanbook.OutcomeCreated, entimportscanbook.OutcomeAttached:
 			success++
 		case entimportscanbook.OutcomeFailed:
 			failed++
@@ -177,7 +177,12 @@ func (s *Service) commitBook(
 	); err != nil {
 		return commitBookFail(span, "mark slot available", err, target.ID)
 	}
-	return entimportscanbook.OutcomeCreated, "", target.ID
+	outcome := entimportscanbook.OutcomeCreated
+	if sc.Classification == entimportscanbook.ClassificationExisting &&
+		sc.DecisionBookHardcoverID == 0 {
+		outcome = entimportscanbook.OutcomeAttached
+	}
+	return outcome, "", target.ID
 }
 
 // resolveBook returns the eager-loaded book to adopt into. The reviewer's pick

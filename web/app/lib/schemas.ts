@@ -65,6 +65,7 @@ export const metadataConfigPatch = v.object({
 	),
 	tmdb_api_key: optionalSecret,
 	tvdb_api_key: optionalSecret,
+	hardcover_api_key: optionalSecret,
 });
 
 export const oidcProviderCreate = v.object({
@@ -372,7 +373,7 @@ export const importTransferMode = v.picklist(
 );
 
 export const importScanKind = v.picklist(
-	["movie", "series"] as const,
+	["movie", "series", "music", "book"] as const,
 	i18n.validation_pick_media_type(),
 );
 

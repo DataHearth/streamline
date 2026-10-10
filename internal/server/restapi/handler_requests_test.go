@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
 )
@@ -55,7 +56,7 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 
 		It("answers 400 for an unknown member of the list", func() {
 			resp := send(http.MethodGet,
-				"/api/v1/requests?media_type=book,album", app.adminKey, "")
+				"/api/v1/requests?media_type=book,author", app.adminKey, "")
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
@@ -121,9 +122,41 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
 		})
 
-		It("answers 400 for the removed album type", func() {
+		It("creates an album request with the artist hints", func() {
+			app.requests.EXPECT().
+				Create(mock.Anything, mock.MatchedBy(func(p requestsvc.CreateParams) bool {
+					return p.MediaType == "album" && p.MediaMBID == "rg-1" &&
+						p.ArtistMBID == "a-1" && p.ArtistName == "Nirvana" &&
+						p.MediaID == 0
+				})).
+				Return(&ent.Request{
+					ID: 2, MediaType: "album", MediaMbid: "rg-1", Title: "Nevermind",
+					ArtistMbid: "a-1", ArtistName: "Nirvana", RequestedAs: "Nirvana",
+				}, nil).Once()
+
+			resp := send(
+				http.MethodPost,
+				"/api/v1/requests",
+				app.requestOnlyKey,
+				`{"media_type":"album","media_mbid":"rg-1","artist_mbid":"a-1","artist_name":"Nirvana","title":"Nevermind"}`,
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+			var got Request
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.MediaType).To(Equal(RequestMediaType("album")))
+			Expect(got.ArtistMbid).To(HaveValue(Equal("a-1")))
+			Expect(got.ArtistName).To(HaveValue(Equal("Nirvana")))
+			Expect(got.RequestedAs).To(HaveValue(Equal("Nirvana")))
+		})
+
+		It("answers 400 for an invalid album identity", func() {
+			app.requests.EXPECT().Create(mock.Anything, mock.Anything).
+				Return(nil, fmt.Errorf("%w: album needs an artist_name", requestsvc.ErrInvalidRequest)).
+				Once()
+
 			resp := send(http.MethodPost, "/api/v1/requests", app.requestOnlyKey,
-				`{"media_type":"album","media_mbid":"x","title":"A"}`)
+				`{"media_type":"album","media_mbid":"rg-1","title":"A"}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		})
@@ -163,6 +196,20 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 			},
 		)
+
+		It("answers 422 album_not_found and leaves the request pending", func() {
+			app.requests.EXPECT().
+				Approve(mock.Anything, uint32(4), app.memberID, "").
+				Return(nil, fmt.Errorf("%w: rg-1", requestsvc.ErrAlbumNotFound)).
+				Once()
+
+			resp := approve("")
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			var body Error
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).To(HaveValue(Equal("album_not_found")))
+		})
 
 		DescribeTable(
 			"answers 503 with a code when Hardcover cannot serve the add",
@@ -219,6 +266,52 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 			},
 		)
+
+		It("describes the artist MusicBrainz names, never the stored hint", func() {
+			app.requests.EXPECT().Get(mock.Anything, uint32(4)).
+				Return(&ent.Request{
+					ID: 4, MediaType: "album", MediaMbid: "rg-1",
+					ArtistMbid: "liar-mbid", ArtistName: "Liar",
+				}, nil).Once()
+			app.metadataMusic.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(&metadata.ReleaseGroupDetails{
+					ArtistMBID: "real-mbid", ArtistName: "Nirvana",
+				}, nil).Once()
+			app.music.EXPECT().LookupArtist(mock.Anything, "real-mbid", "en").
+				Return(&music.LookupDetail{
+					MBID: "real-mbid",
+					Name: "Nirvana",
+				}, nil).Once()
+
+			resp := send(
+				http.MethodGet,
+				"/api/v1/requests/4/metadata",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body MusicArtistLookupDetail
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Mbid).To(Equal("real-mbid"))
+		})
+
+		It("answers 404 for an album MusicBrainz does not know", func() {
+			app.requests.EXPECT().Get(mock.Anything, uint32(4)).
+				Return(&ent.Request{ID: 4, MediaType: "album", MediaMbid: "rg-1"}, nil).
+				Once()
+			app.metadataMusic.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(nil, metadata.ErrNotFound).Once()
+
+			resp := send(
+				http.MethodGet,
+				"/api/v1/requests/4/metadata",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
 
 		It("answers 404 for an unknown request", func() {
 			app.requests.EXPECT().Get(mock.Anything, uint32(4)).

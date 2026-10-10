@@ -2,22 +2,23 @@
 	import { ChevronRight } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { outcomeWord, type TouchEntry } from "@lib/imports-touch";
+	import type { ImportScanKind } from "@lib/types";
 
 	let {
 		entry,
-		series = false,
+		kind = "movie",
 		wide = false,
 		onOpen,
 	}: {
 		entry: TouchEntry;
-		series?: boolean;
+		kind?: ImportScanKind;
 		// From md up the row keeps its shape and gains two trailing columns
 		// instead of the chevron — same component at 390 and at 834.
 		wide?: boolean;
 		onOpen: (entry: TouchEntry) => void;
 	} = $props();
 
-	let word = $derived(outcomeWord(entry, series));
+	let word = $derived(outcomeWord(entry, kind === "series"));
 	const TONE: Record<string, string> = {
 		need: "text-status-wanted",
 		ok: "text-status-available",
@@ -54,7 +55,7 @@
 			{entry.heading}
 		</span>
 		<span class="mt-0.5 block truncate font-mono text-[11px] text-fg-subtle">
-			{entry.sub}
+			{#if entry.flag}<span class="font-sans font-medium text-accent-text">{entry.flag}</span>{" · "}{/if}{entry.sub}
 		</span>
 	</span>
 

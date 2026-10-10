@@ -20,6 +20,7 @@ type CreateImportScanParams struct {
 type UpdateScanStatusOpts struct {
 	TotalCount         *int
 	FailureReason      *string
+	FailureCode        *string
 	ScannedAt          *time.Time
 	CommittedAt        *time.Time
 	CommitSuccessCount *uint32
@@ -94,6 +95,9 @@ func (db *DB) UpdateImportScanStatus(
 	}
 	if opts.FailureReason != nil {
 		u = u.SetFailureReason(*opts.FailureReason)
+	}
+	if opts.FailureCode != nil {
+		u = u.SetFailureCode(*opts.FailureCode)
 	}
 	if opts.ScannedAt != nil {
 		u = u.SetScannedAt(*opts.ScannedAt)

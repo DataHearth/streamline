@@ -1093,6 +1093,31 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/search/releases:
+    get:
+      operationId: searchMusicReleases
+      summary: Search MusicBrainz for release groups
+      description: |
+        One MusicBrainz release-group search over titles and artist credits,
+         remembered for 10 minutes, for the album picker of the import review and
+         the request flow. Each hit says whether the library already holds that
+         album (`already_added`). A `limit` outside [1, 20] answers 400. Open to
+         every authenticated user, `request_only` included. A 429
+         (`code: rate_limited`) is MusicBrainz answering 503.
+      tags: [music]
+      parameters:
+        - $ref: "#/components/parameters/MusicReleaseSearchQuery"
+        - $ref: "#/components/parameters/MusicReleaseSearchLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/MusicReleaseSearchResults"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/search/{mbid}:
     get:
       operationId: getMusicArtistLookup
@@ -5092,8 +5117,13 @@ paths:
         video, the default for the book's kind for books), not the requester's
         preference. A
         non-empty name that is not in that family answers 422 before anything
-        is added. A title already in the library marks the request
-        `available`. Answers 429 (`code: rate_limited`, with `Retry-After`)
+        is added. An album request resolves its artist from MusicBrainz
+        (`GetReleaseGroup`), never from the requester's hint: the missing
+        artist is added with monitor `manual` and only that album monitored,
+        an artist already in the library keeps its own profile, and a release
+        group that is not among the artist's answers 422 `code:
+        album_not_found` with the request left pending. A title already in
+        the library marks the request `available`. Answers 429 (`code: rate_limited`, with `Retry-After`)
         when approving a book or series runs into Hardcover's rate limit or
         daily request budget, and 503 when no Hardcover API key is
         configured; either way the request stays pending.
@@ -5129,6 +5159,8 @@ paths:
         overview and basic metadata for a movie (TMDB) or show (TVDB); the
         MusicBrainz artist lookup for an artist, which costs `1 + ceil(n/100)`
         MusicBrainz requests for `n` release groups and none on a cache hit;
+        for an album, the same artist lookup of the artist MusicBrainz names
+        for the release group, never of the stored `artist_mbid` hint;
         the Hardcover lookup detail for a book or series, one request for a
         book and two for a series, none on a cache hit. The response is
         `oneOf` with no discriminator: the caller branches on the request's
@@ -5881,6 +5913,23 @@ components:
       schema:
         type: string
 
+    MusicReleaseSearchQuery:
+      name: query
+      in: query
+      required: true
+      description: Release-group search text, 2 to 200 characters.
+      schema:
+        type: string
+
+    MusicReleaseSearchLimit:
+      name: limit
+      in: query
+      required: false
+      description: Most hits to return, 1 to 20.
+      schema:
+        type: integer
+        default: 20
+
     BookSearchQuery:
       name: query
       in: query
@@ -6544,6 +6593,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/MusicArtistSearchResultList"
+
+    MusicReleaseSearchResults:
+      description: MusicBrainz release-group search results.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MusicReleaseSearchResultList"
 
     MusicArtistLookupDetailResponse:
       description: One MusicBrainz artist, as the hit fields and the detail.
@@ -8544,6 +8600,36 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MusicArtistSearchResult"
+
+    MusicReleaseSearchResultList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicReleaseSearchResult"
+
+    MusicReleaseSearchResult:
+      type: object
+      required: [mbid, title, artist, artist_mbid, already_added]
+      properties:
+        mbid:
+          type: string
+          description: Release-group MBID.
+        title:
+          type: string
+        artist:
+          type: string
+        artist_mbid:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        type:
+          $ref: "#/components/schemas/MusicAlbumType"
+        already_added:
+          type: boolean
 
     MusicArtistLookupHit:
       type: object
@@ -11958,6 +12044,15 @@ components:
         failure_reason:
           type: string
           nullable: true
+        failure_code:
+          type: string
+          nullable: true
+          description: |
+            Machine-readable cause of a `failed` scan, present only when it
+            has one: `hardcover_key_rejected` (Hardcover refused the key
+            mid-scan) or `hardcover_not_configured` (the key vanished between
+            start and run). Every other failure carries `failure_reason`
+            alone.
         scanned_at:
           type: string
           format: date-time
@@ -12057,7 +12152,7 @@ components:
             `series` matches each top-level folder against TVDB; `music`
             scans album folders against MusicBrainz; `book` scans ebook and
             audiobook items against Hardcover. `mode=rename` is rejected for
-            `music`.
+            `music` and `book`, which adopt in place only.
         mode:
           type: string
           enum: [in_place, rename]
@@ -12355,10 +12450,12 @@ components:
         year:
           type: integer
           x-go-type: uint16
+        type:
+          $ref: "#/components/schemas/MusicAlbumType"
 
     ImportScanAlbum:
       type: object
-      required: [id, folder_path, classification, file_count, decision, outcome]
+      required: [id, folder_path, classification, file_count, size, decision, outcome]
       properties:
         id:
           type: integer
@@ -12369,6 +12466,20 @@ components:
           type: string
         tagged_album:
           type: string
+        tagged_year:
+          type: integer
+          x-go-type: uint16
+          description: Most common year tag of the folder's files.
+        format:
+          type: string
+          description: |
+            Quality label of the folder's first audio file: `FLAC 24/96`,
+            `MP3 320`, `MP3 V0` when ffprobe is enabled, else the extension
+            upper-cased.
+        size:
+          type: integer
+          format: int64
+          description: Bytes of the folder's audio files.
         classification:
           type: string
           enum: [confirmed, ambiguous, unmatched, existing]
@@ -12380,6 +12491,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ImportScanAlbumCandidate"
+        artist_id:
+          type: integer
+          x-go-type: uint32
+          description: |
+            Library id of the artist behind `artist_mbid`, read live; absent
+            when the library lacks it, in which case a commit adds the artist.
         existing_album_id:
           type: integer
           x-go-type: uint32
@@ -12394,7 +12511,10 @@ components:
           type: string
         outcome:
           type: string
-          enum: [pending, created, failed]
+          enum: [pending, created, attached, failed]
+          description: |
+            `attached` is an `existing` row whose files joined the library's
+            album instead of creating one.
         outcome_message:
           type: string
         created_album_id:
@@ -12447,7 +12567,7 @@ components:
 
     ImportScanBook:
       type: object
-      required: [id, file_paths, slot, classification, decision, outcome]
+      required: [id, file_paths, slot, classification, format, size, file_count, source_path, decision, outcome]
       properties:
         id:
           type: integer
@@ -12465,6 +12585,25 @@ components:
           type: string
         parsed_isbn:
           type: string
+        parsed_year:
+          type: integer
+          x-go-type: uint16
+        format:
+          type: string
+          description: |
+            Upper-case format of the item: the best ebook format by the ebook
+            ladder, or the dominant audio extension of an audiobook.
+        size:
+          type: integer
+          format: int64
+          description: Bytes of the item's files.
+        file_count:
+          type: integer
+          x-go-type: uint16
+        source_path:
+          type: string
+          description: |
+            The audiobook's folder, or the ebook's best-format file.
         classification:
           type: string
           enum: [confirmed, ambiguous, unmatched, existing]
@@ -12487,7 +12626,10 @@ components:
           x-go-type: uint32
         outcome:
           type: string
-          enum: [pending, created, failed]
+          enum: [pending, created, attached, failed]
+          description: |
+            `attached` is an `existing` row whose files joined the library's
+            book instead of creating one.
         outcome_message:
           type: string
         created_book_id:
@@ -13051,7 +13193,7 @@ components:
 
     RequestMediaType:
       type: string
-      enum: [movie, tvshow, artist, book, book_series]
+      enum: [movie, tvshow, artist, album, book, book_series]
 
     Request:
       type: object
@@ -13069,10 +13211,28 @@ components:
             TMDB id for movies, TVDB id for shows, Hardcover book id for
             books, Hardcover series id for book series (a separate id space,
             which is why `media_type` is part of the uniqueness key); 0 for
-            artists.
+            artists and albums.
         media_mbid:
           type: string
-          description: MusicBrainz id of an artist request; absent for every other type.
+          description: |
+            MusicBrainz id: the artist of an artist request, the release
+            group of an album request; absent for every other type.
+        artist_mbid:
+          type: string
+          description: |
+            Album requests only. The requester's hint until the request is
+            approved, the artist MusicBrainz names for the release group
+            after. Display data, never trusted.
+        artist_name:
+          type: string
+          description: Album requests only; the display companion of `artist_mbid`.
+        requested_as:
+          type: string
+          description: |
+            Album requests only. The artist wording the requester typed,
+            verbatim and untrusted; it stays after approval replaces
+            `artist_name` with the verified artist, so a client can caption
+            "requested as ..." when the two differ.
         title:
           type: string
         status:
@@ -13136,10 +13296,18 @@ components:
         media_id:
           type: integer
           x-go-type: uint32
-          description: Required for movie, tvshow, book and book_series; rejected for artist.
+          description: Required for movie, tvshow, book and book_series; rejected for artist and album.
         media_mbid:
           type: string
-          description: Artist MBID; required for artist and rejected for every other type.
+          description: |
+            Artist MBID for an artist, release-group MBID for an album;
+            required for both and rejected for every other type.
+        artist_mbid:
+          type: string
+          description: Album only; the artist's MBID (UUID). Rejected for every other type.
+        artist_name:
+          type: string
+          description: Album only; 1 to 200 characters. Rejected for every other type.
         title:
           type: string
         quality_profile:
@@ -13169,7 +13337,7 @@ components:
       description: |
         Response of `GET /requests/{id}/metadata`. No discriminator: the
         caller branches on the request's `media_type`. A movie or tvshow
-        request answers `RequestMediaDetails`, an artist request
+        request answers `RequestMediaDetails`, an artist or album request
         `MusicArtistLookupDetail` (the hit fields and the detail), and a book
         or book_series request `BookLookupDetail` (`type: series` for
         `book_series`).

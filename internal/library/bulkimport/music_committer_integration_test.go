@@ -217,6 +217,40 @@ var _ = Describe(
 			Expect(n).To(Equal(1))
 		})
 
+		It("records an existing album's adoption as attached", func() {
+			held, err := store.CreateArtist(ctx, db.CreateArtistParams{
+				MBID: "a-1",
+				Name: "Nirvana",
+				Albums: []db.AlbumSeed{
+					{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			albumID := held.Edges.Albums[0].ID
+			Expect(
+				store.SetAlbumHydration(
+					ctx, albumID,
+					db.HydrationParams{
+						Tracks: []db.TrackSeed{{
+							MBID: "t-1", Title: "Smells Like Teen Spirit",
+							Disc: 1, Position: 1,
+						}},
+					},
+					time.Now(),
+				),
+			).To(Succeed())
+			dir := folder("Nevermind", "tagged.mp3")
+			row := confirmed(dir, "rg-1", "a-1")
+			row.Classification = entimportscanalbum.ClassificationExisting
+			row.ExistingAlbumID = &albumID
+
+			scan := commit(row)
+
+			Expect(scan.CommitSuccessCount).To(Equal(uint32(1)))
+			Expect(outcomeOf(dir).Outcome).
+				To(Equal(entimportscanalbum.OutcomeAttached))
+		})
+
 		It("adds the artist once for several albums", func() {
 			expectDiscography("a-1", map[string][]string{
 				"rg-1": {"Smells Like Teen Spirit"},

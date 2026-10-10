@@ -15,6 +15,12 @@ type CreateRequestParams struct {
 	Title          string
 	RequesterID    uint32
 	QualityProfile string // "" = no preference
+	// ArtistMBID, ArtistName and RequestedAs are the album-request hints; the
+	// requester's wording is kept in RequestedAs once approval replaces the
+	// pair with the verified artist.
+	ArtistMBID  string
+	ArtistName  string
+	RequestedAs string
 }
 
 type ListRequestsParams struct {
@@ -37,6 +43,15 @@ func (db *DB) CreateRequest(
 		SetQualityProfile(p.QualityProfile)
 	if p.MediaMBID != "" {
 		c = c.SetMediaMbid(p.MediaMBID)
+	}
+	if p.ArtistMBID != "" {
+		c = c.SetArtistMbid(p.ArtistMBID)
+	}
+	if p.ArtistName != "" {
+		c = c.SetArtistName(p.ArtistName)
+	}
+	if p.RequestedAs != "" {
+		c = c.SetRequestedAs(p.RequestedAs)
 	}
 	return c.Save(ctx)
 }
@@ -132,6 +147,22 @@ func (db *DB) GetRequest(ctx context.Context, id uint32) (*ent.Request, error) {
 func (db *DB) ApproveRequest(ctx context.Context, id, adminID uint32) error {
 	return db.client.Request.UpdateOneID(id).
 		SetStatus(request.StatusApproved).SetApprovedByID(adminID).Exec(ctx)
+}
+
+// ApproveAlbumRequest approves and replaces the requester's artist hints with
+// the verified artist in one statement, so a reader never sees an approved
+// request still carrying the unverified pair.
+func (db *DB) ApproveAlbumRequest(
+	ctx context.Context,
+	id, adminID uint32,
+	artistMBID, artistName string,
+) error {
+	return db.client.Request.UpdateOneID(id).
+		SetStatus(request.StatusApproved).
+		SetApprovedByID(adminID).
+		SetArtistMbid(artistMBID).
+		SetArtistName(artistName).
+		Exec(ctx)
 }
 
 func (db *DB) DenyRequest(

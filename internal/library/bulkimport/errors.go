@@ -2,6 +2,11 @@ package bulkimport
 
 import "errors"
 
+const (
+	codeHardcoverKeyRejected   = "hardcover_key_rejected"
+	codeHardcoverNotConfigured = "hardcover_not_configured"
+)
+
 var (
 	ErrInvalidPath = errors.New(
 		"source path invalid (not absolute, doesn't exist, or not a directory)",
@@ -19,5 +24,7 @@ var (
 	ErrScanNotReviewable  = errors.New("scan is not in awaiting_review state")
 	ErrScanNotCancellable = errors.New("scan is not in a cancellable state")
 	ErrScanNotDeletable   = errors.New("scan must be cancelled before delete")
-	ErrRenameUnsupported  = errors.New("rename mode is not supported for music")
+	ErrRenameUnsupported  = errors.New(
+		"rename mode is not supported for music and book imports",
+	)
 )
