@@ -68,6 +68,21 @@ func judge(
 	return releases
 }
 
+// namingAlbum keeps the releases whose name is this artist and this album. An
+// indexer answers a search with whatever loosely matches it, and an automatic
+// grab has no person to notice that "Artist - Other Album" is not the album.
+func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
+	artist := a.Edges.Artist
+	if artist == nil {
+		return nil
+	}
+	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
+		creator, title, ok := library.SplitCreatorTitle(r.Result.Title)
+		return !ok || !library.TitleMatchesStrict(creator, artist.Name) ||
+			!library.TitleNamesSameWork(title, a.Title)
+	})
+}
+
 // firstAccepted is the best release the profile accepts, nil when none is.
 func firstAccepted(releases []AlbumRelease) *AlbumRelease {
 	for i := range releases {
@@ -215,7 +230,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		slog.WarnContext(ctx, "music search: stamp last_search_at failed",
 			"album.id", a.ID, "error", err)
 	}
-	best := firstAccepted(releases)
+	best := firstAccepted(namingAlbum(releases, a))
 	if best == nil {
 		return false
 	}

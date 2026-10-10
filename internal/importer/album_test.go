@@ -50,7 +50,7 @@ func seedTrackFile(dir, name, fixture string, position uint16, title string) str
 	//nolint:gosec // path is a fresh temp dir joined with a fixed name
 	Expect(os.WriteFile(path, data, 0o600)).To(Succeed())
 	Expect(audiotags.Write(path, audiotags.WriteTags{
-		Artist: "Source Artist", Album: "Source Album", Title: title,
+		Artist: "Source Artist", Title: title,
 		Track: position, Disc: 1,
 	})).To(Succeed())
 	return path

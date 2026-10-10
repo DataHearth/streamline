@@ -770,17 +770,26 @@ func (e HistoryEntryStatus) Valid() bool {
 
 // Defines values for HoldReasonCheck.
 const (
+	HoldReasonCheckAlbum      HoldReasonCheck = "album"
 	HoldReasonCheckAlwaysAsk  HoldReasonCheck = "always_ask"
+	HoldReasonCheckBitrate    HoldReasonCheck = "bitrate"
 	HoldReasonCheckCodec      HoldReasonCheck = "codec"
 	HoldReasonCheckCorrupt    HoldReasonCheck = "corrupt"
 	HoldReasonCheckDuration   HoldReasonCheck = "duration"
+	HoldReasonCheckFormat     HoldReasonCheck = "format"
+	HoldReasonCheckMetadata   HoldReasonCheck = "metadata"
 	HoldReasonCheckResolution HoldReasonCheck = "resolution"
+	HoldReasonCheckTier       HoldReasonCheck = "tier"
 )
 
 // Valid indicates whether the value is a known member of the HoldReasonCheck enum.
 func (e HoldReasonCheck) Valid() bool {
 	switch e {
+	case HoldReasonCheckAlbum:
+		return true
 	case HoldReasonCheckAlwaysAsk:
+		return true
+	case HoldReasonCheckBitrate:
 		return true
 	case HoldReasonCheckCodec:
 		return true
@@ -788,7 +797,13 @@ func (e HoldReasonCheck) Valid() bool {
 		return true
 	case HoldReasonCheckDuration:
 		return true
+	case HoldReasonCheckFormat:
+		return true
+	case HoldReasonCheckMetadata:
+		return true
 	case HoldReasonCheckResolution:
+		return true
+	case HoldReasonCheckTier:
 		return true
 	default:
 		return false
@@ -4794,13 +4809,21 @@ type HistoryEntryStatus string
 
 // HoldReason One import verification check a held download failed.
 type HoldReason struct {
-	Actual   *string         `json:"actual,omitempty"`
+	Actual *string `json:"actual,omitempty"`
+
+	// Check corrupt, resolution, duration, codec and always_ask are the video
+	// checks; tier and album hold a music download (a measured tier the
+	// profile does not tick, files tagged as another album); format,
+	// bitrate and metadata hold a book.
 	Check    HoldReasonCheck `json:"check"`
 	Expected *string         `json:"expected,omitempty"`
 	File     string          `json:"file"`
 }
 
-// HoldReasonCheck defines model for HoldReason.Check.
+// HoldReasonCheck corrupt, resolution, duration, codec and always_ask are the video
+// checks; tier and album hold a music download (a measured tier the
+// profile does not tick, files tagged as another album); format,
+// bitrate and metadata hold a book.
 type HoldReasonCheck string
 
 // IdentifyPendingRequest defines model for IdentifyPendingRequest.

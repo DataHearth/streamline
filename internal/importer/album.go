@@ -156,8 +156,12 @@ func (w *Worker) importAlbumFiles(
 	}
 	// Verified before anything is set aside or transferred, so a hold leaves
 	// the library exactly as it was.
-	if haveProfile && !rec.VerificationBypassed {
-		if reasons := tierHoldReasons(plan, profile); len(reasons) > 0 {
+	if !rec.VerificationBypassed {
+		reasons := albumHoldReasons(plan, alb)
+		if haveProfile {
+			reasons = append(reasons, tierHoldReasons(plan, profile)...)
+		}
+		if len(reasons) > 0 {
 			return true, w.hold(ctx, span, rec, reasons)
 		}
 	}

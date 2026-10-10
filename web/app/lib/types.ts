@@ -639,6 +639,11 @@ export type HoldCheck =
 	| "corrupt"
 	| "duration"
 	| "codec"
+	| "tier"
+	| "album"
+	| "format"
+	| "bitrate"
+	| "metadata"
 	// Not a failed check: `library.probe.always_ask` holds an otherwise-clean
 	// import so a person signs off on it, so it carries no expected/actual pair.
 	| "always_ask";

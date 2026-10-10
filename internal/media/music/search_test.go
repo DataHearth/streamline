@@ -233,17 +233,16 @@ var _ = Describe("Music searches", Label("unit", "integration", "music"), func()
 	})
 
 	Describe("search-now", func() {
-		flac := indexer.SearchResult{
-			Title:    "Nirvana - Nevermind (1991) [FLAC]",
-			Download: "magnet:?xt=urn:btih:abc",
-		}
-
 		expectPass := func(albumID uint32, title string, done chan<- struct{}) {
+			release := indexer.SearchResult{
+				Title:    "Nirvana - " + title + " (1991) [FLAC]",
+				Download: "magnet:?xt=urn:btih:" + title,
+			}
 			e.idx.EXPECT().
 				SearchAlbum(mock.Anything, "Nirvana", title, mock.Anything).
-				Return([]indexer.SearchResult{flac}, nil).
+				Return([]indexer.SearchResult{release}, nil).
 				Once()
-			e.dl.EXPECT().GrabAlbum(mock.Anything, flac, albumID).
+			e.dl.EXPECT().GrabAlbum(mock.Anything, release, albumID).
 				Run(func(_ context.Context, _ indexer.SearchResult, _ uint32) {
 					done <- struct{}{}
 				}).

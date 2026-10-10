@@ -12833,7 +12833,12 @@ components:
         file: { type: string }
         check:
           type: string
-          enum: [corrupt, resolution, duration, codec, always_ask]
+          description: |
+            corrupt, resolution, duration, codec and always_ask are the video
+            checks; tier and album hold a music download (a measured tier the
+            profile does not tick, files tagged as another album); format,
+            bitrate and metadata hold a book.
+          enum: [corrupt, resolution, duration, codec, always_ask, tier, album, format, bitrate, metadata]
         expected: { type: string }
         actual: { type: string }
 

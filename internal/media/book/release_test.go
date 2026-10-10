@@ -382,6 +382,20 @@ var _ = Describe("Book releases", Label("unit", "integration", "books"), func() 
 	})
 
 	Describe("SearchMissing", func() {
+		It("never grabs a release that names another book", func() {
+			b := f.addBook(1, "Warbreaker", "ebook")
+			f.idx.EXPECT().
+				SearchBook(anyCtx, "Brandon Sanderson", "Warbreaker", anyCtx, mediafile.BookKindEbook).
+				Return([]indexer.SearchResult{epub}, nil).
+				Once()
+
+			Expect(f.svc.SearchMissing(f.ctx)).To(Succeed())
+
+			got := f.reloadBook(b.ID)
+			Expect(got.EbookStatus).To(Equal(book.EbookStatusWanted))
+			Expect(got.EbookLastSearchAt).NotTo(BeNil())
+		})
+
 		It("grabs the best accepted release of every wanted slot", func() {
 			b := f.addBook(1, "Elantris", "both")
 			f.idx.EXPECT().

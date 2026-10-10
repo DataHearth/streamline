@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	mockffmpeg "github.com/datahearth/streamline/internal/ffmpeg/mocks"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/audiotags"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -290,3 +291,29 @@ var _ = Describe(
 		})
 	},
 )
+
+var _ = Describe("albumHoldReasons", Label("unit", "importer"), func() {
+	alb := &ent.Album{Title: "Twoism"}
+	file := func(album string) albumFile {
+		return albumFile{
+			path: "/dl/" + album + ".mp3",
+			info: audiotags.Info{Album: album},
+		}
+	}
+
+	It(
+		"holds files tagged as another album and lets the album's own through",
+		func() {
+			reasons := albumHoldReasons(
+				[]albumFile{file("Hi Scores"), file("Twoism"), file("")},
+				alb,
+			)
+			Expect(reasons).To(ConsistOf(schema.HoldReason{
+				File:     "/dl/Hi Scores.mp3",
+				Check:    "album",
+				Expected: "Twoism",
+				Actual:   "Hi Scores",
+			}))
+		},
+	)
+})

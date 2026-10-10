@@ -51,6 +51,27 @@ func (w *Worker) assessAlbumFile(
 	return albumFileQuality{}
 }
 
+// albumHoldReasons lists the files tagged as another album. Tracks match by
+// tagged number first, so a download of the wrong album fills the right
+// album's track slots one for one and would be placed without this. An
+// untagged album is no evidence either way.
+func albumHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
+	var out []schema.HoldReason
+	for _, f := range plan {
+		if f.info.Album == "" ||
+			library.TitleNamesSameWork(f.info.Album, alb.Title) {
+			continue
+		}
+		out = append(out, schema.HoldReason{
+			File:     f.path,
+			Check:    "album",
+			Expected: alb.Title,
+			Actual:   f.info.Album,
+		})
+	}
+	return out
+}
+
 // tierHoldReasons lists the measured files whose tier the artist's profile
 // does not tick: a "FLAC" that is a 128k transcode, or a 24-bit pack under a
 // profile that left hi-res unticked.

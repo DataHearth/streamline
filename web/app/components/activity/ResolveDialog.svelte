@@ -41,6 +41,11 @@
 		codec: () => i18n.hold_check_codec(),
 		corrupt: () => i18n.hold_check_corrupt(),
 		always_ask: () => i18n.hold_check_always_ask(),
+		tier: () => i18n.hold_check_tier(),
+		album: () => i18n.hold_check_album(),
+		format: () => i18n.hold_check_format(),
+		bitrate: () => i18n.hold_check_bitrate(),
+		metadata: () => i18n.hold_check_metadata(),
 	};
 
 	// `always_ask` holds a file nothing is wrong with, so it has no claim to

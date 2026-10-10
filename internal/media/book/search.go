@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -156,7 +157,22 @@ func (s *Service) searchSlot(ctx context.Context, b *ent.Book, kind string) bool
 			"book.id", b.ID, "book.kind", kind, "error", err)
 	}
 	sortReleases(releases)
-	return s.grabBest(ctx, span, b, kind, releases)
+	return s.grabBest(ctx, span, b, kind, namingBook(releases, b))
+}
+
+// namingBook keeps the releases whose name is this book by this author. An
+// indexer answers a search with whatever loosely matches it, and an automatic
+// grab has no person to notice that "Author - Other Book" is not the book.
+func namingBook(releases []ReleaseResult, b *ent.Book) []ReleaseResult {
+	return slices.DeleteFunc(slices.Clone(releases), func(r ReleaseResult) bool {
+		creator, title, ok := library.SplitCreatorTitle(r.Title)
+		if !ok ||
+			(b.AuthorName != "" && !library.TitleMatchesStrict(creator, b.AuthorName)) {
+			return true
+		}
+		return !library.TitleNamesSameWork(title, b.Title) &&
+			(b.OriginalTitle == "" || !library.TitleNamesSameWork(title, b.OriginalTitle))
+	})
 }
 
 // grabBest grabs the first accepted release of a sorted list, counts a strike

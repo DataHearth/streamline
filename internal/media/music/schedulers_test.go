@@ -158,13 +158,18 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 
 		It("skips an album whose search errors and continues with the next", func() {
 			albums := seedAlbums("Nevermind", "In Utero")
+			inUtero := indexer.SearchResult{
+				Title:    "Nirvana - In Utero (1993) [FLAC]",
+				Download: "magnet:?xt=urn:btih:def",
+				Seeders:  5,
+			}
 			e.idx.EXPECT().
 				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(0)).
 				Return(nil, fmt.Errorf("q: %w", indexer.ErrUnreachable)).Once()
 			e.idx.EXPECT().
 				SearchAlbum(mock.Anything, "Nirvana", "In Utero", uint16(0)).
-				Return([]indexer.SearchResult{flac}, nil).Once()
-			e.dl.EXPECT().GrabAlbum(mock.Anything, flac, albums[1].ID).
+				Return([]indexer.SearchResult{inUtero}, nil).Once()
+			e.dl.EXPECT().GrabAlbum(mock.Anything, inUtero, albums[1].ID).
 				Return(&ent.DownloadRecord{}, nil).Once()
 
 			Expect(e.svc.SearchMissing(e.ctx)).To(Succeed())
@@ -174,6 +179,19 @@ var _ = Describe("Music schedulers", Label("unit", "integration", "music"), func
 			Expect(failed.LastSearchAt).To(BeNil())
 			Expect(e.client.Album.GetX(e.ctx, albums[1].ID).Status).
 				To(Equal(album.StatusDownloading))
+		})
+
+		It("never grabs a release that names another album", func() {
+			al := seedAlbums("In Utero")[0]
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "In Utero", uint16(0)).
+				Return([]indexer.SearchResult{flac}, nil).Once()
+
+			Expect(e.svc.SearchMissing(e.ctx)).To(Succeed())
+
+			got := e.client.Album.GetX(e.ctx, al.ID)
+			Expect(got.Status).To(Equal(album.StatusWanted))
+			Expect(got.LastSearchAt).NotTo(BeNil())
 		})
 
 		It("leaves albums over the cap or inside the cooldown alone", func() {
