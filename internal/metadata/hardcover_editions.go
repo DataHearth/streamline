@@ -28,6 +28,47 @@ type langFormat struct {
 	language, format string
 }
 
+// originalEdition picks the earliest-released edition that is not a fragment.
+// Hardcover files a standalone printing of one story under the collection that
+// later took its name (Exhalation's earliest edition is a 12-page Hebrew
+// pamphlet), so an edition shorter than half the median known page count is
+// passed over. Audiobooks carry no page count and are never excluded.
+func originalEdition(
+	earliest *RawEdition,
+	digital, physical []RawEdition,
+) *RawEdition {
+	cands := slices.Concat(digital, physical)
+	if earliest != nil {
+		cands = append(cands, *earliest)
+	}
+	var pages []int
+	for _, e := range cands {
+		if e.Pages > 0 {
+			pages = append(pages, int(e.Pages))
+		}
+	}
+	floor := 0
+	if len(pages) >= 3 {
+		slices.Sort(pages)
+		floor = pages[len(pages)/2] / 2
+	}
+	var best *RawEdition
+	for i := range cands {
+		e := &cands[i]
+		if e.Language == "" || e.ReleaseDate == nil ||
+			(e.Pages > 0 && int(e.Pages) < floor) {
+			continue
+		}
+		if best == nil || e.ReleaseDate.Before(*best.ReleaseDate) {
+			best = e
+		}
+	}
+	if best == nil {
+		return earliest
+	}
+	return best
+}
+
 // SelectEditions reduces the raw editions of one book to the stored set: the
 // most popular edition per (language, publisher, format), at most
 // maxBookEditions of them with the best of every (language, format) pair

@@ -510,6 +510,7 @@ func (r hcBookRow) record() *BookRecord {
 		e := r.Earliest[0].raw()
 		earliest = &e
 	}
+	earliest = originalEdition(earliest, digital, physical)
 	rec.Editions, rec.OriginalLanguage = SelectEditions(
 		digital, physical, earliest, rec.ReleaseYear,
 	)

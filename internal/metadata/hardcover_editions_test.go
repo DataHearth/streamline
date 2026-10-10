@@ -183,3 +183,32 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 		},
 	)
 })
+
+var _ = Describe("originalEdition", Label("unit", "metadata"), func() {
+	dated := func(id uint32, lang string, pages uint16, year int) RawEdition {
+		e := raw(id, lang, "P", 1, 1)
+		e.Pages = pages
+		d := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)
+		e.ReleaseDate = &d
+		return e
+	}
+
+	It("passes over a fragment edition that predates the work", func() {
+		pamphlet := dated(1, "he", 12, 2014)
+		got := originalEdition(&pamphlet, []RawEdition{
+			dated(2, "en", 208, 2019),
+			dated(3, "fr", 464, 2019),
+			dated(4, "de", 380, 2020),
+		}, nil)
+		Expect(got.HardcoverID).To(Equal(uint32(2)))
+	})
+
+	It("keeps a full-length earliest edition in another language", func() {
+		first := dated(1, "ja", 300, 1987)
+		got := originalEdition(&first, []RawEdition{
+			dated(2, "en", 296, 2000),
+			dated(3, "fr", 310, 2003),
+		}, nil)
+		Expect(got.HardcoverID).To(Equal(uint32(1)))
+	})
+})
