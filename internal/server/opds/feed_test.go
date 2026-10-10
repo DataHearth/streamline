@@ -8,6 +8,14 @@ import (
 )
 
 var _ = g.Describe("feed", g.Label("unit"), func() {
+	g.It("stamps an empty feed with the current time, not the epoch", func() {
+		rec := httptest.NewRecorder()
+		Expect(
+			writeFeed(rec, kindAcquisition, &feed{ID: "x", Title: "t"}),
+		).To(Succeed())
+		Expect(rec.Body.String()).NotTo(ContainSubstring("1970-"))
+	})
+
 	g.It("writes a navigation feed with the OPDS media type", func() {
 		rec := httptest.NewRecorder()
 		Expect(writeFeed(rec, kindNavigation, &feed{

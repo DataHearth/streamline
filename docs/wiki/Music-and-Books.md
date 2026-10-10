@@ -31,7 +31,7 @@ Both secrets are per user and separate from your login password. Generate, rotat
 
 For OPDS the catalogue URL carries no secret: point the reader at `https://your-host/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
 
-Subsonic serves artists, albums, songs, album lists, search and raw streaming with seeking. Transcoding parameters sent by the client are ignored. OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails in OPDS readers are not available yet: the cover URLs require a web session.
+Subsonic serves artists (getArtists and getIndexes), albums, songs, album lists, search and raw streaming with seeking. Transcoding parameters sent by the client are ignored. OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
 
 ## How books are organised
 
@@ -93,7 +93,6 @@ Users can request an artist (its whole discography), a single album, a single bo
 - A big bulk import hydrates in the background at one album every four seconds, so an artist's tracks can take a while to fill in.
 - Adopting music or books does not trigger a media-server library refresh.
 - Multi-disc albums split into `CD1`, `CD2` folders are adopted as separate candidates.
-- OPDS covers need a web session, so readers show no thumbnails.
 - Volume packs and "intégrale" releases are treated as collections and never grabbed.
 - Hardcover has no CBZ or CBR concept, so a comic or manga volume listed there only as paperback has that paperback shown as its ebook edition.
 - A series volume cannot be deleted on its own; it would come back at the next refresh. Delete the series.

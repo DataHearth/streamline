@@ -164,6 +164,38 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		Expect(entry["coverArt"]).To(Equal(fmt.Sprintf("ar-%d", f.artist.ID)))
 	})
 
+	g.It(
+		"answers getIndexes with the getArtists grouping and a lastModified",
+		func() {
+			resp := f.call("getIndexes", nil)
+			ix := resp["indexes"].(map[string]any)
+			Expect(ix["lastModified"]).To(BeNumerically(">", 0))
+			Expect(ix).To(HaveKey("ignoredArticles"))
+			idx := ix["index"].([]any)
+			Expect(idx).To(HaveLen(1))
+			Expect(idx[0].(map[string]any)["name"]).To(Equal("N"))
+			entry := idx[0].(map[string]any)["artist"].([]any)[0].(map[string]any)
+			Expect(entry["id"]).To(Equal(fmt.Sprintf("ar-%d", f.artist.ID)))
+		},
+	)
+
+	g.It("filters getIndexes by music folder and ifModifiedSince", func() {
+		resp := f.call("getIndexes", url.Values{"musicFolderId": {"2"}})
+		Expect(resp["indexes"].(map[string]any)["index"]).To(BeEmpty())
+
+		resp = f.call("getIndexes", url.Values{"musicFolderId": {"1"}})
+		Expect(resp["indexes"].(map[string]any)["index"]).To(HaveLen(1))
+
+		resp = f.call(
+			"getIndexes",
+			url.Values{"ifModifiedSince": {"99999999999999"}},
+		)
+		Expect(resp["indexes"].(map[string]any)["index"]).To(BeEmpty())
+
+		resp = f.call("getIndexes", url.Values{"ifModifiedSince": {"0"}})
+		Expect(resp["indexes"].(map[string]any)["index"]).To(HaveLen(1))
+	})
+
 	g.It("falls back to name when sort_name is empty", func() {
 		Expect(
 			f.client.Artist.UpdateOneID(f.artist.ID).

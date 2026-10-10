@@ -205,7 +205,7 @@ func New(cfg Config) *Server {
 			Tracker: appAccess,
 		}).Routes(),
 	)
-	s.router.Mount("/opds", opds.New(cfg.Ent, appAccess).Router())
+	s.router.Mount("/opds", opds.New(cfg.Ent, appAccess, cfg.Posters).Router())
 
 	s.router.Get(
 		"/posters/{kind}/{id}/poster.jpg",

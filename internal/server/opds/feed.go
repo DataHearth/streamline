@@ -60,10 +60,12 @@ type link struct {
 
 type atomTime time.Time
 
+// A zero time (an empty feed has no newest entry) renders as now: Atom
+// requires updated, and the epoch reads as a feed untouched since 1970.
 func (t atomTime) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	v := time.Time(t)
 	if v.IsZero() {
-		v = time.Unix(0, 0)
+		v = time.Now()
 	}
 	return e.EncodeElement(v.UTC().Format(time.RFC3339), start)
 }

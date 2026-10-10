@@ -75,3 +75,12 @@ func downloadName(bk *ent.Book, ext string) string {
 	}
 	return library.SanitizePath(name)
 }
+
+func (h *Handler) cover(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "bookID"), 10, 32)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	h.posters.Serve(w, r, "books", uint32(id))
+}
