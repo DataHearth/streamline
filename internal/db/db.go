@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscan"
@@ -44,21 +45,61 @@ type Store interface {
 
 	// music
 	CreateArtist(ctx context.Context, p CreateArtistParams) (*ent.Artist, error)
-	// FindArtistByID eager-loads albums (release_date, then title) with their
-	// tracks (disc, position) and the tracks' media files.
+	// FindArtistByID eager-loads the members and the albums with their
+	// tracks (disc, position), the tracks' media files and every credit.
 	FindArtistByID(ctx context.Context, id uint32) (*ent.Artist, error)
+	// FindArtistRow returns the artist alone, with no edges loaded.
+	FindArtistRow(ctx context.Context, id uint32) (*ent.Artist, error)
 	// FindAlbumByID eager-loads the album's tracks (disc, then position) with
-	// their media files, and its artist, which SearchAlbumReleases needs for
-	// the artist name and quality profile.
+	// their media files and credits, the album's credits, and its artist.
 	FindAlbumByID(ctx context.Context, id uint32) (*ent.Album, error)
+	// FindTrackByID eager-loads the track's files and its album with artist.
+	FindTrackByID(ctx context.Context, id uint32) (*ent.Track, error)
 	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	// FindArtistByMBID returns nil, nil when no artist has the mbid.
 	FindArtistByMBID(ctx context.Context, mbid string) (*ent.Artist, error)
-	CountArtists(ctx context.Context) (int, error)
-	ListArtists(ctx context.Context, offset, limit uint32) ([]*ent.Artist, error)
-	RefreshArtist(ctx context.Context, id uint32, p RefreshArtistParams) error
-	// SetArtistMonitored flips the artist and every one of its albums.
-	SetArtistMonitored(ctx context.Context, id uint32, monitored bool) error
+	// ArtistIDsByMBID maps each mbid that is a library artist to its id.
+	ArtistIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
+	// CountArtistsFiltered counts what ListArtists's filters match.
+	CountArtistsFiltered(ctx context.Context, p ListArtistsParams) (int, error)
+	// ListArtists returns one filtered, sorted page with each artist's albums
+	// loaded as tiles (no tracks).
+	ListArtists(ctx context.Context, p ListArtistsParams) ([]*ent.Artist, error)
+	// ArtistCounts is the faceted tally behind the artist list's toolbar.
+	ArtistCounts(ctx context.Context, p ListArtistsParams) (ArtistCounts, error)
+	// AlbumRollups tallies tracks, files, bytes and runtime per album for the
+	// given artists.
+	AlbumRollups(
+		ctx context.Context,
+		artistIDs []uint32,
+	) (map[uint32]AlbumRollup, error)
+	// HydratingArtists reports which of the artists still have an album being
+	// filled in.
+	HydratingArtists(
+		ctx context.Context,
+		artistIDs []uint32,
+		now time.Time,
+	) (map[uint32]bool, error)
+	// RefreshArtist reconciles the discography and returns the created albums.
+	RefreshArtist(
+		ctx context.Context,
+		id uint32,
+		p RefreshArtistParams,
+	) ([]uint32, error)
+	SetArtistDetails(
+		ctx context.Context,
+		id uint32,
+		p ArtistDetailsParams,
+		at time.Time,
+	) error
+	// SetArtistMonitor stores the policy and applies it to the existing
+	// albums; it never touches album status.
+	SetArtistMonitor(
+		ctx context.Context,
+		id uint32,
+		monitor artist.Monitor,
+		now time.Time,
+	) error
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetAlbumStatus(
 		ctx context.Context,
@@ -66,16 +107,44 @@ type Store interface {
 		from []album.Status,
 		to album.Status,
 	) (bool, error)
-	// ListWantedAlbums returns monitored wanted albums under the grab-failure
-	// cap with no live download record, artist loaded.
+	// SetAlbumHydration stores an album's release call: facts, tracks, credits.
+	SetAlbumHydration(
+		ctx context.Context,
+		albumID uint32,
+		p HydrationParams,
+		at time.Time,
+	) error
+	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsTrackless(
+		ctx context.Context,
+		staleBefore, releasedBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
+	// ArtistMemberMBIDs returns the MusicBrainz ids of the artist's members.
+	ArtistMemberMBIDs(ctx context.Context, artistID uint32) ([]string, error)
+	// AlbumHasLiveRecord reports whether a download for the album, single or
+	// as part of a pack, is in flight.
+	AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error)
+	// ListArtistAlbumsForSearch returns the artist's monitored, released,
+	// hydrated, wanted albums.
+	ListArtistAlbumsForSearch(
+		ctx context.Context,
+		artistID uint32,
+	) ([]*ent.Album, error)
+	// ListPackAlbums returns the artist's monitored, released, hydrated albums
+	// that are wanted or paused: what a discography pack may cover.
+	ListPackAlbums(ctx context.Context, artistID uint32) ([]*ent.Album, error)
+	// ListWantedAlbums returns monitored, released, hydrated, wanted albums
+	// under the grab-failure cap with no live download record, artist loaded.
 	ListWantedAlbums(
 		ctx context.Context,
 		maxGrabFailures uint8,
 	) ([]*ent.Album, error)
 	DeleteArtist(ctx context.Context, id uint32) error
-	// ListEligibleAlbumsForSync returns wanted, monitored albums under the
-	// failure cap and past cooldown with no in-flight record, least recently
-	// searched first. The artist is eager-loaded.
+	// ListEligibleAlbumsForSync returns wanted, monitored, released, hydrated
+	// albums under the failure cap and past cooldown with no in-flight record,
+	// least recently searched first. The artist is eager-loaded.
 	ListEligibleAlbumsForSync(
 		ctx context.Context,
 		maxGrabFailures uint8,
@@ -93,29 +162,122 @@ type Store interface {
 	) ([]*ent.Artist, error)
 
 	// books
-	CreateAuthor(ctx context.Context, p CreateAuthorParams) (*ent.Author, error)
-	// FindAuthorByID eager-loads books (release_date, then title) with their
-	// media files.
-	FindAuthorByID(ctx context.Context, id uint32) (*ent.Author, error)
-	// FindBookByID eager-loads the book's author and media files.
+	// CreateBook writes a standalone book with its editions, contributions and
+	// people in one transaction.
+	CreateBook(ctx context.Context, b BookSeed) (*ent.Book, error)
+	// FindBookByID eager-loads the book's files, editions, slot editions,
+	// series and contributors.
 	FindBookByID(ctx context.Context, id uint32) (*ent.Book, error)
-	// FindAuthorByHardcoverID returns nil, nil when no author has the id.
-	FindAuthorByHardcoverID(
+	// FindBookByHardcoverID returns nil, nil when no book has the id.
+	FindBookByHardcoverID(ctx context.Context, hardcoverID uint32) (*ent.Book, error)
+	FindBooksByHardcoverIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]*ent.Book, error)
+	// ApplyBookMetadata writes provider data onto a book and re-derives its
+	// titles and any slot still without an edition; user state is untouched.
+	ApplyBookMetadata(ctx context.Context, id uint32, m BookMetadata) error
+	// SetBookSlotEdition points a slot at one of the book's editions of that
+	// format; 0 clears it.
+	SetBookSlotEdition(
+		ctx context.Context,
+		id uint32,
+		format string,
+		edition uint32,
+	) error
+	SetBookTitles(ctx context.Context, id uint32, title, original string) error
+	SetBookPreferredLanguage(ctx context.Context, id uint32, language string) error
+	SetBookQualityProfile(ctx context.Context, id uint32, profile string) error
+	SetBookKind(ctx context.Context, id uint32, kind string) error
+	// SetBookReplacing records the language of the edition a slot's file is
+	// being replaced from; empty clears it.
+	SetBookReplacing(ctx context.Context, id uint32, kind, language string) error
+	// SetBookSlot monitors or unmonitors one slot; kind is "ebook" or
+	// "audiobook". Monitoring moves skipped to wanted, unmonitoring moves
+	// wanted and paused to skipped, and a slot downloading or available keeps
+	// its status.
+	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	// DeleteBook returns the ids of the people left with no contribution and
+	// deleted with it.
+	DeleteBook(ctx context.Context, id uint32) ([]uint32, error)
+	DeleteBooks(ctx context.Context, ids []uint32) error
+	// ListActiveBookRecords returns the in-flight download records of the
+	// given books.
+	ListActiveBookRecords(
+		ctx context.Context,
+		bookIDs []uint32,
+	) ([]BookRecordRef, error)
+	// MarkBookRefreshed stamps a book as read without changing its data.
+	MarkBookRefreshed(ctx context.Context, id uint32, at time.Time) error
+	ListShelf(ctx context.Context, p ShelfParams) ([]ShelfRow, uint32, error)
+	ShelfCountsFor(ctx context.Context, p ShelfParams) (ShelfCounts, error)
+	// ListHydrationStubs returns up to limit books never hydrated, oldest
+	// first.
+	ListHydrationStubs(ctx context.Context, limit int) ([]*ent.Book, error)
+	// ListPositionPeers returns the other books at the same series position as
+	// each given book, hydrated or not.
+	ListPositionPeers(ctx context.Context, books []*ent.Book) ([]*ent.Book, error)
+	ListStaleStandaloneBooks(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.Book, error)
+	// series
+	CreateSeries(
+		ctx context.Context,
+		p CreateSeriesParams,
+	) (*ent.BookSeries, VolumeCounts, error)
+	AddSeriesVolumes(
+		ctx context.Context,
+		seriesID uint32,
+		profile string,
+		seeds []BookSeed,
+	) (VolumeCounts, error)
+	// FindSeriesByID eager-loads the volumes in ascending position with their
+	// files and editions, and the contributors.
+	FindSeriesByID(ctx context.Context, id uint32) (*ent.BookSeries, error)
+	// FindSeriesByHardcoverID returns nil, nil when no series has the id.
+	FindSeriesByHardcoverID(
 		ctx context.Context,
 		hardcoverID uint32,
-	) (*ent.Author, error)
-	CountAuthors(ctx context.Context) (int, error)
-	ListAuthors(ctx context.Context, offset, limit uint32) ([]*ent.Author, error)
-	// RefreshAuthor updates metadata of stored books only and creates new ones
-	// with their seed's slot flags.
-	RefreshAuthor(ctx context.Context, id uint32, p RefreshAuthorParams) error
-	// SetAuthorMonitored does not cascade to the author's books.
-	SetAuthorMonitored(ctx context.Context, id uint32, monitored bool) error
-	UpdateAuthor(ctx context.Context, id uint32, p UpdateAuthorParams) error
-	// SetBookSlot writes the slot flag; kind is "ebook" or "audiobook". A slot
-	// holding a file stays available, otherwise skipped and wanted follow the
-	// flag.
-	SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error
+	) (*ent.BookSeries, error)
+	ListStaleSeries(
+		ctx context.Context,
+		cutoff time.Time,
+		limit int,
+	) ([]*ent.BookSeries, error)
+	// FindSeriesByHardcoverIDs returns the library series among the ids, keyed
+	// by Hardcover id, each with its first volume.
+	FindSeriesByHardcoverIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]HeldSeries, error)
+	// FirstVolumeID is the lowest-position volume of a series, 0 when it has
+	// none.
+	FirstVolumeID(ctx context.Context, seriesID uint32) (uint32, error)
+	ApplySeriesMetadata(ctx context.Context, id uint32, m SeriesMetadata) error
+	MarkSeriesRefreshed(ctx context.Context, id uint32, at time.Time) error
+	// RefreshSeriesStats recomputes the stored since and rating from the
+	// volumes.
+	RefreshSeriesStats(ctx context.Context, id uint32) error
+	// SetSeriesQualityProfile writes the series and every one of its volumes.
+	SetSeriesQualityProfile(ctx context.Context, id uint32, profile string) error
+	// SetSeriesMonitor stores the policy and applies it to each volume's ebook
+	// slot; since is the instant "future" is measured against.
+	SetSeriesMonitor(
+		ctx context.Context,
+		id uint32,
+		monitor string,
+		since time.Time,
+	) error
+	// SetSeriesEdition stores the chosen (language, publisher) and re-picks
+	// the ebook slot of every volume without an ebook file.
+	SetSeriesEdition(
+		ctx context.Context,
+		id uint32,
+		language, publisher string,
+	) error
+	DeleteSeries(ctx context.Context, id uint32) ([]uint32, error)
 	// ListUpgradeCandidateAlbums returns the monitored albums that hold a file
 	// and have no live record, tracks and their files loaded.
 	ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, error)
@@ -125,8 +287,15 @@ type Store interface {
 		albumID uint32,
 		mode downloadrecord.ReplaceMode,
 	) error
-	// ListUpgradeCandidateBooks returns the books of monitored authors that
-	// hold a file of a slot no live record covers, files loaded.
+	// SetLiveArtistRecordReplaceMode flags the artist's newest downloading
+	// discography record.
+	SetLiveArtistRecordReplaceMode(
+		ctx context.Context,
+		artistID uint32,
+		mode downloadrecord.ReplaceMode,
+	) error
+	// ListUpgradeCandidateBooks returns the books that hold a file of a slot no
+	// live record covers, files loaded.
 	ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error)
 	// SetLiveBookRecordReplaceMode flags the newest downloading record of one
 	// book slot.
@@ -136,9 +305,9 @@ type Store interface {
 		kind downloadrecord.BookKind,
 		mode downloadrecord.ReplaceMode,
 	) error
-	// ListWantedBooks returns books of monitored authors with at least one
+	// ListWantedBooks returns the searchable books with at least one
 	// monitored, wanted slot under the grab-failure cap and with no live
-	// download record, author loaded.
+	// download record, series, editions and makers loaded.
 	ListWantedBooks(ctx context.Context, maxGrabFailures uint8) ([]*ent.Book, error)
 	// SetBookSlotStatus moves one slot's status from `from` to `to` and
 	// writes nothing when the slot has already left `from`.
@@ -148,14 +317,20 @@ type Store interface {
 		kind string,
 		from, to string,
 	) error
-	DeleteAuthor(ctx context.Context, id uint32) error
-	// ListEligibleBookSlotsForSync returns the books whose kind slot is
-	// wanted, monitored, under the failure cap and past cooldown with no
-	// in-flight record for that kind, least recently searched first. The
-	// author is eager-loaded.
+	// ListEligibleBookSlotsForSync returns the standalone books whose kind slot
+	// is wanted, monitored, under the failure cap and past cooldown with no
+	// in-flight record for that kind, least recently searched first. A series
+	// volume's ebook slot is the series' to search.
 	ListEligibleBookSlotsForSync(
 		ctx context.Context,
 		kind string,
+		maxGrabFailures uint8,
+		notSearchedSince time.Time,
+	) ([]*ent.Book, error)
+	// ListEligibleSeriesVolumes is the same for series volumes' ebook slots,
+	// series loaded.
+	ListEligibleSeriesVolumes(
+		ctx context.Context,
 		maxGrabFailures uint8,
 		notSearchedSince time.Time,
 	) ([]*ent.Book, error)
@@ -167,13 +342,6 @@ type Store interface {
 	) error
 	IncrementBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
 	ResetBookSlotGrabFailures(ctx context.Context, id uint32, kind string) error
-	// ListAuthorsStaleSince returns at most limit authors never refreshed or
-	// refreshed before cutoff, oldest first.
-	ListAuthorsStaleSince(
-		ctx context.Context,
-		cutoff time.Time,
-		limit int,
-	) ([]*ent.Author, error)
 
 	// users
 	FindUserByEmail(ctx context.Context, email string) (*ent.User, error)
@@ -485,6 +653,13 @@ type Store interface {
 	RecordAlbumImportSuccess(
 		ctx context.Context,
 		p RecordAlbumImportSuccessParams,
+	) error
+	// CompletePackRecord completes a discography pack's record and returns
+	// the linked albums it did not fill to wanted.
+	CompletePackRecord(
+		ctx context.Context,
+		recordID uint32,
+		unmatchedAlbumIDs []uint32,
 	) error
 	RecordImportFailure(ctx context.Context, p RecordImportFailureParams) error
 	RetryFailedDownloadRecord(ctx context.Context, id uint32) error

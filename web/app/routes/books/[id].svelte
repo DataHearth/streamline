@@ -9,6 +9,7 @@
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
+	import { bookPosterUrl } from "@lib/posters";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
@@ -38,7 +39,6 @@
 		type BookMonitor,
 		type Edition,
 	} from "@lib/music-books";
-	import { bookPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let id = $state("");
@@ -96,14 +96,14 @@
 	}
 	async function search(f: BookFormat) {
 		if (!book) return;
-		await api(`/books/${id}/search`, { method: "POST", body: { format: f } });
+		await api(`/books/${id}/search-now?kind=${f}`, { method: "POST" });
 		toast.ok(i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() }));
 	}
 	// Every monitored format at once: the book's counterpart to a movie's
 	// automatic search.
 	async function searchAll() {
 		if (!book) return;
-		await api(`/books/${id}/search`, { method: "POST" });
+		await api(`/books/${id}/search-now`, { method: "POST" });
 		toast.ok(i18n.books_search_all_started({ title: book.title }));
 	}
 	async function changeEdition(f: BookFormat) {
@@ -154,6 +154,12 @@
 		const original = book.editions.find((e) => e.original);
 		const pages = (editionOf(inUse.ebook) ?? original)?.pages;
 		const rows: InfoRow[] = [{ label: i18n.common_type(), value: kindLabel(book.kind), mono: false }];
+		if (book.series)
+			rows.push({
+				label: i18n.books_series(),
+				value: [{ text: i18n.books_volume_of({ n: String(book.series.number), title: book.series.title }), href: `/books/series/${book.series.id}` }],
+				mono: false,
+			});
 		if (book.genre) rows.push({ label: i18n.music_fact_genre(), value: book.genre, mono: false });
 		rows.push({ label: i18n.lookup_first_published(), value: String(book.first_published) });
 		if (book.original_title) rows.push({ label: i18n.books_fact_original_title(), value: book.original_title, mono: false });
@@ -275,6 +281,7 @@
 						profile={book.quality_profile}
 						removeBody={i18n.books_remove_body()}
 						filesLabel={i18n.books_delete_files_label()}
+						canRemove={!book.series}
 					/>
 				</div>
 			{/if}
@@ -354,7 +361,7 @@
 
 	<Modal open={manualOpen} title={i18n.manual_search_scope({ scope: book.title })} size="4xl" onClose={() => (manualOpen = false)}>
 		<ReleasesTable
-			searchPath={`/books/${book.id}/releases`}
+			searchPath={`/books/${book.id}/search`}
 			grabPath={`/books/${book.id}/grab`}
 			queryKey={["releases", "book", book.id]}
 			existingCount={book.formats.filter((f) => !!f.file).length}

@@ -255,16 +255,37 @@ func SanitizePath(s string) string {
 	return strings.TrimSpace(s)
 }
 
+// BookNaming is what a book's naming template reads.
+type BookNaming struct {
+	Author   string
+	Title    string
+	Language string
+	Series   string
+	Year     uint16
+	// Volume is the position in the series, nil for a standalone book.
+	Volume *float64
+}
+
 // BuildBookVars creates template variables for ebook and audiobook naming.
 // Keys are capitalised to match the default `{Author}/{Title} ({Year})`
-// templates; renderToken is case-sensitive.
-func BuildBookVars(author, title string, year uint16) map[string]string {
+// templates; renderToken is case-sensitive. {Volume:02} pads a whole number
+// and leaves a fractional one (1.5) as it is.
+func BuildBookVars(n BookNaming) map[string]string {
 	vars := map[string]string{
-		"Author": author,
-		"Title":  title,
+		"Author": n.Author,
+		"Title":  n.Title,
 	}
-	if year > 0 {
-		vars["Year"] = strconv.FormatUint(uint64(year), 10)
+	if n.Year > 0 {
+		vars["Year"] = strconv.FormatUint(uint64(n.Year), 10)
+	}
+	if n.Language != "" {
+		vars["Language"] = n.Language
+	}
+	if n.Series != "" {
+		vars["Series"] = n.Series
+	}
+	if n.Volume != nil {
+		vars["Volume"] = strconv.FormatFloat(*n.Volume, 'f', -1, 64)
 	}
 	return vars
 }

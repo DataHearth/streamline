@@ -615,10 +615,7 @@ func toUpcomingBook(b *ent.Book) UpcomingBook {
 	if b.ReleaseDate != nil {
 		out.ReleaseDate = *b.ReleaseDate
 	}
-	if au := b.Edges.Author; au != nil {
-		out.AuthorId = au.ID
-		out.AuthorName = au.Name
-	}
+	out.AuthorId, out.AuthorName = firstCreator(b)
 	return out
 }
 

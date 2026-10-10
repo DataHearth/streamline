@@ -50,12 +50,12 @@ type Server struct {
 	tvSearcher      *rss.EpisodeMissingSearcher
 	metadataTV      metadata.TVProvider
 	music           music.Manager
-	metadataMusic   metadata.MusicProvider
 	books           book.Manager
 	metadataBook    metadata.BookProvider
 	deepLinker      *mediaserver.DeepLinker
 	renamer         library.Renamer
 	seriesRenamer   library.Renamer
+	musicRenamer    library.Renamer
 	requests        request.Manager
 	torrents        bittorrent.Manager
 	pathMigrations  *pathmigrate.Service
@@ -88,12 +88,12 @@ type Deps struct {
 	TVSearcher      *rss.EpisodeMissingSearcher
 	MetadataTV      metadata.TVProvider
 	Music           music.Manager
-	MetadataMusic   metadata.MusicProvider
 	Books           book.Manager
 	MetadataBook    metadata.BookProvider
 	DeepLinker      *mediaserver.DeepLinker
 	Renamer         library.Renamer
 	SeriesRenamer   library.Renamer
+	MusicRenamer    library.Renamer
 	Requests        request.Manager
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
@@ -122,12 +122,12 @@ func New(d Deps) *Server {
 		tvSearcher:      d.TVSearcher,
 		metadataTV:      d.MetadataTV,
 		music:           d.Music,
-		metadataMusic:   d.MetadataMusic,
 		books:           d.Books,
 		metadataBook:    d.MetadataBook,
 		deepLinker:      d.DeepLinker,
 		renamer:         d.Renamer,
 		seriesRenamer:   d.SeriesRenamer,
+		musicRenamer:    d.MusicRenamer,
 		requests:        d.Requests,
 		torrents:        d.Torrents,
 		pathMigrations:  d.PathMigrations,

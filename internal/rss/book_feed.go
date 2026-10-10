@@ -8,6 +8,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entbook "github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -27,13 +28,22 @@ type bookSlot struct {
 	kind string
 }
 
-// bookPass carries one tick's state for the book branch: wanted books and
-// books holding files (upgrade candidates) indexed by author key, and the
-// slots already attempted. A book's two slots are separate grabs, so grabbed is
-// keyed on the pair.
+// bookIndex finds the books a release could be for. A standalone book is
+// reached by its makers, the way a release names it ("Author - Title"); a
+// series volume is also reached by the series it belongs to and the volume
+// number, since a manga release rarely carries its author.
+type bookIndex struct {
+	byCreator map[string][]*ent.Book
+	volumes   []*ent.Book
+}
+
+// bookPass carries one tick's state for the book branch: the wanted books and
+// the books holding files (upgrade candidates), and the slots already
+// attempted. A book's two slots are separate grabs, so grabbed is keyed on the
+// pair.
 type bookPass struct {
-	wanted   map[string][]*ent.Book
-	upgrades map[string][]*ent.Book
+	wanted   bookIndex
+	upgrades bookIndex
 	grabbed  map[bookSlot]struct{}
 }
 
@@ -66,6 +76,103 @@ func slotWanted(b *ent.Book, kind string, maxGrabFailures uint8) bool {
 		b.EbookGrabFailures < maxGrabFailures
 }
 
+// creatorKeys are the names a release may credit a book under: the display
+// string and each maker.
+func creatorKeys(b *ent.Book) []string {
+	keys := []string{showKey(b.AuthorName)}
+	for _, c := range b.Edges.Contributions {
+		a := c.Edges.Author
+		if a == nil {
+			continue
+		}
+		switch c.Role {
+		case bookcontribution.RoleAuthor,
+			bookcontribution.RoleWriter,
+			bookcontribution.RoleArtist:
+			keys = append(keys, showKey(a.Name))
+		}
+	}
+	return keys
+}
+
+// titleForms are the names a release may use for a book: its title, its
+// original title and the title of every edition.
+func titleForms(b *ent.Book) []string {
+	forms := []string{b.Title}
+	if b.OriginalTitle != "" {
+		forms = append(forms, b.OriginalTitle)
+	}
+	for _, e := range b.Edges.Editions {
+		forms = append(forms, e.Title)
+	}
+	for _, e := range []*ent.BookEdition{b.Edges.EbookEdition, b.Edges.AudiobookEdition} {
+		if e != nil {
+			forms = append(forms, e.Title)
+		}
+	}
+	return forms
+}
+
+func indexBooks(books []*ent.Book) bookIndex {
+	idx := bookIndex{byCreator: make(map[string][]*ent.Book)}
+	for _, b := range books {
+		seen := map[string]bool{}
+		for _, k := range creatorKeys(b) {
+			if k == "" || seen[k] {
+				continue
+			}
+			seen[k] = true
+			idx.byCreator[k] = append(idx.byCreator[k], b)
+		}
+		if b.Edges.Series != nil {
+			idx.volumes = append(idx.volumes, b)
+		}
+	}
+	return idx
+}
+
+func (i bookIndex) empty() bool {
+	return len(i.byCreator) == 0 && len(i.volumes) == 0
+}
+
+// find returns the first book the release is for among those keep accepts: a
+// standalone match on "Author - Title", else a series volume on the series name
+// and the parsed volume number.
+func (i bookIndex) find(
+	itemTitle string,
+	parsed library.ParsedBookRelease,
+	keep func(*ent.Book) bool,
+) *ent.Book {
+	if creator, title, ok := splitCreatorTitle(itemTitle); ok {
+		for _, cand := range i.byCreator[showKey(creator)] {
+			if !keep(cand) {
+				continue
+			}
+			for _, form := range titleForms(cand) {
+				if library.TitleNamesSameWork(title, form) {
+					return cand
+				}
+			}
+		}
+	}
+	if parsed.Volume == nil {
+		return nil
+	}
+	for _, v := range i.volumes {
+		if !keep(v) || v.SeriesPosition == nil ||
+			*v.SeriesPosition != *parsed.Volume {
+			continue
+		}
+		sr := v.Edges.Series
+		if library.TitleNamesSameWork(parsed.VolumePrefix, sr.Title) ||
+			(sr.OriginalTitle != "" &&
+				library.TitleNamesSameWork(parsed.VolumePrefix, sr.OriginalTitle)) {
+			return v
+		}
+	}
+	return nil
+}
+
 func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
 	books, err := s.store.ListWantedBooks(
 		ctx, config.Get().Library.MaxGrabFailures,
@@ -77,26 +184,11 @@ func (s *FeedScanner) newBookPass(ctx context.Context) (*bookPass, error) {
 	if err != nil {
 		return nil, err
 	}
-	pass := &bookPass{
-		wanted:   make(map[string][]*ent.Book),
-		upgrades: make(map[string][]*ent.Book),
+	return &bookPass{
+		wanted:   indexBooks(books),
+		upgrades: indexBooks(upgradable),
 		grabbed:  make(map[bookSlot]struct{}),
-	}
-	for _, b := range books {
-		if b.Edges.Author == nil {
-			continue
-		}
-		key := showKey(b.Edges.Author.Name)
-		pass.wanted[key] = append(pass.wanted[key], b)
-	}
-	for _, b := range upgradable {
-		if b.Edges.Author == nil {
-			continue
-		}
-		key := showKey(b.Edges.Author.Name)
-		pass.upgrades[key] = append(pass.upgrades[key], b)
-	}
-	return pass, nil
+	}, nil
 }
 
 func (s *FeedScanner) processBookItems(
@@ -104,7 +196,7 @@ func (s *FeedScanner) processBookItems(
 	items []indexer.SearchResult,
 	pass *bookPass,
 ) int {
-	if len(pass.wanted) == 0 && len(pass.upgrades) == 0 {
+	if pass.wanted.empty() && pass.upgrades.empty() {
 		return 0
 	}
 	maxFailures := config.Get().Library.MaxGrabFailures
@@ -118,28 +210,11 @@ func (s *FeedScanner) processBookItems(
 		if parsed.Collection {
 			continue
 		}
-		authorPart, titlePart, ok := splitCreatorTitle(item.Title)
-		if !ok {
-			continue
-		}
-		var b *ent.Book
-		for _, cand := range pass.wanted[showKey(authorPart)] {
-			if slotWanted(cand, kind, maxFailures) &&
-				library.TitleNamesSameWork(titlePart, cand.Title) {
-				b = cand
-				break
-			}
-		}
+		b := pass.wanted.find(item.Title, parsed, func(c *ent.Book) bool {
+			return slotWanted(c, kind, maxFailures)
+		})
 		if b == nil {
-			if s.tryBookUpgrade(
-				ctx,
-				item,
-				parsed,
-				kind,
-				authorPart,
-				titlePart,
-				pass,
-			) {
+			if s.tryBookUpgrade(ctx, item, parsed, kind, pass) {
 				matched++
 			}
 			continue
@@ -190,30 +265,25 @@ func (s *FeedScanner) processBookItems(
 	return matched
 }
 
-// bookScore scores the release against the author's profile for the slot, or
-// -1 when it does not fit; an unresolvable profile rejects too, so a book is
-// never grabbed under a profile nobody can read.
+// bookScore scores the release against the book's profile for the slot, or -1
+// when it does not fit: a format the profile refuses, or a release tagged with
+// another language than the slot's edition. An unresolvable profile rejects
+// too, so a book is never grabbed under a profile nobody can read.
 func bookScore(
 	ctx context.Context,
 	b *ent.Book,
 	kind string,
 	parsed library.ParsedBookRelease,
 ) int {
-	a := b.Edges.Author
-	if kind == slotAudiobook {
-		p, ok := config.ResolveBookQualityProfile(a.AudiobookQualityProfile, "")
-		if !ok {
-			slog.WarnContext(ctx, "feed-scan: audiobook quality profile unresolved",
-				"author", a.Name, "profile", a.AudiobookQualityProfile)
-			return -1
-		}
-		return library.ScoreAudiobookRelease(parsed, p)
-	}
-	p, ok := config.ResolveBookQualityProfile(a.EbookQualityProfile, "")
+	p, ok := bookProfile(ctx, b)
 	if !ok {
-		slog.WarnContext(ctx, "feed-scan: ebook quality profile unresolved",
-			"author", a.Name, "profile", a.EbookQualityProfile)
 		return -1
+	}
+	if book.WrongLanguage(b, kind, parsed) {
+		return -1
+	}
+	if kind == slotAudiobook {
+		return library.ScoreAudiobookRelease(parsed, p)
 	}
 	return library.ScoreEbookRelease(parsed, p)
 }

@@ -36,6 +36,8 @@ const BY_CODE: Record<string, () => string> = {
 	registration_disabled: i18n.err_registration_disabled,
 	register_failed: i18n.err_register_failed,
 	rate_limited: i18n.err_rate_limited,
+	no_quality_profile: i18n.err_no_quality_profile,
+	series_volume: i18n.err_series_volume,
 	bad_request: i18n.err_bad_request,
 	body_too_large: i18n.err_body_too_large,
 };

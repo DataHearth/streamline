@@ -1,33 +1,32 @@
-// Music and books: the domain types and the small derivations their pages
-// share. Designed in this project first; main has its own phase-1 types, and
-// the merge decides where these land (types.ts on main).
+// Music and books: the wire types (api/openapi.yaml) and the small derivations
+// their pages share.
 
 import * as v from "valibot";
 import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
 import { formatDate } from "./dates";
 import { formatBytes } from "./format";
-import { artistPosterUrl, authorPosterUrl } from "./posters";
+import { authorPosterUrl, artistPosterUrl } from "./posters";
 
 export type MediaState = "available" | "wanted" | "downloading";
 
 // ── Music ────────────────────────────────────────────────────────────────
-export type ReleaseType = "album" | "ep" | "single";
-export type ReleaseStatus = MediaState | "upcoming";
-export type AudioQuality = "lossless" | "high" | "standard";
+export type ReleaseType = "album" | "ep" | "single" | "compilation" | "live" | "other";
+export type ReleaseStatus = MediaState | "upcoming" | "paused" | "skipped";
 // What following an artist means. "all" is the default: every release, past
 // and future.
 export type ArtistMonitor = "all" | "future" | "manual" | "none";
 
 // ── People ───────────────────────────────────────────────────────────────
 // Someone credited on a release, a track or a book. `artist_id` is set when
-// they are an artist in the music library, `shelf` when they write books in
-// it (the author name the shelf filters by); either makes them a link.
-// Providers have photos for artists and authors, rarely for anyone else.
-export type Person = { name: string; artist_id?: number; author_id?: number; shelf?: string };
+// they are an artist in the music library, `author_id` when they are an author
+// row of the book library. `shelf` is derived on the client for a creator role
+// (the author name the shelf filters by); either link makes them a link, and
+// either id is what their photo is built from.
+export type Person = { name: string; mbid?: string; artist_id?: number; author_id?: number; shelf?: string };
 
 // A group's line-up as MusicBrainz dates it. `to` is set for a former member.
-export type Member = Person & { instruments: string[]; from: number; to?: number };
+export type Member = Person & { instruments: string[]; from?: number; to?: number };
 // Who played on a release. `guest` marks a player from outside a group.
 export type Performer = Person & { instruments: string[]; guest?: boolean };
 // MusicBrainz relationship types, folded to the five liner notes carry.
@@ -37,6 +36,7 @@ export type MediumFormat = "cd" | "vinyl" | "digital" | "cassette";
 
 export type Track = {
 	id: number;
+	disc: number;
 	number: number;
 	title: string;
 	// The artist credit's "feat." part, one entry per guest.
@@ -52,13 +52,15 @@ export type Release = {
 	artist_id: number;
 	title: string;
 	type: ReleaseType;
-	release_date: string;
+	release_date?: string | null;
 	label?: string;
 	status: ReleaseStatus;
 	monitored: boolean;
 	track_count: number;
 	tracks_have: number;
-	quality?: AudioQuality;
+	// True until the album's tracks have been fetched.
+	tracks_pending: boolean;
+	quality?: MusicTier;
 	format?: string;
 	size?: number;
 	duration?: number;
@@ -82,29 +84,38 @@ export type Artist = {
 	type?: "group" | "person";
 	// A group's line-up, current and former. Detail only.
 	members?: Member[];
-	genre: string;
+	genre?: string;
 	origin?: string;
 	since?: number;
 	overview?: string;
+	// Attribution for the overview: the Wikipedia page it came from.
+	overview_source?: string;
 	monitor: ArtistMonitor;
 	// A music or book profile name; empty is the server default.
 	quality_profile?: string;
 	status: MediaState;
-	last_added_at: string;
-	track_count: number;
+	added_at: string;
+	album_count: number;
+	tracks_have: number;
 	size: number;
+	// True while any album is still fetching its tracks or credits; the detail
+	// is polled until it clears.
+	hydrating: boolean;
 	// Newest first, upcoming included.
-	releases: Release[];
+	albums: Release[];
 };
 
-export type ArtistList = { items: Artist[]; total: number };
+export type ArtistList = { items: Artist[]; total: number; page: number; limit: number };
 export type ArtistCounts = {
 	total: number;
-	available: number;
+	status_total: number;
 	wanted: number;
 	downloading: number;
-	releases: number;
-	last_scan: string | null;
+	available: number;
+	monitored_total: number;
+	monitored: number;
+	unmonitored: number;
+	albums: number;
 };
 
 // ── Books ────────────────────────────────────────────────────────────────
@@ -134,7 +145,7 @@ export type FormatSlot = {
 	format: BookFormat;
 	state: FormatState;
 	edition_id: number | null;
-	file?: { container: string; size: number };
+	file?: { container: string; size: number; file_count?: number };
 	progress?: number;
 	// Set while the file on disk is another edition's, kept until the new one
 	// has downloaded.
@@ -144,7 +155,7 @@ export type FormatSlot = {
 // Translators and narrators stay on the edition they worked on; this is
 // everyone else, and the edition's language when the credit is tied to one.
 export type BookRole = "author" | "writer" | "artist" | "colorist" | "cover" | "translator" | "narrator";
-export type BookCredit = Person & { role: BookRole; language?: string };
+export type BookCredit = Person & { role: BookRole; language?: string; author_id: number };
 
 export type Book = {
 	id: number;
@@ -168,10 +179,11 @@ export type Book = {
 	added_at: string;
 	formats: FormatSlot[];
 	editions: Edition[];
+	series?: { id: number; title: string; number: number };
 };
 
 export type Volume = {
-	// The Book whose poster is the volume's cover.
+	// The volume's own book id: its cover is that book's poster.
 	id: number;
 	number: number;
 	status: MediaState | "upcoming";
@@ -199,6 +211,8 @@ export type BookSeries = {
 	edition: string;
 	editions: string[];
 	added_at: string;
+	// True while any volume is still a stub; the detail is polled until it clears.
+	hydrating: boolean;
 	volumes: Volume[];
 };
 
@@ -211,8 +225,7 @@ export type ShelfItem = {
 	author: string;
 	kind: BookKind;
 	status: MediaState;
-	// The Book whose poster is the cover: the book itself, or a series' lowest
-	// volume. The image is bookPosterUrl(cover_id).
+	// The id of the book whose poster is the cover (a series': its first volume).
 	cover_id: number;
 	added_at: string;
 	year?: number;
@@ -223,26 +236,45 @@ export type ShelfItem = {
 	quality_profile?: string;
 };
 
-export type ShelfList = { items: ShelfItem[]; total: number };
+export type ShelfList = { items: ShelfItem[]; total: number; page: number; limit: number };
 export type BookCounts = {
 	total: number;
+	status_total: number;
 	available: number;
 	wanted: number;
 	downloading: number;
+	author_total: number;
 	authors: { name: string; count: number }[];
-	last_scan: string | null;
+	format_total: number;
+	ebook: number;
+	audiobook: number;
 };
 
 // ── Music helpers ────────────────────────────────────────────────────────
-export const releaseYear = (r: Release) => Number(r.release_date.slice(0, 4));
+// Empty for an undated album, so a caller can join it away.
+// The Wikipedia overview comes back in the UI's language, English when that
+// language has no article.
+export const overviewLang = () => (getLocale() === "fr" ? "fr" : "en");
+
+export const releaseYear = (r: Release) => r.release_date?.slice(0, 4) ?? "";
 
 export function releaseTypeLabel(t: ReleaseType): string {
 	if (t === "ep") return i18n.music_type_ep();
 	if (t === "single") return i18n.music_type_single();
+	if (t === "compilation") return i18n.music_type_compilation();
+	if (t === "live") return i18n.music_type_live();
+	if (t === "other") return i18n.music_type_other();
 	return i18n.music_type_album();
 }
 
-export function qualityLabel(q?: AudioQuality): string {
+export const multiDisc = (r: Release) => new Set((r.tracks ?? []).map((t) => t.disc)).size > 1;
+
+// "2019 · Album", or just the type when the album has no date.
+export const releaseLine = (r: Release) => [releaseYear(r), releaseTypeLabel(r.type)].filter(Boolean).join(" · ");
+
+export function qualityLabel(q?: MusicTier): string {
+	if (q === "hires") return i18n.qp_tier_hires();
+	if (q === "low") return i18n.qp_tier_low();
 	if (q === "lossless") return i18n.music_quality_lossless();
 	if (q === "high") return i18n.music_quality_high();
 	if (q === "standard") return i18n.music_quality_standard();
@@ -264,12 +296,14 @@ export const trackTime = (s: number) =>
 // reads as if nothing were there.
 export function releasePill(r: Release): { token: string; label: string; live?: boolean } {
 	if (r.status === "upcoming") return { token: "unaired", label: i18n.music_upcoming() };
+	if (r.status === "paused") return { token: "downloading", label: i18n.status_paused(), live: true };
 	if (r.status === "downloading")
 		return {
 			token: "downloading",
 			label: `${i18n.status_downloading()} · ${Math.round(r.progress ?? 0)}%`,
 			live: true,
 		};
+	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
 	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
 		if (r.tracks_have > 0)
@@ -290,8 +324,8 @@ export function releaseFacts(r: Release): string[] {
 			i18n.music_out_on({ date: formatDate(r.release_date) }),
 			i18n.music_tracks_announced({ count: n(r.track_count) }),
 		];
-	const p: string[] = [tracksCount(r.track_count)];
-	if (r.duration) p.push(i18n.music_minutes({ count: n(Math.round(r.duration / 60)) }));
+	const p: string[] = r.tracks_pending ? [] : [tracksCount(r.track_count)];
+	if (r.duration && !r.tracks_pending) p.push(i18n.music_minutes({ count: n(Math.round(r.duration / 60)) }));
 	if (r.quality && r.tracks_have > 0) p.push(qualityLabel(r.quality));
 	if (r.size) p.push(formatBytes(r.size, ""));
 	return p.filter(Boolean);
@@ -306,13 +340,13 @@ export function qualityNote(r: Release): string {
 }
 
 export function artistTally(a: Artist) {
-	const out = a.releases.filter((r) => r.status !== "upcoming");
+	const out = a.albums.filter((r) => r.status !== "upcoming");
 	return {
 		released: out.length,
 		have: out.filter((r) => r.status === "available").length,
 		wanted: out.filter((r) => r.status === "wanted").length,
-		downloading: out.filter((r) => r.status === "downloading").length,
-		upcoming: a.releases.length - out.length,
+		downloading: out.filter((r) => r.status === "downloading" || r.status === "paused").length,
+		upcoming: a.albums.length - out.length,
 	};
 }
 
@@ -327,7 +361,7 @@ export function releaseGroups(releases: Release[]) {
 // else the newest that is out.
 export function defaultRelease(releases: Release[]): Release | undefined {
 	return (
-		releases.find((r) => r.status === "wanted" || r.status === "downloading") ??
+		releases.find((r) => r.status === "wanted" || r.status === "downloading" || r.status === "paused") ??
 		releases.find((r) => r.status !== "upcoming") ??
 		releases[0]
 	);
@@ -337,11 +371,9 @@ export function defaultRelease(releases: Release[]): Release | undefined {
 // The API sends ids, never photo URLs. A person has art only when they are an
 // artist in the library, or a book creator with an author row; anyone else
 // gets the monogram.
-const CREATOR_ROLES: BookRole[] = ["author", "writer", "artist"];
-
 export function personPhoto(p: Person, role?: BookRole): string | undefined {
 	if (p.artist_id) return artistPosterUrl(p.artist_id);
-	if (p.author_id && role && CREATOR_ROLES.includes(role)) return authorPosterUrl(p.author_id);
+	if (p.author_id && (role ? CREATOR_ROLES.has(role) : p.shelf)) return authorPosterUrl(p.author_id);
 	return undefined;
 }
 
@@ -360,7 +392,8 @@ export function peopleList(ps: Person[]): string {
 	}
 }
 
-export const memberYears = (m: Member) => (m.to ? `${m.from}–${m.to}` : i18n.music_since({ year: String(m.from) }));
+export const memberYears = (m: Member) =>
+	m.to ? (m.from ? `${m.from}–${m.to}` : `–${m.to}`) : m.from ? i18n.music_since({ year: String(m.from) }) : "";
 
 export const CREDIT_ROLES: CreditRole[] = ["producer", "recording", "mix", "mastering", "artwork"];
 export function creditRoleLabel(r: CreditRole): string {
@@ -406,7 +439,7 @@ export function artistPeople(a: Artist): ArtistPeople {
 		if (!x) map.set(p.name, (x = { person: p, releases: new Set(), tracks: 0, roles: new Set(), instruments: new Set() }));
 		return x;
 	};
-	for (const r of a.releases) {
+	for (const r of a.albums) {
 		for (const t of r.tracks ?? [])
 			for (const p of t.featuring ?? []) {
 				const x = at(featured, p);
@@ -479,6 +512,16 @@ export function bookRoleLabel(r: BookRole): string {
 	return i18n.books_role_narrator();
 }
 
+const CREATOR_ROLES = new Set<BookRole>(["author", "writer", "artist"]);
+
+// The wire credit carries the role and the author row; the shelf filter and the
+// photo are for the roles that write the book.
+export const creditPerson = (c: BookCredit): Person => ({
+	name: c.name,
+	author_id: c.author_id,
+	shelf: CREATOR_ROLES.has(c.role) ? c.name : undefined,
+});
+
 export type BookPerson = { person: Person; role: BookRole; languages: string[] };
 
 // Everyone credited on a book: its makers first, then the translators and
@@ -486,7 +529,7 @@ export type BookPerson = { person: Person; role: BookRole; languages: string[] }
 // same person in the same role on two editions is one entry with both
 // languages. A narrator who is also the author keeps the author's link.
 export function bookPeople(credits: BookCredit[], editions: Edition[] = [], inUse: (number | null)[] = []): BookPerson[] {
-	const makers = new Map(credits.map((c) => [c.name, c]));
+	const makers = new Map(credits.map((c) => [c.name, creditPerson(c)]));
 	const out = new Map<string, BookPerson>();
 	const add = (p: Person, role: BookRole, language?: string) => {
 		const k = `${role}:${p.name}`;
@@ -494,13 +537,11 @@ export function bookPeople(credits: BookCredit[], editions: Edition[] = [], inUs
 		if (language && !x.languages.includes(language)) x.languages.push(language);
 		out.set(k, x);
 	};
-	for (const c of [...credits].sort((a, b) => BOOK_ROLES.indexOf(a.role) - BOOK_ROLES.indexOf(b.role))) add(c, c.role, c.language);
+	for (const c of [...credits].sort((a, b) => BOOK_ROLES.indexOf(a.role) - BOOK_ROLES.indexOf(b.role)))
+		add(creditPerson(c), c.role, c.language);
 	const sorted = [...editions].sort((a, b) => Number(inUse.includes(b.id)) - Number(inUse.includes(a.id)));
 	for (const e of sorted) {
-		const known = (name: string): Person => {
-			const m = makers.get(name);
-			return m ? { name, artist_id: m.artist_id, author_id: m.author_id, shelf: m.shelf } : { name };
-		};
+		const known = (name: string): Person => makers.get(name) ?? { name };
 		if (e.translator) add(known(e.translator), "translator", e.language);
 		if (e.narrator) add(known(e.narrator), "narrator", e.language);
 	}
@@ -573,11 +614,11 @@ export function releaseLanguage(title: string): string | null {
 }
 
 // ── Quality profiles ─────────────────────────────────────────────────────
-// Music and books keep their own profiles, each family behind its own resource:
-// a resolution or a video codec means nothing to a FLAC or an EPUB. Names are
-// unique per family.
+// Music and books keep their own profiles, served by /music/quality-profiles
+// and /books/quality-profiles: a resolution or a video codec means nothing to a
+// FLAC or an EPUB. Names are unique per medium.
 export type ProfileMedia = "music" | "books";
-export const profilesPath = (media: ProfileMedia) => (media === "music" ? "/music/quality-profiles" : "/books/quality-profiles");
+export const profilesPath = (media: ProfileMedia) => `/${media}/quality-profiles`;
 
 // Best first. A profile grabs only the tiers it ticks and keeps upgrading until
 // it holds `preferred`. Leaving hi-res unticked is how a Lossless profile keeps
@@ -605,9 +646,8 @@ export const AUDIOBOOK_BITRATES = [0, 64, 96, 128];
 // and its audiobook.
 export type BookProfile = {
 	name: string;
-	// The book kinds this is the default profile of; a book takes the default of
-	// its own kind.
-	default_for?: BookKind[];
+	// The kinds of book this profile is the default for.
+	default_for: BookKind[];
 	upgrade_allowed: boolean;
 	ebook: { formats: EbookFormat[]; preferred: EbookFormat };
 	audiobook: { formats: AudiobookFormat[]; preferred: AudiobookFormat; min_bitrate: number };

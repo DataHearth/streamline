@@ -20,7 +20,7 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes | UI / API |
 | `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie, album and book slot (ebook and audiobook searched separately) | UI / API |
 | `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
-| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates; also refreshes artists (MusicBrainz) and authors (Hardcover), at most 10 of each per run, oldest first | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates; also refreshes artists (MusicBrainz, at most 10 per run, oldest first) and books and series (Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached) | UI / API |
 | `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes | UI / API |
 | `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review | UI / API |
 | `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |

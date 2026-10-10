@@ -2205,6 +2205,8 @@ paths:
       responses:
         "202":
           $ref: "#/components/responses/BookSearchAcceptedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -10882,6 +10884,7 @@ components:
       type: object
       required:
         - monitor_specials
+        - book_language
         - movie_naming
         - series_naming
         - import_mode
@@ -10899,6 +10902,13 @@ components:
           description: |
             Monitor season 0 (specials) when a series is added or a refresh
             discovers the season. Applies to newly seeded seasons only.
+        book_language:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: >-
+            ISO 639-1 language a new book prefers (`library.book_language`);
+            seeds `Book.preferred_language` at add.
         movie_naming:
           type: string
         series_naming:
@@ -10951,6 +10961,10 @@ components:
       properties:
         monitor_specials:
           type: boolean
+        book_language:
+          type: string
+          minLength: 2
+          maxLength: 2
         movie_naming:
           type: string
         series_naming:

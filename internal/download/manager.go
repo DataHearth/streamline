@@ -20,6 +20,7 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
@@ -259,6 +260,16 @@ type Downloader interface {
 		result indexer.SearchResult,
 		albumID uint32,
 	) (*ent.DownloadRecord, error)
+	// GrabArtistPack grabs a discography pack for the artist. The record is
+	// filed under the artist and linked to every album of it that is
+	// monitored, released, hydrated and wanted or paused, which are marked
+	// downloading; a pack with no such album is refused with ErrNoWantedFiles
+	// before the client is contacted.
+	GrabArtistPack(
+		ctx context.Context,
+		result indexer.SearchResult,
+		artistID uint32,
+	) (*ent.DownloadRecord, error)
 	GrabBook(
 		ctx context.Context,
 		result indexer.SearchResult,
@@ -366,6 +377,12 @@ type QueueEntry struct {
 	Quality      string
 	ReleaseGroup string
 	Movie        *ent.Movie
+	// Album is set for an album record, Artist for a discography pack; both
+	// let the activity page title the row.
+	Album  *ent.Album
+	Artist *ent.Artist
+	// PackAlbumIDs are the albums a discography pack is expected to cover.
+	PackAlbumIDs []uint32
 	// Episode is set for TV download records (with season + show eager-loaded);
 	// nil for movie records. Drives the "<show> · SxxExx" row title.
 	Episode        *ent.Episode
@@ -473,6 +490,8 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		Quality:        rec.Quality,
 		ReleaseGroup:   rec.ReleaseGroup,
 		Movie:          rec.Edges.Movie,
+		Album:          rec.Edges.Album,
+		Artist:         rec.Edges.Artist,
 		Episode:        rec.Edges.AnchorEpisode,
 		Size:           rec.Size,
 		FailureReason:  rec.FailureReason,
@@ -489,6 +508,9 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		e.Status = "held"
 		e.Progress = 1.0
 		e.HoldReasons = rec.HoldReasons
+	}
+	for _, a := range rec.Edges.Albums {
+		e.PackAlbumIDs = append(e.PackAlbumIDs, a.ID)
 	}
 	e.Indexer = rec.IndexerName
 	e.DownloadClient = rec.DownloadClientName
@@ -629,11 +651,65 @@ func (d *download) GrabBook(
 	return d.grab(ctx, result, 0, 0, 0, bookID, kind, nil)
 }
 
+func (d *download) GrabArtistPack(
+	ctx context.Context,
+	result indexer.SearchResult,
+	artistID uint32,
+) (*ent.DownloadRecord, error) {
+	albums, err := d.db.ListPackAlbums(ctx, artistID)
+	if err != nil {
+		return nil, fmt.Errorf("list pack albums: %w", err)
+	}
+	if len(albums) == 0 {
+		return nil, fmt.Errorf("%w: no album of the artist is waiting for %s",
+			ErrNoWantedFiles, result.Title)
+	}
+	ids := make([]uint32, len(albums))
+	for i, a := range albums {
+		ids[i] = a.ID
+	}
+	rec, err := d.grabTarget(
+		ctx,
+		result,
+		grabTarget{artistID: artistID, packAlbumIDs: ids},
+	)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		if _, err := d.db.SetAlbumStatus(
+			ctx, id,
+			[]album.Status{album.StatusWanted, album.StatusPaused},
+			album.StatusDownloading,
+		); err != nil {
+			slog.WarnContext(ctx, "mark pack album downloading failed",
+				"album.id", id, "error", err)
+		}
+	}
+	return rec, nil
+}
+
 // pendingSelection carries Flow A's resolved keep-set from resolveTorrentSource
 // through CreateDownloadRecord to the post-add SetWantedFiles confirmation.
 type pendingSelection struct {
 	files []int
 	bytes int64
+}
+
+// grabTarget names what a grab is for when it is not one of the four ids grab
+// takes positionally: a discography pack's artist and the albums it links.
+type grabTarget struct {
+	artistID     uint32
+	packAlbumIDs []uint32
+}
+
+// grabTarget is grab for a target the positional ids cannot name.
+func (d *download) grabTarget(
+	ctx context.Context,
+	result indexer.SearchResult,
+	t grabTarget,
+) (*ent.DownloadRecord, error) {
+	return d.grabWith(ctx, result, 0, 0, 0, 0, "", nil, t)
 }
 
 // grab is the shared torrent-grab path. Exactly one of
@@ -647,6 +723,20 @@ func (d *download) grab(
 	movieID, episodeID, albumID, bookID uint32,
 	bookKind mediafile.BookKind,
 	wantedEpisodes []uint32,
+) (*ent.DownloadRecord, error) {
+	return d.grabWith(
+		ctx, result, movieID, episodeID, albumID, bookID, bookKind,
+		wantedEpisodes, grabTarget{},
+	)
+}
+
+func (d *download) grabWith(
+	ctx context.Context,
+	result indexer.SearchResult,
+	movieID, episodeID, albumID, bookID uint32,
+	bookKind mediafile.BookKind,
+	wantedEpisodes []uint32,
+	target grabTarget,
 ) (*ent.DownloadRecord, error) {
 	spanName, mediaAttr := "download.grab", attribute.Int64(
 		"movie.id",
@@ -668,6 +758,12 @@ func (d *download) grab(
 		spanName, mediaAttr = "download.grab_book", attribute.Int64(
 			"book.id",
 			int64(bookID),
+		)
+	}
+	if target.artistID != 0 {
+		spanName, mediaAttr = "download.grab_artist_pack", attribute.Int64(
+			"artist.id",
+			int64(target.artistID),
 		)
 	}
 	ctx, span := tracer.Start(ctx, spanName,
@@ -878,6 +974,8 @@ func (d *download) grab(
 		MovieID:            movieID,
 		EpisodeID:          episodeID,
 		AlbumID:            albumID,
+		ArtistID:           target.artistID,
+		AlbumIDs:           target.packAlbumIDs,
 		BookID:             bookID,
 		BookKind:           downloadrecord.BookKind(bookKind),
 		DownloadClientName: dc.Name,

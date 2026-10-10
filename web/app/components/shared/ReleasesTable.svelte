@@ -85,7 +85,7 @@
 	let books = $derived(media === "books");
 	let music = $derived(media === "music");
 	let fmtFilter = $state<"all" | BookFormat>("all");
-	const fmtOk = (r: SearchResult) => !books || fmtFilter === "all" || releaseFormat(r.source) === fmtFilter;
+	const fmtOk = (r: SearchResult) => !books || fmtFilter === "all" || (r.slot ?? releaseFormat(r.source)) === fmtFilter;
 
 	// The friendly view is everyone's default; the table is one switch away
 	// and the choice sticks per browser.
@@ -461,7 +461,7 @@
 			{/if}
 			<div class="flex flex-wrap items-center gap-1.5">
 				{#if books}
-					{@const f = releaseFormat(r.source)}
+					{@const f = r.slot ?? releaseFormat(r.source)}
 					{@const code = releaseLanguage(r.title)}
 					<span class="inline-flex h-6 whitespace-nowrap items-center gap-1.5 rounded-sm bg-bg-card px-2 text-[12px] font-semibold text-fg">
 						{#if f === "audiobook"}<Headphones size={13} aria-hidden="true" />{:else}<BookOpen size={13} aria-hidden="true" />{/if}

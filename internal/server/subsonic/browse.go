@@ -65,16 +65,28 @@ func parseID(s string) (string, uint32, error) {
 	return kind, uint32(n), nil
 }
 
-func idParam(r *http.Request, wantKind string) (uint32, error) {
+// anyIDParam reads the id parameter whatever kind it names.
+func anyIDParam(r *http.Request) (string, uint32, error) {
 	raw := r.FormValue("id")
 	if raw == "" {
-		return 0, &apiError{
+		return "", 0, &apiError{
 			Code:    errMissingParam,
 			Message: "Required parameter is missing: id",
 		}
 	}
 	kind, id, err := parseID(raw)
-	if err != nil || kind != wantKind {
+	if err != nil {
+		return "", 0, errNotFoundErr
+	}
+	return kind, id, nil
+}
+
+func idParam(r *http.Request, wantKind string) (uint32, error) {
+	kind, id, err := anyIDParam(r)
+	if err != nil {
+		return 0, err
+	}
+	if kind != wantKind {
 		return 0, errNotFoundErr
 	}
 	return id, nil
@@ -143,6 +155,7 @@ func toArtist(ar *ent.Artist) artistID3 {
 		ID:         artistID(ar.ID),
 		Name:       ar.Name,
 		AlbumCount: len(ar.Edges.Albums),
+		CoverArt:   artistID(ar.ID),
 	}
 }
 

@@ -8,6 +8,7 @@
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { formatDate, formatDateShort, formatRelative } from "@lib/dates";
+	import { bookPosterUrl } from "@lib/posters";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
@@ -28,7 +29,6 @@
 		type BookSeries,
 		type SeriesMonitor,
 	} from "@lib/music-books";
-	import { bookPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Where a stacked BD or manga card leads: monitoring and edition are set
@@ -40,9 +40,12 @@
 		queryKey: ["books", "series", id],
 		queryFn: () => api<BookSeries>(`/books/series/${id}`),
 		enabled: !!id,
+		refetchInterval: (q) => (q.state.data?.hydrating ? 10_000 : false),
 	}));
 	let s = $derived(seriesQuery.data);
 	let canEdit = $derived(auth.canAddDirectly);
+	// A series has no art of its own: its cover is the first volume's.
+	let cover = $derived(s?.volumes[0] ? bookPosterUrl(s.volumes[0].id) : undefined);
 	let out = $derived(s ? s.volumes.filter((v) => v.status !== "upcoming") : []);
 	let have = $derived(out.filter((v) => v.status === "available").length);
 	let wanted = $derived(out.filter((v) => v.status === "wanted").length);
@@ -72,7 +75,7 @@
 	}
 	async function searchMissing() {
 		if (!s) return;
-		await api(`/books/series/${id}/search`, { method: "POST" });
+		await api(`/books/series/${id}/search-now`, { method: "POST" });
 		toast.ok(i18n.music_search_started({ title: s.title }));
 	}
 
@@ -85,8 +88,6 @@
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
 	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-faint";
 
-	// The first volume's poster is the series' cover.
-	let coverSrc = $derived(s?.volumes[0] ? bookPosterUrl(s.volumes[0].id) : undefined);
 	let people = $derived(
 		(s ? bookPeople(s.contributors ?? []) : []).map((x) => ({
 			key: `${x.role}:${x.person.name}`,
@@ -148,7 +149,7 @@
 {:else}
 	<div class={cn(canEdit && wanted > 0 && "pb-24 md:pb-0")}>
 		<MediaHero
-			backdrop={coverSrc}
+			backdrop={cover}
 			backHref="/books"
 			backLabel={i18n.books_label()}
 			cols="md:grid-cols-[170px_1fr] lg:grid-cols-[200px_1fr]"
@@ -161,7 +162,7 @@
 		>
 			{#snippet art()}
 				<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-					<BookCover src={coverSrc} alt={i18n.common_poster_alt({ title: s.title })} />
+					<BookCover src={cover} alt={i18n.common_poster_alt({ title: s.title })} />
 				</div>
 			{/snippet}
 			{#snippet pills()}

@@ -297,10 +297,18 @@ var _ = Describe(
 				bk := &ent.Book{
 					ID:             4,
 					Title:          "Dune",
+					AuthorName:     "Frank Herbert",
 					ReleaseDate:    &future,
 					EbookMonitored: true,
 				}
-				bk.Edges.Author = &ent.Author{ID: 9, Name: "Frank Herbert"}
+				bk.Edges.Contributions = []*ent.BookContribution{
+					{
+						Role: "author",
+						Edges: ent.BookContributionEdges{
+							Author: &ent.Author{ID: 9, Name: "Frank Herbert"},
+						},
+					},
+				}
 				app.store.EXPECT().
 					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
 					Return([]*ent.Book{bk}, nil).

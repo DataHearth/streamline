@@ -15,7 +15,6 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -32,7 +31,6 @@ type bookCandidate struct {
 func (s *ImportService) ImportEbook(
 	ctx context.Context,
 	srcPath string,
-	author *ent.Author,
 	b *ent.Book,
 	profile config.BookQualityProfileEntry,
 	replace bool,
@@ -82,7 +80,9 @@ func (s *ImportService) ImportEbook(
 		}
 	}
 
-	base, err := bookDestination(lib.EbookPath, lib.EbookNaming, author, b)
+	base, err := BookDestination(
+		lib.EbookPath, BookTemplate(lib, b, slotEbook), NamingForBook(b, slotEbook),
+	)
 	if err != nil {
 		outcome = "unsafe_path"
 		return ImportedFile{}, otelx.RecordSpanError(span, err)
@@ -140,7 +140,6 @@ func (s *ImportService) ImportEbook(
 func (s *ImportService) ImportAudiobook(
 	ctx context.Context,
 	srcPath string,
-	author *ent.Author,
 	b *ent.Book,
 	replace bool,
 ) ([]ImportedFile, error) {
@@ -165,11 +164,9 @@ func (s *ImportService) ImportAudiobook(
 		return nil, otelx.RecordSpanError(span, noBookMedia(sawSample, 0))
 	}
 
-	destDir, err := bookDestination(
-		lib.AudiobookPath,
-		lib.AudiobookNaming,
-		author,
-		b,
+	destDir, err := BookDestination(
+		lib.AudiobookPath, BookTemplate(lib, b, slotAudiobook),
+		NamingForBook(b, slotAudiobook),
 	)
 	if err != nil {
 		outcome = "unsafe_path"
@@ -363,28 +360,4 @@ func collectBookFiles(
 		return strings.Compare(a.rel, b.rel)
 	})
 	return out, sawSample, nil
-}
-
-// bookDestination renders the naming template under root, one sanitised
-// segment per "/", and refuses a result that escapes root.
-func bookDestination(
-	root, naming string,
-	author *ent.Author,
-	b *ent.Book,
-) (string, error) {
-	var year uint16
-	if b.ReleaseDate != nil {
-		year = numeric.SaturateU16(b.ReleaseDate.Year())
-	}
-	segments := strings.Split(
-		ApplyTemplate(naming, BuildBookVars(author.Name, b.Title, year)), "/",
-	)
-	for i, seg := range segments {
-		segments[i] = SanitizePath(seg)
-	}
-	dest := filepath.Join(root, filepath.Join(segments...))
-	if !PathUnderRoot(dest, root) {
-		return "", ErrUnsafePath
-	}
-	return dest, nil
 }

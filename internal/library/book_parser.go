@@ -20,7 +20,17 @@ type ParsedBookRelease struct {
 	// BitrateKbps is the audiobook rate the name states ("64k", "128kbps"), 0
 	// when it states none.
 	BitrateKbps uint32
-	Collection  bool
+	// Language is the ISO 639-1 code of a language word the name carries
+	// ("FRENCH", "VF"), empty when it names none. Only the automatic paths
+	// read it; an interactive search never filters on language.
+	Language string
+	// Volume is the number after tome, vol, volume, t, v or #, nil when the
+	// name carries none. A fractional number (1.5) is a volume between two.
+	Volume *float64
+	// VolumePrefix is what precedes the volume marker, the series name in
+	// "One Piece T12 FRENCH EPUB"; empty when the name carries no volume.
+	VolumePrefix string
+	Collection   bool
 }
 
 var (
@@ -40,8 +50,26 @@ var (
 	// \b binds each word alternative separately; the year range has no word
 	// boundary inside its parentheses to anchor on.
 	collectionRe = regexp.MustCompile(
-		`(?i)\b(?:collection|anthology|complete works|boxset|box set)\b|\(\d{4}-\d{4}\)`,
+		`(?i)\b(?:collection|anthology|complete works|complete series|boxset|box set|int[ée]grale)\b` +
+			`|\(\d{4}-\d{4}\)` +
+			`|\b(?:tomes?|vol(?:umes?)?\.?)\s*\d+\s*-\s*\d+`,
 	)
+	volumeRe = regexp.MustCompile(
+		`(?i)(?:\b(?:tome|volume|vol\.?|t|v)|#)[\s._]*0*(\d{1,3}(?:\.\d)?)\b`,
+	)
+	// The two-letter codes match upper case only: "It", "De Niro" and
+	// "Rock en Seine" are titles, not languages.
+	releaseLanguages = []struct {
+		re   *regexp.Regexp
+		code string
+	}{
+		{regexp.MustCompile(`\b(?:(?i:FRENCH|VF)|FR)\b`), "fr"},
+		{regexp.MustCompile(`\b(?:(?i:ENGLISH|ENG)|EN)\b`), "en"},
+		{regexp.MustCompile(`\b(?:(?i:SPANISH|ESP)|ES)\b`), "es"},
+		{regexp.MustCompile(`\b(?:(?i:GERMAN)|DE)\b`), "de"},
+		{regexp.MustCompile(`\b(?:(?i:ITALIAN)|IT)\b`), "it"},
+		{regexp.MustCompile(`\b(?:(?i:JAPANESE|JP)|JA)\b`), "ja"},
+	}
 )
 
 // ParseBookRelease classifies a release name into a book format. A name with
@@ -72,6 +100,22 @@ func ParseBookRelease(name string) ParsedBookRelease {
 	case cbrRe.MatchString(name) && !audioTokenRe.MatchString(name) &&
 		!cbrRateRe.MatchString(name):
 		p.Format, p.Kind = "CBR", "ebook"
+	}
+	spaced := strings.NewReplacer(".", " ", "_", " ").Replace(name)
+	for _, l := range releaseLanguages {
+		if l.re.MatchString(spaced) {
+			p.Language = l.code
+			break
+		}
+	}
+	if loc := volumeRe.FindStringSubmatchIndex(name); loc != nil {
+		if n, err := strconv.ParseFloat(name[loc[2]:loc[3]], 64); err == nil {
+			p.Volume = &n
+			p.VolumePrefix = strings.Trim(
+				strings.NewReplacer(".", " ", "_", " ").Replace(name[:loc[0]]),
+				" -[(",
+			)
+		}
 	}
 	if p.Kind == "audiobook" {
 		if m := bookBitrateRe.FindStringSubmatch(name); m != nil {

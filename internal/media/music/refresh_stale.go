@@ -7,6 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 )
@@ -45,11 +46,14 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 	span.SetAttributes(attribute.Int("refresh.candidate_count", len(rows)))
+	// The hydration sweep rides this job: it queues unfinished albums for the
+	// background worker and returns, so it costs the run nothing.
+	s.sweepHydration(ctx)
 
 	refreshed, skipped := 0, 0
 	for i, a := range rows {
 		scheduler.Progress(ctx, i, len(rows))
-		if _, err := s.RefreshOne(ctx, a.ID); err != nil {
+		if _, err := s.RefreshOne(metadata.Background(ctx), a.ID); err != nil {
 			slog.WarnContext(ctx, "artist refresh failed",
 				"artist.id", a.ID, "error", err)
 			skipped++

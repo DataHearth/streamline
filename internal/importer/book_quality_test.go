@@ -84,12 +84,12 @@ var _ = Describe("Worker audiobook verification", Label("unit", "importer"), fun
 		w = NewWorker(Deps{
 			DB: db.New(client), Library: library.NewImportService(), Prober: prober,
 		})
-		a := client.Author.Create().
-			SetHardcoverID(1).SetName("Brandon Sanderson").SaveX(ctx)
 		b = client.Book.Create().
 			SetHardcoverID(2).SetTitle("Elantris").
 			SetReleaseDate(time.Date(2005, 4, 21, 0, 0, 0, 0, time.UTC)).
-			SetAuthor(a).
+			SetAuthorName("Brandon Sanderson").
+			SetReleaseYear(2005).
+			SetLastRefreshedAt(time.Now()).
 			SetAudiobookStatus(book.AudiobookStatusDownloading).
 			SaveX(ctx)
 	})

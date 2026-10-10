@@ -14,11 +14,10 @@ import (
 // item. Stored as JSON in ImportScanBook.candidates; defined here so ent
 // code-gen can reference it without an import cycle.
 type ScannedBookCandidate struct {
-	BookHardcoverID   uint32 `json:"book_hardcover_id"`
-	AuthorHardcoverID uint32 `json:"author_hardcover_id"`
-	Title             string `json:"title"`
-	Author            string `json:"author"`
-	Year              uint16 `json:"year,omitempty"`
+	BookHardcoverID uint32 `json:"book_hardcover_id"`
+	Title           string `json:"title"`
+	Author          string `json:"author"`
+	Year            uint16 `json:"year,omitempty"`
 }
 
 // ImportScanBook is one detected book (ebook file-group or audiobook folder)
@@ -42,7 +41,6 @@ func (ImportScanBook) Fields() []ent.Field {
 			Values("confirmed", "ambiguous", "unmatched", "existing").
 			Default("unmatched"),
 		field.Uint32("book_hardcover_id").Optional(),
-		field.Uint32("author_hardcover_id").Optional(),
 		field.JSON("candidates", []ScannedBookCandidate{}).Optional(),
 		field.Uint32("existing_book_id").Optional().Nillable(),
 

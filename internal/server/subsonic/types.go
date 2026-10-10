@@ -22,9 +22,10 @@ type child struct {
 }
 
 type artistID3 struct {
-	ID         string `xml:"id,attr"         json:"id"`
-	Name       string `xml:"name,attr"       json:"name"`
-	AlbumCount int    `xml:"albumCount,attr" json:"albumCount"`
+	ID         string `xml:"id,attr"                 json:"id"`
+	Name       string `xml:"name,attr"               json:"name"`
+	AlbumCount int    `xml:"albumCount,attr"         json:"albumCount"`
+	CoverArt   string `xml:"coverArt,attr,omitempty" json:"coverArt,omitempty"`
 }
 
 type albumID3 struct {

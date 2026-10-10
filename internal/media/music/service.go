@@ -15,6 +15,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -23,49 +25,97 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
-	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/music")
+
+const (
+	artistKind = "artists"
+
+	defaultPageLimit = 20
+
+	detailsTTL        = 10 * time.Minute
+	detailsCacheLimit = 32
+)
 
 var (
 	ErrArtistExists   = errors.New("artist already exists")
 	ErrArtistNotFound = errors.New("artist not found")
 	ErrAlbumNotFound  = errors.New("album not found")
+	ErrTrackNotFound  = errors.New("track not found")
 
 	ErrNoQualityProfile = errors.New("no music quality profile configured")
+	ErrUnknownProfile   = errors.New("unknown music quality profile")
+	ErrInvalidMonitor   = errors.New("unknown monitor policy")
+
+	// ErrOutsideRoot is a stored file path outside the music library root:
+	// nothing is deleted.
+	ErrOutsideRoot = library.ErrOutsideRoot
 )
 
 // Manager is the surface the REST handlers use.
 type Manager interface {
 	Add(ctx context.Context, p AddParams) (*ent.Artist, error)
-	List(ctx context.Context, page, limit uint16) ([]*ent.Artist, uint32, error)
-	Get(ctx context.Context, id uint32) (*ent.Artist, error)
-	GetAlbum(ctx context.Context, id uint32) (*ent.Album, error)
-	SetArtistMonitored(ctx context.Context, id uint32, m bool) error
+	List(ctx context.Context, p db.ListArtistsParams) (ArtistPage, error)
+	Counts(ctx context.Context, p db.ListArtistsParams) (db.ArtistCounts, error)
+	Detail(ctx context.Context, id uint32, lang string) (*ArtistView, error)
+	AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error)
+	SetArtistMonitor(ctx context.Context, id uint32, monitor string) error
 	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
 	Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error)
+
+	SearchArtists(ctx context.Context, query string) ([]LookupHit, error)
+	LookupArtist(ctx context.Context, mbid, lang string) (*LookupDetail, error)
+
 	SearchAlbumReleases(ctx context.Context, albumID uint32) ([]AlbumRelease, error)
+	BrowseArtistReleases(
+		ctx context.Context,
+		artistID uint32,
+	) ([]AlbumRelease, error)
 	GrabAlbumRelease(
 		ctx context.Context,
 		albumID uint32,
 		result indexer.SearchResult,
 	) error
+	GrabAlbum(
+		ctx context.Context,
+		albumID uint32,
+		result indexer.SearchResult,
+		replace bool,
+	) error
+	GrabArtistRelease(
+		ctx context.Context,
+		artistID uint32,
+		result indexer.SearchResult,
+		replace bool,
+	) error
+	SearchAlbumNow(ctx context.Context, albumID uint32) error
+	SearchArtistNow(ctx context.Context, artistID uint32) error
+	SearchTrackNow(ctx context.Context, trackID uint32) error
+	DeleteTrackFile(ctx context.Context, trackID uint32) error
 }
 
 var _ Manager = (*Service)(nil)
 
 type Service struct {
-	db       db.Store
-	metadata metadata.MusicProvider
-	posters  posters.Manager
-	covers   metadata.CoverProvider
-	indexer  indexer.Manager
-	download download.Downloader
+	db        db.Store
+	metadata  metadata.MusicProvider
+	posters   posters.Manager
+	covers    metadata.CoverProvider
+	indexer   indexer.Manager
+	download  download.Downloader
+	overviews metadata.OverviewProvider
+	photos    metadata.ArtistPhotoProvider
+
+	details *memo[*metadata.ArtistDetails]
+	lookups *memo[*lookupBody]
+	hydrate hydrator
 }
 
+// NewService wires the music service. overviews and photos may be nil, which
+// turns the Wikipedia and Deezer steps of an add off.
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
@@ -73,37 +123,121 @@ func NewService(
 	covers metadata.CoverProvider,
 	idx indexer.Manager,
 	dl download.Downloader,
+	overviews metadata.OverviewProvider,
+	photos metadata.ArtistPhotoProvider,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
-		indexer: idx, download: dl,
+		indexer: idx, download: dl, overviews: overviews, photos: photos,
+		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
+		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 	}
 }
 
-// Adder is the slice of the service the request flow approves through.
+// Adder is the slice of the service the request flow and the adoption path
+// add artists through.
 type Adder interface {
 	Add(ctx context.Context, p AddParams) (*ent.Artist, error)
 	Get(ctx context.Context, id uint32) (*ent.Artist, error)
-	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
 }
 
 var _ Adder = (*Service)(nil)
 
 type AddParams struct {
-	MBID           string
-	Monitored      bool
+	MBID string
+	// Monitor is a monitor policy: all, future, manual or none. Empty means all.
+	Monitor        string
 	QualityProfile string
 }
 
-// Add fetches the artist and its discography, creates the Artist, Album and
-// Track rows in one transaction, then resolves album cover art in the
-// background. MusicBrainz is limited to one request per second, so a large
-// discography makes this slow by design.
+func parseMonitor(m string) (artist.Monitor, error) {
+	if m == "" {
+		return artist.MonitorAll, nil
+	}
+	mon := artist.Monitor(m)
+	if err := artist.MonitorValidator(mon); err != nil {
+		return "", fmt.Errorf("%w: %q", ErrInvalidMonitor, m)
+	}
+	return mon, nil
+}
+
+// monitoredFor says whether a release group new to an artist is monitored
+// under the policy: all monitors everything, future the undated and the not
+// yet released, manual and none nothing.
+func monitoredFor(policy artist.Monitor, date *time.Time, now time.Time) bool {
+	switch policy {
+	case artist.MonitorAll:
+		return true
+	case artist.MonitorFuture:
+		return date == nil || date.After(now)
+	}
+	return false
+}
+
+func albumSeeds(
+	groups []metadata.ReleaseGroupInfo,
+	policy artist.Monitor,
+	now time.Time,
+) []db.AlbumSeed {
+	seeds := make([]db.AlbumSeed, len(groups))
+	for i, rg := range groups {
+		seeds[i] = db.AlbumSeed{
+			MBID:        rg.MBID,
+			Title:       rg.Title,
+			Type:        string(rg.Type),
+			ReleaseDate: rg.ReleaseDate,
+			Monitored:   monitoredFor(policy, rg.ReleaseDate, now),
+		}
+	}
+	return seeds
+}
+
+func memberSeeds(members []metadata.ArtistMemberInfo) []db.MemberSeed {
+	seeds := make([]db.MemberSeed, len(members))
+	for i, m := range members {
+		seeds[i] = db.MemberSeed{
+			Name:        m.Name,
+			MBID:        m.MBID,
+			Instruments: m.Instruments,
+			FromYear:    m.FromYear,
+			ToYear:      m.ToYear,
+		}
+	}
+	return seeds
+}
+
+// artistDetails fetches an artist and its release groups through a ten-minute
+// cache shared by the lookup and the add, so an artist looked up and then
+// added costs one set of MusicBrainz requests.
+func (s *Service) artistDetails(
+	ctx context.Context,
+	mbid string,
+) (*metadata.ArtistDetails, error) {
+	return s.details.do(mbid, func() (*metadata.ArtistDetails, error) {
+		return s.metadata.GetArtist(ctx, mbid)
+	})
+}
+
+// Add creates the artist and one stub album per release group in a single
+// transaction and returns. Tracks, credits, covers, the overview and the photo
+// arrive in the background, so a prolific artist adds in seconds and one
+// upstream failure cannot fail the add. A request costs 1 + ceil(n/100)
+// MusicBrainz calls, none on a cache hit.
 func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 	ctx, span := tracer.Start(ctx, "music.add",
 		trace.WithAttributes(attribute.String("mbid", p.MBID)))
 	defer span.End()
 
+	policy, err := parseMonitor(p.Monitor)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if p.QualityProfile != "" {
+		if _, ok := config.LookupMusicQualityProfile(p.QualityProfile); !ok {
+			return nil, otelx.RecordSpanError(span,
+				fmt.Errorf("%w: %q", ErrUnknownProfile, p.QualityProfile))
+		}
+	}
 	existing, err := s.db.FindArtistByMBID(ctx, p.MBID)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -115,123 +249,68 @@ func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 		)
 	}
 
-	details, err := s.metadata.GetArtist(ctx, p.MBID)
+	details, err := s.artistDetails(ctx, p.MBID)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get artist: %w", err))
 	}
-	albums, err := s.albumSeeds(ctx, details.ReleaseGroups)
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
-	}
-
-	artist, err := s.db.CreateArtist(ctx, db.CreateArtistParams{
-		MBID:      details.MBID,
-		Name:      details.Name,
-		SortName:  details.SortName,
-		Overview:  details.Overview,
-		Monitored: p.Monitored,
+	row, err := s.db.CreateArtist(ctx, db.CreateArtistParams{
+		MBID:       details.MBID,
+		Name:       details.Name,
+		SortName:   details.SortName,
+		Monitor:    policy,
+		Type:       details.Type,
+		Origin:     details.Origin,
+		Since:      details.Since,
+		Genre:      details.Genre,
+		DeezerID:   details.DeezerID,
+		WikidataID: details.WikidataID,
 		Path: filepath.Join(
 			config.Get().Library.MusicPath,
 			library.SanitizePath(details.Name),
 		),
 		QualityProfile: p.QualityProfile,
-		Albums:         albums,
+		Members:        memberSeeds(details.Members),
+		Albums:         albumSeeds(details.ReleaseGroups, policy, time.Now()),
 	})
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	span.SetAttributes(attribute.Int("artist.id", int(artist.ID)))
+	span.SetAttributes(attribute.Int("artist.id", int(row.ID)))
 
-	ids := make([]uint32, len(artist.Edges.Albums))
-	for i, a := range artist.Edges.Albums {
-		ids[i] = a.ID
-	}
-	s.ResolveCoversInBackground(ctx, ids...)
+	s.afterAdd(ctx, row, false)
 	slog.InfoContext(ctx, "artist added",
-		"artist.id", artist.ID, "mbid", artist.Mbid,
-		"albums", len(artist.Edges.Albums))
-	return artist, nil
+		"artist.id", row.ID, "mbid", row.Mbid,
+		"albums", len(row.Edges.Albums), "monitor", policy)
+	return row, nil
 }
 
-func (s *Service) albumSeeds(
-	ctx context.Context,
-	groups []metadata.ReleaseGroupInfo,
-) ([]db.AlbumSeed, error) {
-	seeds := make([]db.AlbumSeed, 0, len(groups))
-	for _, rg := range groups {
-		d, err := s.metadata.GetReleaseGroup(ctx, rg.MBID)
-		if err != nil {
-			return nil, fmt.Errorf("get release group %s: %w", rg.MBID, err)
+// afterAdd starts the background work of an artist whose albums are stubs:
+// hydration of every album that has no tracks yet and the overview and photo
+// step. It never fails the caller.
+func (s *Service) afterAdd(ctx context.Context, a *ent.Artist, force bool) {
+	items := make([]hydrateItem, 0, len(a.Edges.Albums))
+	for _, al := range a.Edges.Albums {
+		if al.MetadataFetchedAt == nil {
+			items = append(items, hydrateItem{
+				albumID:   al.ID,
+				monitored: al.Monitored,
+				date:      al.ReleaseDate,
+			})
 		}
-		tracks := make([]db.TrackSeed, len(d.Tracks))
-		for i, t := range d.Tracks {
-			tracks[i] = db.TrackSeed{
-				MBID:     t.MBID,
-				Title:    t.Title,
-				Disc:     t.Disc,
-				Position: t.Position,
-				Duration: t.Duration,
-			}
-		}
-		seeds = append(seeds, db.AlbumSeed{
-			MBID:        rg.MBID,
-			ReleaseMBID: d.ReleaseMBID,
-			Barcode:     d.Barcode,
-			Title:       rg.Title,
-			Type:        string(rg.Type),
-			ReleaseDate: rg.ReleaseDate,
-			Tracks:      tracks,
-		})
 	}
-	return seeds, nil
-}
-
-func (s *Service) List(
-	ctx context.Context,
-	page, limit uint16,
-) ([]*ent.Artist, uint32, error) {
-	ctx, span := tracer.Start(ctx, "music.list")
-	defer span.End()
-	if page == 0 {
-		page = 1
-	}
-	if limit == 0 {
-		limit = 20
-	}
-	total, err := s.db.CountArtists(ctx)
-	if err != nil {
-		return nil, 0, otelx.RecordSpanError(span, err)
-	}
-	rows, err := s.db.ListArtists(ctx, uint32(page-1)*uint32(limit), uint32(limit))
-	if err != nil {
-		return nil, 0, otelx.RecordSpanError(span, err)
-	}
-	return rows, numeric.SaturateU32(total), nil
+	s.enqueueHydration(a.ID, items...)
+	s.fillDetailsInBackground(ctx, a.ID, force)
 }
 
 func (s *Service) Get(ctx context.Context, id uint32) (*ent.Artist, error) {
 	ctx, span := tracer.Start(ctx, "music.get",
 		trace.WithAttributes(attribute.Int("artist.id", int(id))))
 	defer span.End()
-	artist, err := s.db.FindArtistByID(ctx, id)
+	row, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, notFound(err))
 	}
-	return artist, nil
-}
-
-func (s *Service) GetAlbum(ctx context.Context, id uint32) (*ent.Album, error) {
-	ctx, span := tracer.Start(ctx, "music.get_album",
-		trace.WithAttributes(attribute.Int("album.id", int(id))))
-	defer span.End()
-	album, err := s.db.FindAlbumByID(ctx, id)
-	if ent.IsNotFound(err) {
-		err = ErrAlbumNotFound
-	}
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
-	}
-	return album, nil
+	return row, nil
 }
 
 func (s *Service) SetArtistQualityProfile(
@@ -245,20 +324,39 @@ func (s *Service) SetArtistQualityProfile(
 			attribute.String("quality_profile", profile),
 		))
 	defer span.End()
+	if profile != "" {
+		if _, ok := config.LookupMusicQualityProfile(profile); !ok {
+			return otelx.RecordSpanError(span,
+				fmt.Errorf("%w: %q", ErrUnknownProfile, profile))
+		}
+	}
 	return otelx.RecordSpanError(
 		span,
 		notFound(s.db.SetArtistQualityProfile(ctx, id, profile)),
 	)
 }
 
-func (s *Service) SetArtistMonitored(ctx context.Context, id uint32, m bool) error {
-	ctx, span := tracer.Start(ctx, "music.set_artist_monitored",
+// SetArtistMonitor stores the policy and applies it to the artist's existing
+// albums. It never touches album status.
+func (s *Service) SetArtistMonitor(
+	ctx context.Context,
+	id uint32,
+	monitor string,
+) error {
+	ctx, span := tracer.Start(ctx, "music.set_artist_monitor",
 		trace.WithAttributes(
 			attribute.Int("artist.id", int(id)),
-			attribute.Bool("monitored", m),
+			attribute.String("monitor", monitor),
 		))
 	defer span.End()
-	return otelx.RecordSpanError(span, notFound(s.db.SetArtistMonitored(ctx, id, m)))
+	policy, err := parseMonitor(monitor)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	return otelx.RecordSpanError(
+		span,
+		notFound(s.db.SetArtistMonitor(ctx, id, policy, time.Now())),
+	)
 }
 
 func (s *Service) SetAlbumMonitored(ctx context.Context, id uint32, m bool) error {
@@ -276,7 +374,8 @@ func (s *Service) SetAlbumMonitored(ctx context.Context, id uint32, m bool) erro
 }
 
 // Delete removes the artist; albums, tracks and media-file rows cascade in the
-// schema. Files on disk are removed only when deleteFiles is set.
+// schema. Files on disk are removed only when deleteFiles is set. The cached
+// artist photo and album covers go with it.
 func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error {
 	ctx, span := tracer.Start(ctx, "music.delete",
 		trace.WithAttributes(
@@ -285,13 +384,13 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		))
 	defer span.End()
 
-	artist, err := s.db.FindArtistByID(ctx, id)
+	row, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
 	}
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
-		for _, a := range artist.Edges.Albums {
+		for _, a := range row.Edges.Albums {
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
 					if err := library.RemoveMediaFile(
@@ -317,8 +416,12 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	if err := s.db.DeleteArtist(ctx, id); err != nil {
 		return otelx.RecordSpanError(span, notFound(err))
 	}
-	for _, a := range artist.Edges.Albums {
-		if err := s.posters.Remove("albums", a.ID); err != nil {
+	if err := s.posters.Remove(artistKind, id); err != nil {
+		slog.WarnContext(ctx, "artist poster was not removed",
+			"artist.id", id, "error", err)
+	}
+	for _, a := range row.Edges.Albums {
+		if err := s.posters.Remove(coverKind, a.ID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", a.ID, "error", err)
 		}
@@ -327,52 +430,51 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	return nil
 }
 
-// RefreshOne re-fetches the discography. Release-groups new to the artist
-// become albums inheriting its monitored flag; existing albums update metadata
-// only, so monitored and status stay as the user left them.
+const (
+	// tracklessStale is how long an album that came back without tracks is
+	// left before MusicBrainz is asked again; tracklessHorizon bounds that to
+	// albums that are out or near release.
+	tracklessStale   = 7 * 24 * time.Hour
+	tracklessHorizon = 90 * 24 * time.Hour
+	tracklessPerRun  = 5
+)
+
+// RefreshOne re-fetches the artist and its discography synchronously
+// (1 + ceil(n/100) MusicBrainz calls): the artist's own facts and members are
+// rewritten, release groups new to it become albums under its monitor policy
+// and are hydrated in the background, as are known albums that still have no
+// tracks. The photo is re-resolved when none is cached and the overview when
+// it is empty.
 func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error) {
 	ctx, span := tracer.Start(ctx, "music.refresh_one",
 		trace.WithAttributes(attribute.Int("artist.id", int(id))))
 	defer span.End()
 
-	artist, err := s.db.FindArtistByID(ctx, id)
+	row, err := s.db.FindArtistByID(ctx, id)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, notFound(err))
 	}
-	details, err := s.metadata.GetArtist(ctx, artist.Mbid)
+	details, err := s.metadata.GetArtist(ctx, row.Mbid)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get artist: %w", err))
 	}
+	s.details.put(row.Mbid, details)
 
-	known := make(map[string]bool, len(artist.Edges.Albums))
-	for _, a := range artist.Edges.Albums {
-		known[a.Mbid] = true
-	}
-	var fresh []metadata.ReleaseGroupInfo
-	seeds := make([]db.AlbumSeed, 0, len(details.ReleaseGroups))
-	for _, rg := range details.ReleaseGroups {
-		if known[rg.MBID] {
-			seeds = append(seeds, db.AlbumSeed{
-				MBID: rg.MBID, Title: rg.Title,
-				Type: string(rg.Type), ReleaseDate: rg.ReleaseDate,
-			})
-			continue
-		}
-		fresh = append(fresh, rg)
-	}
-	created, err := s.albumSeeds(ctx, fresh)
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
-	}
-	seeds = append(seeds, created...)
-
-	if err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
+	now := time.Now()
+	created, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
-		Overview:    details.Overview,
-		Albums:      seeds,
-		RefreshedAt: time.Now(),
-	}); err != nil {
+		Type:        details.Type,
+		Origin:      details.Origin,
+		Since:       details.Since,
+		Genre:       details.Genre,
+		DeezerID:    details.DeezerID,
+		WikidataID:  details.WikidataID,
+		Members:     memberSeeds(details.Members),
+		Albums:      albumSeeds(details.ReleaseGroups, row.Monitor, now),
+		RefreshedAt: now,
+	})
+	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
@@ -380,9 +482,29 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	var items []hydrateItem
+	retried := 0
+	for _, a := range updated.Edges.Albums {
+		retry := retried < tracklessPerRun && a.MetadataFetchedAt != nil &&
+			len(a.Edges.Tracks) == 0 &&
+			now.Sub(*a.MetadataFetchedAt) > tracklessStale &&
+			(a.ReleaseDate == nil || a.ReleaseDate.Before(now.Add(tracklessHorizon)))
+		if retry {
+			retried++
+		}
+		if !retry && a.MetadataFetchedAt != nil && !slices.Contains(created, a.ID) {
+			continue
+		}
+		items = append(items, hydrateItem{
+			albumID: a.ID, monitored: a.Monitored, date: a.ReleaseDate,
+		})
+	}
+	s.enqueueHydration(id, items...)
+	s.fillDetailsInBackground(ctx, id, true)
+
 	var uncovered []uint32
 	for _, a := range updated.Edges.Albums {
-		if !s.hasCover(a.ID) {
+		if !s.hasCover(a.ID) && a.MetadataFetchedAt != nil {
 			uncovered = append(uncovered, a.ID)
 		}
 	}
@@ -397,83 +519,11 @@ func notFound(err error) error {
 	return err
 }
 
-// AlbumRelease is one indexer result judged against the artist's quality
-// profile. A rejected one carries the reason and sorts after every accepted one.
-type AlbumRelease struct {
-	Result   indexer.SearchResult
-	Parsed   library.ParsedMusicRelease
-	Format   string
-	Score    int
-	Rejected bool
-	Reason   string
-}
-
-// SearchAlbumReleases queries the indexers for the album and returns every
-// result, accepted ones first and best first, rejected ones flagged with why.
-func (s *Service) SearchAlbumReleases(
-	ctx context.Context,
-	albumID uint32,
-) ([]AlbumRelease, error) {
-	ctx, span := tracer.Start(ctx, "music.search_album",
-		trace.WithAttributes(attribute.Int("album.id", int(albumID))))
-	defer span.End()
-
-	a, err := s.db.FindAlbumByID(ctx, albumID)
+func albumNotFound(err error) error {
 	if ent.IsNotFound(err) {
-		err = ErrAlbumNotFound
+		return ErrAlbumNotFound
 	}
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
-	}
-	artist := a.Edges.Artist
-	if artist == nil {
-		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("album %d has no artist", albumID))
-	}
-	profile, ok := config.ResolveMusicQualityProfile(artist.QualityProfile)
-	if !ok {
-		return nil, otelx.RecordSpanError(span, ErrNoQualityProfile)
-	}
-
-	var year uint16
-	if a.ReleaseDate != nil {
-		year = numeric.SaturateU16(a.ReleaseDate.Year())
-	}
-	results, err := s.indexer.SearchAlbum(ctx, artist.Name, a.Title, year)
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, fmt.Errorf("search album: %w", err))
-	}
-
-	releases := make([]AlbumRelease, 0, len(results))
-	for _, r := range results {
-		parsed := library.ParseMusicRelease(r.Title)
-		score, reason := library.JudgeMusicRelease(
-			parsed, profile, library.MusicScopeAlbum)
-		releases = append(releases, AlbumRelease{
-			Result: r, Parsed: parsed, Format: parsed.Source,
-			Score: max(score, 0), Rejected: score < 0, Reason: reason,
-		})
-	}
-	slices.SortStableFunc(releases, func(x, y AlbumRelease) int {
-		if x.Rejected != y.Rejected {
-			if x.Rejected {
-				return 1
-			}
-			return -1
-		}
-		if x.Score != y.Score {
-			return y.Score - x.Score
-		}
-		switch {
-		case x.Result.Seeders > y.Result.Seeders:
-			return -1
-		case x.Result.Seeders < y.Result.Seeders:
-			return 1
-		}
-		return 0
-	})
-	span.SetAttributes(attribute.Int("releases", len(releases)))
-	return releases, nil
+	return err
 }
 
 // GrabAlbumRelease grabs one release as the album's single download record and
@@ -484,18 +534,43 @@ func (s *Service) GrabAlbumRelease(
 	albumID uint32,
 	result indexer.SearchResult,
 ) error {
+	return s.GrabAlbum(ctx, albumID, result, false)
+}
+
+// GrabAlbum is GrabAlbumRelease for a manual grab: replace flags the record
+// so the importer, once the new files are placed and verified, removes the old
+// file of every track the release matched.
+func (s *Service) GrabAlbum(
+	ctx context.Context,
+	albumID uint32,
+	result indexer.SearchResult,
+	replace bool,
+) error {
 	ctx, span := tracer.Start(ctx, "music.grab_album",
 		trace.WithAttributes(
 			attribute.Int("album.id", int(albumID)),
 			attribute.String("release.title", result.Title),
+			attribute.Bool("replace_existing", replace),
 		))
 	defer span.End()
 
-	if _, err := s.download.GrabAlbum(ctx, result, albumID); err != nil {
+	if _, err := s.db.FindAlbumByID(ctx, albumID); err != nil {
+		return otelx.RecordSpanError(span, albumNotFound(err))
+	}
+	rec, err := s.download.GrabAlbum(ctx, result, albumID)
+	if err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("grab album: %w", err))
 	}
+	if replace {
+		if err := s.db.SetDownloadRecordReplaceMode(
+			ctx, rec.ID, downloadrecord.ReplaceModeAll,
+		); err != nil {
+			slog.WarnContext(ctx, "grab album: set replace mode failed",
+				"download_record.id", rec.ID, "error", err)
+		}
+	}
 
-	_, err := s.db.SetAlbumStatus(
+	_, err = s.db.SetAlbumStatus(
 		ctx, albumID,
 		[]album.Status{album.StatusWanted, album.StatusPaused},
 		album.StatusDownloading,

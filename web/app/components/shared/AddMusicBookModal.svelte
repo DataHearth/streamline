@@ -19,6 +19,7 @@
 	import type { QualityProfile } from "@lib/types";
 	import { profilesPath } from "@lib/music-books";
 	import {
+		addErrorText,
 		addRequest,
 		libraryHref,
 		libraryRoot,
@@ -142,7 +143,7 @@
 			qc.invalidateQueries({ queryKey: [libraryRoot(kind)] });
 			toast.ok(i18n.toast_added({ title: h.title }));
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e) => toast.err(addErrorText(e, canAdd)),
 		onSettled: () => {
 			pendingKey = null;
 		},

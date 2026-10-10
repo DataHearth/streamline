@@ -126,6 +126,20 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 		})
 	})
 
+	Describe("SearchArtist", func() {
+		It(
+			"asks each indexer once, by the bare name, in the music category",
+			func() {
+				rec := recordingIndexer()
+				results, err := New().SearchArtist(context.Background(), "  Nirvana ")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec.queries()).To(Equal([]string{"Nirvana"}))
+				Expect(rec.categories()).To(HaveEach("3000"))
+				Expect(results).NotTo(BeEmpty())
+			},
+		)
+	})
+
 	Describe("SearchMovie", func() {
 		It(
 			"searches all enabled indexers in parallel and merges results sorted by seeders",

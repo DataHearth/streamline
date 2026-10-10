@@ -1,3 +1,5 @@
+import type { MusicTier } from "./music-books";
+
 export type MovieStatus =
 	| "wanted"
 	| "downloading"
@@ -365,6 +367,8 @@ export type SearchResult = {
 	resolution?: string;
 	source?: string;
 	codec?: string;
+	// Book: the slot the release fills.
+	slot?: "ebook" | "audiobook";
 	indexer?: string;
 	published_at?: string;
 	// Scoring against the queried item's quality profile. Absent when no profile

@@ -382,16 +382,42 @@ var _ = Describe("SanitizePath", Label("unit", "library"), func() {
 })
 
 var _ = Describe("BuildBookVars", Label("unit", "library"), func() {
+	elantris := BookNaming{
+		Author: "Brandon Sanderson",
+		Title:  "Elantris",
+		Year:   2005,
+	}
+
 	It("renders the default book template", func() {
-		vars := BuildBookVars("Brandon Sanderson", "Elantris", 2005)
+		vars := BuildBookVars(elantris)
 		Expect(ApplyTemplate("{Author}/{Title} ({Year})", vars)).
 			To(Equal("Brandon Sanderson/Elantris (2005)"))
 	})
 
 	It("collapses the bracketed year when it is unknown", func() {
-		vars := BuildBookVars("Brandon Sanderson", "Elantris", 0)
+		n := elantris
+		n.Year = 0
+		vars := BuildBookVars(n)
 		Expect(vars).NotTo(HaveKey("Year"))
 		Expect(ApplyTemplate("{Author}/{Title} ({Year})", vars)).
 			To(Equal("Brandon Sanderson/Elantris"))
+	})
+
+	It("renders a series volume, padding a whole number only", func() {
+		one, between := 1.0, 1.5
+		tpl := "{Author}/{Series}/{Series} - Vol. {Volume:02}"
+		n := BookNaming{Author: "Eiichiro Oda", Series: "One Piece", Volume: &one}
+		Expect(ApplyTemplate(tpl, BuildBookVars(n))).
+			To(Equal("Eiichiro Oda/One Piece/One Piece - Vol. 01"))
+		n.Volume = &between
+		Expect(ApplyTemplate(tpl, BuildBookVars(n))).
+			To(Equal("Eiichiro Oda/One Piece/One Piece - Vol. 1.5"))
+	})
+
+	It("offers the edition language to a template", func() {
+		n := elantris
+		n.Language = "fr"
+		Expect(ApplyTemplate("{Author}/{Title} [{Language}]", BuildBookVars(n))).
+			To(Equal("Brandon Sanderson/Elantris [fr]"))
 	})
 })

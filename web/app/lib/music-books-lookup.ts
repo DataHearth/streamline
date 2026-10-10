@@ -2,9 +2,10 @@
 // Hardcover for books; both are normalised to one hit here, so the desktop
 // modal, the phone screen and a request row read the same fields.
 
-import { api } from "./api";
+import { api, ApiError, errorText } from "./api";
+import type { RequestMediaDetails } from "./types";
+import { kindLabel, overviewLang, type ProfileMedia, type BookFormat, type BookKind, type ReleaseType } from "./music-books";
 import { artistPosterUrl, bookPosterUrl, lookupPosterUrl } from "./posters";
-import { kindLabel, type BookFormat, type BookKind, type ProfileMedia, type ReleaseType } from "./music-books";
 import { m as i18n } from "./paraglide/messages.js";
 
 export type LookupKind = "artist" | "book";
@@ -12,13 +13,15 @@ export type LookupKind = "artist" | "book";
 export type ArtistHit = {
 	mbid: string;
 	name: string;
+	sort_name?: string;
 	// MusicBrainz's own tiebreaker for namesakes ("Swedish synth-pop band").
 	disambiguation?: string;
 	type?: "group" | "person";
 	genre?: string;
 	area?: string;
 	since?: number;
-	release_count?: number;
+	// MusicBrainz's search ranking; absent on a detail.
+	score?: number;
 	already_added?: boolean;
 	// Set with already_added, so "Open in library" needs no library fetch.
 	library_id?: number;
@@ -30,20 +33,19 @@ export type BookHit = {
 	title: string;
 	original_title?: string;
 	author: string;
-	kind: BookKind;
+	// Absent on a search hit: Hardcover's search document does not carry it.
+	kind?: BookKind;
 	year?: number;
-	// Series only: the library volume whose cover stands for the series, set with
-	// already_added.
-	cover_id?: number;
 	// Series only.
 	volumes?: number;
 	ongoing?: boolean;
 	already_added?: boolean;
 	library_id?: number;
+	// The library book whose poster is the cover, when the title is held.
+	cover_id?: number;
 };
 
-// `mbid` is the release group's: the key of its lookup cover.
-export type LookupRelease = { mbid: string; title: string; year: number; type: ReleaseType };
+export type LookupRelease = { mbid: string; title: string; year?: number; type: ReleaseType };
 export type ArtistDetail = {
 	overview?: string;
 	genres?: string[];
@@ -64,8 +66,8 @@ export type BookDetail = {
 	genres?: string[];
 	pages?: number;
 	editions?: LookupEdition[];
-	// Series only: Hardcover ids of the first volumes, in order; each one's cover
-	// is lookupPosterUrl("books", id).
+	// Series only: Hardcover ids of the first volumes, in order; each is a
+	// lookup cover.
 	volume_book_ids?: number[];
 };
 
@@ -73,6 +75,9 @@ export type BookDetail = {
 // detail in one object.
 export type ArtistMeta = ArtistHit & ArtistDetail;
 export type BookMeta = BookHit & BookDetail;
+
+// What /requests/{id}/metadata answers, by the request's media_type.
+export type RequestMetadata = RequestMediaDetails | ArtistMeta | BookMeta;
 
 export type LookupHit = {
 	// mbid for an artist; "b<id>" / "s<id>" for a book or a series, whose ids
@@ -109,11 +114,10 @@ export function artistHit(a: ArtistHit): LookupHit {
 	};
 }
 
-// A held title shows its library cover; one that is not shows the proxied
-// lookup cover. A series hit has no cover of its own until it is held.
+// A series hit has no cover of its own; the placeholder renders.
 function bookImage(b: BookHit): string | undefined {
-	if (b.type === "series") return b.cover_id ? bookPosterUrl(b.cover_id) : undefined;
-	return b.library_id ? bookPosterUrl(b.library_id) : lookupPosterUrl("books", b.hardcover_id);
+	if (b.library_id && b.cover_id) return bookPosterUrl(b.cover_id);
+	return b.type === "book" ? lookupPosterUrl("books", b.hardcover_id) : undefined;
 }
 
 export function bookHit(b: BookHit): LookupHit {
@@ -143,9 +147,15 @@ export async function lookupSearch(kind: LookupKind, q: string): Promise<LookupH
 }
 
 export function lookupDetail(h: LookupHit): Promise<ArtistDetail | BookDetail> {
-	if (h.artist) return api<ArtistDetail>(`/music/search/${h.artist.mbid}`);
+	if (h.artist) return api<ArtistDetail>(`/music/search/${h.artist.mbid}?lang=${overviewLang()}`);
 	const b = h.book!;
 	return api<BookDetail>(`/books/search/${b.hardcover_id}?type=${b.type}`);
+}
+
+// A 409 from an add means another tab or user got there first.
+export function addErrorText(e: unknown, direct: boolean): string {
+	if (direct && e instanceof ApiError && e.status === 409) return i18n.lookup_already_in_library();
+	return errorText(e, i18n.common_add_failed());
 }
 
 export const LOOKUP_SOURCE: Record<LookupKind, string> = {
@@ -196,11 +206,14 @@ export function addRequest(h: LookupHit, profile: string, monitor: string) {
 // The request a request_only member sends instead. The profile is a
 // preference; the reviewer can override it.
 export function requestBody(h: LookupHit, profile: string) {
+	const title = h.title;
+	const quality_profile = profile || undefined;
+	if (h.artist) return { media_type: "artist", media_mbid: h.artist.mbid, title, quality_profile };
 	return {
-		media_type: h.artist ? "artist" : h.series ? "book_series" : "book",
-		...(h.artist ? { media_mbid: h.artist.mbid } : { media_id: h.book!.hardcover_id }),
-		title: h.title,
-		quality_profile: profile || undefined,
+		media_type: h.series ? "book_series" : "book",
+		media_id: h.book!.hardcover_id,
+		title,
+		quality_profile,
 	};
 }
 
@@ -211,14 +224,13 @@ export function hitChips(h: LookupHit): string[] {
 		return [
 			a.genre,
 			a.since ? i18n.music_since({ year: String(a.since) }) : undefined,
-			a.release_count ? (a.release_count === 1 ? i18n.music_releases_one : i18n.music_releases_other)({ count: String(a.release_count) }) : undefined,
 		].filter((x): x is string => !!x);
 	}
 	const b = h.book;
 	// A request's hit before its metadata lands carries neither record.
 	if (!b) return [];
 	return [
-		kindLabel(b.kind),
+		b.kind ? kindLabel(b.kind) : undefined,
 		b.year ? String(b.year) : undefined,
 		b.volumes ? volumesCount(b.volumes) : undefined,
 	].filter((x): x is string => !!x);

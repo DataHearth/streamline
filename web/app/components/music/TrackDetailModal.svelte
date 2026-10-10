@@ -2,7 +2,7 @@
 	import { Search, Trash2 } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
-	import { personHref, releaseYear, trackTime, type Person, type Release, type Track } from "@lib/music-books";
+	import { multiDisc, personHref, releaseYear, trackTime, type Person, type Release, type Track } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// EpisodeDetailModal's counterpart: what is known about one track, and the
@@ -29,8 +29,8 @@
 	let rows = $derived.by(() => {
 		if (!track) return [] as Row[];
 		const r: Row[] = [];
-		if (release) r.push({ k: i18n.music_fact_release(), v: `${release.title} · ${releaseYear(release)}` });
-		r.push({ k: i18n.music_fact_track(), v: release ? i18n.music_track_n_of({ n: String(track.number), total: String(release.track_count) }) : String(track.number) });
+		if (release) r.push({ k: i18n.music_fact_release(), v: [release.title, releaseYear(release)].filter(Boolean).join(" · ") });
+		r.push({ k: i18n.music_fact_track(), v: release ? i18n.music_track_n_of({ n: multiDisc(release) ? `${track.disc}.${track.number}` : String(track.number), total: String(release.track_count) }) : String(track.number) });
 		r.push({ k: i18n.music_fact_duration(), v: trackTime(track.duration) });
 		if (track.featuring?.length) r.push({ k: i18n.music_fact_featuring(), people: track.featuring });
 		if (track.writers?.length) r.push({ k: i18n.music_fact_written_by(), people: track.writers });

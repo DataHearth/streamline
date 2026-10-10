@@ -67,6 +67,22 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		})
 	})
 
+	Describe("SearchArtist", func() {
+		It("returns an empty slice when no indexer is enabled", func() {
+			configtest.Setup()
+			results, err := svc.SearchArtist(ctx, "Nirvana")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("returns nil for a blank name", func() {
+			configtest.Setup()
+			results, err := svc.SearchArtist(ctx, "  ")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(BeNil())
+		})
+	})
+
 	Describe("SearchBook", func() {
 		It("returns an empty slice when no indexer is enabled", func() {
 			configtest.Setup()

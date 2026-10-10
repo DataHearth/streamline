@@ -3,7 +3,7 @@
 	import { formatDateShort } from "@lib/dates";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
-	import { releaseTypeLabel, releaseYear, type Release } from "@lib/music-books";
+	import { releaseLine, releaseTypeLabel, type Release } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -15,6 +15,7 @@
 	let none = $derived(r.status === "wanted" && r.tracks_have === 0);
 	let badge = $derived.by(() => {
 		if (up) return { token: "unaired", label: formatDateShort(r.release_date), live: false };
+		if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped(), live: false };
 		if (r.status === "wanted")
 			return {
 				token: "wanted",
@@ -23,6 +24,7 @@
 			};
 		if (r.status === "downloading")
 			return { token: "downloading", label: `${Math.round(r.progress ?? 0)}%`, live: true };
+		if (r.status === "paused") return { token: "downloading", label: i18n.status_paused(), live: false };
 		return null;
 	});
 </script>
@@ -50,6 +52,6 @@
 		{r.title}
 	</p>
 	<p class="truncate font-mono text-[10.5px] text-fg-subtle">
-		{up ? releaseTypeLabel(r.type) : `${releaseYear(r)} · ${releaseTypeLabel(r.type)}`}
+		{up ? releaseTypeLabel(r.type) : releaseLine(r)}
 	</p>
 </a>

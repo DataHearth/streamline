@@ -44,21 +44,16 @@ var _ = Describe("Music import scan store", Label("integration", "db"), func() {
 	seedAlbum := func() *ent.Album {
 		GinkgoHelper()
 		_, err := store.CreateArtist(ctx, CreateArtistParams{
-			MBID: "a-1", Name: "Nirvana", Monitored: false,
-			Albums: []AlbumSeed{{
-				MBID: "rg-1", Title: "Nevermind", Type: "album",
-				Tracks: []TrackSeed{
-					{MBID: "t-2", Title: "In Bloom", Disc: 1, Position: 2},
-					{
-						MBID:     "t-1",
-						Title:    "Smells Like Teen Spirit",
-						Disc:     1,
-						Position: 1,
-					},
-				},
-			}},
+			MBID: "a-1", Name: "Nirvana",
+			Albums: []AlbumSeed{{MBID: "rg-1", Title: "Nevermind", Type: "album"}},
 		})
 		Expect(err).NotTo(HaveOccurred())
+		hydrateAlbum(ctx, store, "rg-1",
+			TrackSeed{MBID: "t-2", Title: "In Bloom", Disc: 1, Position: 2},
+			TrackSeed{
+				MBID: "t-1", Title: "Smells Like Teen Spirit", Disc: 1, Position: 1,
+			},
+		)
 		a, err := store.FindAlbumByMBID(ctx, "rg-1")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(a).NotTo(BeNil())

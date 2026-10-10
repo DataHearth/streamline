@@ -42,10 +42,17 @@ func serveFile(w http.ResponseWriter, r *http.Request, mf *ent.MediaFile) error 
 }
 
 func (h *Handler) getCoverArt(w http.ResponseWriter, r *http.Request) error {
-	id, err := idParam(r, kindAlbum)
+	kind, id, err := anyIDParam(r)
 	if err != nil {
 		return err
 	}
-	h.posters.Serve(w, r, "albums", id)
+	switch kind {
+	case kindAlbum:
+		h.posters.Serve(w, r, "albums", id)
+	case kindArtist:
+		h.posters.Serve(w, r, "artists", id)
+	default:
+		return errNotFoundErr
+	}
 	return nil
 }

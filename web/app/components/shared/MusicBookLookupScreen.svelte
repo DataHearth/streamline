@@ -11,6 +11,7 @@
 	import type { QualityProfile } from "@lib/types";
 	import { profilesPath } from "@lib/music-books";
 	import {
+		addErrorText,
 		addRequest,
 		hitChips,
 		libraryHref,
@@ -124,7 +125,7 @@
 			// Back to the grid: the badge carries the new state.
 			selectedKey = null;
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_add_failed())),
+		onError: (e) => toast.err(addErrorText(e, canAdd)),
 		onSettled: () => {
 			pendingKey = null;
 		},

@@ -18,6 +18,7 @@
 		BookOpen,
 	} from "@lucide/svelte";
 	import { api, apiAllPages, type Paginated } from "@lib/api";
+	import { SILENT } from "@lib/query";
 	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { formatRelative } from "@lib/dates";
@@ -27,7 +28,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
-	import { requestHit, type ArtistMeta, type BookMeta } from "@lib/music-books-lookup";
+	import { requestHit, type ArtistMeta, type BookMeta, type RequestMetadata } from "@lib/music-books-lookup";
 	import RequestStatLine from "@components/requests/RequestStatLine.svelte";
 	import RequestFilterLine from "@components/requests/RequestFilterLine.svelte";
 	import RequestFilterSheet from "@components/requests/RequestFilterSheet.svelte";
@@ -124,14 +125,18 @@
 	// Cover/synopsis for whichever row is open — expanded on desktop, or the
 	// sheet below lg. One query serves both; only one can be open at a time.
 	let detailId = $derived(sheetId ?? expandedId);
-	const detailQuery = createQuery<RequestMediaDetails | ArtistMeta | BookMeta>(() => ({
+	// A provider that is limiting (429) or a book request with no Hardcover key
+	// (503) answers an error, not metadata: the row falls back to its title and
+	// retrying only spends the provider's budget.
+	const detailQuery = createQuery<RequestMetadata>(() => ({
 		queryKey: ["request-metadata", detailId],
-		queryFn: () => api<RequestMediaDetails | ArtistMeta | BookMeta>(`/requests/${detailId}/metadata`),
+		queryFn: () => api<RequestMetadata>(`/requests/${detailId}/metadata`),
 		enabled: detailId !== null,
 		staleTime: 5 * 60 * 1000,
 		// A 429 or 503 means the provider is out of budget or unconfigured; a retry
 		// would spend the budget it is protecting. The panel falls back to the title.
 		retry: false,
+		meta: SILENT,
 	}));
 	const profilesQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles"],

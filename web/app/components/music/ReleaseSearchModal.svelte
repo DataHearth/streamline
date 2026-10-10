@@ -2,7 +2,7 @@
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
-	import { releaseYear, type Artist } from "@lib/music-books";
+	import { releaseLine, type Artist } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Manual search for an artist, as SeriesReleaseSearchModal is for a show:
@@ -28,13 +28,13 @@
 	});
 
 	// Upcoming releases have nothing to find yet.
-	let out = $derived(artist.releases.filter((r) => r.status !== "upcoming"));
+	let out = $derived(artist.albums.filter((r) => r.status !== "upcoming"));
 	let options = $derived([
 		{ value: "artist", label: i18n.music_whole_discography() },
-		...out.map((r) => ({ value: String(r.id), label: `${r.title} · ${releaseYear(r)}` })),
+		...out.map((r) => ({ value: String(r.id), label: `${r.title} · ${releaseLine(r)}` })),
 	]);
 	let release = $derived(out.find((r) => String(r.id) === scope));
-	let base = $derived(release ? `/music/releases/${release.id}` : `/music/artists/${artist.id}`);
+	let base = $derived(release ? `/music/albums/${release.id}` : `/music/artists/${artist.id}`);
 	// Tracks already on disk in the scope: above zero, a grab asks first.
 	let onDisk = $derived(release ? release.tracks_have : out.reduce((n, r) => n + r.tracks_have, 0));
 </script>
@@ -48,7 +48,7 @@
 	</div>
 	{#key base}
 		<ReleasesTable
-			searchPath={`${base}/releases`}
+			searchPath={release ? `${base}/search` : `${base}/browse`}
 			grabPath={`${base}/grab`}
 			queryKey={["releases", "music", base]}
 			existingCount={onDisk}

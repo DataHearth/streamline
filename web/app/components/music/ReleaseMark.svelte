@@ -12,8 +12,12 @@
 
 {#if r.status === "upcoming"}
 	<span class="shrink-0 font-mono text-[10.5px] text-fg-subtle">{formatDateShort(r.release_date)}</span>
+{:else if r.status === "paused"}
+	<span class="shrink-0 font-mono text-[10.5px] text-status-downloading">{i18n.status_paused()}</span>
 {:else if r.status === "downloading"}
 	<span class="shrink-0 font-mono text-[10.5px] text-status-downloading">{Math.round(r.progress ?? 0)}%</span>
+{:else if r.status === "skipped"}
+	<span class="shrink-0 font-mono text-[10.5px] text-status-skipped">{i18n.status_skipped()}</span>
 {:else if r.status === "wanted"}
 	<span class="shrink-0 font-mono text-[10.5px] text-status-wanted">
 		{r.tracks_have > 0 ? `${r.tracks_have}/${r.track_count}` : i18n.status_wanted()}

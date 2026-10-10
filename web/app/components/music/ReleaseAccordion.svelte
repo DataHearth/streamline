@@ -9,7 +9,7 @@
 	import ReleaseMark from "./ReleaseMark.svelte";
 	import Tracklist from "./Tracklist.svelte";
 	import ReleaseCredits from "./ReleaseCredits.svelte";
-	import { qualityNote, releaseFacts, releaseGroups, releasePill, releaseTypeLabel, releaseYear, type Release, type Track } from "@lib/music-books";
+	import { qualityNote, releaseFacts, releaseGroups, releaseLine, releasePill, releaseTypeLabel, type Release, type Track } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -65,8 +65,8 @@
 				<p class="truncate text-[14px] font-medium text-fg">{r.title}</p>
 				<p class="truncate font-mono text-[11px] text-fg-subtle">
 					{up
-						? `${releaseTypeLabel(r.type)} · ${formatDateShort(r.release_date)}`
-						: `${releaseYear(r)} · ${releaseTypeLabel(r.type)}`}
+						? [releaseTypeLabel(r.type), formatDateShort(r.release_date)].filter(Boolean).join(" · ")
+						: releaseLine(r)}
 				</p>
 			</div>
 			<ReleaseMark release={r} />
@@ -130,6 +130,10 @@
 							onSearch={onSearchTrack}
 							onDeleteFile={onDeleteTrack}
 						/>
+					{:else if r.tracks_pending}
+						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">
+							{i18n.music_tracks_fetching()}
+						</p>
 					{:else}
 						<p class="rounded-lg border border-dashed border-border-strong px-4 py-6 text-center text-[13px] text-fg-muted">
 							{i18n.music_tracklist_unannounced()}

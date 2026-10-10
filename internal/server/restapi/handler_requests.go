@@ -322,13 +322,6 @@ func (s *Server) GetRequestMetadata(
 		resp, err := s.GetMusicArtistLookup(ctx, GetMusicArtistLookupRequestObject{
 			Mbid: r.MediaMbid,
 		})
-		if errors.Is(err, errNotImplemented) {
-			return GetRequestMetadata503JSONResponse{
-				ServiceUnavailableJSONResponse: errServiceUnavailable(
-					"artist metadata is not available yet",
-				),
-			}, nil
-		}
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
 				InternalErrorJSONResponse: errInternal(ctx, err),
@@ -368,13 +361,6 @@ func (s *Server) GetRequestMetadata(
 			HardcoverId: r.MediaID,
 			Params:      GetBookLookupParams{Type: lookupType},
 		})
-		if errors.Is(err, errNotImplemented) {
-			return GetRequestMetadata503JSONResponse{
-				ServiceUnavailableJSONResponse: errServiceUnavailable(
-					"book metadata is not available yet",
-				),
-			}, nil
-		}
 		if err != nil {
 			return GetRequestMetadata500JSONResponse{
 				InternalErrorJSONResponse: errInternal(ctx, err),

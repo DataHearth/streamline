@@ -56,9 +56,9 @@ packages:
       Manager: {}
       MetadataRefresher: {}
       MissingSearcher: {}
+      AlbumHydrator: {}
   github.com/datahearth/streamline/internal/media/book:
     interfaces:
-      Adder: {}
       Manager: {}
       MetadataRefresher: {}
       MissingSearcher: {}
@@ -73,6 +73,8 @@ packages:
       CoverProvider: {}
       Budgeter: {}
       MusicProvider: {}
+      OverviewProvider: {}
+      ArtistPhotoProvider: {}
       Provider: {}
       TVProvider: {}
   github.com/datahearth/streamline/internal/posters:

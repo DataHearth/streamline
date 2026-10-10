@@ -33,6 +33,7 @@
 	} = $props();
 
 	let detail = $state<Track | null>(null);
+	let multiDisc = $derived(new Set(tracks.map((t) => t.disc)).size > 1);
 	let canSearch = $derived(canEdit && !!onSearch);
 	const canDelete = (t: Track) => canEdit && !!onDeleteFile && t.has_file;
 	const items = (t: Track): KebabItem[] => [
@@ -65,8 +66,14 @@
 					compact ? "gap-3 pl-3 pr-0.5" : "gap-4 pl-4 pr-1 lg:min-h-10 lg:pr-3",
 				)}
 			>
-				<span class={cn("shrink-0 text-right font-mono text-fg-faint", compact ? "w-5 text-[11px]" : "w-6 text-xs")}>
-					{t.number}
+				<span
+					class={cn(
+						"shrink-0 text-right font-mono text-fg-faint",
+						compact ? "text-[11px]" : "text-xs",
+						multiDisc ? (compact ? "w-8" : "w-9") : compact ? "w-5" : "w-6",
+					)}
+				>
+					{multiDisc ? `${t.disc}.${t.number}` : t.number}
 				</span>
 				<button
 					type="button"

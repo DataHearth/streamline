@@ -174,25 +174,20 @@ func (s *FeedScanner) tryBookUpgrade(
 	ctx context.Context,
 	item indexer.SearchResult,
 	parsed library.ParsedBookRelease,
-	kind, authorPart, titlePart string,
+	kind string,
 	pass *bookPass,
 ) bool {
-	var b *ent.Book
-	for _, cand := range pass.upgrades[showKey(authorPart)] {
-		if slotUpgradable(cand, kind) &&
-			library.TitleNamesSameWork(titlePart, cand.Title) {
-			b = cand
-			break
-		}
-	}
-	if b == nil {
+	b := pass.upgrades.find(item.Title, parsed, func(c *ent.Book) bool {
+		return slotUpgradable(c, kind)
+	})
+	if b == nil || book.WrongLanguage(b, kind, parsed) {
 		return false
 	}
 	slot := bookSlot{id: b.ID, kind: kind}
 	if _, already := pass.grabbed[slot]; already {
 		return false
 	}
-	profile, ok := bookProfile(ctx, b, kind)
+	profile, ok := bookProfile(ctx, b)
 	if !ok {
 		return false
 	}
@@ -255,22 +250,16 @@ func (s *FeedScanner) tryBookUpgrade(
 	return true
 }
 
-// bookProfile resolves the profile that governs one slot of a book, logging
-// when it cannot: a book is never judged under a profile nobody can read.
+// bookProfile resolves the profile that governs a book, logging when it
+// cannot: a book is never judged under a profile nobody can read.
 func bookProfile(
 	ctx context.Context,
 	b *ent.Book,
-	kind string,
 ) (config.BookQualityProfileEntry, bool) {
-	a := b.Edges.Author
-	name := a.EbookQualityProfile
-	if kind == slotAudiobook {
-		name = a.AudiobookQualityProfile
-	}
-	p, ok := config.ResolveBookQualityProfile(name, "")
+	p, ok := book.ProfileFor(b)
 	if !ok {
 		slog.WarnContext(ctx, "feed-scan: book quality profile unresolved",
-			"author", a.Name, "kind", kind, "profile", name)
+			"book", b.Title, "profile", b.QualityProfile)
 	}
 	return p, ok
 }

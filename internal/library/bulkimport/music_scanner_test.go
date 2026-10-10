@@ -282,9 +282,8 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 
 	It("classifies a release group already in the library as existing", func() {
 		_, err := store.CreateArtist(ctx, db.CreateArtistParams{
-			MBID:      "a-1",
-			Name:      "Nirvana",
-			Monitored: true,
+			MBID: "a-1",
+			Name: "Nirvana",
 			Albums: []db.AlbumSeed{
 				{MBID: "rg-1", Title: "Nevermind", Type: "album"},
 			},

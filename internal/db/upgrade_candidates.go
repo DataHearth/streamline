@@ -5,7 +5,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
-	"github.com/datahearth/streamline/ent/author"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -23,9 +23,8 @@ func (db *DB) ListUpgradeCandidateAlbums(ctx context.Context) ([]*ent.Album, err
 		Where(
 			album.Monitored(true),
 			album.HasTracksWith(track.HasMediaFiles()),
-			album.Not(album.HasDownloadRecordsWith(
-				downloadrecord.StatusIn(inFlightRecordStatuses...),
-			)),
+			album.Not(album.HasDownloadRecordsWith(liveRecord())),
+			album.Not(album.HasPackRecordsWith(liveRecord())),
 		).
 		WithArtist().
 		WithTracks(func(q *ent.TrackQuery) { q.WithMediaFiles() }).
@@ -53,8 +52,28 @@ func (db *DB) SetLiveAlbumRecordReplaceMode(
 	return db.SetDownloadRecordReplaceMode(ctx, id, mode)
 }
 
-// ListUpgradeCandidateBooks returns the books of monitored authors that hold
-// at least one file of a slot no live record covers, with the author and every
+// SetLiveArtistRecordReplaceMode flags the artist's newest downloading
+// discography record, the pack twin of SetLiveAlbumRecordReplaceMode.
+func (db *DB) SetLiveArtistRecordReplaceMode(
+	ctx context.Context,
+	artistID uint32,
+	mode downloadrecord.ReplaceMode,
+) error {
+	id, err := db.client.DownloadRecord.Query().
+		Where(
+			downloadrecord.HasArtistWith(artist.ID(artistID)),
+			downloadrecord.StatusEQ(downloadrecord.StatusDownloading),
+		).
+		Order(ent.Desc(downloadrecord.FieldID)).
+		FirstID(ctx)
+	if err != nil {
+		return err
+	}
+	return db.SetDownloadRecordReplaceMode(ctx, id, mode)
+}
+
+// ListUpgradeCandidateBooks returns the books that hold at least one file of a
+// slot no live record covers, with the series, slot editions and every
 // file loaded. The query says some slot is a candidate; the caller re-checks
 // each slot.
 func (db *DB) ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error) {
@@ -71,13 +90,16 @@ func (db *DB) ListUpgradeCandidateBooks(ctx context.Context) ([]*ent.Book, error
 	}
 	return db.client.Book.Query().
 		Where(
-			book.HasAuthorWith(author.Monitored(true)),
 			book.Or(
 				slot(mediafile.BookKindEbook, downloadrecord.BookKindEbook),
 				slot(mediafile.BookKindAudiobook, downloadrecord.BookKindAudiobook),
 			),
 		).
-		WithAuthor().
+		WithSeries().
+		WithEbookEdition().
+		WithAudiobookEdition().
+		WithEditions().
+		WithContributions(func(cq *ent.BookContributionQuery) { cq.WithAuthor() }).
 		WithMediaFiles().
 		All(ctx)
 }

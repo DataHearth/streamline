@@ -5,8 +5,8 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import BookCover from "./BookCover.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
-	import { formatLabel, kindLabel, type FormatState, type ShelfItem } from "@lib/music-books";
 	import { bookPosterUrl } from "@lib/posters";
+	import { formatLabel, kindLabel, type FormatState, type ShelfItem } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// A cover on a shelf or in a kind's grid. A series is one card with two

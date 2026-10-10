@@ -53,8 +53,8 @@
 	let tileW = $derived(wide ? 104 : 96);
 	let gap = $derived(wide ? 12 : 10);
 	let slots = $derived(Math.max(1, Math.floor((stripW + gap) / (tileW + gap))));
-	let shown = $derived(a.releases.length > slots ? a.releases.slice(0, slots - 1) : a.releases);
-	let hidden = $derived(a.releases.length - shown.length);
+	let shown = $derived(a.albums.length > slots ? a.albums.slice(0, slots - 1) : a.albums);
+	let hidden = $derived(a.albums.length - shown.length);
 
 	let pctHave = $derived(t.released ? (t.have / t.released) * 100 : 0);
 	let pctDl = $derived(t.released ? (t.downloading / t.released) * 100 : 0);
@@ -108,7 +108,7 @@
 		<div
 			class="mt-3 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 		>
-			{#each a.releases as r (r.id)}
+			{#each a.albums as r (r.id)}
 				<ReleaseTile release={r} href={releaseHref(r.id)} width={92} />
 			{/each}
 		</div>

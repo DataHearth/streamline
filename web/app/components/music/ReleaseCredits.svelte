@@ -62,7 +62,7 @@
 	});
 
 	let facts = $derived.by<InfoRow[]>(() => {
-		const rows: InfoRow[] = [{ label: i18n.detail_released(), value: formatDate(r.release_date) }];
+		const rows: InfoRow[] = r.release_date ? [{ label: i18n.detail_released(), value: formatDate(r.release_date) }] : [];
 		if (r.label) rows.push({ label: i18n.music_fact_label(), value: r.label, mono: false });
 		if (r.catalog_number) rows.push({ label: i18n.music_fact_catalog(), value: r.catalog_number });
 		if (r.media?.length) rows.push({ label: i18n.music_fact_media(), value: r.media.map(mediumLabel).join(" · ") });

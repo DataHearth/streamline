@@ -38,7 +38,14 @@ func withEpisodeContext(q *ent.EpisodeQuery) {
 	})
 }
 
-func withBookAuthor(q *ent.BookQuery) { q.WithAuthor() }
+// withBookContext gives the importer what it names and places a book by: the
+// makers, the slot editions and the series.
+func withBookContext(q *ent.BookQuery) {
+	q.WithSeries().
+		WithEbookEdition().
+		WithAudiobookEdition().
+		WithContributions(func(cq *ent.BookContributionQuery) { cq.WithAuthor() })
+}
 
 // withAlbumContext eager-loads an album record's artist and its tracks in disc
 // order, each with the files it already holds. Mirrors FindAlbumByID: the
@@ -51,13 +58,17 @@ func withAlbumContext(q *ent.AlbumQuery) {
 }
 
 type CreateDownloadRecordParams struct {
-	Title              string
-	Size               int64
-	TorrentHash        string
-	Status             downloadrecord.Status
-	MovieID            uint32
-	EpisodeID          uint32
-	AlbumID            uint32
+	Title       string
+	Size        int64
+	TorrentHash string
+	Status      downloadrecord.Status
+	MovieID     uint32
+	EpisodeID   uint32
+	AlbumID     uint32
+	// ArtistID files a discography pack under its artist; AlbumIDs are the
+	// albums it is expected to cover. A record has an album or an artist.
+	ArtistID           uint32
+	AlbumIDs           []uint32
 	BookID             uint32
 	BookKind           downloadrecord.BookKind
 	DownloadClientName string
@@ -110,6 +121,10 @@ func (db *DB) CreateDownloadRecord(
 	if p.AlbumID != 0 {
 		b = b.SetAlbumID(p.AlbumID)
 	}
+	if p.ArtistID != 0 {
+		b = b.SetArtistID(p.ArtistID)
+	}
+	b = b.AddAlbumIDs(p.AlbumIDs...)
 	if p.BookID != 0 {
 		b = b.SetBookID(p.BookID).SetBookKind(p.BookKind)
 	}
@@ -532,9 +547,13 @@ type RecordImportFailureParams struct {
 	BookID   uint32
 	BookKind mediafile.BookKind
 	AlbumID  uint32
-	Terminal bool
-	Reason   string
-	Attempts uint8
+	// PackAlbumIDs are the albums a discography pack was linked to; on
+	// terminal failure each one still downloading and holding no file goes
+	// back to wanted.
+	PackAlbumIDs []uint32
+	Terminal     bool
+	Reason       string
+	Attempts     uint8
 }
 
 // ListImportingDownloadRecords returns records currently in status=importing.
@@ -546,8 +565,10 @@ func (db *DB) ListImportingDownloadRecords(
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusImporting)).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
-		WithBook(withBookAuthor).
+		WithBook(withBookContext).
 		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
 		All(ctx)
 }
 
@@ -566,8 +587,10 @@ func (db *DB) FindImportingDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
-		WithBook(withBookAuthor).
+		WithBook(withBookContext).
 		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
 		Only(ctx)
 }
 
@@ -608,6 +631,8 @@ func (db *DB) FindHeldDownloadRecordByID(
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
 		WithAlbum(withAlbumContext).
+		WithArtist().
+		WithAlbums(withAlbumContext).
 		Only(ctx)
 }
 
@@ -795,6 +820,9 @@ type RecordAlbumImportSuccessParams struct {
 	RecordID uint32
 	AlbumID  uint32
 	Files    []AdoptAlbumFile
+	// KeepRecord leaves the record as it is: one album of a discography pack
+	// was imported and the record completes only when every album is done.
+	KeepRecord bool
 }
 
 // RecordAlbumImportSuccess is the album twin of RecordEpisodeImportSuccess:
@@ -825,13 +853,15 @@ func (db *DB) RecordAlbumImportSuccess(
 			return fmt.Errorf("create media file %s: %w", f.Path, err)
 		}
 	}
-	if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
-		SetStatus(downloadrecord.StatusCompleted).
-		SetImportedAt(time.Now()).
-		SetFailureReason("").
-		Exec(ctx); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("update download record: %w", err)
+	if !p.KeepRecord {
+		if err := tx.DownloadRecord.UpdateOneID(p.RecordID).
+			SetStatus(downloadrecord.StatusCompleted).
+			SetImportedAt(time.Now()).
+			SetFailureReason("").
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update download record: %w", err)
+		}
 	}
 	bare, err := tx.Track.Query().
 		Where(
@@ -856,6 +886,42 @@ func (db *DB) RecordAlbumImportSuccess(
 		Exec(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update album: %w", err)
+	}
+	return tx.Commit()
+}
+
+// CompletePackRecord completes a discography pack's record and returns the
+// albums the pack was linked to that it did not fill, from downloading back to
+// wanted: they stay searchable, with no grab_failures strike, since the pack
+// simply did not name them.
+func (db *DB) CompletePackRecord(
+	ctx context.Context,
+	recordID uint32,
+	unmatchedAlbumIDs []uint32,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.DownloadRecord.UpdateOneID(recordID).
+		SetStatus(downloadrecord.StatusCompleted).
+		SetImportedAt(time.Now()).
+		SetFailureReason("").
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("update download record: %w", err)
+	}
+	if len(unmatchedAlbumIDs) > 0 {
+		if err := tx.Album.Update().
+			Where(
+				album.IDIn(unmatchedAlbumIDs...),
+				album.StatusEQ(album.StatusDownloading),
+			).
+			SetStatus(album.StatusWanted).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("return unmatched pack albums to wanted: %w", err)
+		}
 	}
 	return tx.Commit()
 }
@@ -918,9 +984,11 @@ func (db *DB) RecordBookImportSuccess(
 	u := tx.Book.UpdateOneID(p.BookID)
 	switch p.Kind {
 	case mediafile.BookKindEbook:
-		u = u.SetEbookStatus(book.EbookStatusAvailable)
+		u = u.SetEbookStatus(book.EbookStatusAvailable).
+			SetEbookReplacingLanguage("")
 	case mediafile.BookKindAudiobook:
-		u = u.SetAudiobookStatus(book.AudiobookStatusAvailable)
+		u = u.SetAudiobookStatus(book.AudiobookStatusAvailable).
+			SetAudiobookReplacingLanguage("")
 	default:
 		tx.Rollback()
 		return fmt.Errorf("unknown book kind %q", p.Kind)
@@ -1003,6 +1071,33 @@ func (db *DB) RecordImportFailure(
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("update album: %w", err)
+			}
+		}
+	}
+	if p.Terminal {
+		for _, id := range p.PackAlbumIDs {
+			hasFile, err := tx.Track.Query().
+				Where(
+					track.HasAlbumWith(album.ID(id)),
+					track.HasMediaFiles(),
+				).
+				Exist(ctx)
+			if err != nil {
+				tx.Rollback()
+				return fmt.Errorf("check pack album media files: %w", err)
+			}
+			if hasFile {
+				continue
+			}
+			if err := tx.Album.Update().
+				Where(
+					album.ID(id),
+					album.StatusEQ(album.StatusDownloading),
+				).
+				SetStatus(album.StatusWanted).
+				Exec(ctx); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("update pack album: %w", err)
 			}
 		}
 	}
@@ -1236,6 +1331,9 @@ func (db *DB) ListActiveDownloadRecords(
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
+		WithAlbum().
+		WithArtist().
+		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
 		All(ctx)
 }
 

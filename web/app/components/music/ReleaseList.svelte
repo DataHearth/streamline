@@ -2,7 +2,7 @@
 	import { cn } from "@lib/cn";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import ReleaseMark from "./ReleaseMark.svelte";
-	import { releaseGroups, releaseTypeLabel, releaseYear, type Release } from "@lib/music-books";
+	import { releaseGroups, releaseLine, releaseTypeLabel, type Release } from "@lib/music-books";
 	import { albumPosterUrl } from "@lib/posters";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -41,7 +41,7 @@
 			<div class="min-w-0 flex-1">
 				<p class={cn("truncate text-[13px] font-medium", sel ? "text-accent-text" : "text-fg")}>{r.title}</p>
 				<p class="truncate font-mono text-[10.5px] text-fg-subtle">
-					{up ? releaseTypeLabel(r.type) : `${releaseYear(r)} · ${releaseTypeLabel(r.type)}`}
+					{up ? releaseTypeLabel(r.type) : releaseLine(r)}
 				</p>
 			</div>
 			<ReleaseMark release={r} />

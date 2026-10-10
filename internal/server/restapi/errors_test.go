@@ -33,5 +33,4 @@ var _ = Describe("Internal error sanitization",
 			Expect(string(body)).NotTo(ContainSubstring("sqlite"))
 			Expect(string(body)).To(ContainSubstring(internalErrorMessage))
 		})
-
 	})

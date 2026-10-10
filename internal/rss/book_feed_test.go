@@ -45,6 +45,7 @@ func wantedBook(ebook, audiobook bool) *ent.Book {
 	b := &ent.Book{
 		ID:              1,
 		Title:           "Book Title",
+		AuthorName:      "Author Name",
 		EbookStatus:     entbook.EbookStatusSkipped,
 		AudiobookStatus: entbook.AudiobookStatusSkipped,
 	}
@@ -55,7 +56,6 @@ func wantedBook(ebook, audiobook bool) *ent.Book {
 		b.AudiobookMonitored = true
 		b.AudiobookStatus = entbook.AudiobookStatusWanted
 	}
-	b.Edges.Author = &ent.Author{ID: 50, Name: "Author Name", Monitored: true}
 	return b
 }
 
@@ -190,6 +190,91 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 		expectBookkeeping("ebook")
 		expectBookkeeping("audiobook")
 		run([]*ent.Book{wantedBook(true, true)}, ebookItem, audioItem)
+	})
+
+	Describe("series volumes", func() {
+		volume := func(position float64) *ent.Book {
+			b := wantedBook(true, false)
+			b.AuthorName = "Eiichiro Oda"
+			b.Title = fmt.Sprintf("One Piece %g", position)
+			b.SeriesPosition = &position
+			b.Edges.Series = &ent.BookSeries{ID: 9, Title: "One Piece"}
+			return b
+		}
+		volumeItem := indexer.SearchResult{
+			Title:    "One Piece T03 CBZ",
+			Category: "7020",
+		}
+
+		BeforeEach(func() {
+			cfg := bookConfig("idx")
+			cfg["book_quality_profiles"] = []map[string]any{{
+				"name": "books",
+				"ebook": map[string]any{
+					"formats": []string{"EPUB", "CBZ"}, "preferred": "EPUB",
+				},
+				"audiobook": map[string]any{
+					"formats": []string{"M4B"}, "preferred": "M4B",
+				},
+			}}
+			configtest.Setup(cfg)
+		})
+
+		It(
+			"matches a volume by the series name and number, no author needed",
+			func() {
+				books.EXPECT().GrabBookRelease(
+					mock.Anything, uint32(1),
+					book.GrabParams{Kind: "ebook", Result: volumeItem},
+				).Return(nil).Once()
+				expectBookkeeping("ebook")
+				run([]*ent.Book{volume(3)}, volumeItem)
+			},
+		)
+
+		It("leaves a release of another volume alone", func() {
+			run([]*ent.Book{volume(4)}, volumeItem)
+		})
+
+		It("leaves a release of another series alone", func() {
+			run([]*ent.Book{volume(3)}, indexer.SearchResult{
+				Title: "Two Piece T03 CBZ", Category: "7020",
+			})
+		})
+
+		It("skips a release tagged with another language than the edition", func() {
+			v := volume(3)
+			v.Edges.EbookEdition = &ent.BookEdition{Language: "en"}
+			run([]*ent.Book{v}, indexer.SearchResult{
+				Title: "One Piece T03 FRENCH CBZ", Category: "7020",
+			})
+		})
+
+		It("takes a release tagged with the edition's own language", func() {
+			v := volume(3)
+			v.Edges.EbookEdition = &ent.BookEdition{Language: "fr"}
+			item := indexer.SearchResult{
+				Title: "One Piece T03 FRENCH CBZ", Category: "7020",
+			}
+			books.EXPECT().GrabBookRelease(
+				mock.Anything, uint32(1),
+				book.GrabParams{Kind: "ebook", Result: item},
+			).Return(nil).Once()
+			expectBookkeeping("ebook")
+			run([]*ent.Book{v}, item)
+		})
+	})
+
+	It("matches a book by its original title as well", func() {
+		b := wantedBook(true, false)
+		b.Title = "Le Titre"
+		b.OriginalTitle = "Book Title"
+		books.EXPECT().GrabBookRelease(
+			mock.Anything, uint32(1),
+			book.GrabParams{Kind: "ebook", Result: ebookItem},
+		).Return(nil).Once()
+		expectBookkeeping("ebook")
+		run([]*ent.Book{b}, ebookItem)
 	})
 
 	It("skips collections", func() {
