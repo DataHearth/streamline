@@ -56,6 +56,29 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 			},
 		)
 
+		It(
+			"puts a hit credited to the author the query names ahead of a mis-credited one",
+			func() {
+				wrong := bookHit(1, "Ted Chiang - Exhalation Stories")
+				wrong.Author = "F. Scott Fitzgerald"
+				right := bookHit(2, "Exhalation")
+				right.Author = "Ted Chiang"
+				unrelated := bookHit(3, "Something Else")
+				f.meta.EXPECT().LookupBooks(anyCtx, "Exhalation Ted Chiang").
+					Return([]metadata.BookLookupHit{wrong, unrelated, right}, nil).
+					Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "Exhalation Ted Chiang", lookupBook)
+
+				Expect(err).NotTo(HaveOccurred())
+				ids := make([]uint32, 0, len(hits))
+				for _, h := range hits {
+					ids = append(ids, h.HardcoverID)
+				}
+				Expect(ids).To(Equal([]uint32{2, 1, 3}))
+			},
+		)
+
 		It("asks Hardcover for one kind only when told to", func() {
 			f.meta.EXPECT().LookupBooks(anyCtx, "elantris").
 				Return([]metadata.BookLookupHit{bookHit(1, "Elantris")}, nil).Once()
@@ -151,7 +174,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 		)
 
 		It("says so when there is no Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl)
+			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil)
 			_, err := svc.Lookup(f.ctx, "x", lookupAll)
 			Expect(err).To(MatchError(ErrNotConfigured))
 		})

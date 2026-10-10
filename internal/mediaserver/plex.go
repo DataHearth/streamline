@@ -68,6 +68,24 @@ func (p *Plex) RefreshLibrary(
 		return p.refreshSection(ctx, sectionKey, libraryPath)
 	}
 
+	return p.refreshByPathOrType(ctx, libraryPath, "")
+}
+
+// RefreshLibraryOfType is RefreshLibrary for a library whose section type is
+// known ("artist" for music), used when no section key is configured: the
+// fallback rescans only the sections of that type, not every library the
+// server holds.
+func (p *Plex) RefreshLibraryOfType(
+	ctx context.Context,
+	libraryPath, sectionType string,
+) error {
+	return p.refreshByPathOrType(ctx, libraryPath, sectionType)
+}
+
+func (p *Plex) refreshByPathOrType(
+	ctx context.Context,
+	libraryPath, sectionType string,
+) error {
 	// Plex reports its *own* mount paths, which in any containerised install
 	// differ from ours (/srv/streamline/movies here, /data/movies there), so
 	// the path match usually finds nothing. Refreshing every section is what
@@ -82,6 +100,8 @@ func (p *Plex) RefreshLibrary(
 		"plex: no section matches the library path, refreshing all sections",
 		"path",
 		libraryPath,
+		"section_type",
+		sectionType,
 		"error",
 		err,
 	)
@@ -91,10 +111,18 @@ func (p *Plex) RefreshLibrary(
 		return err
 	}
 	var errs []error
+	matched := 0
 	for _, s := range sections {
+		if sectionType != "" && s.Type != sectionType {
+			continue
+		}
+		matched++
 		if err := p.refreshSection(ctx, s.Key, libraryPath); err != nil {
 			errs = append(errs, err)
 		}
+	}
+	if matched == 0 && sectionType != "" {
+		return fmt.Errorf("plex: no %s library section to refresh", sectionType)
 	}
 	return errors.Join(errs...)
 }

@@ -85,7 +85,12 @@ var _ = Describe(
 			store = db.New(client)
 			bookmeta = metamocks.NewMockBookProvider(GinkgoT())
 			bookSvc := book.NewService(
-				store, bookmeta, postersmocks.NewMockManager(GinkgoT()), nil, nil,
+				store,
+				bookmeta,
+				postersmocks.NewMockManager(GinkgoT()),
+				nil,
+				nil,
+				nil,
 			)
 			svc = NewService(
 				store,

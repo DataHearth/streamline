@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -23,6 +24,14 @@ func removeFiles(ctx context.Context, b *ent.Book) {
 			slog.ErrorContext(ctx, "book file was not deleted from disk",
 				"book.id", b.ID, "path", f.Path, "error", err)
 		}
+	}
+}
+
+// refreshLibraries asks the media servers to rescan both slot roots.
+func (s *Service) refreshLibraries(ctx context.Context) {
+	lib := config.Get().Library
+	for _, root := range []string{lib.EbookPath, lib.AudiobookPath} {
+		mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindBook, root)
 	}
 }
 
@@ -67,6 +76,7 @@ func (s *Service) DeleteBook(
 		return otelx.RecordSpanError(span, ErrSeriesVolume)
 	}
 	if deleteFiles {
+		defer s.refreshLibraries(ctx)
 		removeFiles(ctx, row)
 	}
 	orphans, err := s.db.DeleteBook(ctx, id)
@@ -94,6 +104,9 @@ func (s *Service) DeleteSeries(
 	row, err := s.GetSeries(ctx, id)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
+	}
+	if deleteFiles {
+		defer s.refreshLibraries(ctx)
 	}
 	volumeIDs := make([]uint32, 0, len(row.Edges.Volumes))
 	for _, v := range row.Edges.Volumes {

@@ -60,6 +60,12 @@ type indexes struct {
 	Index           []index `xml:"index"                json:"index"`
 }
 
+type folderIndexes struct {
+	IgnoredArticles string  `xml:"ignoredArticles,attr" json:"ignoredArticles"`
+	LastModified    int64   `xml:"lastModified,attr"    json:"lastModified"`
+	Index           []index `xml:"index"                json:"index"`
+}
+
 type albumList2 struct {
 	Album []albumID3 `xml:"album" json:"album"`
 }

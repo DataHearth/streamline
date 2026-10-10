@@ -100,7 +100,8 @@ func albumCandidate(
 	return c
 }
 
-// albumFolder is one directory that directly holds audio files.
+// albumFolder is one album: a directory that directly holds audio files, with
+// the files of its disc subfolders (CD1, Disc 2) folded in.
 type albumFolder struct {
 	path  string
 	files []string
@@ -131,6 +132,10 @@ func walkAlbumFolders(
 				return nil
 			}
 			dir := filepath.Dir(path)
+			if _, isDisc := library.DiscFolderNumber(filepath.Base(dir)); isDisc &&
+				filepath.Dir(dir) != root {
+				dir = filepath.Dir(dir)
+			}
 			byDir[dir] = append(byDir[dir], path)
 			if info, ierr := d.Info(); ierr == nil {
 				sizes[dir] += info.Size()

@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -23,12 +24,15 @@ import (
 // Renamer computes and applies track-file renames for an artist against
 // library.music_naming, from database metadata only: no tag is read or
 // rewritten. A file that is a hardlink of a seeding torrent keeps its inode;
-// only the library path moves. Music has no media-server refresh.
+// only the library path moves.
 type Renamer struct {
 	db db.Store
+	ms mediaserver.Refresher
 }
 
-func NewRenamer(store db.Store) *Renamer { return &Renamer{db: store} }
+func NewRenamer(store db.Store, ms mediaserver.Refresher) *Renamer {
+	return &Renamer{db: store, ms: ms}
+}
 
 var _ library.Renamer = (*Renamer)(nil)
 
@@ -66,6 +70,9 @@ func (r *Renamer) Apply(
 		return library.RenamePlan{}, otelx.RecordSpanError(span, err)
 	}
 	root := config.Get().Library.MusicPath
+	if len(plan.Operations) > 0 {
+		defer mediaserver.RefreshInBackground(ctx, r.ms, mediaserver.KindMusic, root)
+	}
 	for _, op := range plan.Operations {
 		if err := r.move(ctx, op, root); err != nil {
 			return library.RenamePlan{}, otelx.RecordSpanError(span, err)

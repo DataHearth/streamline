@@ -26,15 +26,16 @@ func (e *apiError) Error() string { return e.Message }
 // body is the payload set by each handler, exactly one field non-nil,
 // serialized inside <subsonic-response> / "subsonic-response".
 type body struct {
-	License      *license      `xml:"license,omitempty"       json:"license,omitempty"`
-	MusicFolders *musicFolders `xml:"musicFolders,omitempty"  json:"musicFolders,omitempty"`
-	Artists      *indexes      `xml:"artists,omitempty"       json:"artists,omitempty"`
-	Artist       *artistWith   `xml:"artist,omitempty"        json:"artist,omitempty"`
-	Album        *albumWith    `xml:"album,omitempty"         json:"album,omitempty"`
-	Song         *child        `xml:"song,omitempty"          json:"song,omitempty"`
-	AlbumList2   *albumList2   `xml:"albumList2,omitempty"    json:"albumList2,omitempty"`
-	SearchResult *search3      `xml:"searchResult3,omitempty" json:"searchResult3,omitempty"`
-	Error        *apiError     `xml:"error,omitempty"         json:"error,omitempty"`
+	License      *license       `xml:"license,omitempty"       json:"license,omitempty"`
+	MusicFolders *musicFolders  `xml:"musicFolders,omitempty"  json:"musicFolders,omitempty"`
+	Artists      *indexes       `xml:"artists,omitempty"       json:"artists,omitempty"`
+	Indexes      *folderIndexes `xml:"indexes,omitempty"       json:"indexes,omitempty"`
+	Artist       *artistWith    `xml:"artist,omitempty"        json:"artist,omitempty"`
+	Album        *albumWith     `xml:"album,omitempty"         json:"album,omitempty"`
+	Song         *child         `xml:"song,omitempty"          json:"song,omitempty"`
+	AlbumList2   *albumList2    `xml:"albumList2,omitempty"    json:"albumList2,omitempty"`
+	SearchResult *search3       `xml:"searchResult3,omitempty" json:"searchResult3,omitempty"`
+	Error        *apiError      `xml:"error,omitempty"         json:"error,omitempty"`
 }
 
 type response struct {

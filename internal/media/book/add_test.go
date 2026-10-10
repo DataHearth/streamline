@@ -149,7 +149,7 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 		})
 
 		It("says so when there is no Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl)
+			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil)
 			_, err := svc.AddBook(f.ctx, AddBookParams{HardcoverID: 1})
 			Expect(err).To(MatchError(ErrNotConfigured))
 		})

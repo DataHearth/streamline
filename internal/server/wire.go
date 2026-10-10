@@ -209,9 +209,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	musicSvc := music.NewService(
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
-		metadata.NewWikipedia(), deezer,
+		metadata.NewWikipedia(), deezer, dispatcher,
 	)
-	bookSvc := book.NewService(store, bookMeta, postersSvc, indexerSvc, dlManager)
+	bookSvc := book.NewService(
+		store, bookMeta, postersSvc, indexerSvc, dlManager, dispatcher,
+	)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
 	// subfolders, so on a fresh install they'd first appear after an import that
@@ -511,7 +513,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		DeepLinker:      deepLinker,
 		Renamer:         renamer,
 		SeriesRenamer:   seriesRenamer,
-		MusicRenamer:    music.NewRenamer(store),
+		MusicRenamer:    music.NewRenamer(store, dispatcher),
 		Auth:            authSvc,
 		Limiter:         limiter,
 		OIDC:            oidcMgr,

@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -39,6 +40,9 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 			return otelx.RecordSpanError(span,
 				fmt.Errorf("delete %s: %w", f.Path, ErrOutsideRoot))
 		}
+	}
+	if len(t.Edges.MediaFiles) > 0 {
+		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 	}
 	for _, f := range t.Edges.MediaFiles {
 		// A file already gone (or taken with a same-named sibling's sidecars)

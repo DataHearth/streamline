@@ -258,13 +258,13 @@ func indexLetter(key string) string {
 	return "#"
 }
 
-func (h *Handler) getArtists(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) sortedArtists(r *http.Request) ([]*ent.Artist, error) {
 	artists, err := h.ent.Artist.Query().
 		WithAlbums().
 		Order(artist.ByID()).
 		All(r.Context())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sort.SliceStable(artists, func(i, j int) bool {
 		return strings.ToLower(
@@ -273,17 +273,53 @@ func (h *Handler) getArtists(w http.ResponseWriter, r *http.Request) error {
 			sortKey(artists[j]),
 		)
 	})
+	return artists, nil
+}
 
-	out := &indexes{Index: []index{}}
+func groupArtists(artists []*ent.Artist) []index {
+	out := []index{}
 	for _, ar := range artists {
 		letter := indexLetter(sortKey(ar))
-		if n := len(out.Index); n == 0 || out.Index[n-1].Name != letter {
-			out.Index = append(out.Index, index{Name: letter, Artist: []artistID3{}})
+		if n := len(out); n == 0 || out[n-1].Name != letter {
+			out = append(out, index{Name: letter, Artist: []artistID3{}})
 		}
-		last := &out.Index[len(out.Index)-1]
+		last := &out[len(out)-1]
 		last.Artist = append(last.Artist, toArtist(ar))
 	}
-	writeOK(w, r, &body{Artists: out})
+	return out
+}
+
+func (h *Handler) getArtists(w http.ResponseWriter, r *http.Request) error {
+	artists, err := h.sortedArtists(r)
+	if err != nil {
+		return err
+	}
+	writeOK(w, r, &body{Artists: &indexes{Index: groupArtists(artists)}})
+	return nil
+}
+
+// getIndexes is the folder-based twin of getArtists: the library has the one
+// music folder, so the same artist grouping answers it.
+func (h *Handler) getIndexes(w http.ResponseWriter, r *http.Request) error {
+	artists, err := h.sortedArtists(r)
+	if err != nil {
+		return err
+	}
+	var lastModified int64
+	for _, ar := range artists {
+		lastModified = max(lastModified, ar.UpdateTime.UnixMilli())
+	}
+
+	out := &folderIndexes{LastModified: lastModified, Index: []index{}}
+	if folder := r.FormValue("musicFolderId"); folder != "" && folder != "1" {
+		artists = nil
+	}
+	since, err := strconv.ParseInt(r.FormValue("ifModifiedSince"), 10, 64)
+	if err == nil && lastModified <= since {
+		artists = nil
+	}
+	out.Index = groupArtists(artists)
+	writeOK(w, r, &body{Indexes: out})
 	return nil
 }
 

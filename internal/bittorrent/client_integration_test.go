@@ -852,3 +852,65 @@ var _ = Describe(
 		})
 	},
 )
+
+var _ = Describe(
+	"Engine magnet refused by the path guard",
+	Label("integration", "bittorrent"),
+	func() {
+		packInfo := func(size int) ([]byte, metainfo.Hash) {
+			GinkgoHelper()
+			dir := filepath.Join(GinkgoT().TempDir(), "pack")
+			Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
+			Expect(os.WriteFile(
+				filepath.Join(dir, "a.bin"), make([]byte, size), 0o644,
+			)).To(Succeed())
+			info := metainfo.Info{PieceLength: 1 << 20}
+			Expect(info.BuildFromFilePath(dir)).To(Succeed())
+			ib, err := bencode.Marshal(info)
+			Expect(err).NotTo(HaveOccurred())
+			return ib, metainfo.HashBytes(ib)
+		}
+
+		It("drops a second magnet sharing a held name and reports why", func() {
+			ctx := context.Background()
+			dlDir := filepath.Join(GinkgoT().TempDir(), "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+			firstInfo, firstHash := packInfo(100)
+			secondInfo, secondHash := packInfo(200)
+			Expect(secondHash).NotTo(Equal(firstHash))
+
+			first, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" + firstHash.HexString(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			ft, ok := engine.client.Torrent(firstHash)
+			Expect(ok).To(BeTrue())
+			Expect(ft.SetInfoBytes(firstInfo)).To(Succeed())
+
+			second, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Magnet: "magnet:?xt=urn:btih:" + secondHash.HexString(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			st, ok := engine.client.Torrent(secondHash)
+			Expect(ok).To(BeTrue())
+			Expect(st.SetInfoBytes(secondInfo)).NotTo(Succeed())
+
+			Eventually(func() error {
+				_, gerr := engine.GetTorrent(ctx, second)
+				return gerr
+			}).WithTimeout(10 * time.Second).Should(MatchError(
+				download.ErrTorrentRefused,
+			))
+			_, err = engine.GetTorrent(ctx, second)
+			Expect(err).To(MatchError(ContainSubstring(first)))
+			_, ok = engine.client.Torrent(secondHash)
+			Expect(ok).To(BeFalse())
+			_, err = engine.GetTorrent(ctx, first)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	},
+)

@@ -97,6 +97,10 @@ type Engine struct {
 	mu     sync.Mutex
 	state  map[string]*torrentState
 	sample map[string]speedSample
+	// refusals maps the hash of a torrent the path guard refused to the reason,
+	// kept after the torrent is dropped so GetTorrent can still tell the
+	// download manager why it is gone.
+	refusals map[string]string
 
 	stop chan struct{}
 	wg   sync.WaitGroup
@@ -188,8 +192,10 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		packetConn:  packetConn,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
+		refusals:    map[string]string{},
 		stop:        make(chan struct{}),
 	}
+	paths.onRefuse = e.refuseTorrent
 	if err := e.restore(ctx); err != nil {
 		if cerr := e.Close(); cerr != nil {
 			slog.WarnContext(ctx, "engine close after failed restore", "error", cerr)

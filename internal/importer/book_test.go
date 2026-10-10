@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
@@ -16,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -103,6 +105,20 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 			SetEbookStatus(book.EbookStatusDownloading).
 			SetAudiobookStatus(book.AudiobookStatusDownloading).
 			SaveX(ctx)
+	})
+
+	It("asks the media servers to rescan the slot's root", func() {
+		ms := msmocks.NewMockRefresher(GinkgoT())
+		w = NewWorker(Deps{
+			DB: db.New(client), Library: library.NewImportService(), MediaServer: ms,
+		})
+		ms.EXPECT().RefreshAll(mock.Anything, "book", ebooks).Return(nil).Once()
+		src := filepath.Join(tmp, "dl")
+		write(src, "elantris.epub", "epub bytes")
+
+		Expect(run(record(
+			downloadrecord.BookKindEbook, src, downloadrecord.ReplaceModeNone,
+		))).To(Succeed())
 	})
 
 	It("imports one ebook file, ignoring the rest of the download", func() {

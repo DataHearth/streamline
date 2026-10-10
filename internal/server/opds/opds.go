@@ -8,15 +8,21 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/appaccess"
+	"github.com/datahearth/streamline/internal/posters"
 )
 
 type Handler struct {
 	client  *ent.Client
 	tracker *appaccess.Tracker
+	posters posters.Manager
 }
 
-func New(client *ent.Client, tracker *appaccess.Tracker) *Handler {
-	return &Handler{client: client, tracker: tracker}
+func New(
+	client *ent.Client,
+	tracker *appaccess.Tracker,
+	posters posters.Manager,
+) *Handler {
+	return &Handler{client: client, tracker: tracker, posters: posters}
 }
 
 func (h *Handler) Router() chi.Router {
@@ -28,6 +34,7 @@ func (h *Handler) Router() chi.Router {
 	r.Get("/recent", h.recent)
 	r.Get("/search.xml", h.searchDescription)
 	r.Get("/search", h.search)
+	r.Get("/cover/{bookID}", h.cover)
 	r.Get("/download/{bookID}/{format}", h.download)
 	return r
 }

@@ -333,7 +333,7 @@ func bookEntry(bk *ent.Book) *entry {
 			},
 			{
 				Rel:  relImage,
-				Href: fmt.Sprintf("/posters/books/%d/poster.jpg", bk.ID),
+				Href: fmt.Sprintf("/opds/cover/%d", bk.ID),
 				Type: "image/jpeg",
 			},
 		},

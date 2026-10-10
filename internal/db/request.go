@@ -53,7 +53,11 @@ func (db *DB) CreateRequest(
 	if p.RequestedAs != "" {
 		c = c.SetRequestedAs(p.RequestedAs)
 	}
-	return c.Save(ctx)
+	row, err := c.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return db.GetRequest(ctx, row.ID)
 }
 
 // FindActiveRequestByMBID is FindActiveRequest for the MusicBrainz-keyed types.

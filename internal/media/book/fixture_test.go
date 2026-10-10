@@ -160,7 +160,7 @@ func newFixture() *fixture {
 	f.posters = &fakePosters{}
 	f.idx = idxmocks.NewMockManager(GinkgoT())
 	f.dl = dlmocks.NewMockDownloader(GinkgoT())
-	f.svc = NewService(f.store, f.meta, f.posters, f.idx, f.dl)
+	f.svc = NewService(f.store, f.meta, f.posters, f.idx, f.dl, nil)
 	return f
 }
 

@@ -14,6 +14,7 @@ import (
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
+	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -29,6 +30,12 @@ func copyFixture(name, dst string) {
 	Expect(os.MkdirAll(filepath.Dir(dst), 0o755)).To(Succeed())
 	//nolint:gosec // dst is a spec-owned temp path
 	Expect(os.WriteFile(dst, raw, 0o600)).To(Succeed())
+}
+
+func writeTrack(dst string, tags audiotags.WriteTags) {
+	GinkgoHelper()
+	copyFixture("untagged.mp3", dst)
+	Expect(audiotags.Write(dst, tags)).To(Succeed())
 }
 
 func searchHit(
@@ -262,6 +269,30 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 		Expect(nm.TaggedYear).To(BeNumerically(">", 0))
 		Expect(nm.Format).To(Equal("MP3"))
 		Expect(nm.Size).To(BeNumerically(">", 0))
+	})
+
+	It("folds disc subfolders into one album under their parent", func() {
+		for disc, dir := range map[string]string{"1": "CD1", "2": "CD 2"} {
+			writeTrack(
+				filepath.Join(root, "Pink Floyd", "The Wall", dir, "01.mp3"),
+				audiotags.WriteTags{
+					AlbumArtist: "Pink Floyd", Album: "The Wall",
+					Title: "Track " + disc, Track: 1,
+				},
+			)
+		}
+		mb.EXPECT().SearchReleaseGroups(mock.Anything, "Pink Floyd", "The Wall").
+			Return(nil, nil).Once()
+		mb.EXPECT().SearchReleaseGroups(mock.Anything, "Nirvana", "Nevermind").
+			Return(nil, nil).Once()
+		mb.EXPECT().SearchReleaseGroups(mock.Anything, "", "Unknown").
+			Return(nil, nil).Once()
+
+		rows := scan()
+		Expect(rows).To(HaveLen(3))
+		wall := byFolder(rows, "The Wall")
+		Expect(wall.FileCount).To(Equal(uint16(2)))
+		Expect(wall.TaggedAlbum).To(Equal("The Wall"))
 	})
 
 	It("falls back to folder names and leaves an untagged folder unmatched", func() {

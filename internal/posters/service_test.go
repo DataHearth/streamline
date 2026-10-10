@@ -200,6 +200,8 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			Expect(err).To(HaveOccurred())
 			_, statErr := os.Stat(svc.Path("movies", 99))
 			Expect(os.IsNotExist(statErr)).To(BeTrue())
+			_, dirErr := os.Stat(filepath.Dir(svc.Path("movies", 99)))
+			Expect(os.IsNotExist(dirErr)).To(BeTrue())
 		})
 	})
 
@@ -222,6 +224,21 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			).To(ContainSubstring("max-age="))
 			body, _ := io.ReadAll(rec.Body)
 			Expect(body).To(Equal(payload))
+		})
+
+		It("serves the sniffed type of a PNG body", func() {
+			png := "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+			Expect(
+				svc.Put(context.Background(), "albums", 3, strings.NewReader(png)),
+			).To(Succeed())
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(
+				http.MethodGet,
+				"/posters/albums/3/poster.jpg",
+				nil,
+			)
+			svc.Serve(rec, req, "albums", 3)
+			Expect(rec.Header().Get("Content-Type")).To(Equal("image/png"))
 		})
 
 		It("returns 404 when missing", func() {

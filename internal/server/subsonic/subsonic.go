@@ -40,6 +40,7 @@ func (h *Handler) Routes() http.Handler {
 		"getLicense":      h.getLicense,
 		"getMusicFolders": h.getMusicFolders,
 		"getArtists":      h.getArtists,
+		"getIndexes":      h.getIndexes,
 		"getArtist":       h.getArtist,
 		"getAlbum":        h.getAlbum,
 		"getSong":         h.getSong,

@@ -386,7 +386,7 @@ func (db *DB) ListTvShowsForAdoption(ctx context.Context) ([]*ent.TVShow, error)
 }
 
 // ListDownloadingRecordsWithMovie returns every "downloading"
-// download_record with its Movie edge preloaded. Used by the orphan-torrent
+// download_record with its Movie and anchor Episode edges preloaded. Used by the orphan-torrent
 // reconciliation pass.
 func (db *DB) ListDownloadingRecordsWithMovie(
 	ctx context.Context,
@@ -394,6 +394,7 @@ func (db *DB) ListDownloadingRecordsWithMovie(
 	return db.client.DownloadRecord.Query().
 		Where(downloadrecord.StatusEQ(downloadrecord.StatusDownloading)).
 		WithMovie().
+		WithAnchorEpisode().
 		All(ctx)
 }
 

@@ -65,7 +65,7 @@ func newEnv(withEnrichment bool) *env {
 		e.photos = mockmeta.NewMockArtistPhotoProvider(GinkgoT())
 		ov, ph = e.overviews, e.photos
 	}
-	e.svc = NewService(e.store, e.provider, e.posters, nil, e.idx, e.dl, ov, ph)
+	e.svc = NewService(e.store, e.provider, e.posters, nil, e.idx, e.dl, ov, ph, nil)
 	e.setConfig(map[string]any{})
 	return e
 }

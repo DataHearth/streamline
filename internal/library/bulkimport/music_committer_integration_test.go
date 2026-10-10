@@ -16,6 +16,7 @@ import (
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -58,8 +59,17 @@ var _ = Describe(
 				Fetch(mock.Anything, "albums", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			svc = NewService(
-				store, nil, nil, nil, nil, nil, nil, root, root,
-				mb, music.NewService(store, mb, covers, nil, nil, nil, nil, nil),
+				store,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				root,
+				root,
+				mb,
+				music.NewService(store, mb, covers, nil, nil, nil, nil, nil, nil),
 				nil,
 				nil,
 			)
@@ -179,6 +189,41 @@ var _ = Describe(
 			row := outcomeOf(dir)
 			Expect(row.Outcome).To(Equal(entimportscanalbum.OutcomeCreated))
 			Expect(row.CreatedAlbumID).To(HaveValue(Equal(alb.ID)))
+		})
+
+		It("adopts every disc of a multi-disc album into the one album", func() {
+			mb.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(&metadata.ReleaseGroupDetails{
+					MBID: "rg-1", Title: "rg-1", ReleaseMBID: "rel",
+					Tracks: []metadata.TrackInfo{
+						{MBID: "t1", Title: "One", Disc: 1, Position: 1},
+						{MBID: "t2", Title: "Two", Disc: 2, Position: 1},
+					},
+					CreditsComplete: true,
+				}, nil).Maybe()
+			mb.EXPECT().GetArtist(mock.Anything, "a-1").
+				Return(&metadata.ArtistDetails{
+					MBID: "a-1", Name: "Nirvana",
+					ReleaseGroups: []metadata.ReleaseGroupInfo{
+						{MBID: "rg-1", Title: "rg-1", Type: metadata.AlbumTypeAlbum},
+					},
+				}, nil).Once()
+			dir := filepath.Join(root, "Double")
+			writeTrack(filepath.Join(dir, "CD1", "a.mp3"), audiotags.WriteTags{
+				Album: "Double", Title: "Unrelated", Track: 1, Disc: 1,
+			})
+			writeTrack(filepath.Join(dir, "Disc 2", "a.mp3"), audiotags.WriteTags{
+				Album: "Double", Title: "Unrelated too", Track: 1,
+			})
+
+			scan := commit(confirmed(dir, "rg-1", "a-1"))
+
+			Expect(scan.CommitSuccessCount).To(Equal(uint32(1)))
+			Expect(scan.CommitFailedCount).To(BeZero())
+			files, err := client.MediaFile.Query().All(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(HaveLen(2))
+			Expect(outcomeOf(dir).OutcomeMessage).To(BeEmpty())
 		})
 
 		It("reuses an artist the library already holds", func() {

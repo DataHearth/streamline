@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
@@ -90,8 +91,14 @@ func newCatalogFixture(ctx context.Context) *catalogFixture {
 		SetOpdsToken(auth.HashOPDSToken("sesame")).
 		SaveX(ctx)
 
+	pm, err := posters.New(g.GinkgoT().TempDir())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(
+		pm.Put(ctx, "books", ebook.ID, strings.NewReader("JPEGDATA")),
+	).To(Succeed())
+
 	root := chi.NewRouter()
-	root.Mount("/opds", New(client, appaccess.NewTracker(client)).Router())
+	root.Mount("/opds", New(client, appaccess.NewTracker(client), pm).Router())
 	return &catalogFixture{
 		client:    client,
 		router:    root,
@@ -209,9 +216,17 @@ var _ = g.Describe("catalog", g.Label("integration"), func() {
 		Expect(body).To(ContainSubstring(`type="application/epub+zip"`))
 		Expect(
 			body,
-		).To(ContainSubstring(fmt.Sprintf(`href="/posters/books/%d/poster.jpg"`, f.ebook.ID)))
+		).To(ContainSubstring(fmt.Sprintf(`href="/opds/cover/%d"`, f.ebook.ID)))
 		Expect(body).To(ContainSubstring("A fallen city."))
 		Expect(body).NotTo(ContainSubstring("Warbreaker"))
+	})
+
+	g.It("serves a cover under Basic auth and refuses it without", func() {
+		path := fmt.Sprintf("/opds/cover/%d", f.ebook.ID)
+		Expect(f.get(path, false).Code).To(Equal(http.StatusUnauthorized))
+		rec := f.get(path, true)
+		Expect(rec.Code).To(Equal(http.StatusOK))
+		Expect(rec.Body.String()).To(Equal("JPEGDATA"))
 	})
 
 	g.It("answers 404 for a bad or unknown author id", func() {

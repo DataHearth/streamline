@@ -234,7 +234,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		}
 
 		It("does nothing without a Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl)
+			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil)
 			Expect(svc.RefreshStale(f.ctx)).To(Succeed())
 		})
 
@@ -392,6 +392,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 				f.posters,
 				f.idx,
 				f.dl,
+				nil,
 			)
 
 			Expect(svc.RefreshStale(f.ctx)).To(Succeed())
@@ -528,7 +529,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		})
 
 		It("does not start without a Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl)
+			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil)
 			svc.HydrateSeriesInBackground(f.ctx)
 			Expect(svc.hydrating.Load()).To(BeFalse())
 		})

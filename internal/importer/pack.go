@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -157,6 +158,6 @@ func (w *Worker) importPackRecord(
 
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, "music", libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
 	return nil
 }
