@@ -19,6 +19,30 @@ type ScannedShowCandidate struct {
 	Year   uint16 `json:"year,omitempty"`
 }
 
+// ShowMonitoring is the source's monitored state for one show. Episodes holds
+// only the ones whose flag differs from their season's, so a show monitored
+// uniformly stores nothing there.
+type ShowMonitoring struct {
+	Seasons  map[uint16]bool `json:"seasons"`
+	Episodes []EpisodeFlag   `json:"episodes,omitempty"`
+}
+
+type EpisodeFlag struct {
+	Season    uint16 `json:"season"`
+	Episode   uint16 `json:"episode"`
+	Monitored bool   `json:"monitored"`
+}
+
+// SourceEpisodeFile is the source's own file-to-episode mapping. Sonarr states
+// it on the episode, so a migration resolves files by number instead of
+// re-parsing filenames, which is strictly worse evidence.
+type SourceEpisodeFile struct {
+	Season  uint16 `json:"season"`
+	Episode uint16 `json:"episode"`
+	Path    string `json:"path"`
+	Size    int64  `json:"size"`
+}
+
 // ImportScanShow is one detected show folder in a series import scan.
 type ImportScanShow struct{ ent.Schema }
 
@@ -38,6 +62,11 @@ func (ImportScanShow) Fields() []ent.Field {
 		field.JSON("candidates", []ScannedShowCandidate{}).Optional(),
 		field.Uint32("existing_tvshow_id").Optional().Nillable(),
 		field.Uint16("file_count").Default(0),
+		field.String("quality_profile").Optional(),
+		field.Bool("monitored").Default(true),
+		field.String("series_type").Optional(),
+		field.JSON("monitoring", ShowMonitoring{}).Optional(),
+		field.JSON("source_files", []SourceEpisodeFile{}).Optional(),
 
 		field.Enum("decision").
 			Values("pending", "accept", "skip").

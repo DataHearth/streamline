@@ -160,6 +160,54 @@ func formatScoresToAPI(
 
 // formatScoresFromAPI is the inverse of formatScoresToAPI, used by create/
 // update requests.
+func qualityProfileFromCreate(b QualityProfileCreate) config.QualityProfileEntry {
+	e := config.QualityProfileEntry{
+		Name:                b.Name,
+		PreferredResolution: string(b.PreferredResolution),
+		MinResolution:       string(b.PreferredResolution),
+	}
+	if b.MinResolution != nil {
+		e.MinResolution = string(*b.MinResolution)
+	}
+	if b.UpgradeAllowed != nil {
+		e.UpgradeAllowed = *b.UpgradeAllowed
+	}
+	if b.AllowedCodecs != nil {
+		e.AllowedCodecs = *b.AllowedCodecs
+	}
+	if b.Formats != nil {
+		e.Formats = formatScoresFromAPI(*b.Formats)
+	}
+	if b.MinScore != nil {
+		e.MinScore = *b.MinScore
+	}
+	if b.UpgradeUntilScore != nil {
+		e.UpgradeUntilScore = *b.UpgradeUntilScore
+	}
+	e.Transcode = transcodePolicyFromAPI(b.Transcode)
+	return e
+}
+
+func qualityProfileCreateFromEntry(
+	e config.QualityProfileEntry,
+) QualityProfileCreate {
+	minRes := QualityProfileCreateMinResolution(e.MinResolution)
+	formats := formatScoresToAPI(e.Formats)
+	return QualityProfileCreate{
+		Name: e.Name,
+		PreferredResolution: QualityProfileCreatePreferredResolution(
+			e.PreferredResolution,
+		),
+		MinResolution:     &minRes,
+		UpgradeAllowed:    &e.UpgradeAllowed,
+		AllowedCodecs:     &e.AllowedCodecs,
+		Formats:           &formats,
+		MinScore:          &e.MinScore,
+		UpgradeUntilScore: &e.UpgradeUntilScore,
+		Transcode:         transcodePolicyToAPI(e.Transcode),
+	}
+}
+
 func formatScoresFromAPI(
 	scores []QualityProfileFormatScore,
 ) []config.QualityProfileFormatScore {
@@ -195,31 +243,7 @@ func (s *Server) CreateQualityProfile(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	e := config.QualityProfileEntry{
-		Name:                request.Body.Name,
-		PreferredResolution: string(request.Body.PreferredResolution),
-	}
-	if request.Body.MinResolution != nil {
-		e.MinResolution = string(*request.Body.MinResolution)
-	} else {
-		e.MinResolution = e.PreferredResolution
-	}
-	if request.Body.UpgradeAllowed != nil {
-		e.UpgradeAllowed = *request.Body.UpgradeAllowed
-	}
-	if request.Body.AllowedCodecs != nil {
-		e.AllowedCodecs = *request.Body.AllowedCodecs
-	}
-	if request.Body.Formats != nil {
-		e.Formats = formatScoresFromAPI(*request.Body.Formats)
-	}
-	if request.Body.MinScore != nil {
-		e.MinScore = *request.Body.MinScore
-	}
-	if request.Body.UpgradeUntilScore != nil {
-		e.UpgradeUntilScore = *request.Body.UpgradeUntilScore
-	}
-	e.Transcode = transcodePolicyFromAPI(request.Body.Transcode)
+	e := qualityProfileFromCreate(*request.Body)
 
 	switch err := config.AddQualityProfile(ctx, e); {
 	case errors.Is(err, config.ErrQualityProfileExists):

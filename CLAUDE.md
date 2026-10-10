@@ -136,9 +136,9 @@ Metadata is Hardcover (GraphQL, `metadata.hardcover_api_key` or `_file`): **the 
 
 ## Release-name parsing & bulk import matching
 
-`library.Parse` and friends turn a release name into facts; `internal/library/bulkimport/` classifies scanned folders against TMDB/TVDB and commits them. Nearly every rule in this area exists because a specific real-world release broke the obvious implementation — do not simplify one without reading why it is shaped that way.
+`library.Parse` and friends turn a release name into facts; `internal/library/bulkimport/` classifies scanned folders against TMDB/TVDB and commits them. An import scan also has a `source` axis (`filesystem | radarr | sonarr`): a Radarr/Sonarr migration fetches identified titles through `internal/arr` instead of classifying files, commits title-only rows and resolves episodes by the source's own numbers, and never stores the API key. Nearly every rule in this area exists because a specific real-world release broke the obvious implementation — do not simplify one without reading why it is shaped that way.
 
-**Parser rules, title normalization, classifier ranking, commit-time re-resolution and the naming-template/path-sanitizing contract: [`docs/agents/bulk-import-matching.md`](docs/agents/bulk-import-matching.md) — read it before touching `internal/library/` parsing, the rename services, or the metadata classifiers.**
+**Parser rules, title normalization, classifier ranking, commit-time re-resolution, the *arr migration and the naming-template/path-sanitizing contract: [`docs/agents/bulk-import-matching.md`](docs/agents/bulk-import-matching.md) — read it before touching `internal/library/` parsing, `internal/arr/`, the rename services, or the metadata classifiers.**
 
 ## API conventions
 - Every list endpoint bounds `limit` to `[1, 100]` (200 for activity) and **400s** a value outside it (`pagination.go` `limitOr` — there is no request-validation middleware, so the spec's bounds are enforced there). The SPA's `apiAllPages` (`web/app/lib/api.ts`) walks pages at `PAGE_LIMIT = 100` against `total`; the handlers used to clamp silently, and asking for `limit=500` — which nine call sites did — showed 100 of 621 movies with no indication anything was missing.
@@ -151,6 +151,7 @@ Metadata is Hardcover (GraphQL, `metadata.hardcover_api_key` or `_file`): **the 
 - **`GET /requests/{id}/metadata` for an artist, book or series calls the same handler method as its lookup detail** (`GetMusicArtistLookup`, `GetBookLookup`), so the request panel and the add flow share one cache and one provider budget; 429 and 503 pass through and the SPA falls back to the title without retrying.
 - **A 422 for a title with no usable quality profile carries `code: no_quality_profile`** (`errNoQualityProfile`), for the same reason: the album and book-slot search/grab endpoints would otherwise fall to the SPA's generic 422 line.
 - **A Hardcover `503` carries `code: hardcover_not_configured` or `code: hardcover_key_rejected`**, distinct from `rate_limited` (429). One helper builds it (`errHardcoverUnavailable`); a handler that returns the book provider's 503 with `errServiceUnavailable` leaves the SPA unable to tell a missing key from a refused one from an outage. Approving a book or series request answers the same codes (and `429`) and the request stays pending.
+- **A refused Radarr/Sonarr migration step answers `422` with `code: migration_rejected`** (`errMigrationRejected`) — the arr arm of `StartImport` and `apply-config` — for the same reason as `grab_rejected`: its message names the mapping, name or secret to fix, and without a code the SPA shows its generic 422 instead. Connection problems keep `connection_failed`; filesystem-scan 422s stay uncoded.
 
 ## Testing
 - Framework: Ginkgo (Describe/Context/It/By) + Gomega assertions

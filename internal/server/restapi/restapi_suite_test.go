@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	arrmocks "github.com/datahearth/streamline/internal/arr/mocks"
 	"github.com/datahearth/streamline/internal/auth"
 	authmocks "github.com/datahearth/streamline/internal/auth/mocks"
 	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
@@ -91,6 +92,7 @@ type apiKeyApp struct {
 	musicRenamer  *librarymocks.MockRenamer
 	prober        *ffmpegmocks.MockProber
 	importer      *importermocks.MockEnqueuer
+	arrClients    *arrmocks.MockFactory
 
 	// Identity tokens consumed by the synthetic auth middleware.
 	adminKey       string
@@ -131,6 +133,7 @@ func newAPIKeyApp() *apiKeyApp {
 		musicRenamer:   librarymocks.NewMockRenamer(t),
 		prober:         ffmpegmocks.NewMockProber(t),
 		importer:       importermocks.NewMockEnqueuer(t),
+		arrClients:     arrmocks.NewMockFactory(t),
 		adminKey:       "test-admin-token",
 		adminAPIKey:    "test-admin-apikey",
 		adminID:        1,
@@ -161,6 +164,7 @@ func newAPIKeyApp() *apiKeyApp {
 		PathMigrations: pathmigrate.NewService(a.store),
 		Prober:         a.prober,
 		Importer:       a.importer,
+		ArrClients:     a.arrClients,
 		// A real worker, never started: the handlers only ever ask it for
 		// progress of a job this process is encoding (none) and for a scan,
 		// which drives the store mock.

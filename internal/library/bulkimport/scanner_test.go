@@ -2,6 +2,7 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -67,6 +68,41 @@ var _ = Describe(
 			)
 			Expect(err).To(MatchError(ErrInvalidPath))
 		})
+
+		It("runs BeforeCreate only once every check has passed", func() {
+			called := false
+			hook := func(context.Context) error { called = true; return nil }
+
+			_, err := svc.StartScan(ctx, StartScanParams{
+				SourcePath: "relative/path", Mode: entimportscan.ModeInPlace,
+				BeforeCreate: hook,
+			})
+			Expect(err).To(MatchError(ErrInvalidPath))
+			Expect(called).To(BeFalse())
+
+			store.EXPECT().CountActiveImportScans(mock.Anything).
+				Return(1, nil).Once()
+			_, err = svc.StartScan(ctx, StartScanParams{
+				SourcePath: libRoot, Mode: entimportscan.ModeInPlace,
+				BeforeCreate: hook,
+			})
+			Expect(err).To(MatchError(ErrScanRunning))
+			Expect(called).To(BeFalse())
+		})
+
+		It("refuses the start with BeforeCreate's error and creates no scan",
+			func() {
+				store.EXPECT().CountActiveImportScans(mock.Anything).
+					Return(0, nil).Once()
+				boom := errors.New("config is read-only")
+				// No CreateImportScan expectation: the mock fails the spec if
+				// the scan row is written anyway.
+				_, err := svc.StartScan(ctx, StartScanParams{
+					SourcePath: libRoot, Mode: entimportscan.ModeInPlace,
+					BeforeCreate: func(context.Context) error { return boom },
+				})
+				Expect(err).To(MatchError(boom))
+			})
 
 		It("rejects nonexistent path", func() {
 			_, err := svc.StartScan(
@@ -205,3 +241,13 @@ var _ = Describe(
 		})
 	},
 )
+
+var _ = Describe("storedSourceURL", Label("unit", "bulkimport"), func() {
+	It("keeps the address and drops what can carry a credential", func() {
+		Expect(storedSourceURL(
+			"https://admin:s3cret@radarr.example.com/radarr?apikey=K#top",
+		)).To(Equal("https://radarr.example.com/radarr"))
+		Expect(storedSourceURL("http://radarr.lan:7878")).
+			To(Equal("http://radarr.lan:7878"))
+	})
+})

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "tmdbId": 27205,
+    "title": "Inception",
+    "year": 2010,
+    "monitored": true,
+    "qualityProfileId": 4,
+    "path": "/media/movies/Inception (2010)",
+    "rootFolderPath": "/media/movies",
+    "hasFile": true,
+    "movieFile": {
+      "path": "/media/movies/Inception (2010)/Inception.2010.1080p.mkv",
+      "relativePath": "Inception.2010.1080p.mkv",
+      "size": 9663676416,
+      "releaseGroup": "GRP"
+    }
+  },
+  {
+    "id": 2,
+    "tmdbId": 157336,
+    "title": "Interstellar",
+    "year": 2014,
+    "monitored": true,
+    "qualityProfileId": 4,
+    "path": "/media/movies/Interstellar (2014)",
+    "rootFolderPath": "/media/movies",
+    "hasFile": false
+  }
+]

@@ -1,5 +1,6 @@
 import { formatBytes } from "./format";
 import { formatLabel, releaseTypeLabel } from "./music-books";
+import { isTitleOnly } from "./imports";
 import type {
 	ImportFileClassification,
 	ImportScanAlbum,
@@ -87,14 +88,22 @@ export function fileEntry(f: ImportScanFile): TouchEntry {
 		chosen != null
 			? (f.candidates ?? []).find((c) => c.tmdb_id === chosen)
 			: undefined;
+	// A title a migration source tracks without a file has no path at all: the
+	// heading is the title it reported, and `path` stays "" — the row reads that
+	// as title-only instead of rendering an empty path.
+	const titleOnly = isTitleOnly(f);
 	return {
 		id: f.id,
-		heading: f.parsed_title || basename(f.source_path),
+		heading: titleOnly
+			? (f.parsed_title ?? "")
+			: f.parsed_title || basename(f.source_path),
 		headingWeak: !f.parsed_title,
-		path: f.source_path,
-		sub: f.parsed_title
-			? basename(f.source_path)
-			: bits.filter(Boolean).join(" · "),
+		path: titleOnly ? "" : f.source_path,
+		sub: titleOnly
+			? ""
+			: f.parsed_title
+				? basename(f.source_path)
+				: bits.filter(Boolean).join(" · "),
 		classification: f.classification,
 		decision: f.decision,
 		outcome: f.outcome,

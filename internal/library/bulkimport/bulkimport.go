@@ -10,12 +10,14 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -52,13 +54,19 @@ type FilesParams struct {
 	Limit          uint16
 }
 
-// SeriesAdder creates a TV show (with its seasons and episodes) from a TVDB id.
-// Satisfied by *tvshow.Service; used to adopt shows on series-scan commit.
+// SeriesAdder creates a TV show (with its seasons and episodes) from a TVDB id
+// and applies the flags a migration carries. Satisfied by *tvshow.Service;
+// used to adopt shows on series-scan commit.
 type SeriesAdder interface {
 	Add(
 		ctx context.Context,
 		tvdbID uint32,
 		qualityProfile string,
+	) (*ent.TVShow, error)
+	Update(
+		ctx context.Context,
+		id uint32,
+		p tvshow.UpdateParams,
 	) (*ent.TVShow, error)
 }
 
@@ -85,7 +93,7 @@ type Service struct {
 	bookmeta    metadata.BookProvider
 	bookAdder   BookAdder
 	importSvc   *library.ImportService
-	movieSvc    *movie.Service
+	movieSvc    movie.Manager
 	seriesAdder SeriesAdder
 	ms          mediaserver.Refresher
 	moviePath   string
@@ -93,6 +101,7 @@ type Service struct {
 	musicmeta   metadata.MusicProvider
 	musicAdder  MusicAdder
 	prober      ffmpeg.Prober
+	arrClients  arr.Factory
 }
 
 // Option tunes optional collaborators of the bulk-import service.
@@ -105,13 +114,19 @@ func WithProber(p ffmpeg.Prober) Option {
 	return func(s *Service) { s.prober = p }
 }
 
+// WithArrClients replaces how a Radarr/Sonarr migration reaches its source;
+// tests hand in a fake instead of dialling one.
+func WithArrClients(f arr.Factory) Option {
+	return func(s *Service) { s.arrClients = f }
+}
+
 // NewService constructs the bulk-import service.
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
 	tvmeta metadata.TVProvider,
 	importSvc *library.ImportService,
-	movieSvc *movie.Service,
+	movieSvc movie.Manager,
 	seriesAdder SeriesAdder,
 	ms mediaserver.Refresher,
 	moviePath string,
@@ -136,6 +151,7 @@ func NewService(
 		musicAdder:  musicAdder,
 		bookmeta:    bookmeta,
 		bookAdder:   bookAdder,
+		arrClients:  arr.NewFactory(),
 	}
 	for _, o := range opts {
 		o(s)

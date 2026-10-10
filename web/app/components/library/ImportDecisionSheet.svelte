@@ -100,9 +100,13 @@
 					<h2 class="text-[17px] font-semibold tracking-tight text-fg">
 						{entry.heading}
 					</h2>
-					<p class="mt-1 break-all font-mono text-[11px] leading-relaxed text-fg-subtle">
-						{entry.path}
-					</p>
+					{#if entry.path}
+						<p class="mt-1 break-all font-mono text-[11px] leading-relaxed text-fg-subtle">
+							{entry.path}
+						</p>
+					{:else}
+						<p class="mt-1 text-[12px] text-fg-subtle">{i18n.imports_title_only()}</p>
+					{/if}
 				</div>
 				<button
 					type="button"

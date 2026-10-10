@@ -247,6 +247,15 @@ func stripEnvLayerLocked(k *koanf.Koanf) ([]string, error) {
 // is not an install that may be broken in another, and the key an update
 // breaks is often one the environment does not supply at all — nothing would
 // put that value back.
+// ValidationError is a change Update refused because the result would not
+// validate: the caller's input is wrong, as opposed to a fault loading or
+// writing the file, whose message can name the config path.
+type ValidationError struct{ Err error }
+
+func (e *ValidationError) Error() string { return "validate: " + e.Err.Error() }
+
+func (e *ValidationError) Unwrap() error { return e.Err }
+
 func Update(ctx context.Context, fn func(*Config) error) error {
 	mu.Lock()
 	defer mu.Unlock()
@@ -272,7 +281,7 @@ func Update(ctx context.Context, fn func(*Config) error) error {
 	}
 	if err := cloned.Validate(); err != nil {
 		slog.ErrorContext(ctx, "config validation failed", "error", err)
-		return fmt.Errorf("validate: %w", err)
+		return &ValidationError{Err: err}
 	}
 	next, err := flatten(cloned)
 	if err != nil {

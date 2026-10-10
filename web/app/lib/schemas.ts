@@ -377,6 +377,17 @@ export const importScanKind = v.picklist(
 	i18n.validation_pick_media_type(),
 );
 
+// The Radarr/Sonarr connect step. The URL is the address *this server* dials,
+// so it has to carry its scheme; the key is checked by the preview itself.
+export const arrConnectForm = v.object({
+	url: v.pipe(
+		v.string(),
+		v.minLength(1, i18n.validation_required()),
+		v.regex(/^https?:\/\//, i18n.validation_url()),
+	),
+	api_key: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
+});
+
 export const importStartForm = v.object({
 	source_path: v.pipe(
 		v.string(),

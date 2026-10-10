@@ -40,6 +40,16 @@ type ImportScanShow struct {
 	ExistingTvshowID *uint32 `json:"existing_tvshow_id,omitempty"`
 	// FileCount holds the value of the "file_count" field.
 	FileCount uint16 `json:"file_count,omitempty"`
+	// QualityProfile holds the value of the "quality_profile" field.
+	QualityProfile string `json:"quality_profile,omitempty"`
+	// Monitored holds the value of the "monitored" field.
+	Monitored bool `json:"monitored,omitempty"`
+	// SeriesType holds the value of the "series_type" field.
+	SeriesType string `json:"series_type,omitempty"`
+	// Monitoring holds the value of the "monitoring" field.
+	Monitoring schema.ShowMonitoring `json:"monitoring,omitempty"`
+	// SourceFiles holds the value of the "source_files" field.
+	SourceFiles []schema.SourceEpisodeFile `json:"source_files,omitempty"`
 	// Decision holds the value of the "decision" field.
 	Decision importscanshow.Decision `json:"decision,omitempty"`
 	// DecisionTvdbID holds the value of the "decision_tvdb_id" field.
@@ -82,11 +92,13 @@ func (*ImportScanShow) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case importscanshow.FieldCandidates:
+		case importscanshow.FieldCandidates, importscanshow.FieldMonitoring, importscanshow.FieldSourceFiles:
 			values[i] = new([]byte)
+		case importscanshow.FieldMonitored:
+			values[i] = new(sql.NullBool)
 		case importscanshow.FieldID, importscanshow.FieldParsedYear, importscanshow.FieldTvdbID, importscanshow.FieldExistingTvshowID, importscanshow.FieldFileCount, importscanshow.FieldDecisionTvdbID, importscanshow.FieldCreatedTvshowID:
 			values[i] = new(sql.NullInt64)
-		case importscanshow.FieldFolderPath, importscanshow.FieldParsedTitle, importscanshow.FieldClassification, importscanshow.FieldDecision, importscanshow.FieldOutcome, importscanshow.FieldOutcomeMessage:
+		case importscanshow.FieldFolderPath, importscanshow.FieldParsedTitle, importscanshow.FieldClassification, importscanshow.FieldQualityProfile, importscanshow.FieldSeriesType, importscanshow.FieldDecision, importscanshow.FieldOutcome, importscanshow.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanshow.FieldCreateTime, importscanshow.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -177,6 +189,40 @@ func (_m *ImportScanShow) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field file_count", values[i])
 			} else if value.Valid {
 				_m.FileCount = uint16(value.Int64)
+			}
+		case importscanshow.FieldQualityProfile:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quality_profile", values[i])
+			} else if value.Valid {
+				_m.QualityProfile = value.String
+			}
+		case importscanshow.FieldMonitored:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field monitored", values[i])
+			} else if value.Valid {
+				_m.Monitored = value.Bool
+			}
+		case importscanshow.FieldSeriesType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field series_type", values[i])
+			} else if value.Valid {
+				_m.SeriesType = value.String
+			}
+		case importscanshow.FieldMonitoring:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field monitoring", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Monitoring); err != nil {
+					return fmt.Errorf("unmarshal field monitoring: %w", err)
+				}
+			}
+		case importscanshow.FieldSourceFiles:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field source_files", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SourceFiles); err != nil {
+					return fmt.Errorf("unmarshal field source_files: %w", err)
+				}
 			}
 		case importscanshow.FieldDecision:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -293,6 +339,21 @@ func (_m *ImportScanShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("file_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FileCount))
+	builder.WriteString(", ")
+	builder.WriteString("quality_profile=")
+	builder.WriteString(_m.QualityProfile)
+	builder.WriteString(", ")
+	builder.WriteString("monitored=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
+	builder.WriteString(", ")
+	builder.WriteString("series_type=")
+	builder.WriteString(_m.SeriesType)
+	builder.WriteString(", ")
+	builder.WriteString("monitoring=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Monitoring))
+	builder.WriteString(", ")
+	builder.WriteString("source_files=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SourceFiles))
 	builder.WriteString(", ")
 	builder.WriteString("decision=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Decision))

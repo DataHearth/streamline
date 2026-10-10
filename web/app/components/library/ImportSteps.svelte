@@ -1,17 +1,32 @@
 <script lang="ts">
 	import { Check, LoaderCircle } from "@lucide/svelte";
-	import type { ImportScanKind, ImportStatus } from "@lib/types";
+	import type { ImportScanKind, ImportSource, ImportStatus } from "@lib/types";
+	import { appLabel } from "@lib/arr-import";
 	import { IMPORT_KIND } from "@lib/imports";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	let { status, kind = "movie" }: { status: ImportStatus; kind?: ImportScanKind } =
+	let {
+		status,
+		kind = "movie",
+		source = "filesystem",
+	}: { status: ImportStatus; kind?: ImportScanKind; source?: ImportSource } =
 		$props();
 
 	type State = "done" | "current" | "pending";
 
+	// A migration reads its titles from Radarr/Sonarr instead of walking a
+	// directory, so its first two stages fetch from the source and translate
+	// its paths and profiles rather than discover and parse.
 	const STEPS = $derived([
-		{ label: i18n.imports_discovery(), sub: i18n.imports_step_indexing() },
-		{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: IMPORT_KIND[kind].source }) },
+		...(source === "filesystem"
+			? [
+					{ label: i18n.imports_discovery(), sub: i18n.imports_step_indexing() },
+					{ label: i18n.imports_parsing(), sub: i18n.imports_matching_against({ provider: IMPORT_KIND[kind].source }) },
+				]
+			: [
+					{ label: i18n.imports_step_fetching(), sub: i18n.imports_step_fetching_sub({ app: appLabel(source) }) },
+					{ label: i18n.imports_step_translating(), sub: i18n.imports_step_translating_sub() },
+				]),
 		{ label: i18n.common_review(), sub: i18n.imports_step_resolve() },
 		{ label: i18n.imports_commit(), sub: i18n.imports_step_import() },
 	]);

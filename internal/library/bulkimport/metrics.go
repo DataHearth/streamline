@@ -3,6 +3,8 @@ package bulkimport
 import (
 	"context"
 
+	entimportscan "github.com/datahearth/streamline/ent/importscan"
+
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -28,12 +30,24 @@ var (
 	))
 )
 
-func countCommit(ctx context.Context, kind, outcome string, n int64) {
+// source splits a Radarr/Sonarr migration from a filesystem scan: a migration
+// commits identified titles, so its failure rate means something different.
+func countCommit(
+	ctx context.Context,
+	kind string,
+	source entimportscan.Source,
+	outcome string,
+	n int64,
+) {
 	if n <= 0 {
 		return
 	}
+	if source == "" {
+		source = entimportscan.SourceFilesystem
+	}
 	commits.Add(ctx, n, metric.WithAttributes(
 		attribute.String("kind", kind),
+		attribute.String("source", string(source)),
 		attribute.String("outcome", outcome),
 	))
 }

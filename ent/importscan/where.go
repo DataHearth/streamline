@@ -70,6 +70,11 @@ func SourcePath(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldEQ(FieldSourcePath, v))
 }
 
+// SourceURL applies equality check predicate on the "source_url" field. It's identical to SourceURLEQ.
+func SourceURL(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEQ(FieldSourceURL, v))
+}
+
 // TotalCount applies equality check predicate on the "total_count" field. It's identical to TotalCountEQ.
 func TotalCount(v uint32) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldEQ(FieldTotalCount, v))
@@ -245,6 +250,16 @@ func SourcePathHasSuffix(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldHasSuffix(FieldSourcePath, v))
 }
 
+// SourcePathIsNil applies the IsNil predicate on the "source_path" field.
+func SourcePathIsNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIsNull(FieldSourcePath))
+}
+
+// SourcePathNotNil applies the NotNil predicate on the "source_path" field.
+func SourcePathNotNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotNull(FieldSourcePath))
+}
+
 // SourcePathEqualFold applies the EqualFold predicate on the "source_path" field.
 func SourcePathEqualFold(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldEqualFold(FieldSourcePath, v))
@@ -253,6 +268,111 @@ func SourcePathEqualFold(v string) predicate.ImportScan {
 // SourcePathContainsFold applies the ContainsFold predicate on the "source_path" field.
 func SourcePathContainsFold(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldContainsFold(FieldSourcePath, v))
+}
+
+// SourceEQ applies the EQ predicate on the "source" field.
+func SourceEQ(v Source) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEQ(FieldSource, v))
+}
+
+// SourceNEQ applies the NEQ predicate on the "source" field.
+func SourceNEQ(v Source) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNEQ(FieldSource, v))
+}
+
+// SourceIn applies the In predicate on the "source" field.
+func SourceIn(vs ...Source) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIn(FieldSource, vs...))
+}
+
+// SourceNotIn applies the NotIn predicate on the "source" field.
+func SourceNotIn(vs ...Source) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotIn(FieldSource, vs...))
+}
+
+// SourceURLEQ applies the EQ predicate on the "source_url" field.
+func SourceURLEQ(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEQ(FieldSourceURL, v))
+}
+
+// SourceURLNEQ applies the NEQ predicate on the "source_url" field.
+func SourceURLNEQ(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNEQ(FieldSourceURL, v))
+}
+
+// SourceURLIn applies the In predicate on the "source_url" field.
+func SourceURLIn(vs ...string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIn(FieldSourceURL, vs...))
+}
+
+// SourceURLNotIn applies the NotIn predicate on the "source_url" field.
+func SourceURLNotIn(vs ...string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotIn(FieldSourceURL, vs...))
+}
+
+// SourceURLGT applies the GT predicate on the "source_url" field.
+func SourceURLGT(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldGT(FieldSourceURL, v))
+}
+
+// SourceURLGTE applies the GTE predicate on the "source_url" field.
+func SourceURLGTE(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldGTE(FieldSourceURL, v))
+}
+
+// SourceURLLT applies the LT predicate on the "source_url" field.
+func SourceURLLT(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldLT(FieldSourceURL, v))
+}
+
+// SourceURLLTE applies the LTE predicate on the "source_url" field.
+func SourceURLLTE(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldLTE(FieldSourceURL, v))
+}
+
+// SourceURLContains applies the Contains predicate on the "source_url" field.
+func SourceURLContains(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldContains(FieldSourceURL, v))
+}
+
+// SourceURLHasPrefix applies the HasPrefix predicate on the "source_url" field.
+func SourceURLHasPrefix(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldHasPrefix(FieldSourceURL, v))
+}
+
+// SourceURLHasSuffix applies the HasSuffix predicate on the "source_url" field.
+func SourceURLHasSuffix(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldHasSuffix(FieldSourceURL, v))
+}
+
+// SourceURLIsNil applies the IsNil predicate on the "source_url" field.
+func SourceURLIsNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIsNull(FieldSourceURL))
+}
+
+// SourceURLNotNil applies the NotNil predicate on the "source_url" field.
+func SourceURLNotNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotNull(FieldSourceURL))
+}
+
+// SourceURLEqualFold applies the EqualFold predicate on the "source_url" field.
+func SourceURLEqualFold(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEqualFold(FieldSourceURL, v))
+}
+
+// SourceURLContainsFold applies the ContainsFold predicate on the "source_url" field.
+func SourceURLContainsFold(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldContainsFold(FieldSourceURL, v))
+}
+
+// MappingsIsNil applies the IsNil predicate on the "mappings" field.
+func MappingsIsNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIsNull(FieldMappings))
+}
+
+// MappingsNotNil applies the NotNil predicate on the "mappings" field.
+func MappingsNotNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotNull(FieldMappings))
 }
 
 // KindEQ applies the EQ predicate on the "kind" field.

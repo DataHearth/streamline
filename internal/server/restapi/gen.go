@@ -165,6 +165,126 @@ func (e AppLogConfigLevel) Valid() bool {
 	}
 }
 
+// Defines values for ApplySourceConfigRequestApp.
+const (
+	ApplySourceConfigRequestAppRadarr ApplySourceConfigRequestApp = "radarr"
+	ApplySourceConfigRequestAppSonarr ApplySourceConfigRequestApp = "sonarr"
+)
+
+// Valid indicates whether the value is a known member of the ApplySourceConfigRequestApp enum.
+func (e ApplySourceConfigRequestApp) Valid() bool {
+	switch e {
+	case ApplySourceConfigRequestAppRadarr:
+		return true
+	case ApplySourceConfigRequestAppSonarr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArrClientOptionClientType.
+const (
+	ArrClientOptionClientTypeDeluge       ArrClientOptionClientType = "deluge"
+	ArrClientOptionClientTypeQbittorrent  ArrClientOptionClientType = "qbittorrent"
+	ArrClientOptionClientTypeTransmission ArrClientOptionClientType = "transmission"
+	ArrClientOptionClientTypeUnsupported  ArrClientOptionClientType = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ArrClientOptionClientType enum.
+func (e ArrClientOptionClientType) Valid() bool {
+	switch e {
+	case ArrClientOptionClientTypeDeluge:
+		return true
+	case ArrClientOptionClientTypeQbittorrent:
+		return true
+	case ArrClientOptionClientTypeTransmission:
+		return true
+	case ArrClientOptionClientTypeUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArrIndexerOptionKind.
+const (
+	ArrIndexerOptionKindProwlarr    ArrIndexerOptionKind = "prowlarr"
+	ArrIndexerOptionKindTorznab     ArrIndexerOptionKind = "torznab"
+	ArrIndexerOptionKindUnsupported ArrIndexerOptionKind = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the ArrIndexerOptionKind enum.
+func (e ArrIndexerOptionKind) Valid() bool {
+	switch e {
+	case ArrIndexerOptionKindProwlarr:
+		return true
+	case ArrIndexerOptionKindTorznab:
+		return true
+	case ArrIndexerOptionKindUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArrPreviewApp.
+const (
+	ArrPreviewAppRadarr ArrPreviewApp = "radarr"
+	ArrPreviewAppSonarr ArrPreviewApp = "sonarr"
+)
+
+// Valid indicates whether the value is a known member of the ArrPreviewApp enum.
+func (e ArrPreviewApp) Valid() bool {
+	switch e {
+	case ArrPreviewAppRadarr:
+		return true
+	case ArrPreviewAppSonarr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArrRootCheckReason.
+const (
+	ArrRootCheckReasonNotFound         ArrRootCheckReason = "not found"
+	ArrRootCheckReasonPermissionDenied ArrRootCheckReason = "permission denied"
+	ArrRootCheckReasonUnreadable       ArrRootCheckReason = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the ArrRootCheckReason enum.
+func (e ArrRootCheckReason) Valid() bool {
+	switch e {
+	case ArrRootCheckReasonNotFound:
+		return true
+	case ArrRootCheckReasonPermissionDenied:
+		return true
+	case ArrRootCheckReasonUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArrSourceRequestApp.
+const (
+	ArrSourceRequestAppRadarr ArrSourceRequestApp = "radarr"
+	ArrSourceRequestAppSonarr ArrSourceRequestApp = "sonarr"
+)
+
+// Valid indicates whether the value is a known member of the ArrSourceRequestApp enum.
+func (e ArrSourceRequestApp) Valid() bool {
+	switch e {
+	case ArrSourceRequestAppRadarr:
+		return true
+	case ArrSourceRequestAppSonarr:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AudiobookFormat.
 const (
 	AudiobookFormatFLAC AudiobookFormat = "FLAC"
@@ -936,6 +1056,27 @@ func (e ImportScanMode) Valid() bool {
 	}
 }
 
+// Defines values for ImportScanSource.
+const (
+	ImportScanSourceFilesystem ImportScanSource = "filesystem"
+	ImportScanSourceRadarr     ImportScanSource = "radarr"
+	ImportScanSourceSonarr     ImportScanSource = "sonarr"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanSource enum.
+func (e ImportScanSource) Valid() bool {
+	switch e {
+	case ImportScanSourceFilesystem:
+		return true
+	case ImportScanSourceRadarr:
+		return true
+	case ImportScanSourceSonarr:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportScanStatus.
 const (
 	ImportScanStatusAwaitingReview ImportScanStatus = "awaiting_review"
@@ -1221,6 +1362,27 @@ func (e ImportScanCreateRequestMode) Valid() bool {
 	case ImportScanCreateRequestModeInPlace:
 		return true
 	case ImportScanCreateRequestModeRename:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportScanCreateRequestSource.
+const (
+	ImportScanCreateRequestSourceFilesystem ImportScanCreateRequestSource = "filesystem"
+	ImportScanCreateRequestSourceRadarr     ImportScanCreateRequestSource = "radarr"
+	ImportScanCreateRequestSourceSonarr     ImportScanCreateRequestSource = "sonarr"
+)
+
+// Valid indicates whether the value is a known member of the ImportScanCreateRequestSource enum.
+func (e ImportScanCreateRequestSource) Valid() bool {
+	switch e {
+	case ImportScanCreateRequestSourceFilesystem:
+		return true
+	case ImportScanCreateRequestSourceRadarr:
+		return true
+	case ImportScanCreateRequestSourceSonarr:
 		return true
 	default:
 		return false
@@ -3874,6 +4036,24 @@ type AppLogConfigFormat string
 // AppLogConfigLevel defines model for AppLogConfig.Level.
 type AppLogConfigLevel string
 
+// ApplySourceConfigRequest defines model for ApplySourceConfigRequest.
+type ApplySourceConfigRequest struct {
+	ApiKey          *string                     `json:"api_key,omitempty"`
+	App             ApplySourceConfigRequestApp `json:"app"`
+	DownloadClients *[]ArrConfigSelection       `json:"download_clients,omitempty"`
+	Indexers        *[]ArrConfigSelection       `json:"indexers,omitempty"`
+	Url             string                      `json:"url"`
+}
+
+// ApplySourceConfigRequestApp defines model for ApplySourceConfigRequest.App.
+type ApplySourceConfigRequestApp string
+
+// ApplySourceConfigResponse defines model for ApplySourceConfigResponse.
+type ApplySourceConfigResponse struct {
+	DownloadClients []string `json:"download_clients"`
+	Indexers        []string `json:"indexers"`
+}
+
 // ApproveRequestRequest defines model for ApproveRequestRequest.
 type ApproveRequestRequest struct {
 	// QualityProfile Profile name from the request's medium family (video, music or
@@ -3882,6 +4062,180 @@ type ApproveRequestRequest struct {
 	// is not in the family answers 422 and the request stays pending.
 	QualityProfile *string `json:"quality_profile,omitempty"`
 }
+
+// ArrClientOption defines model for ArrClientOption.
+type ArrClientOption struct {
+	// ClientType `unsupported` for a client that cannot be carried across; `reason`
+	// then says why.
+	ClientType ArrClientOptionClientType `json:"client_type"`
+
+	// Conflict A download client of this name already exists.
+	Conflict bool   `json:"conflict"`
+	Enabled  bool   `json:"enabled"`
+	Name     string `json:"name"`
+
+	// NeedsSecret The instance did not return the password; `apply-config` needs it
+	// in the selection's `secret`.
+	NeedsSecret bool `json:"needs_secret"`
+
+	// Reason Why the client cannot be carried across.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// ArrClientOptionClientType `unsupported` for a client that cannot be carried across; `reason`
+// then says why.
+type ArrClientOptionClientType string
+
+// ArrConfigSelection defines model for ArrConfigSelection.
+type ArrConfigSelection struct {
+	// Name The `name` the preview reported.
+	Name string `json:"name"`
+
+	// Secret The API key or password, for an entry the preview marked
+	// `needs_secret`. Overrides what the instance returned.
+	Secret *string `json:"secret,omitempty"`
+}
+
+// ArrCounts defines model for ArrCounts.
+type ArrCounts struct {
+	Monitored uint32 `json:"monitored"`
+
+	// Titles Movies or series the instance tracks.
+	Titles uint32 `json:"titles"`
+
+	// WithFile Movies with a file, or series with at least one episode file
+	// (Sonarr's own statistics).
+	WithFile uint32 `json:"with_file"`
+}
+
+// ArrIndexerOption defines model for ArrIndexerOption.
+type ArrIndexerOption struct {
+	// Collapses How many of the instance's indexers a `prowlarr` entry stands for:
+	// every indexer Prowlarr synced becomes one Prowlarr entry here.
+	Collapses uint32 `json:"collapses"`
+
+	// Conflict An indexer of this name already exists.
+	Conflict bool                 `json:"conflict"`
+	Enabled  bool                 `json:"enabled"`
+	Kind     ArrIndexerOptionKind `json:"kind"`
+
+	// Name The name the indexer would be created under.
+	Name string `json:"name"`
+
+	// NeedsSecret The instance did not return the API key; `apply-config` needs it
+	// in the selection's `secret`.
+	NeedsSecret bool `json:"needs_secret"`
+
+	// Reason Why an unsupported indexer cannot be carried across.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// ArrIndexerOptionKind defines model for ArrIndexerOption.Kind.
+type ArrIndexerOptionKind string
+
+// ArrPreview defines model for ArrPreview.
+type ArrPreview struct {
+	App             ArrPreviewApp           `json:"app"`
+	Counts          ArrCounts               `json:"counts"`
+	DownloadClients []ArrClientOption       `json:"download_clients"`
+	Indexers        []ArrIndexerOption      `json:"indexers"`
+	InstanceName    *string                 `json:"instance_name,omitempty"`
+	QualityProfiles []ArrProfileTranslation `json:"quality_profiles"`
+	RootFolders     []ArrRootFolder         `json:"root_folders"`
+	Version         string                  `json:"version"`
+}
+
+// ArrPreviewApp defines model for ArrPreview.App.
+type ArrPreviewApp string
+
+// ArrProfileMapping defines model for ArrProfileMapping.
+type ArrProfileMapping struct {
+	Create     *QualityProfileCreate `json:"create,omitempty"`
+	SourceId   uint32                `json:"source_id"`
+	SourceName *string               `json:"source_name,omitempty"`
+
+	// Target The streamline profile name titles on this profile get.
+	Target string `json:"target"`
+}
+
+// ArrProfileTranslation defines model for ArrProfileTranslation.
+type ArrProfileTranslation struct {
+	// Existing The name of the streamline profile spelled exactly like this one,
+	// or empty when there is none; mapping onto it is usually what the
+	// operator wants.
+	Existing string `json:"existing"`
+
+	// Id The profile's id on the instance.
+	Id uint32 `json:"id"`
+
+	// InUse How many of the instance's titles use this profile.
+	InUse uint32 `json:"in_use"`
+
+	// Name The profile's name on the instance.
+	Name string `json:"name"`
+
+	// Notes Every step of the translation that lost information.
+	Notes       []string             `json:"notes"`
+	Translation QualityProfileCreate `json:"translation"`
+}
+
+// ArrRootCheck defines model for ArrRootCheck.
+type ArrRootCheck struct {
+	Found  bool                `json:"found"`
+	From   string              `json:"from"`
+	Reason *ArrRootCheckReason `json:"reason,omitempty"`
+
+	// Resolved The sample path rewritten through the mapping.
+	Resolved string `json:"resolved"`
+	To       string `json:"to"`
+}
+
+// ArrRootCheckReason defines model for ArrRootCheck.Reason.
+type ArrRootCheckReason string
+
+// ArrRootFolder defines model for ArrRootFolder.
+type ArrRootFolder struct {
+	// Accessible Whether the instance itself can reach the folder.
+	Accessible bool   `json:"accessible"`
+	Path       string `json:"path"`
+
+	// SamplePath One file under this folder, for `check-paths`. Empty when no title
+	// under it has a file.
+	SamplePath *string `json:"sample_path,omitempty"`
+	TitleCount uint32  `json:"title_count"`
+}
+
+// ArrRootMapping defines model for ArrRootMapping.
+type ArrRootMapping struct {
+	// From The root folder as the instance reports it.
+	From string `json:"from"`
+
+	// SamplePath A file path under `from`, as the preview reported it. Checked
+	// after rewriting; omit to skip the check.
+	SamplePath *string `json:"sample_path,omitempty"`
+
+	// To The same folder as this host sees it.
+	To string `json:"to"`
+}
+
+// ArrRootMappingCheck defines model for ArrRootMappingCheck.
+type ArrRootMappingCheck struct {
+	From       string  `json:"from"`
+	SamplePath *string `json:"sample_path,omitempty"`
+	To         string  `json:"to"`
+}
+
+// ArrSourceRequest defines model for ArrSourceRequest.
+type ArrSourceRequest struct {
+	ApiKey *string             `json:"api_key,omitempty"`
+	App    ArrSourceRequestApp `json:"app"`
+
+	// Url The instance's base URL, e.g. `http://radarr:7878`.
+	Url string `json:"url"`
+}
+
+// ArrSourceRequestApp defines model for ArrSourceRequest.App.
+type ArrSourceRequestApp string
 
 // AudiobookFormat Best first. Upper case on the wire, in config and in `MediaFile.quality`.
 type AudiobookFormat string
@@ -4361,6 +4715,16 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password"`
 }
 
+// CheckPathsRequest defines model for CheckPathsRequest.
+type CheckPathsRequest struct {
+	Roots []ArrRootMappingCheck `json:"roots"`
+}
+
+// CheckPathsResponse defines model for CheckPathsResponse.
+type CheckPathsResponse struct {
+	Roots []ArrRootCheck `json:"roots"`
+}
+
 // ClearCompletedResult defines model for ClearCompletedResult.
 type ClearCompletedResult struct {
 	Deleted int `json:"deleted"`
@@ -4727,7 +5091,7 @@ type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
-	// hardcover_not_configured, hardcover_key_rejected). Present for domain errors
+	// hardcover_not_configured, hardcover_key_rejected, migration_rejected). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
@@ -4887,14 +5251,22 @@ type ImportScan struct {
 
 	// Kind Whether this scan reviews movie files, series folders, album
 	// folders or book items.
-	Kind           ImportScanKind   `json:"kind"`
-	Mode           ImportScanMode   `json:"mode"`
-	ProcessedCount uint32           `json:"processed_count"`
-	ScannedAt      *time.Time       `json:"scanned_at,omitempty"`
-	SourcePath     string           `json:"source_path"`
-	Status         ImportScanStatus `json:"status"`
-	TotalCount     uint32           `json:"total_count"`
-	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
+	Kind           ImportScanKind `json:"kind"`
+	Mode           ImportScanMode `json:"mode"`
+	ProcessedCount uint32         `json:"processed_count"`
+	ScannedAt      *time.Time     `json:"scanned_at,omitempty"`
+
+	// Source Where the scan's titles came from.
+	Source ImportScanSource `json:"source"`
+
+	// SourcePath The scanned directory. Empty for a Radarr or Sonarr source.
+	SourcePath string `json:"source_path"`
+
+	// SourceUrl The Radarr or Sonarr instance a migration read from.
+	SourceUrl  *string          `json:"source_url,omitempty"`
+	Status     ImportScanStatus `json:"status"`
+	TotalCount uint32           `json:"total_count"`
+	UpdatedAt  *time.Time       `json:"updated_at,omitempty"`
 }
 
 // ImportScanImportMode Per-scan transfer-mode override (rename mode only). Empty when using the global default.
@@ -4906,6 +5278,9 @@ type ImportScanKind string
 
 // ImportScanMode defines model for ImportScan.Mode.
 type ImportScanMode string
+
+// ImportScanSource Where the scan's titles came from.
+type ImportScanSource string
 
 // ImportScanStatus defines model for ImportScan.Status.
 type ImportScanStatus string
@@ -5064,6 +5439,10 @@ type ImportScanCandidate struct {
 
 // ImportScanCreateRequest defines model for ImportScanCreateRequest.
 type ImportScanCreateRequest struct {
+	// ApiKey The instance's API key. Used by the fetch and never stored, so a
+	// scan cannot be re-fetched later without sending it again.
+	ApiKey *string `json:"api_key,omitempty"`
+
 	// ImportMode Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
 	// Omit (or empty) to use the global default.
 	ImportMode *ImportScanCreateRequestImportMode `json:"import_mode,omitempty"`
@@ -5073,9 +5452,32 @@ type ImportScanCreateRequest struct {
 	// scans album folders against MusicBrainz; `book` scans ebook and
 	// audiobook items against Hardcover. `mode=rename` is rejected for
 	// `music` and `book`, which adopt in place only.
-	Kind       *ImportScanCreateRequestKind `json:"kind,omitempty"`
-	Mode       ImportScanCreateRequestMode  `json:"mode"`
-	SourcePath string                       `json:"source_path"`
+	Kind *ImportScanCreateRequestKind `json:"kind,omitempty"`
+	Mode ImportScanCreateRequestMode  `json:"mode"`
+
+	// ProfileMappings Which streamline profile each of the instance's quality profiles
+	// becomes. A title whose profile is not mapped gets the default.
+	ProfileMappings *[]ArrProfileMapping `json:"profile_mappings,omitempty"`
+
+	// RootMappings How each of the instance's root folders appears on this host.
+	// Send `from` equal to `to` when the paths match. For `in_place`
+	// every `to` must sit inside the library path, for `rename` outside
+	// it. A mapping carrying `sample_path` must resolve to an existing
+	// file, or the request is refused before any scan starts.
+	RootMappings *[]ArrRootMapping `json:"root_mappings,omitempty"`
+
+	// Source Where the titles come from. `filesystem` scans `source_path`;
+	// `radarr` and `sonarr` read a live instance, in which case
+	// `source_path` and `kind` are ignored and `source_url` and
+	// `api_key` are required. A Radarr source is a movie scan and a
+	// Sonarr source a series scan.
+	Source *ImportScanCreateRequestSource `json:"source,omitempty"`
+
+	// SourcePath The directory to scan. Required for a filesystem source.
+	SourcePath *string `json:"source_path,omitempty"`
+
+	// SourceUrl The instance's base URL, e.g. `http://radarr:7878`.
+	SourceUrl *string `json:"source_url,omitempty"`
 }
 
 // ImportScanCreateRequestImportMode Per-scan override of `library.import_mode`. Only meaningful when `mode=rename`.
@@ -5092,26 +5494,43 @@ type ImportScanCreateRequestKind string
 // ImportScanCreateRequestMode defines model for ImportScanCreateRequest.Mode.
 type ImportScanCreateRequestMode string
 
+// ImportScanCreateRequestSource Where the titles come from. `filesystem` scans `source_path`;
+// `radarr` and `sonarr` read a live instance, in which case
+// `source_path` and `kind` are ignored and `source_url` and
+// `api_key` are required. A Radarr source is a movie scan and a
+// Sonarr source a series scan.
+type ImportScanCreateRequestSource string
+
 // ImportScanFile defines model for ImportScanFile.
 type ImportScanFile struct {
-	Candidates         *[]ImportScanCandidate       `json:"candidates,omitempty"`
-	Classification     ImportScanFileClassification `json:"classification"`
-	CreatedAt          *time.Time                   `json:"created_at,omitempty"`
-	CreatedMovieId     *uint32                      `json:"created_movie_id,omitempty"`
-	Decision           ImportScanFileDecision       `json:"decision"`
-	DecisionTmdbId     *uint32                      `json:"decision_tmdb_id,omitempty"`
-	ExistingMovieId    *uint32                      `json:"existing_movie_id,omitempty"`
-	Id                 uint32                       `json:"id"`
-	Outcome            ImportScanFileOutcome        `json:"outcome"`
-	OutcomeMessage     *string                      `json:"outcome_message,omitempty"`
-	ParsedQuality      *string                      `json:"parsed_quality,omitempty"`
-	ParsedReleaseGroup *string                      `json:"parsed_release_group,omitempty"`
-	ParsedTitle        *string                      `json:"parsed_title,omitempty"`
-	ParsedYear         *uint16                      `json:"parsed_year,omitempty"`
-	Size               int64                        `json:"size"`
-	SourcePath         string                       `json:"source_path"`
-	TmdbId             *uint32                      `json:"tmdb_id,omitempty"`
-	UpdatedAt          *time.Time                   `json:"updated_at,omitempty"`
+	Candidates      *[]ImportScanCandidate       `json:"candidates,omitempty"`
+	Classification  ImportScanFileClassification `json:"classification"`
+	CreatedAt       *time.Time                   `json:"created_at,omitempty"`
+	CreatedMovieId  *uint32                      `json:"created_movie_id,omitempty"`
+	Decision        ImportScanFileDecision       `json:"decision"`
+	DecisionTmdbId  *uint32                      `json:"decision_tmdb_id,omitempty"`
+	ExistingMovieId *uint32                      `json:"existing_movie_id,omitempty"`
+	Id              uint32                       `json:"id"`
+
+	// Monitored The monitored flag a migrated title is created with.
+	Monitored          bool                  `json:"monitored"`
+	Outcome            ImportScanFileOutcome `json:"outcome"`
+	OutcomeMessage     *string               `json:"outcome_message,omitempty"`
+	ParsedQuality      *string               `json:"parsed_quality,omitempty"`
+	ParsedReleaseGroup *string               `json:"parsed_release_group,omitempty"`
+	ParsedTitle        *string               `json:"parsed_title,omitempty"`
+	ParsedYear         *uint16               `json:"parsed_year,omitempty"`
+
+	// QualityProfile The streamline profile a migrated title is created with. Empty
+	// means the default.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+	Size           int64   `json:"size"`
+
+	// SourcePath Empty for a title a Radarr source tracks without a file; it
+	// commits as a library entry with no media file.
+	SourcePath string     `json:"source_path"`
+	TmdbId     *uint32    `json:"tmdb_id,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanFileClassification defines model for ImportScanFile.Classification.
@@ -5156,12 +5575,23 @@ type ImportScanShow struct {
 	FileCount        uint16                       `json:"file_count"`
 	FolderPath       string                       `json:"folder_path"`
 	Id               uint32                       `json:"id"`
-	Outcome          ImportScanShowOutcome        `json:"outcome"`
-	OutcomeMessage   *string                      `json:"outcome_message,omitempty"`
-	ParsedTitle      *string                      `json:"parsed_title,omitempty"`
-	ParsedYear       *uint16                      `json:"parsed_year,omitempty"`
-	TvdbId           *uint32                      `json:"tvdb_id,omitempty"`
-	UpdatedAt        *time.Time                   `json:"updated_at,omitempty"`
+
+	// Monitored The monitored flag a migrated show is created with.
+	Monitored      bool                  `json:"monitored"`
+	Outcome        ImportScanShowOutcome `json:"outcome"`
+	OutcomeMessage *string               `json:"outcome_message,omitempty"`
+	ParsedTitle    *string               `json:"parsed_title,omitempty"`
+	ParsedYear     *uint16               `json:"parsed_year,omitempty"`
+
+	// QualityProfile The streamline profile a migrated show is created with. Empty
+	// means the default.
+	QualityProfile *string `json:"quality_profile,omitempty"`
+
+	// SeriesType The Sonarr series type (standard, daily, anime) a migrated show
+	// is set to before its episodes are matched.
+	SeriesType *string    `json:"series_type,omitempty"`
+	TvdbId     *uint32    `json:"tvdb_id,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanShowClassification defines model for ImportScanShow.Classification.
@@ -8313,6 +8743,9 @@ type UsersOrder string
 // UsersSort defines model for UsersSort.
 type UsersSort string
 
+// ApplySourceConfigResult defines model for ApplySourceConfigResult.
+type ApplySourceConfigResult = ApplySourceConfigResponse
+
 // AuthConfig defines model for AuthConfig.
 type AuthConfig = AuthConfigView
 
@@ -8359,6 +8792,9 @@ type BookSeriesRenamePlanResponse = BookSeriesRenamePlan
 
 // BookShelfPage defines model for BookShelfPage.
 type BookShelfPage = PaginatedShelf
+
+// CheckPathsResult defines model for CheckPathsResult.
+type CheckPathsResult = CheckPathsResponse
 
 // Conflict defines model for Conflict.
 type Conflict = Error
@@ -8554,14 +8990,23 @@ type AddSeries = AddSeriesRequest
 // AddTorrent Exactly one of magnet or torrent must be set.
 type AddTorrent = AddTorrentRequest
 
+// ApplySourceConfig defines model for ApplySourceConfig.
+type ApplySourceConfig = ApplySourceConfigRequest
+
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest = ApproveRequestRequest
+
+// ArrSource defines model for ArrSource.
+type ArrSource = ArrSourceRequest
 
 // BulkUpdateImportDecisions defines model for BulkUpdateImportDecisions.
 type BulkUpdateImportDecisions = ImportBulkDecisionRequest
 
 // ChangePassword defines model for ChangePassword.
 type ChangePassword = ChangePasswordRequest
+
+// CheckPaths defines model for CheckPaths.
+type CheckPaths = CheckPathsRequest
 
 // CreateApiKey defines model for CreateApiKey.
 type CreateApiKey = CreateApiKeyRequest
@@ -9335,6 +9780,15 @@ type UpdateIndexerJSONRequestBody = IndexerCreate
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
 
+// ApplyImportSourceConfigJSONRequestBody defines body for ApplyImportSourceConfig for application/json ContentType.
+type ApplyImportSourceConfigJSONRequestBody = ApplySourceConfigRequest
+
+// CheckImportSourcePathsJSONRequestBody defines body for CheckImportSourcePaths for application/json ContentType.
+type CheckImportSourcePathsJSONRequestBody = CheckPathsRequest
+
+// PreviewImportSourceJSONRequestBody defines body for PreviewImportSource for application/json ContentType.
+type PreviewImportSourceJSONRequestBody = ArrSourceRequest
+
 // UpdateImportAlbumDecisionJSONRequestBody defines body for UpdateImportAlbumDecision for application/json ContentType.
 type UpdateImportAlbumDecisionJSONRequestBody = ImportScanAlbumDecisionRequest
 
@@ -9857,6 +10311,15 @@ type ServerInterface interface {
 
 	// (POST /library/imports)
 	StartImport(w http.ResponseWriter, r *http.Request)
+	// ApplyImportSourceConfig Copy indexers and download clients from Radarr or Sonarr
+	// (POST /library/imports/sources/apply-config)
+	ApplyImportSourceConfig(w http.ResponseWriter, r *http.Request)
+	// CheckImportSourcePaths Check root-folder mappings against this host's filesystem
+	// (POST /library/imports/sources/check-paths)
+	CheckImportSourcePaths(w http.ResponseWriter, r *http.Request)
+	// PreviewImportSource Read a Radarr or Sonarr instance before migrating it
+	// (POST /library/imports/sources/preview)
+	PreviewImportSource(w http.ResponseWriter, r *http.Request)
 
 	// (DELETE /library/imports/{id})
 	DeleteImport(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -10863,6 +11326,24 @@ func (_ Unimplemented) ListImports(w http.ResponseWriter, r *http.Request, param
 
 // (POST /library/imports)
 func (_ Unimplemented) StartImport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApplyImportSourceConfig Copy indexers and download clients from Radarr or Sonarr
+// (POST /library/imports/sources/apply-config)
+func (_ Unimplemented) ApplyImportSourceConfig(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// CheckImportSourcePaths Check root-folder mappings against this host's filesystem
+// (POST /library/imports/sources/check-paths)
+func (_ Unimplemented) CheckImportSourcePaths(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PreviewImportSource Read a Radarr or Sonarr instance before migrating it
+// (POST /library/imports/sources/preview)
+func (_ Unimplemented) PreviewImportSource(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -14199,6 +14680,48 @@ func (siw *ServerInterfaceWrapper) StartImport(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.StartImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyImportSourceConfig operation middleware
+func (siw *ServerInterfaceWrapper) ApplyImportSourceConfig(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyImportSourceConfig(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckImportSourcePaths operation middleware
+func (siw *ServerInterfaceWrapper) CheckImportSourcePaths(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckImportSourcePaths(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewImportSource operation middleware
+func (siw *ServerInterfaceWrapper) PreviewImportSource(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewImportSource(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19256,6 +19779,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/library/imports/{id}/decisions", wrapper.BulkUpdateImportDecisions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/imports/sources/preview", wrapper.PreviewImportSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/imports/sources/check-paths", wrapper.CheckImportSourcePaths)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/library/imports/sources/apply-config", wrapper.ApplyImportSourceConfig)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/library/path-migration", wrapper.GetPathMigration)
 	})
 	r.Group(func(r chi.Router) {
@@ -19363,6 +19895,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 type ActivityListJSONResponse ActivityList
 
+type ApplySourceConfigResultJSONResponse ApplySourceConfigResponse
+
+type ArrPreviewJSONResponse ArrPreview
+
 type AuthConfigJSONResponse AuthConfigView
 
 type BadRequestJSONResponse Error
@@ -19399,6 +19935,8 @@ type BookSeriesDetailJSONResponse BookSeries
 type BookSeriesRenamePlanResponseJSONResponse BookSeriesRenamePlan
 
 type BookShelfPageJSONResponse PaginatedShelf
+
+type CheckPathsResultJSONResponse CheckPathsResponse
 
 type ClearCompletedResultJSONResponse ClearCompletedResult
 
@@ -26076,6 +26614,190 @@ func (response StartImport503JSONResponse) VisitStartImportResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyImportSourceConfigRequestObject struct {
+	Body *ApplyImportSourceConfigJSONRequestBody
+}
+
+type ApplyImportSourceConfigResponseObject interface {
+	VisitApplyImportSourceConfigResponse(w http.ResponseWriter) error
+}
+
+type ApplyImportSourceConfig200JSONResponse struct {
+	ApplySourceConfigResultJSONResponse
+}
+
+func (response ApplyImportSourceConfig200JSONResponse) VisitApplyImportSourceConfigResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyImportSourceConfig403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplyImportSourceConfig403JSONResponse) VisitApplyImportSourceConfigResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyImportSourceConfig413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response ApplyImportSourceConfig413JSONResponse) VisitApplyImportSourceConfigResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyImportSourceConfig422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response ApplyImportSourceConfig422JSONResponse) VisitApplyImportSourceConfigResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckImportSourcePathsRequestObject struct {
+	Body *CheckImportSourcePathsJSONRequestBody
+}
+
+type CheckImportSourcePathsResponseObject interface {
+	VisitCheckImportSourcePathsResponse(w http.ResponseWriter) error
+}
+
+type CheckImportSourcePaths200JSONResponse struct{ CheckPathsResultJSONResponse }
+
+func (response CheckImportSourcePaths200JSONResponse) VisitCheckImportSourcePathsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckImportSourcePaths403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CheckImportSourcePaths403JSONResponse) VisitCheckImportSourcePathsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckImportSourcePaths413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response CheckImportSourcePaths413JSONResponse) VisitCheckImportSourcePathsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewImportSourceRequestObject struct {
+	Body *PreviewImportSourceJSONRequestBody
+}
+
+type PreviewImportSourceResponseObject interface {
+	VisitPreviewImportSourceResponse(w http.ResponseWriter) error
+}
+
+type PreviewImportSource200JSONResponse struct{ ArrPreviewJSONResponse }
+
+func (response PreviewImportSource200JSONResponse) VisitPreviewImportSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewImportSource403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PreviewImportSource403JSONResponse) VisitPreviewImportSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewImportSource413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PreviewImportSource413JSONResponse) VisitPreviewImportSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PreviewImportSource422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PreviewImportSource422JSONResponse) VisitPreviewImportSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -35327,6 +36049,15 @@ type StrictServerInterface interface {
 
 	// (POST /library/imports)
 	StartImport(ctx context.Context, request StartImportRequestObject) (StartImportResponseObject, error)
+	// ApplyImportSourceConfig Copy indexers and download clients from Radarr or Sonarr
+	// (POST /library/imports/sources/apply-config)
+	ApplyImportSourceConfig(ctx context.Context, request ApplyImportSourceConfigRequestObject) (ApplyImportSourceConfigResponseObject, error)
+	// CheckImportSourcePaths Check root-folder mappings against this host's filesystem
+	// (POST /library/imports/sources/check-paths)
+	CheckImportSourcePaths(ctx context.Context, request CheckImportSourcePathsRequestObject) (CheckImportSourcePathsResponseObject, error)
+	// PreviewImportSource Read a Radarr or Sonarr instance before migrating it
+	// (POST /library/imports/sources/preview)
+	PreviewImportSource(ctx context.Context, request PreviewImportSourceRequestObject) (PreviewImportSourceResponseObject, error)
 
 	// (DELETE /library/imports/{id})
 	DeleteImport(ctx context.Context, request DeleteImportRequestObject) (DeleteImportResponseObject, error)
@@ -38535,6 +39266,99 @@ func (sh *strictHandler) StartImport(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(StartImportResponseObject); ok {
 		if err := validResponse.VisitStartImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplyImportSourceConfig operation middleware
+func (sh *strictHandler) ApplyImportSourceConfig(w http.ResponseWriter, r *http.Request) {
+	var request ApplyImportSourceConfigRequestObject
+
+	var body ApplyImportSourceConfigJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplyImportSourceConfig(ctx, request.(ApplyImportSourceConfigRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplyImportSourceConfig")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplyImportSourceConfigResponseObject); ok {
+		if err := validResponse.VisitApplyImportSourceConfigResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckImportSourcePaths operation middleware
+func (sh *strictHandler) CheckImportSourcePaths(w http.ResponseWriter, r *http.Request) {
+	var request CheckImportSourcePathsRequestObject
+
+	var body CheckImportSourcePathsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckImportSourcePaths(ctx, request.(CheckImportSourcePathsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckImportSourcePaths")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckImportSourcePathsResponseObject); ok {
+		if err := validResponse.VisitCheckImportSourcePathsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PreviewImportSource operation middleware
+func (sh *strictHandler) PreviewImportSource(w http.ResponseWriter, r *http.Request) {
+	var request PreviewImportSourceRequestObject
+
+	var body PreviewImportSourceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PreviewImportSource(ctx, request.(PreviewImportSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PreviewImportSource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PreviewImportSourceResponseObject); ok {
+		if err := validResponse.VisitPreviewImportSourceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

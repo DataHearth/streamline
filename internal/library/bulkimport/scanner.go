@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,10 +20,12 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -42,31 +45,45 @@ func (s *Service) StartScan(
 	)
 	defer span.End()
 
-	if p.Kind == "" {
+	arrSource := p.Source != "" && p.Source != entimportscan.SourceFilesystem
+	var resolved string
+	if arrSource {
 		p.Kind = entimportscan.KindMovie
-	}
-	switch p.Kind {
-	case entimportscan.KindMovie, entimportscan.KindSeries:
-	case entimportscan.KindMusic:
-		if p.Mode == entimportscan.ModeRename {
-			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		if p.Source == entimportscan.SourceSonarr {
+			p.Kind = entimportscan.KindSeries
 		}
-	case entimportscan.KindBook:
-		if p.Mode == entimportscan.ModeRename {
-			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		p.SourcePath = ""
+		if err := s.validateArrScanParams(p); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
 		}
-		if s.bookmeta == nil {
-			return nil, otelx.RecordSpanError(span, book.ErrNotConfigured)
+	} else {
+		if p.Kind == "" {
+			p.Kind = entimportscan.KindMovie
 		}
-	default:
-		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("%w: %s", ErrUnsupportedKind, p.Kind),
-		)
+		switch p.Kind {
+		case entimportscan.KindMovie, entimportscan.KindSeries:
+		case entimportscan.KindMusic:
+			if p.Mode == entimportscan.ModeRename {
+				return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+			}
+		case entimportscan.KindBook:
+			if p.Mode == entimportscan.ModeRename {
+				return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+			}
+			if s.bookmeta == nil {
+				return nil, otelx.RecordSpanError(span, book.ErrNotConfigured)
+			}
+		default:
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("%w: %s", ErrUnsupportedKind, p.Kind),
+			)
+		}
+		var err error
+		if resolved, err = s.validateScanParams(p); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
 	}
-	resolved, err := s.validateScanParams(p)
-	if err != nil {
-		return nil, otelx.RecordSpanError(span, err)
-	}
+	span.SetAttributes(attribute.String("scan.source", string(p.Source)))
 	// import_mode override only meaningful in rename mode; silently clear otherwise
 	// so callers don't have to special-case it in the UI.
 	if p.Mode != entimportscan.ModeRename {
@@ -83,13 +100,24 @@ func (s *Service) StartScan(
 	if n > 0 {
 		return nil, otelx.RecordSpanError(span, ErrScanRunning)
 	}
+	if p.BeforeCreate != nil {
+		if err := p.BeforeCreate(ctx); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
+	}
 
-	scan, err := s.store.CreateImportScan(ctx, db.CreateImportScanParams{
+	params := db.CreateImportScanParams{
 		SourcePath: resolved,
 		Kind:       p.Kind,
 		Mode:       p.Mode,
 		ImportMode: p.ImportMode,
-	})
+	}
+	if arrSource {
+		params.Source = p.Source
+		params.SourceURL = storedSourceURL(p.SourceURL)
+		params.Mappings = &p.Mappings
+	}
+	scan, err := s.store.CreateImportScan(ctx, params)
 	if err != nil {
 		return nil, otelx.RecordSpanError(
 			span,
@@ -99,21 +127,111 @@ func (s *Service) StartScan(
 	span.SetAttributes(attribute.Int64("scan.id", int64(scan.ID)))
 
 	bg := context.WithoutCancel(ctx)
-	switch p.Kind {
-	case entimportscan.KindSeries:
+	switch {
+	case arrSource:
+		sourceURL, apiKey := p.SourceURL, p.APIKey
+		go func() {
+			defer observability.RecoverPanic(bg, "bulk import arr fetch", func() {
+				s.markScanFailed(bg, scan.ID, "the fetch from the source panicked")
+			})
+			s.runScanArr(bg, scan, sourceURL, apiKey)
+		}()
+	case p.Kind == entimportscan.KindSeries:
 		go s.runScanSeries(bg, scan)
-	case entimportscan.KindMusic:
+	case p.Kind == entimportscan.KindMusic:
 		go s.runScanMusic(bg, scan)
-	case entimportscan.KindBook:
+	case p.Kind == entimportscan.KindBook:
 		go s.runScanBooks(bg, scan)
 	default:
 		go s.runScan(bg, scan)
 	}
 	slog.InfoContext(ctx, "bulk import scan started",
 		"scan.id", scan.ID, "scan.kind", scan.Kind,
-		"scan.mode", scan.Mode, "scan.source_path", resolved)
+		"scan.mode", scan.Mode, "scan.source", scan.Source,
+		"scan.source_path", resolved)
 
 	return scan, nil
+}
+
+// storedSourceURL is a migration's instance URL as its scan row keeps it:
+// scheme, host and path only. The row is shown to every admin for as long as
+// the scan exists, and a URL can carry a credential besides the address — the
+// userinfo a basic-auth proxy takes, a pasted ?apikey=. The fetch gets the
+// URL as given, by value, the way it gets the API key.
+func storedSourceURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return otelx.RedactURL(u)
+}
+
+// libraryRoot is the resolved library root for a media kind: in_place and
+// rename are defined relative to it, so a TV folder is "outside" the movie
+// library and vice versa.
+func (s *Service) libraryRoot(kind entimportscan.Kind) (string, error) {
+	root := s.moviePath
+	if kind == entimportscan.KindSeries {
+		root = s.seriesPath
+	}
+	libAbs, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", ErrLibraryPathMissing
+	}
+	return libAbs, nil
+}
+
+func insideRoot(path, root string) bool {
+	return path == root ||
+		strings.HasPrefix(path, root+string(filepath.Separator))
+}
+
+// validateArrScanParams applies the containment rule a filesystem scan gets,
+// once per mapped root: in_place records files where they lie, so every
+// target must be inside the library root, and rename moves them in, so every
+// target must be outside it. Skipping this lets a migration record a library
+// the orphan scan never walks.
+func (s *Service) validateArrScanParams(p StartScanParams) error {
+	if p.SourceURL == "" {
+		return ErrMissingSourceURL
+	}
+	libAbs, err := s.libraryRoot(p.Kind)
+	if err != nil {
+		return err
+	}
+	for _, m := range p.Mappings.Roots {
+		// The message names the mapping: a migration carries several, and the
+		// bare sentinel reads as a filesystem scan's source_path.
+		invalid := fmt.Errorf(
+			"%w: root folder %s maps to %s",
+			ErrInvalidPath,
+			m.From,
+			m.To,
+		)
+		// From is the source's path, in its own style — a Windows *arr
+		// reports D:\Movies — while To is one of this host's.
+		if !arr.IsAbsSourcePath(m.From) || !filepath.IsAbs(m.To) {
+			return invalid
+		}
+		resolved, err := filepath.EvalSymlinks(m.To)
+		if err != nil {
+			return invalid
+		}
+		info, err := os.Stat(resolved)
+		if err != nil || !info.IsDir() {
+			return invalid
+		}
+		inside := insideRoot(resolved, libAbs)
+		if (p.Mode == entimportscan.ModeInPlace) != inside {
+			return fmt.Errorf(
+				"%w: root folder %s maps to %s",
+				ErrRootOutsideLibrary,
+				m.From,
+				m.To,
+			)
+		}
+	}
+	return nil
 }
 
 func (s *Service) validateScanParams(p StartScanParams) (string, error) {

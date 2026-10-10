@@ -56,9 +56,45 @@ func (_c *ImportScanFileCreate) SetSourcePath(v string) *ImportScanFileCreate {
 	return _c
 }
 
+// SetNillableSourcePath sets the "source_path" field if the given value is not nil.
+func (_c *ImportScanFileCreate) SetNillableSourcePath(v *string) *ImportScanFileCreate {
+	if v != nil {
+		_c.SetSourcePath(*v)
+	}
+	return _c
+}
+
 // SetSize sets the "size" field.
 func (_c *ImportScanFileCreate) SetSize(v int64) *ImportScanFileCreate {
 	_c.mutation.SetSize(v)
+	return _c
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (_c *ImportScanFileCreate) SetQualityProfile(v string) *ImportScanFileCreate {
+	_c.mutation.SetQualityProfile(v)
+	return _c
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_c *ImportScanFileCreate) SetNillableQualityProfile(v *string) *ImportScanFileCreate {
+	if v != nil {
+		_c.SetQualityProfile(*v)
+	}
+	return _c
+}
+
+// SetMonitored sets the "monitored" field.
+func (_c *ImportScanFileCreate) SetMonitored(v bool) *ImportScanFileCreate {
+	_c.mutation.SetMonitored(v)
+	return _c
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_c *ImportScanFileCreate) SetNillableMonitored(v *bool) *ImportScanFileCreate {
+	if v != nil {
+		_c.SetMonitored(*v)
+	}
 	return _c
 }
 
@@ -296,6 +332,10 @@ func (_c *ImportScanFileCreate) defaults() {
 		v := importscanfile.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
+	if _, ok := _c.mutation.Monitored(); !ok {
+		v := importscanfile.DefaultMonitored
+		_c.mutation.SetMonitored(v)
+	}
 	if _, ok := _c.mutation.Classification(); !ok {
 		v := importscanfile.DefaultClassification
 		_c.mutation.SetClassification(v)
@@ -318,16 +358,11 @@ func (_c *ImportScanFileCreate) check() error {
 	if _, ok := _c.mutation.UpdateTime(); !ok {
 		return &ValidationError{Name: "update_time", err: errors.New(`ent: missing required field "ImportScanFile.update_time"`)}
 	}
-	if _, ok := _c.mutation.SourcePath(); !ok {
-		return &ValidationError{Name: "source_path", err: errors.New(`ent: missing required field "ImportScanFile.source_path"`)}
-	}
-	if v, ok := _c.mutation.SourcePath(); ok {
-		if err := importscanfile.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScanFile.source_path": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.Size(); !ok {
 		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "ImportScanFile.size"`)}
+	}
+	if _, ok := _c.mutation.Monitored(); !ok {
+		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "ImportScanFile.monitored"`)}
 	}
 	if _, ok := _c.mutation.Classification(); !ok {
 		return &ValidationError{Name: "classification", err: errors.New(`ent: missing required field "ImportScanFile.classification"`)}
@@ -403,6 +438,14 @@ func (_c *ImportScanFileCreate) createSpec() (*ImportScanFile, *sqlgraph.CreateS
 	if value, ok := _c.mutation.Size(); ok {
 		_spec.SetField(importscanfile.FieldSize, field.TypeInt64, value)
 		_node.Size = value
+	}
+	if value, ok := _c.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanfile.FieldQualityProfile, field.TypeString, value)
+		_node.QualityProfile = value
+	}
+	if value, ok := _c.mutation.Monitored(); ok {
+		_spec.SetField(importscanfile.FieldMonitored, field.TypeBool, value)
+		_node.Monitored = value
 	}
 	if value, ok := _c.mutation.ParsedTitle(); ok {
 		_spec.SetField(importscanfile.FieldParsedTitle, field.TypeString, value)

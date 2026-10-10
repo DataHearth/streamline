@@ -7,6 +7,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -15,6 +16,9 @@ type CreateImportScanParams struct {
 	Kind       entimportscan.Kind // empty = movie (schema default)
 	Mode       entimportscan.Mode
 	ImportMode entimportscan.ImportMode // empty = fall back to library.import_mode at commit time
+	Source     entimportscan.Source     // empty = filesystem (schema default)
+	SourceURL  string
+	Mappings   *schema.ScanMappings
 }
 
 type UpdateScanStatusOpts struct {
@@ -34,6 +38,15 @@ func (db *DB) CreateImportScan(
 	c := db.client.ImportScan.Create().
 		SetSourcePath(p.SourcePath).
 		SetMode(p.Mode)
+	if p.Source != "" {
+		c = c.SetSource(p.Source)
+	}
+	if p.SourceURL != "" {
+		c = c.SetSourceURL(p.SourceURL)
+	}
+	if p.Mappings != nil {
+		c = c.SetMappings(*p.Mappings)
+	}
 	if p.Kind != "" {
 		c = c.SetKind(p.Kind)
 	}

@@ -6,17 +6,22 @@
 		CircleCheckBig,
 		CircleHelp,
 		CircleX,
+		Eye,
+		EyeOff,
 		Link2,
 		Minus,
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { appLabel } from "@lib/arr-import";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
+	import { isTitleOnly } from "@lib/imports";
 	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
+		ArrApp,
 		ImportFileDecision,
 		ImportScanFile,
 	} from "@lib/types";
@@ -25,10 +30,21 @@
 		file: ImportScanFile;
 		scanId: number;
 		reviewing: boolean;
+		// Set on a Radarr migration: the row then carries the profile and the
+		// monitored flag the title is created with.
+		migratedFrom?: ArrApp | undefined;
 		onChooseMatch: (file: ImportScanFile) => void;
 	};
 
-	let { file, scanId, reviewing, onChooseMatch }: Props = $props();
+	let { file, scanId, reviewing, migratedFrom, onChooseMatch }: Props =
+		$props();
+
+	// A title the source tracks without a file has no path and no size; the
+	// title and a badge saying so stand where the path would be.
+	let titleOnly = $derived(isTitleOnly(file));
+	let monitoredLabel = $derived(
+		file.monitored ? i18n.imports_monitored() : i18n.imports_not_monitored(),
+	);
 
 	const qc = useQueryClient();
 
@@ -109,29 +125,74 @@
 
 <tr class="transition hover:bg-bg-card">
 	<td class="hidden px-4 py-3 align-top md:table-cell">
-		<p
-			class="break-all font-mono text-[13px] text-fg"
-			title={file.source_path}
-		>
-			{file.source_path}
-		</p>
-		<p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-subtle">
-			<span class="font-mono tabular-nums">{formatBytes(file.size)}</span>
-			{#if file.parsed_title}
-				<span aria-hidden="true" class="text-fg-faint">·</span>
-				<span>
-					{i18n.imports_parsed()} <span class="text-fg-muted">{file.parsed_title}</span
-					>{#if file.parsed_year}<span class="text-fg-muted"> ({file.parsed_year})</span
+		{#if titleOnly}
+			<p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+				<span class="text-[13px] font-medium text-fg">
+					{file.parsed_title}{#if file.parsed_year}<span class="text-fg-muted"> ({file.parsed_year})</span
 						>{/if}
 				</span>
-				{#if file.parsed_quality}
+				<span
+					class="rounded-sm border border-status-wanted/30 bg-status-wanted/10 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-status-wanted"
+					title={migratedFrom
+						? i18n.imports_title_only_help({ app: appLabel(migratedFrom) })
+						: undefined}
+				>
+					{i18n.imports_title_only()}
+				</span>
+			</p>
+		{:else}
+			<p
+				class="break-all font-mono text-[13px] text-fg"
+				title={file.source_path}
+			>
+				{file.source_path}
+			</p>
+		{/if}
+		<p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-subtle">
+			{#if !titleOnly}
+				<span class="font-mono tabular-nums">{formatBytes(file.size)}</span>
+				{#if file.parsed_title}
 					<span aria-hidden="true" class="text-fg-faint">·</span>
-					<span class="font-mono">{file.parsed_quality}</span>
+					<span>
+						{i18n.imports_parsed()} <span class="text-fg-muted">{file.parsed_title}</span
+						>{#if file.parsed_year}<span class="text-fg-muted"> ({file.parsed_year})</span
+							>{/if}
+					</span>
+					{#if file.parsed_quality}
+						<span aria-hidden="true" class="text-fg-faint">·</span>
+						<span class="font-mono">{file.parsed_quality}</span>
+					{/if}
+					{#if file.parsed_release_group}
+						<span aria-hidden="true" class="text-fg-faint">·</span>
+						<span>{file.parsed_release_group}</span>
+					{/if}
 				{/if}
-				{#if file.parsed_release_group}
+			{/if}
+			{#if migratedFrom}
+				{#if !titleOnly}
 					<span aria-hidden="true" class="text-fg-faint">·</span>
-					<span>{file.parsed_release_group}</span>
 				{/if}
+				{#if file.quality_profile}
+					<span class="text-fg-muted" title={i18n.quality_profile()}>
+						{file.quality_profile}
+					</span>
+					<span aria-hidden="true" class="text-fg-faint">·</span>
+				{/if}
+				<span
+					role="img"
+					aria-label={monitoredLabel}
+					title={monitoredLabel}
+					class={cn(
+					"inline-flex",
+					file.monitored ? "text-fg-muted" : "text-fg-faint",
+				)}
+				>
+					{#if file.monitored}
+						<Eye size={13} aria-hidden="true" />
+					{:else}
+						<EyeOff size={13} aria-hidden="true" />
+					{/if}
+				</span>
 			{/if}
 		</p>
 		<span

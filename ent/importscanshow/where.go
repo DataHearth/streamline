@@ -95,6 +95,21 @@ func FileCount(v uint16) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldFileCount, v))
 }
 
+// QualityProfile applies equality check predicate on the "quality_profile" field. It's identical to QualityProfileEQ.
+func QualityProfile(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldQualityProfile, v))
+}
+
+// Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
+func Monitored(v bool) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldMonitored, v))
+}
+
+// SeriesType applies equality check predicate on the "series_type" field. It's identical to SeriesTypeEQ.
+func SeriesType(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldSeriesType, v))
+}
+
 // DecisionTvdbID applies equality check predicate on the "decision_tvdb_id" field. It's identical to DecisionTvdbIDEQ.
 func DecisionTvdbID(v uint32) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldEQ(FieldDecisionTvdbID, v))
@@ -548,6 +563,186 @@ func FileCountLT(v uint16) predicate.ImportScanShow {
 // FileCountLTE applies the LTE predicate on the "file_count" field.
 func FileCountLTE(v uint16) predicate.ImportScanShow {
 	return predicate.ImportScanShow(sql.FieldLTE(FieldFileCount, v))
+}
+
+// QualityProfileEQ applies the EQ predicate on the "quality_profile" field.
+func QualityProfileEQ(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileNEQ applies the NEQ predicate on the "quality_profile" field.
+func QualityProfileNEQ(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileIn applies the In predicate on the "quality_profile" field.
+func QualityProfileIn(vs ...string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileNotIn applies the NotIn predicate on the "quality_profile" field.
+func QualityProfileNotIn(vs ...string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileGT applies the GT predicate on the "quality_profile" field.
+func QualityProfileGT(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldGT(FieldQualityProfile, v))
+}
+
+// QualityProfileGTE applies the GTE predicate on the "quality_profile" field.
+func QualityProfileGTE(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldGTE(FieldQualityProfile, v))
+}
+
+// QualityProfileLT applies the LT predicate on the "quality_profile" field.
+func QualityProfileLT(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldLT(FieldQualityProfile, v))
+}
+
+// QualityProfileLTE applies the LTE predicate on the "quality_profile" field.
+func QualityProfileLTE(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldLTE(FieldQualityProfile, v))
+}
+
+// QualityProfileContains applies the Contains predicate on the "quality_profile" field.
+func QualityProfileContains(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContains(FieldQualityProfile, v))
+}
+
+// QualityProfileHasPrefix applies the HasPrefix predicate on the "quality_profile" field.
+func QualityProfileHasPrefix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasPrefix(FieldQualityProfile, v))
+}
+
+// QualityProfileHasSuffix applies the HasSuffix predicate on the "quality_profile" field.
+func QualityProfileHasSuffix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasSuffix(FieldQualityProfile, v))
+}
+
+// QualityProfileIsNil applies the IsNil predicate on the "quality_profile" field.
+func QualityProfileIsNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIsNull(FieldQualityProfile))
+}
+
+// QualityProfileNotNil applies the NotNil predicate on the "quality_profile" field.
+func QualityProfileNotNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotNull(FieldQualityProfile))
+}
+
+// QualityProfileEqualFold applies the EqualFold predicate on the "quality_profile" field.
+func QualityProfileEqualFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEqualFold(FieldQualityProfile, v))
+}
+
+// QualityProfileContainsFold applies the ContainsFold predicate on the "quality_profile" field.
+func QualityProfileContainsFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContainsFold(FieldQualityProfile, v))
+}
+
+// MonitoredEQ applies the EQ predicate on the "monitored" field.
+func MonitoredEQ(v bool) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldMonitored, v))
+}
+
+// MonitoredNEQ applies the NEQ predicate on the "monitored" field.
+func MonitoredNEQ(v bool) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNEQ(FieldMonitored, v))
+}
+
+// SeriesTypeEQ applies the EQ predicate on the "series_type" field.
+func SeriesTypeEQ(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEQ(FieldSeriesType, v))
+}
+
+// SeriesTypeNEQ applies the NEQ predicate on the "series_type" field.
+func SeriesTypeNEQ(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNEQ(FieldSeriesType, v))
+}
+
+// SeriesTypeIn applies the In predicate on the "series_type" field.
+func SeriesTypeIn(vs ...string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIn(FieldSeriesType, vs...))
+}
+
+// SeriesTypeNotIn applies the NotIn predicate on the "series_type" field.
+func SeriesTypeNotIn(vs ...string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotIn(FieldSeriesType, vs...))
+}
+
+// SeriesTypeGT applies the GT predicate on the "series_type" field.
+func SeriesTypeGT(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldGT(FieldSeriesType, v))
+}
+
+// SeriesTypeGTE applies the GTE predicate on the "series_type" field.
+func SeriesTypeGTE(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldGTE(FieldSeriesType, v))
+}
+
+// SeriesTypeLT applies the LT predicate on the "series_type" field.
+func SeriesTypeLT(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldLT(FieldSeriesType, v))
+}
+
+// SeriesTypeLTE applies the LTE predicate on the "series_type" field.
+func SeriesTypeLTE(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldLTE(FieldSeriesType, v))
+}
+
+// SeriesTypeContains applies the Contains predicate on the "series_type" field.
+func SeriesTypeContains(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContains(FieldSeriesType, v))
+}
+
+// SeriesTypeHasPrefix applies the HasPrefix predicate on the "series_type" field.
+func SeriesTypeHasPrefix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasPrefix(FieldSeriesType, v))
+}
+
+// SeriesTypeHasSuffix applies the HasSuffix predicate on the "series_type" field.
+func SeriesTypeHasSuffix(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldHasSuffix(FieldSeriesType, v))
+}
+
+// SeriesTypeIsNil applies the IsNil predicate on the "series_type" field.
+func SeriesTypeIsNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIsNull(FieldSeriesType))
+}
+
+// SeriesTypeNotNil applies the NotNil predicate on the "series_type" field.
+func SeriesTypeNotNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotNull(FieldSeriesType))
+}
+
+// SeriesTypeEqualFold applies the EqualFold predicate on the "series_type" field.
+func SeriesTypeEqualFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldEqualFold(FieldSeriesType, v))
+}
+
+// SeriesTypeContainsFold applies the ContainsFold predicate on the "series_type" field.
+func SeriesTypeContainsFold(v string) predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldContainsFold(FieldSeriesType, v))
+}
+
+// MonitoringIsNil applies the IsNil predicate on the "monitoring" field.
+func MonitoringIsNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIsNull(FieldMonitoring))
+}
+
+// MonitoringNotNil applies the NotNil predicate on the "monitoring" field.
+func MonitoringNotNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotNull(FieldMonitoring))
+}
+
+// SourceFilesIsNil applies the IsNil predicate on the "source_files" field.
+func SourceFilesIsNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldIsNull(FieldSourceFiles))
+}
+
+// SourceFilesNotNil applies the NotNil predicate on the "source_files" field.
+func SourceFilesNotNil() predicate.ImportScanShow {
+	return predicate.ImportScanShow(sql.FieldNotNull(FieldSourceFiles))
 }
 
 // DecisionEQ applies the EQ predicate on the "decision" field.

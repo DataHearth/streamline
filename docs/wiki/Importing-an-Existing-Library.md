@@ -24,7 +24,7 @@ The first choice you make is the one that matters. Everything else is detail.
 
 Streamline records the files at their current paths and starts tracking them. **Nothing is moved, copied or renamed.** Your existing folder structure survives exactly as it is.
 
-Use this when your library is already organised the way you like it, and you want Streamline to manage it going forward rather than re-shape it. This is the right answer for most people migrating from Radarr/Sonarr, or from years of manual filing.
+Use this when your library is already organised the way you like it, and you want Streamline to manage it going forward rather than re-shape it. This is the right answer for most people coming from years of manual filing. Coming from Radarr or Sonarr, [migrate from the running instance](Migrating-from-Radarr-and-Sonarr) instead: it carries monitoring and profiles across and needs no title matching.
 
 ### Import & rename
 

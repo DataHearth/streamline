@@ -1,0 +1,27 @@
+[
+  {
+    "seasonNumber": 1,
+    "episodeNumber": 1,
+    "monitored": true,
+    "hasFile": true,
+    "episodeFileId": 41,
+    "episodeFile": {
+      "path": "/media/series/Breaking Bad/Season 01/S01E01.mkv",
+      "size": 2147483648
+    }
+  },
+  {
+    "seasonNumber": 1,
+    "episodeNumber": 2,
+    "monitored": false,
+    "hasFile": false,
+    "episodeFileId": 0
+  },
+  {
+    "seasonNumber": 2,
+    "episodeNumber": 1,
+    "monitored": true,
+    "hasFile": false,
+    "episodeFileId": 0
+  }
+]

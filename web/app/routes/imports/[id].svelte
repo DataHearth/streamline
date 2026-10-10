@@ -27,10 +27,13 @@
 		importStatusMeta,
 		IMPORT_KIND,
 		pendingRowsKey,
+		scanLocation,
 	} from "@lib/imports";
+	import { appLabel } from "@lib/arr-import";
 	import { toast } from "@lib/toast";
 	import { hardcoverCode } from "@lib/music-books-lookup";
 	import type {
+		ArrApp,
 		ImportFileClassification,
 		ImportFileDecision,
 		ImportBulkDecisionResult,
@@ -52,6 +55,7 @@
 	import ImportProgress from "@components/library/ImportProgress.svelte";
 	import ImportSteps from "@components/library/ImportSteps.svelte";
 	import ImportTouchList from "@components/library/ImportTouchList.svelte";
+	import type { ReviewEntry } from "@components/library/ImportTouchRow.svelte";
 	import ImportDecisionSheet from "@components/library/ImportDecisionSheet.svelte";
 	import ImportCommitBar from "@components/library/ImportCommitBar.svelte";
 	import ImportMatchSheet from "@components/library/ImportMatchSheet.svelte";
@@ -110,6 +114,13 @@
 	const kindMeta = $derived(IMPORT_KIND[kind]);
 	const text = $derived(unitText(kind));
 	const isMB = $derived(kind === "music" || kind === "book");
+	// The application a migrated scan read from; undefined for a folder scan.
+	// The rows show what each title is created with only when it is set.
+	const migratedFrom = $derived<ArrApp | undefined>(
+		scan?.source === "radarr" || scan?.source === "sonarr"
+			? scan.source
+			: undefined,
+	);
 
 	// Toast once when commit finishes — observed by watching the live→terminal
 	// transition rather than threading a callback through the mutation.
@@ -508,7 +519,8 @@
 	let sortDir = $state<"asc" | "desc">("asc");
 
 	const SORT_FIELD: Record<FileSortKey, (f: ImportScanFile) => string> = {
-		file: (f) => f.source_path,
+		// A title-only migrated row has no path; it sorts by its title.
+		file: (f) => f.source_path || (f.parsed_title ?? ""),
 		classification: (f) => f.classification,
 		// ponytail: sorts by the raw outcome field, not the row's effective
 		// label (Will accept / Auto-accept …) which needs the row's render logic.
@@ -544,9 +556,30 @@
 	// One row shape for the phone and the tablet, over one normalised entry, so
 	// movie files and series folders render through the same list. Desktop keeps
 	// its two tables and its two row components.
-	let touchEntries = $derived<TouchEntry[]>(
-		isMB ? mbEntries : isSeries ? showItems.map(showEntry) : sortedItems.map(fileEntry),
+	let touchEntries = $derived<ReviewEntry[]>(
+		isMB
+			? mbEntries
+			: isSeries
+				? showItems.map((sh) => withMigration(showEntry(sh), sh))
+				: sortedItems.map((f) => withMigration(fileEntry(f), f)),
 	);
+
+	// A migrated row also says what its title is created with — the profile,
+	// the monitored flag and, for a show, its series type.
+	function withMigration(
+		entry: TouchEntry,
+		row: ImportScanFile | ImportScanShow,
+	): ReviewEntry {
+		if (!migratedFrom) return entry;
+		return {
+			...entry,
+			migration: {
+				qualityProfile: row.quality_profile,
+				monitored: row.monitored,
+				seriesType: "series_type" in row ? row.series_type : undefined,
+			},
+		};
+	}
 	let touchPending = $derived(
 		isMB ? mbQuery.isPending : isSeries ? showsQuery.isPending : filesQuery.isPending,
 	);
@@ -634,7 +667,9 @@
 
 	let pickerOpen = $derived(pickerFile !== null || pickerShow !== null);
 	let pickerContext = $derived(
-		pickerShow?.folder_path ?? pickerFile?.source_path ?? "",
+		pickerShow?.folder_path ??
+			(pickerFile?.source_path || pickerFile?.parsed_title) ??
+			"",
 	);
 
 	function closePicker() {
@@ -674,13 +709,20 @@
 				</p>
 				<h1
 					class="mt-1.5 break-all font-mono text-lg font-semibold text-fg"
-					title={scan.source_path}
+					title={scanLocation(scan)}
 				>
-					{scan.source_path}
+					{scanLocation(scan)}
 				</h1>
 				<div
 					class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted"
 				>
+					{#if migratedFrom}
+						<span
+							class="rounded-sm border border-accent-line bg-accent-soft px-1.5 py-px text-[10px] font-medium tracking-wide text-accent-text"
+						>
+							{i18n.imports_migrated_from({ app: appLabel(migratedFrom) })}
+						</span>
+					{/if}
 					<span
 						class="rounded-sm border border-border bg-surface px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-fg-muted"
 					>
@@ -752,7 +794,11 @@
 		</header>
 
 		<div class="mt-5">
-			<ImportSteps status={scan.status} {kind} />
+			<ImportSteps
+				status={scan.status}
+				{kind}
+				source={migratedFrom ?? "filesystem"}
+			/>
 		</div>
 
 		{#if scan.status === "failed"}
@@ -1008,6 +1054,7 @@
 										show={sh}
 										scanId={importId}
 										reviewing={isReviewing}
+										{migratedFrom}
 										onChooseMatch={(show) =>
 											(pickerShow = show)}
 									/>
@@ -1107,6 +1154,7 @@
 										file={f}
 										scanId={importId}
 										reviewing={isReviewing}
+										{migratedFrom}
 										onChooseMatch={(file) =>
 											(pickerFile = file)}
 									/>
@@ -1129,6 +1177,7 @@
 				onClassificationChange={(c) => (classification = c)}
 				pending={touchPending}
 				error={touchError}
+				{migratedFrom}
 				onOpen={(e) => (sheetId = e.id)}
 			/>
 			{#if isReviewing}

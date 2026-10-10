@@ -6,6 +6,7 @@
 - [First-Run Setup](First-Run-Setup)
 - [Adding Movies and TV](Adding-Movies-and-TV)
 - [Importing an Existing Library](Importing-an-Existing-Library)
+- [Migrating from Radarr and Sonarr](Migrating-from-Radarr-and-Sonarr)
 - [Activity and Calendar](Activity-and-Calendar)
 - [Requests and Users](Requests-and-Users)
 - [Music and Books](Music-and-Books)

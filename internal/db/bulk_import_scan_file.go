@@ -30,6 +30,8 @@ type CreateImportScanFileParams struct {
 	Candidates         []schema.ScannedCandidate
 	TMDBID             uint32 // 0 = unset
 	ExistingMovieID    uint32 // 0 = unset
+	QualityProfile     string
+	Monitored          *bool // nil = schema default (monitored)
 }
 
 type FilterImportScanFilesParams struct {
@@ -111,6 +113,12 @@ func applyImportScanFileFields(
 	if p.ExistingMovieID != 0 {
 		c.SetExistingMovieID(p.ExistingMovieID)
 	}
+	if p.QualityProfile != "" {
+		c.SetQualityProfile(p.QualityProfile)
+	}
+	if p.Monitored != nil {
+		c.SetMonitored(*p.Monitored)
+	}
 }
 
 func (db *DB) FilterImportScanFiles(
@@ -123,7 +131,11 @@ func (db *DB) FilterImportScanFiles(
 		q = q.Where(entimportscanfile.ClassificationEQ(p.Classification))
 	}
 	if p.Query != "" {
-		q = q.Where(entimportscanfile.SourcePathContainsFold(p.Query))
+		// A migrated title with no file has only its title to match on.
+		q = q.Where(entimportscanfile.Or(
+			entimportscanfile.SourcePathContainsFold(p.Query),
+			entimportscanfile.ParsedTitleContainsFold(p.Query),
+		))
 	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {

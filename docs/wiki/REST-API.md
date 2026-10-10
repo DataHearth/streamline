@@ -126,7 +126,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `monitored_total`); the three diverge as soon as two facets are filtered, so read each from its own. `total` is separate again: the library, filtered by nothing. So are `wanted_episodes`, `downloading_episodes` and the movie `trend`. Called with no parameters the whole response is the unfiltered library, which is the shape older clients already expected.
 
-**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, or a search result whose handle expired when the session secret rotated). Those last three carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
+**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, or a search result whose handle expired when the session secret rotated), `migration_rejected` (a Radarr/Sonarr migration step refused — a path mapping that does not resolve, names already taken, a missing secret). Those last four carry a message composed for display, which the web UI shows verbatim; a coded error's `message` is otherwise still advisory.
 
 ---
 
@@ -381,6 +381,9 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows | 🔒 Admin |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
+| `POST` | `/library/imports/sources/preview` | Read a Radarr/Sonarr instance before migrating it | 🔒 Admin |
+| `POST` | `/library/imports/sources/check-paths` | Check root-folder mappings against this host | 🔒 Admin |
+| `POST` | `/library/imports/sources/apply-config` | Copy indexers and download clients from Radarr/Sonarr | 🔒 Admin |
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
 | `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
@@ -798,6 +801,13 @@ api -X POST -d '{"decision":"skip","classification":"unmatched"}' \
 
 api -X POST "$SL/api/v1/library/imports/$scan/commit"
 ```
+
+A create body may name a Radarr or Sonarr instance instead of a path
+(`"source": "radarr"`, `source_url`, `api_key`, `root_mappings`,
+`profile_mappings`); the scan then reads the instance rather than walking a
+directory, and review and commit are unchanged. The API key is never stored and
+never echoed. The whole sequence is on
+[Migrating from Radarr and Sonarr](Migrating-from-Radarr-and-Sonarr).
 
 `POST .../decisions` returns `{"updated": N}` and dispatches on the scan's kind,
 so the same call covers movie files and series shows. Omit `classification` to

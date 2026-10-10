@@ -1391,9 +1391,17 @@ export type ImportTransferMode = "hardlink" | "copy" | "move";
 
 export type ImportScanKind = "movie" | "series" | "music" | "book";
 
+// Where a scan's titles came from: a directory walk, or a live Radarr/Sonarr
+// instance read through its API.
+export type ImportSource = "filesystem" | "radarr" | "sonarr";
+export type ArrApp = "radarr" | "sonarr";
+
 export type ImportScan = {
 	id: number;
+	// Empty for a Radarr or Sonarr source — `source_url` names the instance.
 	source_path: string;
+	source: ImportSource;
+	source_url?: string;
 	kind: ImportScanKind;
 	mode: ImportMode;
 	import_mode?: ImportTransferMode | "";
@@ -1448,8 +1456,13 @@ export type ImportScanCandidate = {
 
 export type ImportScanFile = {
 	id: number;
+	// Empty for a title a Radarr source tracks without a file (`isTitleOnly`).
 	source_path: string;
 	size: number;
+	// The streamline profile a migrated title is created with; empty is the
+	// default.
+	quality_profile?: string;
+	monitored: boolean;
 	parsed_title?: string;
 	parsed_year?: number | null;
 	parsed_quality?: string;
@@ -1480,6 +1493,10 @@ export type ImportScanShowCandidate = {
 export type ImportScanShow = {
 	id: number;
 	folder_path: string;
+	quality_profile?: string;
+	monitored: boolean;
+	// The Sonarr series type (standard, daily, anime) a migrated show is set to.
+	series_type?: string;
 	parsed_title?: string;
 	parsed_year?: number | null;
 	classification: ImportFileClassification;
@@ -1598,10 +1615,94 @@ export type AppAccess = {
 export type AppAccessCreated = AppAccess & { secret: string };
 
 export type ImportStartRequest = {
-	source_path: string;
+	// Required for a filesystem source, ignored for an arr one.
+	source_path?: string;
 	kind?: ImportScanKind;
 	mode: ImportMode;
 	import_mode?: ImportTransferMode | "";
+	source?: ImportSource;
+	source_url?: string;
+	api_key?: string;
+	root_mappings?: ArrRootMapping[];
+	profile_mappings?: ArrProfileMapping[];
+};
+
+// The QualityProfileCreate body: what a migrated profile becomes when the
+// operator chooses to create it.
+export type QualityProfileCreate = {
+	name: string;
+	preferred_resolution: Resolution;
+	min_resolution?: Resolution;
+	upgrade_allowed?: boolean;
+	allowed_codecs?: string[];
+	formats?: QualityProfileFormatScore[];
+	min_score?: number;
+	upgrade_until_score?: number;
+	transcode?: TranscodePolicy;
+};
+
+// Radarr/Sonarr migration. The API key travels in each request and is never
+// stored, on the server or here.
+export type ArrSourceRequest = { app: ArrApp; url: string; api_key: string };
+export type ArrRootFolder = {
+	path: string;
+	accessible: boolean;
+	title_count: number;
+	sample_path?: string;
+};
+export type ArrProfileTranslation = {
+	id: number;
+	name: string;
+	in_use: number;
+	existing: string;
+	translation: QualityProfileCreate;
+	notes: string[];
+};
+export type ArrIndexerOption = {
+	name: string;
+	kind: "torznab" | "prowlarr" | "unsupported";
+	reason?: string;
+	collapses: number;
+	needs_secret: boolean;
+	enabled: boolean;
+	conflict: boolean;
+};
+export type ArrClientOption = {
+	name: string;
+	client_type: "qbittorrent" | "transmission" | "deluge" | "unsupported";
+	reason?: string;
+	needs_secret: boolean;
+	enabled: boolean;
+	conflict: boolean;
+};
+export type ArrPreview = {
+	app: ArrApp;
+	version: string;
+	instance_name?: string;
+	counts: { titles: number; with_file: number; monitored: number };
+	root_folders: ArrRootFolder[];
+	quality_profiles: ArrProfileTranslation[];
+	indexers: ArrIndexerOption[];
+	download_clients: ArrClientOption[];
+};
+export type ArrRootMapping = { from: string; to: string; sample_path?: string };
+export type ArrRootCheck = {
+	from: string;
+	to: string;
+	resolved: string;
+	found: boolean;
+	reason?: "not found" | "permission denied" | "unreadable";
+};
+export type ArrProfileMapping = {
+	source_id: number;
+	source_name?: string;
+	target: string;
+	create?: QualityProfileCreate;
+};
+export type ArrConfigSelection = { name: string; secret?: string };
+export type ApplySourceConfigResult = {
+	indexers: string[];
+	download_clients: string[];
 };
 
 export type MigrationRoot = "movies" | "series" | "downloads";

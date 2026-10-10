@@ -2,13 +2,9 @@
 	import { Search, X } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
-	import {
-		CLASS_CHIPS,
-		unitText,
-		type TouchEntry,
-	} from "@lib/imports-touch";
-	import type { ImportFileClassification, ImportScanKind } from "@lib/types";
-	import ImportTouchRow from "./ImportTouchRow.svelte";
+	import { CLASS_CHIPS, unitText } from "@lib/imports-touch";
+	import type { ArrApp, ImportFileClassification, ImportScanKind } from "@lib/types";
+	import ImportTouchRow, { type ReviewEntry } from "./ImportTouchRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// E2: search stays in the open and classification is a chip scroller rather
@@ -24,18 +20,20 @@
 		onClassificationChange,
 		pending = false,
 		error,
+		migratedFrom,
 		onOpen,
 	}: {
-		entries: TouchEntry[];
+		entries: ReviewEntry[];
 		total: number;
 		kind?: ImportScanKind;
+		migratedFrom?: ArrApp | undefined;
 		query: string;
 		onQueryChange: (q: string) => void;
 		classification: "" | ImportFileClassification;
 		onClassificationChange: (c: "" | ImportFileClassification) => void;
 		pending?: boolean;
 		error?: string;
-		onOpen: (entry: TouchEntry) => void;
+		onOpen: (entry: ReviewEntry) => void;
 	} = $props();
 
 	let text = $derived(unitText(kind));
@@ -125,7 +123,7 @@
 		<ul class="divide-y divide-border">
 			{#each entries as e (e.id)}
 				<li>
-					<ImportTouchRow entry={e} {kind} wide {onOpen} />
+					<ImportTouchRow entry={e} {kind} wide {migratedFrom} {onOpen} />
 				</li>
 			{/each}
 		</ul>

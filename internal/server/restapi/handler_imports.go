@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
@@ -10,6 +11,8 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/arr"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -22,27 +25,141 @@ func (s *Server) StartImport(
 	if err := requireAdmin(ctx); err != nil {
 		return StartImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	params := bulkimport.StartScanParams{
-		SourcePath: req.Body.SourcePath,
-		Mode:       entimportscan.Mode(req.Body.Mode),
+	unprocessable := func(msg string) (StartImportResponseObject, error) {
+		return StartImport422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(msg),
+		}, nil
 	}
-	if req.Body.Kind != nil {
-		params.Kind = entimportscan.Kind(*req.Body.Kind)
+	// Nothing validates a body against the spec, and a value ent's enum
+	// refuses would only surface from the scan insert as a 500 — after a
+	// migration had written its profiles.
+	if !req.Body.Mode.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"mode %q is not in_place or rename", req.Body.Mode,
+		))
+	}
+	if req.Body.Source != nil && !req.Body.Source.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"source %q is not filesystem, radarr or sonarr", *req.Body.Source,
+		))
+	}
+	if req.Body.Kind != nil && !req.Body.Kind.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"kind %q is not movie or series", *req.Body.Kind,
+		))
+	}
+	if req.Body.ImportMode != nil && *req.Body.ImportMode != "" &&
+		!req.Body.ImportMode.Valid() {
+		return unprocessable(fmt.Sprintf(
+			"import_mode %q is not hardlink, copy or move", *req.Body.ImportMode,
+		))
+	}
+	params := bulkimport.StartScanParams{
+		Mode: entimportscan.Mode(req.Body.Mode),
 	}
 	if req.Body.ImportMode != nil {
 		params.ImportMode = entimportscan.ImportMode(*req.Body.ImportMode)
 	}
+	source := entimportscan.SourceFilesystem
+	if req.Body.Source != nil {
+		source = entimportscan.Source(*req.Body.Source)
+	}
+
+	if source == entimportscan.SourceFilesystem {
+		if req.Body.SourcePath == nil || *req.Body.SourcePath == "" {
+			return unprocessable("source_path is required for a filesystem scan")
+		}
+		params.SourcePath = *req.Body.SourcePath
+		if req.Body.Kind != nil {
+			params.Kind = entimportscan.Kind(*req.Body.Kind)
+		}
+	} else {
+		rejected := func(msg string) (StartImportResponseObject, error) {
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errMigrationRejected(msg),
+			}, nil
+		}
+		if req.Body.SourceUrl == nil || *req.Body.SourceUrl == "" ||
+			req.Body.ApiKey == nil || *req.Body.ApiKey == "" {
+			return rejected("a migration needs source_url and api_key")
+		}
+		// The fetch only dials the URL once the scan exists; one it could
+		// never dial is refused now, not reported as a failed scan later.
+		if _, err := arr.ParseBaseURL(*req.Body.SourceUrl); err != nil {
+			return rejected(err.Error())
+		}
+		if draftTargetRefused(ctx, *req.Body.SourceUrl) {
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errConnectionFailed(
+					draftTargetRefusedMessage,
+				),
+			}, nil
+		}
+		mappings, msg := migrationMappings(req.Body)
+		if msg != "" {
+			return rejected(msg)
+		}
+		params.Source = source
+		params.SourceURL = *req.Body.SourceUrl
+		params.APIKey = *req.Body.ApiKey
+		params.Mappings = mappings
+
+		// A running scan answers 409 before the profile collision check
+		// below; StartScan checks again, ahead of the profile write.
+		running, err := s.store.CountActiveImportScans(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if running > 0 {
+			return StartImport409JSONResponse{
+				ConflictJSONResponse: errConflict(
+					bulkimport.ErrScanRunning.Error(),
+				),
+			}, nil
+		}
+
+		// Profiles land before the scan row so a commit weeks later finds
+		// them, in one config write so half a set never does — written by
+		// StartScan once the start has passed every check it makes, so a
+		// start refused for a mapping, the library root or a running scan
+		// leaves none behind.
+		profiles, msg := profilesToCreate(req.Body)
+		if msg != "" {
+			return rejected(msg)
+		}
+		if len(profiles) > 0 {
+			params.BeforeCreate = func(ctx context.Context) error {
+				return config.AddResources(ctx, profiles, nil, nil)
+			}
+		}
+	}
 	scan, err := s.bulkImports.StartScan(ctx, params)
 	if err != nil {
 		switch {
+		// The profile write's own refusals, from BeforeCreate.
+		case configLocked(err):
+			return StartImport403JSONResponse{
+				ForbiddenJSONResponse: forbiddenResp(err.Error()),
+			}, nil
+		case migrationWriteRejected(err):
+			return StartImport422JSONResponse{
+				UnprocessableEntityJSONResponse: errMigrationRejected(err.Error()),
+			}, nil
 		case errors.Is(err, bulkimport.ErrInvalidPath),
 			errors.Is(err, bulkimport.ErrPathOutsideLibrary),
 			errors.Is(err, bulkimport.ErrLibraryPathMissing),
 			errors.Is(err, bulkimport.ErrUnsupportedKind),
-			errors.Is(err, bulkimport.ErrRenameUnsupported):
-			return StartImport422JSONResponse{
-				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
-			}, nil
+			errors.Is(err, bulkimport.ErrRenameUnsupported),
+			errors.Is(err, bulkimport.ErrRootOutsideLibrary),
+			errors.Is(err, bulkimport.ErrMissingSourceURL):
+			if source != entimportscan.SourceFilesystem {
+				return StartImport422JSONResponse{
+					UnprocessableEntityJSONResponse: errMigrationRejected(
+						err.Error(),
+					),
+				}, nil
+			}
+			return unprocessable(err.Error())
 		case errors.Is(err, bulkimport.ErrScanRunning):
 			return StartImport409JSONResponse{
 				ConflictJSONResponse: errConflict(err.Error()),

@@ -4,12 +4,14 @@
 package restapi
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/arr"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/db"
@@ -45,6 +47,7 @@ type Server struct {
 	mediaServers    mediaserver.Manager
 	scheduler       scheduler.Controller
 	bulkImports     bulkimport.Manager
+	arrClients      arr.Factory
 	missingSearcher *rss.MissingSearcher
 	tvshows         tvshow.Manager
 	tvSearcher      *rss.EpisodeMissingSearcher
@@ -76,14 +79,17 @@ type authRejecter interface{ AuthRejected() bool }
 
 // Deps is the dependency set required by restapi handlers.
 type Deps struct {
-	Auth            auth.Manager
-	Movies          movie.Manager
-	Metadata        metadata.Provider
-	Indexers        indexer.Manager
-	Downloads       download.Downloader
-	MediaServers    mediaserver.Manager
-	Scheduler       scheduler.Controller
-	BulkImports     bulkimport.Manager
+	Auth         auth.Manager
+	Movies       movie.Manager
+	Metadata     metadata.Provider
+	Indexers     indexer.Manager
+	Downloads    download.Downloader
+	MediaServers mediaserver.Manager
+	Scheduler    scheduler.Controller
+	BulkImports  bulkimport.Manager
+	// ArrClients reaches Radarr and Sonarr for the migration endpoints; nil
+	// means the real HTTP client.
+	ArrClients      arr.Factory
 	MissingSearcher *rss.MissingSearcher
 	TVShows         tvshow.Manager
 	TVSearcher      *rss.EpisodeMissingSearcher
@@ -119,6 +125,7 @@ func New(d Deps) *Server {
 		mediaServers:    d.MediaServers,
 		scheduler:       d.Scheduler,
 		bulkImports:     d.BulkImports,
+		arrClients:      cmp.Or(d.ArrClients, arr.NewFactory()),
 		missingSearcher: d.MissingSearcher,
 		tvshows:         d.TVShows,
 		tvSearcher:      d.TVSearcher,

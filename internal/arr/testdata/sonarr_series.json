@@ -1,0 +1,18 @@
+[
+  {
+    "id": 7,
+    "tvdbId": 81189,
+    "title": "Breaking Bad",
+    "year": 2008,
+    "monitored": true,
+    "qualityProfileId": 6,
+    "path": "/media/series/Breaking Bad",
+    "rootFolderPath": "/media/series",
+    "seriesType": "standard",
+    "seasons": [
+      { "seasonNumber": 0, "monitored": false },
+      { "seasonNumber": 1, "monitored": true },
+      { "seasonNumber": 2, "monitored": false }
+    ]
+  }
+]

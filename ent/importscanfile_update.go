@@ -52,6 +52,12 @@ func (_u *ImportScanFileUpdate) SetNillableSourcePath(v *string) *ImportScanFile
 	return _u
 }
 
+// ClearSourcePath clears the value of the "source_path" field.
+func (_u *ImportScanFileUpdate) ClearSourcePath() *ImportScanFileUpdate {
+	_u.mutation.ClearSourcePath()
+	return _u
+}
+
 // SetSize sets the "size" field.
 func (_u *ImportScanFileUpdate) SetSize(v int64) *ImportScanFileUpdate {
 	_u.mutation.ResetSize()
@@ -70,6 +76,40 @@ func (_u *ImportScanFileUpdate) SetNillableSize(v *int64) *ImportScanFileUpdate 
 // AddSize adds value to the "size" field.
 func (_u *ImportScanFileUpdate) AddSize(v int64) *ImportScanFileUpdate {
 	_u.mutation.AddSize(v)
+	return _u
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *ImportScanFileUpdate) SetQualityProfile(v string) *ImportScanFileUpdate {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *ImportScanFileUpdate) SetNillableQualityProfile(v *string) *ImportScanFileUpdate {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *ImportScanFileUpdate) ClearQualityProfile() *ImportScanFileUpdate {
+	_u.mutation.ClearQualityProfile()
+	return _u
+}
+
+// SetMonitored sets the "monitored" field.
+func (_u *ImportScanFileUpdate) SetMonitored(v bool) *ImportScanFileUpdate {
+	_u.mutation.SetMonitored(v)
+	return _u
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_u *ImportScanFileUpdate) SetNillableMonitored(v *bool) *ImportScanFileUpdate {
+	if v != nil {
+		_u.SetMonitored(*v)
+	}
 	return _u
 }
 
@@ -408,11 +448,6 @@ func (_u *ImportScanFileUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ImportScanFileUpdate) check() error {
-	if v, ok := _u.mutation.SourcePath(); ok {
-		if err := importscanfile.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScanFile.source_path": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Classification(); ok {
 		if err := importscanfile.ClassificationValidator(v); err != nil {
 			return &ValidationError{Name: "classification", err: fmt.Errorf(`ent: validator failed for field "ImportScanFile.classification": %w`, err)}
@@ -458,11 +493,23 @@ func (_u *ImportScanFileUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if value, ok := _u.mutation.SourcePath(); ok {
 		_spec.SetField(importscanfile.FieldSourcePath, field.TypeString, value)
 	}
+	if _u.mutation.SourcePathCleared() {
+		_spec.ClearField(importscanfile.FieldSourcePath, field.TypeString)
+	}
 	if value, ok := _u.mutation.Size(); ok {
 		_spec.SetField(importscanfile.FieldSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.AddedSize(); ok {
 		_spec.AddField(importscanfile.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanfile.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(importscanfile.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitored(); ok {
+		_spec.SetField(importscanfile.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ParsedTitle(); ok {
 		_spec.SetField(importscanfile.FieldParsedTitle, field.TypeString, value)
@@ -624,6 +671,12 @@ func (_u *ImportScanFileUpdateOne) SetNillableSourcePath(v *string) *ImportScanF
 	return _u
 }
 
+// ClearSourcePath clears the value of the "source_path" field.
+func (_u *ImportScanFileUpdateOne) ClearSourcePath() *ImportScanFileUpdateOne {
+	_u.mutation.ClearSourcePath()
+	return _u
+}
+
 // SetSize sets the "size" field.
 func (_u *ImportScanFileUpdateOne) SetSize(v int64) *ImportScanFileUpdateOne {
 	_u.mutation.ResetSize()
@@ -642,6 +695,40 @@ func (_u *ImportScanFileUpdateOne) SetNillableSize(v *int64) *ImportScanFileUpda
 // AddSize adds value to the "size" field.
 func (_u *ImportScanFileUpdateOne) AddSize(v int64) *ImportScanFileUpdateOne {
 	_u.mutation.AddSize(v)
+	return _u
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *ImportScanFileUpdateOne) SetQualityProfile(v string) *ImportScanFileUpdateOne {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *ImportScanFileUpdateOne) SetNillableQualityProfile(v *string) *ImportScanFileUpdateOne {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *ImportScanFileUpdateOne) ClearQualityProfile() *ImportScanFileUpdateOne {
+	_u.mutation.ClearQualityProfile()
+	return _u
+}
+
+// SetMonitored sets the "monitored" field.
+func (_u *ImportScanFileUpdateOne) SetMonitored(v bool) *ImportScanFileUpdateOne {
+	_u.mutation.SetMonitored(v)
+	return _u
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_u *ImportScanFileUpdateOne) SetNillableMonitored(v *bool) *ImportScanFileUpdateOne {
+	if v != nil {
+		_u.SetMonitored(*v)
+	}
 	return _u
 }
 
@@ -993,11 +1080,6 @@ func (_u *ImportScanFileUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ImportScanFileUpdateOne) check() error {
-	if v, ok := _u.mutation.SourcePath(); ok {
-		if err := importscanfile.SourcePathValidator(v); err != nil {
-			return &ValidationError{Name: "source_path", err: fmt.Errorf(`ent: validator failed for field "ImportScanFile.source_path": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Classification(); ok {
 		if err := importscanfile.ClassificationValidator(v); err != nil {
 			return &ValidationError{Name: "classification", err: fmt.Errorf(`ent: validator failed for field "ImportScanFile.classification": %w`, err)}
@@ -1060,11 +1142,23 @@ func (_u *ImportScanFileUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 	if value, ok := _u.mutation.SourcePath(); ok {
 		_spec.SetField(importscanfile.FieldSourcePath, field.TypeString, value)
 	}
+	if _u.mutation.SourcePathCleared() {
+		_spec.ClearField(importscanfile.FieldSourcePath, field.TypeString)
+	}
 	if value, ok := _u.mutation.Size(); ok {
 		_spec.SetField(importscanfile.FieldSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.AddedSize(); ok {
 		_spec.AddField(importscanfile.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanfile.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(importscanfile.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitored(); ok {
+		_spec.SetField(importscanfile.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ParsedTitle(); ok {
 		_spec.SetField(importscanfile.FieldParsedTitle, field.TypeString, value)

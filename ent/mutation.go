@@ -17604,6 +17604,9 @@ type ImportScanMutation struct {
 	create_time             *time.Time
 	update_time             *time.Time
 	source_path             *string
+	source                  *importscan.Source
+	source_url              *string
+	mappings                *schema.ScanMappings
 	kind                    *importscan.Kind
 	mode                    *importscan.Mode
 	import_mode             *importscan.ImportMode
@@ -17845,9 +17848,156 @@ func (m *ImportScanMutation) OldSourcePath(ctx context.Context) (v string, err e
 	return oldValue.SourcePath, nil
 }
 
+// ClearSourcePath clears the value of the "source_path" field.
+func (m *ImportScanMutation) ClearSourcePath() {
+	m.source_path = nil
+	m.clearedFields[importscan.FieldSourcePath] = struct{}{}
+}
+
+// SourcePathCleared returns if the "source_path" field was cleared in this mutation.
+func (m *ImportScanMutation) SourcePathCleared() bool {
+	_, ok := m.clearedFields[importscan.FieldSourcePath]
+	return ok
+}
+
 // ResetSourcePath resets all changes to the "source_path" field.
 func (m *ImportScanMutation) ResetSourcePath() {
 	m.source_path = nil
+	delete(m.clearedFields, importscan.FieldSourcePath)
+}
+
+// SetSource sets the "source" field.
+func (m *ImportScanMutation) SetSource(i importscan.Source) {
+	m.source = &i
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *ImportScanMutation) Source() (r importscan.Source, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the ImportScan entity.
+// If the ImportScan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanMutation) OldSource(ctx context.Context) (v importscan.Source, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *ImportScanMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetSourceURL sets the "source_url" field.
+func (m *ImportScanMutation) SetSourceURL(s string) {
+	m.source_url = &s
+}
+
+// SourceURL returns the value of the "source_url" field in the mutation.
+func (m *ImportScanMutation) SourceURL() (r string, exists bool) {
+	v := m.source_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceURL returns the old "source_url" field's value of the ImportScan entity.
+// If the ImportScan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanMutation) OldSourceURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceURL: %w", err)
+	}
+	return oldValue.SourceURL, nil
+}
+
+// ClearSourceURL clears the value of the "source_url" field.
+func (m *ImportScanMutation) ClearSourceURL() {
+	m.source_url = nil
+	m.clearedFields[importscan.FieldSourceURL] = struct{}{}
+}
+
+// SourceURLCleared returns if the "source_url" field was cleared in this mutation.
+func (m *ImportScanMutation) SourceURLCleared() bool {
+	_, ok := m.clearedFields[importscan.FieldSourceURL]
+	return ok
+}
+
+// ResetSourceURL resets all changes to the "source_url" field.
+func (m *ImportScanMutation) ResetSourceURL() {
+	m.source_url = nil
+	delete(m.clearedFields, importscan.FieldSourceURL)
+}
+
+// SetMappings sets the "mappings" field.
+func (m *ImportScanMutation) SetMappings(sm schema.ScanMappings) {
+	m.mappings = &sm
+}
+
+// Mappings returns the value of the "mappings" field in the mutation.
+func (m *ImportScanMutation) Mappings() (r schema.ScanMappings, exists bool) {
+	v := m.mappings
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMappings returns the old "mappings" field's value of the ImportScan entity.
+// If the ImportScan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanMutation) OldMappings(ctx context.Context) (v schema.ScanMappings, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMappings is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMappings requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMappings: %w", err)
+	}
+	return oldValue.Mappings, nil
+}
+
+// ClearMappings clears the value of the "mappings" field.
+func (m *ImportScanMutation) ClearMappings() {
+	m.mappings = nil
+	m.clearedFields[importscan.FieldMappings] = struct{}{}
+}
+
+// MappingsCleared returns if the "mappings" field was cleared in this mutation.
+func (m *ImportScanMutation) MappingsCleared() bool {
+	_, ok := m.clearedFields[importscan.FieldMappings]
+	return ok
+}
+
+// ResetMappings resets all changes to the "mappings" field.
+func (m *ImportScanMutation) ResetMappings() {
+	m.mappings = nil
+	delete(m.clearedFields, importscan.FieldMappings)
 }
 
 // SetKind sets the "kind" field.
@@ -18677,7 +18827,7 @@ func (m *ImportScanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 18)
 	if m.create_time != nil {
 		fields = append(fields, importscan.FieldCreateTime)
 	}
@@ -18686,6 +18836,15 @@ func (m *ImportScanMutation) Fields() []string {
 	}
 	if m.source_path != nil {
 		fields = append(fields, importscan.FieldSourcePath)
+	}
+	if m.source != nil {
+		fields = append(fields, importscan.FieldSource)
+	}
+	if m.source_url != nil {
+		fields = append(fields, importscan.FieldSourceURL)
+	}
+	if m.mappings != nil {
+		fields = append(fields, importscan.FieldMappings)
 	}
 	if m.kind != nil {
 		fields = append(fields, importscan.FieldKind)
@@ -18737,6 +18896,12 @@ func (m *ImportScanMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdateTime()
 	case importscan.FieldSourcePath:
 		return m.SourcePath()
+	case importscan.FieldSource:
+		return m.Source()
+	case importscan.FieldSourceURL:
+		return m.SourceURL()
+	case importscan.FieldMappings:
+		return m.Mappings()
 	case importscan.FieldKind:
 		return m.Kind()
 	case importscan.FieldMode:
@@ -18776,6 +18941,12 @@ func (m *ImportScanMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpdateTime(ctx)
 	case importscan.FieldSourcePath:
 		return m.OldSourcePath(ctx)
+	case importscan.FieldSource:
+		return m.OldSource(ctx)
+	case importscan.FieldSourceURL:
+		return m.OldSourceURL(ctx)
+	case importscan.FieldMappings:
+		return m.OldMappings(ctx)
 	case importscan.FieldKind:
 		return m.OldKind(ctx)
 	case importscan.FieldMode:
@@ -18829,6 +19000,27 @@ func (m *ImportScanMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSourcePath(v)
+		return nil
+	case importscan.FieldSource:
+		v, ok := value.(importscan.Source)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case importscan.FieldSourceURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceURL(v)
+		return nil
+	case importscan.FieldMappings:
+		v, ok := value.(schema.ScanMappings)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMappings(v)
 		return nil
 	case importscan.FieldKind:
 		v, ok := value.(importscan.Kind)
@@ -18995,6 +19187,15 @@ func (m *ImportScanMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ImportScanMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(importscan.FieldSourcePath) {
+		fields = append(fields, importscan.FieldSourcePath)
+	}
+	if m.FieldCleared(importscan.FieldSourceURL) {
+		fields = append(fields, importscan.FieldSourceURL)
+	}
+	if m.FieldCleared(importscan.FieldMappings) {
+		fields = append(fields, importscan.FieldMappings)
+	}
 	if m.FieldCleared(importscan.FieldImportMode) {
 		fields = append(fields, importscan.FieldImportMode)
 	}
@@ -19024,6 +19225,15 @@ func (m *ImportScanMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ImportScanMutation) ClearField(name string) error {
 	switch name {
+	case importscan.FieldSourcePath:
+		m.ClearSourcePath()
+		return nil
+	case importscan.FieldSourceURL:
+		m.ClearSourceURL()
+		return nil
+	case importscan.FieldMappings:
+		m.ClearMappings()
+		return nil
 	case importscan.FieldImportMode:
 		m.ClearImportMode()
 		return nil
@@ -19055,6 +19265,15 @@ func (m *ImportScanMutation) ResetField(name string) error {
 		return nil
 	case importscan.FieldSourcePath:
 		m.ResetSourcePath()
+		return nil
+	case importscan.FieldSource:
+		m.ResetSource()
+		return nil
+	case importscan.FieldSourceURL:
+		m.ResetSourceURL()
+		return nil
+	case importscan.FieldMappings:
+		m.ResetMappings()
 		return nil
 	case importscan.FieldKind:
 		m.ResetKind()
@@ -22789,6 +23008,8 @@ type ImportScanFileMutation struct {
 	source_path          *string
 	size                 *int64
 	addsize              *int64
+	quality_profile      *string
+	monitored            *bool
 	parsed_title         *string
 	parsed_year          *uint16
 	addparsed_year       *int16
@@ -23023,9 +23244,22 @@ func (m *ImportScanFileMutation) OldSourcePath(ctx context.Context) (v string, e
 	return oldValue.SourcePath, nil
 }
 
+// ClearSourcePath clears the value of the "source_path" field.
+func (m *ImportScanFileMutation) ClearSourcePath() {
+	m.source_path = nil
+	m.clearedFields[importscanfile.FieldSourcePath] = struct{}{}
+}
+
+// SourcePathCleared returns if the "source_path" field was cleared in this mutation.
+func (m *ImportScanFileMutation) SourcePathCleared() bool {
+	_, ok := m.clearedFields[importscanfile.FieldSourcePath]
+	return ok
+}
+
 // ResetSourcePath resets all changes to the "source_path" field.
 func (m *ImportScanFileMutation) ResetSourcePath() {
 	m.source_path = nil
+	delete(m.clearedFields, importscanfile.FieldSourcePath)
 }
 
 // SetSize sets the "size" field.
@@ -23082,6 +23316,91 @@ func (m *ImportScanFileMutation) AddedSize() (r int64, exists bool) {
 func (m *ImportScanFileMutation) ResetSize() {
 	m.size = nil
 	m.addsize = nil
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (m *ImportScanFileMutation) SetQualityProfile(s string) {
+	m.quality_profile = &s
+}
+
+// QualityProfile returns the value of the "quality_profile" field in the mutation.
+func (m *ImportScanFileMutation) QualityProfile() (r string, exists bool) {
+	v := m.quality_profile
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQualityProfile returns the old "quality_profile" field's value of the ImportScanFile entity.
+// If the ImportScanFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanFileMutation) OldQualityProfile(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQualityProfile is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQualityProfile requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQualityProfile: %w", err)
+	}
+	return oldValue.QualityProfile, nil
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (m *ImportScanFileMutation) ClearQualityProfile() {
+	m.quality_profile = nil
+	m.clearedFields[importscanfile.FieldQualityProfile] = struct{}{}
+}
+
+// QualityProfileCleared returns if the "quality_profile" field was cleared in this mutation.
+func (m *ImportScanFileMutation) QualityProfileCleared() bool {
+	_, ok := m.clearedFields[importscanfile.FieldQualityProfile]
+	return ok
+}
+
+// ResetQualityProfile resets all changes to the "quality_profile" field.
+func (m *ImportScanFileMutation) ResetQualityProfile() {
+	m.quality_profile = nil
+	delete(m.clearedFields, importscanfile.FieldQualityProfile)
+}
+
+// SetMonitored sets the "monitored" field.
+func (m *ImportScanFileMutation) SetMonitored(b bool) {
+	m.monitored = &b
+}
+
+// Monitored returns the value of the "monitored" field in the mutation.
+func (m *ImportScanFileMutation) Monitored() (r bool, exists bool) {
+	v := m.monitored
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitored returns the old "monitored" field's value of the ImportScanFile entity.
+// If the ImportScanFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanFileMutation) OldMonitored(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitored is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitored requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitored: %w", err)
+	}
+	return oldValue.Monitored, nil
+}
+
+// ResetMonitored resets all changes to the "monitored" field.
+func (m *ImportScanFileMutation) ResetMonitored() {
+	m.monitored = nil
 }
 
 // SetParsedTitle sets the "parsed_title" field.
@@ -23876,7 +24195,7 @@ func (m *ImportScanFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanFileMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, importscanfile.FieldCreateTime)
 	}
@@ -23888,6 +24207,12 @@ func (m *ImportScanFileMutation) Fields() []string {
 	}
 	if m.size != nil {
 		fields = append(fields, importscanfile.FieldSize)
+	}
+	if m.quality_profile != nil {
+		fields = append(fields, importscanfile.FieldQualityProfile)
+	}
+	if m.monitored != nil {
+		fields = append(fields, importscanfile.FieldMonitored)
 	}
 	if m.parsed_title != nil {
 		fields = append(fields, importscanfile.FieldParsedTitle)
@@ -23944,6 +24269,10 @@ func (m *ImportScanFileMutation) Field(name string) (ent.Value, bool) {
 		return m.SourcePath()
 	case importscanfile.FieldSize:
 		return m.Size()
+	case importscanfile.FieldQualityProfile:
+		return m.QualityProfile()
+	case importscanfile.FieldMonitored:
+		return m.Monitored()
 	case importscanfile.FieldParsedTitle:
 		return m.ParsedTitle()
 	case importscanfile.FieldParsedYear:
@@ -23987,6 +24316,10 @@ func (m *ImportScanFileMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldSourcePath(ctx)
 	case importscanfile.FieldSize:
 		return m.OldSize(ctx)
+	case importscanfile.FieldQualityProfile:
+		return m.OldQualityProfile(ctx)
+	case importscanfile.FieldMonitored:
+		return m.OldMonitored(ctx)
 	case importscanfile.FieldParsedTitle:
 		return m.OldParsedTitle(ctx)
 	case importscanfile.FieldParsedYear:
@@ -24049,6 +24382,20 @@ func (m *ImportScanFileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSize(v)
+		return nil
+	case importscanfile.FieldQualityProfile:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQualityProfile(v)
+		return nil
+	case importscanfile.FieldMonitored:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitored(v)
 		return nil
 	case importscanfile.FieldParsedTitle:
 		v, ok := value.(string)
@@ -24246,6 +24593,12 @@ func (m *ImportScanFileMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ImportScanFileMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(importscanfile.FieldSourcePath) {
+		fields = append(fields, importscanfile.FieldSourcePath)
+	}
+	if m.FieldCleared(importscanfile.FieldQualityProfile) {
+		fields = append(fields, importscanfile.FieldQualityProfile)
+	}
 	if m.FieldCleared(importscanfile.FieldParsedTitle) {
 		fields = append(fields, importscanfile.FieldParsedTitle)
 	}
@@ -24290,6 +24643,12 @@ func (m *ImportScanFileMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ImportScanFileMutation) ClearField(name string) error {
 	switch name {
+	case importscanfile.FieldSourcePath:
+		m.ClearSourcePath()
+		return nil
+	case importscanfile.FieldQualityProfile:
+		m.ClearQualityProfile()
+		return nil
 	case importscanfile.FieldParsedTitle:
 		m.ClearParsedTitle()
 		return nil
@@ -24339,6 +24698,12 @@ func (m *ImportScanFileMutation) ResetField(name string) error {
 		return nil
 	case importscanfile.FieldSize:
 		m.ResetSize()
+		return nil
+	case importscanfile.FieldQualityProfile:
+		m.ResetQualityProfile()
+		return nil
+	case importscanfile.FieldMonitored:
+		m.ResetMonitored()
 		return nil
 	case importscanfile.FieldParsedTitle:
 		m.ResetParsedTitle()
@@ -24478,6 +24843,12 @@ type ImportScanShowMutation struct {
 	addexisting_tvshow_id *int32
 	file_count            *uint16
 	addfile_count         *int16
+	quality_profile       *string
+	monitored             *bool
+	series_type           *string
+	monitoring            *schema.ShowMonitoring
+	source_files          *[]schema.SourceEpisodeFile
+	appendsource_files    []schema.SourceEpisodeFile
 	decision              *importscanshow.Decision
 	decision_tvdb_id      *uint32
 	adddecision_tvdb_id   *int32
@@ -25121,6 +25492,254 @@ func (m *ImportScanShowMutation) ResetFileCount() {
 	m.addfile_count = nil
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (m *ImportScanShowMutation) SetQualityProfile(s string) {
+	m.quality_profile = &s
+}
+
+// QualityProfile returns the value of the "quality_profile" field in the mutation.
+func (m *ImportScanShowMutation) QualityProfile() (r string, exists bool) {
+	v := m.quality_profile
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQualityProfile returns the old "quality_profile" field's value of the ImportScanShow entity.
+// If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanShowMutation) OldQualityProfile(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQualityProfile is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQualityProfile requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQualityProfile: %w", err)
+	}
+	return oldValue.QualityProfile, nil
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (m *ImportScanShowMutation) ClearQualityProfile() {
+	m.quality_profile = nil
+	m.clearedFields[importscanshow.FieldQualityProfile] = struct{}{}
+}
+
+// QualityProfileCleared returns if the "quality_profile" field was cleared in this mutation.
+func (m *ImportScanShowMutation) QualityProfileCleared() bool {
+	_, ok := m.clearedFields[importscanshow.FieldQualityProfile]
+	return ok
+}
+
+// ResetQualityProfile resets all changes to the "quality_profile" field.
+func (m *ImportScanShowMutation) ResetQualityProfile() {
+	m.quality_profile = nil
+	delete(m.clearedFields, importscanshow.FieldQualityProfile)
+}
+
+// SetMonitored sets the "monitored" field.
+func (m *ImportScanShowMutation) SetMonitored(b bool) {
+	m.monitored = &b
+}
+
+// Monitored returns the value of the "monitored" field in the mutation.
+func (m *ImportScanShowMutation) Monitored() (r bool, exists bool) {
+	v := m.monitored
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitored returns the old "monitored" field's value of the ImportScanShow entity.
+// If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanShowMutation) OldMonitored(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitored is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitored requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitored: %w", err)
+	}
+	return oldValue.Monitored, nil
+}
+
+// ResetMonitored resets all changes to the "monitored" field.
+func (m *ImportScanShowMutation) ResetMonitored() {
+	m.monitored = nil
+}
+
+// SetSeriesType sets the "series_type" field.
+func (m *ImportScanShowMutation) SetSeriesType(s string) {
+	m.series_type = &s
+}
+
+// SeriesType returns the value of the "series_type" field in the mutation.
+func (m *ImportScanShowMutation) SeriesType() (r string, exists bool) {
+	v := m.series_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSeriesType returns the old "series_type" field's value of the ImportScanShow entity.
+// If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanShowMutation) OldSeriesType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSeriesType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSeriesType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSeriesType: %w", err)
+	}
+	return oldValue.SeriesType, nil
+}
+
+// ClearSeriesType clears the value of the "series_type" field.
+func (m *ImportScanShowMutation) ClearSeriesType() {
+	m.series_type = nil
+	m.clearedFields[importscanshow.FieldSeriesType] = struct{}{}
+}
+
+// SeriesTypeCleared returns if the "series_type" field was cleared in this mutation.
+func (m *ImportScanShowMutation) SeriesTypeCleared() bool {
+	_, ok := m.clearedFields[importscanshow.FieldSeriesType]
+	return ok
+}
+
+// ResetSeriesType resets all changes to the "series_type" field.
+func (m *ImportScanShowMutation) ResetSeriesType() {
+	m.series_type = nil
+	delete(m.clearedFields, importscanshow.FieldSeriesType)
+}
+
+// SetMonitoring sets the "monitoring" field.
+func (m *ImportScanShowMutation) SetMonitoring(sm schema.ShowMonitoring) {
+	m.monitoring = &sm
+}
+
+// Monitoring returns the value of the "monitoring" field in the mutation.
+func (m *ImportScanShowMutation) Monitoring() (r schema.ShowMonitoring, exists bool) {
+	v := m.monitoring
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitoring returns the old "monitoring" field's value of the ImportScanShow entity.
+// If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanShowMutation) OldMonitoring(ctx context.Context) (v schema.ShowMonitoring, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitoring is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitoring requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitoring: %w", err)
+	}
+	return oldValue.Monitoring, nil
+}
+
+// ClearMonitoring clears the value of the "monitoring" field.
+func (m *ImportScanShowMutation) ClearMonitoring() {
+	m.monitoring = nil
+	m.clearedFields[importscanshow.FieldMonitoring] = struct{}{}
+}
+
+// MonitoringCleared returns if the "monitoring" field was cleared in this mutation.
+func (m *ImportScanShowMutation) MonitoringCleared() bool {
+	_, ok := m.clearedFields[importscanshow.FieldMonitoring]
+	return ok
+}
+
+// ResetMonitoring resets all changes to the "monitoring" field.
+func (m *ImportScanShowMutation) ResetMonitoring() {
+	m.monitoring = nil
+	delete(m.clearedFields, importscanshow.FieldMonitoring)
+}
+
+// SetSourceFiles sets the "source_files" field.
+func (m *ImportScanShowMutation) SetSourceFiles(sef []schema.SourceEpisodeFile) {
+	m.source_files = &sef
+	m.appendsource_files = nil
+}
+
+// SourceFiles returns the value of the "source_files" field in the mutation.
+func (m *ImportScanShowMutation) SourceFiles() (r []schema.SourceEpisodeFile, exists bool) {
+	v := m.source_files
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceFiles returns the old "source_files" field's value of the ImportScanShow entity.
+// If the ImportScanShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanShowMutation) OldSourceFiles(ctx context.Context) (v []schema.SourceEpisodeFile, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceFiles is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceFiles requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceFiles: %w", err)
+	}
+	return oldValue.SourceFiles, nil
+}
+
+// AppendSourceFiles adds sef to the "source_files" field.
+func (m *ImportScanShowMutation) AppendSourceFiles(sef []schema.SourceEpisodeFile) {
+	m.appendsource_files = append(m.appendsource_files, sef...)
+}
+
+// AppendedSourceFiles returns the list of values that were appended to the "source_files" field in this mutation.
+func (m *ImportScanShowMutation) AppendedSourceFiles() ([]schema.SourceEpisodeFile, bool) {
+	if len(m.appendsource_files) == 0 {
+		return nil, false
+	}
+	return m.appendsource_files, true
+}
+
+// ClearSourceFiles clears the value of the "source_files" field.
+func (m *ImportScanShowMutation) ClearSourceFiles() {
+	m.source_files = nil
+	m.appendsource_files = nil
+	m.clearedFields[importscanshow.FieldSourceFiles] = struct{}{}
+}
+
+// SourceFilesCleared returns if the "source_files" field was cleared in this mutation.
+func (m *ImportScanShowMutation) SourceFilesCleared() bool {
+	_, ok := m.clearedFields[importscanshow.FieldSourceFiles]
+	return ok
+}
+
+// ResetSourceFiles resets all changes to the "source_files" field.
+func (m *ImportScanShowMutation) ResetSourceFiles() {
+	m.source_files = nil
+	m.appendsource_files = nil
+	delete(m.clearedFields, importscanshow.FieldSourceFiles)
+}
+
 // SetDecision sets the "decision" field.
 func (m *ImportScanShowMutation) SetDecision(i importscanshow.Decision) {
 	m.decision = &i
@@ -25455,7 +26074,7 @@ func (m *ImportScanShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanShowMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, importscanshow.FieldCreateTime)
 	}
@@ -25485,6 +26104,21 @@ func (m *ImportScanShowMutation) Fields() []string {
 	}
 	if m.file_count != nil {
 		fields = append(fields, importscanshow.FieldFileCount)
+	}
+	if m.quality_profile != nil {
+		fields = append(fields, importscanshow.FieldQualityProfile)
+	}
+	if m.monitored != nil {
+		fields = append(fields, importscanshow.FieldMonitored)
+	}
+	if m.series_type != nil {
+		fields = append(fields, importscanshow.FieldSeriesType)
+	}
+	if m.monitoring != nil {
+		fields = append(fields, importscanshow.FieldMonitoring)
+	}
+	if m.source_files != nil {
+		fields = append(fields, importscanshow.FieldSourceFiles)
 	}
 	if m.decision != nil {
 		fields = append(fields, importscanshow.FieldDecision)
@@ -25529,6 +26163,16 @@ func (m *ImportScanShowMutation) Field(name string) (ent.Value, bool) {
 		return m.ExistingTvshowID()
 	case importscanshow.FieldFileCount:
 		return m.FileCount()
+	case importscanshow.FieldQualityProfile:
+		return m.QualityProfile()
+	case importscanshow.FieldMonitored:
+		return m.Monitored()
+	case importscanshow.FieldSeriesType:
+		return m.SeriesType()
+	case importscanshow.FieldMonitoring:
+		return m.Monitoring()
+	case importscanshow.FieldSourceFiles:
+		return m.SourceFiles()
 	case importscanshow.FieldDecision:
 		return m.Decision()
 	case importscanshow.FieldDecisionTvdbID:
@@ -25568,6 +26212,16 @@ func (m *ImportScanShowMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldExistingTvshowID(ctx)
 	case importscanshow.FieldFileCount:
 		return m.OldFileCount(ctx)
+	case importscanshow.FieldQualityProfile:
+		return m.OldQualityProfile(ctx)
+	case importscanshow.FieldMonitored:
+		return m.OldMonitored(ctx)
+	case importscanshow.FieldSeriesType:
+		return m.OldSeriesType(ctx)
+	case importscanshow.FieldMonitoring:
+		return m.OldMonitoring(ctx)
+	case importscanshow.FieldSourceFiles:
+		return m.OldSourceFiles(ctx)
 	case importscanshow.FieldDecision:
 		return m.OldDecision(ctx)
 	case importscanshow.FieldDecisionTvdbID:
@@ -25656,6 +26310,41 @@ func (m *ImportScanShowMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFileCount(v)
+		return nil
+	case importscanshow.FieldQualityProfile:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQualityProfile(v)
+		return nil
+	case importscanshow.FieldMonitored:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitored(v)
+		return nil
+	case importscanshow.FieldSeriesType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSeriesType(v)
+		return nil
+	case importscanshow.FieldMonitoring:
+		v, ok := value.(schema.ShowMonitoring)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitoring(v)
+		return nil
+	case importscanshow.FieldSourceFiles:
+		v, ok := value.([]schema.SourceEpisodeFile)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceFiles(v)
 		return nil
 	case importscanshow.FieldDecision:
 		v, ok := value.(importscanshow.Decision)
@@ -25812,6 +26501,18 @@ func (m *ImportScanShowMutation) ClearedFields() []string {
 	if m.FieldCleared(importscanshow.FieldExistingTvshowID) {
 		fields = append(fields, importscanshow.FieldExistingTvshowID)
 	}
+	if m.FieldCleared(importscanshow.FieldQualityProfile) {
+		fields = append(fields, importscanshow.FieldQualityProfile)
+	}
+	if m.FieldCleared(importscanshow.FieldSeriesType) {
+		fields = append(fields, importscanshow.FieldSeriesType)
+	}
+	if m.FieldCleared(importscanshow.FieldMonitoring) {
+		fields = append(fields, importscanshow.FieldMonitoring)
+	}
+	if m.FieldCleared(importscanshow.FieldSourceFiles) {
+		fields = append(fields, importscanshow.FieldSourceFiles)
+	}
 	if m.FieldCleared(importscanshow.FieldDecisionTvdbID) {
 		fields = append(fields, importscanshow.FieldDecisionTvdbID)
 	}
@@ -25849,6 +26550,18 @@ func (m *ImportScanShowMutation) ClearField(name string) error {
 		return nil
 	case importscanshow.FieldExistingTvshowID:
 		m.ClearExistingTvshowID()
+		return nil
+	case importscanshow.FieldQualityProfile:
+		m.ClearQualityProfile()
+		return nil
+	case importscanshow.FieldSeriesType:
+		m.ClearSeriesType()
+		return nil
+	case importscanshow.FieldMonitoring:
+		m.ClearMonitoring()
+		return nil
+	case importscanshow.FieldSourceFiles:
+		m.ClearSourceFiles()
 		return nil
 	case importscanshow.FieldDecisionTvdbID:
 		m.ClearDecisionTvdbID()
@@ -25896,6 +26609,21 @@ func (m *ImportScanShowMutation) ResetField(name string) error {
 		return nil
 	case importscanshow.FieldFileCount:
 		m.ResetFileCount()
+		return nil
+	case importscanshow.FieldQualityProfile:
+		m.ResetQualityProfile()
+		return nil
+	case importscanshow.FieldMonitored:
+		m.ResetMonitored()
+		return nil
+	case importscanshow.FieldSeriesType:
+		m.ResetSeriesType()
+		return nil
+	case importscanshow.FieldMonitoring:
+		m.ResetMonitoring()
+		return nil
+	case importscanshow.FieldSourceFiles:
+		m.ResetSourceFiles()
 		return nil
 	case importscanshow.FieldDecision:
 		m.ResetDecision()

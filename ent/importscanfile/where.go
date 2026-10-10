@@ -75,6 +75,16 @@ func Size(v int64) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldSize, v))
 }
 
+// QualityProfile applies equality check predicate on the "quality_profile" field. It's identical to QualityProfileEQ.
+func QualityProfile(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEQ(FieldQualityProfile, v))
+}
+
+// Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
+func Monitored(v bool) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEQ(FieldMonitored, v))
+}
+
 // ParsedTitle applies equality check predicate on the "parsed_title" field. It's identical to ParsedTitleEQ.
 func ParsedTitle(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEQ(FieldParsedTitle, v))
@@ -255,6 +265,16 @@ func SourcePathHasSuffix(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldHasSuffix(FieldSourcePath, v))
 }
 
+// SourcePathIsNil applies the IsNil predicate on the "source_path" field.
+func SourcePathIsNil() predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldIsNull(FieldSourcePath))
+}
+
+// SourcePathNotNil applies the NotNil predicate on the "source_path" field.
+func SourcePathNotNil() predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldNotNull(FieldSourcePath))
+}
+
 // SourcePathEqualFold applies the EqualFold predicate on the "source_path" field.
 func SourcePathEqualFold(v string) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldEqualFold(FieldSourcePath, v))
@@ -303,6 +323,91 @@ func SizeLT(v int64) predicate.ImportScanFile {
 // SizeLTE applies the LTE predicate on the "size" field.
 func SizeLTE(v int64) predicate.ImportScanFile {
 	return predicate.ImportScanFile(sql.FieldLTE(FieldSize, v))
+}
+
+// QualityProfileEQ applies the EQ predicate on the "quality_profile" field.
+func QualityProfileEQ(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileNEQ applies the NEQ predicate on the "quality_profile" field.
+func QualityProfileNEQ(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldNEQ(FieldQualityProfile, v))
+}
+
+// QualityProfileIn applies the In predicate on the "quality_profile" field.
+func QualityProfileIn(vs ...string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileNotIn applies the NotIn predicate on the "quality_profile" field.
+func QualityProfileNotIn(vs ...string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldNotIn(FieldQualityProfile, vs...))
+}
+
+// QualityProfileGT applies the GT predicate on the "quality_profile" field.
+func QualityProfileGT(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldGT(FieldQualityProfile, v))
+}
+
+// QualityProfileGTE applies the GTE predicate on the "quality_profile" field.
+func QualityProfileGTE(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldGTE(FieldQualityProfile, v))
+}
+
+// QualityProfileLT applies the LT predicate on the "quality_profile" field.
+func QualityProfileLT(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldLT(FieldQualityProfile, v))
+}
+
+// QualityProfileLTE applies the LTE predicate on the "quality_profile" field.
+func QualityProfileLTE(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldLTE(FieldQualityProfile, v))
+}
+
+// QualityProfileContains applies the Contains predicate on the "quality_profile" field.
+func QualityProfileContains(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContains(FieldQualityProfile, v))
+}
+
+// QualityProfileHasPrefix applies the HasPrefix predicate on the "quality_profile" field.
+func QualityProfileHasPrefix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasPrefix(FieldQualityProfile, v))
+}
+
+// QualityProfileHasSuffix applies the HasSuffix predicate on the "quality_profile" field.
+func QualityProfileHasSuffix(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldHasSuffix(FieldQualityProfile, v))
+}
+
+// QualityProfileIsNil applies the IsNil predicate on the "quality_profile" field.
+func QualityProfileIsNil() predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldIsNull(FieldQualityProfile))
+}
+
+// QualityProfileNotNil applies the NotNil predicate on the "quality_profile" field.
+func QualityProfileNotNil() predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldNotNull(FieldQualityProfile))
+}
+
+// QualityProfileEqualFold applies the EqualFold predicate on the "quality_profile" field.
+func QualityProfileEqualFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEqualFold(FieldQualityProfile, v))
+}
+
+// QualityProfileContainsFold applies the ContainsFold predicate on the "quality_profile" field.
+func QualityProfileContainsFold(v string) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldContainsFold(FieldQualityProfile, v))
+}
+
+// MonitoredEQ applies the EQ predicate on the "monitored" field.
+func MonitoredEQ(v bool) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldEQ(FieldMonitored, v))
+}
+
+// MonitoredNEQ applies the NEQ predicate on the "monitored" field.
+func MonitoredNEQ(v bool) predicate.ImportScanFile {
+	return predicate.ImportScanFile(sql.FieldNEQ(FieldMonitored, v))
 }
 
 // ParsedTitleEQ applies the EQ predicate on the "parsed_title" field.

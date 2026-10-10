@@ -206,6 +206,98 @@ func (_u *ImportScanShowUpdate) AddFileCount(v int16) *ImportScanShowUpdate {
 	return _u
 }
 
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *ImportScanShowUpdate) SetQualityProfile(v string) *ImportScanShowUpdate {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *ImportScanShowUpdate) SetNillableQualityProfile(v *string) *ImportScanShowUpdate {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *ImportScanShowUpdate) ClearQualityProfile() *ImportScanShowUpdate {
+	_u.mutation.ClearQualityProfile()
+	return _u
+}
+
+// SetMonitored sets the "monitored" field.
+func (_u *ImportScanShowUpdate) SetMonitored(v bool) *ImportScanShowUpdate {
+	_u.mutation.SetMonitored(v)
+	return _u
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_u *ImportScanShowUpdate) SetNillableMonitored(v *bool) *ImportScanShowUpdate {
+	if v != nil {
+		_u.SetMonitored(*v)
+	}
+	return _u
+}
+
+// SetSeriesType sets the "series_type" field.
+func (_u *ImportScanShowUpdate) SetSeriesType(v string) *ImportScanShowUpdate {
+	_u.mutation.SetSeriesType(v)
+	return _u
+}
+
+// SetNillableSeriesType sets the "series_type" field if the given value is not nil.
+func (_u *ImportScanShowUpdate) SetNillableSeriesType(v *string) *ImportScanShowUpdate {
+	if v != nil {
+		_u.SetSeriesType(*v)
+	}
+	return _u
+}
+
+// ClearSeriesType clears the value of the "series_type" field.
+func (_u *ImportScanShowUpdate) ClearSeriesType() *ImportScanShowUpdate {
+	_u.mutation.ClearSeriesType()
+	return _u
+}
+
+// SetMonitoring sets the "monitoring" field.
+func (_u *ImportScanShowUpdate) SetMonitoring(v schema.ShowMonitoring) *ImportScanShowUpdate {
+	_u.mutation.SetMonitoring(v)
+	return _u
+}
+
+// SetNillableMonitoring sets the "monitoring" field if the given value is not nil.
+func (_u *ImportScanShowUpdate) SetNillableMonitoring(v *schema.ShowMonitoring) *ImportScanShowUpdate {
+	if v != nil {
+		_u.SetMonitoring(*v)
+	}
+	return _u
+}
+
+// ClearMonitoring clears the value of the "monitoring" field.
+func (_u *ImportScanShowUpdate) ClearMonitoring() *ImportScanShowUpdate {
+	_u.mutation.ClearMonitoring()
+	return _u
+}
+
+// SetSourceFiles sets the "source_files" field.
+func (_u *ImportScanShowUpdate) SetSourceFiles(v []schema.SourceEpisodeFile) *ImportScanShowUpdate {
+	_u.mutation.SetSourceFiles(v)
+	return _u
+}
+
+// AppendSourceFiles appends value to the "source_files" field.
+func (_u *ImportScanShowUpdate) AppendSourceFiles(v []schema.SourceEpisodeFile) *ImportScanShowUpdate {
+	_u.mutation.AppendSourceFiles(v)
+	return _u
+}
+
+// ClearSourceFiles clears the value of the "source_files" field.
+func (_u *ImportScanShowUpdate) ClearSourceFiles() *ImportScanShowUpdate {
+	_u.mutation.ClearSourceFiles()
+	return _u
+}
+
 // SetDecision sets the "decision" field.
 func (_u *ImportScanShowUpdate) SetDecision(v importscanshow.Decision) *ImportScanShowUpdate {
 	_u.mutation.SetDecision(v)
@@ -471,6 +563,38 @@ func (_u *ImportScanShowUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if value, ok := _u.mutation.AddedFileCount(); ok {
 		_spec.AddField(importscanshow.FieldFileCount, field.TypeUint16, value)
 	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanshow.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(importscanshow.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitored(); ok {
+		_spec.SetField(importscanshow.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SeriesType(); ok {
+		_spec.SetField(importscanshow.FieldSeriesType, field.TypeString, value)
+	}
+	if _u.mutation.SeriesTypeCleared() {
+		_spec.ClearField(importscanshow.FieldSeriesType, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitoring(); ok {
+		_spec.SetField(importscanshow.FieldMonitoring, field.TypeJSON, value)
+	}
+	if _u.mutation.MonitoringCleared() {
+		_spec.ClearField(importscanshow.FieldMonitoring, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SourceFiles(); ok {
+		_spec.SetField(importscanshow.FieldSourceFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSourceFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, importscanshow.FieldSourceFiles, value)
+		})
+	}
+	if _u.mutation.SourceFilesCleared() {
+		_spec.ClearField(importscanshow.FieldSourceFiles, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Decision(); ok {
 		_spec.SetField(importscanshow.FieldDecision, field.TypeEnum, value)
 	}
@@ -723,6 +847,98 @@ func (_u *ImportScanShowUpdateOne) SetNillableFileCount(v *uint16) *ImportScanSh
 // AddFileCount adds value to the "file_count" field.
 func (_u *ImportScanShowUpdateOne) AddFileCount(v int16) *ImportScanShowUpdateOne {
 	_u.mutation.AddFileCount(v)
+	return _u
+}
+
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *ImportScanShowUpdateOne) SetQualityProfile(v string) *ImportScanShowUpdateOne {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *ImportScanShowUpdateOne) SetNillableQualityProfile(v *string) *ImportScanShowUpdateOne {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *ImportScanShowUpdateOne) ClearQualityProfile() *ImportScanShowUpdateOne {
+	_u.mutation.ClearQualityProfile()
+	return _u
+}
+
+// SetMonitored sets the "monitored" field.
+func (_u *ImportScanShowUpdateOne) SetMonitored(v bool) *ImportScanShowUpdateOne {
+	_u.mutation.SetMonitored(v)
+	return _u
+}
+
+// SetNillableMonitored sets the "monitored" field if the given value is not nil.
+func (_u *ImportScanShowUpdateOne) SetNillableMonitored(v *bool) *ImportScanShowUpdateOne {
+	if v != nil {
+		_u.SetMonitored(*v)
+	}
+	return _u
+}
+
+// SetSeriesType sets the "series_type" field.
+func (_u *ImportScanShowUpdateOne) SetSeriesType(v string) *ImportScanShowUpdateOne {
+	_u.mutation.SetSeriesType(v)
+	return _u
+}
+
+// SetNillableSeriesType sets the "series_type" field if the given value is not nil.
+func (_u *ImportScanShowUpdateOne) SetNillableSeriesType(v *string) *ImportScanShowUpdateOne {
+	if v != nil {
+		_u.SetSeriesType(*v)
+	}
+	return _u
+}
+
+// ClearSeriesType clears the value of the "series_type" field.
+func (_u *ImportScanShowUpdateOne) ClearSeriesType() *ImportScanShowUpdateOne {
+	_u.mutation.ClearSeriesType()
+	return _u
+}
+
+// SetMonitoring sets the "monitoring" field.
+func (_u *ImportScanShowUpdateOne) SetMonitoring(v schema.ShowMonitoring) *ImportScanShowUpdateOne {
+	_u.mutation.SetMonitoring(v)
+	return _u
+}
+
+// SetNillableMonitoring sets the "monitoring" field if the given value is not nil.
+func (_u *ImportScanShowUpdateOne) SetNillableMonitoring(v *schema.ShowMonitoring) *ImportScanShowUpdateOne {
+	if v != nil {
+		_u.SetMonitoring(*v)
+	}
+	return _u
+}
+
+// ClearMonitoring clears the value of the "monitoring" field.
+func (_u *ImportScanShowUpdateOne) ClearMonitoring() *ImportScanShowUpdateOne {
+	_u.mutation.ClearMonitoring()
+	return _u
+}
+
+// SetSourceFiles sets the "source_files" field.
+func (_u *ImportScanShowUpdateOne) SetSourceFiles(v []schema.SourceEpisodeFile) *ImportScanShowUpdateOne {
+	_u.mutation.SetSourceFiles(v)
+	return _u
+}
+
+// AppendSourceFiles appends value to the "source_files" field.
+func (_u *ImportScanShowUpdateOne) AppendSourceFiles(v []schema.SourceEpisodeFile) *ImportScanShowUpdateOne {
+	_u.mutation.AppendSourceFiles(v)
+	return _u
+}
+
+// ClearSourceFiles clears the value of the "source_files" field.
+func (_u *ImportScanShowUpdateOne) ClearSourceFiles() *ImportScanShowUpdateOne {
+	_u.mutation.ClearSourceFiles()
 	return _u
 }
 
@@ -1020,6 +1236,38 @@ func (_u *ImportScanShowUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 	}
 	if value, ok := _u.mutation.AddedFileCount(); ok {
 		_spec.AddField(importscanshow.FieldFileCount, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(importscanshow.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(importscanshow.FieldQualityProfile, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitored(); ok {
+		_spec.SetField(importscanshow.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SeriesType(); ok {
+		_spec.SetField(importscanshow.FieldSeriesType, field.TypeString, value)
+	}
+	if _u.mutation.SeriesTypeCleared() {
+		_spec.ClearField(importscanshow.FieldSeriesType, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitoring(); ok {
+		_spec.SetField(importscanshow.FieldMonitoring, field.TypeJSON, value)
+	}
+	if _u.mutation.MonitoringCleared() {
+		_spec.ClearField(importscanshow.FieldMonitoring, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.SourceFiles(); ok {
+		_spec.SetField(importscanshow.FieldSourceFiles, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSourceFiles(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, importscanshow.FieldSourceFiles, value)
+		})
+	}
+	if _u.mutation.SourceFilesCleared() {
+		_spec.ClearField(importscanshow.FieldSourceFiles, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
 		_spec.SetField(importscanshow.FieldDecision, field.TypeEnum, value)

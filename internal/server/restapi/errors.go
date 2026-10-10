@@ -152,6 +152,21 @@ func errRateLimited(err error) RateLimitedJSONResponse {
 	}
 }
 
+// codeMigrationRejected marks a 422 from the Radarr/Sonarr migration routes
+// whose message names what to fix — a mapping that does not resolve, a name
+// already taken, a missing secret. Without a code the SPA shows its generic
+// "some of those values weren't accepted" and the operator cannot tell which.
+const codeMigrationRejected = "migration_rejected"
+
+// errMigrationRejected is errUnprocessable for a refused migration step. Only
+// messages built from the caller's own input reach it — a config write is
+// first sorted by migrationWriteRejected, since a write fault's text names
+// the server's config path.
+func errMigrationRejected(msg string) UnprocessableEntityJSONResponse {
+	code := codeMigrationRejected
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
 // codeWorkerUnavailable marks a 409 from POST /transcoding/scan raised because
 // the worker cannot run (ffmpeg disabled or not found), as opposed to the
 // plain 409 for a scan already in flight. The SPA reads both scan 409s as

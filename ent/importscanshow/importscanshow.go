@@ -35,6 +35,16 @@ const (
 	FieldExistingTvshowID = "existing_tvshow_id"
 	// FieldFileCount holds the string denoting the file_count field in the database.
 	FieldFileCount = "file_count"
+	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
+	FieldQualityProfile = "quality_profile"
+	// FieldMonitored holds the string denoting the monitored field in the database.
+	FieldMonitored = "monitored"
+	// FieldSeriesType holds the string denoting the series_type field in the database.
+	FieldSeriesType = "series_type"
+	// FieldMonitoring holds the string denoting the monitoring field in the database.
+	FieldMonitoring = "monitoring"
+	// FieldSourceFiles holds the string denoting the source_files field in the database.
+	FieldSourceFiles = "source_files"
 	// FieldDecision holds the string denoting the decision field in the database.
 	FieldDecision = "decision"
 	// FieldDecisionTvdbID holds the string denoting the decision_tvdb_id field in the database.
@@ -71,6 +81,11 @@ var Columns = []string{
 	FieldCandidates,
 	FieldExistingTvshowID,
 	FieldFileCount,
+	FieldQualityProfile,
+	FieldMonitored,
+	FieldSeriesType,
+	FieldMonitoring,
+	FieldSourceFiles,
 	FieldDecision,
 	FieldDecisionTvdbID,
 	FieldOutcome,
@@ -110,6 +125,8 @@ var (
 	FolderPathValidator func(string) error
 	// DefaultFileCount holds the default value on creation for the "file_count" field.
 	DefaultFileCount uint16
+	// DefaultMonitored holds the default value on creation for the "monitored" field.
+	DefaultMonitored bool
 )
 
 // Classification defines the type for the "classification" enum field.
@@ -246,6 +263,21 @@ func ByExistingTvshowID(opts ...sql.OrderTermOption) OrderOption {
 // ByFileCount orders the results by the file_count field.
 func ByFileCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFileCount, opts...).ToFunc()
+}
+
+// ByQualityProfile orders the results by the quality_profile field.
+func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
+}
+
+// ByMonitored orders the results by the monitored field.
+func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
+}
+
+// BySeriesType orders the results by the series_type field.
+func BySeriesType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSeriesType, opts...).ToFunc()
 }
 
 // ByDecision orders the results by the decision field.

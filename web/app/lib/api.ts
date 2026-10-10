@@ -112,6 +112,10 @@ export function errorText(err: unknown, fallback?: string): string {
 		// A 429 that says how long to wait: the sentence says it too (a login,
 		// a Hardcover add or approve).
 		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter);
+		// And for a Radarr/Sonarr migration the server refused: the message names
+		// the root mapping that does not resolve or the profile/indexer/client
+		// name that collides, which is the one thing the operator has to change.
+		if (code === "migration_rejected" && err.message) return err.message;
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}
