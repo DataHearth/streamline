@@ -104,5 +104,10 @@ var _ = Describe("Tracker", Label("unit"), func() {
 			strings.Repeat("a", 100),
 			strings.Repeat("a", clientMaxLen),
 		),
+		Entry(
+			"cuts multibyte names at the byte limit on a rune boundary",
+			strings.Repeat("日", 30),
+			strings.Repeat("日", 21),
+		),
 	)
 })

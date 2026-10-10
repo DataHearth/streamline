@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -120,8 +121,9 @@ func sanitizeClient(s string) string {
 		}
 		return r
 	}, strings.TrimSpace(s))
-	if runes := []rune(s); len(runes) > clientMaxLen {
-		s = string(runes[:clientMaxLen])
+	for len(s) > clientMaxLen {
+		_, size := utf8.DecodeLastRuneInString(s)
+		s = s[:len(s)-size]
 	}
 	return s
 }
