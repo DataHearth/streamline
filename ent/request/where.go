@@ -315,36 +315,6 @@ func MediaMbidContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldMediaMbid, v))
 }
 
-// BookKindEQ applies the EQ predicate on the "book_kind" field.
-func BookKindEQ(v BookKind) predicate.Request {
-	return predicate.Request(sql.FieldEQ(FieldBookKind, v))
-}
-
-// BookKindNEQ applies the NEQ predicate on the "book_kind" field.
-func BookKindNEQ(v BookKind) predicate.Request {
-	return predicate.Request(sql.FieldNEQ(FieldBookKind, v))
-}
-
-// BookKindIn applies the In predicate on the "book_kind" field.
-func BookKindIn(vs ...BookKind) predicate.Request {
-	return predicate.Request(sql.FieldIn(FieldBookKind, vs...))
-}
-
-// BookKindNotIn applies the NotIn predicate on the "book_kind" field.
-func BookKindNotIn(vs ...BookKind) predicate.Request {
-	return predicate.Request(sql.FieldNotIn(FieldBookKind, vs...))
-}
-
-// BookKindIsNil applies the IsNil predicate on the "book_kind" field.
-func BookKindIsNil() predicate.Request {
-	return predicate.Request(sql.FieldIsNull(FieldBookKind))
-}
-
-// BookKindNotNil applies the NotNil predicate on the "book_kind" field.
-func BookKindNotNil() predicate.Request {
-	return predicate.Request(sql.FieldNotNull(FieldBookKind))
-}
-
 // TitleEQ applies the EQ predicate on the "title" field.
 func TitleEQ(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldTitle, v))

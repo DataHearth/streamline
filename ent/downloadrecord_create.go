@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -358,6 +359,40 @@ func (_c *DownloadRecordCreate) SetBook(v *Book) *DownloadRecordCreate {
 	return _c.SetBookID(v.ID)
 }
 
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (_c *DownloadRecordCreate) SetArtistID(id uint32) *DownloadRecordCreate {
+	_c.mutation.SetArtistID(id)
+	return _c
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (_c *DownloadRecordCreate) SetNillableArtistID(id *uint32) *DownloadRecordCreate {
+	if id != nil {
+		_c = _c.SetArtistID(*id)
+	}
+	return _c
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (_c *DownloadRecordCreate) SetArtist(v *Artist) *DownloadRecordCreate {
+	return _c.SetArtistID(v.ID)
+}
+
+// AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
+func (_c *DownloadRecordCreate) AddAlbumIDs(ids ...uint32) *DownloadRecordCreate {
+	_c.mutation.AddAlbumIDs(ids...)
+	return _c
+}
+
+// AddAlbums adds the "albums" edges to the Album entity.
+func (_c *DownloadRecordCreate) AddAlbums(v ...*Album) *DownloadRecordCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAlbumIDs(ids...)
+}
+
 // SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
 func (_c *DownloadRecordCreate) SetAnchorEpisodeID(id uint32) *DownloadRecordCreate {
 	_c.mutation.SetAnchorEpisodeID(id)
@@ -673,6 +708,39 @@ func (_c *DownloadRecordCreate) createSpec() (*DownloadRecord, *sqlgraph.CreateS
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.book_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.ArtistTable,
+			Columns: []string{downloadrecord.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.artist_download_records = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AnchorEpisodeIDs(); len(nodes) > 0 {

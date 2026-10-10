@@ -3,7 +3,6 @@
 package author
 
 import (
-	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -25,33 +24,19 @@ const (
 	FieldName = "name"
 	// FieldSortName holds the string denoting the sort_name field in the database.
 	FieldSortName = "sort_name"
-	// FieldOverview holds the string denoting the overview field in the database.
-	FieldOverview = "overview"
-	// FieldMonitored holds the string denoting the monitored field in the database.
-	FieldMonitored = "monitored"
-	// FieldFolder holds the string denoting the folder field in the database.
-	FieldFolder = "folder"
-	// FieldMonitorPolicy holds the string denoting the monitor_policy field in the database.
-	FieldMonitorPolicy = "monitor_policy"
-	// FieldWantKinds holds the string denoting the want_kinds field in the database.
-	FieldWantKinds = "want_kinds"
-	// FieldEbookQualityProfile holds the string denoting the ebook_quality_profile field in the database.
-	FieldEbookQualityProfile = "ebook_quality_profile"
-	// FieldAudiobookQualityProfile holds the string denoting the audiobook_quality_profile field in the database.
-	FieldAudiobookQualityProfile = "audiobook_quality_profile"
-	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
-	FieldLastRefreshedAt = "last_refreshed_at"
-	// EdgeBooks holds the string denoting the books edge name in mutations.
-	EdgeBooks = "books"
+	// FieldImageSource holds the string denoting the image_source field in the database.
+	FieldImageSource = "image_source"
+	// EdgeContributions holds the string denoting the contributions edge name in mutations.
+	EdgeContributions = "contributions"
 	// Table holds the table name of the author in the database.
 	Table = "authors"
-	// BooksTable is the table that holds the books relation/edge.
-	BooksTable = "books"
-	// BooksInverseTable is the table name for the Book entity.
-	// It exists in this package in order to avoid circular dependency with the "book" package.
-	BooksInverseTable = "books"
-	// BooksColumn is the table column denoting the books relation/edge.
-	BooksColumn = "author_books"
+	// ContributionsTable is the table that holds the contributions relation/edge.
+	ContributionsTable = "book_contributions"
+	// ContributionsInverseTable is the table name for the BookContribution entity.
+	// It exists in this package in order to avoid circular dependency with the "bookcontribution" package.
+	ContributionsInverseTable = "book_contributions"
+	// ContributionsColumn is the table column denoting the contributions relation/edge.
+	ContributionsColumn = "author_contributions"
 )
 
 // Columns holds all SQL columns for author fields.
@@ -62,14 +47,7 @@ var Columns = []string{
 	FieldHardcoverID,
 	FieldName,
 	FieldSortName,
-	FieldOverview,
-	FieldMonitored,
-	FieldFolder,
-	FieldMonitorPolicy,
-	FieldWantKinds,
-	FieldEbookQualityProfile,
-	FieldAudiobookQualityProfile,
-	FieldLastRefreshedAt,
+	FieldImageSource,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -91,63 +69,7 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultMonitored holds the default value on creation for the "monitored" field.
-	DefaultMonitored bool
 )
-
-// MonitorPolicy defines the type for the "monitor_policy" enum field.
-type MonitorPolicy string
-
-// MonitorPolicyAll is the default value of the MonitorPolicy enum.
-const DefaultMonitorPolicy = MonitorPolicyAll
-
-// MonitorPolicy values.
-const (
-	MonitorPolicyAll    MonitorPolicy = "all"
-	MonitorPolicyFuture MonitorPolicy = "future"
-	MonitorPolicyNone   MonitorPolicy = "none"
-)
-
-func (mp MonitorPolicy) String() string {
-	return string(mp)
-}
-
-// MonitorPolicyValidator is a validator for the "monitor_policy" field enum values. It is called by the builders before save.
-func MonitorPolicyValidator(mp MonitorPolicy) error {
-	switch mp {
-	case MonitorPolicyAll, MonitorPolicyFuture, MonitorPolicyNone:
-		return nil
-	default:
-		return fmt.Errorf("author: invalid enum value for monitor_policy field: %q", mp)
-	}
-}
-
-// WantKinds defines the type for the "want_kinds" enum field.
-type WantKinds string
-
-// WantKindsEbook is the default value of the WantKinds enum.
-const DefaultWantKinds = WantKindsEbook
-
-// WantKinds values.
-const (
-	WantKindsEbook     WantKinds = "ebook"
-	WantKindsAudiobook WantKinds = "audiobook"
-	WantKindsBoth      WantKinds = "both"
-)
-
-func (wk WantKinds) String() string {
-	return string(wk)
-}
-
-// WantKindsValidator is a validator for the "want_kinds" field enum values. It is called by the builders before save.
-func WantKindsValidator(wk WantKinds) error {
-	switch wk {
-	case WantKindsEbook, WantKindsAudiobook, WantKindsBoth:
-		return nil
-	default:
-		return fmt.Errorf("author: invalid enum value for want_kinds field: %q", wk)
-	}
-}
 
 // OrderOption defines the ordering options for the Author queries.
 type OrderOption func(*sql.Selector)
@@ -182,63 +104,28 @@ func BySortName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSortName, opts...).ToFunc()
 }
 
-// ByOverview orders the results by the overview field.
-func ByOverview(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOverview, opts...).ToFunc()
+// ByImageSource orders the results by the image_source field.
+func ByImageSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldImageSource, opts...).ToFunc()
 }
 
-// ByMonitored orders the results by the monitored field.
-func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
-}
-
-// ByFolder orders the results by the folder field.
-func ByFolder(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFolder, opts...).ToFunc()
-}
-
-// ByMonitorPolicy orders the results by the monitor_policy field.
-func ByMonitorPolicy(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMonitorPolicy, opts...).ToFunc()
-}
-
-// ByWantKinds orders the results by the want_kinds field.
-func ByWantKinds(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldWantKinds, opts...).ToFunc()
-}
-
-// ByEbookQualityProfile orders the results by the ebook_quality_profile field.
-func ByEbookQualityProfile(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEbookQualityProfile, opts...).ToFunc()
-}
-
-// ByAudiobookQualityProfile orders the results by the audiobook_quality_profile field.
-func ByAudiobookQualityProfile(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAudiobookQualityProfile, opts...).ToFunc()
-}
-
-// ByLastRefreshedAt orders the results by the last_refreshed_at field.
-func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
-}
-
-// ByBooksCount orders the results by books count.
-func ByBooksCount(opts ...sql.OrderTermOption) OrderOption {
+// ByContributionsCount orders the results by contributions count.
+func ByContributionsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newBooksStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newContributionsStep(), opts...)
 	}
 }
 
-// ByBooks orders the results by books terms.
-func ByBooks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByContributions orders the results by contributions terms.
+func ByContributions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newBooksStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newContributionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-func newBooksStep() *sqlgraph.Step {
+func newContributionsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(BooksInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, BooksTable, BooksColumn),
+		sqlgraph.To(ContributionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ContributionsTable, ContributionsColumn),
 	)
 }

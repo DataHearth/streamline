@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/author"
-	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
 )
 
 // AuthorCreate is the builder for creating a Author entity.
@@ -75,114 +75,16 @@ func (_c *AuthorCreate) SetNillableSortName(v *string) *AuthorCreate {
 	return _c
 }
 
-// SetOverview sets the "overview" field.
-func (_c *AuthorCreate) SetOverview(v string) *AuthorCreate {
-	_c.mutation.SetOverview(v)
+// SetImageSource sets the "image_source" field.
+func (_c *AuthorCreate) SetImageSource(v string) *AuthorCreate {
+	_c.mutation.SetImageSource(v)
 	return _c
 }
 
-// SetNillableOverview sets the "overview" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableOverview(v *string) *AuthorCreate {
+// SetNillableImageSource sets the "image_source" field if the given value is not nil.
+func (_c *AuthorCreate) SetNillableImageSource(v *string) *AuthorCreate {
 	if v != nil {
-		_c.SetOverview(*v)
-	}
-	return _c
-}
-
-// SetMonitored sets the "monitored" field.
-func (_c *AuthorCreate) SetMonitored(v bool) *AuthorCreate {
-	_c.mutation.SetMonitored(v)
-	return _c
-}
-
-// SetNillableMonitored sets the "monitored" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableMonitored(v *bool) *AuthorCreate {
-	if v != nil {
-		_c.SetMonitored(*v)
-	}
-	return _c
-}
-
-// SetFolder sets the "folder" field.
-func (_c *AuthorCreate) SetFolder(v string) *AuthorCreate {
-	_c.mutation.SetFolder(v)
-	return _c
-}
-
-// SetNillableFolder sets the "folder" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableFolder(v *string) *AuthorCreate {
-	if v != nil {
-		_c.SetFolder(*v)
-	}
-	return _c
-}
-
-// SetMonitorPolicy sets the "monitor_policy" field.
-func (_c *AuthorCreate) SetMonitorPolicy(v author.MonitorPolicy) *AuthorCreate {
-	_c.mutation.SetMonitorPolicy(v)
-	return _c
-}
-
-// SetNillableMonitorPolicy sets the "monitor_policy" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableMonitorPolicy(v *author.MonitorPolicy) *AuthorCreate {
-	if v != nil {
-		_c.SetMonitorPolicy(*v)
-	}
-	return _c
-}
-
-// SetWantKinds sets the "want_kinds" field.
-func (_c *AuthorCreate) SetWantKinds(v author.WantKinds) *AuthorCreate {
-	_c.mutation.SetWantKinds(v)
-	return _c
-}
-
-// SetNillableWantKinds sets the "want_kinds" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableWantKinds(v *author.WantKinds) *AuthorCreate {
-	if v != nil {
-		_c.SetWantKinds(*v)
-	}
-	return _c
-}
-
-// SetEbookQualityProfile sets the "ebook_quality_profile" field.
-func (_c *AuthorCreate) SetEbookQualityProfile(v string) *AuthorCreate {
-	_c.mutation.SetEbookQualityProfile(v)
-	return _c
-}
-
-// SetNillableEbookQualityProfile sets the "ebook_quality_profile" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableEbookQualityProfile(v *string) *AuthorCreate {
-	if v != nil {
-		_c.SetEbookQualityProfile(*v)
-	}
-	return _c
-}
-
-// SetAudiobookQualityProfile sets the "audiobook_quality_profile" field.
-func (_c *AuthorCreate) SetAudiobookQualityProfile(v string) *AuthorCreate {
-	_c.mutation.SetAudiobookQualityProfile(v)
-	return _c
-}
-
-// SetNillableAudiobookQualityProfile sets the "audiobook_quality_profile" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableAudiobookQualityProfile(v *string) *AuthorCreate {
-	if v != nil {
-		_c.SetAudiobookQualityProfile(*v)
-	}
-	return _c
-}
-
-// SetLastRefreshedAt sets the "last_refreshed_at" field.
-func (_c *AuthorCreate) SetLastRefreshedAt(v time.Time) *AuthorCreate {
-	_c.mutation.SetLastRefreshedAt(v)
-	return _c
-}
-
-// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
-func (_c *AuthorCreate) SetNillableLastRefreshedAt(v *time.Time) *AuthorCreate {
-	if v != nil {
-		_c.SetLastRefreshedAt(*v)
+		_c.SetImageSource(*v)
 	}
 	return _c
 }
@@ -193,19 +95,19 @@ func (_c *AuthorCreate) SetID(v uint32) *AuthorCreate {
 	return _c
 }
 
-// AddBookIDs adds the "books" edge to the Book entity by IDs.
-func (_c *AuthorCreate) AddBookIDs(ids ...uint32) *AuthorCreate {
-	_c.mutation.AddBookIDs(ids...)
+// AddContributionIDs adds the "contributions" edge to the BookContribution entity by IDs.
+func (_c *AuthorCreate) AddContributionIDs(ids ...uint32) *AuthorCreate {
+	_c.mutation.AddContributionIDs(ids...)
 	return _c
 }
 
-// AddBooks adds the "books" edges to the Book entity.
-func (_c *AuthorCreate) AddBooks(v ...*Book) *AuthorCreate {
+// AddContributions adds the "contributions" edges to the BookContribution entity.
+func (_c *AuthorCreate) AddContributions(v ...*BookContribution) *AuthorCreate {
 	ids := make([]uint32, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddBookIDs(ids...)
+	return _c.AddContributionIDs(ids...)
 }
 
 // Mutation returns the AuthorMutation object of the builder.
@@ -251,18 +153,6 @@ func (_c *AuthorCreate) defaults() {
 		v := author.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
-	if _, ok := _c.mutation.Monitored(); !ok {
-		v := author.DefaultMonitored
-		_c.mutation.SetMonitored(v)
-	}
-	if _, ok := _c.mutation.MonitorPolicy(); !ok {
-		v := author.DefaultMonitorPolicy
-		_c.mutation.SetMonitorPolicy(v)
-	}
-	if _, ok := _c.mutation.WantKinds(); !ok {
-		v := author.DefaultWantKinds
-		_c.mutation.SetWantKinds(v)
-	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -282,25 +172,6 @@ func (_c *AuthorCreate) check() error {
 	if v, ok := _c.mutation.Name(); ok {
 		if err := author.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Author.name": %w`, err)}
-		}
-	}
-	if _, ok := _c.mutation.Monitored(); !ok {
-		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "Author.monitored"`)}
-	}
-	if _, ok := _c.mutation.MonitorPolicy(); !ok {
-		return &ValidationError{Name: "monitor_policy", err: errors.New(`ent: missing required field "Author.monitor_policy"`)}
-	}
-	if v, ok := _c.mutation.MonitorPolicy(); ok {
-		if err := author.MonitorPolicyValidator(v); err != nil {
-			return &ValidationError{Name: "monitor_policy", err: fmt.Errorf(`ent: validator failed for field "Author.monitor_policy": %w`, err)}
-		}
-	}
-	if _, ok := _c.mutation.WantKinds(); !ok {
-		return &ValidationError{Name: "want_kinds", err: errors.New(`ent: missing required field "Author.want_kinds"`)}
-	}
-	if v, ok := _c.mutation.WantKinds(); ok {
-		if err := author.WantKindsValidator(v); err != nil {
-			return &ValidationError{Name: "want_kinds", err: fmt.Errorf(`ent: validator failed for field "Author.want_kinds": %w`, err)}
 		}
 	}
 	return nil
@@ -355,47 +226,19 @@ func (_c *AuthorCreate) createSpec() (*Author, *sqlgraph.CreateSpec) {
 		_spec.SetField(author.FieldSortName, field.TypeString, value)
 		_node.SortName = value
 	}
-	if value, ok := _c.mutation.Overview(); ok {
-		_spec.SetField(author.FieldOverview, field.TypeString, value)
-		_node.Overview = value
+	if value, ok := _c.mutation.ImageSource(); ok {
+		_spec.SetField(author.FieldImageSource, field.TypeString, value)
+		_node.ImageSource = value
 	}
-	if value, ok := _c.mutation.Monitored(); ok {
-		_spec.SetField(author.FieldMonitored, field.TypeBool, value)
-		_node.Monitored = value
-	}
-	if value, ok := _c.mutation.Folder(); ok {
-		_spec.SetField(author.FieldFolder, field.TypeString, value)
-		_node.Folder = value
-	}
-	if value, ok := _c.mutation.MonitorPolicy(); ok {
-		_spec.SetField(author.FieldMonitorPolicy, field.TypeEnum, value)
-		_node.MonitorPolicy = value
-	}
-	if value, ok := _c.mutation.WantKinds(); ok {
-		_spec.SetField(author.FieldWantKinds, field.TypeEnum, value)
-		_node.WantKinds = value
-	}
-	if value, ok := _c.mutation.EbookQualityProfile(); ok {
-		_spec.SetField(author.FieldEbookQualityProfile, field.TypeString, value)
-		_node.EbookQualityProfile = value
-	}
-	if value, ok := _c.mutation.AudiobookQualityProfile(); ok {
-		_spec.SetField(author.FieldAudiobookQualityProfile, field.TypeString, value)
-		_node.AudiobookQualityProfile = value
-	}
-	if value, ok := _c.mutation.LastRefreshedAt(); ok {
-		_spec.SetField(author.FieldLastRefreshedAt, field.TypeTime, value)
-		_node.LastRefreshedAt = &value
-	}
-	if nodes := _c.mutation.BooksIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ContributionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   author.BooksTable,
-			Columns: []string{author.BooksColumn},
+			Table:   author.ContributionsTable,
+			Columns: []string{author.ContributionsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

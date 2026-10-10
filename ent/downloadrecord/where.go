@@ -1179,6 +1179,52 @@ func HasBookWith(preds ...predicate.Book) predicate.DownloadRecord {
 	})
 }
 
+// HasArtist applies the HasEdge predicate on the "artist" edge.
+func HasArtist() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ArtistTable, ArtistColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArtistWith applies the HasEdge predicate on the "artist" edge with a given conditions (other predicates).
+func HasArtistWith(preds ...predicate.Artist) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newArtistStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAlbums applies the HasEdge predicate on the "albums" edge.
+func HasAlbums() predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, AlbumsTable, AlbumsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlbumsWith applies the HasEdge predicate on the "albums" edge with a given conditions (other predicates).
+func HasAlbumsWith(preds ...predicate.Album) predicate.DownloadRecord {
+	return predicate.DownloadRecord(func(s *sql.Selector) {
+		step := newAlbumsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasAnchorEpisode applies the HasEdge predicate on the "anchor_episode" edge.
 func HasAnchorEpisode() predicate.DownloadRecord {
 	return predicate.DownloadRecord(func(s *sql.Selector) {

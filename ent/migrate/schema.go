@@ -24,6 +24,13 @@ var (
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "wanted"},
+		{Name: "label", Type: field.TypeString, Nullable: true},
+		{Name: "catalog_number", Type: field.TypeString, Nullable: true},
+		{Name: "country", Type: field.TypeString, Nullable: true},
+		{Name: "media", Type: field.TypeString, Nullable: true},
+		{Name: "studio", Type: field.TypeString, Nullable: true},
+		{Name: "metadata_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "credits_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "artist_albums", Type: field.TypeUint32},
 	}
 	// AlbumsTable holds the schema information for the "albums" table.
@@ -34,7 +41,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[13]},
+				Columns:    []*schema.Column{AlbumsColumns[20]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -43,12 +50,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[13]},
+				Columns: []*schema.Column{AlbumsColumns[20]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
 				Columns: []*schema.Column{AlbumsColumns[12]},
+			},
+			{
+				Name:    "album_metadata_fetched_at",
+				Unique:  false,
+				Columns: []*schema.Column{AlbumsColumns[18]},
 			},
 		},
 	}
@@ -97,16 +109,67 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "sort_name", Type: field.TypeString, Nullable: true},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
-		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "overview_source", Type: field.TypeString, Nullable: true},
+		{Name: "overview_fr", Type: field.TypeString, Nullable: true},
+		{Name: "overview_source_fr", Type: field.TypeString, Nullable: true},
+		{Name: "monitor", Type: field.TypeEnum, Enums: []string{"all", "future", "manual", "none"}, Default: "all"},
+		{Name: "type", Type: field.TypeEnum, Nullable: true, Enums: []string{"group", "person"}},
+		{Name: "origin", Type: field.TypeString, Nullable: true},
+		{Name: "since", Type: field.TypeUint16, Nullable: true},
+		{Name: "genre", Type: field.TypeString, Nullable: true},
+		{Name: "deezer_id", Type: field.TypeUint32, Nullable: true},
+		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
 		{Name: "path", Type: field.TypeString, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "details_fetched_at", Type: field.TypeTime, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
 		Name:       "artists",
 		Columns:    ArtistsColumns,
 		PrimaryKey: []*schema.Column{ArtistsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "artist_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{ArtistsColumns[1]},
+			},
+		},
+	}
+	// ArtistMembersColumns holds the columns for the "artist_members" table.
+	ArtistMembersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "mbid", Type: field.TypeString, Nullable: true},
+		{Name: "instruments", Type: field.TypeString, Nullable: true},
+		{Name: "from_year", Type: field.TypeUint16, Nullable: true},
+		{Name: "to_year", Type: field.TypeUint16, Nullable: true},
+		{Name: "ordinal", Type: field.TypeUint16},
+		{Name: "artist_members", Type: field.TypeUint32},
+	}
+	// ArtistMembersTable holds the schema information for the "artist_members" table.
+	ArtistMembersTable = &schema.Table{
+		Name:       "artist_members",
+		Columns:    ArtistMembersColumns,
+		PrimaryKey: []*schema.Column{ArtistMembersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "artist_members_artists_members",
+				Columns:    []*schema.Column{ArtistMembersColumns[9]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "artistmember_artist_members",
+				Unique:  false,
+				Columns: []*schema.Column{ArtistMembersColumns[9]},
+			},
+		},
 	}
 	// AuthorsColumns holds the columns for the "authors" table.
 	AuthorsColumns = []*schema.Column{
@@ -116,20 +179,20 @@ var (
 		{Name: "hardcover_id", Type: field.TypeUint32, Unique: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "sort_name", Type: field.TypeString, Nullable: true},
-		{Name: "overview", Type: field.TypeString, Nullable: true},
-		{Name: "monitored", Type: field.TypeBool, Default: true},
-		{Name: "folder", Type: field.TypeString, Nullable: true},
-		{Name: "monitor_policy", Type: field.TypeEnum, Enums: []string{"all", "future", "none"}, Default: "all"},
-		{Name: "want_kinds", Type: field.TypeEnum, Enums: []string{"ebook", "audiobook", "both"}, Default: "ebook"},
-		{Name: "ebook_quality_profile", Type: field.TypeString, Nullable: true},
-		{Name: "audiobook_quality_profile", Type: field.TypeString, Nullable: true},
-		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "image_source", Type: field.TypeString, Nullable: true},
 	}
 	// AuthorsTable holds the schema information for the "authors" table.
 	AuthorsTable = &schema.Table{
 		Name:       "authors",
 		Columns:    AuthorsColumns,
 		PrimaryKey: []*schema.Column{AuthorsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "author_name",
+				Unique:  false,
+				Columns: []*schema.Column{AuthorsColumns[4]},
+			},
+		},
 	}
 	// BooksColumns holds the columns for the "books" table.
 	BooksColumns = []*schema.Column{
@@ -138,20 +201,32 @@ var (
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "hardcover_id", Type: field.TypeUint32, Unique: true},
 		{Name: "title", Type: field.TypeString},
+		{Name: "original_title", Type: field.TypeString, Nullable: true},
 		{Name: "sort_title", Type: field.TypeString, Nullable: true},
+		{Name: "author_name", Type: field.TypeString, Nullable: true},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"novel", "bd", "comic", "manga"}, Default: "novel"},
+		{Name: "genre", Type: field.TypeString, Nullable: true},
+		{Name: "rating_tenths", Type: field.TypeUint8, Nullable: true},
+		{Name: "release_year", Type: field.TypeUint16, Nullable: true},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
-		{Name: "series_name", Type: field.TypeString, Nullable: true},
-		{Name: "series_position", Type: field.TypeString, Nullable: true},
+		{Name: "preferred_language", Type: field.TypeString, Default: "en"},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "series_position", Type: field.TypeFloat64, Nullable: true},
 		{Name: "ebook_monitored", Type: field.TypeBool, Default: false},
 		{Name: "ebook_status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "skipped"},
 		{Name: "ebook_grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "ebook_last_search_at", Type: field.TypeTime, Nullable: true},
+		{Name: "ebook_replacing_language", Type: field.TypeString, Nullable: true},
 		{Name: "audiobook_monitored", Type: field.TypeBool, Default: false},
 		{Name: "audiobook_status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "skipped"},
 		{Name: "audiobook_grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "audiobook_last_search_at", Type: field.TypeTime, Nullable: true},
-		{Name: "author_books", Type: field.TypeUint32},
+		{Name: "audiobook_replacing_language", Type: field.TypeString, Nullable: true},
+		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "book_ebook_edition", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_audiobook_edition", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_series_volumes", Type: field.TypeUint32, Nullable: true},
 	}
 	// BooksTable holds the schema information for the "books" table.
 	BooksTable = &schema.Table{
@@ -160,19 +235,180 @@ var (
 		PrimaryKey: []*schema.Column{BooksColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "books_authors_books",
-				Columns:    []*schema.Column{BooksColumns[18]},
-				RefColumns: []*schema.Column{AuthorsColumns[0]},
+				Symbol:     "books_book_editions_ebook_edition",
+				Columns:    []*schema.Column{BooksColumns[28]},
+				RefColumns: []*schema.Column{BookEditionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "books_book_editions_audiobook_edition",
+				Columns:    []*schema.Column{BooksColumns[29]},
+				RefColumns: []*schema.Column{BookEditionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "books_book_series_volumes",
+				Columns:    []*schema.Column{BooksColumns[30]},
+				RefColumns: []*schema.Column{BookSeriesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "book_author_books",
+				Name:    "book_book_series_volumes",
 				Unique:  false,
-				Columns: []*schema.Column{BooksColumns[18]},
+				Columns: []*schema.Column{BooksColumns[30]},
+			},
+			{
+				Name:    "book_series_position_book_series_volumes",
+				Unique:  false,
+				Columns: []*schema.Column{BooksColumns[16], BooksColumns[30]},
+			},
+			{
+				Name:    "book_kind",
+				Unique:  false,
+				Columns: []*schema.Column{BooksColumns[8]},
+			},
+			{
+				Name:    "book_author_name",
+				Unique:  false,
+				Columns: []*schema.Column{BooksColumns[7]},
 			},
 		},
+	}
+	// BookContributionsColumns holds the columns for the "book_contributions" table.
+	BookContributionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"author", "writer", "artist", "colorist", "cover", "translator", "narrator"}},
+		{Name: "language", Type: field.TypeString, Nullable: true},
+		{Name: "order", Type: field.TypeUint8, Default: 0},
+		{Name: "author_contributions", Type: field.TypeUint32},
+		{Name: "book_contributions", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_series_contributions", Type: field.TypeUint32, Nullable: true},
+	}
+	// BookContributionsTable holds the schema information for the "book_contributions" table.
+	BookContributionsTable = &schema.Table{
+		Name:       "book_contributions",
+		Columns:    BookContributionsColumns,
+		PrimaryKey: []*schema.Column{BookContributionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "book_contributions_authors_contributions",
+				Columns:    []*schema.Column{BookContributionsColumns[6]},
+				RefColumns: []*schema.Column{AuthorsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "book_contributions_books_contributions",
+				Columns:    []*schema.Column{BookContributionsColumns[7]},
+				RefColumns: []*schema.Column{BooksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "book_contributions_book_series_contributions",
+				Columns:    []*schema.Column{BookContributionsColumns[8]},
+				RefColumns: []*schema.Column{BookSeriesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "bookcontribution_author_contributions",
+				Unique:  false,
+				Columns: []*schema.Column{BookContributionsColumns[6]},
+			},
+			{
+				Name:    "bookcontribution_book_contributions",
+				Unique:  false,
+				Columns: []*schema.Column{BookContributionsColumns[7]},
+			},
+			{
+				Name:    "bookcontribution_book_series_contributions",
+				Unique:  false,
+				Columns: []*schema.Column{BookContributionsColumns[8]},
+			},
+		},
+	}
+	// BookEditionsColumns holds the columns for the "book_editions" table.
+	BookEditionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "hardcover_edition_id", Type: field.TypeUint32},
+		{Name: "language", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString},
+		{Name: "publisher", Type: field.TypeString, Default: ""},
+		{Name: "year", Type: field.TypeUint16, Default: 0},
+		{Name: "format", Type: field.TypeEnum, Enums: []string{"ebook", "audiobook"}},
+		{Name: "original", Type: field.TypeBool, Default: false},
+		{Name: "pages", Type: field.TypeUint16, Nullable: true},
+		{Name: "duration_seconds", Type: field.TypeUint32, Nullable: true},
+		{Name: "narrator", Type: field.TypeString, Nullable: true},
+		{Name: "translator", Type: field.TypeString, Nullable: true},
+		{Name: "isbn_13", Type: field.TypeString, Nullable: true},
+		{Name: "asin", Type: field.TypeString, Nullable: true},
+		{Name: "popularity", Type: field.TypeUint32, Default: 0},
+		{Name: "book_editions", Type: field.TypeUint32},
+	}
+	// BookEditionsTable holds the schema information for the "book_editions" table.
+	BookEditionsTable = &schema.Table{
+		Name:       "book_editions",
+		Columns:    BookEditionsColumns,
+		PrimaryKey: []*schema.Column{BookEditionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "book_editions_books_editions",
+				Columns:    []*schema.Column{BookEditionsColumns[17]},
+				RefColumns: []*schema.Column{BooksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "bookedition_hardcover_edition_id_book_editions",
+				Unique:  true,
+				Columns: []*schema.Column{BookEditionsColumns[3], BookEditionsColumns[17]},
+			},
+			{
+				Name:    "bookedition_language_format_publisher_book_editions",
+				Unique:  false,
+				Columns: []*schema.Column{BookEditionsColumns[4], BookEditionsColumns[8], BookEditionsColumns[6], BookEditionsColumns[17]},
+			},
+			{
+				Name:    "bookedition_isbn_13",
+				Unique:  false,
+				Columns: []*schema.Column{BookEditionsColumns[14]},
+			},
+		},
+	}
+	// BookSeriesColumns holds the columns for the "book_series" table.
+	BookSeriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "hardcover_id", Type: field.TypeUint32, Unique: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "original_title", Type: field.TypeString, Nullable: true},
+		{Name: "sort_title", Type: field.TypeString, Nullable: true},
+		{Name: "overview", Type: field.TypeString, Nullable: true},
+		{Name: "author_name", Type: field.TypeString, Nullable: true},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"novel", "bd", "comic", "manga"}, Default: "novel"},
+		{Name: "rating_tenths", Type: field.TypeUint8, Nullable: true},
+		{Name: "ongoing", Type: field.TypeBool, Default: false},
+		{Name: "since", Type: field.TypeUint16, Nullable: true},
+		{Name: "monitor", Type: field.TypeEnum, Enums: []string{"all", "future", "none"}, Default: "all"},
+		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
+		{Name: "edition_language", Type: field.TypeString, Nullable: true},
+		{Name: "edition_publisher", Type: field.TypeString, Nullable: true},
+		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+	}
+	// BookSeriesTable holds the schema information for the "book_series" table.
+	BookSeriesTable = &schema.Table{
+		Name:       "book_series",
+		Columns:    BookSeriesColumns,
+		PrimaryKey: []*schema.Column{BookSeriesColumns[0]},
 	}
 	// CreditsColumns holds the columns for the "credits" table.
 	CreditsColumns = []*schema.Column{
@@ -253,6 +489,7 @@ var (
 		{Name: "selection_state", Type: field.TypeEnum, Enums: []string{"pending", "applied", "unsupported", "skipped"}, Default: "skipped"},
 		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook"}},
 		{Name: "album_download_records", Type: field.TypeUint32, Nullable: true},
+		{Name: "artist_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "book_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_download_records", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_download_records", Type: field.TypeUint32, Nullable: true},
@@ -270,20 +507,26 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "download_records_books_download_records",
+				Symbol:     "download_records_artists_download_records",
 				Columns:    []*schema.Column{DownloadRecordsColumns[23]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "download_records_books_download_records",
+				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_episodes_anchored_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[24]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "download_records_movies_download_records",
-				Columns:    []*schema.Column{DownloadRecordsColumns[25]},
+				Columns:    []*schema.Column{DownloadRecordsColumns[26]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -312,12 +555,17 @@ var (
 			{
 				Name:    "downloadrecord_movie_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[25]},
+				Columns: []*schema.Column{DownloadRecordsColumns[26]},
 			},
 			{
 				Name:    "downloadrecord_episode_download_records",
 				Unique:  false,
-				Columns: []*schema.Column{DownloadRecordsColumns[24]},
+				Columns: []*schema.Column{DownloadRecordsColumns[25]},
+			},
+			{
+				Name:    "downloadrecord_artist_download_records",
+				Unique:  false,
+				Columns: []*schema.Column{DownloadRecordsColumns[23]},
 			},
 		},
 	}
@@ -468,7 +716,6 @@ var (
 		{Name: "parsed_isbn", Type: field.TypeString, Nullable: true},
 		{Name: "classification", Type: field.TypeEnum, Enums: []string{"confirmed", "ambiguous", "unmatched", "existing"}, Default: "unmatched"},
 		{Name: "book_hardcover_id", Type: field.TypeUint32, Nullable: true},
-		{Name: "author_hardcover_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "candidates", Type: field.TypeJSON, Nullable: true},
 		{Name: "existing_book_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "decision", Type: field.TypeEnum, Enums: []string{"pending", "accept", "skip"}, Default: "pending"},
@@ -486,7 +733,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "import_scan_books_import_scans_books",
-				Columns:    []*schema.Column{ImportScanBooksColumns[18]},
+				Columns:    []*schema.Column{ImportScanBooksColumns[17]},
 				RefColumns: []*schema.Column{ImportScansColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -500,12 +747,12 @@ var (
 			{
 				Name:    "importscanbook_decision",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanBooksColumns[13]},
+				Columns: []*schema.Column{ImportScanBooksColumns[12]},
 			},
 			{
 				Name:    "importscanbook_import_scan_books",
 				Unique:  false,
-				Columns: []*schema.Column{ImportScanBooksColumns[18]},
+				Columns: []*schema.Column{ImportScanBooksColumns[17]},
 			},
 		},
 	}
@@ -877,6 +1124,58 @@ var (
 			},
 		},
 	}
+	// MusicCreditsColumns holds the columns for the "music_credits" table.
+	MusicCreditsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"credit", "performer", "featuring", "writer"}},
+		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork"}},
+		{Name: "name", Type: field.TypeString},
+		{Name: "mbid", Type: field.TypeString, Nullable: true},
+		{Name: "instruments", Type: field.TypeString, Nullable: true},
+		{Name: "guest", Type: field.TypeBool, Default: false},
+		{Name: "ordinal", Type: field.TypeUint16},
+		{Name: "album_credits", Type: field.TypeUint32, Nullable: true},
+		{Name: "track_credits", Type: field.TypeUint32, Nullable: true},
+	}
+	// MusicCreditsTable holds the schema information for the "music_credits" table.
+	MusicCreditsTable = &schema.Table{
+		Name:       "music_credits",
+		Columns:    MusicCreditsColumns,
+		PrimaryKey: []*schema.Column{MusicCreditsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "music_credits_albums_credits",
+				Columns:    []*schema.Column{MusicCreditsColumns[10]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "music_credits_tracks_credits",
+				Columns:    []*schema.Column{MusicCreditsColumns[11]},
+				RefColumns: []*schema.Column{TracksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "musiccredit_album_credits",
+				Unique:  false,
+				Columns: []*schema.Column{MusicCreditsColumns[10]},
+			},
+			{
+				Name:    "musiccredit_track_credits",
+				Unique:  false,
+				Columns: []*schema.Column{MusicCreditsColumns[11]},
+			},
+			{
+				Name:    "musiccredit_mbid",
+				Unique:  false,
+				Columns: []*schema.Column{MusicCreditsColumns[6]},
+			},
+		},
+	}
 	// OidcIdentitiesColumns holds the columns for the "oidc_identities" table.
 	OidcIdentitiesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -960,10 +1259,9 @@ var (
 		{Name: "id", Type: field.TypeUint32, Increment: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "media_type", Type: field.TypeEnum, Enums: []string{"movie", "tvshow", "artist", "album", "author", "book"}},
+		{Name: "media_type", Type: field.TypeEnum, Enums: []string{"movie", "tvshow", "artist", "book", "book_series"}},
 		{Name: "media_id", Type: field.TypeUint32, Nullable: true, Default: 0},
 		{Name: "media_mbid", Type: field.TypeString, Nullable: true},
-		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook", "both"}},
 		{Name: "title", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "approved", "denied", "available"}, Default: "pending"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
@@ -979,13 +1277,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "requests_users_approved_by",
-				Columns:    []*schema.Column{RequestsColumns[11]},
+				Columns:    []*schema.Column{RequestsColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "requests_users_requests",
-				Columns:    []*schema.Column{RequestsColumns[12]},
+				Columns:    []*schema.Column{RequestsColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1010,12 +1308,12 @@ var (
 			{
 				Name:    "request_user_requests",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[12]},
+				Columns: []*schema.Column{RequestsColumns[11]},
 			},
 			{
 				Name:    "request_request_approved_by",
 				Unique:  false,
-				Columns: []*schema.Column{RequestsColumns[11]},
+				Columns: []*schema.Column{RequestsColumns[10]},
 			},
 		},
 	}
@@ -1175,6 +1473,7 @@ var (
 		{Name: "disc", Type: field.TypeUint8, Default: 1},
 		{Name: "position", Type: field.TypeUint16},
 		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "bonus", Type: field.TypeBool, Default: false},
 		{Name: "album_tracks", Type: field.TypeUint32},
 	}
 	// TracksTable holds the schema information for the "tracks" table.
@@ -1185,7 +1484,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[8]},
+				Columns:    []*schema.Column{TracksColumns[9]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1194,7 +1493,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[8]},
+				Columns: []*schema.Column{TracksColumns[9]},
 			},
 		},
 	}
@@ -1261,6 +1560,31 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
+	// DownloadRecordAlbumsColumns holds the columns for the "download_record_albums" table.
+	DownloadRecordAlbumsColumns = []*schema.Column{
+		{Name: "download_record_id", Type: field.TypeUint32},
+		{Name: "album_id", Type: field.TypeUint32},
+	}
+	// DownloadRecordAlbumsTable holds the schema information for the "download_record_albums" table.
+	DownloadRecordAlbumsTable = &schema.Table{
+		Name:       "download_record_albums",
+		Columns:    DownloadRecordAlbumsColumns,
+		PrimaryKey: []*schema.Column{DownloadRecordAlbumsColumns[0], DownloadRecordAlbumsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "download_record_albums_download_record_id",
+				Columns:    []*schema.Column{DownloadRecordAlbumsColumns[0]},
+				RefColumns: []*schema.Column{DownloadRecordsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "download_record_albums_album_id",
+				Columns:    []*schema.Column{DownloadRecordAlbumsColumns[1]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// DownloadRecordEpisodesColumns holds the columns for the "download_record_episodes" table.
 	DownloadRecordEpisodesColumns = []*schema.Column{
 		{Name: "episode_id", Type: field.TypeUint32},
@@ -1291,8 +1615,12 @@ var (
 		AlbumsTable,
 		APIKeysTable,
 		ArtistsTable,
+		ArtistMembersTable,
 		AuthorsTable,
 		BooksTable,
+		BookContributionsTable,
+		BookEditionsTable,
+		BookSeriesTable,
 		CreditsTable,
 		DownloadRecordsTable,
 		EpisodesTable,
@@ -1305,6 +1633,7 @@ var (
 		MediaEventsTable,
 		MediaFilesTable,
 		MoviesTable,
+		MusicCreditsTable,
 		OidcIdentitiesTable,
 		PersonsTable,
 		RequestsTable,
@@ -1316,6 +1645,7 @@ var (
 		TracksTable,
 		TranscodeJobsTable,
 		UsersTable,
+		DownloadRecordAlbumsTable,
 		DownloadRecordEpisodesTable,
 	}
 )
@@ -1323,14 +1653,22 @@ var (
 func init() {
 	AlbumsTable.ForeignKeys[0].RefTable = ArtistsTable
 	APIKeysTable.ForeignKeys[0].RefTable = UsersTable
-	BooksTable.ForeignKeys[0].RefTable = AuthorsTable
+	ArtistMembersTable.ForeignKeys[0].RefTable = ArtistsTable
+	BooksTable.ForeignKeys[0].RefTable = BookEditionsTable
+	BooksTable.ForeignKeys[1].RefTable = BookEditionsTable
+	BooksTable.ForeignKeys[2].RefTable = BookSeriesTable
+	BookContributionsTable.ForeignKeys[0].RefTable = AuthorsTable
+	BookContributionsTable.ForeignKeys[1].RefTable = BooksTable
+	BookContributionsTable.ForeignKeys[2].RefTable = BookSeriesTable
+	BookEditionsTable.ForeignKeys[0].RefTable = BooksTable
 	CreditsTable.ForeignKeys[0].RefTable = MoviesTable
 	CreditsTable.ForeignKeys[1].RefTable = PersonsTable
 	CreditsTable.ForeignKeys[2].RefTable = TvShowsTable
 	DownloadRecordsTable.ForeignKeys[0].RefTable = AlbumsTable
-	DownloadRecordsTable.ForeignKeys[1].RefTable = BooksTable
-	DownloadRecordsTable.ForeignKeys[2].RefTable = EpisodesTable
-	DownloadRecordsTable.ForeignKeys[3].RefTable = MoviesTable
+	DownloadRecordsTable.ForeignKeys[1].RefTable = ArtistsTable
+	DownloadRecordsTable.ForeignKeys[2].RefTable = BooksTable
+	DownloadRecordsTable.ForeignKeys[3].RefTable = EpisodesTable
+	DownloadRecordsTable.ForeignKeys[4].RefTable = MoviesTable
 	EpisodesTable.ForeignKeys[0].RefTable = SeasonsTable
 	ImportScanAlbumsTable.ForeignKeys[0].RefTable = ImportScansTable
 	ImportScanBooksTable.ForeignKeys[0].RefTable = ImportScansTable
@@ -1345,6 +1683,8 @@ func init() {
 	MediaFilesTable.ForeignKeys[1].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[2].RefTable = MoviesTable
 	MediaFilesTable.ForeignKeys[3].RefTable = TracksTable
+	MusicCreditsTable.ForeignKeys[0].RefTable = AlbumsTable
+	MusicCreditsTable.ForeignKeys[1].RefTable = TracksTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[0].RefTable = UsersTable
 	RequestsTable.ForeignKeys[1].RefTable = UsersTable
@@ -1352,6 +1692,8 @@ func init() {
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	TracksTable.ForeignKeys[0].RefTable = AlbumsTable
 	TranscodeJobsTable.ForeignKeys[0].RefTable = MediaFilesTable
+	DownloadRecordAlbumsTable.ForeignKeys[0].RefTable = DownloadRecordsTable
+	DownloadRecordAlbumsTable.ForeignKeys[1].RefTable = AlbumsTable
 	DownloadRecordEpisodesTable.ForeignKeys[0].RefTable = EpisodesTable
 	DownloadRecordEpisodesTable.ForeignKeys[1].RefTable = DownloadRecordsTable
 }

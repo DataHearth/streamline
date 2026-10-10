@@ -8,8 +8,12 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
+	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -22,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
@@ -117,10 +122,25 @@ func init() {
 	artistDescName := artistFields[1].Descriptor()
 	// artist.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	artist.NameValidator = artistDescName.Validators[0].(func(string) error)
-	// artistDescMonitored is the schema descriptor for monitored field.
-	artistDescMonitored := artistFields[4].Descriptor()
-	// artist.DefaultMonitored holds the default value on creation for the monitored field.
-	artist.DefaultMonitored = artistDescMonitored.Default.(bool)
+	artistmemberMixin := schema.ArtistMember{}.Mixin()
+	artistmemberMixinFields1 := artistmemberMixin[1].Fields()
+	_ = artistmemberMixinFields1
+	artistmemberFields := schema.ArtistMember{}.Fields()
+	_ = artistmemberFields
+	// artistmemberDescCreateTime is the schema descriptor for create_time field.
+	artistmemberDescCreateTime := artistmemberMixinFields1[0].Descriptor()
+	// artistmember.DefaultCreateTime holds the default value on creation for the create_time field.
+	artistmember.DefaultCreateTime = artistmemberDescCreateTime.Default.(func() time.Time)
+	// artistmemberDescUpdateTime is the schema descriptor for update_time field.
+	artistmemberDescUpdateTime := artistmemberMixinFields1[1].Descriptor()
+	// artistmember.DefaultUpdateTime holds the default value on creation for the update_time field.
+	artistmember.DefaultUpdateTime = artistmemberDescUpdateTime.Default.(func() time.Time)
+	// artistmember.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	artistmember.UpdateDefaultUpdateTime = artistmemberDescUpdateTime.UpdateDefault.(func() time.Time)
+	// artistmemberDescName is the schema descriptor for name field.
+	artistmemberDescName := artistmemberFields[0].Descriptor()
+	// artistmember.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	artistmember.NameValidator = artistmemberDescName.Validators[0].(func(string) error)
 	authorMixin := schema.Author{}.Mixin()
 	authorMixinFields1 := authorMixin[1].Fields()
 	_ = authorMixinFields1
@@ -140,10 +160,6 @@ func init() {
 	authorDescName := authorFields[1].Descriptor()
 	// author.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	author.NameValidator = authorDescName.Validators[0].(func(string) error)
-	// authorDescMonitored is the schema descriptor for monitored field.
-	authorDescMonitored := authorFields[4].Descriptor()
-	// author.DefaultMonitored holds the default value on creation for the monitored field.
-	author.DefaultMonitored = authorDescMonitored.Default.(bool)
 	bookMixin := schema.Book{}.Mixin()
 	bookMixinFields1 := bookMixin[1].Fields()
 	_ = bookMixinFields1
@@ -163,22 +179,107 @@ func init() {
 	bookDescTitle := bookFields[1].Descriptor()
 	// book.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	book.TitleValidator = bookDescTitle.Validators[0].(func(string) error)
+	// bookDescPreferredLanguage is the schema descriptor for preferred_language field.
+	bookDescPreferredLanguage := bookFields[11].Descriptor()
+	// book.DefaultPreferredLanguage holds the default value on creation for the preferred_language field.
+	book.DefaultPreferredLanguage = bookDescPreferredLanguage.Default.(string)
 	// bookDescEbookMonitored is the schema descriptor for ebook_monitored field.
-	bookDescEbookMonitored := bookFields[7].Descriptor()
+	bookDescEbookMonitored := bookFields[14].Descriptor()
 	// book.DefaultEbookMonitored holds the default value on creation for the ebook_monitored field.
 	book.DefaultEbookMonitored = bookDescEbookMonitored.Default.(bool)
 	// bookDescEbookGrabFailures is the schema descriptor for ebook_grab_failures field.
-	bookDescEbookGrabFailures := bookFields[9].Descriptor()
+	bookDescEbookGrabFailures := bookFields[16].Descriptor()
 	// book.DefaultEbookGrabFailures holds the default value on creation for the ebook_grab_failures field.
 	book.DefaultEbookGrabFailures = bookDescEbookGrabFailures.Default.(uint8)
 	// bookDescAudiobookMonitored is the schema descriptor for audiobook_monitored field.
-	bookDescAudiobookMonitored := bookFields[11].Descriptor()
+	bookDescAudiobookMonitored := bookFields[19].Descriptor()
 	// book.DefaultAudiobookMonitored holds the default value on creation for the audiobook_monitored field.
 	book.DefaultAudiobookMonitored = bookDescAudiobookMonitored.Default.(bool)
 	// bookDescAudiobookGrabFailures is the schema descriptor for audiobook_grab_failures field.
-	bookDescAudiobookGrabFailures := bookFields[13].Descriptor()
+	bookDescAudiobookGrabFailures := bookFields[21].Descriptor()
 	// book.DefaultAudiobookGrabFailures holds the default value on creation for the audiobook_grab_failures field.
 	book.DefaultAudiobookGrabFailures = bookDescAudiobookGrabFailures.Default.(uint8)
+	bookcontributionMixin := schema.BookContribution{}.Mixin()
+	bookcontributionMixinFields1 := bookcontributionMixin[1].Fields()
+	_ = bookcontributionMixinFields1
+	bookcontributionFields := schema.BookContribution{}.Fields()
+	_ = bookcontributionFields
+	// bookcontributionDescCreateTime is the schema descriptor for create_time field.
+	bookcontributionDescCreateTime := bookcontributionMixinFields1[0].Descriptor()
+	// bookcontribution.DefaultCreateTime holds the default value on creation for the create_time field.
+	bookcontribution.DefaultCreateTime = bookcontributionDescCreateTime.Default.(func() time.Time)
+	// bookcontributionDescUpdateTime is the schema descriptor for update_time field.
+	bookcontributionDescUpdateTime := bookcontributionMixinFields1[1].Descriptor()
+	// bookcontribution.DefaultUpdateTime holds the default value on creation for the update_time field.
+	bookcontribution.DefaultUpdateTime = bookcontributionDescUpdateTime.Default.(func() time.Time)
+	// bookcontribution.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	bookcontribution.UpdateDefaultUpdateTime = bookcontributionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookcontributionDescOrder is the schema descriptor for order field.
+	bookcontributionDescOrder := bookcontributionFields[2].Descriptor()
+	// bookcontribution.DefaultOrder holds the default value on creation for the order field.
+	bookcontribution.DefaultOrder = bookcontributionDescOrder.Default.(uint8)
+	bookeditionMixin := schema.BookEdition{}.Mixin()
+	bookeditionMixinFields1 := bookeditionMixin[1].Fields()
+	_ = bookeditionMixinFields1
+	bookeditionFields := schema.BookEdition{}.Fields()
+	_ = bookeditionFields
+	// bookeditionDescCreateTime is the schema descriptor for create_time field.
+	bookeditionDescCreateTime := bookeditionMixinFields1[0].Descriptor()
+	// bookedition.DefaultCreateTime holds the default value on creation for the create_time field.
+	bookedition.DefaultCreateTime = bookeditionDescCreateTime.Default.(func() time.Time)
+	// bookeditionDescUpdateTime is the schema descriptor for update_time field.
+	bookeditionDescUpdateTime := bookeditionMixinFields1[1].Descriptor()
+	// bookedition.DefaultUpdateTime holds the default value on creation for the update_time field.
+	bookedition.DefaultUpdateTime = bookeditionDescUpdateTime.Default.(func() time.Time)
+	// bookedition.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	bookedition.UpdateDefaultUpdateTime = bookeditionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookeditionDescLanguage is the schema descriptor for language field.
+	bookeditionDescLanguage := bookeditionFields[1].Descriptor()
+	// bookedition.LanguageValidator is a validator for the "language" field. It is called by the builders before save.
+	bookedition.LanguageValidator = bookeditionDescLanguage.Validators[0].(func(string) error)
+	// bookeditionDescTitle is the schema descriptor for title field.
+	bookeditionDescTitle := bookeditionFields[2].Descriptor()
+	// bookedition.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	bookedition.TitleValidator = bookeditionDescTitle.Validators[0].(func(string) error)
+	// bookeditionDescPublisher is the schema descriptor for publisher field.
+	bookeditionDescPublisher := bookeditionFields[3].Descriptor()
+	// bookedition.DefaultPublisher holds the default value on creation for the publisher field.
+	bookedition.DefaultPublisher = bookeditionDescPublisher.Default.(string)
+	// bookeditionDescYear is the schema descriptor for year field.
+	bookeditionDescYear := bookeditionFields[4].Descriptor()
+	// bookedition.DefaultYear holds the default value on creation for the year field.
+	bookedition.DefaultYear = bookeditionDescYear.Default.(uint16)
+	// bookeditionDescOriginal is the schema descriptor for original field.
+	bookeditionDescOriginal := bookeditionFields[6].Descriptor()
+	// bookedition.DefaultOriginal holds the default value on creation for the original field.
+	bookedition.DefaultOriginal = bookeditionDescOriginal.Default.(bool)
+	// bookeditionDescPopularity is the schema descriptor for popularity field.
+	bookeditionDescPopularity := bookeditionFields[13].Descriptor()
+	// bookedition.DefaultPopularity holds the default value on creation for the popularity field.
+	bookedition.DefaultPopularity = bookeditionDescPopularity.Default.(uint32)
+	bookseriesMixin := schema.BookSeries{}.Mixin()
+	bookseriesMixinFields1 := bookseriesMixin[1].Fields()
+	_ = bookseriesMixinFields1
+	bookseriesFields := schema.BookSeries{}.Fields()
+	_ = bookseriesFields
+	// bookseriesDescCreateTime is the schema descriptor for create_time field.
+	bookseriesDescCreateTime := bookseriesMixinFields1[0].Descriptor()
+	// bookseries.DefaultCreateTime holds the default value on creation for the create_time field.
+	bookseries.DefaultCreateTime = bookseriesDescCreateTime.Default.(func() time.Time)
+	// bookseriesDescUpdateTime is the schema descriptor for update_time field.
+	bookseriesDescUpdateTime := bookseriesMixinFields1[1].Descriptor()
+	// bookseries.DefaultUpdateTime holds the default value on creation for the update_time field.
+	bookseries.DefaultUpdateTime = bookseriesDescUpdateTime.Default.(func() time.Time)
+	// bookseries.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	bookseries.UpdateDefaultUpdateTime = bookseriesDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookseriesDescTitle is the schema descriptor for title field.
+	bookseriesDescTitle := bookseriesFields[1].Descriptor()
+	// bookseries.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	bookseries.TitleValidator = bookseriesDescTitle.Validators[0].(func(string) error)
+	// bookseriesDescOngoing is the schema descriptor for ongoing field.
+	bookseriesDescOngoing := bookseriesFields[8].Descriptor()
+	// bookseries.DefaultOngoing holds the default value on creation for the ongoing field.
+	bookseries.DefaultOngoing = bookseriesDescOngoing.Default.(bool)
 	creditMixin := schema.Credit{}.Mixin()
 	creditMixinFields1 := creditMixin[1].Fields()
 	_ = creditMixinFields1
@@ -463,6 +564,29 @@ func init() {
 	movieDescRating := movieFields[14].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
+	musiccreditMixin := schema.MusicCredit{}.Mixin()
+	musiccreditMixinFields1 := musiccreditMixin[1].Fields()
+	_ = musiccreditMixinFields1
+	musiccreditFields := schema.MusicCredit{}.Fields()
+	_ = musiccreditFields
+	// musiccreditDescCreateTime is the schema descriptor for create_time field.
+	musiccreditDescCreateTime := musiccreditMixinFields1[0].Descriptor()
+	// musiccredit.DefaultCreateTime holds the default value on creation for the create_time field.
+	musiccredit.DefaultCreateTime = musiccreditDescCreateTime.Default.(func() time.Time)
+	// musiccreditDescUpdateTime is the schema descriptor for update_time field.
+	musiccreditDescUpdateTime := musiccreditMixinFields1[1].Descriptor()
+	// musiccredit.DefaultUpdateTime holds the default value on creation for the update_time field.
+	musiccredit.DefaultUpdateTime = musiccreditDescUpdateTime.Default.(func() time.Time)
+	// musiccredit.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	musiccredit.UpdateDefaultUpdateTime = musiccreditDescUpdateTime.UpdateDefault.(func() time.Time)
+	// musiccreditDescName is the schema descriptor for name field.
+	musiccreditDescName := musiccreditFields[2].Descriptor()
+	// musiccredit.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	musiccredit.NameValidator = musiccreditDescName.Validators[0].(func(string) error)
+	// musiccreditDescGuest is the schema descriptor for guest field.
+	musiccreditDescGuest := musiccreditFields[5].Descriptor()
+	// musiccredit.DefaultGuest holds the default value on creation for the guest field.
+	musiccredit.DefaultGuest = musiccreditDescGuest.Default.(bool)
 	oidcidentityMixin := schema.OIDCIdentity{}.Mixin()
 	oidcidentityMixinFields1 := oidcidentityMixin[1].Fields()
 	_ = oidcidentityMixinFields1
@@ -533,7 +657,7 @@ func init() {
 	// request.DefaultMediaID holds the default value on creation for the media_id field.
 	request.DefaultMediaID = requestDescMediaID.Default.(uint32)
 	// requestDescTitle is the schema descriptor for title field.
-	requestDescTitle := requestFields[4].Descriptor()
+	requestDescTitle := requestFields[3].Descriptor()
 	// request.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	request.TitleValidator = requestDescTitle.Validators[0].(func(string) error)
 	scheduledjobFields := schema.ScheduledJob{}.Fields()
@@ -687,6 +811,10 @@ func init() {
 	trackDescDuration := trackFields[4].Descriptor()
 	// track.DefaultDuration holds the default value on creation for the duration field.
 	track.DefaultDuration = trackDescDuration.Default.(uint32)
+	// trackDescBonus is the schema descriptor for bonus field.
+	trackDescBonus := trackFields[5].Descriptor()
+	// track.DefaultBonus holds the default value on creation for the bonus field.
+	track.DefaultBonus = trackDescBonus.Default.(bool)
 	transcodejobMixin := schema.TranscodeJob{}.Mixin()
 	transcodejobMixinFields1 := transcodejobMixin[1].Fields()
 	_ = transcodejobMixinFields1

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
 )
 
@@ -104,6 +105,20 @@ func (_c *TrackCreate) SetNillableDuration(v *uint32) *TrackCreate {
 	return _c
 }
 
+// SetBonus sets the "bonus" field.
+func (_c *TrackCreate) SetBonus(v bool) *TrackCreate {
+	_c.mutation.SetBonus(v)
+	return _c
+}
+
+// SetNillableBonus sets the "bonus" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableBonus(v *bool) *TrackCreate {
+	if v != nil {
+		_c.SetBonus(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TrackCreate) SetID(v uint32) *TrackCreate {
 	_c.mutation.SetID(v)
@@ -134,6 +149,21 @@ func (_c *TrackCreate) AddMediaFiles(v ...*MediaFile) *TrackCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddMediaFileIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_c *TrackCreate) AddCreditIDs(ids ...uint32) *TrackCreate {
+	_c.mutation.AddCreditIDs(ids...)
+	return _c
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_c *TrackCreate) AddCredits(v ...*MusicCredit) *TrackCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreditIDs(ids...)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -187,6 +217,10 @@ func (_c *TrackCreate) defaults() {
 		v := track.DefaultDuration
 		_c.mutation.SetDuration(v)
 	}
+	if _, ok := _c.mutation.Bonus(); !ok {
+		v := track.DefaultBonus
+		_c.mutation.SetBonus(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -210,6 +244,9 @@ func (_c *TrackCreate) check() error {
 	}
 	if _, ok := _c.mutation.Position(); !ok {
 		return &ValidationError{Name: "position", err: errors.New(`ent: missing required field "Track.position"`)}
+	}
+	if _, ok := _c.mutation.Bonus(); !ok {
+		return &ValidationError{Name: "bonus", err: errors.New(`ent: missing required field "Track.bonus"`)}
 	}
 	if len(_c.mutation.AlbumIDs()) == 0 {
 		return &ValidationError{Name: "album", err: errors.New(`ent: missing required edge "Track.album"`)}
@@ -274,6 +311,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 		_spec.SetField(track.FieldDuration, field.TypeUint32, value)
 		_node.Duration = value
 	}
+	if value, ok := _c.mutation.Bonus(); ok {
+		_spec.SetField(track.FieldBonus, field.TypeBool, value)
+		_node.Bonus = value
+	}
 	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -300,6 +341,22 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediafile.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

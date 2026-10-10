@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
 )
@@ -27,6 +28,7 @@ type TrackQuery struct {
 	predicates     []predicate.Track
 	withAlbum      *AlbumQuery
 	withMediaFiles *MediaFileQuery
+	withCredits    *MusicCreditQuery
 	withFKs        bool
 	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -102,6 +104,28 @@ func (_q *TrackQuery) QueryMediaFiles() *MediaFileQuery {
 			sqlgraph.From(track.Table, track.FieldID, selector),
 			sqlgraph.To(mediafile.Table, mediafile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, track.MediaFilesTable, track.MediaFilesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredits chains the current query on the "credits" edge.
+func (_q *TrackQuery) QueryCredits() *MusicCreditQuery {
+	query := (&MusicCreditClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, selector),
+			sqlgraph.To(musiccredit.Table, musiccredit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.CreditsTable, track.CreditsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -303,6 +327,7 @@ func (_q *TrackQuery) Clone() *TrackQuery {
 		predicates:     append([]predicate.Track{}, _q.predicates...),
 		withAlbum:      _q.withAlbum.Clone(),
 		withMediaFiles: _q.withMediaFiles.Clone(),
+		withCredits:    _q.withCredits.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -329,6 +354,17 @@ func (_q *TrackQuery) WithMediaFiles(opts ...func(*MediaFileQuery)) *TrackQuery 
 		opt(query)
 	}
 	_q.withMediaFiles = query
+	return _q
+}
+
+// WithCredits tells the query-builder to eager-load the nodes that are connected to
+// the "credits" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TrackQuery) WithCredits(opts ...func(*MusicCreditQuery)) *TrackQuery {
+	query := (&MusicCreditClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredits = query
 	return _q
 }
 
@@ -411,9 +447,10 @@ func (_q *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track,
 		nodes       = []*Track{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withAlbum != nil,
 			_q.withMediaFiles != nil,
+			_q.withCredits != nil,
 		}
 	)
 	if _q.withAlbum != nil {
@@ -453,6 +490,13 @@ func (_q *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track,
 		if err := _q.loadMediaFiles(ctx, query, nodes,
 			func(n *Track) { n.Edges.MediaFiles = []*MediaFile{} },
 			func(n *Track, e *MediaFile) { n.Edges.MediaFiles = append(n.Edges.MediaFiles, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCredits; query != nil {
+		if err := _q.loadCredits(ctx, query, nodes,
+			func(n *Track) { n.Edges.Credits = []*MusicCredit{} },
+			func(n *Track, e *MusicCredit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -517,6 +561,37 @@ func (_q *TrackQuery) loadMediaFiles(ctx context.Context, query *MediaFileQuery,
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "track_media_files" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TrackQuery) loadCredits(ctx context.Context, query *MusicCreditQuery, nodes []*Track, init func(*Track), assign func(*Track, *MusicCredit)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Track)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MusicCredit(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(track.CreditsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.track_credits
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "track_credits" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "track_credits" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -45,6 +45,18 @@ func (f ArtistFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ArtistMutation", m)
 }
 
+// The ArtistMemberFunc type is an adapter to allow the use of ordinary
+// function as ArtistMember mutator.
+type ArtistMemberFunc func(context.Context, *ent.ArtistMemberMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ArtistMemberFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ArtistMemberMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ArtistMemberMutation", m)
+}
+
 // The AuthorFunc type is an adapter to allow the use of ordinary
 // function as Author mutator.
 type AuthorFunc func(context.Context, *ent.AuthorMutation) (ent.Value, error)
@@ -67,6 +79,42 @@ func (f BookFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookMutation", m)
+}
+
+// The BookContributionFunc type is an adapter to allow the use of ordinary
+// function as BookContribution mutator.
+type BookContributionFunc func(context.Context, *ent.BookContributionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BookContributionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BookContributionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookContributionMutation", m)
+}
+
+// The BookEditionFunc type is an adapter to allow the use of ordinary
+// function as BookEdition mutator.
+type BookEditionFunc func(context.Context, *ent.BookEditionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BookEditionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BookEditionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookEditionMutation", m)
+}
+
+// The BookSeriesFunc type is an adapter to allow the use of ordinary
+// function as BookSeries mutator.
+type BookSeriesFunc func(context.Context, *ent.BookSeriesMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BookSeriesFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BookSeriesMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BookSeriesMutation", m)
 }
 
 // The CreditFunc type is an adapter to allow the use of ordinary
@@ -211,6 +259,18 @@ func (f MovieFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MovieMutation", m)
+}
+
+// The MusicCreditFunc type is an adapter to allow the use of ordinary
+// function as MusicCredit mutator.
+type MusicCreditFunc func(context.Context, *ent.MusicCreditMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MusicCreditFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MusicCreditMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MusicCreditMutation", m)
 }
 
 // The OIDCIdentityFunc type is an adapter to allow the use of ordinary

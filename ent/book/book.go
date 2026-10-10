@@ -23,14 +23,28 @@ const (
 	FieldHardcoverID = "hardcover_id"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
+	// FieldOriginalTitle holds the string denoting the original_title field in the database.
+	FieldOriginalTitle = "original_title"
 	// FieldSortTitle holds the string denoting the sort_title field in the database.
 	FieldSortTitle = "sort_title"
+	// FieldAuthorName holds the string denoting the author_name field in the database.
+	FieldAuthorName = "author_name"
+	// FieldKind holds the string denoting the kind field in the database.
+	FieldKind = "kind"
+	// FieldGenre holds the string denoting the genre field in the database.
+	FieldGenre = "genre"
+	// FieldRatingTenths holds the string denoting the rating_tenths field in the database.
+	FieldRatingTenths = "rating_tenths"
+	// FieldReleaseYear holds the string denoting the release_year field in the database.
+	FieldReleaseYear = "release_year"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
 	FieldReleaseDate = "release_date"
 	// FieldOverview holds the string denoting the overview field in the database.
 	FieldOverview = "overview"
-	// FieldSeriesName holds the string denoting the series_name field in the database.
-	FieldSeriesName = "series_name"
+	// FieldPreferredLanguage holds the string denoting the preferred_language field in the database.
+	FieldPreferredLanguage = "preferred_language"
+	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
+	FieldQualityProfile = "quality_profile"
 	// FieldSeriesPosition holds the string denoting the series_position field in the database.
 	FieldSeriesPosition = "series_position"
 	// FieldEbookMonitored holds the string denoting the ebook_monitored field in the database.
@@ -41,6 +55,8 @@ const (
 	FieldEbookGrabFailures = "ebook_grab_failures"
 	// FieldEbookLastSearchAt holds the string denoting the ebook_last_search_at field in the database.
 	FieldEbookLastSearchAt = "ebook_last_search_at"
+	// FieldEbookReplacingLanguage holds the string denoting the ebook_replacing_language field in the database.
+	FieldEbookReplacingLanguage = "ebook_replacing_language"
 	// FieldAudiobookMonitored holds the string denoting the audiobook_monitored field in the database.
 	FieldAudiobookMonitored = "audiobook_monitored"
 	// FieldAudiobookStatus holds the string denoting the audiobook_status field in the database.
@@ -49,21 +65,61 @@ const (
 	FieldAudiobookGrabFailures = "audiobook_grab_failures"
 	// FieldAudiobookLastSearchAt holds the string denoting the audiobook_last_search_at field in the database.
 	FieldAudiobookLastSearchAt = "audiobook_last_search_at"
-	// EdgeAuthor holds the string denoting the author edge name in mutations.
-	EdgeAuthor = "author"
+	// FieldAudiobookReplacingLanguage holds the string denoting the audiobook_replacing_language field in the database.
+	FieldAudiobookReplacingLanguage = "audiobook_replacing_language"
+	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
+	FieldLastRefreshedAt = "last_refreshed_at"
+	// EdgeSeries holds the string denoting the series edge name in mutations.
+	EdgeSeries = "series"
+	// EdgeEditions holds the string denoting the editions edge name in mutations.
+	EdgeEditions = "editions"
+	// EdgeContributions holds the string denoting the contributions edge name in mutations.
+	EdgeContributions = "contributions"
+	// EdgeEbookEdition holds the string denoting the ebook_edition edge name in mutations.
+	EdgeEbookEdition = "ebook_edition"
+	// EdgeAudiobookEdition holds the string denoting the audiobook_edition edge name in mutations.
+	EdgeAudiobookEdition = "audiobook_edition"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
 	EdgeMediaFiles = "media_files"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
 	// Table holds the table name of the book in the database.
 	Table = "books"
-	// AuthorTable is the table that holds the author relation/edge.
-	AuthorTable = "books"
-	// AuthorInverseTable is the table name for the Author entity.
-	// It exists in this package in order to avoid circular dependency with the "author" package.
-	AuthorInverseTable = "authors"
-	// AuthorColumn is the table column denoting the author relation/edge.
-	AuthorColumn = "author_books"
+	// SeriesTable is the table that holds the series relation/edge.
+	SeriesTable = "books"
+	// SeriesInverseTable is the table name for the BookSeries entity.
+	// It exists in this package in order to avoid circular dependency with the "bookseries" package.
+	SeriesInverseTable = "book_series"
+	// SeriesColumn is the table column denoting the series relation/edge.
+	SeriesColumn = "book_series_volumes"
+	// EditionsTable is the table that holds the editions relation/edge.
+	EditionsTable = "book_editions"
+	// EditionsInverseTable is the table name for the BookEdition entity.
+	// It exists in this package in order to avoid circular dependency with the "bookedition" package.
+	EditionsInverseTable = "book_editions"
+	// EditionsColumn is the table column denoting the editions relation/edge.
+	EditionsColumn = "book_editions"
+	// ContributionsTable is the table that holds the contributions relation/edge.
+	ContributionsTable = "book_contributions"
+	// ContributionsInverseTable is the table name for the BookContribution entity.
+	// It exists in this package in order to avoid circular dependency with the "bookcontribution" package.
+	ContributionsInverseTable = "book_contributions"
+	// ContributionsColumn is the table column denoting the contributions relation/edge.
+	ContributionsColumn = "book_contributions"
+	// EbookEditionTable is the table that holds the ebook_edition relation/edge.
+	EbookEditionTable = "books"
+	// EbookEditionInverseTable is the table name for the BookEdition entity.
+	// It exists in this package in order to avoid circular dependency with the "bookedition" package.
+	EbookEditionInverseTable = "book_editions"
+	// EbookEditionColumn is the table column denoting the ebook_edition relation/edge.
+	EbookEditionColumn = "book_ebook_edition"
+	// AudiobookEditionTable is the table that holds the audiobook_edition relation/edge.
+	AudiobookEditionTable = "books"
+	// AudiobookEditionInverseTable is the table name for the BookEdition entity.
+	// It exists in this package in order to avoid circular dependency with the "bookedition" package.
+	AudiobookEditionInverseTable = "book_editions"
+	// AudiobookEditionColumn is the table column denoting the audiobook_edition relation/edge.
+	AudiobookEditionColumn = "book_audiobook_edition"
 	// MediaFilesTable is the table that holds the media_files relation/edge.
 	MediaFilesTable = "media_files"
 	// MediaFilesInverseTable is the table name for the MediaFile entity.
@@ -87,25 +143,37 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldHardcoverID,
 	FieldTitle,
+	FieldOriginalTitle,
 	FieldSortTitle,
+	FieldAuthorName,
+	FieldKind,
+	FieldGenre,
+	FieldRatingTenths,
+	FieldReleaseYear,
 	FieldReleaseDate,
 	FieldOverview,
-	FieldSeriesName,
+	FieldPreferredLanguage,
+	FieldQualityProfile,
 	FieldSeriesPosition,
 	FieldEbookMonitored,
 	FieldEbookStatus,
 	FieldEbookGrabFailures,
 	FieldEbookLastSearchAt,
+	FieldEbookReplacingLanguage,
 	FieldAudiobookMonitored,
 	FieldAudiobookStatus,
 	FieldAudiobookGrabFailures,
 	FieldAudiobookLastSearchAt,
+	FieldAudiobookReplacingLanguage,
+	FieldLastRefreshedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "books"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"author_books",
+	"book_ebook_edition",
+	"book_audiobook_edition",
+	"book_series_volumes",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -132,6 +200,8 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
+	// DefaultPreferredLanguage holds the default value on creation for the "preferred_language" field.
+	DefaultPreferredLanguage string
 	// DefaultEbookMonitored holds the default value on creation for the "ebook_monitored" field.
 	DefaultEbookMonitored bool
 	// DefaultEbookGrabFailures holds the default value on creation for the "ebook_grab_failures" field.
@@ -141,6 +211,34 @@ var (
 	// DefaultAudiobookGrabFailures holds the default value on creation for the "audiobook_grab_failures" field.
 	DefaultAudiobookGrabFailures uint8
 )
+
+// Kind defines the type for the "kind" enum field.
+type Kind string
+
+// KindNovel is the default value of the Kind enum.
+const DefaultKind = KindNovel
+
+// Kind values.
+const (
+	KindNovel Kind = "novel"
+	KindBd    Kind = "bd"
+	KindComic Kind = "comic"
+	KindManga Kind = "manga"
+)
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+// KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
+func KindValidator(k Kind) error {
+	switch k {
+	case KindNovel, KindBd, KindComic, KindManga:
+		return nil
+	default:
+		return fmt.Errorf("book: invalid enum value for kind field: %q", k)
+	}
+}
 
 // EbookStatus defines the type for the "ebook_status" enum field.
 type EbookStatus string
@@ -228,9 +326,39 @@ func ByTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTitle, opts...).ToFunc()
 }
 
+// ByOriginalTitle orders the results by the original_title field.
+func ByOriginalTitle(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOriginalTitle, opts...).ToFunc()
+}
+
 // BySortTitle orders the results by the sort_title field.
 func BySortTitle(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSortTitle, opts...).ToFunc()
+}
+
+// ByAuthorName orders the results by the author_name field.
+func ByAuthorName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthorName, opts...).ToFunc()
+}
+
+// ByKind orders the results by the kind field.
+func ByKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKind, opts...).ToFunc()
+}
+
+// ByGenre orders the results by the genre field.
+func ByGenre(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGenre, opts...).ToFunc()
+}
+
+// ByRatingTenths orders the results by the rating_tenths field.
+func ByRatingTenths(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRatingTenths, opts...).ToFunc()
+}
+
+// ByReleaseYear orders the results by the release_year field.
+func ByReleaseYear(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReleaseYear, opts...).ToFunc()
 }
 
 // ByReleaseDate orders the results by the release_date field.
@@ -243,9 +371,14 @@ func ByOverview(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOverview, opts...).ToFunc()
 }
 
-// BySeriesName orders the results by the series_name field.
-func BySeriesName(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSeriesName, opts...).ToFunc()
+// ByPreferredLanguage orders the results by the preferred_language field.
+func ByPreferredLanguage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreferredLanguage, opts...).ToFunc()
+}
+
+// ByQualityProfile orders the results by the quality_profile field.
+func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
 }
 
 // BySeriesPosition orders the results by the series_position field.
@@ -273,6 +406,11 @@ func ByEbookLastSearchAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEbookLastSearchAt, opts...).ToFunc()
 }
 
+// ByEbookReplacingLanguage orders the results by the ebook_replacing_language field.
+func ByEbookReplacingLanguage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEbookReplacingLanguage, opts...).ToFunc()
+}
+
 // ByAudiobookMonitored orders the results by the audiobook_monitored field.
 func ByAudiobookMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAudiobookMonitored, opts...).ToFunc()
@@ -293,10 +431,62 @@ func ByAudiobookLastSearchAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAudiobookLastSearchAt, opts...).ToFunc()
 }
 
-// ByAuthorField orders the results by author field.
-func ByAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByAudiobookReplacingLanguage orders the results by the audiobook_replacing_language field.
+func ByAudiobookReplacingLanguage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAudiobookReplacingLanguage, opts...).ToFunc()
+}
+
+// ByLastRefreshedAt orders the results by the last_refreshed_at field.
+func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
+}
+
+// BySeriesField orders the results by series field.
+func BySeriesField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAuthorStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newSeriesStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEditionsCount orders the results by editions count.
+func ByEditionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEditionsStep(), opts...)
+	}
+}
+
+// ByEditions orders the results by editions terms.
+func ByEditions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEditionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByContributionsCount orders the results by contributions count.
+func ByContributionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newContributionsStep(), opts...)
+	}
+}
+
+// ByContributions orders the results by contributions terms.
+func ByContributions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newContributionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByEbookEditionField orders the results by ebook_edition field.
+func ByEbookEditionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEbookEditionStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAudiobookEditionField orders the results by audiobook_edition field.
+func ByAudiobookEditionField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAudiobookEditionStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -327,11 +517,39 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-func newAuthorStep() *sqlgraph.Step {
+func newSeriesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(AuthorInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
+		sqlgraph.To(SeriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, SeriesTable, SeriesColumn),
+	)
+}
+func newEditionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EditionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EditionsTable, EditionsColumn),
+	)
+}
+func newContributionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ContributionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ContributionsTable, ContributionsColumn),
+	)
+}
+func newEbookEditionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EbookEditionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, EbookEditionTable, EbookEditionColumn),
+	)
+}
+func newAudiobookEditionStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AudiobookEditionInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, AudiobookEditionTable, AudiobookEditionColumn),
 	)
 }
 func newMediaFilesStep() *sqlgraph.Step {

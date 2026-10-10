@@ -13,19 +13,19 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/author"
-	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
 // AuthorQuery is the builder for querying Author entities.
 type AuthorQuery struct {
 	config
-	ctx        *QueryContext
-	order      []author.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Author
-	withBooks  *BookQuery
-	modifiers  []func(*sql.Selector)
+	ctx               *QueryContext
+	order             []author.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.Author
+	withContributions *BookContributionQuery
+	modifiers         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,9 +62,9 @@ func (_q *AuthorQuery) Order(o ...author.OrderOption) *AuthorQuery {
 	return _q
 }
 
-// QueryBooks chains the current query on the "books" edge.
-func (_q *AuthorQuery) QueryBooks() *BookQuery {
-	query := (&BookClient{config: _q.config}).Query()
+// QueryContributions chains the current query on the "contributions" edge.
+func (_q *AuthorQuery) QueryContributions() *BookContributionQuery {
+	query := (&BookContributionClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -75,8 +75,8 @@ func (_q *AuthorQuery) QueryBooks() *BookQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(author.Table, author.FieldID, selector),
-			sqlgraph.To(book.Table, book.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, author.BooksTable, author.BooksColumn),
+			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, author.ContributionsTable, author.ContributionsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -271,12 +271,12 @@ func (_q *AuthorQuery) Clone() *AuthorQuery {
 		return nil
 	}
 	return &AuthorQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]author.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Author{}, _q.predicates...),
-		withBooks:  _q.withBooks.Clone(),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]author.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.Author{}, _q.predicates...),
+		withContributions: _q.withContributions.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -284,14 +284,14 @@ func (_q *AuthorQuery) Clone() *AuthorQuery {
 	}
 }
 
-// WithBooks tells the query-builder to eager-load the nodes that are connected to
-// the "books" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *AuthorQuery) WithBooks(opts ...func(*BookQuery)) *AuthorQuery {
-	query := (&BookClient{config: _q.config}).Query()
+// WithContributions tells the query-builder to eager-load the nodes that are connected to
+// the "contributions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AuthorQuery) WithContributions(opts ...func(*BookContributionQuery)) *AuthorQuery {
+	query := (&BookContributionClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withBooks = query
+	_q.withContributions = query
 	return _q
 }
 
@@ -374,7 +374,7 @@ func (_q *AuthorQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Autho
 		nodes       = []*Author{}
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			_q.withBooks != nil,
+			_q.withContributions != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -398,17 +398,17 @@ func (_q *AuthorQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Autho
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withBooks; query != nil {
-		if err := _q.loadBooks(ctx, query, nodes,
-			func(n *Author) { n.Edges.Books = []*Book{} },
-			func(n *Author, e *Book) { n.Edges.Books = append(n.Edges.Books, e) }); err != nil {
+	if query := _q.withContributions; query != nil {
+		if err := _q.loadContributions(ctx, query, nodes,
+			func(n *Author) { n.Edges.Contributions = []*BookContribution{} },
+			func(n *Author, e *BookContribution) { n.Edges.Contributions = append(n.Edges.Contributions, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (_q *AuthorQuery) loadBooks(ctx context.Context, query *BookQuery, nodes []*Author, init func(*Author), assign func(*Author, *Book)) error {
+func (_q *AuthorQuery) loadContributions(ctx context.Context, query *BookContributionQuery, nodes []*Author, init func(*Author), assign func(*Author, *BookContribution)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uint32]*Author)
 	for i := range nodes {
@@ -419,21 +419,21 @@ func (_q *AuthorQuery) loadBooks(ctx context.Context, query *BookQuery, nodes []
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.Book(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(author.BooksColumn), fks...))
+	query.Where(predicate.BookContribution(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(author.ContributionsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.author_books
+		fk := n.author_contributions
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "author_books" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "author_contributions" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "author_books" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "author_contributions" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

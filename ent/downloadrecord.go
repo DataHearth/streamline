@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -69,6 +70,7 @@ type DownloadRecord struct {
 	// The values are being populated by the DownloadRecordQuery when eager-loading is set.
 	Edges                    DownloadRecordEdges `json:"edges"`
 	album_download_records   *uint32
+	artist_download_records  *uint32
 	book_download_records    *uint32
 	episode_download_records *uint32
 	movie_download_records   *uint32
@@ -83,13 +85,17 @@ type DownloadRecordEdges struct {
 	Album *Album `json:"album,omitempty"`
 	// Book holds the value of the book edge.
 	Book *Book `json:"book,omitempty"`
+	// Artist holds the value of the artist edge.
+	Artist *Artist `json:"artist,omitempty"`
+	// Albums holds the value of the albums edge.
+	Albums []*Album `json:"albums,omitempty"`
 	// AnchorEpisode holds the value of the anchor_episode edge.
 	AnchorEpisode *Episode `json:"anchor_episode,omitempty"`
 	// Episodes holds the value of the episodes edge.
 	Episodes []*Episode `json:"episodes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [7]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -125,12 +131,32 @@ func (e DownloadRecordEdges) BookOrErr() (*Book, error) {
 	return nil, &NotLoadedError{edge: "book"}
 }
 
+// ArtistOrErr returns the Artist value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DownloadRecordEdges) ArtistOrErr() (*Artist, error) {
+	if e.Artist != nil {
+		return e.Artist, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: artist.Label}
+	}
+	return nil, &NotLoadedError{edge: "artist"}
+}
+
+// AlbumsOrErr returns the Albums value or an error if the edge
+// was not loaded in eager-loading.
+func (e DownloadRecordEdges) AlbumsOrErr() ([]*Album, error) {
+	if e.loadedTypes[4] {
+		return e.Albums, nil
+	}
+	return nil, &NotLoadedError{edge: "albums"}
+}
+
 // AnchorEpisodeOrErr returns the AnchorEpisode value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 	if e.AnchorEpisode != nil {
 		return e.AnchorEpisode, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[5] {
 		return nil, &NotFoundError{label: episode.Label}
 	}
 	return nil, &NotLoadedError{edge: "anchor_episode"}
@@ -139,7 +165,7 @@ func (e DownloadRecordEdges) AnchorEpisodeOrErr() (*Episode, error) {
 // EpisodesOrErr returns the Episodes value or an error if the edge
 // was not loaded in eager-loading.
 func (e DownloadRecordEdges) EpisodesOrErr() ([]*Episode, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[6] {
 		return e.Episodes, nil
 	}
 	return nil, &NotLoadedError{edge: "episodes"}
@@ -162,11 +188,13 @@ func (*DownloadRecord) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case downloadrecord.ForeignKeys[0]: // album_download_records
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.ForeignKeys[1]: // book_download_records
+		case downloadrecord.ForeignKeys[1]: // artist_download_records
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.ForeignKeys[2]: // episode_download_records
+		case downloadrecord.ForeignKeys[2]: // book_download_records
 			values[i] = new(sql.NullInt64)
-		case downloadrecord.ForeignKeys[3]: // movie_download_records
+		case downloadrecord.ForeignKeys[3]: // episode_download_records
+			values[i] = new(sql.NullInt64)
+		case downloadrecord.ForeignKeys[4]: // movie_download_records
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -329,19 +357,26 @@ func (_m *DownloadRecord) assignValues(columns []string, values []any) error {
 			}
 		case downloadrecord.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field artist_download_records", value)
+			} else if value.Valid {
+				_m.artist_download_records = new(uint32)
+				*_m.artist_download_records = uint32(value.Int64)
+			}
+		case downloadrecord.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field book_download_records", value)
 			} else if value.Valid {
 				_m.book_download_records = new(uint32)
 				*_m.book_download_records = uint32(value.Int64)
 			}
-		case downloadrecord.ForeignKeys[2]:
+		case downloadrecord.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_download_records", value)
 			} else if value.Valid {
 				_m.episode_download_records = new(uint32)
 				*_m.episode_download_records = uint32(value.Int64)
 			}
-		case downloadrecord.ForeignKeys[3]:
+		case downloadrecord.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field movie_download_records", value)
 			} else if value.Valid {
@@ -374,6 +409,16 @@ func (_m *DownloadRecord) QueryAlbum() *AlbumQuery {
 // QueryBook queries the "book" edge of the DownloadRecord entity.
 func (_m *DownloadRecord) QueryBook() *BookQuery {
 	return NewDownloadRecordClient(_m.config).QueryBook(_m)
+}
+
+// QueryArtist queries the "artist" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryArtist() *ArtistQuery {
+	return NewDownloadRecordClient(_m.config).QueryArtist(_m)
+}
+
+// QueryAlbums queries the "albums" edge of the DownloadRecord entity.
+func (_m *DownloadRecord) QueryAlbums() *AlbumQuery {
+	return NewDownloadRecordClient(_m.config).QueryAlbums(_m)
 }
 
 // QueryAnchorEpisode queries the "anchor_episode" edge of the DownloadRecord entity.

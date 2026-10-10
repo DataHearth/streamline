@@ -15,8 +15,12 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
+	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -29,6 +33,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
@@ -100,34 +105,39 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			album.Table:           album.ValidColumn,
-			apikey.Table:          apikey.ValidColumn,
-			artist.Table:          artist.ValidColumn,
-			author.Table:          author.ValidColumn,
-			book.Table:            book.ValidColumn,
-			credit.Table:          credit.ValidColumn,
-			downloadrecord.Table:  downloadrecord.ValidColumn,
-			episode.Table:         episode.ValidColumn,
-			importscan.Table:      importscan.ValidColumn,
-			importscanalbum.Table: importscanalbum.ValidColumn,
-			importscanbook.Table:  importscanbook.ValidColumn,
-			importscanfile.Table:  importscanfile.ValidColumn,
-			importscanshow.Table:  importscanshow.ValidColumn,
-			invite.Table:          invite.ValidColumn,
-			mediaevent.Table:      mediaevent.ValidColumn,
-			mediafile.Table:       mediafile.ValidColumn,
-			movie.Table:           movie.ValidColumn,
-			oidcidentity.Table:    oidcidentity.ValidColumn,
-			person.Table:          person.ValidColumn,
-			request.Table:         request.ValidColumn,
-			scheduledjob.Table:    scheduledjob.ValidColumn,
-			season.Table:          season.ValidColumn,
-			session.Table:         session.ValidColumn,
-			tvshow.Table:          tvshow.ValidColumn,
-			torrentsession.Table:  torrentsession.ValidColumn,
-			track.Table:           track.ValidColumn,
-			transcodejob.Table:    transcodejob.ValidColumn,
-			user.Table:            user.ValidColumn,
+			album.Table:            album.ValidColumn,
+			apikey.Table:           apikey.ValidColumn,
+			artist.Table:           artist.ValidColumn,
+			artistmember.Table:     artistmember.ValidColumn,
+			author.Table:           author.ValidColumn,
+			book.Table:             book.ValidColumn,
+			bookcontribution.Table: bookcontribution.ValidColumn,
+			bookedition.Table:      bookedition.ValidColumn,
+			bookseries.Table:       bookseries.ValidColumn,
+			credit.Table:           credit.ValidColumn,
+			downloadrecord.Table:   downloadrecord.ValidColumn,
+			episode.Table:          episode.ValidColumn,
+			importscan.Table:       importscan.ValidColumn,
+			importscanalbum.Table:  importscanalbum.ValidColumn,
+			importscanbook.Table:   importscanbook.ValidColumn,
+			importscanfile.Table:   importscanfile.ValidColumn,
+			importscanshow.Table:   importscanshow.ValidColumn,
+			invite.Table:           invite.ValidColumn,
+			mediaevent.Table:       mediaevent.ValidColumn,
+			mediafile.Table:        mediafile.ValidColumn,
+			movie.Table:            movie.ValidColumn,
+			musiccredit.Table:      musiccredit.ValidColumn,
+			oidcidentity.Table:     oidcidentity.ValidColumn,
+			person.Table:           person.ValidColumn,
+			request.Table:          request.ValidColumn,
+			scheduledjob.Table:     scheduledjob.ValidColumn,
+			season.Table:           season.ValidColumn,
+			session.Table:          session.ValidColumn,
+			tvshow.Table:           tvshow.ValidColumn,
+			torrentsession.Table:   torrentsession.ValidColumn,
+			track.Table:            track.ValidColumn,
+			transcodejob.Table:     transcodejob.ValidColumn,
+			user.Table:             user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

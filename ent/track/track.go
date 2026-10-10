@@ -28,10 +28,14 @@ const (
 	FieldPosition = "position"
 	// FieldDuration holds the string denoting the duration field in the database.
 	FieldDuration = "duration"
+	// FieldBonus holds the string denoting the bonus field in the database.
+	FieldBonus = "bonus"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
 	EdgeAlbum = "album"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
 	EdgeMediaFiles = "media_files"
+	// EdgeCredits holds the string denoting the credits edge name in mutations.
+	EdgeCredits = "credits"
 	// Table holds the table name of the track in the database.
 	Table = "tracks"
 	// AlbumTable is the table that holds the album relation/edge.
@@ -48,6 +52,13 @@ const (
 	MediaFilesInverseTable = "media_files"
 	// MediaFilesColumn is the table column denoting the media_files relation/edge.
 	MediaFilesColumn = "track_media_files"
+	// CreditsTable is the table that holds the credits relation/edge.
+	CreditsTable = "music_credits"
+	// CreditsInverseTable is the table name for the MusicCredit entity.
+	// It exists in this package in order to avoid circular dependency with the "musiccredit" package.
+	CreditsInverseTable = "music_credits"
+	// CreditsColumn is the table column denoting the credits relation/edge.
+	CreditsColumn = "track_credits"
 )
 
 // Columns holds all SQL columns for track fields.
@@ -60,6 +71,7 @@ var Columns = []string{
 	FieldDisc,
 	FieldPosition,
 	FieldDuration,
+	FieldBonus,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tracks"
@@ -96,6 +108,8 @@ var (
 	DefaultDisc uint8
 	// DefaultDuration holds the default value on creation for the "duration" field.
 	DefaultDuration uint32
+	// DefaultBonus holds the default value on creation for the "bonus" field.
+	DefaultBonus bool
 )
 
 // OrderOption defines the ordering options for the Track queries.
@@ -141,6 +155,11 @@ func ByDuration(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDuration, opts...).ToFunc()
 }
 
+// ByBonus orders the results by the bonus field.
+func ByBonus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBonus, opts...).ToFunc()
+}
+
 // ByAlbumField orders the results by album field.
 func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -161,6 +180,20 @@ func ByMediaFiles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newMediaFilesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCreditsCount orders the results by credits count.
+func ByCreditsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreditsStep(), opts...)
+	}
+}
+
+// ByCredits orders the results by credits terms.
+func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -173,5 +206,12 @@ func newMediaFilesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(MediaFilesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, MediaFilesTable, MediaFilesColumn),
+	)
+}
+func newCreditsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreditsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
 	)
 }

@@ -9,8 +9,9 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 )
 
 // Book is the model entity for the Book schema.
@@ -26,16 +27,30 @@ type Book struct {
 	HardcoverID uint32 `json:"hardcover_id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// OriginalTitle holds the value of the "original_title" field.
+	OriginalTitle string `json:"original_title,omitempty"`
 	// SortTitle holds the value of the "sort_title" field.
 	SortTitle string `json:"sort_title,omitempty"`
+	// AuthorName holds the value of the "author_name" field.
+	AuthorName string `json:"author_name,omitempty"`
+	// Kind holds the value of the "kind" field.
+	Kind book.Kind `json:"kind,omitempty"`
+	// Genre holds the value of the "genre" field.
+	Genre string `json:"genre,omitempty"`
+	// RatingTenths holds the value of the "rating_tenths" field.
+	RatingTenths *uint8 `json:"rating_tenths,omitempty"`
+	// ReleaseYear holds the value of the "release_year" field.
+	ReleaseYear *uint16 `json:"release_year,omitempty"`
 	// ReleaseDate holds the value of the "release_date" field.
 	ReleaseDate *time.Time `json:"release_date,omitempty"`
 	// Overview holds the value of the "overview" field.
 	Overview string `json:"overview,omitempty"`
-	// SeriesName holds the value of the "series_name" field.
-	SeriesName string `json:"series_name,omitempty"`
+	// PreferredLanguage holds the value of the "preferred_language" field.
+	PreferredLanguage string `json:"preferred_language,omitempty"`
+	// QualityProfile holds the value of the "quality_profile" field.
+	QualityProfile string `json:"quality_profile,omitempty"`
 	// SeriesPosition holds the value of the "series_position" field.
-	SeriesPosition string `json:"series_position,omitempty"`
+	SeriesPosition *float64 `json:"series_position,omitempty"`
 	// EbookMonitored holds the value of the "ebook_monitored" field.
 	EbookMonitored bool `json:"ebook_monitored,omitempty"`
 	// EbookStatus holds the value of the "ebook_status" field.
@@ -44,6 +59,8 @@ type Book struct {
 	EbookGrabFailures uint8 `json:"ebook_grab_failures,omitempty"`
 	// EbookLastSearchAt holds the value of the "ebook_last_search_at" field.
 	EbookLastSearchAt *time.Time `json:"ebook_last_search_at,omitempty"`
+	// EbookReplacingLanguage holds the value of the "ebook_replacing_language" field.
+	EbookReplacingLanguage string `json:"ebook_replacing_language,omitempty"`
 	// AudiobookMonitored holds the value of the "audiobook_monitored" field.
 	AudiobookMonitored bool `json:"audiobook_monitored,omitempty"`
 	// AudiobookStatus holds the value of the "audiobook_status" field.
@@ -52,41 +69,95 @@ type Book struct {
 	AudiobookGrabFailures uint8 `json:"audiobook_grab_failures,omitempty"`
 	// AudiobookLastSearchAt holds the value of the "audiobook_last_search_at" field.
 	AudiobookLastSearchAt *time.Time `json:"audiobook_last_search_at,omitempty"`
+	// AudiobookReplacingLanguage holds the value of the "audiobook_replacing_language" field.
+	AudiobookReplacingLanguage string `json:"audiobook_replacing_language,omitempty"`
+	// Null on a series stub the hydration worker has not reached; such a row is never searched, grabbed or imported.
+	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BookQuery when eager-loading is set.
-	Edges        BookEdges `json:"edges"`
-	author_books *uint32
-	selectValues sql.SelectValues
+	Edges                  BookEdges `json:"edges"`
+	book_ebook_edition     *uint32
+	book_audiobook_edition *uint32
+	book_series_volumes    *uint32
+	selectValues           sql.SelectValues
 }
 
 // BookEdges holds the relations/edges for other nodes in the graph.
 type BookEdges struct {
-	// Author holds the value of the author edge.
-	Author *Author `json:"author,omitempty"`
+	// Series holds the value of the series edge.
+	Series *BookSeries `json:"series,omitempty"`
+	// Editions holds the value of the editions edge.
+	Editions []*BookEdition `json:"editions,omitempty"`
+	// Contributions holds the value of the contributions edge.
+	Contributions []*BookContribution `json:"contributions,omitempty"`
+	// EbookEdition holds the value of the ebook_edition edge.
+	EbookEdition *BookEdition `json:"ebook_edition,omitempty"`
+	// AudiobookEdition holds the value of the audiobook_edition edge.
+	AudiobookEdition *BookEdition `json:"audiobook_edition,omitempty"`
 	// MediaFiles holds the value of the media_files edge.
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [7]bool
 }
 
-// AuthorOrErr returns the Author value or an error if the edge
+// SeriesOrErr returns the Series value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e BookEdges) AuthorOrErr() (*Author, error) {
-	if e.Author != nil {
-		return e.Author, nil
+func (e BookEdges) SeriesOrErr() (*BookSeries, error) {
+	if e.Series != nil {
+		return e.Series, nil
 	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: author.Label}
+		return nil, &NotFoundError{label: bookseries.Label}
 	}
-	return nil, &NotLoadedError{edge: "author"}
+	return nil, &NotLoadedError{edge: "series"}
+}
+
+// EditionsOrErr returns the Editions value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEdges) EditionsOrErr() ([]*BookEdition, error) {
+	if e.loadedTypes[1] {
+		return e.Editions, nil
+	}
+	return nil, &NotLoadedError{edge: "editions"}
+}
+
+// ContributionsOrErr returns the Contributions value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEdges) ContributionsOrErr() ([]*BookContribution, error) {
+	if e.loadedTypes[2] {
+		return e.Contributions, nil
+	}
+	return nil, &NotLoadedError{edge: "contributions"}
+}
+
+// EbookEditionOrErr returns the EbookEdition value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e BookEdges) EbookEditionOrErr() (*BookEdition, error) {
+	if e.EbookEdition != nil {
+		return e.EbookEdition, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: bookedition.Label}
+	}
+	return nil, &NotLoadedError{edge: "ebook_edition"}
+}
+
+// AudiobookEditionOrErr returns the AudiobookEdition value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e BookEdges) AudiobookEditionOrErr() (*BookEdition, error) {
+	if e.AudiobookEdition != nil {
+		return e.AudiobookEdition, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: bookedition.Label}
+	}
+	return nil, &NotLoadedError{edge: "audiobook_edition"}
 }
 
 // MediaFilesOrErr returns the MediaFiles value or an error if the edge
 // was not loaded in eager-loading.
 func (e BookEdges) MediaFilesOrErr() ([]*MediaFile, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[5] {
 		return e.MediaFiles, nil
 	}
 	return nil, &NotLoadedError{edge: "media_files"}
@@ -95,7 +166,7 @@ func (e BookEdges) MediaFilesOrErr() ([]*MediaFile, error) {
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
 // was not loaded in eager-loading.
 func (e BookEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[6] {
 		return e.DownloadRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "download_records"}
@@ -108,13 +179,19 @@ func (*Book) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case book.FieldEbookMonitored, book.FieldAudiobookMonitored:
 			values[i] = new(sql.NullBool)
-		case book.FieldID, book.FieldHardcoverID, book.FieldEbookGrabFailures, book.FieldAudiobookGrabFailures:
+		case book.FieldSeriesPosition:
+			values[i] = new(sql.NullFloat64)
+		case book.FieldID, book.FieldHardcoverID, book.FieldRatingTenths, book.FieldReleaseYear, book.FieldEbookGrabFailures, book.FieldAudiobookGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case book.FieldTitle, book.FieldSortTitle, book.FieldOverview, book.FieldSeriesName, book.FieldSeriesPosition, book.FieldEbookStatus, book.FieldAudiobookStatus:
+		case book.FieldTitle, book.FieldOriginalTitle, book.FieldSortTitle, book.FieldAuthorName, book.FieldKind, book.FieldGenre, book.FieldOverview, book.FieldPreferredLanguage, book.FieldQualityProfile, book.FieldEbookStatus, book.FieldEbookReplacingLanguage, book.FieldAudiobookStatus, book.FieldAudiobookReplacingLanguage:
 			values[i] = new(sql.NullString)
-		case book.FieldCreateTime, book.FieldUpdateTime, book.FieldReleaseDate, book.FieldEbookLastSearchAt, book.FieldAudiobookLastSearchAt:
+		case book.FieldCreateTime, book.FieldUpdateTime, book.FieldReleaseDate, book.FieldEbookLastSearchAt, book.FieldAudiobookLastSearchAt, book.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
-		case book.ForeignKeys[0]: // author_books
+		case book.ForeignKeys[0]: // book_ebook_edition
+			values[i] = new(sql.NullInt64)
+		case book.ForeignKeys[1]: // book_audiobook_edition
+			values[i] = new(sql.NullInt64)
+		case book.ForeignKeys[2]: // book_series_volumes
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -161,11 +238,49 @@ func (_m *Book) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Title = value.String
 			}
+		case book.FieldOriginalTitle:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field original_title", values[i])
+			} else if value.Valid {
+				_m.OriginalTitle = value.String
+			}
 		case book.FieldSortTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field sort_title", values[i])
 			} else if value.Valid {
 				_m.SortTitle = value.String
+			}
+		case book.FieldAuthorName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field author_name", values[i])
+			} else if value.Valid {
+				_m.AuthorName = value.String
+			}
+		case book.FieldKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kind", values[i])
+			} else if value.Valid {
+				_m.Kind = book.Kind(value.String)
+			}
+		case book.FieldGenre:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field genre", values[i])
+			} else if value.Valid {
+				_m.Genre = value.String
+			}
+		case book.FieldRatingTenths:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field rating_tenths", values[i])
+			} else if value.Valid {
+				_m.RatingTenths = new(uint8)
+				*_m.RatingTenths = uint8(value.Int64)
+			}
+		case book.FieldReleaseYear:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field release_year", values[i])
+			} else if value.Valid {
+				_m.ReleaseYear = new(uint16)
+				*_m.ReleaseYear = uint16(value.Int64)
 			}
 		case book.FieldReleaseDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -180,17 +295,24 @@ func (_m *Book) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Overview = value.String
 			}
-		case book.FieldSeriesName:
+		case book.FieldPreferredLanguage:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field series_name", values[i])
+				return fmt.Errorf("unexpected type %T for field preferred_language", values[i])
 			} else if value.Valid {
-				_m.SeriesName = value.String
+				_m.PreferredLanguage = value.String
+			}
+		case book.FieldQualityProfile:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quality_profile", values[i])
+			} else if value.Valid {
+				_m.QualityProfile = value.String
 			}
 		case book.FieldSeriesPosition:
-			if value, ok := values[i].(*sql.NullString); !ok {
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field series_position", values[i])
 			} else if value.Valid {
-				_m.SeriesPosition = value.String
+				_m.SeriesPosition = new(float64)
+				*_m.SeriesPosition = value.Float64
 			}
 		case book.FieldEbookMonitored:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -217,6 +339,12 @@ func (_m *Book) assignValues(columns []string, values []any) error {
 				_m.EbookLastSearchAt = new(time.Time)
 				*_m.EbookLastSearchAt = value.Time
 			}
+		case book.FieldEbookReplacingLanguage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field ebook_replacing_language", values[i])
+			} else if value.Valid {
+				_m.EbookReplacingLanguage = value.String
+			}
 		case book.FieldAudiobookMonitored:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field audiobook_monitored", values[i])
@@ -242,12 +370,39 @@ func (_m *Book) assignValues(columns []string, values []any) error {
 				_m.AudiobookLastSearchAt = new(time.Time)
 				*_m.AudiobookLastSearchAt = value.Time
 			}
+		case book.FieldAudiobookReplacingLanguage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field audiobook_replacing_language", values[i])
+			} else if value.Valid {
+				_m.AudiobookReplacingLanguage = value.String
+			}
+		case book.FieldLastRefreshedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
+			} else if value.Valid {
+				_m.LastRefreshedAt = new(time.Time)
+				*_m.LastRefreshedAt = value.Time
+			}
 		case book.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field author_books", value)
+				return fmt.Errorf("unexpected type %T for edge-field book_ebook_edition", value)
 			} else if value.Valid {
-				_m.author_books = new(uint32)
-				*_m.author_books = uint32(value.Int64)
+				_m.book_ebook_edition = new(uint32)
+				*_m.book_ebook_edition = uint32(value.Int64)
+			}
+		case book.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field book_audiobook_edition", value)
+			} else if value.Valid {
+				_m.book_audiobook_edition = new(uint32)
+				*_m.book_audiobook_edition = uint32(value.Int64)
+			}
+		case book.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field book_series_volumes", value)
+			} else if value.Valid {
+				_m.book_series_volumes = new(uint32)
+				*_m.book_series_volumes = uint32(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -262,9 +417,29 @@ func (_m *Book) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryAuthor queries the "author" edge of the Book entity.
-func (_m *Book) QueryAuthor() *AuthorQuery {
-	return NewBookClient(_m.config).QueryAuthor(_m)
+// QuerySeries queries the "series" edge of the Book entity.
+func (_m *Book) QuerySeries() *BookSeriesQuery {
+	return NewBookClient(_m.config).QuerySeries(_m)
+}
+
+// QueryEditions queries the "editions" edge of the Book entity.
+func (_m *Book) QueryEditions() *BookEditionQuery {
+	return NewBookClient(_m.config).QueryEditions(_m)
+}
+
+// QueryContributions queries the "contributions" edge of the Book entity.
+func (_m *Book) QueryContributions() *BookContributionQuery {
+	return NewBookClient(_m.config).QueryContributions(_m)
+}
+
+// QueryEbookEdition queries the "ebook_edition" edge of the Book entity.
+func (_m *Book) QueryEbookEdition() *BookEditionQuery {
+	return NewBookClient(_m.config).QueryEbookEdition(_m)
+}
+
+// QueryAudiobookEdition queries the "audiobook_edition" edge of the Book entity.
+func (_m *Book) QueryAudiobookEdition() *BookEditionQuery {
+	return NewBookClient(_m.config).QueryAudiobookEdition(_m)
 }
 
 // QueryMediaFiles queries the "media_files" edge of the Book entity.
@@ -312,8 +487,30 @@ func (_m *Book) String() string {
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
+	builder.WriteString("original_title=")
+	builder.WriteString(_m.OriginalTitle)
+	builder.WriteString(", ")
 	builder.WriteString("sort_title=")
 	builder.WriteString(_m.SortTitle)
+	builder.WriteString(", ")
+	builder.WriteString("author_name=")
+	builder.WriteString(_m.AuthorName)
+	builder.WriteString(", ")
+	builder.WriteString("kind=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Kind))
+	builder.WriteString(", ")
+	builder.WriteString("genre=")
+	builder.WriteString(_m.Genre)
+	builder.WriteString(", ")
+	if v := _m.RatingTenths; v != nil {
+		builder.WriteString("rating_tenths=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.ReleaseYear; v != nil {
+		builder.WriteString("release_year=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	if v := _m.ReleaseDate; v != nil {
 		builder.WriteString("release_date=")
@@ -323,11 +520,16 @@ func (_m *Book) String() string {
 	builder.WriteString("overview=")
 	builder.WriteString(_m.Overview)
 	builder.WriteString(", ")
-	builder.WriteString("series_name=")
-	builder.WriteString(_m.SeriesName)
+	builder.WriteString("preferred_language=")
+	builder.WriteString(_m.PreferredLanguage)
 	builder.WriteString(", ")
-	builder.WriteString("series_position=")
-	builder.WriteString(_m.SeriesPosition)
+	builder.WriteString("quality_profile=")
+	builder.WriteString(_m.QualityProfile)
+	builder.WriteString(", ")
+	if v := _m.SeriesPosition; v != nil {
+		builder.WriteString("series_position=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("ebook_monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.EbookMonitored))
@@ -343,6 +545,9 @@ func (_m *Book) String() string {
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
+	builder.WriteString("ebook_replacing_language=")
+	builder.WriteString(_m.EbookReplacingLanguage)
+	builder.WriteString(", ")
 	builder.WriteString("audiobook_monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AudiobookMonitored))
 	builder.WriteString(", ")
@@ -354,6 +559,14 @@ func (_m *Book) String() string {
 	builder.WriteString(", ")
 	if v := _m.AudiobookLastSearchAt; v != nil {
 		builder.WriteString("audiobook_last_search_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("audiobook_replacing_language=")
+	builder.WriteString(_m.AudiobookReplacingLanguage)
+	builder.WriteString(", ")
+	if v := _m.LastRefreshedAt; v != nil {
+		builder.WriteString("last_refreshed_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteByte(')')

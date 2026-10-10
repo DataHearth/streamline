@@ -165,33 +165,6 @@ func (_u *ImportScanBookUpdate) ClearBookHardcoverID() *ImportScanBookUpdate {
 	return _u
 }
 
-// SetAuthorHardcoverID sets the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdate) SetAuthorHardcoverID(v uint32) *ImportScanBookUpdate {
-	_u.mutation.ResetAuthorHardcoverID()
-	_u.mutation.SetAuthorHardcoverID(v)
-	return _u
-}
-
-// SetNillableAuthorHardcoverID sets the "author_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdate) SetNillableAuthorHardcoverID(v *uint32) *ImportScanBookUpdate {
-	if v != nil {
-		_u.SetAuthorHardcoverID(*v)
-	}
-	return _u
-}
-
-// AddAuthorHardcoverID adds value to the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdate) AddAuthorHardcoverID(v int32) *ImportScanBookUpdate {
-	_u.mutation.AddAuthorHardcoverID(v)
-	return _u
-}
-
-// ClearAuthorHardcoverID clears the value of the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdate) ClearAuthorHardcoverID() *ImportScanBookUpdate {
-	_u.mutation.ClearAuthorHardcoverID()
-	return _u
-}
-
 // SetCandidates sets the "candidates" field.
 func (_u *ImportScanBookUpdate) SetCandidates(v []schema.ScannedBookCandidate) *ImportScanBookUpdate {
 	_u.mutation.SetCandidates(v)
@@ -487,15 +460,6 @@ func (_u *ImportScanBookUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if _u.mutation.BookHardcoverIDCleared() {
 		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeUint32)
 	}
-	if value, ok := _u.mutation.AuthorHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedAuthorHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32, value)
-	}
-	if _u.mutation.AuthorHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32)
-	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanbook.FieldCandidates, field.TypeJSON, value)
 	}
@@ -727,33 +691,6 @@ func (_u *ImportScanBookUpdateOne) AddBookHardcoverID(v int32) *ImportScanBookUp
 // ClearBookHardcoverID clears the value of the "book_hardcover_id" field.
 func (_u *ImportScanBookUpdateOne) ClearBookHardcoverID() *ImportScanBookUpdateOne {
 	_u.mutation.ClearBookHardcoverID()
-	return _u
-}
-
-// SetAuthorHardcoverID sets the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) SetAuthorHardcoverID(v uint32) *ImportScanBookUpdateOne {
-	_u.mutation.ResetAuthorHardcoverID()
-	_u.mutation.SetAuthorHardcoverID(v)
-	return _u
-}
-
-// SetNillableAuthorHardcoverID sets the "author_hardcover_id" field if the given value is not nil.
-func (_u *ImportScanBookUpdateOne) SetNillableAuthorHardcoverID(v *uint32) *ImportScanBookUpdateOne {
-	if v != nil {
-		_u.SetAuthorHardcoverID(*v)
-	}
-	return _u
-}
-
-// AddAuthorHardcoverID adds value to the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) AddAuthorHardcoverID(v int32) *ImportScanBookUpdateOne {
-	_u.mutation.AddAuthorHardcoverID(v)
-	return _u
-}
-
-// ClearAuthorHardcoverID clears the value of the "author_hardcover_id" field.
-func (_u *ImportScanBookUpdateOne) ClearAuthorHardcoverID() *ImportScanBookUpdateOne {
-	_u.mutation.ClearAuthorHardcoverID()
 	return _u
 }
 
@@ -1081,15 +1018,6 @@ func (_u *ImportScanBookUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 	}
 	if _u.mutation.BookHardcoverIDCleared() {
 		_spec.ClearField(importscanbook.FieldBookHardcoverID, field.TypeUint32)
-	}
-	if value, ok := _u.mutation.AuthorHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32, value)
-	}
-	if value, ok := _u.mutation.AddedAuthorHardcoverID(); ok {
-		_spec.AddField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32, value)
-	}
-	if _u.mutation.AuthorHardcoverIDCleared() {
-		_spec.ClearField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32)
 	}
 	if value, ok := _u.mutation.Candidates(); ok {
 		_spec.SetField(importscanbook.FieldCandidates, field.TypeJSON, value)

@@ -203,6 +203,74 @@ func (_c *MockProber_Probe_Call) RunAndReturn(run func(ctx context.Context, path
 	return _c
 }
 
+// ProbeAudio provides a mock function for the type MockProber
+func (_mock *MockProber) ProbeAudio(ctx context.Context, path string) (*ffmpeg.AudioInfo, error) {
+	ret := _mock.Called(ctx, path)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ProbeAudio")
+	}
+
+	var r0 *ffmpeg.AudioInfo
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*ffmpeg.AudioInfo, error)); ok {
+		return returnFunc(ctx, path)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *ffmpeg.AudioInfo); ok {
+		r0 = returnFunc(ctx, path)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ffmpeg.AudioInfo)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, path)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProber_ProbeAudio_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProbeAudio'
+type MockProber_ProbeAudio_Call struct {
+	*mock.Call
+}
+
+// ProbeAudio is a helper method to define mock.On call
+//   - ctx context.Context
+//   - path string
+func (_e *MockProber_Expecter) ProbeAudio(ctx any, path any) *MockProber_ProbeAudio_Call {
+	return &MockProber_ProbeAudio_Call{Call: _e.mock.On("ProbeAudio", ctx, path)}
+}
+
+func (_c *MockProber_ProbeAudio_Call) Run(run func(ctx context.Context, path string)) *MockProber_ProbeAudio_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProber_ProbeAudio_Call) Return(audioInfo *ffmpeg.AudioInfo, err error) *MockProber_ProbeAudio_Call {
+	_c.Call.Return(audioInfo, err)
+	return _c
+}
+
+func (_c *MockProber_ProbeAudio_Call) RunAndReturn(run func(ctx context.Context, path string) (*ffmpeg.AudioInfo, error)) *MockProber_ProbeAudio_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResolvedPath provides a mock function for the type MockProber
 func (_mock *MockProber) ResolvedPath() string {
 	ret := _mock.Called()

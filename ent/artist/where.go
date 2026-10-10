@@ -85,9 +85,44 @@ func Overview(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldOverview, v))
 }
 
-// Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
-func Monitored(v bool) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldMonitored, v))
+// OverviewSource applies equality check predicate on the "overview_source" field. It's identical to OverviewSourceEQ.
+func OverviewSource(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewSource, v))
+}
+
+// OverviewFr applies equality check predicate on the "overview_fr" field. It's identical to OverviewFrEQ.
+func OverviewFr(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewFr, v))
+}
+
+// OverviewSourceFr applies equality check predicate on the "overview_source_fr" field. It's identical to OverviewSourceFrEQ.
+func OverviewSourceFr(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewSourceFr, v))
+}
+
+// Origin applies equality check predicate on the "origin" field. It's identical to OriginEQ.
+func Origin(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOrigin, v))
+}
+
+// Since applies equality check predicate on the "since" field. It's identical to SinceEQ.
+func Since(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldSince, v))
+}
+
+// Genre applies equality check predicate on the "genre" field. It's identical to GenreEQ.
+func Genre(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldGenre, v))
+}
+
+// DeezerID applies equality check predicate on the "deezer_id" field. It's identical to DeezerIDEQ.
+func DeezerID(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDeezerID, v))
+}
+
+// WikidataID applies equality check predicate on the "wikidata_id" field. It's identical to WikidataIDEQ.
+func WikidataID(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldWikidataID, v))
 }
 
 // Path applies equality check predicate on the "path" field. It's identical to PathEQ.
@@ -103,6 +138,11 @@ func QualityProfile(v string) predicate.Artist {
 // LastRefreshedAt applies equality check predicate on the "last_refreshed_at" field. It's identical to LastRefreshedAtEQ.
 func LastRefreshedAt(v time.Time) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldLastRefreshedAt, v))
+}
+
+// DetailsFetchedAt applies equality check predicate on the "details_fetched_at" field. It's identical to DetailsFetchedAtEQ.
+func DetailsFetchedAt(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDetailsFetchedAt, v))
 }
 
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
@@ -465,14 +505,604 @@ func OverviewContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldOverview, v))
 }
 
-// MonitoredEQ applies the EQ predicate on the "monitored" field.
-func MonitoredEQ(v bool) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldMonitored, v))
+// OverviewSourceEQ applies the EQ predicate on the "overview_source" field.
+func OverviewSourceEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewSource, v))
 }
 
-// MonitoredNEQ applies the NEQ predicate on the "monitored" field.
-func MonitoredNEQ(v bool) predicate.Artist {
-	return predicate.Artist(sql.FieldNEQ(FieldMonitored, v))
+// OverviewSourceNEQ applies the NEQ predicate on the "overview_source" field.
+func OverviewSourceNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldOverviewSource, v))
+}
+
+// OverviewSourceIn applies the In predicate on the "overview_source" field.
+func OverviewSourceIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldOverviewSource, vs...))
+}
+
+// OverviewSourceNotIn applies the NotIn predicate on the "overview_source" field.
+func OverviewSourceNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldOverviewSource, vs...))
+}
+
+// OverviewSourceGT applies the GT predicate on the "overview_source" field.
+func OverviewSourceGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldOverviewSource, v))
+}
+
+// OverviewSourceGTE applies the GTE predicate on the "overview_source" field.
+func OverviewSourceGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldOverviewSource, v))
+}
+
+// OverviewSourceLT applies the LT predicate on the "overview_source" field.
+func OverviewSourceLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldOverviewSource, v))
+}
+
+// OverviewSourceLTE applies the LTE predicate on the "overview_source" field.
+func OverviewSourceLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldOverviewSource, v))
+}
+
+// OverviewSourceContains applies the Contains predicate on the "overview_source" field.
+func OverviewSourceContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldOverviewSource, v))
+}
+
+// OverviewSourceHasPrefix applies the HasPrefix predicate on the "overview_source" field.
+func OverviewSourceHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldOverviewSource, v))
+}
+
+// OverviewSourceHasSuffix applies the HasSuffix predicate on the "overview_source" field.
+func OverviewSourceHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldOverviewSource, v))
+}
+
+// OverviewSourceIsNil applies the IsNil predicate on the "overview_source" field.
+func OverviewSourceIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldOverviewSource))
+}
+
+// OverviewSourceNotNil applies the NotNil predicate on the "overview_source" field.
+func OverviewSourceNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldOverviewSource))
+}
+
+// OverviewSourceEqualFold applies the EqualFold predicate on the "overview_source" field.
+func OverviewSourceEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldOverviewSource, v))
+}
+
+// OverviewSourceContainsFold applies the ContainsFold predicate on the "overview_source" field.
+func OverviewSourceContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldOverviewSource, v))
+}
+
+// OverviewFrEQ applies the EQ predicate on the "overview_fr" field.
+func OverviewFrEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewFr, v))
+}
+
+// OverviewFrNEQ applies the NEQ predicate on the "overview_fr" field.
+func OverviewFrNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldOverviewFr, v))
+}
+
+// OverviewFrIn applies the In predicate on the "overview_fr" field.
+func OverviewFrIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldOverviewFr, vs...))
+}
+
+// OverviewFrNotIn applies the NotIn predicate on the "overview_fr" field.
+func OverviewFrNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldOverviewFr, vs...))
+}
+
+// OverviewFrGT applies the GT predicate on the "overview_fr" field.
+func OverviewFrGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldOverviewFr, v))
+}
+
+// OverviewFrGTE applies the GTE predicate on the "overview_fr" field.
+func OverviewFrGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldOverviewFr, v))
+}
+
+// OverviewFrLT applies the LT predicate on the "overview_fr" field.
+func OverviewFrLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldOverviewFr, v))
+}
+
+// OverviewFrLTE applies the LTE predicate on the "overview_fr" field.
+func OverviewFrLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldOverviewFr, v))
+}
+
+// OverviewFrContains applies the Contains predicate on the "overview_fr" field.
+func OverviewFrContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldOverviewFr, v))
+}
+
+// OverviewFrHasPrefix applies the HasPrefix predicate on the "overview_fr" field.
+func OverviewFrHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldOverviewFr, v))
+}
+
+// OverviewFrHasSuffix applies the HasSuffix predicate on the "overview_fr" field.
+func OverviewFrHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldOverviewFr, v))
+}
+
+// OverviewFrIsNil applies the IsNil predicate on the "overview_fr" field.
+func OverviewFrIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldOverviewFr))
+}
+
+// OverviewFrNotNil applies the NotNil predicate on the "overview_fr" field.
+func OverviewFrNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldOverviewFr))
+}
+
+// OverviewFrEqualFold applies the EqualFold predicate on the "overview_fr" field.
+func OverviewFrEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldOverviewFr, v))
+}
+
+// OverviewFrContainsFold applies the ContainsFold predicate on the "overview_fr" field.
+func OverviewFrContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldOverviewFr, v))
+}
+
+// OverviewSourceFrEQ applies the EQ predicate on the "overview_source_fr" field.
+func OverviewSourceFrEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrNEQ applies the NEQ predicate on the "overview_source_fr" field.
+func OverviewSourceFrNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrIn applies the In predicate on the "overview_source_fr" field.
+func OverviewSourceFrIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldOverviewSourceFr, vs...))
+}
+
+// OverviewSourceFrNotIn applies the NotIn predicate on the "overview_source_fr" field.
+func OverviewSourceFrNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldOverviewSourceFr, vs...))
+}
+
+// OverviewSourceFrGT applies the GT predicate on the "overview_source_fr" field.
+func OverviewSourceFrGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrGTE applies the GTE predicate on the "overview_source_fr" field.
+func OverviewSourceFrGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrLT applies the LT predicate on the "overview_source_fr" field.
+func OverviewSourceFrLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrLTE applies the LTE predicate on the "overview_source_fr" field.
+func OverviewSourceFrLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrContains applies the Contains predicate on the "overview_source_fr" field.
+func OverviewSourceFrContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrHasPrefix applies the HasPrefix predicate on the "overview_source_fr" field.
+func OverviewSourceFrHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrHasSuffix applies the HasSuffix predicate on the "overview_source_fr" field.
+func OverviewSourceFrHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrIsNil applies the IsNil predicate on the "overview_source_fr" field.
+func OverviewSourceFrIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldOverviewSourceFr))
+}
+
+// OverviewSourceFrNotNil applies the NotNil predicate on the "overview_source_fr" field.
+func OverviewSourceFrNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldOverviewSourceFr))
+}
+
+// OverviewSourceFrEqualFold applies the EqualFold predicate on the "overview_source_fr" field.
+func OverviewSourceFrEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldOverviewSourceFr, v))
+}
+
+// OverviewSourceFrContainsFold applies the ContainsFold predicate on the "overview_source_fr" field.
+func OverviewSourceFrContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldOverviewSourceFr, v))
+}
+
+// MonitorEQ applies the EQ predicate on the "monitor" field.
+func MonitorEQ(v Monitor) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldMonitor, v))
+}
+
+// MonitorNEQ applies the NEQ predicate on the "monitor" field.
+func MonitorNEQ(v Monitor) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldMonitor, v))
+}
+
+// MonitorIn applies the In predicate on the "monitor" field.
+func MonitorIn(vs ...Monitor) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldMonitor, vs...))
+}
+
+// MonitorNotIn applies the NotIn predicate on the "monitor" field.
+func MonitorNotIn(vs ...Monitor) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldMonitor, vs...))
+}
+
+// TypeEQ applies the EQ predicate on the "type" field.
+func TypeEQ(v Type) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldType, v))
+}
+
+// TypeNEQ applies the NEQ predicate on the "type" field.
+func TypeNEQ(v Type) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldType, v))
+}
+
+// TypeIn applies the In predicate on the "type" field.
+func TypeIn(vs ...Type) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldType, vs...))
+}
+
+// TypeNotIn applies the NotIn predicate on the "type" field.
+func TypeNotIn(vs ...Type) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldType, vs...))
+}
+
+// TypeIsNil applies the IsNil predicate on the "type" field.
+func TypeIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldType))
+}
+
+// TypeNotNil applies the NotNil predicate on the "type" field.
+func TypeNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldType))
+}
+
+// OriginEQ applies the EQ predicate on the "origin" field.
+func OriginEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldOrigin, v))
+}
+
+// OriginNEQ applies the NEQ predicate on the "origin" field.
+func OriginNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldOrigin, v))
+}
+
+// OriginIn applies the In predicate on the "origin" field.
+func OriginIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldOrigin, vs...))
+}
+
+// OriginNotIn applies the NotIn predicate on the "origin" field.
+func OriginNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldOrigin, vs...))
+}
+
+// OriginGT applies the GT predicate on the "origin" field.
+func OriginGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldOrigin, v))
+}
+
+// OriginGTE applies the GTE predicate on the "origin" field.
+func OriginGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldOrigin, v))
+}
+
+// OriginLT applies the LT predicate on the "origin" field.
+func OriginLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldOrigin, v))
+}
+
+// OriginLTE applies the LTE predicate on the "origin" field.
+func OriginLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldOrigin, v))
+}
+
+// OriginContains applies the Contains predicate on the "origin" field.
+func OriginContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldOrigin, v))
+}
+
+// OriginHasPrefix applies the HasPrefix predicate on the "origin" field.
+func OriginHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldOrigin, v))
+}
+
+// OriginHasSuffix applies the HasSuffix predicate on the "origin" field.
+func OriginHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldOrigin, v))
+}
+
+// OriginIsNil applies the IsNil predicate on the "origin" field.
+func OriginIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldOrigin))
+}
+
+// OriginNotNil applies the NotNil predicate on the "origin" field.
+func OriginNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldOrigin))
+}
+
+// OriginEqualFold applies the EqualFold predicate on the "origin" field.
+func OriginEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldOrigin, v))
+}
+
+// OriginContainsFold applies the ContainsFold predicate on the "origin" field.
+func OriginContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldOrigin, v))
+}
+
+// SinceEQ applies the EQ predicate on the "since" field.
+func SinceEQ(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldSince, v))
+}
+
+// SinceNEQ applies the NEQ predicate on the "since" field.
+func SinceNEQ(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldSince, v))
+}
+
+// SinceIn applies the In predicate on the "since" field.
+func SinceIn(vs ...uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldSince, vs...))
+}
+
+// SinceNotIn applies the NotIn predicate on the "since" field.
+func SinceNotIn(vs ...uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldSince, vs...))
+}
+
+// SinceGT applies the GT predicate on the "since" field.
+func SinceGT(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldSince, v))
+}
+
+// SinceGTE applies the GTE predicate on the "since" field.
+func SinceGTE(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldSince, v))
+}
+
+// SinceLT applies the LT predicate on the "since" field.
+func SinceLT(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldSince, v))
+}
+
+// SinceLTE applies the LTE predicate on the "since" field.
+func SinceLTE(v uint16) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldSince, v))
+}
+
+// SinceIsNil applies the IsNil predicate on the "since" field.
+func SinceIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldSince))
+}
+
+// SinceNotNil applies the NotNil predicate on the "since" field.
+func SinceNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldSince))
+}
+
+// GenreEQ applies the EQ predicate on the "genre" field.
+func GenreEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldGenre, v))
+}
+
+// GenreNEQ applies the NEQ predicate on the "genre" field.
+func GenreNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldGenre, v))
+}
+
+// GenreIn applies the In predicate on the "genre" field.
+func GenreIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldGenre, vs...))
+}
+
+// GenreNotIn applies the NotIn predicate on the "genre" field.
+func GenreNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldGenre, vs...))
+}
+
+// GenreGT applies the GT predicate on the "genre" field.
+func GenreGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldGenre, v))
+}
+
+// GenreGTE applies the GTE predicate on the "genre" field.
+func GenreGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldGenre, v))
+}
+
+// GenreLT applies the LT predicate on the "genre" field.
+func GenreLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldGenre, v))
+}
+
+// GenreLTE applies the LTE predicate on the "genre" field.
+func GenreLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldGenre, v))
+}
+
+// GenreContains applies the Contains predicate on the "genre" field.
+func GenreContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldGenre, v))
+}
+
+// GenreHasPrefix applies the HasPrefix predicate on the "genre" field.
+func GenreHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldGenre, v))
+}
+
+// GenreHasSuffix applies the HasSuffix predicate on the "genre" field.
+func GenreHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldGenre, v))
+}
+
+// GenreIsNil applies the IsNil predicate on the "genre" field.
+func GenreIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldGenre))
+}
+
+// GenreNotNil applies the NotNil predicate on the "genre" field.
+func GenreNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldGenre))
+}
+
+// GenreEqualFold applies the EqualFold predicate on the "genre" field.
+func GenreEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldGenre, v))
+}
+
+// GenreContainsFold applies the ContainsFold predicate on the "genre" field.
+func GenreContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldGenre, v))
+}
+
+// DeezerIDEQ applies the EQ predicate on the "deezer_id" field.
+func DeezerIDEQ(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDeezerID, v))
+}
+
+// DeezerIDNEQ applies the NEQ predicate on the "deezer_id" field.
+func DeezerIDNEQ(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldDeezerID, v))
+}
+
+// DeezerIDIn applies the In predicate on the "deezer_id" field.
+func DeezerIDIn(vs ...uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldDeezerID, vs...))
+}
+
+// DeezerIDNotIn applies the NotIn predicate on the "deezer_id" field.
+func DeezerIDNotIn(vs ...uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldDeezerID, vs...))
+}
+
+// DeezerIDGT applies the GT predicate on the "deezer_id" field.
+func DeezerIDGT(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldDeezerID, v))
+}
+
+// DeezerIDGTE applies the GTE predicate on the "deezer_id" field.
+func DeezerIDGTE(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldDeezerID, v))
+}
+
+// DeezerIDLT applies the LT predicate on the "deezer_id" field.
+func DeezerIDLT(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldDeezerID, v))
+}
+
+// DeezerIDLTE applies the LTE predicate on the "deezer_id" field.
+func DeezerIDLTE(v uint32) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldDeezerID, v))
+}
+
+// DeezerIDIsNil applies the IsNil predicate on the "deezer_id" field.
+func DeezerIDIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldDeezerID))
+}
+
+// DeezerIDNotNil applies the NotNil predicate on the "deezer_id" field.
+func DeezerIDNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldDeezerID))
+}
+
+// WikidataIDEQ applies the EQ predicate on the "wikidata_id" field.
+func WikidataIDEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldWikidataID, v))
+}
+
+// WikidataIDNEQ applies the NEQ predicate on the "wikidata_id" field.
+func WikidataIDNEQ(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldWikidataID, v))
+}
+
+// WikidataIDIn applies the In predicate on the "wikidata_id" field.
+func WikidataIDIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDNotIn applies the NotIn predicate on the "wikidata_id" field.
+func WikidataIDNotIn(vs ...string) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldWikidataID, vs...))
+}
+
+// WikidataIDGT applies the GT predicate on the "wikidata_id" field.
+func WikidataIDGT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldWikidataID, v))
+}
+
+// WikidataIDGTE applies the GTE predicate on the "wikidata_id" field.
+func WikidataIDGTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldWikidataID, v))
+}
+
+// WikidataIDLT applies the LT predicate on the "wikidata_id" field.
+func WikidataIDLT(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldWikidataID, v))
+}
+
+// WikidataIDLTE applies the LTE predicate on the "wikidata_id" field.
+func WikidataIDLTE(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldWikidataID, v))
+}
+
+// WikidataIDContains applies the Contains predicate on the "wikidata_id" field.
+func WikidataIDContains(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContains(FieldWikidataID, v))
+}
+
+// WikidataIDHasPrefix applies the HasPrefix predicate on the "wikidata_id" field.
+func WikidataIDHasPrefix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasPrefix(FieldWikidataID, v))
+}
+
+// WikidataIDHasSuffix applies the HasSuffix predicate on the "wikidata_id" field.
+func WikidataIDHasSuffix(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldHasSuffix(FieldWikidataID, v))
+}
+
+// WikidataIDIsNil applies the IsNil predicate on the "wikidata_id" field.
+func WikidataIDIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldWikidataID))
+}
+
+// WikidataIDNotNil applies the NotNil predicate on the "wikidata_id" field.
+func WikidataIDNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldWikidataID))
+}
+
+// WikidataIDEqualFold applies the EqualFold predicate on the "wikidata_id" field.
+func WikidataIDEqualFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldEqualFold(FieldWikidataID, v))
+}
+
+// WikidataIDContainsFold applies the ContainsFold predicate on the "wikidata_id" field.
+func WikidataIDContainsFold(v string) predicate.Artist {
+	return predicate.Artist(sql.FieldContainsFold(FieldWikidataID, v))
 }
 
 // PathEQ applies the EQ predicate on the "path" field.
@@ -675,6 +1305,56 @@ func LastRefreshedAtNotNil() predicate.Artist {
 	return predicate.Artist(sql.FieldNotNull(FieldLastRefreshedAt))
 }
 
+// DetailsFetchedAtEQ applies the EQ predicate on the "details_fetched_at" field.
+func DetailsFetchedAtEQ(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldEQ(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtNEQ applies the NEQ predicate on the "details_fetched_at" field.
+func DetailsFetchedAtNEQ(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldNEQ(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtIn applies the In predicate on the "details_fetched_at" field.
+func DetailsFetchedAtIn(vs ...time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldIn(FieldDetailsFetchedAt, vs...))
+}
+
+// DetailsFetchedAtNotIn applies the NotIn predicate on the "details_fetched_at" field.
+func DetailsFetchedAtNotIn(vs ...time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldNotIn(FieldDetailsFetchedAt, vs...))
+}
+
+// DetailsFetchedAtGT applies the GT predicate on the "details_fetched_at" field.
+func DetailsFetchedAtGT(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldGT(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtGTE applies the GTE predicate on the "details_fetched_at" field.
+func DetailsFetchedAtGTE(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldGTE(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtLT applies the LT predicate on the "details_fetched_at" field.
+func DetailsFetchedAtLT(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldLT(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtLTE applies the LTE predicate on the "details_fetched_at" field.
+func DetailsFetchedAtLTE(v time.Time) predicate.Artist {
+	return predicate.Artist(sql.FieldLTE(FieldDetailsFetchedAt, v))
+}
+
+// DetailsFetchedAtIsNil applies the IsNil predicate on the "details_fetched_at" field.
+func DetailsFetchedAtIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldDetailsFetchedAt))
+}
+
+// DetailsFetchedAtNotNil applies the NotNil predicate on the "details_fetched_at" field.
+func DetailsFetchedAtNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldDetailsFetchedAt))
+}
+
 // HasAlbums applies the HasEdge predicate on the "albums" edge.
 func HasAlbums() predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {
@@ -690,6 +1370,52 @@ func HasAlbums() predicate.Artist {
 func HasAlbumsWith(preds ...predicate.Album) predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {
 		step := newAlbumsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasMembers applies the HasEdge predicate on the "members" edge.
+func HasMembers() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MembersTable, MembersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMembersWith applies the HasEdge predicate on the "members" edge with a given conditions (other predicates).
+func HasMembersWith(preds ...predicate.ArtistMember) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newMembersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDownloadRecords applies the HasEdge predicate on the "download_records" edge.
+func HasDownloadRecords() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDownloadRecordsWith applies the HasEdge predicate on the "download_records" edge with a given conditions (other predicates).
+func HasDownloadRecordsWith(preds ...predicate.DownloadRecord) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newDownloadRecordsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

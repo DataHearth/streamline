@@ -33,8 +33,6 @@ const (
 	FieldClassification = "classification"
 	// FieldBookHardcoverID holds the string denoting the book_hardcover_id field in the database.
 	FieldBookHardcoverID = "book_hardcover_id"
-	// FieldAuthorHardcoverID holds the string denoting the author_hardcover_id field in the database.
-	FieldAuthorHardcoverID = "author_hardcover_id"
 	// FieldCandidates holds the string denoting the candidates field in the database.
 	FieldCandidates = "candidates"
 	// FieldExistingBookID holds the string denoting the existing_book_id field in the database.
@@ -74,7 +72,6 @@ var Columns = []string{
 	FieldParsedIsbn,
 	FieldClassification,
 	FieldBookHardcoverID,
-	FieldAuthorHardcoverID,
 	FieldCandidates,
 	FieldExistingBookID,
 	FieldDecision,
@@ -265,11 +262,6 @@ func ByClassification(opts ...sql.OrderTermOption) OrderOption {
 // ByBookHardcoverID orders the results by the book_hardcover_id field.
 func ByBookHardcoverID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBookHardcoverID, opts...).ToFunc()
-}
-
-// ByAuthorHardcoverID orders the results by the author_hardcover_id field.
-func ByAuthorHardcoverID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAuthorHardcoverID, opts...).ToFunc()
 }
 
 // ByExistingBookID orders the results by the existing_book_id field.

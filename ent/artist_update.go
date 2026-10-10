@@ -13,6 +13,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/artistmember"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -104,17 +106,211 @@ func (_u *ArtistUpdate) ClearOverview() *ArtistUpdate {
 	return _u
 }
 
-// SetMonitored sets the "monitored" field.
-func (_u *ArtistUpdate) SetMonitored(v bool) *ArtistUpdate {
-	_u.mutation.SetMonitored(v)
+// SetOverviewSource sets the "overview_source" field.
+func (_u *ArtistUpdate) SetOverviewSource(v string) *ArtistUpdate {
+	_u.mutation.SetOverviewSource(v)
 	return _u
 }
 
-// SetNillableMonitored sets the "monitored" field if the given value is not nil.
-func (_u *ArtistUpdate) SetNillableMonitored(v *bool) *ArtistUpdate {
+// SetNillableOverviewSource sets the "overview_source" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableOverviewSource(v *string) *ArtistUpdate {
 	if v != nil {
-		_u.SetMonitored(*v)
+		_u.SetOverviewSource(*v)
 	}
+	return _u
+}
+
+// ClearOverviewSource clears the value of the "overview_source" field.
+func (_u *ArtistUpdate) ClearOverviewSource() *ArtistUpdate {
+	_u.mutation.ClearOverviewSource()
+	return _u
+}
+
+// SetOverviewFr sets the "overview_fr" field.
+func (_u *ArtistUpdate) SetOverviewFr(v string) *ArtistUpdate {
+	_u.mutation.SetOverviewFr(v)
+	return _u
+}
+
+// SetNillableOverviewFr sets the "overview_fr" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableOverviewFr(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetOverviewFr(*v)
+	}
+	return _u
+}
+
+// ClearOverviewFr clears the value of the "overview_fr" field.
+func (_u *ArtistUpdate) ClearOverviewFr() *ArtistUpdate {
+	_u.mutation.ClearOverviewFr()
+	return _u
+}
+
+// SetOverviewSourceFr sets the "overview_source_fr" field.
+func (_u *ArtistUpdate) SetOverviewSourceFr(v string) *ArtistUpdate {
+	_u.mutation.SetOverviewSourceFr(v)
+	return _u
+}
+
+// SetNillableOverviewSourceFr sets the "overview_source_fr" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableOverviewSourceFr(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetOverviewSourceFr(*v)
+	}
+	return _u
+}
+
+// ClearOverviewSourceFr clears the value of the "overview_source_fr" field.
+func (_u *ArtistUpdate) ClearOverviewSourceFr() *ArtistUpdate {
+	_u.mutation.ClearOverviewSourceFr()
+	return _u
+}
+
+// SetMonitor sets the "monitor" field.
+func (_u *ArtistUpdate) SetMonitor(v artist.Monitor) *ArtistUpdate {
+	_u.mutation.SetMonitor(v)
+	return _u
+}
+
+// SetNillableMonitor sets the "monitor" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableMonitor(v *artist.Monitor) *ArtistUpdate {
+	if v != nil {
+		_u.SetMonitor(*v)
+	}
+	return _u
+}
+
+// SetType sets the "type" field.
+func (_u *ArtistUpdate) SetType(v artist.Type) *ArtistUpdate {
+	_u.mutation.SetType(v)
+	return _u
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableType(v *artist.Type) *ArtistUpdate {
+	if v != nil {
+		_u.SetType(*v)
+	}
+	return _u
+}
+
+// ClearType clears the value of the "type" field.
+func (_u *ArtistUpdate) ClearType() *ArtistUpdate {
+	_u.mutation.ClearType()
+	return _u
+}
+
+// SetOrigin sets the "origin" field.
+func (_u *ArtistUpdate) SetOrigin(v string) *ArtistUpdate {
+	_u.mutation.SetOrigin(v)
+	return _u
+}
+
+// SetNillableOrigin sets the "origin" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableOrigin(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetOrigin(*v)
+	}
+	return _u
+}
+
+// ClearOrigin clears the value of the "origin" field.
+func (_u *ArtistUpdate) ClearOrigin() *ArtistUpdate {
+	_u.mutation.ClearOrigin()
+	return _u
+}
+
+// SetSince sets the "since" field.
+func (_u *ArtistUpdate) SetSince(v uint16) *ArtistUpdate {
+	_u.mutation.ResetSince()
+	_u.mutation.SetSince(v)
+	return _u
+}
+
+// SetNillableSince sets the "since" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableSince(v *uint16) *ArtistUpdate {
+	if v != nil {
+		_u.SetSince(*v)
+	}
+	return _u
+}
+
+// AddSince adds value to the "since" field.
+func (_u *ArtistUpdate) AddSince(v int16) *ArtistUpdate {
+	_u.mutation.AddSince(v)
+	return _u
+}
+
+// ClearSince clears the value of the "since" field.
+func (_u *ArtistUpdate) ClearSince() *ArtistUpdate {
+	_u.mutation.ClearSince()
+	return _u
+}
+
+// SetGenre sets the "genre" field.
+func (_u *ArtistUpdate) SetGenre(v string) *ArtistUpdate {
+	_u.mutation.SetGenre(v)
+	return _u
+}
+
+// SetNillableGenre sets the "genre" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableGenre(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetGenre(*v)
+	}
+	return _u
+}
+
+// ClearGenre clears the value of the "genre" field.
+func (_u *ArtistUpdate) ClearGenre() *ArtistUpdate {
+	_u.mutation.ClearGenre()
+	return _u
+}
+
+// SetDeezerID sets the "deezer_id" field.
+func (_u *ArtistUpdate) SetDeezerID(v uint32) *ArtistUpdate {
+	_u.mutation.ResetDeezerID()
+	_u.mutation.SetDeezerID(v)
+	return _u
+}
+
+// SetNillableDeezerID sets the "deezer_id" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableDeezerID(v *uint32) *ArtistUpdate {
+	if v != nil {
+		_u.SetDeezerID(*v)
+	}
+	return _u
+}
+
+// AddDeezerID adds value to the "deezer_id" field.
+func (_u *ArtistUpdate) AddDeezerID(v int32) *ArtistUpdate {
+	_u.mutation.AddDeezerID(v)
+	return _u
+}
+
+// ClearDeezerID clears the value of the "deezer_id" field.
+func (_u *ArtistUpdate) ClearDeezerID() *ArtistUpdate {
+	_u.mutation.ClearDeezerID()
+	return _u
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *ArtistUpdate) SetWikidataID(v string) *ArtistUpdate {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableWikidataID(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *ArtistUpdate) ClearWikidataID() *ArtistUpdate {
+	_u.mutation.ClearWikidataID()
 	return _u
 }
 
@@ -178,6 +374,26 @@ func (_u *ArtistUpdate) ClearLastRefreshedAt() *ArtistUpdate {
 	return _u
 }
 
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_u *ArtistUpdate) SetDetailsFetchedAt(v time.Time) *ArtistUpdate {
+	_u.mutation.SetDetailsFetchedAt(v)
+	return _u
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableDetailsFetchedAt(v *time.Time) *ArtistUpdate {
+	if v != nil {
+		_u.SetDetailsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearDetailsFetchedAt clears the value of the "details_fetched_at" field.
+func (_u *ArtistUpdate) ClearDetailsFetchedAt() *ArtistUpdate {
+	_u.mutation.ClearDetailsFetchedAt()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdate) AddAlbumIDs(ids ...uint32) *ArtistUpdate {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -191,6 +407,36 @@ func (_u *ArtistUpdate) AddAlbums(v ...*Album) *ArtistUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddAlbumIDs(ids...)
+}
+
+// AddMemberIDs adds the "members" edge to the ArtistMember entity by IDs.
+func (_u *ArtistUpdate) AddMemberIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddMemberIDs(ids...)
+	return _u
+}
+
+// AddMembers adds the "members" edges to the ArtistMember entity.
+func (_u *ArtistUpdate) AddMembers(v ...*ArtistMember) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMemberIDs(ids...)
+}
+
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_u *ArtistUpdate) AddDownloadRecordIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_u *ArtistUpdate) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDownloadRecordIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -217,6 +463,48 @@ func (_u *ArtistUpdate) RemoveAlbums(v ...*Album) *ArtistUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAlbumIDs(ids...)
+}
+
+// ClearMembers clears all "members" edges to the ArtistMember entity.
+func (_u *ArtistUpdate) ClearMembers() *ArtistUpdate {
+	_u.mutation.ClearMembers()
+	return _u
+}
+
+// RemoveMemberIDs removes the "members" edge to ArtistMember entities by IDs.
+func (_u *ArtistUpdate) RemoveMemberIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveMemberIDs(ids...)
+	return _u
+}
+
+// RemoveMembers removes "members" edges to ArtistMember entities.
+func (_u *ArtistUpdate) RemoveMembers(v ...*ArtistMember) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMemberIDs(ids...)
+}
+
+// ClearDownloadRecords clears all "download_records" edges to the DownloadRecord entity.
+func (_u *ArtistUpdate) ClearDownloadRecords() *ArtistUpdate {
+	_u.mutation.ClearDownloadRecords()
+	return _u
+}
+
+// RemoveDownloadRecordIDs removes the "download_records" edge to DownloadRecord entities by IDs.
+func (_u *ArtistUpdate) RemoveDownloadRecordIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveDownloadRecords removes "download_records" edges to DownloadRecord entities.
+func (_u *ArtistUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDownloadRecordIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -267,6 +555,16 @@ func (_u *ArtistUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Artist.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Monitor(); ok {
+		if err := artist.MonitorValidator(v); err != nil {
+			return &ValidationError{Name: "monitor", err: fmt.Errorf(`ent: validator failed for field "Artist.monitor": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := artist.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Artist.type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -309,8 +607,68 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.OverviewCleared() {
 		_spec.ClearField(artist.FieldOverview, field.TypeString)
 	}
-	if value, ok := _u.mutation.Monitored(); ok {
-		_spec.SetField(artist.FieldMonitored, field.TypeBool, value)
+	if value, ok := _u.mutation.OverviewSource(); ok {
+		_spec.SetField(artist.FieldOverviewSource, field.TypeString, value)
+	}
+	if _u.mutation.OverviewSourceCleared() {
+		_spec.ClearField(artist.FieldOverviewSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.OverviewFr(); ok {
+		_spec.SetField(artist.FieldOverviewFr, field.TypeString, value)
+	}
+	if _u.mutation.OverviewFrCleared() {
+		_spec.ClearField(artist.FieldOverviewFr, field.TypeString)
+	}
+	if value, ok := _u.mutation.OverviewSourceFr(); ok {
+		_spec.SetField(artist.FieldOverviewSourceFr, field.TypeString, value)
+	}
+	if _u.mutation.OverviewSourceFrCleared() {
+		_spec.ClearField(artist.FieldOverviewSourceFr, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitor(); ok {
+		_spec.SetField(artist.FieldMonitor, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.GetType(); ok {
+		_spec.SetField(artist.FieldType, field.TypeEnum, value)
+	}
+	if _u.mutation.TypeCleared() {
+		_spec.ClearField(artist.FieldType, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Origin(); ok {
+		_spec.SetField(artist.FieldOrigin, field.TypeString, value)
+	}
+	if _u.mutation.OriginCleared() {
+		_spec.ClearField(artist.FieldOrigin, field.TypeString)
+	}
+	if value, ok := _u.mutation.Since(); ok {
+		_spec.SetField(artist.FieldSince, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSince(); ok {
+		_spec.AddField(artist.FieldSince, field.TypeUint16, value)
+	}
+	if _u.mutation.SinceCleared() {
+		_spec.ClearField(artist.FieldSince, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Genre(); ok {
+		_spec.SetField(artist.FieldGenre, field.TypeString, value)
+	}
+	if _u.mutation.GenreCleared() {
+		_spec.ClearField(artist.FieldGenre, field.TypeString)
+	}
+	if value, ok := _u.mutation.DeezerID(); ok {
+		_spec.SetField(artist.FieldDeezerID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedDeezerID(); ok {
+		_spec.AddField(artist.FieldDeezerID, field.TypeUint32, value)
+	}
+	if _u.mutation.DeezerIDCleared() {
+		_spec.ClearField(artist.FieldDeezerID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(artist.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)
@@ -329,6 +687,12 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LastRefreshedAtCleared() {
 		_spec.ClearField(artist.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(artist.FieldDetailsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DetailsFetchedAtCleared() {
+		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
 	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -368,6 +732,96 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMembersIDs(); len(nodes) > 0 && !_u.mutation.MembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -471,17 +925,211 @@ func (_u *ArtistUpdateOne) ClearOverview() *ArtistUpdateOne {
 	return _u
 }
 
-// SetMonitored sets the "monitored" field.
-func (_u *ArtistUpdateOne) SetMonitored(v bool) *ArtistUpdateOne {
-	_u.mutation.SetMonitored(v)
+// SetOverviewSource sets the "overview_source" field.
+func (_u *ArtistUpdateOne) SetOverviewSource(v string) *ArtistUpdateOne {
+	_u.mutation.SetOverviewSource(v)
 	return _u
 }
 
-// SetNillableMonitored sets the "monitored" field if the given value is not nil.
-func (_u *ArtistUpdateOne) SetNillableMonitored(v *bool) *ArtistUpdateOne {
+// SetNillableOverviewSource sets the "overview_source" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableOverviewSource(v *string) *ArtistUpdateOne {
 	if v != nil {
-		_u.SetMonitored(*v)
+		_u.SetOverviewSource(*v)
 	}
+	return _u
+}
+
+// ClearOverviewSource clears the value of the "overview_source" field.
+func (_u *ArtistUpdateOne) ClearOverviewSource() *ArtistUpdateOne {
+	_u.mutation.ClearOverviewSource()
+	return _u
+}
+
+// SetOverviewFr sets the "overview_fr" field.
+func (_u *ArtistUpdateOne) SetOverviewFr(v string) *ArtistUpdateOne {
+	_u.mutation.SetOverviewFr(v)
+	return _u
+}
+
+// SetNillableOverviewFr sets the "overview_fr" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableOverviewFr(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetOverviewFr(*v)
+	}
+	return _u
+}
+
+// ClearOverviewFr clears the value of the "overview_fr" field.
+func (_u *ArtistUpdateOne) ClearOverviewFr() *ArtistUpdateOne {
+	_u.mutation.ClearOverviewFr()
+	return _u
+}
+
+// SetOverviewSourceFr sets the "overview_source_fr" field.
+func (_u *ArtistUpdateOne) SetOverviewSourceFr(v string) *ArtistUpdateOne {
+	_u.mutation.SetOverviewSourceFr(v)
+	return _u
+}
+
+// SetNillableOverviewSourceFr sets the "overview_source_fr" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableOverviewSourceFr(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetOverviewSourceFr(*v)
+	}
+	return _u
+}
+
+// ClearOverviewSourceFr clears the value of the "overview_source_fr" field.
+func (_u *ArtistUpdateOne) ClearOverviewSourceFr() *ArtistUpdateOne {
+	_u.mutation.ClearOverviewSourceFr()
+	return _u
+}
+
+// SetMonitor sets the "monitor" field.
+func (_u *ArtistUpdateOne) SetMonitor(v artist.Monitor) *ArtistUpdateOne {
+	_u.mutation.SetMonitor(v)
+	return _u
+}
+
+// SetNillableMonitor sets the "monitor" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableMonitor(v *artist.Monitor) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetMonitor(*v)
+	}
+	return _u
+}
+
+// SetType sets the "type" field.
+func (_u *ArtistUpdateOne) SetType(v artist.Type) *ArtistUpdateOne {
+	_u.mutation.SetType(v)
+	return _u
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableType(v *artist.Type) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetType(*v)
+	}
+	return _u
+}
+
+// ClearType clears the value of the "type" field.
+func (_u *ArtistUpdateOne) ClearType() *ArtistUpdateOne {
+	_u.mutation.ClearType()
+	return _u
+}
+
+// SetOrigin sets the "origin" field.
+func (_u *ArtistUpdateOne) SetOrigin(v string) *ArtistUpdateOne {
+	_u.mutation.SetOrigin(v)
+	return _u
+}
+
+// SetNillableOrigin sets the "origin" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableOrigin(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetOrigin(*v)
+	}
+	return _u
+}
+
+// ClearOrigin clears the value of the "origin" field.
+func (_u *ArtistUpdateOne) ClearOrigin() *ArtistUpdateOne {
+	_u.mutation.ClearOrigin()
+	return _u
+}
+
+// SetSince sets the "since" field.
+func (_u *ArtistUpdateOne) SetSince(v uint16) *ArtistUpdateOne {
+	_u.mutation.ResetSince()
+	_u.mutation.SetSince(v)
+	return _u
+}
+
+// SetNillableSince sets the "since" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableSince(v *uint16) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetSince(*v)
+	}
+	return _u
+}
+
+// AddSince adds value to the "since" field.
+func (_u *ArtistUpdateOne) AddSince(v int16) *ArtistUpdateOne {
+	_u.mutation.AddSince(v)
+	return _u
+}
+
+// ClearSince clears the value of the "since" field.
+func (_u *ArtistUpdateOne) ClearSince() *ArtistUpdateOne {
+	_u.mutation.ClearSince()
+	return _u
+}
+
+// SetGenre sets the "genre" field.
+func (_u *ArtistUpdateOne) SetGenre(v string) *ArtistUpdateOne {
+	_u.mutation.SetGenre(v)
+	return _u
+}
+
+// SetNillableGenre sets the "genre" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableGenre(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetGenre(*v)
+	}
+	return _u
+}
+
+// ClearGenre clears the value of the "genre" field.
+func (_u *ArtistUpdateOne) ClearGenre() *ArtistUpdateOne {
+	_u.mutation.ClearGenre()
+	return _u
+}
+
+// SetDeezerID sets the "deezer_id" field.
+func (_u *ArtistUpdateOne) SetDeezerID(v uint32) *ArtistUpdateOne {
+	_u.mutation.ResetDeezerID()
+	_u.mutation.SetDeezerID(v)
+	return _u
+}
+
+// SetNillableDeezerID sets the "deezer_id" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableDeezerID(v *uint32) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetDeezerID(*v)
+	}
+	return _u
+}
+
+// AddDeezerID adds value to the "deezer_id" field.
+func (_u *ArtistUpdateOne) AddDeezerID(v int32) *ArtistUpdateOne {
+	_u.mutation.AddDeezerID(v)
+	return _u
+}
+
+// ClearDeezerID clears the value of the "deezer_id" field.
+func (_u *ArtistUpdateOne) ClearDeezerID() *ArtistUpdateOne {
+	_u.mutation.ClearDeezerID()
+	return _u
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_u *ArtistUpdateOne) SetWikidataID(v string) *ArtistUpdateOne {
+	_u.mutation.SetWikidataID(v)
+	return _u
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableWikidataID(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetWikidataID(*v)
+	}
+	return _u
+}
+
+// ClearWikidataID clears the value of the "wikidata_id" field.
+func (_u *ArtistUpdateOne) ClearWikidataID() *ArtistUpdateOne {
+	_u.mutation.ClearWikidataID()
 	return _u
 }
 
@@ -545,6 +1193,26 @@ func (_u *ArtistUpdateOne) ClearLastRefreshedAt() *ArtistUpdateOne {
 	return _u
 }
 
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_u *ArtistUpdateOne) SetDetailsFetchedAt(v time.Time) *ArtistUpdateOne {
+	_u.mutation.SetDetailsFetchedAt(v)
+	return _u
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableDetailsFetchedAt(v *time.Time) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetDetailsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearDetailsFetchedAt clears the value of the "details_fetched_at" field.
+func (_u *ArtistUpdateOne) ClearDetailsFetchedAt() *ArtistUpdateOne {
+	_u.mutation.ClearDetailsFetchedAt()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdateOne) AddAlbumIDs(ids ...uint32) *ArtistUpdateOne {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -558,6 +1226,36 @@ func (_u *ArtistUpdateOne) AddAlbums(v ...*Album) *ArtistUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddAlbumIDs(ids...)
+}
+
+// AddMemberIDs adds the "members" edge to the ArtistMember entity by IDs.
+func (_u *ArtistUpdateOne) AddMemberIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddMemberIDs(ids...)
+	return _u
+}
+
+// AddMembers adds the "members" edges to the ArtistMember entity.
+func (_u *ArtistUpdateOne) AddMembers(v ...*ArtistMember) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMemberIDs(ids...)
+}
+
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_u *ArtistUpdateOne) AddDownloadRecordIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddDownloadRecordIDs(ids...)
+	return _u
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_u *ArtistUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDownloadRecordIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -584,6 +1282,48 @@ func (_u *ArtistUpdateOne) RemoveAlbums(v ...*Album) *ArtistUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAlbumIDs(ids...)
+}
+
+// ClearMembers clears all "members" edges to the ArtistMember entity.
+func (_u *ArtistUpdateOne) ClearMembers() *ArtistUpdateOne {
+	_u.mutation.ClearMembers()
+	return _u
+}
+
+// RemoveMemberIDs removes the "members" edge to ArtistMember entities by IDs.
+func (_u *ArtistUpdateOne) RemoveMemberIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveMemberIDs(ids...)
+	return _u
+}
+
+// RemoveMembers removes "members" edges to ArtistMember entities.
+func (_u *ArtistUpdateOne) RemoveMembers(v ...*ArtistMember) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMemberIDs(ids...)
+}
+
+// ClearDownloadRecords clears all "download_records" edges to the DownloadRecord entity.
+func (_u *ArtistUpdateOne) ClearDownloadRecords() *ArtistUpdateOne {
+	_u.mutation.ClearDownloadRecords()
+	return _u
+}
+
+// RemoveDownloadRecordIDs removes the "download_records" edge to DownloadRecord entities by IDs.
+func (_u *ArtistUpdateOne) RemoveDownloadRecordIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveDownloadRecordIDs(ids...)
+	return _u
+}
+
+// RemoveDownloadRecords removes "download_records" edges to DownloadRecord entities.
+func (_u *ArtistUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDownloadRecordIDs(ids...)
 }
 
 // Where appends a list predicates to the ArtistUpdate builder.
@@ -647,6 +1387,16 @@ func (_u *ArtistUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Artist.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Monitor(); ok {
+		if err := artist.MonitorValidator(v); err != nil {
+			return &ValidationError{Name: "monitor", err: fmt.Errorf(`ent: validator failed for field "Artist.monitor": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := artist.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Artist.type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -706,8 +1456,68 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	if _u.mutation.OverviewCleared() {
 		_spec.ClearField(artist.FieldOverview, field.TypeString)
 	}
-	if value, ok := _u.mutation.Monitored(); ok {
-		_spec.SetField(artist.FieldMonitored, field.TypeBool, value)
+	if value, ok := _u.mutation.OverviewSource(); ok {
+		_spec.SetField(artist.FieldOverviewSource, field.TypeString, value)
+	}
+	if _u.mutation.OverviewSourceCleared() {
+		_spec.ClearField(artist.FieldOverviewSource, field.TypeString)
+	}
+	if value, ok := _u.mutation.OverviewFr(); ok {
+		_spec.SetField(artist.FieldOverviewFr, field.TypeString, value)
+	}
+	if _u.mutation.OverviewFrCleared() {
+		_spec.ClearField(artist.FieldOverviewFr, field.TypeString)
+	}
+	if value, ok := _u.mutation.OverviewSourceFr(); ok {
+		_spec.SetField(artist.FieldOverviewSourceFr, field.TypeString, value)
+	}
+	if _u.mutation.OverviewSourceFrCleared() {
+		_spec.ClearField(artist.FieldOverviewSourceFr, field.TypeString)
+	}
+	if value, ok := _u.mutation.Monitor(); ok {
+		_spec.SetField(artist.FieldMonitor, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.GetType(); ok {
+		_spec.SetField(artist.FieldType, field.TypeEnum, value)
+	}
+	if _u.mutation.TypeCleared() {
+		_spec.ClearField(artist.FieldType, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.Origin(); ok {
+		_spec.SetField(artist.FieldOrigin, field.TypeString, value)
+	}
+	if _u.mutation.OriginCleared() {
+		_spec.ClearField(artist.FieldOrigin, field.TypeString)
+	}
+	if value, ok := _u.mutation.Since(); ok {
+		_spec.SetField(artist.FieldSince, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSince(); ok {
+		_spec.AddField(artist.FieldSince, field.TypeUint16, value)
+	}
+	if _u.mutation.SinceCleared() {
+		_spec.ClearField(artist.FieldSince, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Genre(); ok {
+		_spec.SetField(artist.FieldGenre, field.TypeString, value)
+	}
+	if _u.mutation.GenreCleared() {
+		_spec.ClearField(artist.FieldGenre, field.TypeString)
+	}
+	if value, ok := _u.mutation.DeezerID(); ok {
+		_spec.SetField(artist.FieldDeezerID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedDeezerID(); ok {
+		_spec.AddField(artist.FieldDeezerID, field.TypeUint32, value)
+	}
+	if _u.mutation.DeezerIDCleared() {
+		_spec.ClearField(artist.FieldDeezerID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.WikidataID(); ok {
+		_spec.SetField(artist.FieldWikidataID, field.TypeString, value)
+	}
+	if _u.mutation.WikidataIDCleared() {
+		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
 	}
 	if value, ok := _u.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)
@@ -726,6 +1536,12 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	}
 	if _u.mutation.LastRefreshedAtCleared() {
 		_spec.ClearField(artist.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(artist.FieldDetailsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DetailsFetchedAtCleared() {
+		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
 	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -765,6 +1581,96 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMembersIDs(); len(nodes) > 0 && !_u.mutation.MembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDownloadRecordsIDs(); len(nodes) > 0 && !_u.mutation.DownloadRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

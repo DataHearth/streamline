@@ -18,8 +18,12 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/apikey"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
+	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -32,6 +36,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/request"
@@ -56,10 +61,18 @@ type Client struct {
 	ApiKey *ApiKeyClient
 	// Artist is the client for interacting with the Artist builders.
 	Artist *ArtistClient
+	// ArtistMember is the client for interacting with the ArtistMember builders.
+	ArtistMember *ArtistMemberClient
 	// Author is the client for interacting with the Author builders.
 	Author *AuthorClient
 	// Book is the client for interacting with the Book builders.
 	Book *BookClient
+	// BookContribution is the client for interacting with the BookContribution builders.
+	BookContribution *BookContributionClient
+	// BookEdition is the client for interacting with the BookEdition builders.
+	BookEdition *BookEditionClient
+	// BookSeries is the client for interacting with the BookSeries builders.
+	BookSeries *BookSeriesClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -84,6 +97,8 @@ type Client struct {
 	MediaFile *MediaFileClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
+	// MusicCredit is the client for interacting with the MusicCredit builders.
+	MusicCredit *MusicCreditClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
 	// Person is the client for interacting with the Person builders.
@@ -120,8 +135,12 @@ func (c *Client) init() {
 	c.Album = NewAlbumClient(c.config)
 	c.ApiKey = NewApiKeyClient(c.config)
 	c.Artist = NewArtistClient(c.config)
+	c.ArtistMember = NewArtistMemberClient(c.config)
 	c.Author = NewAuthorClient(c.config)
 	c.Book = NewBookClient(c.config)
+	c.BookContribution = NewBookContributionClient(c.config)
+	c.BookEdition = NewBookEditionClient(c.config)
+	c.BookSeries = NewBookSeriesClient(c.config)
 	c.Credit = NewCreditClient(c.config)
 	c.DownloadRecord = NewDownloadRecordClient(c.config)
 	c.Episode = NewEpisodeClient(c.config)
@@ -134,6 +153,7 @@ func (c *Client) init() {
 	c.MediaEvent = NewMediaEventClient(c.config)
 	c.MediaFile = NewMediaFileClient(c.config)
 	c.Movie = NewMovieClient(c.config)
+	c.MusicCredit = NewMusicCreditClient(c.config)
 	c.OIDCIdentity = NewOIDCIdentityClient(c.config)
 	c.Person = NewPersonClient(c.config)
 	c.Request = NewRequestClient(c.config)
@@ -235,36 +255,41 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Album:           NewAlbumClient(cfg),
-		ApiKey:          NewApiKeyClient(cfg),
-		Artist:          NewArtistClient(cfg),
-		Author:          NewAuthorClient(cfg),
-		Book:            NewBookClient(cfg),
-		Credit:          NewCreditClient(cfg),
-		DownloadRecord:  NewDownloadRecordClient(cfg),
-		Episode:         NewEpisodeClient(cfg),
-		ImportScan:      NewImportScanClient(cfg),
-		ImportScanAlbum: NewImportScanAlbumClient(cfg),
-		ImportScanBook:  NewImportScanBookClient(cfg),
-		ImportScanFile:  NewImportScanFileClient(cfg),
-		ImportScanShow:  NewImportScanShowClient(cfg),
-		Invite:          NewInviteClient(cfg),
-		MediaEvent:      NewMediaEventClient(cfg),
-		MediaFile:       NewMediaFileClient(cfg),
-		Movie:           NewMovieClient(cfg),
-		OIDCIdentity:    NewOIDCIdentityClient(cfg),
-		Person:          NewPersonClient(cfg),
-		Request:         NewRequestClient(cfg),
-		ScheduledJob:    NewScheduledJobClient(cfg),
-		Season:          NewSeasonClient(cfg),
-		Session:         NewSessionClient(cfg),
-		TVShow:          NewTVShowClient(cfg),
-		TorrentSession:  NewTorrentSessionClient(cfg),
-		Track:           NewTrackClient(cfg),
-		TranscodeJob:    NewTranscodeJobClient(cfg),
-		User:            NewUserClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		Album:            NewAlbumClient(cfg),
+		ApiKey:           NewApiKeyClient(cfg),
+		Artist:           NewArtistClient(cfg),
+		ArtistMember:     NewArtistMemberClient(cfg),
+		Author:           NewAuthorClient(cfg),
+		Book:             NewBookClient(cfg),
+		BookContribution: NewBookContributionClient(cfg),
+		BookEdition:      NewBookEditionClient(cfg),
+		BookSeries:       NewBookSeriesClient(cfg),
+		Credit:           NewCreditClient(cfg),
+		DownloadRecord:   NewDownloadRecordClient(cfg),
+		Episode:          NewEpisodeClient(cfg),
+		ImportScan:       NewImportScanClient(cfg),
+		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
+		ImportScanBook:   NewImportScanBookClient(cfg),
+		ImportScanFile:   NewImportScanFileClient(cfg),
+		ImportScanShow:   NewImportScanShowClient(cfg),
+		Invite:           NewInviteClient(cfg),
+		MediaEvent:       NewMediaEventClient(cfg),
+		MediaFile:        NewMediaFileClient(cfg),
+		Movie:            NewMovieClient(cfg),
+		MusicCredit:      NewMusicCreditClient(cfg),
+		OIDCIdentity:     NewOIDCIdentityClient(cfg),
+		Person:           NewPersonClient(cfg),
+		Request:          NewRequestClient(cfg),
+		ScheduledJob:     NewScheduledJobClient(cfg),
+		Season:           NewSeasonClient(cfg),
+		Session:          NewSessionClient(cfg),
+		TVShow:           NewTVShowClient(cfg),
+		TorrentSession:   NewTorrentSessionClient(cfg),
+		Track:            NewTrackClient(cfg),
+		TranscodeJob:     NewTranscodeJobClient(cfg),
+		User:             NewUserClient(cfg),
 	}, nil
 }
 
@@ -282,36 +307,41 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		Album:           NewAlbumClient(cfg),
-		ApiKey:          NewApiKeyClient(cfg),
-		Artist:          NewArtistClient(cfg),
-		Author:          NewAuthorClient(cfg),
-		Book:            NewBookClient(cfg),
-		Credit:          NewCreditClient(cfg),
-		DownloadRecord:  NewDownloadRecordClient(cfg),
-		Episode:         NewEpisodeClient(cfg),
-		ImportScan:      NewImportScanClient(cfg),
-		ImportScanAlbum: NewImportScanAlbumClient(cfg),
-		ImportScanBook:  NewImportScanBookClient(cfg),
-		ImportScanFile:  NewImportScanFileClient(cfg),
-		ImportScanShow:  NewImportScanShowClient(cfg),
-		Invite:          NewInviteClient(cfg),
-		MediaEvent:      NewMediaEventClient(cfg),
-		MediaFile:       NewMediaFileClient(cfg),
-		Movie:           NewMovieClient(cfg),
-		OIDCIdentity:    NewOIDCIdentityClient(cfg),
-		Person:          NewPersonClient(cfg),
-		Request:         NewRequestClient(cfg),
-		ScheduledJob:    NewScheduledJobClient(cfg),
-		Season:          NewSeasonClient(cfg),
-		Session:         NewSessionClient(cfg),
-		TVShow:          NewTVShowClient(cfg),
-		TorrentSession:  NewTorrentSessionClient(cfg),
-		Track:           NewTrackClient(cfg),
-		TranscodeJob:    NewTranscodeJobClient(cfg),
-		User:            NewUserClient(cfg),
+		ctx:              ctx,
+		config:           cfg,
+		Album:            NewAlbumClient(cfg),
+		ApiKey:           NewApiKeyClient(cfg),
+		Artist:           NewArtistClient(cfg),
+		ArtistMember:     NewArtistMemberClient(cfg),
+		Author:           NewAuthorClient(cfg),
+		Book:             NewBookClient(cfg),
+		BookContribution: NewBookContributionClient(cfg),
+		BookEdition:      NewBookEditionClient(cfg),
+		BookSeries:       NewBookSeriesClient(cfg),
+		Credit:           NewCreditClient(cfg),
+		DownloadRecord:   NewDownloadRecordClient(cfg),
+		Episode:          NewEpisodeClient(cfg),
+		ImportScan:       NewImportScanClient(cfg),
+		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
+		ImportScanBook:   NewImportScanBookClient(cfg),
+		ImportScanFile:   NewImportScanFileClient(cfg),
+		ImportScanShow:   NewImportScanShowClient(cfg),
+		Invite:           NewInviteClient(cfg),
+		MediaEvent:       NewMediaEventClient(cfg),
+		MediaFile:        NewMediaFileClient(cfg),
+		Movie:            NewMovieClient(cfg),
+		MusicCredit:      NewMusicCreditClient(cfg),
+		OIDCIdentity:     NewOIDCIdentityClient(cfg),
+		Person:           NewPersonClient(cfg),
+		Request:          NewRequestClient(cfg),
+		ScheduledJob:     NewScheduledJobClient(cfg),
+		Season:           NewSeasonClient(cfg),
+		Session:          NewSessionClient(cfg),
+		TVShow:           NewTVShowClient(cfg),
+		TorrentSession:   NewTorrentSessionClient(cfg),
+		Track:            NewTrackClient(cfg),
+		TranscodeJob:     NewTranscodeJobClient(cfg),
+		User:             NewUserClient(cfg),
 	}, nil
 }
 
@@ -341,11 +371,12 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Album, c.ApiKey, c.Artist, c.Author, c.Book, c.Credit, c.DownloadRecord,
+		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
+		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
-		c.TorrentSession, c.Track, c.TranscodeJob, c.User,
+		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicCredit,
+		c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob, c.Season, c.Session,
+		c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -355,11 +386,12 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Album, c.ApiKey, c.Artist, c.Author, c.Book, c.Credit, c.DownloadRecord,
+		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
+		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.OIDCIdentity,
-		c.Person, c.Request, c.ScheduledJob, c.Season, c.Session, c.TVShow,
-		c.TorrentSession, c.Track, c.TranscodeJob, c.User,
+		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicCredit,
+		c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob, c.Season, c.Session,
+		c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -374,10 +406,18 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ApiKey.mutate(ctx, m)
 	case *ArtistMutation:
 		return c.Artist.mutate(ctx, m)
+	case *ArtistMemberMutation:
+		return c.ArtistMember.mutate(ctx, m)
 	case *AuthorMutation:
 		return c.Author.mutate(ctx, m)
 	case *BookMutation:
 		return c.Book.mutate(ctx, m)
+	case *BookContributionMutation:
+		return c.BookContribution.mutate(ctx, m)
+	case *BookEditionMutation:
+		return c.BookEdition.mutate(ctx, m)
+	case *BookSeriesMutation:
+		return c.BookSeries.mutate(ctx, m)
 	case *CreditMutation:
 		return c.Credit.mutate(ctx, m)
 	case *DownloadRecordMutation:
@@ -402,6 +442,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MediaFile.mutate(ctx, m)
 	case *MovieMutation:
 		return c.Movie.mutate(ctx, m)
+	case *MusicCreditMutation:
+		return c.MusicCredit.mutate(ctx, m)
 	case *OIDCIdentityMutation:
 		return c.OIDCIdentity.mutate(ctx, m)
 	case *PersonMutation:
@@ -578,6 +620,38 @@ func (c *AlbumClient) QueryDownloadRecords(_m *Album) *DownloadRecordQuery {
 			sqlgraph.From(album.Table, album.FieldID, id),
 			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, album.DownloadRecordsTable, album.DownloadRecordsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCredits queries the credits edge of a Album.
+func (c *AlbumClient) QueryCredits(_m *Album) *MusicCreditQuery {
+	query := (&MusicCreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(musiccredit.Table, musiccredit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.CreditsTable, album.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPackRecords queries the pack_records edge of a Album.
+func (c *AlbumClient) QueryPackRecords(_m *Album) *DownloadRecordQuery {
+	query := (&DownloadRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, album.PackRecordsTable, album.PackRecordsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -883,6 +957,38 @@ func (c *ArtistClient) QueryAlbums(_m *Artist) *AlbumQuery {
 	return query
 }
 
+// QueryMembers queries the members edge of a Artist.
+func (c *ArtistClient) QueryMembers(_m *Artist) *ArtistMemberQuery {
+	query := (&ArtistMemberClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(artistmember.Table, artistmember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.MembersTable, artist.MembersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDownloadRecords queries the download_records edge of a Artist.
+func (c *ArtistClient) QueryDownloadRecords(_m *Artist) *DownloadRecordQuery {
+	query := (&DownloadRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(downloadrecord.Table, downloadrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.DownloadRecordsTable, artist.DownloadRecordsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ArtistClient) Hooks() []Hook {
 	return c.hooks.Artist
@@ -905,6 +1011,155 @@ func (c *ArtistClient) mutate(ctx context.Context, m *ArtistMutation) (Value, er
 		return (&ArtistDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Artist mutation op: %q", m.Op())
+	}
+}
+
+// ArtistMemberClient is a client for the ArtistMember schema.
+type ArtistMemberClient struct {
+	config
+}
+
+// NewArtistMemberClient returns a client for the ArtistMember from the given config.
+func NewArtistMemberClient(c config) *ArtistMemberClient {
+	return &ArtistMemberClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `artistmember.Hooks(f(g(h())))`.
+func (c *ArtistMemberClient) Use(hooks ...Hook) {
+	c.hooks.ArtistMember = append(c.hooks.ArtistMember, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `artistmember.Intercept(f(g(h())))`.
+func (c *ArtistMemberClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ArtistMember = append(c.inters.ArtistMember, interceptors...)
+}
+
+// Create returns a builder for creating a ArtistMember entity.
+func (c *ArtistMemberClient) Create() *ArtistMemberCreate {
+	mutation := newArtistMemberMutation(c.config, OpCreate)
+	return &ArtistMemberCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ArtistMember entities.
+func (c *ArtistMemberClient) CreateBulk(builders ...*ArtistMemberCreate) *ArtistMemberCreateBulk {
+	return &ArtistMemberCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ArtistMemberClient) MapCreateBulk(slice any, setFunc func(*ArtistMemberCreate, int)) *ArtistMemberCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ArtistMemberCreateBulk{err: fmt.Errorf("calling to ArtistMemberClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ArtistMemberCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ArtistMemberCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ArtistMember.
+func (c *ArtistMemberClient) Update() *ArtistMemberUpdate {
+	mutation := newArtistMemberMutation(c.config, OpUpdate)
+	return &ArtistMemberUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ArtistMemberClient) UpdateOne(_m *ArtistMember) *ArtistMemberUpdateOne {
+	mutation := newArtistMemberMutation(c.config, OpUpdateOne, withArtistMember(_m))
+	return &ArtistMemberUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ArtistMemberClient) UpdateOneID(id uint32) *ArtistMemberUpdateOne {
+	mutation := newArtistMemberMutation(c.config, OpUpdateOne, withArtistMemberID(id))
+	return &ArtistMemberUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ArtistMember.
+func (c *ArtistMemberClient) Delete() *ArtistMemberDelete {
+	mutation := newArtistMemberMutation(c.config, OpDelete)
+	return &ArtistMemberDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ArtistMemberClient) DeleteOne(_m *ArtistMember) *ArtistMemberDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ArtistMemberClient) DeleteOneID(id uint32) *ArtistMemberDeleteOne {
+	builder := c.Delete().Where(artistmember.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ArtistMemberDeleteOne{builder}
+}
+
+// Query returns a query builder for ArtistMember.
+func (c *ArtistMemberClient) Query() *ArtistMemberQuery {
+	return &ArtistMemberQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeArtistMember},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ArtistMember entity by its id.
+func (c *ArtistMemberClient) Get(ctx context.Context, id uint32) (*ArtistMember, error) {
+	return c.Query().Where(artistmember.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ArtistMemberClient) GetX(ctx context.Context, id uint32) *ArtistMember {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryArtist queries the artist edge of a ArtistMember.
+func (c *ArtistMemberClient) QueryArtist(_m *ArtistMember) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artistmember.Table, artistmember.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, artistmember.ArtistTable, artistmember.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ArtistMemberClient) Hooks() []Hook {
+	return c.hooks.ArtistMember
+}
+
+// Interceptors returns the client interceptors.
+func (c *ArtistMemberClient) Interceptors() []Interceptor {
+	return c.inters.ArtistMember
+}
+
+func (c *ArtistMemberClient) mutate(ctx context.Context, m *ArtistMemberMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ArtistMemberCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ArtistMemberUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ArtistMemberUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ArtistMemberDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ArtistMember mutation op: %q", m.Op())
 	}
 }
 
@@ -1016,15 +1271,15 @@ func (c *AuthorClient) GetX(ctx context.Context, id uint32) *Author {
 	return obj
 }
 
-// QueryBooks queries the books edge of a Author.
-func (c *AuthorClient) QueryBooks(_m *Author) *BookQuery {
-	query := (&BookClient{config: c.config}).Query()
+// QueryContributions queries the contributions edge of a Author.
+func (c *AuthorClient) QueryContributions(_m *Author) *BookContributionQuery {
+	query := (&BookContributionClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(author.Table, author.FieldID, id),
-			sqlgraph.To(book.Table, book.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, author.BooksTable, author.BooksColumn),
+			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, author.ContributionsTable, author.ContributionsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1165,15 +1420,79 @@ func (c *BookClient) GetX(ctx context.Context, id uint32) *Book {
 	return obj
 }
 
-// QueryAuthor queries the author edge of a Book.
-func (c *BookClient) QueryAuthor(_m *Book) *AuthorQuery {
-	query := (&AuthorClient{config: c.config}).Query()
+// QuerySeries queries the series edge of a Book.
+func (c *BookClient) QuerySeries(_m *Book) *BookSeriesQuery {
+	query := (&BookSeriesClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(book.Table, book.FieldID, id),
-			sqlgraph.To(author.Table, author.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, book.AuthorTable, book.AuthorColumn),
+			sqlgraph.To(bookseries.Table, bookseries.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, book.SeriesTable, book.SeriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEditions queries the editions edge of a Book.
+func (c *BookClient) QueryEditions(_m *Book) *BookEditionQuery {
+	query := (&BookEditionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.EditionsTable, book.EditionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryContributions queries the contributions edge of a Book.
+func (c *BookClient) QueryContributions(_m *Book) *BookContributionQuery {
+	query := (&BookContributionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.ContributionsTable, book.ContributionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEbookEdition queries the ebook_edition edge of a Book.
+func (c *BookClient) QueryEbookEdition(_m *Book) *BookEditionQuery {
+	query := (&BookEditionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, book.EbookEditionTable, book.EbookEditionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAudiobookEdition queries the audiobook_edition edge of a Book.
+func (c *BookClient) QueryAudiobookEdition(_m *Book) *BookEditionQuery {
+	query := (&BookEditionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(bookedition.Table, bookedition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, book.AudiobookEditionTable, book.AudiobookEditionColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1235,6 +1554,501 @@ func (c *BookClient) mutate(ctx context.Context, m *BookMutation) (Value, error)
 		return (&BookDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Book mutation op: %q", m.Op())
+	}
+}
+
+// BookContributionClient is a client for the BookContribution schema.
+type BookContributionClient struct {
+	config
+}
+
+// NewBookContributionClient returns a client for the BookContribution from the given config.
+func NewBookContributionClient(c config) *BookContributionClient {
+	return &BookContributionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `bookcontribution.Hooks(f(g(h())))`.
+func (c *BookContributionClient) Use(hooks ...Hook) {
+	c.hooks.BookContribution = append(c.hooks.BookContribution, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `bookcontribution.Intercept(f(g(h())))`.
+func (c *BookContributionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BookContribution = append(c.inters.BookContribution, interceptors...)
+}
+
+// Create returns a builder for creating a BookContribution entity.
+func (c *BookContributionClient) Create() *BookContributionCreate {
+	mutation := newBookContributionMutation(c.config, OpCreate)
+	return &BookContributionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BookContribution entities.
+func (c *BookContributionClient) CreateBulk(builders ...*BookContributionCreate) *BookContributionCreateBulk {
+	return &BookContributionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BookContributionClient) MapCreateBulk(slice any, setFunc func(*BookContributionCreate, int)) *BookContributionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BookContributionCreateBulk{err: fmt.Errorf("calling to BookContributionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BookContributionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BookContributionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BookContribution.
+func (c *BookContributionClient) Update() *BookContributionUpdate {
+	mutation := newBookContributionMutation(c.config, OpUpdate)
+	return &BookContributionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BookContributionClient) UpdateOne(_m *BookContribution) *BookContributionUpdateOne {
+	mutation := newBookContributionMutation(c.config, OpUpdateOne, withBookContribution(_m))
+	return &BookContributionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BookContributionClient) UpdateOneID(id uint32) *BookContributionUpdateOne {
+	mutation := newBookContributionMutation(c.config, OpUpdateOne, withBookContributionID(id))
+	return &BookContributionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BookContribution.
+func (c *BookContributionClient) Delete() *BookContributionDelete {
+	mutation := newBookContributionMutation(c.config, OpDelete)
+	return &BookContributionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BookContributionClient) DeleteOne(_m *BookContribution) *BookContributionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BookContributionClient) DeleteOneID(id uint32) *BookContributionDeleteOne {
+	builder := c.Delete().Where(bookcontribution.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BookContributionDeleteOne{builder}
+}
+
+// Query returns a query builder for BookContribution.
+func (c *BookContributionClient) Query() *BookContributionQuery {
+	return &BookContributionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBookContribution},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BookContribution entity by its id.
+func (c *BookContributionClient) Get(ctx context.Context, id uint32) (*BookContribution, error) {
+	return c.Query().Where(bookcontribution.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BookContributionClient) GetX(ctx context.Context, id uint32) *BookContribution {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAuthor queries the author edge of a BookContribution.
+func (c *BookContributionClient) QueryAuthor(_m *BookContribution) *AuthorQuery {
+	query := (&AuthorClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookcontribution.Table, bookcontribution.FieldID, id),
+			sqlgraph.To(author.Table, author.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, bookcontribution.AuthorTable, bookcontribution.AuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBook queries the book edge of a BookContribution.
+func (c *BookContributionClient) QueryBook(_m *BookContribution) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookcontribution.Table, bookcontribution.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, bookcontribution.BookTable, bookcontribution.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySeries queries the series edge of a BookContribution.
+func (c *BookContributionClient) QuerySeries(_m *BookContribution) *BookSeriesQuery {
+	query := (&BookSeriesClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookcontribution.Table, bookcontribution.FieldID, id),
+			sqlgraph.To(bookseries.Table, bookseries.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, bookcontribution.SeriesTable, bookcontribution.SeriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BookContributionClient) Hooks() []Hook {
+	return c.hooks.BookContribution
+}
+
+// Interceptors returns the client interceptors.
+func (c *BookContributionClient) Interceptors() []Interceptor {
+	return c.inters.BookContribution
+}
+
+func (c *BookContributionClient) mutate(ctx context.Context, m *BookContributionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BookContributionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BookContributionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BookContributionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BookContributionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BookContribution mutation op: %q", m.Op())
+	}
+}
+
+// BookEditionClient is a client for the BookEdition schema.
+type BookEditionClient struct {
+	config
+}
+
+// NewBookEditionClient returns a client for the BookEdition from the given config.
+func NewBookEditionClient(c config) *BookEditionClient {
+	return &BookEditionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `bookedition.Hooks(f(g(h())))`.
+func (c *BookEditionClient) Use(hooks ...Hook) {
+	c.hooks.BookEdition = append(c.hooks.BookEdition, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `bookedition.Intercept(f(g(h())))`.
+func (c *BookEditionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BookEdition = append(c.inters.BookEdition, interceptors...)
+}
+
+// Create returns a builder for creating a BookEdition entity.
+func (c *BookEditionClient) Create() *BookEditionCreate {
+	mutation := newBookEditionMutation(c.config, OpCreate)
+	return &BookEditionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BookEdition entities.
+func (c *BookEditionClient) CreateBulk(builders ...*BookEditionCreate) *BookEditionCreateBulk {
+	return &BookEditionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BookEditionClient) MapCreateBulk(slice any, setFunc func(*BookEditionCreate, int)) *BookEditionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BookEditionCreateBulk{err: fmt.Errorf("calling to BookEditionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BookEditionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BookEditionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BookEdition.
+func (c *BookEditionClient) Update() *BookEditionUpdate {
+	mutation := newBookEditionMutation(c.config, OpUpdate)
+	return &BookEditionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BookEditionClient) UpdateOne(_m *BookEdition) *BookEditionUpdateOne {
+	mutation := newBookEditionMutation(c.config, OpUpdateOne, withBookEdition(_m))
+	return &BookEditionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BookEditionClient) UpdateOneID(id uint32) *BookEditionUpdateOne {
+	mutation := newBookEditionMutation(c.config, OpUpdateOne, withBookEditionID(id))
+	return &BookEditionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BookEdition.
+func (c *BookEditionClient) Delete() *BookEditionDelete {
+	mutation := newBookEditionMutation(c.config, OpDelete)
+	return &BookEditionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BookEditionClient) DeleteOne(_m *BookEdition) *BookEditionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BookEditionClient) DeleteOneID(id uint32) *BookEditionDeleteOne {
+	builder := c.Delete().Where(bookedition.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BookEditionDeleteOne{builder}
+}
+
+// Query returns a query builder for BookEdition.
+func (c *BookEditionClient) Query() *BookEditionQuery {
+	return &BookEditionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBookEdition},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BookEdition entity by its id.
+func (c *BookEditionClient) Get(ctx context.Context, id uint32) (*BookEdition, error) {
+	return c.Query().Where(bookedition.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BookEditionClient) GetX(ctx context.Context, id uint32) *BookEdition {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryBook queries the book edge of a BookEdition.
+func (c *BookEditionClient) QueryBook(_m *BookEdition) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, bookedition.BookTable, bookedition.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BookEditionClient) Hooks() []Hook {
+	return c.hooks.BookEdition
+}
+
+// Interceptors returns the client interceptors.
+func (c *BookEditionClient) Interceptors() []Interceptor {
+	return c.inters.BookEdition
+}
+
+func (c *BookEditionClient) mutate(ctx context.Context, m *BookEditionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BookEditionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BookEditionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BookEditionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BookEditionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BookEdition mutation op: %q", m.Op())
+	}
+}
+
+// BookSeriesClient is a client for the BookSeries schema.
+type BookSeriesClient struct {
+	config
+}
+
+// NewBookSeriesClient returns a client for the BookSeries from the given config.
+func NewBookSeriesClient(c config) *BookSeriesClient {
+	return &BookSeriesClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `bookseries.Hooks(f(g(h())))`.
+func (c *BookSeriesClient) Use(hooks ...Hook) {
+	c.hooks.BookSeries = append(c.hooks.BookSeries, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `bookseries.Intercept(f(g(h())))`.
+func (c *BookSeriesClient) Intercept(interceptors ...Interceptor) {
+	c.inters.BookSeries = append(c.inters.BookSeries, interceptors...)
+}
+
+// Create returns a builder for creating a BookSeries entity.
+func (c *BookSeriesClient) Create() *BookSeriesCreate {
+	mutation := newBookSeriesMutation(c.config, OpCreate)
+	return &BookSeriesCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of BookSeries entities.
+func (c *BookSeriesClient) CreateBulk(builders ...*BookSeriesCreate) *BookSeriesCreateBulk {
+	return &BookSeriesCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *BookSeriesClient) MapCreateBulk(slice any, setFunc func(*BookSeriesCreate, int)) *BookSeriesCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &BookSeriesCreateBulk{err: fmt.Errorf("calling to BookSeriesClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*BookSeriesCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &BookSeriesCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for BookSeries.
+func (c *BookSeriesClient) Update() *BookSeriesUpdate {
+	mutation := newBookSeriesMutation(c.config, OpUpdate)
+	return &BookSeriesUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *BookSeriesClient) UpdateOne(_m *BookSeries) *BookSeriesUpdateOne {
+	mutation := newBookSeriesMutation(c.config, OpUpdateOne, withBookSeries(_m))
+	return &BookSeriesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *BookSeriesClient) UpdateOneID(id uint32) *BookSeriesUpdateOne {
+	mutation := newBookSeriesMutation(c.config, OpUpdateOne, withBookSeriesID(id))
+	return &BookSeriesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for BookSeries.
+func (c *BookSeriesClient) Delete() *BookSeriesDelete {
+	mutation := newBookSeriesMutation(c.config, OpDelete)
+	return &BookSeriesDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *BookSeriesClient) DeleteOne(_m *BookSeries) *BookSeriesDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *BookSeriesClient) DeleteOneID(id uint32) *BookSeriesDeleteOne {
+	builder := c.Delete().Where(bookseries.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &BookSeriesDeleteOne{builder}
+}
+
+// Query returns a query builder for BookSeries.
+func (c *BookSeriesClient) Query() *BookSeriesQuery {
+	return &BookSeriesQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeBookSeries},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a BookSeries entity by its id.
+func (c *BookSeriesClient) Get(ctx context.Context, id uint32) (*BookSeries, error) {
+	return c.Query().Where(bookseries.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *BookSeriesClient) GetX(ctx context.Context, id uint32) *BookSeries {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryVolumes queries the volumes edge of a BookSeries.
+func (c *BookSeriesClient) QueryVolumes(_m *BookSeries) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookseries.Table, bookseries.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.VolumesTable, bookseries.VolumesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryContributions queries the contributions edge of a BookSeries.
+func (c *BookSeriesClient) QueryContributions(_m *BookSeries) *BookContributionQuery {
+	query := (&BookContributionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookseries.Table, bookseries.FieldID, id),
+			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.ContributionsTable, bookseries.ContributionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *BookSeriesClient) Hooks() []Hook {
+	return c.hooks.BookSeries
+}
+
+// Interceptors returns the client interceptors.
+func (c *BookSeriesClient) Interceptors() []Interceptor {
+	return c.inters.BookSeries
+}
+
+func (c *BookSeriesClient) mutate(ctx context.Context, m *BookSeriesMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&BookSeriesCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&BookSeriesUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&BookSeriesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&BookSeriesDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown BookSeries mutation op: %q", m.Op())
 	}
 }
 
@@ -1568,6 +2382,38 @@ func (c *DownloadRecordClient) QueryBook(_m *DownloadRecord) *BookQuery {
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
 			sqlgraph.To(book.Table, book.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.BookTable, downloadrecord.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArtist queries the artist edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryArtist(_m *DownloadRecord) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.ArtistTable, downloadrecord.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlbums queries the albums edge of a DownloadRecord.
+func (c *DownloadRecordClient) QueryAlbums(_m *DownloadRecord) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, downloadrecord.AlbumsTable, downloadrecord.AlbumsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3394,6 +4240,171 @@ func (c *MovieClient) mutate(ctx context.Context, m *MovieMutation) (Value, erro
 	}
 }
 
+// MusicCreditClient is a client for the MusicCredit schema.
+type MusicCreditClient struct {
+	config
+}
+
+// NewMusicCreditClient returns a client for the MusicCredit from the given config.
+func NewMusicCreditClient(c config) *MusicCreditClient {
+	return &MusicCreditClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `musiccredit.Hooks(f(g(h())))`.
+func (c *MusicCreditClient) Use(hooks ...Hook) {
+	c.hooks.MusicCredit = append(c.hooks.MusicCredit, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `musiccredit.Intercept(f(g(h())))`.
+func (c *MusicCreditClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MusicCredit = append(c.inters.MusicCredit, interceptors...)
+}
+
+// Create returns a builder for creating a MusicCredit entity.
+func (c *MusicCreditClient) Create() *MusicCreditCreate {
+	mutation := newMusicCreditMutation(c.config, OpCreate)
+	return &MusicCreditCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MusicCredit entities.
+func (c *MusicCreditClient) CreateBulk(builders ...*MusicCreditCreate) *MusicCreditCreateBulk {
+	return &MusicCreditCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MusicCreditClient) MapCreateBulk(slice any, setFunc func(*MusicCreditCreate, int)) *MusicCreditCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MusicCreditCreateBulk{err: fmt.Errorf("calling to MusicCreditClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MusicCreditCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MusicCreditCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MusicCredit.
+func (c *MusicCreditClient) Update() *MusicCreditUpdate {
+	mutation := newMusicCreditMutation(c.config, OpUpdate)
+	return &MusicCreditUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MusicCreditClient) UpdateOne(_m *MusicCredit) *MusicCreditUpdateOne {
+	mutation := newMusicCreditMutation(c.config, OpUpdateOne, withMusicCredit(_m))
+	return &MusicCreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MusicCreditClient) UpdateOneID(id uint32) *MusicCreditUpdateOne {
+	mutation := newMusicCreditMutation(c.config, OpUpdateOne, withMusicCreditID(id))
+	return &MusicCreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MusicCredit.
+func (c *MusicCreditClient) Delete() *MusicCreditDelete {
+	mutation := newMusicCreditMutation(c.config, OpDelete)
+	return &MusicCreditDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MusicCreditClient) DeleteOne(_m *MusicCredit) *MusicCreditDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MusicCreditClient) DeleteOneID(id uint32) *MusicCreditDeleteOne {
+	builder := c.Delete().Where(musiccredit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MusicCreditDeleteOne{builder}
+}
+
+// Query returns a query builder for MusicCredit.
+func (c *MusicCreditClient) Query() *MusicCreditQuery {
+	return &MusicCreditQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMusicCredit},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MusicCredit entity by its id.
+func (c *MusicCreditClient) Get(ctx context.Context, id uint32) (*MusicCredit, error) {
+	return c.Query().Where(musiccredit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MusicCreditClient) GetX(ctx context.Context, id uint32) *MusicCredit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAlbum queries the album edge of a MusicCredit.
+func (c *MusicCreditClient) QueryAlbum(_m *MusicCredit) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(musiccredit.Table, musiccredit.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, musiccredit.AlbumTable, musiccredit.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTrack queries the track edge of a MusicCredit.
+func (c *MusicCreditClient) QueryTrack(_m *MusicCredit) *TrackQuery {
+	query := (&TrackClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(musiccredit.Table, musiccredit.FieldID, id),
+			sqlgraph.To(track.Table, track.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, musiccredit.TrackTable, musiccredit.TrackColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *MusicCreditClient) Hooks() []Hook {
+	return c.hooks.MusicCredit
+}
+
+// Interceptors returns the client interceptors.
+func (c *MusicCreditClient) Interceptors() []Interceptor {
+	return c.inters.MusicCredit
+}
+
+func (c *MusicCreditClient) mutate(ctx context.Context, m *MusicCreditMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MusicCreditCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MusicCreditUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MusicCreditUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MusicCreditDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MusicCredit mutation op: %q", m.Op())
+	}
+}
+
 // OIDCIdentityClient is a client for the OIDCIdentity schema.
 type OIDCIdentityClient struct {
 	config
@@ -4758,6 +5769,22 @@ func (c *TrackClient) QueryMediaFiles(_m *Track) *MediaFileQuery {
 	return query
 }
 
+// QueryCredits queries the credits edge of a Track.
+func (c *TrackClient) QueryCredits(_m *Track) *MusicCreditQuery {
+	query := (&MusicCreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, id),
+			sqlgraph.To(musiccredit.Table, musiccredit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.CreditsTable, track.CreditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TrackClient) Hooks() []Hook {
 	return c.hooks.Track
@@ -5132,16 +6159,18 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Album, ApiKey, Artist, Author, Book, Credit, DownloadRecord, Episode,
-		ImportScan, ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
-		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person, Request,
+		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
+		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
+		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow, Invite,
+		MediaEvent, MediaFile, Movie, MusicCredit, OIDCIdentity, Person, Request,
 		ScheduledJob, Season, Session, TVShow, TorrentSession, Track, TranscodeJob,
 		User []ent.Hook
 	}
 	inters struct {
-		Album, ApiKey, Artist, Author, Book, Credit, DownloadRecord, Episode,
-		ImportScan, ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
-		Invite, MediaEvent, MediaFile, Movie, OIDCIdentity, Person, Request,
+		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
+		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
+		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow, Invite,
+		MediaEvent, MediaFile, Movie, MusicCredit, OIDCIdentity, Person, Request,
 		ScheduledJob, Season, Session, TVShow, TorrentSession, Track, TranscodeJob,
 		User []ent.Interceptor
 	}

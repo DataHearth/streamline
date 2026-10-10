@@ -85,11 +85,6 @@ func BookHardcoverID(v uint32) predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldEQ(FieldBookHardcoverID, v))
 }
 
-// AuthorHardcoverID applies equality check predicate on the "author_hardcover_id" field. It's identical to AuthorHardcoverIDEQ.
-func AuthorHardcoverID(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldEQ(FieldAuthorHardcoverID, v))
-}
-
 // ExistingBookID applies equality check predicate on the "existing_book_id" field. It's identical to ExistingBookIDEQ.
 func ExistingBookID(v uint32) predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldEQ(FieldExistingBookID, v))
@@ -503,56 +498,6 @@ func BookHardcoverIDIsNil() predicate.ImportScanBook {
 // BookHardcoverIDNotNil applies the NotNil predicate on the "book_hardcover_id" field.
 func BookHardcoverIDNotNil() predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldNotNull(FieldBookHardcoverID))
-}
-
-// AuthorHardcoverIDEQ applies the EQ predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDEQ(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldEQ(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDNEQ applies the NEQ predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDNEQ(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldNEQ(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDIn applies the In predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDIn(vs ...uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldIn(FieldAuthorHardcoverID, vs...))
-}
-
-// AuthorHardcoverIDNotIn applies the NotIn predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDNotIn(vs ...uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldNotIn(FieldAuthorHardcoverID, vs...))
-}
-
-// AuthorHardcoverIDGT applies the GT predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDGT(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldGT(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDGTE applies the GTE predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDGTE(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldGTE(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDLT applies the LT predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDLT(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldLT(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDLTE applies the LTE predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDLTE(v uint32) predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldLTE(FieldAuthorHardcoverID, v))
-}
-
-// AuthorHardcoverIDIsNil applies the IsNil predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDIsNil() predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldIsNull(FieldAuthorHardcoverID))
-}
-
-// AuthorHardcoverIDNotNil applies the NotNil predicate on the "author_hardcover_id" field.
-func AuthorHardcoverIDNotNil() predicate.ImportScanBook {
-	return predicate.ImportScanBook(sql.FieldNotNull(FieldAuthorHardcoverID))
 }
 
 // CandidatesIsNil applies the IsNil predicate on the "candidates" field.

@@ -39,12 +39,30 @@ const (
 	FieldLastSearchAt = "last_search_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldLabel holds the string denoting the label field in the database.
+	FieldLabel = "label"
+	// FieldCatalogNumber holds the string denoting the catalog_number field in the database.
+	FieldCatalogNumber = "catalog_number"
+	// FieldCountry holds the string denoting the country field in the database.
+	FieldCountry = "country"
+	// FieldMedia holds the string denoting the media field in the database.
+	FieldMedia = "media"
+	// FieldStudio holds the string denoting the studio field in the database.
+	FieldStudio = "studio"
+	// FieldMetadataFetchedAt holds the string denoting the metadata_fetched_at field in the database.
+	FieldMetadataFetchedAt = "metadata_fetched_at"
+	// FieldCreditsFetchedAt holds the string denoting the credits_fetched_at field in the database.
+	FieldCreditsFetchedAt = "credits_fetched_at"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
 	EdgeArtist = "artist"
 	// EdgeTracks holds the string denoting the tracks edge name in mutations.
 	EdgeTracks = "tracks"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
+	// EdgeCredits holds the string denoting the credits edge name in mutations.
+	EdgeCredits = "credits"
+	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
+	EdgePackRecords = "pack_records"
 	// Table holds the table name of the album in the database.
 	Table = "albums"
 	// ArtistTable is the table that holds the artist relation/edge.
@@ -68,6 +86,18 @@ const (
 	DownloadRecordsInverseTable = "download_records"
 	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
 	DownloadRecordsColumn = "album_download_records"
+	// CreditsTable is the table that holds the credits relation/edge.
+	CreditsTable = "music_credits"
+	// CreditsInverseTable is the table name for the MusicCredit entity.
+	// It exists in this package in order to avoid circular dependency with the "musiccredit" package.
+	CreditsInverseTable = "music_credits"
+	// CreditsColumn is the table column denoting the credits relation/edge.
+	CreditsColumn = "album_credits"
+	// PackRecordsTable is the table that holds the pack_records relation/edge. The primary key declared below.
+	PackRecordsTable = "download_record_albums"
+	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
+	PackRecordsInverseTable = "download_records"
 )
 
 // Columns holds all SQL columns for album fields.
@@ -85,6 +115,13 @@ var Columns = []string{
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
+	FieldLabel,
+	FieldCatalogNumber,
+	FieldCountry,
+	FieldMedia,
+	FieldStudio,
+	FieldMetadataFetchedAt,
+	FieldCreditsFetchedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "albums"
@@ -92,6 +129,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"artist_albums",
 }
+
+var (
+	// PackRecordsPrimaryKey and PackRecordsColumn2 are the table columns denoting the
+	// primary key for the pack_records relation (M2M).
+	PackRecordsPrimaryKey = []string{"download_record_id", "album_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -252,6 +295,41 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
+// ByLabel orders the results by the label field.
+func ByLabel(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLabel, opts...).ToFunc()
+}
+
+// ByCatalogNumber orders the results by the catalog_number field.
+func ByCatalogNumber(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCatalogNumber, opts...).ToFunc()
+}
+
+// ByCountry orders the results by the country field.
+func ByCountry(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCountry, opts...).ToFunc()
+}
+
+// ByMedia orders the results by the media field.
+func ByMedia(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMedia, opts...).ToFunc()
+}
+
+// ByStudio orders the results by the studio field.
+func ByStudio(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStudio, opts...).ToFunc()
+}
+
+// ByMetadataFetchedAt orders the results by the metadata_fetched_at field.
+func ByMetadataFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMetadataFetchedAt, opts...).ToFunc()
+}
+
+// ByCreditsFetchedAt orders the results by the credits_fetched_at field.
+func ByCreditsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsFetchedAt, opts...).ToFunc()
+}
+
 // ByArtistField orders the results by artist field.
 func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -286,6 +364,34 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCreditsCount orders the results by credits count.
+func ByCreditsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreditsStep(), opts...)
+	}
+}
+
+// ByCredits orders the results by credits terms.
+func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPackRecordsCount orders the results by pack_records count.
+func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPackRecordsStep(), opts...)
+	}
+}
+
+// ByPackRecords orders the results by pack_records terms.
+func ByPackRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPackRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newArtistStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -305,5 +411,19 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+	)
+}
+func newCreditsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreditsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+	)
+}
+func newPackRecordsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PackRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, PackRecordsTable, PackRecordsPrimaryKey...),
 	)
 }

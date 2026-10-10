@@ -83,20 +83,6 @@ func (_c *RequestCreate) SetNillableMediaMbid(v *string) *RequestCreate {
 	return _c
 }
 
-// SetBookKind sets the "book_kind" field.
-func (_c *RequestCreate) SetBookKind(v request.BookKind) *RequestCreate {
-	_c.mutation.SetBookKind(v)
-	return _c
-}
-
-// SetNillableBookKind sets the "book_kind" field if the given value is not nil.
-func (_c *RequestCreate) SetNillableBookKind(v *request.BookKind) *RequestCreate {
-	if v != nil {
-		_c.SetBookKind(*v)
-	}
-	return _c
-}
-
 // SetTitle sets the "title" field.
 func (_c *RequestCreate) SetTitle(v string) *RequestCreate {
 	_c.mutation.SetTitle(v)
@@ -250,11 +236,6 @@ func (_c *RequestCreate) check() error {
 			return &ValidationError{Name: "media_type", err: fmt.Errorf(`ent: validator failed for field "Request.media_type": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.BookKind(); ok {
-		if err := request.BookKindValidator(v); err != nil {
-			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "Request.book_kind": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Request.title"`)}
 	}
@@ -325,10 +306,6 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MediaMbid(); ok {
 		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
 		_node.MediaMbid = value
-	}
-	if value, ok := _c.mutation.BookKind(); ok {
-		_spec.SetField(request.FieldBookKind, field.TypeEnum, value)
-		_node.BookKind = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)

@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
 )
@@ -209,6 +210,146 @@ func (_u *AlbumUpdate) SetNillableStatus(v *album.Status) *AlbumUpdate {
 	return _u
 }
 
+// SetLabel sets the "label" field.
+func (_u *AlbumUpdate) SetLabel(v string) *AlbumUpdate {
+	_u.mutation.SetLabel(v)
+	return _u
+}
+
+// SetNillableLabel sets the "label" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableLabel(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetLabel(*v)
+	}
+	return _u
+}
+
+// ClearLabel clears the value of the "label" field.
+func (_u *AlbumUpdate) ClearLabel() *AlbumUpdate {
+	_u.mutation.ClearLabel()
+	return _u
+}
+
+// SetCatalogNumber sets the "catalog_number" field.
+func (_u *AlbumUpdate) SetCatalogNumber(v string) *AlbumUpdate {
+	_u.mutation.SetCatalogNumber(v)
+	return _u
+}
+
+// SetNillableCatalogNumber sets the "catalog_number" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableCatalogNumber(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetCatalogNumber(*v)
+	}
+	return _u
+}
+
+// ClearCatalogNumber clears the value of the "catalog_number" field.
+func (_u *AlbumUpdate) ClearCatalogNumber() *AlbumUpdate {
+	_u.mutation.ClearCatalogNumber()
+	return _u
+}
+
+// SetCountry sets the "country" field.
+func (_u *AlbumUpdate) SetCountry(v string) *AlbumUpdate {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableCountry(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetCountry(*v)
+	}
+	return _u
+}
+
+// ClearCountry clears the value of the "country" field.
+func (_u *AlbumUpdate) ClearCountry() *AlbumUpdate {
+	_u.mutation.ClearCountry()
+	return _u
+}
+
+// SetMedia sets the "media" field.
+func (_u *AlbumUpdate) SetMedia(v string) *AlbumUpdate {
+	_u.mutation.SetMedia(v)
+	return _u
+}
+
+// SetNillableMedia sets the "media" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableMedia(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetMedia(*v)
+	}
+	return _u
+}
+
+// ClearMedia clears the value of the "media" field.
+func (_u *AlbumUpdate) ClearMedia() *AlbumUpdate {
+	_u.mutation.ClearMedia()
+	return _u
+}
+
+// SetStudio sets the "studio" field.
+func (_u *AlbumUpdate) SetStudio(v string) *AlbumUpdate {
+	_u.mutation.SetStudio(v)
+	return _u
+}
+
+// SetNillableStudio sets the "studio" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableStudio(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetStudio(*v)
+	}
+	return _u
+}
+
+// ClearStudio clears the value of the "studio" field.
+func (_u *AlbumUpdate) ClearStudio() *AlbumUpdate {
+	_u.mutation.ClearStudio()
+	return _u
+}
+
+// SetMetadataFetchedAt sets the "metadata_fetched_at" field.
+func (_u *AlbumUpdate) SetMetadataFetchedAt(v time.Time) *AlbumUpdate {
+	_u.mutation.SetMetadataFetchedAt(v)
+	return _u
+}
+
+// SetNillableMetadataFetchedAt sets the "metadata_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableMetadataFetchedAt(v *time.Time) *AlbumUpdate {
+	if v != nil {
+		_u.SetMetadataFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearMetadataFetchedAt clears the value of the "metadata_fetched_at" field.
+func (_u *AlbumUpdate) ClearMetadataFetchedAt() *AlbumUpdate {
+	_u.mutation.ClearMetadataFetchedAt()
+	return _u
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_u *AlbumUpdate) SetCreditsFetchedAt(v time.Time) *AlbumUpdate {
+	_u.mutation.SetCreditsFetchedAt(v)
+	return _u
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableCreditsFetchedAt(v *time.Time) *AlbumUpdate {
+	if v != nil {
+		_u.SetCreditsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
+func (_u *AlbumUpdate) ClearCreditsFetchedAt() *AlbumUpdate {
+	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdate) SetArtistID(id uint32) *AlbumUpdate {
 	_u.mutation.SetArtistID(id)
@@ -248,6 +389,36 @@ func (_u *AlbumUpdate) AddDownloadRecords(v ...*DownloadRecord) *AlbumUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddDownloadRecordIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_u *AlbumUpdate) AddCreditIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_u *AlbumUpdate) AddCredits(v ...*MusicCredit) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
+}
+
+// AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
+func (_u *AlbumUpdate) AddPackRecordIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.AddPackRecordIDs(ids...)
+	return _u
+}
+
+// AddPackRecords adds the "pack_records" edges to the DownloadRecord entity.
+func (_u *AlbumUpdate) AddPackRecords(v ...*DownloadRecord) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPackRecordIDs(ids...)
 }
 
 // Mutation returns the AlbumMutation object of the builder.
@@ -301,6 +472,48 @@ func (_u *AlbumUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *AlbumUpdate 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the MusicCredit entity.
+func (_u *AlbumUpdate) ClearCredits() *AlbumUpdate {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to MusicCredit entities by IDs.
+func (_u *AlbumUpdate) RemoveCreditIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to MusicCredit entities.
+func (_u *AlbumUpdate) RemoveCredits(v ...*MusicCredit) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
+func (_u *AlbumUpdate) ClearPackRecords() *AlbumUpdate {
+	_u.mutation.ClearPackRecords()
+	return _u
+}
+
+// RemovePackRecordIDs removes the "pack_records" edge to DownloadRecord entities by IDs.
+func (_u *AlbumUpdate) RemovePackRecordIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.RemovePackRecordIDs(ids...)
+	return _u
+}
+
+// RemovePackRecords removes "pack_records" edges to DownloadRecord entities.
+func (_u *AlbumUpdate) RemovePackRecords(v ...*DownloadRecord) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePackRecordIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -433,6 +646,48 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
 	}
+	if value, ok := _u.mutation.Label(); ok {
+		_spec.SetField(album.FieldLabel, field.TypeString, value)
+	}
+	if _u.mutation.LabelCleared() {
+		_spec.ClearField(album.FieldLabel, field.TypeString)
+	}
+	if value, ok := _u.mutation.CatalogNumber(); ok {
+		_spec.SetField(album.FieldCatalogNumber, field.TypeString, value)
+	}
+	if _u.mutation.CatalogNumberCleared() {
+		_spec.ClearField(album.FieldCatalogNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(album.FieldCountry, field.TypeString, value)
+	}
+	if _u.mutation.CountryCleared() {
+		_spec.ClearField(album.FieldCountry, field.TypeString)
+	}
+	if value, ok := _u.mutation.Media(); ok {
+		_spec.SetField(album.FieldMedia, field.TypeString, value)
+	}
+	if _u.mutation.MediaCleared() {
+		_spec.ClearField(album.FieldMedia, field.TypeString)
+	}
+	if value, ok := _u.mutation.Studio(); ok {
+		_spec.SetField(album.FieldStudio, field.TypeString, value)
+	}
+	if _u.mutation.StudioCleared() {
+		_spec.ClearField(album.FieldStudio, field.TypeString)
+	}
+	if value, ok := _u.mutation.MetadataFetchedAt(); ok {
+		_spec.SetField(album.FieldMetadataFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.MetadataFetchedAtCleared() {
+		_spec.ClearField(album.FieldMetadataFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(album.FieldCreditsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreditsFetchedAtCleared() {
+		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -542,6 +797,96 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Inverse: false,
 			Table:   album.DownloadRecordsTable,
 			Columns: []string{album.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PackRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPackRecordsIDs(); len(nodes) > 0 && !_u.mutation.PackRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PackRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
@@ -751,6 +1096,146 @@ func (_u *AlbumUpdateOne) SetNillableStatus(v *album.Status) *AlbumUpdateOne {
 	return _u
 }
 
+// SetLabel sets the "label" field.
+func (_u *AlbumUpdateOne) SetLabel(v string) *AlbumUpdateOne {
+	_u.mutation.SetLabel(v)
+	return _u
+}
+
+// SetNillableLabel sets the "label" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableLabel(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetLabel(*v)
+	}
+	return _u
+}
+
+// ClearLabel clears the value of the "label" field.
+func (_u *AlbumUpdateOne) ClearLabel() *AlbumUpdateOne {
+	_u.mutation.ClearLabel()
+	return _u
+}
+
+// SetCatalogNumber sets the "catalog_number" field.
+func (_u *AlbumUpdateOne) SetCatalogNumber(v string) *AlbumUpdateOne {
+	_u.mutation.SetCatalogNumber(v)
+	return _u
+}
+
+// SetNillableCatalogNumber sets the "catalog_number" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableCatalogNumber(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetCatalogNumber(*v)
+	}
+	return _u
+}
+
+// ClearCatalogNumber clears the value of the "catalog_number" field.
+func (_u *AlbumUpdateOne) ClearCatalogNumber() *AlbumUpdateOne {
+	_u.mutation.ClearCatalogNumber()
+	return _u
+}
+
+// SetCountry sets the "country" field.
+func (_u *AlbumUpdateOne) SetCountry(v string) *AlbumUpdateOne {
+	_u.mutation.SetCountry(v)
+	return _u
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableCountry(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetCountry(*v)
+	}
+	return _u
+}
+
+// ClearCountry clears the value of the "country" field.
+func (_u *AlbumUpdateOne) ClearCountry() *AlbumUpdateOne {
+	_u.mutation.ClearCountry()
+	return _u
+}
+
+// SetMedia sets the "media" field.
+func (_u *AlbumUpdateOne) SetMedia(v string) *AlbumUpdateOne {
+	_u.mutation.SetMedia(v)
+	return _u
+}
+
+// SetNillableMedia sets the "media" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableMedia(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetMedia(*v)
+	}
+	return _u
+}
+
+// ClearMedia clears the value of the "media" field.
+func (_u *AlbumUpdateOne) ClearMedia() *AlbumUpdateOne {
+	_u.mutation.ClearMedia()
+	return _u
+}
+
+// SetStudio sets the "studio" field.
+func (_u *AlbumUpdateOne) SetStudio(v string) *AlbumUpdateOne {
+	_u.mutation.SetStudio(v)
+	return _u
+}
+
+// SetNillableStudio sets the "studio" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableStudio(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetStudio(*v)
+	}
+	return _u
+}
+
+// ClearStudio clears the value of the "studio" field.
+func (_u *AlbumUpdateOne) ClearStudio() *AlbumUpdateOne {
+	_u.mutation.ClearStudio()
+	return _u
+}
+
+// SetMetadataFetchedAt sets the "metadata_fetched_at" field.
+func (_u *AlbumUpdateOne) SetMetadataFetchedAt(v time.Time) *AlbumUpdateOne {
+	_u.mutation.SetMetadataFetchedAt(v)
+	return _u
+}
+
+// SetNillableMetadataFetchedAt sets the "metadata_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableMetadataFetchedAt(v *time.Time) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetMetadataFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearMetadataFetchedAt clears the value of the "metadata_fetched_at" field.
+func (_u *AlbumUpdateOne) ClearMetadataFetchedAt() *AlbumUpdateOne {
+	_u.mutation.ClearMetadataFetchedAt()
+	return _u
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_u *AlbumUpdateOne) SetCreditsFetchedAt(v time.Time) *AlbumUpdateOne {
+	_u.mutation.SetCreditsFetchedAt(v)
+	return _u
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableCreditsFetchedAt(v *time.Time) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetCreditsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
+func (_u *AlbumUpdateOne) ClearCreditsFetchedAt() *AlbumUpdateOne {
+	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdateOne) SetArtistID(id uint32) *AlbumUpdateOne {
 	_u.mutation.SetArtistID(id)
@@ -790,6 +1275,36 @@ func (_u *AlbumUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *AlbumUpdateO
 		ids[i] = v[i].ID
 	}
 	return _u.AddDownloadRecordIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_u *AlbumUpdateOne) AddCreditIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_u *AlbumUpdateOne) AddCredits(v ...*MusicCredit) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
+}
+
+// AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
+func (_u *AlbumUpdateOne) AddPackRecordIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.AddPackRecordIDs(ids...)
+	return _u
+}
+
+// AddPackRecords adds the "pack_records" edges to the DownloadRecord entity.
+func (_u *AlbumUpdateOne) AddPackRecords(v ...*DownloadRecord) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPackRecordIDs(ids...)
 }
 
 // Mutation returns the AlbumMutation object of the builder.
@@ -843,6 +1358,48 @@ func (_u *AlbumUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *AlbumUpda
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the MusicCredit entity.
+func (_u *AlbumUpdateOne) ClearCredits() *AlbumUpdateOne {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to MusicCredit entities by IDs.
+func (_u *AlbumUpdateOne) RemoveCreditIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to MusicCredit entities.
+func (_u *AlbumUpdateOne) RemoveCredits(v ...*MusicCredit) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
+func (_u *AlbumUpdateOne) ClearPackRecords() *AlbumUpdateOne {
+	_u.mutation.ClearPackRecords()
+	return _u
+}
+
+// RemovePackRecordIDs removes the "pack_records" edge to DownloadRecord entities by IDs.
+func (_u *AlbumUpdateOne) RemovePackRecordIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.RemovePackRecordIDs(ids...)
+	return _u
+}
+
+// RemovePackRecords removes "pack_records" edges to DownloadRecord entities.
+func (_u *AlbumUpdateOne) RemovePackRecords(v ...*DownloadRecord) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePackRecordIDs(ids...)
 }
 
 // Where appends a list predicates to the AlbumUpdate builder.
@@ -1005,6 +1562,48 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
 	}
+	if value, ok := _u.mutation.Label(); ok {
+		_spec.SetField(album.FieldLabel, field.TypeString, value)
+	}
+	if _u.mutation.LabelCleared() {
+		_spec.ClearField(album.FieldLabel, field.TypeString)
+	}
+	if value, ok := _u.mutation.CatalogNumber(); ok {
+		_spec.SetField(album.FieldCatalogNumber, field.TypeString, value)
+	}
+	if _u.mutation.CatalogNumberCleared() {
+		_spec.ClearField(album.FieldCatalogNumber, field.TypeString)
+	}
+	if value, ok := _u.mutation.Country(); ok {
+		_spec.SetField(album.FieldCountry, field.TypeString, value)
+	}
+	if _u.mutation.CountryCleared() {
+		_spec.ClearField(album.FieldCountry, field.TypeString)
+	}
+	if value, ok := _u.mutation.Media(); ok {
+		_spec.SetField(album.FieldMedia, field.TypeString, value)
+	}
+	if _u.mutation.MediaCleared() {
+		_spec.ClearField(album.FieldMedia, field.TypeString)
+	}
+	if value, ok := _u.mutation.Studio(); ok {
+		_spec.SetField(album.FieldStudio, field.TypeString, value)
+	}
+	if _u.mutation.StudioCleared() {
+		_spec.ClearField(album.FieldStudio, field.TypeString)
+	}
+	if value, ok := _u.mutation.MetadataFetchedAt(); ok {
+		_spec.SetField(album.FieldMetadataFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.MetadataFetchedAtCleared() {
+		_spec.ClearField(album.FieldMetadataFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(album.FieldCreditsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreditsFetchedAtCleared() {
+		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1114,6 +1713,96 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 			Inverse: false,
 			Table:   album.DownloadRecordsTable,
 			Columns: []string{album.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PackRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPackRecordsIDs(); len(nodes) > 0 && !_u.mutation.PackRecordsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PackRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),

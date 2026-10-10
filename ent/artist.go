@@ -29,14 +29,34 @@ type Artist struct {
 	SortName string `json:"sort_name,omitempty"`
 	// Overview holds the value of the "overview" field.
 	Overview string `json:"overview,omitempty"`
-	// Monitored holds the value of the "monitored" field.
-	Monitored bool `json:"monitored,omitempty"`
+	// OverviewSource holds the value of the "overview_source" field.
+	OverviewSource string `json:"overview_source,omitempty"`
+	// OverviewFr holds the value of the "overview_fr" field.
+	OverviewFr string `json:"overview_fr,omitempty"`
+	// OverviewSourceFr holds the value of the "overview_source_fr" field.
+	OverviewSourceFr string `json:"overview_source_fr,omitempty"`
+	// Monitor holds the value of the "monitor" field.
+	Monitor artist.Monitor `json:"monitor,omitempty"`
+	// Type holds the value of the "type" field.
+	Type artist.Type `json:"type,omitempty"`
+	// Origin holds the value of the "origin" field.
+	Origin string `json:"origin,omitempty"`
+	// Since holds the value of the "since" field.
+	Since uint16 `json:"since,omitempty"`
+	// Genre holds the value of the "genre" field.
+	Genre string `json:"genre,omitempty"`
+	// DeezerID holds the value of the "deezer_id" field.
+	DeezerID uint32 `json:"deezer_id,omitempty"`
+	// WikidataID holds the value of the "wikidata_id" field.
+	WikidataID string `json:"wikidata_id,omitempty"`
 	// Path holds the value of the "path" field.
 	Path string `json:"path,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
 	QualityProfile string `json:"quality_profile,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
+	// DetailsFetchedAt holds the value of the "details_fetched_at" field.
+	DetailsFetchedAt *time.Time `json:"details_fetched_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArtistQuery when eager-loading is set.
 	Edges        ArtistEdges `json:"edges"`
@@ -47,9 +67,13 @@ type Artist struct {
 type ArtistEdges struct {
 	// Albums holds the value of the albums edge.
 	Albums []*Album `json:"albums,omitempty"`
+	// Members holds the value of the members edge.
+	Members []*ArtistMember `json:"members,omitempty"`
+	// DownloadRecords holds the value of the download_records edge.
+	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
@@ -61,18 +85,34 @@ func (e ArtistEdges) AlbumsOrErr() ([]*Album, error) {
 	return nil, &NotLoadedError{edge: "albums"}
 }
 
+// MembersOrErr returns the Members value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) MembersOrErr() ([]*ArtistMember, error) {
+	if e.loadedTypes[1] {
+		return e.Members, nil
+	}
+	return nil, &NotLoadedError{edge: "members"}
+}
+
+// DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
+	if e.loadedTypes[2] {
+		return e.DownloadRecords, nil
+	}
+	return nil, &NotLoadedError{edge: "download_records"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Artist) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case artist.FieldMonitored:
-			values[i] = new(sql.NullBool)
-		case artist.FieldID:
+		case artist.FieldID, artist.FieldSince, artist.FieldDeezerID:
 			values[i] = new(sql.NullInt64)
-		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldPath, artist.FieldQualityProfile:
+		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldPath, artist.FieldQualityProfile:
 			values[i] = new(sql.NullString)
-		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt:
+		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -131,11 +171,65 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Overview = value.String
 			}
-		case artist.FieldMonitored:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field monitored", values[i])
+		case artist.FieldOverviewSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field overview_source", values[i])
 			} else if value.Valid {
-				_m.Monitored = value.Bool
+				_m.OverviewSource = value.String
+			}
+		case artist.FieldOverviewFr:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field overview_fr", values[i])
+			} else if value.Valid {
+				_m.OverviewFr = value.String
+			}
+		case artist.FieldOverviewSourceFr:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field overview_source_fr", values[i])
+			} else if value.Valid {
+				_m.OverviewSourceFr = value.String
+			}
+		case artist.FieldMonitor:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field monitor", values[i])
+			} else if value.Valid {
+				_m.Monitor = artist.Monitor(value.String)
+			}
+		case artist.FieldType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field type", values[i])
+			} else if value.Valid {
+				_m.Type = artist.Type(value.String)
+			}
+		case artist.FieldOrigin:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field origin", values[i])
+			} else if value.Valid {
+				_m.Origin = value.String
+			}
+		case artist.FieldSince:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field since", values[i])
+			} else if value.Valid {
+				_m.Since = uint16(value.Int64)
+			}
+		case artist.FieldGenre:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field genre", values[i])
+			} else if value.Valid {
+				_m.Genre = value.String
+			}
+		case artist.FieldDeezerID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field deezer_id", values[i])
+			} else if value.Valid {
+				_m.DeezerID = uint32(value.Int64)
+			}
+		case artist.FieldWikidataID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
+			} else if value.Valid {
+				_m.WikidataID = value.String
 			}
 		case artist.FieldPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -156,6 +250,13 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 				_m.LastRefreshedAt = new(time.Time)
 				*_m.LastRefreshedAt = value.Time
 			}
+		case artist.FieldDetailsFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field details_fetched_at", values[i])
+			} else if value.Valid {
+				_m.DetailsFetchedAt = new(time.Time)
+				*_m.DetailsFetchedAt = value.Time
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -172,6 +273,16 @@ func (_m *Artist) Value(name string) (ent.Value, error) {
 // QueryAlbums queries the "albums" edge of the Artist entity.
 func (_m *Artist) QueryAlbums() *AlbumQuery {
 	return NewArtistClient(_m.config).QueryAlbums(_m)
+}
+
+// QueryMembers queries the "members" edge of the Artist entity.
+func (_m *Artist) QueryMembers() *ArtistMemberQuery {
+	return NewArtistClient(_m.config).QueryMembers(_m)
+}
+
+// QueryDownloadRecords queries the "download_records" edge of the Artist entity.
+func (_m *Artist) QueryDownloadRecords() *DownloadRecordQuery {
+	return NewArtistClient(_m.config).QueryDownloadRecords(_m)
 }
 
 // Update returns a builder for updating this Artist.
@@ -215,8 +326,35 @@ func (_m *Artist) String() string {
 	builder.WriteString("overview=")
 	builder.WriteString(_m.Overview)
 	builder.WriteString(", ")
-	builder.WriteString("monitored=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
+	builder.WriteString("overview_source=")
+	builder.WriteString(_m.OverviewSource)
+	builder.WriteString(", ")
+	builder.WriteString("overview_fr=")
+	builder.WriteString(_m.OverviewFr)
+	builder.WriteString(", ")
+	builder.WriteString("overview_source_fr=")
+	builder.WriteString(_m.OverviewSourceFr)
+	builder.WriteString(", ")
+	builder.WriteString("monitor=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Monitor))
+	builder.WriteString(", ")
+	builder.WriteString("type=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
+	builder.WriteString(", ")
+	builder.WriteString("origin=")
+	builder.WriteString(_m.Origin)
+	builder.WriteString(", ")
+	builder.WriteString("since=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Since))
+	builder.WriteString(", ")
+	builder.WriteString("genre=")
+	builder.WriteString(_m.Genre)
+	builder.WriteString(", ")
+	builder.WriteString("deezer_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DeezerID))
+	builder.WriteString(", ")
+	builder.WriteString("wikidata_id=")
+	builder.WriteString(_m.WikidataID)
 	builder.WriteString(", ")
 	builder.WriteString("path=")
 	builder.WriteString(_m.Path)
@@ -226,6 +364,11 @@ func (_m *Artist) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastRefreshedAt; v != nil {
 		builder.WriteString("last_refreshed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.DetailsFetchedAt; v != nil {
+		builder.WriteString("details_fetched_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteByte(')')

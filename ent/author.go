@@ -27,22 +27,8 @@ type Author struct {
 	Name string `json:"name,omitempty"`
 	// SortName holds the value of the "sort_name" field.
 	SortName string `json:"sort_name,omitempty"`
-	// Overview holds the value of the "overview" field.
-	Overview string `json:"overview,omitempty"`
-	// Monitored holds the value of the "monitored" field.
-	Monitored bool `json:"monitored,omitempty"`
-	// Folder holds the value of the "folder" field.
-	Folder string `json:"folder,omitempty"`
-	// MonitorPolicy holds the value of the "monitor_policy" field.
-	MonitorPolicy author.MonitorPolicy `json:"monitor_policy,omitempty"`
-	// WantKinds holds the value of the "want_kinds" field.
-	WantKinds author.WantKinds `json:"want_kinds,omitempty"`
-	// EbookQualityProfile holds the value of the "ebook_quality_profile" field.
-	EbookQualityProfile string `json:"ebook_quality_profile,omitempty"`
-	// AudiobookQualityProfile holds the value of the "audiobook_quality_profile" field.
-	AudiobookQualityProfile string `json:"audiobook_quality_profile,omitempty"`
-	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
-	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
+	// Hardcover CDN URL for the asynchronous photo fetch.
+	ImageSource string `json:"image_source,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AuthorQuery when eager-loading is set.
 	Edges        AuthorEdges `json:"edges"`
@@ -51,20 +37,20 @@ type Author struct {
 
 // AuthorEdges holds the relations/edges for other nodes in the graph.
 type AuthorEdges struct {
-	// Books holds the value of the books edge.
-	Books []*Book `json:"books,omitempty"`
+	// Contributions holds the value of the contributions edge.
+	Contributions []*BookContribution `json:"contributions,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
-// BooksOrErr returns the Books value or an error if the edge
+// ContributionsOrErr returns the Contributions value or an error if the edge
 // was not loaded in eager-loading.
-func (e AuthorEdges) BooksOrErr() ([]*Book, error) {
+func (e AuthorEdges) ContributionsOrErr() ([]*BookContribution, error) {
 	if e.loadedTypes[0] {
-		return e.Books, nil
+		return e.Contributions, nil
 	}
-	return nil, &NotLoadedError{edge: "books"}
+	return nil, &NotLoadedError{edge: "contributions"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -72,13 +58,11 @@ func (*Author) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case author.FieldMonitored:
-			values[i] = new(sql.NullBool)
 		case author.FieldID, author.FieldHardcoverID:
 			values[i] = new(sql.NullInt64)
-		case author.FieldName, author.FieldSortName, author.FieldOverview, author.FieldFolder, author.FieldMonitorPolicy, author.FieldWantKinds, author.FieldEbookQualityProfile, author.FieldAudiobookQualityProfile:
+		case author.FieldName, author.FieldSortName, author.FieldImageSource:
 			values[i] = new(sql.NullString)
-		case author.FieldCreateTime, author.FieldUpdateTime, author.FieldLastRefreshedAt:
+		case author.FieldCreateTime, author.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -131,54 +115,11 @@ func (_m *Author) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.SortName = value.String
 			}
-		case author.FieldOverview:
+		case author.FieldImageSource:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field overview", values[i])
+				return fmt.Errorf("unexpected type %T for field image_source", values[i])
 			} else if value.Valid {
-				_m.Overview = value.String
-			}
-		case author.FieldMonitored:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field monitored", values[i])
-			} else if value.Valid {
-				_m.Monitored = value.Bool
-			}
-		case author.FieldFolder:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field folder", values[i])
-			} else if value.Valid {
-				_m.Folder = value.String
-			}
-		case author.FieldMonitorPolicy:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field monitor_policy", values[i])
-			} else if value.Valid {
-				_m.MonitorPolicy = author.MonitorPolicy(value.String)
-			}
-		case author.FieldWantKinds:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field want_kinds", values[i])
-			} else if value.Valid {
-				_m.WantKinds = author.WantKinds(value.String)
-			}
-		case author.FieldEbookQualityProfile:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ebook_quality_profile", values[i])
-			} else if value.Valid {
-				_m.EbookQualityProfile = value.String
-			}
-		case author.FieldAudiobookQualityProfile:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field audiobook_quality_profile", values[i])
-			} else if value.Valid {
-				_m.AudiobookQualityProfile = value.String
-			}
-		case author.FieldLastRefreshedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field last_refreshed_at", values[i])
-			} else if value.Valid {
-				_m.LastRefreshedAt = new(time.Time)
-				*_m.LastRefreshedAt = value.Time
+				_m.ImageSource = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -193,9 +134,9 @@ func (_m *Author) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryBooks queries the "books" edge of the Author entity.
-func (_m *Author) QueryBooks() *BookQuery {
-	return NewAuthorClient(_m.config).QueryBooks(_m)
+// QueryContributions queries the "contributions" edge of the Author entity.
+func (_m *Author) QueryContributions() *BookContributionQuery {
+	return NewAuthorClient(_m.config).QueryContributions(_m)
 }
 
 // Update returns a builder for updating this Author.
@@ -236,31 +177,8 @@ func (_m *Author) String() string {
 	builder.WriteString("sort_name=")
 	builder.WriteString(_m.SortName)
 	builder.WriteString(", ")
-	builder.WriteString("overview=")
-	builder.WriteString(_m.Overview)
-	builder.WriteString(", ")
-	builder.WriteString("monitored=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
-	builder.WriteString(", ")
-	builder.WriteString("folder=")
-	builder.WriteString(_m.Folder)
-	builder.WriteString(", ")
-	builder.WriteString("monitor_policy=")
-	builder.WriteString(fmt.Sprintf("%v", _m.MonitorPolicy))
-	builder.WriteString(", ")
-	builder.WriteString("want_kinds=")
-	builder.WriteString(fmt.Sprintf("%v", _m.WantKinds))
-	builder.WriteString(", ")
-	builder.WriteString("ebook_quality_profile=")
-	builder.WriteString(_m.EbookQualityProfile)
-	builder.WriteString(", ")
-	builder.WriteString("audiobook_quality_profile=")
-	builder.WriteString(_m.AudiobookQualityProfile)
-	builder.WriteString(", ")
-	if v := _m.LastRefreshedAt; v != nil {
-		builder.WriteString("last_refreshed_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("image_source=")
+	builder.WriteString(_m.ImageSource)
 	builder.WriteByte(')')
 	return builder.String()
 }

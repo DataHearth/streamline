@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -30,6 +31,8 @@ type DownloadRecordQuery struct {
 	withMovie         *MovieQuery
 	withAlbum         *AlbumQuery
 	withBook          *BookQuery
+	withArtist        *ArtistQuery
+	withAlbums        *AlbumQuery
 	withAnchorEpisode *EpisodeQuery
 	withEpisodes      *EpisodeQuery
 	withFKs           bool
@@ -129,6 +132,50 @@ func (_q *DownloadRecordQuery) QueryBook() *BookQuery {
 			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
 			sqlgraph.To(book.Table, book.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.BookTable, downloadrecord.BookColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryArtist chains the current query on the "artist" edge.
+func (_q *DownloadRecordQuery) QueryArtist() *ArtistQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, downloadrecord.ArtistTable, downloadrecord.ArtistColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAlbums chains the current query on the "albums" edge.
+func (_q *DownloadRecordQuery) QueryAlbums() *AlbumQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(downloadrecord.Table, downloadrecord.FieldID, selector),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, downloadrecord.AlbumsTable, downloadrecord.AlbumsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -375,6 +422,8 @@ func (_q *DownloadRecordQuery) Clone() *DownloadRecordQuery {
 		withMovie:         _q.withMovie.Clone(),
 		withAlbum:         _q.withAlbum.Clone(),
 		withBook:          _q.withBook.Clone(),
+		withArtist:        _q.withArtist.Clone(),
+		withAlbums:        _q.withAlbums.Clone(),
 		withAnchorEpisode: _q.withAnchorEpisode.Clone(),
 		withEpisodes:      _q.withEpisodes.Clone(),
 		// clone intermediate query.
@@ -414,6 +463,28 @@ func (_q *DownloadRecordQuery) WithBook(opts ...func(*BookQuery)) *DownloadRecor
 		opt(query)
 	}
 	_q.withBook = query
+	return _q
+}
+
+// WithArtist tells the query-builder to eager-load the nodes that are connected to
+// the "artist" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithArtist(opts ...func(*ArtistQuery)) *DownloadRecordQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withArtist = query
+	return _q
+}
+
+// WithAlbums tells the query-builder to eager-load the nodes that are connected to
+// the "albums" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *DownloadRecordQuery) WithAlbums(opts ...func(*AlbumQuery)) *DownloadRecordQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlbums = query
 	return _q
 }
 
@@ -518,15 +589,17 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 		nodes       = []*DownloadRecord{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [7]bool{
 			_q.withMovie != nil,
 			_q.withAlbum != nil,
 			_q.withBook != nil,
+			_q.withArtist != nil,
+			_q.withAlbums != nil,
 			_q.withAnchorEpisode != nil,
 			_q.withEpisodes != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withAlbum != nil || _q.withBook != nil || _q.withAnchorEpisode != nil {
+	if _q.withMovie != nil || _q.withAlbum != nil || _q.withBook != nil || _q.withArtist != nil || _q.withAnchorEpisode != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -568,6 +641,19 @@ func (_q *DownloadRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if query := _q.withBook; query != nil {
 		if err := _q.loadBook(ctx, query, nodes, nil,
 			func(n *DownloadRecord, e *Book) { n.Edges.Book = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withArtist; query != nil {
+		if err := _q.loadArtist(ctx, query, nodes, nil,
+			func(n *DownloadRecord, e *Artist) { n.Edges.Artist = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAlbums; query != nil {
+		if err := _q.loadAlbums(ctx, query, nodes,
+			func(n *DownloadRecord) { n.Edges.Albums = []*Album{} },
+			func(n *DownloadRecord, e *Album) { n.Edges.Albums = append(n.Edges.Albums, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -679,6 +765,99 @@ func (_q *DownloadRecordQuery) loadBook(ctx context.Context, query *BookQuery, n
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadArtist(ctx context.Context, query *ArtistQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Artist)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*DownloadRecord)
+	for i := range nodes {
+		if nodes[i].artist_download_records == nil {
+			continue
+		}
+		fk := *nodes[i].artist_download_records
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(artist.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "artist_download_records" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *DownloadRecordQuery) loadAlbums(ctx context.Context, query *AlbumQuery, nodes []*DownloadRecord, init func(*DownloadRecord), assign func(*DownloadRecord, *Album)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uint32]*DownloadRecord)
+	nids := make(map[uint32]map[*DownloadRecord]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(downloadrecord.AlbumsTable)
+		s.Join(joinT).On(s.C(album.FieldID), joinT.C(downloadrecord.AlbumsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(downloadrecord.AlbumsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(downloadrecord.AlbumsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := uint32(values[0].(*sql.NullInt64).Int64)
+				inValue := uint32(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*DownloadRecord]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Album](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "albums" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

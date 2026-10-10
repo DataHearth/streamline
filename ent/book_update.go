@@ -11,8 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/datahearth/streamline/ent/author"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookcontribution"
+	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -73,6 +75,26 @@ func (_u *BookUpdate) SetNillableTitle(v *string) *BookUpdate {
 	return _u
 }
 
+// SetOriginalTitle sets the "original_title" field.
+func (_u *BookUpdate) SetOriginalTitle(v string) *BookUpdate {
+	_u.mutation.SetOriginalTitle(v)
+	return _u
+}
+
+// SetNillableOriginalTitle sets the "original_title" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableOriginalTitle(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetOriginalTitle(*v)
+	}
+	return _u
+}
+
+// ClearOriginalTitle clears the value of the "original_title" field.
+func (_u *BookUpdate) ClearOriginalTitle() *BookUpdate {
+	_u.mutation.ClearOriginalTitle()
+	return _u
+}
+
 // SetSortTitle sets the "sort_title" field.
 func (_u *BookUpdate) SetSortTitle(v string) *BookUpdate {
 	_u.mutation.SetSortTitle(v)
@@ -90,6 +112,114 @@ func (_u *BookUpdate) SetNillableSortTitle(v *string) *BookUpdate {
 // ClearSortTitle clears the value of the "sort_title" field.
 func (_u *BookUpdate) ClearSortTitle() *BookUpdate {
 	_u.mutation.ClearSortTitle()
+	return _u
+}
+
+// SetAuthorName sets the "author_name" field.
+func (_u *BookUpdate) SetAuthorName(v string) *BookUpdate {
+	_u.mutation.SetAuthorName(v)
+	return _u
+}
+
+// SetNillableAuthorName sets the "author_name" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableAuthorName(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetAuthorName(*v)
+	}
+	return _u
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (_u *BookUpdate) ClearAuthorName() *BookUpdate {
+	_u.mutation.ClearAuthorName()
+	return _u
+}
+
+// SetKind sets the "kind" field.
+func (_u *BookUpdate) SetKind(v book.Kind) *BookUpdate {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableKind(v *book.Kind) *BookUpdate {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetGenre sets the "genre" field.
+func (_u *BookUpdate) SetGenre(v string) *BookUpdate {
+	_u.mutation.SetGenre(v)
+	return _u
+}
+
+// SetNillableGenre sets the "genre" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableGenre(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetGenre(*v)
+	}
+	return _u
+}
+
+// ClearGenre clears the value of the "genre" field.
+func (_u *BookUpdate) ClearGenre() *BookUpdate {
+	_u.mutation.ClearGenre()
+	return _u
+}
+
+// SetRatingTenths sets the "rating_tenths" field.
+func (_u *BookUpdate) SetRatingTenths(v uint8) *BookUpdate {
+	_u.mutation.ResetRatingTenths()
+	_u.mutation.SetRatingTenths(v)
+	return _u
+}
+
+// SetNillableRatingTenths sets the "rating_tenths" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableRatingTenths(v *uint8) *BookUpdate {
+	if v != nil {
+		_u.SetRatingTenths(*v)
+	}
+	return _u
+}
+
+// AddRatingTenths adds value to the "rating_tenths" field.
+func (_u *BookUpdate) AddRatingTenths(v int8) *BookUpdate {
+	_u.mutation.AddRatingTenths(v)
+	return _u
+}
+
+// ClearRatingTenths clears the value of the "rating_tenths" field.
+func (_u *BookUpdate) ClearRatingTenths() *BookUpdate {
+	_u.mutation.ClearRatingTenths()
+	return _u
+}
+
+// SetReleaseYear sets the "release_year" field.
+func (_u *BookUpdate) SetReleaseYear(v uint16) *BookUpdate {
+	_u.mutation.ResetReleaseYear()
+	_u.mutation.SetReleaseYear(v)
+	return _u
+}
+
+// SetNillableReleaseYear sets the "release_year" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableReleaseYear(v *uint16) *BookUpdate {
+	if v != nil {
+		_u.SetReleaseYear(*v)
+	}
+	return _u
+}
+
+// AddReleaseYear adds value to the "release_year" field.
+func (_u *BookUpdate) AddReleaseYear(v int16) *BookUpdate {
+	_u.mutation.AddReleaseYear(v)
+	return _u
+}
+
+// ClearReleaseYear clears the value of the "release_year" field.
+func (_u *BookUpdate) ClearReleaseYear() *BookUpdate {
+	_u.mutation.ClearReleaseYear()
 	return _u
 }
 
@@ -133,37 +263,58 @@ func (_u *BookUpdate) ClearOverview() *BookUpdate {
 	return _u
 }
 
-// SetSeriesName sets the "series_name" field.
-func (_u *BookUpdate) SetSeriesName(v string) *BookUpdate {
-	_u.mutation.SetSeriesName(v)
+// SetPreferredLanguage sets the "preferred_language" field.
+func (_u *BookUpdate) SetPreferredLanguage(v string) *BookUpdate {
+	_u.mutation.SetPreferredLanguage(v)
 	return _u
 }
 
-// SetNillableSeriesName sets the "series_name" field if the given value is not nil.
-func (_u *BookUpdate) SetNillableSeriesName(v *string) *BookUpdate {
+// SetNillablePreferredLanguage sets the "preferred_language" field if the given value is not nil.
+func (_u *BookUpdate) SetNillablePreferredLanguage(v *string) *BookUpdate {
 	if v != nil {
-		_u.SetSeriesName(*v)
+		_u.SetPreferredLanguage(*v)
 	}
 	return _u
 }
 
-// ClearSeriesName clears the value of the "series_name" field.
-func (_u *BookUpdate) ClearSeriesName() *BookUpdate {
-	_u.mutation.ClearSeriesName()
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *BookUpdate) SetQualityProfile(v string) *BookUpdate {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableQualityProfile(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *BookUpdate) ClearQualityProfile() *BookUpdate {
+	_u.mutation.ClearQualityProfile()
 	return _u
 }
 
 // SetSeriesPosition sets the "series_position" field.
-func (_u *BookUpdate) SetSeriesPosition(v string) *BookUpdate {
+func (_u *BookUpdate) SetSeriesPosition(v float64) *BookUpdate {
+	_u.mutation.ResetSeriesPosition()
 	_u.mutation.SetSeriesPosition(v)
 	return _u
 }
 
 // SetNillableSeriesPosition sets the "series_position" field if the given value is not nil.
-func (_u *BookUpdate) SetNillableSeriesPosition(v *string) *BookUpdate {
+func (_u *BookUpdate) SetNillableSeriesPosition(v *float64) *BookUpdate {
 	if v != nil {
 		_u.SetSeriesPosition(*v)
 	}
+	return _u
+}
+
+// AddSeriesPosition adds value to the "series_position" field.
+func (_u *BookUpdate) AddSeriesPosition(v float64) *BookUpdate {
+	_u.mutation.AddSeriesPosition(v)
 	return _u
 }
 
@@ -242,6 +393,26 @@ func (_u *BookUpdate) ClearEbookLastSearchAt() *BookUpdate {
 	return _u
 }
 
+// SetEbookReplacingLanguage sets the "ebook_replacing_language" field.
+func (_u *BookUpdate) SetEbookReplacingLanguage(v string) *BookUpdate {
+	_u.mutation.SetEbookReplacingLanguage(v)
+	return _u
+}
+
+// SetNillableEbookReplacingLanguage sets the "ebook_replacing_language" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableEbookReplacingLanguage(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetEbookReplacingLanguage(*v)
+	}
+	return _u
+}
+
+// ClearEbookReplacingLanguage clears the value of the "ebook_replacing_language" field.
+func (_u *BookUpdate) ClearEbookReplacingLanguage() *BookUpdate {
+	_u.mutation.ClearEbookReplacingLanguage()
+	return _u
+}
+
 // SetAudiobookMonitored sets the "audiobook_monitored" field.
 func (_u *BookUpdate) SetAudiobookMonitored(v bool) *BookUpdate {
 	_u.mutation.SetAudiobookMonitored(v)
@@ -311,15 +482,131 @@ func (_u *BookUpdate) ClearAudiobookLastSearchAt() *BookUpdate {
 	return _u
 }
 
-// SetAuthorID sets the "author" edge to the Author entity by ID.
-func (_u *BookUpdate) SetAuthorID(id uint32) *BookUpdate {
-	_u.mutation.SetAuthorID(id)
+// SetAudiobookReplacingLanguage sets the "audiobook_replacing_language" field.
+func (_u *BookUpdate) SetAudiobookReplacingLanguage(v string) *BookUpdate {
+	_u.mutation.SetAudiobookReplacingLanguage(v)
 	return _u
 }
 
-// SetAuthor sets the "author" edge to the Author entity.
-func (_u *BookUpdate) SetAuthor(v *Author) *BookUpdate {
-	return _u.SetAuthorID(v.ID)
+// SetNillableAudiobookReplacingLanguage sets the "audiobook_replacing_language" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableAudiobookReplacingLanguage(v *string) *BookUpdate {
+	if v != nil {
+		_u.SetAudiobookReplacingLanguage(*v)
+	}
+	return _u
+}
+
+// ClearAudiobookReplacingLanguage clears the value of the "audiobook_replacing_language" field.
+func (_u *BookUpdate) ClearAudiobookReplacingLanguage() *BookUpdate {
+	_u.mutation.ClearAudiobookReplacingLanguage()
+	return _u
+}
+
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (_u *BookUpdate) SetLastRefreshedAt(v time.Time) *BookUpdate {
+	_u.mutation.SetLastRefreshedAt(v)
+	return _u
+}
+
+// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
+func (_u *BookUpdate) SetNillableLastRefreshedAt(v *time.Time) *BookUpdate {
+	if v != nil {
+		_u.SetLastRefreshedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (_u *BookUpdate) ClearLastRefreshedAt() *BookUpdate {
+	_u.mutation.ClearLastRefreshedAt()
+	return _u
+}
+
+// SetSeriesID sets the "series" edge to the BookSeries entity by ID.
+func (_u *BookUpdate) SetSeriesID(id uint32) *BookUpdate {
+	_u.mutation.SetSeriesID(id)
+	return _u
+}
+
+// SetNillableSeriesID sets the "series" edge to the BookSeries entity by ID if the given value is not nil.
+func (_u *BookUpdate) SetNillableSeriesID(id *uint32) *BookUpdate {
+	if id != nil {
+		_u = _u.SetSeriesID(*id)
+	}
+	return _u
+}
+
+// SetSeries sets the "series" edge to the BookSeries entity.
+func (_u *BookUpdate) SetSeries(v *BookSeries) *BookUpdate {
+	return _u.SetSeriesID(v.ID)
+}
+
+// AddEditionIDs adds the "editions" edge to the BookEdition entity by IDs.
+func (_u *BookUpdate) AddEditionIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.AddEditionIDs(ids...)
+	return _u
+}
+
+// AddEditions adds the "editions" edges to the BookEdition entity.
+func (_u *BookUpdate) AddEditions(v ...*BookEdition) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEditionIDs(ids...)
+}
+
+// AddContributionIDs adds the "contributions" edge to the BookContribution entity by IDs.
+func (_u *BookUpdate) AddContributionIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.AddContributionIDs(ids...)
+	return _u
+}
+
+// AddContributions adds the "contributions" edges to the BookContribution entity.
+func (_u *BookUpdate) AddContributions(v ...*BookContribution) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddContributionIDs(ids...)
+}
+
+// SetEbookEditionID sets the "ebook_edition" edge to the BookEdition entity by ID.
+func (_u *BookUpdate) SetEbookEditionID(id uint32) *BookUpdate {
+	_u.mutation.SetEbookEditionID(id)
+	return _u
+}
+
+// SetNillableEbookEditionID sets the "ebook_edition" edge to the BookEdition entity by ID if the given value is not nil.
+func (_u *BookUpdate) SetNillableEbookEditionID(id *uint32) *BookUpdate {
+	if id != nil {
+		_u = _u.SetEbookEditionID(*id)
+	}
+	return _u
+}
+
+// SetEbookEdition sets the "ebook_edition" edge to the BookEdition entity.
+func (_u *BookUpdate) SetEbookEdition(v *BookEdition) *BookUpdate {
+	return _u.SetEbookEditionID(v.ID)
+}
+
+// SetAudiobookEditionID sets the "audiobook_edition" edge to the BookEdition entity by ID.
+func (_u *BookUpdate) SetAudiobookEditionID(id uint32) *BookUpdate {
+	_u.mutation.SetAudiobookEditionID(id)
+	return _u
+}
+
+// SetNillableAudiobookEditionID sets the "audiobook_edition" edge to the BookEdition entity by ID if the given value is not nil.
+func (_u *BookUpdate) SetNillableAudiobookEditionID(id *uint32) *BookUpdate {
+	if id != nil {
+		_u = _u.SetAudiobookEditionID(*id)
+	}
+	return _u
+}
+
+// SetAudiobookEdition sets the "audiobook_edition" edge to the BookEdition entity.
+func (_u *BookUpdate) SetAudiobookEdition(v *BookEdition) *BookUpdate {
+	return _u.SetAudiobookEditionID(v.ID)
 }
 
 // AddMediaFileIDs adds the "media_files" edge to the MediaFile entity by IDs.
@@ -357,9 +644,63 @@ func (_u *BookUpdate) Mutation() *BookMutation {
 	return _u.mutation
 }
 
-// ClearAuthor clears the "author" edge to the Author entity.
-func (_u *BookUpdate) ClearAuthor() *BookUpdate {
-	_u.mutation.ClearAuthor()
+// ClearSeries clears the "series" edge to the BookSeries entity.
+func (_u *BookUpdate) ClearSeries() *BookUpdate {
+	_u.mutation.ClearSeries()
+	return _u
+}
+
+// ClearEditions clears all "editions" edges to the BookEdition entity.
+func (_u *BookUpdate) ClearEditions() *BookUpdate {
+	_u.mutation.ClearEditions()
+	return _u
+}
+
+// RemoveEditionIDs removes the "editions" edge to BookEdition entities by IDs.
+func (_u *BookUpdate) RemoveEditionIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.RemoveEditionIDs(ids...)
+	return _u
+}
+
+// RemoveEditions removes "editions" edges to BookEdition entities.
+func (_u *BookUpdate) RemoveEditions(v ...*BookEdition) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEditionIDs(ids...)
+}
+
+// ClearContributions clears all "contributions" edges to the BookContribution entity.
+func (_u *BookUpdate) ClearContributions() *BookUpdate {
+	_u.mutation.ClearContributions()
+	return _u
+}
+
+// RemoveContributionIDs removes the "contributions" edge to BookContribution entities by IDs.
+func (_u *BookUpdate) RemoveContributionIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.RemoveContributionIDs(ids...)
+	return _u
+}
+
+// RemoveContributions removes "contributions" edges to BookContribution entities.
+func (_u *BookUpdate) RemoveContributions(v ...*BookContribution) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveContributionIDs(ids...)
+}
+
+// ClearEbookEdition clears the "ebook_edition" edge to the BookEdition entity.
+func (_u *BookUpdate) ClearEbookEdition() *BookUpdate {
+	_u.mutation.ClearEbookEdition()
+	return _u
+}
+
+// ClearAudiobookEdition clears the "audiobook_edition" edge to the BookEdition entity.
+func (_u *BookUpdate) ClearAudiobookEdition() *BookUpdate {
+	_u.mutation.ClearAudiobookEdition()
 	return _u
 }
 
@@ -448,6 +789,11 @@ func (_u *BookUpdate) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Book.title": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := book.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Book.kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.EbookStatus(); ok {
 		if err := book.EbookStatusValidator(v); err != nil {
 			return &ValidationError{Name: "ebook_status", err: fmt.Errorf(`ent: validator failed for field "Book.ebook_status": %w`, err)}
@@ -457,9 +803,6 @@ func (_u *BookUpdate) check() error {
 		if err := book.AudiobookStatusValidator(v); err != nil {
 			return &ValidationError{Name: "audiobook_status", err: fmt.Errorf(`ent: validator failed for field "Book.audiobook_status": %w`, err)}
 		}
-	}
-	if _u.mutation.AuthorCleared() && len(_u.mutation.AuthorIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Book.author"`)
 	}
 	return nil
 }
@@ -494,11 +837,50 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(book.FieldTitle, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.OriginalTitle(); ok {
+		_spec.SetField(book.FieldOriginalTitle, field.TypeString, value)
+	}
+	if _u.mutation.OriginalTitleCleared() {
+		_spec.ClearField(book.FieldOriginalTitle, field.TypeString)
+	}
 	if value, ok := _u.mutation.SortTitle(); ok {
 		_spec.SetField(book.FieldSortTitle, field.TypeString, value)
 	}
 	if _u.mutation.SortTitleCleared() {
 		_spec.ClearField(book.FieldSortTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthorName(); ok {
+		_spec.SetField(book.FieldAuthorName, field.TypeString, value)
+	}
+	if _u.mutation.AuthorNameCleared() {
+		_spec.ClearField(book.FieldAuthorName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(book.FieldKind, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Genre(); ok {
+		_spec.SetField(book.FieldGenre, field.TypeString, value)
+	}
+	if _u.mutation.GenreCleared() {
+		_spec.ClearField(book.FieldGenre, field.TypeString)
+	}
+	if value, ok := _u.mutation.RatingTenths(); ok {
+		_spec.SetField(book.FieldRatingTenths, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedRatingTenths(); ok {
+		_spec.AddField(book.FieldRatingTenths, field.TypeUint8, value)
+	}
+	if _u.mutation.RatingTenthsCleared() {
+		_spec.ClearField(book.FieldRatingTenths, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.ReleaseYear(); ok {
+		_spec.SetField(book.FieldReleaseYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedReleaseYear(); ok {
+		_spec.AddField(book.FieldReleaseYear, field.TypeUint16, value)
+	}
+	if _u.mutation.ReleaseYearCleared() {
+		_spec.ClearField(book.FieldReleaseYear, field.TypeUint16)
 	}
 	if value, ok := _u.mutation.ReleaseDate(); ok {
 		_spec.SetField(book.FieldReleaseDate, field.TypeTime, value)
@@ -512,17 +894,23 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.OverviewCleared() {
 		_spec.ClearField(book.FieldOverview, field.TypeString)
 	}
-	if value, ok := _u.mutation.SeriesName(); ok {
-		_spec.SetField(book.FieldSeriesName, field.TypeString, value)
+	if value, ok := _u.mutation.PreferredLanguage(); ok {
+		_spec.SetField(book.FieldPreferredLanguage, field.TypeString, value)
 	}
-	if _u.mutation.SeriesNameCleared() {
-		_spec.ClearField(book.FieldSeriesName, field.TypeString)
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(book.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(book.FieldQualityProfile, field.TypeString)
 	}
 	if value, ok := _u.mutation.SeriesPosition(); ok {
-		_spec.SetField(book.FieldSeriesPosition, field.TypeString, value)
+		_spec.SetField(book.FieldSeriesPosition, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSeriesPosition(); ok {
+		_spec.AddField(book.FieldSeriesPosition, field.TypeFloat64, value)
 	}
 	if _u.mutation.SeriesPositionCleared() {
-		_spec.ClearField(book.FieldSeriesPosition, field.TypeString)
+		_spec.ClearField(book.FieldSeriesPosition, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.EbookMonitored(); ok {
 		_spec.SetField(book.FieldEbookMonitored, field.TypeBool, value)
@@ -542,6 +930,12 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.EbookLastSearchAtCleared() {
 		_spec.ClearField(book.FieldEbookLastSearchAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.EbookReplacingLanguage(); ok {
+		_spec.SetField(book.FieldEbookReplacingLanguage, field.TypeString, value)
+	}
+	if _u.mutation.EbookReplacingLanguageCleared() {
+		_spec.ClearField(book.FieldEbookReplacingLanguage, field.TypeString)
+	}
 	if value, ok := _u.mutation.AudiobookMonitored(); ok {
 		_spec.SetField(book.FieldAudiobookMonitored, field.TypeBool, value)
 	}
@@ -560,28 +954,188 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.AudiobookLastSearchAtCleared() {
 		_spec.ClearField(book.FieldAudiobookLastSearchAt, field.TypeTime)
 	}
-	if _u.mutation.AuthorCleared() {
+	if value, ok := _u.mutation.AudiobookReplacingLanguage(); ok {
+		_spec.SetField(book.FieldAudiobookReplacingLanguage, field.TypeString, value)
+	}
+	if _u.mutation.AudiobookReplacingLanguageCleared() {
+		_spec.ClearField(book.FieldAudiobookReplacingLanguage, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastRefreshedAt(); ok {
+		_spec.SetField(book.FieldLastRefreshedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastRefreshedAtCleared() {
+		_spec.ClearField(book.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if _u.mutation.SeriesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   book.AuthorTable,
-			Columns: []string{book.AuthorColumn},
+			Table:   book.SeriesTable,
+			Columns: []string{book.SeriesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(author.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(bookseries.FieldID, field.TypeUint32),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SeriesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   book.AuthorTable,
-			Columns: []string{book.AuthorColumn},
+			Table:   book.SeriesTable,
+			Columns: []string{book.SeriesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(author.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(bookseries.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EditionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEditionsIDs(); len(nodes) > 0 && !_u.mutation.EditionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EditionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ContributionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedContributionsIDs(); len(nodes) > 0 && !_u.mutation.ContributionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ContributionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EbookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.EbookEditionTable,
+			Columns: []string{book.EbookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EbookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.EbookEditionTable,
+			Columns: []string{book.EbookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AudiobookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.AudiobookEditionTable,
+			Columns: []string{book.AudiobookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AudiobookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.AudiobookEditionTable,
+			Columns: []string{book.AudiobookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -742,6 +1296,26 @@ func (_u *BookUpdateOne) SetNillableTitle(v *string) *BookUpdateOne {
 	return _u
 }
 
+// SetOriginalTitle sets the "original_title" field.
+func (_u *BookUpdateOne) SetOriginalTitle(v string) *BookUpdateOne {
+	_u.mutation.SetOriginalTitle(v)
+	return _u
+}
+
+// SetNillableOriginalTitle sets the "original_title" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableOriginalTitle(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetOriginalTitle(*v)
+	}
+	return _u
+}
+
+// ClearOriginalTitle clears the value of the "original_title" field.
+func (_u *BookUpdateOne) ClearOriginalTitle() *BookUpdateOne {
+	_u.mutation.ClearOriginalTitle()
+	return _u
+}
+
 // SetSortTitle sets the "sort_title" field.
 func (_u *BookUpdateOne) SetSortTitle(v string) *BookUpdateOne {
 	_u.mutation.SetSortTitle(v)
@@ -759,6 +1333,114 @@ func (_u *BookUpdateOne) SetNillableSortTitle(v *string) *BookUpdateOne {
 // ClearSortTitle clears the value of the "sort_title" field.
 func (_u *BookUpdateOne) ClearSortTitle() *BookUpdateOne {
 	_u.mutation.ClearSortTitle()
+	return _u
+}
+
+// SetAuthorName sets the "author_name" field.
+func (_u *BookUpdateOne) SetAuthorName(v string) *BookUpdateOne {
+	_u.mutation.SetAuthorName(v)
+	return _u
+}
+
+// SetNillableAuthorName sets the "author_name" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableAuthorName(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetAuthorName(*v)
+	}
+	return _u
+}
+
+// ClearAuthorName clears the value of the "author_name" field.
+func (_u *BookUpdateOne) ClearAuthorName() *BookUpdateOne {
+	_u.mutation.ClearAuthorName()
+	return _u
+}
+
+// SetKind sets the "kind" field.
+func (_u *BookUpdateOne) SetKind(v book.Kind) *BookUpdateOne {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableKind(v *book.Kind) *BookUpdateOne {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
+// SetGenre sets the "genre" field.
+func (_u *BookUpdateOne) SetGenre(v string) *BookUpdateOne {
+	_u.mutation.SetGenre(v)
+	return _u
+}
+
+// SetNillableGenre sets the "genre" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableGenre(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetGenre(*v)
+	}
+	return _u
+}
+
+// ClearGenre clears the value of the "genre" field.
+func (_u *BookUpdateOne) ClearGenre() *BookUpdateOne {
+	_u.mutation.ClearGenre()
+	return _u
+}
+
+// SetRatingTenths sets the "rating_tenths" field.
+func (_u *BookUpdateOne) SetRatingTenths(v uint8) *BookUpdateOne {
+	_u.mutation.ResetRatingTenths()
+	_u.mutation.SetRatingTenths(v)
+	return _u
+}
+
+// SetNillableRatingTenths sets the "rating_tenths" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableRatingTenths(v *uint8) *BookUpdateOne {
+	if v != nil {
+		_u.SetRatingTenths(*v)
+	}
+	return _u
+}
+
+// AddRatingTenths adds value to the "rating_tenths" field.
+func (_u *BookUpdateOne) AddRatingTenths(v int8) *BookUpdateOne {
+	_u.mutation.AddRatingTenths(v)
+	return _u
+}
+
+// ClearRatingTenths clears the value of the "rating_tenths" field.
+func (_u *BookUpdateOne) ClearRatingTenths() *BookUpdateOne {
+	_u.mutation.ClearRatingTenths()
+	return _u
+}
+
+// SetReleaseYear sets the "release_year" field.
+func (_u *BookUpdateOne) SetReleaseYear(v uint16) *BookUpdateOne {
+	_u.mutation.ResetReleaseYear()
+	_u.mutation.SetReleaseYear(v)
+	return _u
+}
+
+// SetNillableReleaseYear sets the "release_year" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableReleaseYear(v *uint16) *BookUpdateOne {
+	if v != nil {
+		_u.SetReleaseYear(*v)
+	}
+	return _u
+}
+
+// AddReleaseYear adds value to the "release_year" field.
+func (_u *BookUpdateOne) AddReleaseYear(v int16) *BookUpdateOne {
+	_u.mutation.AddReleaseYear(v)
+	return _u
+}
+
+// ClearReleaseYear clears the value of the "release_year" field.
+func (_u *BookUpdateOne) ClearReleaseYear() *BookUpdateOne {
+	_u.mutation.ClearReleaseYear()
 	return _u
 }
 
@@ -802,37 +1484,58 @@ func (_u *BookUpdateOne) ClearOverview() *BookUpdateOne {
 	return _u
 }
 
-// SetSeriesName sets the "series_name" field.
-func (_u *BookUpdateOne) SetSeriesName(v string) *BookUpdateOne {
-	_u.mutation.SetSeriesName(v)
+// SetPreferredLanguage sets the "preferred_language" field.
+func (_u *BookUpdateOne) SetPreferredLanguage(v string) *BookUpdateOne {
+	_u.mutation.SetPreferredLanguage(v)
 	return _u
 }
 
-// SetNillableSeriesName sets the "series_name" field if the given value is not nil.
-func (_u *BookUpdateOne) SetNillableSeriesName(v *string) *BookUpdateOne {
+// SetNillablePreferredLanguage sets the "preferred_language" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillablePreferredLanguage(v *string) *BookUpdateOne {
 	if v != nil {
-		_u.SetSeriesName(*v)
+		_u.SetPreferredLanguage(*v)
 	}
 	return _u
 }
 
-// ClearSeriesName clears the value of the "series_name" field.
-func (_u *BookUpdateOne) ClearSeriesName() *BookUpdateOne {
-	_u.mutation.ClearSeriesName()
+// SetQualityProfile sets the "quality_profile" field.
+func (_u *BookUpdateOne) SetQualityProfile(v string) *BookUpdateOne {
+	_u.mutation.SetQualityProfile(v)
+	return _u
+}
+
+// SetNillableQualityProfile sets the "quality_profile" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableQualityProfile(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetQualityProfile(*v)
+	}
+	return _u
+}
+
+// ClearQualityProfile clears the value of the "quality_profile" field.
+func (_u *BookUpdateOne) ClearQualityProfile() *BookUpdateOne {
+	_u.mutation.ClearQualityProfile()
 	return _u
 }
 
 // SetSeriesPosition sets the "series_position" field.
-func (_u *BookUpdateOne) SetSeriesPosition(v string) *BookUpdateOne {
+func (_u *BookUpdateOne) SetSeriesPosition(v float64) *BookUpdateOne {
+	_u.mutation.ResetSeriesPosition()
 	_u.mutation.SetSeriesPosition(v)
 	return _u
 }
 
 // SetNillableSeriesPosition sets the "series_position" field if the given value is not nil.
-func (_u *BookUpdateOne) SetNillableSeriesPosition(v *string) *BookUpdateOne {
+func (_u *BookUpdateOne) SetNillableSeriesPosition(v *float64) *BookUpdateOne {
 	if v != nil {
 		_u.SetSeriesPosition(*v)
 	}
+	return _u
+}
+
+// AddSeriesPosition adds value to the "series_position" field.
+func (_u *BookUpdateOne) AddSeriesPosition(v float64) *BookUpdateOne {
+	_u.mutation.AddSeriesPosition(v)
 	return _u
 }
 
@@ -911,6 +1614,26 @@ func (_u *BookUpdateOne) ClearEbookLastSearchAt() *BookUpdateOne {
 	return _u
 }
 
+// SetEbookReplacingLanguage sets the "ebook_replacing_language" field.
+func (_u *BookUpdateOne) SetEbookReplacingLanguage(v string) *BookUpdateOne {
+	_u.mutation.SetEbookReplacingLanguage(v)
+	return _u
+}
+
+// SetNillableEbookReplacingLanguage sets the "ebook_replacing_language" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableEbookReplacingLanguage(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetEbookReplacingLanguage(*v)
+	}
+	return _u
+}
+
+// ClearEbookReplacingLanguage clears the value of the "ebook_replacing_language" field.
+func (_u *BookUpdateOne) ClearEbookReplacingLanguage() *BookUpdateOne {
+	_u.mutation.ClearEbookReplacingLanguage()
+	return _u
+}
+
 // SetAudiobookMonitored sets the "audiobook_monitored" field.
 func (_u *BookUpdateOne) SetAudiobookMonitored(v bool) *BookUpdateOne {
 	_u.mutation.SetAudiobookMonitored(v)
@@ -980,15 +1703,131 @@ func (_u *BookUpdateOne) ClearAudiobookLastSearchAt() *BookUpdateOne {
 	return _u
 }
 
-// SetAuthorID sets the "author" edge to the Author entity by ID.
-func (_u *BookUpdateOne) SetAuthorID(id uint32) *BookUpdateOne {
-	_u.mutation.SetAuthorID(id)
+// SetAudiobookReplacingLanguage sets the "audiobook_replacing_language" field.
+func (_u *BookUpdateOne) SetAudiobookReplacingLanguage(v string) *BookUpdateOne {
+	_u.mutation.SetAudiobookReplacingLanguage(v)
 	return _u
 }
 
-// SetAuthor sets the "author" edge to the Author entity.
-func (_u *BookUpdateOne) SetAuthor(v *Author) *BookUpdateOne {
-	return _u.SetAuthorID(v.ID)
+// SetNillableAudiobookReplacingLanguage sets the "audiobook_replacing_language" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableAudiobookReplacingLanguage(v *string) *BookUpdateOne {
+	if v != nil {
+		_u.SetAudiobookReplacingLanguage(*v)
+	}
+	return _u
+}
+
+// ClearAudiobookReplacingLanguage clears the value of the "audiobook_replacing_language" field.
+func (_u *BookUpdateOne) ClearAudiobookReplacingLanguage() *BookUpdateOne {
+	_u.mutation.ClearAudiobookReplacingLanguage()
+	return _u
+}
+
+// SetLastRefreshedAt sets the "last_refreshed_at" field.
+func (_u *BookUpdateOne) SetLastRefreshedAt(v time.Time) *BookUpdateOne {
+	_u.mutation.SetLastRefreshedAt(v)
+	return _u
+}
+
+// SetNillableLastRefreshedAt sets the "last_refreshed_at" field if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableLastRefreshedAt(v *time.Time) *BookUpdateOne {
+	if v != nil {
+		_u.SetLastRefreshedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastRefreshedAt clears the value of the "last_refreshed_at" field.
+func (_u *BookUpdateOne) ClearLastRefreshedAt() *BookUpdateOne {
+	_u.mutation.ClearLastRefreshedAt()
+	return _u
+}
+
+// SetSeriesID sets the "series" edge to the BookSeries entity by ID.
+func (_u *BookUpdateOne) SetSeriesID(id uint32) *BookUpdateOne {
+	_u.mutation.SetSeriesID(id)
+	return _u
+}
+
+// SetNillableSeriesID sets the "series" edge to the BookSeries entity by ID if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableSeriesID(id *uint32) *BookUpdateOne {
+	if id != nil {
+		_u = _u.SetSeriesID(*id)
+	}
+	return _u
+}
+
+// SetSeries sets the "series" edge to the BookSeries entity.
+func (_u *BookUpdateOne) SetSeries(v *BookSeries) *BookUpdateOne {
+	return _u.SetSeriesID(v.ID)
+}
+
+// AddEditionIDs adds the "editions" edge to the BookEdition entity by IDs.
+func (_u *BookUpdateOne) AddEditionIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.AddEditionIDs(ids...)
+	return _u
+}
+
+// AddEditions adds the "editions" edges to the BookEdition entity.
+func (_u *BookUpdateOne) AddEditions(v ...*BookEdition) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEditionIDs(ids...)
+}
+
+// AddContributionIDs adds the "contributions" edge to the BookContribution entity by IDs.
+func (_u *BookUpdateOne) AddContributionIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.AddContributionIDs(ids...)
+	return _u
+}
+
+// AddContributions adds the "contributions" edges to the BookContribution entity.
+func (_u *BookUpdateOne) AddContributions(v ...*BookContribution) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddContributionIDs(ids...)
+}
+
+// SetEbookEditionID sets the "ebook_edition" edge to the BookEdition entity by ID.
+func (_u *BookUpdateOne) SetEbookEditionID(id uint32) *BookUpdateOne {
+	_u.mutation.SetEbookEditionID(id)
+	return _u
+}
+
+// SetNillableEbookEditionID sets the "ebook_edition" edge to the BookEdition entity by ID if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableEbookEditionID(id *uint32) *BookUpdateOne {
+	if id != nil {
+		_u = _u.SetEbookEditionID(*id)
+	}
+	return _u
+}
+
+// SetEbookEdition sets the "ebook_edition" edge to the BookEdition entity.
+func (_u *BookUpdateOne) SetEbookEdition(v *BookEdition) *BookUpdateOne {
+	return _u.SetEbookEditionID(v.ID)
+}
+
+// SetAudiobookEditionID sets the "audiobook_edition" edge to the BookEdition entity by ID.
+func (_u *BookUpdateOne) SetAudiobookEditionID(id uint32) *BookUpdateOne {
+	_u.mutation.SetAudiobookEditionID(id)
+	return _u
+}
+
+// SetNillableAudiobookEditionID sets the "audiobook_edition" edge to the BookEdition entity by ID if the given value is not nil.
+func (_u *BookUpdateOne) SetNillableAudiobookEditionID(id *uint32) *BookUpdateOne {
+	if id != nil {
+		_u = _u.SetAudiobookEditionID(*id)
+	}
+	return _u
+}
+
+// SetAudiobookEdition sets the "audiobook_edition" edge to the BookEdition entity.
+func (_u *BookUpdateOne) SetAudiobookEdition(v *BookEdition) *BookUpdateOne {
+	return _u.SetAudiobookEditionID(v.ID)
 }
 
 // AddMediaFileIDs adds the "media_files" edge to the MediaFile entity by IDs.
@@ -1026,9 +1865,63 @@ func (_u *BookUpdateOne) Mutation() *BookMutation {
 	return _u.mutation
 }
 
-// ClearAuthor clears the "author" edge to the Author entity.
-func (_u *BookUpdateOne) ClearAuthor() *BookUpdateOne {
-	_u.mutation.ClearAuthor()
+// ClearSeries clears the "series" edge to the BookSeries entity.
+func (_u *BookUpdateOne) ClearSeries() *BookUpdateOne {
+	_u.mutation.ClearSeries()
+	return _u
+}
+
+// ClearEditions clears all "editions" edges to the BookEdition entity.
+func (_u *BookUpdateOne) ClearEditions() *BookUpdateOne {
+	_u.mutation.ClearEditions()
+	return _u
+}
+
+// RemoveEditionIDs removes the "editions" edge to BookEdition entities by IDs.
+func (_u *BookUpdateOne) RemoveEditionIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.RemoveEditionIDs(ids...)
+	return _u
+}
+
+// RemoveEditions removes "editions" edges to BookEdition entities.
+func (_u *BookUpdateOne) RemoveEditions(v ...*BookEdition) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEditionIDs(ids...)
+}
+
+// ClearContributions clears all "contributions" edges to the BookContribution entity.
+func (_u *BookUpdateOne) ClearContributions() *BookUpdateOne {
+	_u.mutation.ClearContributions()
+	return _u
+}
+
+// RemoveContributionIDs removes the "contributions" edge to BookContribution entities by IDs.
+func (_u *BookUpdateOne) RemoveContributionIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.RemoveContributionIDs(ids...)
+	return _u
+}
+
+// RemoveContributions removes "contributions" edges to BookContribution entities.
+func (_u *BookUpdateOne) RemoveContributions(v ...*BookContribution) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveContributionIDs(ids...)
+}
+
+// ClearEbookEdition clears the "ebook_edition" edge to the BookEdition entity.
+func (_u *BookUpdateOne) ClearEbookEdition() *BookUpdateOne {
+	_u.mutation.ClearEbookEdition()
+	return _u
+}
+
+// ClearAudiobookEdition clears the "audiobook_edition" edge to the BookEdition entity.
+func (_u *BookUpdateOne) ClearAudiobookEdition() *BookUpdateOne {
+	_u.mutation.ClearAudiobookEdition()
 	return _u
 }
 
@@ -1130,6 +2023,11 @@ func (_u *BookUpdateOne) check() error {
 			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Book.title": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := book.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "Book.kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.EbookStatus(); ok {
 		if err := book.EbookStatusValidator(v); err != nil {
 			return &ValidationError{Name: "ebook_status", err: fmt.Errorf(`ent: validator failed for field "Book.ebook_status": %w`, err)}
@@ -1139,9 +2037,6 @@ func (_u *BookUpdateOne) check() error {
 		if err := book.AudiobookStatusValidator(v); err != nil {
 			return &ValidationError{Name: "audiobook_status", err: fmt.Errorf(`ent: validator failed for field "Book.audiobook_status": %w`, err)}
 		}
-	}
-	if _u.mutation.AuthorCleared() && len(_u.mutation.AuthorIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "Book.author"`)
 	}
 	return nil
 }
@@ -1193,11 +2088,50 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(book.FieldTitle, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.OriginalTitle(); ok {
+		_spec.SetField(book.FieldOriginalTitle, field.TypeString, value)
+	}
+	if _u.mutation.OriginalTitleCleared() {
+		_spec.ClearField(book.FieldOriginalTitle, field.TypeString)
+	}
 	if value, ok := _u.mutation.SortTitle(); ok {
 		_spec.SetField(book.FieldSortTitle, field.TypeString, value)
 	}
 	if _u.mutation.SortTitleCleared() {
 		_spec.ClearField(book.FieldSortTitle, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthorName(); ok {
+		_spec.SetField(book.FieldAuthorName, field.TypeString, value)
+	}
+	if _u.mutation.AuthorNameCleared() {
+		_spec.ClearField(book.FieldAuthorName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(book.FieldKind, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Genre(); ok {
+		_spec.SetField(book.FieldGenre, field.TypeString, value)
+	}
+	if _u.mutation.GenreCleared() {
+		_spec.ClearField(book.FieldGenre, field.TypeString)
+	}
+	if value, ok := _u.mutation.RatingTenths(); ok {
+		_spec.SetField(book.FieldRatingTenths, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedRatingTenths(); ok {
+		_spec.AddField(book.FieldRatingTenths, field.TypeUint8, value)
+	}
+	if _u.mutation.RatingTenthsCleared() {
+		_spec.ClearField(book.FieldRatingTenths, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.ReleaseYear(); ok {
+		_spec.SetField(book.FieldReleaseYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedReleaseYear(); ok {
+		_spec.AddField(book.FieldReleaseYear, field.TypeUint16, value)
+	}
+	if _u.mutation.ReleaseYearCleared() {
+		_spec.ClearField(book.FieldReleaseYear, field.TypeUint16)
 	}
 	if value, ok := _u.mutation.ReleaseDate(); ok {
 		_spec.SetField(book.FieldReleaseDate, field.TypeTime, value)
@@ -1211,17 +2145,23 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 	if _u.mutation.OverviewCleared() {
 		_spec.ClearField(book.FieldOverview, field.TypeString)
 	}
-	if value, ok := _u.mutation.SeriesName(); ok {
-		_spec.SetField(book.FieldSeriesName, field.TypeString, value)
+	if value, ok := _u.mutation.PreferredLanguage(); ok {
+		_spec.SetField(book.FieldPreferredLanguage, field.TypeString, value)
 	}
-	if _u.mutation.SeriesNameCleared() {
-		_spec.ClearField(book.FieldSeriesName, field.TypeString)
+	if value, ok := _u.mutation.QualityProfile(); ok {
+		_spec.SetField(book.FieldQualityProfile, field.TypeString, value)
+	}
+	if _u.mutation.QualityProfileCleared() {
+		_spec.ClearField(book.FieldQualityProfile, field.TypeString)
 	}
 	if value, ok := _u.mutation.SeriesPosition(); ok {
-		_spec.SetField(book.FieldSeriesPosition, field.TypeString, value)
+		_spec.SetField(book.FieldSeriesPosition, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSeriesPosition(); ok {
+		_spec.AddField(book.FieldSeriesPosition, field.TypeFloat64, value)
 	}
 	if _u.mutation.SeriesPositionCleared() {
-		_spec.ClearField(book.FieldSeriesPosition, field.TypeString)
+		_spec.ClearField(book.FieldSeriesPosition, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.EbookMonitored(); ok {
 		_spec.SetField(book.FieldEbookMonitored, field.TypeBool, value)
@@ -1241,6 +2181,12 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 	if _u.mutation.EbookLastSearchAtCleared() {
 		_spec.ClearField(book.FieldEbookLastSearchAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.EbookReplacingLanguage(); ok {
+		_spec.SetField(book.FieldEbookReplacingLanguage, field.TypeString, value)
+	}
+	if _u.mutation.EbookReplacingLanguageCleared() {
+		_spec.ClearField(book.FieldEbookReplacingLanguage, field.TypeString)
+	}
 	if value, ok := _u.mutation.AudiobookMonitored(); ok {
 		_spec.SetField(book.FieldAudiobookMonitored, field.TypeBool, value)
 	}
@@ -1259,28 +2205,188 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 	if _u.mutation.AudiobookLastSearchAtCleared() {
 		_spec.ClearField(book.FieldAudiobookLastSearchAt, field.TypeTime)
 	}
-	if _u.mutation.AuthorCleared() {
+	if value, ok := _u.mutation.AudiobookReplacingLanguage(); ok {
+		_spec.SetField(book.FieldAudiobookReplacingLanguage, field.TypeString, value)
+	}
+	if _u.mutation.AudiobookReplacingLanguageCleared() {
+		_spec.ClearField(book.FieldAudiobookReplacingLanguage, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastRefreshedAt(); ok {
+		_spec.SetField(book.FieldLastRefreshedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastRefreshedAtCleared() {
+		_spec.ClearField(book.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if _u.mutation.SeriesCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   book.AuthorTable,
-			Columns: []string{book.AuthorColumn},
+			Table:   book.SeriesTable,
+			Columns: []string{book.SeriesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(author.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(bookseries.FieldID, field.TypeUint32),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SeriesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   book.AuthorTable,
-			Columns: []string{book.AuthorColumn},
+			Table:   book.SeriesTable,
+			Columns: []string{book.SeriesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(author.FieldID, field.TypeUint32),
+				IDSpec: sqlgraph.NewFieldSpec(bookseries.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EditionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEditionsIDs(); len(nodes) > 0 && !_u.mutation.EditionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EditionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EditionsTable,
+			Columns: []string{book.EditionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ContributionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedContributionsIDs(); len(nodes) > 0 && !_u.mutation.ContributionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ContributionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.ContributionsTable,
+			Columns: []string{book.ContributionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookcontribution.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EbookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.EbookEditionTable,
+			Columns: []string{book.EbookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EbookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.EbookEditionTable,
+			Columns: []string{book.EbookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AudiobookEditionCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.AudiobookEditionTable,
+			Columns: []string{book.AudiobookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AudiobookEditionIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   book.AudiobookEditionTable,
+			Columns: []string{book.AudiobookEditionColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookedition.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

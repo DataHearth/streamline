@@ -80,34 +80,9 @@ func SortName(v string) predicate.Author {
 	return predicate.Author(sql.FieldEQ(FieldSortName, v))
 }
 
-// Overview applies equality check predicate on the "overview" field. It's identical to OverviewEQ.
-func Overview(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldOverview, v))
-}
-
-// Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
-func Monitored(v bool) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldMonitored, v))
-}
-
-// Folder applies equality check predicate on the "folder" field. It's identical to FolderEQ.
-func Folder(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldFolder, v))
-}
-
-// EbookQualityProfile applies equality check predicate on the "ebook_quality_profile" field. It's identical to EbookQualityProfileEQ.
-func EbookQualityProfile(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldEbookQualityProfile, v))
-}
-
-// AudiobookQualityProfile applies equality check predicate on the "audiobook_quality_profile" field. It's identical to AudiobookQualityProfileEQ.
-func AudiobookQualityProfile(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldAudiobookQualityProfile, v))
-}
-
-// LastRefreshedAt applies equality check predicate on the "last_refreshed_at" field. It's identical to LastRefreshedAtEQ.
-func LastRefreshedAt(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldLastRefreshedAt, v))
+// ImageSource applies equality check predicate on the "image_source" field. It's identical to ImageSourceEQ.
+func ImageSource(v string) predicate.Author {
+	return predicate.Author(sql.FieldEQ(FieldImageSource, v))
 }
 
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
@@ -370,421 +345,96 @@ func SortNameContainsFold(v string) predicate.Author {
 	return predicate.Author(sql.FieldContainsFold(FieldSortName, v))
 }
 
-// OverviewEQ applies the EQ predicate on the "overview" field.
-func OverviewEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldOverview, v))
+// ImageSourceEQ applies the EQ predicate on the "image_source" field.
+func ImageSourceEQ(v string) predicate.Author {
+	return predicate.Author(sql.FieldEQ(FieldImageSource, v))
 }
 
-// OverviewNEQ applies the NEQ predicate on the "overview" field.
-func OverviewNEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldOverview, v))
+// ImageSourceNEQ applies the NEQ predicate on the "image_source" field.
+func ImageSourceNEQ(v string) predicate.Author {
+	return predicate.Author(sql.FieldNEQ(FieldImageSource, v))
 }
 
-// OverviewIn applies the In predicate on the "overview" field.
-func OverviewIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldOverview, vs...))
+// ImageSourceIn applies the In predicate on the "image_source" field.
+func ImageSourceIn(vs ...string) predicate.Author {
+	return predicate.Author(sql.FieldIn(FieldImageSource, vs...))
 }
 
-// OverviewNotIn applies the NotIn predicate on the "overview" field.
-func OverviewNotIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldOverview, vs...))
+// ImageSourceNotIn applies the NotIn predicate on the "image_source" field.
+func ImageSourceNotIn(vs ...string) predicate.Author {
+	return predicate.Author(sql.FieldNotIn(FieldImageSource, vs...))
 }
 
-// OverviewGT applies the GT predicate on the "overview" field.
-func OverviewGT(v string) predicate.Author {
-	return predicate.Author(sql.FieldGT(FieldOverview, v))
+// ImageSourceGT applies the GT predicate on the "image_source" field.
+func ImageSourceGT(v string) predicate.Author {
+	return predicate.Author(sql.FieldGT(FieldImageSource, v))
 }
 
-// OverviewGTE applies the GTE predicate on the "overview" field.
-func OverviewGTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldGTE(FieldOverview, v))
+// ImageSourceGTE applies the GTE predicate on the "image_source" field.
+func ImageSourceGTE(v string) predicate.Author {
+	return predicate.Author(sql.FieldGTE(FieldImageSource, v))
 }
 
-// OverviewLT applies the LT predicate on the "overview" field.
-func OverviewLT(v string) predicate.Author {
-	return predicate.Author(sql.FieldLT(FieldOverview, v))
+// ImageSourceLT applies the LT predicate on the "image_source" field.
+func ImageSourceLT(v string) predicate.Author {
+	return predicate.Author(sql.FieldLT(FieldImageSource, v))
 }
 
-// OverviewLTE applies the LTE predicate on the "overview" field.
-func OverviewLTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldLTE(FieldOverview, v))
+// ImageSourceLTE applies the LTE predicate on the "image_source" field.
+func ImageSourceLTE(v string) predicate.Author {
+	return predicate.Author(sql.FieldLTE(FieldImageSource, v))
 }
 
-// OverviewContains applies the Contains predicate on the "overview" field.
-func OverviewContains(v string) predicate.Author {
-	return predicate.Author(sql.FieldContains(FieldOverview, v))
+// ImageSourceContains applies the Contains predicate on the "image_source" field.
+func ImageSourceContains(v string) predicate.Author {
+	return predicate.Author(sql.FieldContains(FieldImageSource, v))
 }
 
-// OverviewHasPrefix applies the HasPrefix predicate on the "overview" field.
-func OverviewHasPrefix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasPrefix(FieldOverview, v))
+// ImageSourceHasPrefix applies the HasPrefix predicate on the "image_source" field.
+func ImageSourceHasPrefix(v string) predicate.Author {
+	return predicate.Author(sql.FieldHasPrefix(FieldImageSource, v))
 }
 
-// OverviewHasSuffix applies the HasSuffix predicate on the "overview" field.
-func OverviewHasSuffix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasSuffix(FieldOverview, v))
+// ImageSourceHasSuffix applies the HasSuffix predicate on the "image_source" field.
+func ImageSourceHasSuffix(v string) predicate.Author {
+	return predicate.Author(sql.FieldHasSuffix(FieldImageSource, v))
 }
 
-// OverviewIsNil applies the IsNil predicate on the "overview" field.
-func OverviewIsNil() predicate.Author {
-	return predicate.Author(sql.FieldIsNull(FieldOverview))
+// ImageSourceIsNil applies the IsNil predicate on the "image_source" field.
+func ImageSourceIsNil() predicate.Author {
+	return predicate.Author(sql.FieldIsNull(FieldImageSource))
 }
 
-// OverviewNotNil applies the NotNil predicate on the "overview" field.
-func OverviewNotNil() predicate.Author {
-	return predicate.Author(sql.FieldNotNull(FieldOverview))
+// ImageSourceNotNil applies the NotNil predicate on the "image_source" field.
+func ImageSourceNotNil() predicate.Author {
+	return predicate.Author(sql.FieldNotNull(FieldImageSource))
 }
 
-// OverviewEqualFold applies the EqualFold predicate on the "overview" field.
-func OverviewEqualFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldEqualFold(FieldOverview, v))
+// ImageSourceEqualFold applies the EqualFold predicate on the "image_source" field.
+func ImageSourceEqualFold(v string) predicate.Author {
+	return predicate.Author(sql.FieldEqualFold(FieldImageSource, v))
 }
 
-// OverviewContainsFold applies the ContainsFold predicate on the "overview" field.
-func OverviewContainsFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldContainsFold(FieldOverview, v))
+// ImageSourceContainsFold applies the ContainsFold predicate on the "image_source" field.
+func ImageSourceContainsFold(v string) predicate.Author {
+	return predicate.Author(sql.FieldContainsFold(FieldImageSource, v))
 }
 
-// MonitoredEQ applies the EQ predicate on the "monitored" field.
-func MonitoredEQ(v bool) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldMonitored, v))
-}
-
-// MonitoredNEQ applies the NEQ predicate on the "monitored" field.
-func MonitoredNEQ(v bool) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldMonitored, v))
-}
-
-// FolderEQ applies the EQ predicate on the "folder" field.
-func FolderEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldFolder, v))
-}
-
-// FolderNEQ applies the NEQ predicate on the "folder" field.
-func FolderNEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldFolder, v))
-}
-
-// FolderIn applies the In predicate on the "folder" field.
-func FolderIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldFolder, vs...))
-}
-
-// FolderNotIn applies the NotIn predicate on the "folder" field.
-func FolderNotIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldFolder, vs...))
-}
-
-// FolderGT applies the GT predicate on the "folder" field.
-func FolderGT(v string) predicate.Author {
-	return predicate.Author(sql.FieldGT(FieldFolder, v))
-}
-
-// FolderGTE applies the GTE predicate on the "folder" field.
-func FolderGTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldGTE(FieldFolder, v))
-}
-
-// FolderLT applies the LT predicate on the "folder" field.
-func FolderLT(v string) predicate.Author {
-	return predicate.Author(sql.FieldLT(FieldFolder, v))
-}
-
-// FolderLTE applies the LTE predicate on the "folder" field.
-func FolderLTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldLTE(FieldFolder, v))
-}
-
-// FolderContains applies the Contains predicate on the "folder" field.
-func FolderContains(v string) predicate.Author {
-	return predicate.Author(sql.FieldContains(FieldFolder, v))
-}
-
-// FolderHasPrefix applies the HasPrefix predicate on the "folder" field.
-func FolderHasPrefix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasPrefix(FieldFolder, v))
-}
-
-// FolderHasSuffix applies the HasSuffix predicate on the "folder" field.
-func FolderHasSuffix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasSuffix(FieldFolder, v))
-}
-
-// FolderIsNil applies the IsNil predicate on the "folder" field.
-func FolderIsNil() predicate.Author {
-	return predicate.Author(sql.FieldIsNull(FieldFolder))
-}
-
-// FolderNotNil applies the NotNil predicate on the "folder" field.
-func FolderNotNil() predicate.Author {
-	return predicate.Author(sql.FieldNotNull(FieldFolder))
-}
-
-// FolderEqualFold applies the EqualFold predicate on the "folder" field.
-func FolderEqualFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldEqualFold(FieldFolder, v))
-}
-
-// FolderContainsFold applies the ContainsFold predicate on the "folder" field.
-func FolderContainsFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldContainsFold(FieldFolder, v))
-}
-
-// MonitorPolicyEQ applies the EQ predicate on the "monitor_policy" field.
-func MonitorPolicyEQ(v MonitorPolicy) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldMonitorPolicy, v))
-}
-
-// MonitorPolicyNEQ applies the NEQ predicate on the "monitor_policy" field.
-func MonitorPolicyNEQ(v MonitorPolicy) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldMonitorPolicy, v))
-}
-
-// MonitorPolicyIn applies the In predicate on the "monitor_policy" field.
-func MonitorPolicyIn(vs ...MonitorPolicy) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldMonitorPolicy, vs...))
-}
-
-// MonitorPolicyNotIn applies the NotIn predicate on the "monitor_policy" field.
-func MonitorPolicyNotIn(vs ...MonitorPolicy) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldMonitorPolicy, vs...))
-}
-
-// WantKindsEQ applies the EQ predicate on the "want_kinds" field.
-func WantKindsEQ(v WantKinds) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldWantKinds, v))
-}
-
-// WantKindsNEQ applies the NEQ predicate on the "want_kinds" field.
-func WantKindsNEQ(v WantKinds) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldWantKinds, v))
-}
-
-// WantKindsIn applies the In predicate on the "want_kinds" field.
-func WantKindsIn(vs ...WantKinds) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldWantKinds, vs...))
-}
-
-// WantKindsNotIn applies the NotIn predicate on the "want_kinds" field.
-func WantKindsNotIn(vs ...WantKinds) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldWantKinds, vs...))
-}
-
-// EbookQualityProfileEQ applies the EQ predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileNEQ applies the NEQ predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileNEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileIn applies the In predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldEbookQualityProfile, vs...))
-}
-
-// EbookQualityProfileNotIn applies the NotIn predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileNotIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldEbookQualityProfile, vs...))
-}
-
-// EbookQualityProfileGT applies the GT predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileGT(v string) predicate.Author {
-	return predicate.Author(sql.FieldGT(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileGTE applies the GTE predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileGTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldGTE(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileLT applies the LT predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileLT(v string) predicate.Author {
-	return predicate.Author(sql.FieldLT(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileLTE applies the LTE predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileLTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldLTE(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileContains applies the Contains predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileContains(v string) predicate.Author {
-	return predicate.Author(sql.FieldContains(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileHasPrefix applies the HasPrefix predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileHasPrefix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasPrefix(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileHasSuffix applies the HasSuffix predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileHasSuffix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasSuffix(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileIsNil applies the IsNil predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileIsNil() predicate.Author {
-	return predicate.Author(sql.FieldIsNull(FieldEbookQualityProfile))
-}
-
-// EbookQualityProfileNotNil applies the NotNil predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileNotNil() predicate.Author {
-	return predicate.Author(sql.FieldNotNull(FieldEbookQualityProfile))
-}
-
-// EbookQualityProfileEqualFold applies the EqualFold predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileEqualFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldEqualFold(FieldEbookQualityProfile, v))
-}
-
-// EbookQualityProfileContainsFold applies the ContainsFold predicate on the "ebook_quality_profile" field.
-func EbookQualityProfileContainsFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldContainsFold(FieldEbookQualityProfile, v))
-}
-
-// AudiobookQualityProfileEQ applies the EQ predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileNEQ applies the NEQ predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileNEQ(v string) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileIn applies the In predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldAudiobookQualityProfile, vs...))
-}
-
-// AudiobookQualityProfileNotIn applies the NotIn predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileNotIn(vs ...string) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldAudiobookQualityProfile, vs...))
-}
-
-// AudiobookQualityProfileGT applies the GT predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileGT(v string) predicate.Author {
-	return predicate.Author(sql.FieldGT(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileGTE applies the GTE predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileGTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldGTE(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileLT applies the LT predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileLT(v string) predicate.Author {
-	return predicate.Author(sql.FieldLT(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileLTE applies the LTE predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileLTE(v string) predicate.Author {
-	return predicate.Author(sql.FieldLTE(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileContains applies the Contains predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileContains(v string) predicate.Author {
-	return predicate.Author(sql.FieldContains(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileHasPrefix applies the HasPrefix predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileHasPrefix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasPrefix(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileHasSuffix applies the HasSuffix predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileHasSuffix(v string) predicate.Author {
-	return predicate.Author(sql.FieldHasSuffix(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileIsNil applies the IsNil predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileIsNil() predicate.Author {
-	return predicate.Author(sql.FieldIsNull(FieldAudiobookQualityProfile))
-}
-
-// AudiobookQualityProfileNotNil applies the NotNil predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileNotNil() predicate.Author {
-	return predicate.Author(sql.FieldNotNull(FieldAudiobookQualityProfile))
-}
-
-// AudiobookQualityProfileEqualFold applies the EqualFold predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileEqualFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldEqualFold(FieldAudiobookQualityProfile, v))
-}
-
-// AudiobookQualityProfileContainsFold applies the ContainsFold predicate on the "audiobook_quality_profile" field.
-func AudiobookQualityProfileContainsFold(v string) predicate.Author {
-	return predicate.Author(sql.FieldContainsFold(FieldAudiobookQualityProfile, v))
-}
-
-// LastRefreshedAtEQ applies the EQ predicate on the "last_refreshed_at" field.
-func LastRefreshedAtEQ(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldEQ(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtNEQ applies the NEQ predicate on the "last_refreshed_at" field.
-func LastRefreshedAtNEQ(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldNEQ(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtIn applies the In predicate on the "last_refreshed_at" field.
-func LastRefreshedAtIn(vs ...time.Time) predicate.Author {
-	return predicate.Author(sql.FieldIn(FieldLastRefreshedAt, vs...))
-}
-
-// LastRefreshedAtNotIn applies the NotIn predicate on the "last_refreshed_at" field.
-func LastRefreshedAtNotIn(vs ...time.Time) predicate.Author {
-	return predicate.Author(sql.FieldNotIn(FieldLastRefreshedAt, vs...))
-}
-
-// LastRefreshedAtGT applies the GT predicate on the "last_refreshed_at" field.
-func LastRefreshedAtGT(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldGT(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtGTE applies the GTE predicate on the "last_refreshed_at" field.
-func LastRefreshedAtGTE(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldGTE(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtLT applies the LT predicate on the "last_refreshed_at" field.
-func LastRefreshedAtLT(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldLT(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtLTE applies the LTE predicate on the "last_refreshed_at" field.
-func LastRefreshedAtLTE(v time.Time) predicate.Author {
-	return predicate.Author(sql.FieldLTE(FieldLastRefreshedAt, v))
-}
-
-// LastRefreshedAtIsNil applies the IsNil predicate on the "last_refreshed_at" field.
-func LastRefreshedAtIsNil() predicate.Author {
-	return predicate.Author(sql.FieldIsNull(FieldLastRefreshedAt))
-}
-
-// LastRefreshedAtNotNil applies the NotNil predicate on the "last_refreshed_at" field.
-func LastRefreshedAtNotNil() predicate.Author {
-	return predicate.Author(sql.FieldNotNull(FieldLastRefreshedAt))
-}
-
-// HasBooks applies the HasEdge predicate on the "books" edge.
-func HasBooks() predicate.Author {
+// HasContributions applies the HasEdge predicate on the "contributions" edge.
+func HasContributions() predicate.Author {
 	return predicate.Author(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, BooksTable, BooksColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ContributionsTable, ContributionsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasBooksWith applies the HasEdge predicate on the "books" edge with a given conditions (other predicates).
-func HasBooksWith(preds ...predicate.Book) predicate.Author {
+// HasContributionsWith applies the HasEdge predicate on the "contributions" edge with a given conditions (other predicates).
+func HasContributionsWith(preds ...predicate.BookContribution) predicate.Author {
 	return predicate.Author(func(s *sql.Selector) {
-		step := newBooksStep()
+		step := newContributionsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

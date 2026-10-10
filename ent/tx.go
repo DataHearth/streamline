@@ -18,10 +18,18 @@ type Tx struct {
 	ApiKey *ApiKeyClient
 	// Artist is the client for interacting with the Artist builders.
 	Artist *ArtistClient
+	// ArtistMember is the client for interacting with the ArtistMember builders.
+	ArtistMember *ArtistMemberClient
 	// Author is the client for interacting with the Author builders.
 	Author *AuthorClient
 	// Book is the client for interacting with the Book builders.
 	Book *BookClient
+	// BookContribution is the client for interacting with the BookContribution builders.
+	BookContribution *BookContributionClient
+	// BookEdition is the client for interacting with the BookEdition builders.
+	BookEdition *BookEditionClient
+	// BookSeries is the client for interacting with the BookSeries builders.
+	BookSeries *BookSeriesClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -46,6 +54,8 @@ type Tx struct {
 	MediaFile *MediaFileClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
+	// MusicCredit is the client for interacting with the MusicCredit builders.
+	MusicCredit *MusicCreditClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
 	// Person is the client for interacting with the Person builders.
@@ -202,8 +212,12 @@ func (tx *Tx) init() {
 	tx.Album = NewAlbumClient(tx.config)
 	tx.ApiKey = NewApiKeyClient(tx.config)
 	tx.Artist = NewArtistClient(tx.config)
+	tx.ArtistMember = NewArtistMemberClient(tx.config)
 	tx.Author = NewAuthorClient(tx.config)
 	tx.Book = NewBookClient(tx.config)
+	tx.BookContribution = NewBookContributionClient(tx.config)
+	tx.BookEdition = NewBookEditionClient(tx.config)
+	tx.BookSeries = NewBookSeriesClient(tx.config)
 	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
@@ -216,6 +230,7 @@ func (tx *Tx) init() {
 	tx.MediaEvent = NewMediaEventClient(tx.config)
 	tx.MediaFile = NewMediaFileClient(tx.config)
 	tx.Movie = NewMovieClient(tx.config)
+	tx.MusicCredit = NewMusicCreditClient(tx.config)
 	tx.OIDCIdentity = NewOIDCIdentityClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)

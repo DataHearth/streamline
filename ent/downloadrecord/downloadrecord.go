@@ -63,6 +63,10 @@ const (
 	EdgeAlbum = "album"
 	// EdgeBook holds the string denoting the book edge name in mutations.
 	EdgeBook = "book"
+	// EdgeArtist holds the string denoting the artist edge name in mutations.
+	EdgeArtist = "artist"
+	// EdgeAlbums holds the string denoting the albums edge name in mutations.
+	EdgeAlbums = "albums"
 	// EdgeAnchorEpisode holds the string denoting the anchor_episode edge name in mutations.
 	EdgeAnchorEpisode = "anchor_episode"
 	// EdgeEpisodes holds the string denoting the episodes edge name in mutations.
@@ -90,6 +94,18 @@ const (
 	BookInverseTable = "books"
 	// BookColumn is the table column denoting the book relation/edge.
 	BookColumn = "book_download_records"
+	// ArtistTable is the table that holds the artist relation/edge.
+	ArtistTable = "download_records"
+	// ArtistInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	ArtistInverseTable = "artists"
+	// ArtistColumn is the table column denoting the artist relation/edge.
+	ArtistColumn = "artist_download_records"
+	// AlbumsTable is the table that holds the albums relation/edge. The primary key declared below.
+	AlbumsTable = "download_record_albums"
+	// AlbumsInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	AlbumsInverseTable = "albums"
 	// AnchorEpisodeTable is the table that holds the anchor_episode relation/edge.
 	AnchorEpisodeTable = "download_records"
 	// AnchorEpisodeInverseTable is the table name for the Episode entity.
@@ -134,12 +150,16 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"album_download_records",
+	"artist_download_records",
 	"book_download_records",
 	"episode_download_records",
 	"movie_download_records",
 }
 
 var (
+	// AlbumsPrimaryKey and AlbumsColumn2 are the table columns denoting the
+	// primary key for the albums relation (M2M).
+	AlbumsPrimaryKey = []string{"download_record_id", "album_id"}
 	// EpisodesPrimaryKey and EpisodesColumn2 are the table columns denoting the
 	// primary key for the episodes relation (M2M).
 	EpisodesPrimaryKey = []string{"episode_id", "download_record_id"}
@@ -408,6 +428,27 @@ func ByBookField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByArtistField orders the results by artist field.
+func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArtistStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAlbumsCount orders the results by albums count.
+func ByAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlbumsStep(), opts...)
+	}
+}
+
+// ByAlbums orders the results by albums terms.
+func ByAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByAnchorEpisodeField orders the results by anchor_episode field.
 func ByAnchorEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -447,6 +488,20 @@ func newBookStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(BookInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
+	)
+}
+func newArtistStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArtistInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ArtistTable, ArtistColumn),
+	)
+}
+func newAlbumsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlbumsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, AlbumsTable, AlbumsPrimaryKey...),
 	)
 }
 func newAnchorEpisodeStep() *sqlgraph.Step {

@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
 )
 
@@ -175,6 +176,104 @@ func (_c *AlbumCreate) SetNillableStatus(v *album.Status) *AlbumCreate {
 	return _c
 }
 
+// SetLabel sets the "label" field.
+func (_c *AlbumCreate) SetLabel(v string) *AlbumCreate {
+	_c.mutation.SetLabel(v)
+	return _c
+}
+
+// SetNillableLabel sets the "label" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableLabel(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetLabel(*v)
+	}
+	return _c
+}
+
+// SetCatalogNumber sets the "catalog_number" field.
+func (_c *AlbumCreate) SetCatalogNumber(v string) *AlbumCreate {
+	_c.mutation.SetCatalogNumber(v)
+	return _c
+}
+
+// SetNillableCatalogNumber sets the "catalog_number" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableCatalogNumber(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetCatalogNumber(*v)
+	}
+	return _c
+}
+
+// SetCountry sets the "country" field.
+func (_c *AlbumCreate) SetCountry(v string) *AlbumCreate {
+	_c.mutation.SetCountry(v)
+	return _c
+}
+
+// SetNillableCountry sets the "country" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableCountry(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetCountry(*v)
+	}
+	return _c
+}
+
+// SetMedia sets the "media" field.
+func (_c *AlbumCreate) SetMedia(v string) *AlbumCreate {
+	_c.mutation.SetMedia(v)
+	return _c
+}
+
+// SetNillableMedia sets the "media" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableMedia(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetMedia(*v)
+	}
+	return _c
+}
+
+// SetStudio sets the "studio" field.
+func (_c *AlbumCreate) SetStudio(v string) *AlbumCreate {
+	_c.mutation.SetStudio(v)
+	return _c
+}
+
+// SetNillableStudio sets the "studio" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableStudio(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetStudio(*v)
+	}
+	return _c
+}
+
+// SetMetadataFetchedAt sets the "metadata_fetched_at" field.
+func (_c *AlbumCreate) SetMetadataFetchedAt(v time.Time) *AlbumCreate {
+	_c.mutation.SetMetadataFetchedAt(v)
+	return _c
+}
+
+// SetNillableMetadataFetchedAt sets the "metadata_fetched_at" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableMetadataFetchedAt(v *time.Time) *AlbumCreate {
+	if v != nil {
+		_c.SetMetadataFetchedAt(*v)
+	}
+	return _c
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_c *AlbumCreate) SetCreditsFetchedAt(v time.Time) *AlbumCreate {
+	_c.mutation.SetCreditsFetchedAt(v)
+	return _c
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableCreditsFetchedAt(v *time.Time) *AlbumCreate {
+	if v != nil {
+		_c.SetCreditsFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AlbumCreate) SetID(v uint32) *AlbumCreate {
 	_c.mutation.SetID(v)
@@ -220,6 +319,36 @@ func (_c *AlbumCreate) AddDownloadRecords(v ...*DownloadRecord) *AlbumCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddDownloadRecordIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_c *AlbumCreate) AddCreditIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddCreditIDs(ids...)
+	return _c
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_c *AlbumCreate) AddCredits(v ...*MusicCredit) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreditIDs(ids...)
+}
+
+// AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
+func (_c *AlbumCreate) AddPackRecordIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddPackRecordIDs(ids...)
+	return _c
+}
+
+// AddPackRecords adds the "pack_records" edges to the DownloadRecord entity.
+func (_c *AlbumCreate) AddPackRecords(v ...*DownloadRecord) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPackRecordIDs(ids...)
 }
 
 // Mutation returns the AlbumMutation object of the builder.
@@ -412,6 +541,34 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
+	if value, ok := _c.mutation.Label(); ok {
+		_spec.SetField(album.FieldLabel, field.TypeString, value)
+		_node.Label = value
+	}
+	if value, ok := _c.mutation.CatalogNumber(); ok {
+		_spec.SetField(album.FieldCatalogNumber, field.TypeString, value)
+		_node.CatalogNumber = value
+	}
+	if value, ok := _c.mutation.Country(); ok {
+		_spec.SetField(album.FieldCountry, field.TypeString, value)
+		_node.Country = value
+	}
+	if value, ok := _c.mutation.Media(); ok {
+		_spec.SetField(album.FieldMedia, field.TypeString, value)
+		_node.Media = value
+	}
+	if value, ok := _c.mutation.Studio(); ok {
+		_spec.SetField(album.FieldStudio, field.TypeString, value)
+		_node.Studio = value
+	}
+	if value, ok := _c.mutation.MetadataFetchedAt(); ok {
+		_spec.SetField(album.FieldMetadataFetchedAt, field.TypeTime, value)
+		_node.MetadataFetchedAt = &value
+	}
+	if value, ok := _c.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(album.FieldCreditsFetchedAt, field.TypeTime, value)
+		_node.CreditsFetchedAt = &value
+	}
 	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -451,6 +608,38 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 			Inverse: false,
 			Table:   album.DownloadRecordsTable,
 			Columns: []string{album.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.CreditsTable,
+			Columns: []string{album.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PackRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   album.PackRecordsTable,
+			Columns: album.PackRecordsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),

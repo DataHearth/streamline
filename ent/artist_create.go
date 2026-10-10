@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/artistmember"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 )
 
 // ArtistCreate is the builder for creating a Artist entity.
@@ -89,16 +91,142 @@ func (_c *ArtistCreate) SetNillableOverview(v *string) *ArtistCreate {
 	return _c
 }
 
-// SetMonitored sets the "monitored" field.
-func (_c *ArtistCreate) SetMonitored(v bool) *ArtistCreate {
-	_c.mutation.SetMonitored(v)
+// SetOverviewSource sets the "overview_source" field.
+func (_c *ArtistCreate) SetOverviewSource(v string) *ArtistCreate {
+	_c.mutation.SetOverviewSource(v)
 	return _c
 }
 
-// SetNillableMonitored sets the "monitored" field if the given value is not nil.
-func (_c *ArtistCreate) SetNillableMonitored(v *bool) *ArtistCreate {
+// SetNillableOverviewSource sets the "overview_source" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableOverviewSource(v *string) *ArtistCreate {
 	if v != nil {
-		_c.SetMonitored(*v)
+		_c.SetOverviewSource(*v)
+	}
+	return _c
+}
+
+// SetOverviewFr sets the "overview_fr" field.
+func (_c *ArtistCreate) SetOverviewFr(v string) *ArtistCreate {
+	_c.mutation.SetOverviewFr(v)
+	return _c
+}
+
+// SetNillableOverviewFr sets the "overview_fr" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableOverviewFr(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetOverviewFr(*v)
+	}
+	return _c
+}
+
+// SetOverviewSourceFr sets the "overview_source_fr" field.
+func (_c *ArtistCreate) SetOverviewSourceFr(v string) *ArtistCreate {
+	_c.mutation.SetOverviewSourceFr(v)
+	return _c
+}
+
+// SetNillableOverviewSourceFr sets the "overview_source_fr" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableOverviewSourceFr(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetOverviewSourceFr(*v)
+	}
+	return _c
+}
+
+// SetMonitor sets the "monitor" field.
+func (_c *ArtistCreate) SetMonitor(v artist.Monitor) *ArtistCreate {
+	_c.mutation.SetMonitor(v)
+	return _c
+}
+
+// SetNillableMonitor sets the "monitor" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableMonitor(v *artist.Monitor) *ArtistCreate {
+	if v != nil {
+		_c.SetMonitor(*v)
+	}
+	return _c
+}
+
+// SetType sets the "type" field.
+func (_c *ArtistCreate) SetType(v artist.Type) *ArtistCreate {
+	_c.mutation.SetType(v)
+	return _c
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableType(v *artist.Type) *ArtistCreate {
+	if v != nil {
+		_c.SetType(*v)
+	}
+	return _c
+}
+
+// SetOrigin sets the "origin" field.
+func (_c *ArtistCreate) SetOrigin(v string) *ArtistCreate {
+	_c.mutation.SetOrigin(v)
+	return _c
+}
+
+// SetNillableOrigin sets the "origin" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableOrigin(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetOrigin(*v)
+	}
+	return _c
+}
+
+// SetSince sets the "since" field.
+func (_c *ArtistCreate) SetSince(v uint16) *ArtistCreate {
+	_c.mutation.SetSince(v)
+	return _c
+}
+
+// SetNillableSince sets the "since" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableSince(v *uint16) *ArtistCreate {
+	if v != nil {
+		_c.SetSince(*v)
+	}
+	return _c
+}
+
+// SetGenre sets the "genre" field.
+func (_c *ArtistCreate) SetGenre(v string) *ArtistCreate {
+	_c.mutation.SetGenre(v)
+	return _c
+}
+
+// SetNillableGenre sets the "genre" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableGenre(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetGenre(*v)
+	}
+	return _c
+}
+
+// SetDeezerID sets the "deezer_id" field.
+func (_c *ArtistCreate) SetDeezerID(v uint32) *ArtistCreate {
+	_c.mutation.SetDeezerID(v)
+	return _c
+}
+
+// SetNillableDeezerID sets the "deezer_id" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableDeezerID(v *uint32) *ArtistCreate {
+	if v != nil {
+		_c.SetDeezerID(*v)
+	}
+	return _c
+}
+
+// SetWikidataID sets the "wikidata_id" field.
+func (_c *ArtistCreate) SetWikidataID(v string) *ArtistCreate {
+	_c.mutation.SetWikidataID(v)
+	return _c
+}
+
+// SetNillableWikidataID sets the "wikidata_id" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableWikidataID(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetWikidataID(*v)
 	}
 	return _c
 }
@@ -145,6 +273,20 @@ func (_c *ArtistCreate) SetNillableLastRefreshedAt(v *time.Time) *ArtistCreate {
 	return _c
 }
 
+// SetDetailsFetchedAt sets the "details_fetched_at" field.
+func (_c *ArtistCreate) SetDetailsFetchedAt(v time.Time) *ArtistCreate {
+	_c.mutation.SetDetailsFetchedAt(v)
+	return _c
+}
+
+// SetNillableDetailsFetchedAt sets the "details_fetched_at" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableDetailsFetchedAt(v *time.Time) *ArtistCreate {
+	if v != nil {
+		_c.SetDetailsFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ArtistCreate) SetID(v uint32) *ArtistCreate {
 	_c.mutation.SetID(v)
@@ -164,6 +306,36 @@ func (_c *ArtistCreate) AddAlbums(v ...*Album) *ArtistCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddAlbumIDs(ids...)
+}
+
+// AddMemberIDs adds the "members" edge to the ArtistMember entity by IDs.
+func (_c *ArtistCreate) AddMemberIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddMemberIDs(ids...)
+	return _c
+}
+
+// AddMembers adds the "members" edges to the ArtistMember entity.
+func (_c *ArtistCreate) AddMembers(v ...*ArtistMember) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMemberIDs(ids...)
+}
+
+// AddDownloadRecordIDs adds the "download_records" edge to the DownloadRecord entity by IDs.
+func (_c *ArtistCreate) AddDownloadRecordIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddDownloadRecordIDs(ids...)
+	return _c
+}
+
+// AddDownloadRecords adds the "download_records" edges to the DownloadRecord entity.
+func (_c *ArtistCreate) AddDownloadRecords(v ...*DownloadRecord) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddDownloadRecordIDs(ids...)
 }
 
 // Mutation returns the ArtistMutation object of the builder.
@@ -209,9 +381,9 @@ func (_c *ArtistCreate) defaults() {
 		v := artist.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
-	if _, ok := _c.mutation.Monitored(); !ok {
-		v := artist.DefaultMonitored
-		_c.mutation.SetMonitored(v)
+	if _, ok := _c.mutation.Monitor(); !ok {
+		v := artist.DefaultMonitor
+		_c.mutation.SetMonitor(v)
 	}
 }
 
@@ -239,8 +411,18 @@ func (_c *ArtistCreate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Artist.name": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.Monitored(); !ok {
-		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "Artist.monitored"`)}
+	if _, ok := _c.mutation.Monitor(); !ok {
+		return &ValidationError{Name: "monitor", err: errors.New(`ent: missing required field "Artist.monitor"`)}
+	}
+	if v, ok := _c.mutation.Monitor(); ok {
+		if err := artist.MonitorValidator(v); err != nil {
+			return &ValidationError{Name: "monitor", err: fmt.Errorf(`ent: validator failed for field "Artist.monitor": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := artist.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "Artist.type": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -298,9 +480,45 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 		_spec.SetField(artist.FieldOverview, field.TypeString, value)
 		_node.Overview = value
 	}
-	if value, ok := _c.mutation.Monitored(); ok {
-		_spec.SetField(artist.FieldMonitored, field.TypeBool, value)
-		_node.Monitored = value
+	if value, ok := _c.mutation.OverviewSource(); ok {
+		_spec.SetField(artist.FieldOverviewSource, field.TypeString, value)
+		_node.OverviewSource = value
+	}
+	if value, ok := _c.mutation.OverviewFr(); ok {
+		_spec.SetField(artist.FieldOverviewFr, field.TypeString, value)
+		_node.OverviewFr = value
+	}
+	if value, ok := _c.mutation.OverviewSourceFr(); ok {
+		_spec.SetField(artist.FieldOverviewSourceFr, field.TypeString, value)
+		_node.OverviewSourceFr = value
+	}
+	if value, ok := _c.mutation.Monitor(); ok {
+		_spec.SetField(artist.FieldMonitor, field.TypeEnum, value)
+		_node.Monitor = value
+	}
+	if value, ok := _c.mutation.GetType(); ok {
+		_spec.SetField(artist.FieldType, field.TypeEnum, value)
+		_node.Type = value
+	}
+	if value, ok := _c.mutation.Origin(); ok {
+		_spec.SetField(artist.FieldOrigin, field.TypeString, value)
+		_node.Origin = value
+	}
+	if value, ok := _c.mutation.Since(); ok {
+		_spec.SetField(artist.FieldSince, field.TypeUint16, value)
+		_node.Since = value
+	}
+	if value, ok := _c.mutation.Genre(); ok {
+		_spec.SetField(artist.FieldGenre, field.TypeString, value)
+		_node.Genre = value
+	}
+	if value, ok := _c.mutation.DeezerID(); ok {
+		_spec.SetField(artist.FieldDeezerID, field.TypeUint32, value)
+		_node.DeezerID = value
+	}
+	if value, ok := _c.mutation.WikidataID(); ok {
+		_spec.SetField(artist.FieldWikidataID, field.TypeString, value)
+		_node.WikidataID = value
 	}
 	if value, ok := _c.mutation.Path(); ok {
 		_spec.SetField(artist.FieldPath, field.TypeString, value)
@@ -314,6 +532,10 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 		_spec.SetField(artist.FieldLastRefreshedAt, field.TypeTime, value)
 		_node.LastRefreshedAt = &value
 	}
+	if value, ok := _c.mutation.DetailsFetchedAt(); ok {
+		_spec.SetField(artist.FieldDetailsFetchedAt, field.TypeTime, value)
+		_node.DetailsFetchedAt = &value
+	}
 	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -323,6 +545,38 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MembersTable,
+			Columns: []string{artist.MembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artistmember.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DownloadRecordsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.DownloadRecordsTable,
+			Columns: []string{artist.DownloadRecordsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -5110,6 +5110,7 @@ type JWTRotated struct {
 // LibraryConfigPatch Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
 type LibraryConfigPatch struct {
 	AllowedDownloadRoots *[]string                     `json:"allowed_download_roots,omitempty"`
+	BookLanguage         *string                       `json:"book_language,omitempty"`
 	DriftGraceTicks      *int                          `json:"drift_grace_ticks,omitempty"`
 	ImportMaxAttempts    *int                          `json:"import_max_attempts,omitempty"`
 	ImportMode           *LibraryConfigPatchImportMode `json:"import_mode,omitempty"`
@@ -5132,13 +5133,16 @@ type LibraryConfigPatchImportMode string
 
 // LibraryConfigView defines model for LibraryConfigView.
 type LibraryConfigView struct {
-	AllowedDownloadRoots *[]string                   `json:"allowed_download_roots,omitempty"`
-	DownloadPath         *string                     `json:"download_path,omitempty"`
-	DriftGraceTicks      int                         `json:"drift_grace_ticks"`
-	ImportMaxAttempts    int                         `json:"import_max_attempts"`
-	ImportMode           LibraryConfigViewImportMode `json:"import_mode"`
-	KeepTorrentSeeding   bool                        `json:"keep_torrent_seeding"`
-	MaxGrabFailures      int                         `json:"max_grab_failures"`
+	AllowedDownloadRoots *[]string `json:"allowed_download_roots,omitempty"`
+
+	// BookLanguage ISO 639-1 language a new book prefers (`library.book_language`); seeds `Book.preferred_language` at add.
+	BookLanguage       string                      `json:"book_language"`
+	DownloadPath       *string                     `json:"download_path,omitempty"`
+	DriftGraceTicks    int                         `json:"drift_grace_ticks"`
+	ImportMaxAttempts  int                         `json:"import_max_attempts"`
+	ImportMode         LibraryConfigViewImportMode `json:"import_mode"`
+	KeepTorrentSeeding bool                        `json:"keep_torrent_seeding"`
+	MaxGrabFailures    int                         `json:"max_grab_failures"`
 
 	// MonitorSpecials Monitor season 0 (specials) when a series is added or a refresh
 	// discovers the season. Applies to newly seeded seasons only.
@@ -8121,9 +8125,6 @@ type BookLookupDetailResponse = BookLookupDetail
 // BookLookupResults defines model for BookLookupResults.
 type BookLookupResults = BookLookupList
 
-// BookQualityProfileList defines model for BookQualityProfileList.
-type BookQualityProfileList = []BookQualityProfile
-
 // BookQualityProfileResponse defines model for BookQualityProfileResponse.
 type BookQualityProfileResponse = BookQualityProfile
 
@@ -8218,9 +8219,6 @@ type MusicArtistList = PaginatedMusicArtists
 // request panel needs no second call. Also the music arm of
 // `GET /requests/{id}/metadata`.
 type MusicArtistLookupDetailResponse = MusicArtistLookupDetail
-
-// MusicQualityProfileList defines model for MusicQualityProfileList.
-type MusicQualityProfileList = []MusicQualityProfile
 
 // MusicQualityProfileResponse defines model for MusicQualityProfileResponse.
 type MusicQualityProfileResponse = MusicQualityProfile
@@ -19101,8 +19099,6 @@ type BookLookupResultsJSONResponse BookLookupList
 type BookQualityProfileDeletedResponse struct {
 }
 
-type BookQualityProfileListJSONResponse []BookQualityProfile
-
 type BookQualityProfileResponseJSONResponse BookQualityProfile
 
 type BookRenamePlanResponseJSONResponse BookRenamePlan
@@ -19224,8 +19220,6 @@ type MusicArtistLookupDetailResponseJSONResponse MusicArtistLookupDetail
 
 type MusicQualityProfileDeletedResponse struct {
 }
-
-type MusicQualityProfileListJSONResponse []MusicQualityProfile
 
 type MusicQualityProfileResponseJSONResponse MusicQualityProfile
 
@@ -21438,9 +21432,7 @@ type ListBookQualityProfilesResponseObject interface {
 	VisitListBookQualityProfilesResponse(w http.ResponseWriter) error
 }
 
-type ListBookQualityProfiles200JSONResponse struct {
-	BookQualityProfileListJSONResponse
-}
+type ListBookQualityProfiles200JSONResponse []BookQualityProfile
 
 func (response ListBookQualityProfiles200JSONResponse) VisitListBookQualityProfilesResponse(w http.ResponseWriter) error {
 
@@ -21772,6 +21764,22 @@ func (response SetDefaultBookQualityProfile404JSONResponse) VisitSetDefaultBookQ
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetDefaultBookQualityProfile422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SetDefaultBookQualityProfile422JSONResponse) VisitSetDefaultBookQualityProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -23137,6 +23145,20 @@ func (response SearchBookNow202JSONResponse) VisitSearchBookNowResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchBookNow400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchBookNow400JSONResponse) VisitSearchBookNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -29663,9 +29685,7 @@ type ListMusicQualityProfilesResponseObject interface {
 	VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error
 }
 
-type ListMusicQualityProfiles200JSONResponse struct {
-	MusicQualityProfileListJSONResponse
-}
+type ListMusicQualityProfiles200JSONResponse []MusicQualityProfile
 
 func (response ListMusicQualityProfiles200JSONResponse) VisitListMusicQualityProfilesResponse(w http.ResponseWriter) error {
 

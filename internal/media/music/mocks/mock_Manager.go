@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/media/music"
 	mock "github.com/stretchr/testify/mock"
@@ -117,6 +118,208 @@ func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, p mus
 	return _c
 }
 
+// AlbumDetail provides a mock function for the type MockManager
+func (_mock *MockManager) AlbumDetail(ctx context.Context, id uint32) (*music.AlbumView, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumDetail")
+	}
+
+	var r0 *music.AlbumView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*music.AlbumView, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *music.AlbumView); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.AlbumView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_AlbumDetail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumDetail'
+type MockManager_AlbumDetail_Call struct {
+	*mock.Call
+}
+
+// AlbumDetail is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockManager_Expecter) AlbumDetail(ctx any, id any) *MockManager_AlbumDetail_Call {
+	return &MockManager_AlbumDetail_Call{Call: _e.mock.On("AlbumDetail", ctx, id)}
+}
+
+func (_c *MockManager_AlbumDetail_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_AlbumDetail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_AlbumDetail_Call) Return(albumView *music.AlbumView, err error) *MockManager_AlbumDetail_Call {
+	_c.Call.Return(albumView, err)
+	return _c
+}
+
+func (_c *MockManager_AlbumDetail_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*music.AlbumView, error)) *MockManager_AlbumDetail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// BrowseArtistReleases provides a mock function for the type MockManager
+func (_mock *MockManager) BrowseArtistReleases(ctx context.Context, artistID uint32) ([]music.AlbumRelease, error) {
+	ret := _mock.Called(ctx, artistID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BrowseArtistReleases")
+	}
+
+	var r0 []music.AlbumRelease
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]music.AlbumRelease, error)); ok {
+		return returnFunc(ctx, artistID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []music.AlbumRelease); ok {
+		r0 = returnFunc(ctx, artistID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]music.AlbumRelease)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, artistID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_BrowseArtistReleases_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BrowseArtistReleases'
+type MockManager_BrowseArtistReleases_Call struct {
+	*mock.Call
+}
+
+// BrowseArtistReleases is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+func (_e *MockManager_Expecter) BrowseArtistReleases(ctx any, artistID any) *MockManager_BrowseArtistReleases_Call {
+	return &MockManager_BrowseArtistReleases_Call{Call: _e.mock.On("BrowseArtistReleases", ctx, artistID)}
+}
+
+func (_c *MockManager_BrowseArtistReleases_Call) Run(run func(ctx context.Context, artistID uint32)) *MockManager_BrowseArtistReleases_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_BrowseArtistReleases_Call) Return(albumReleases []music.AlbumRelease, err error) *MockManager_BrowseArtistReleases_Call {
+	_c.Call.Return(albumReleases, err)
+	return _c
+}
+
+func (_c *MockManager_BrowseArtistReleases_Call) RunAndReturn(run func(ctx context.Context, artistID uint32) ([]music.AlbumRelease, error)) *MockManager_BrowseArtistReleases_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Counts provides a mock function for the type MockManager
+func (_mock *MockManager) Counts(ctx context.Context, p db.ListArtistsParams) (db.ArtistCounts, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Counts")
+	}
+
+	var r0 db.ArtistCounts
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) (db.ArtistCounts, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) db.ArtistCounts); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Get(0).(db.ArtistCounts)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListArtistsParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_Counts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Counts'
+type MockManager_Counts_Call struct {
+	*mock.Call
+}
+
+// Counts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.ListArtistsParams
+func (_e *MockManager_Expecter) Counts(ctx any, p any) *MockManager_Counts_Call {
+	return &MockManager_Counts_Call{Call: _e.mock.On("Counts", ctx, p)}
+}
+
+func (_c *MockManager_Counts_Call) Run(run func(ctx context.Context, p db.ListArtistsParams)) *MockManager_Counts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListArtistsParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListArtistsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Counts_Call) Return(artistCounts db.ArtistCounts, err error) *MockManager_Counts_Call {
+	_c.Call.Return(artistCounts, err)
+	return _c
+}
+
+func (_c *MockManager_Counts_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) (db.ArtistCounts, error)) *MockManager_Counts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type MockManager
 func (_mock *MockManager) Delete(ctx context.Context, id uint32, deleteFiles bool) error {
 	ret := _mock.Called(ctx, id, deleteFiles)
@@ -180,47 +383,36 @@ func (_c *MockManager_Delete_Call) RunAndReturn(run func(ctx context.Context, id
 	return _c
 }
 
-// Get provides a mock function for the type MockManager
-func (_mock *MockManager) Get(ctx context.Context, id uint32) (*ent.Artist, error) {
-	ret := _mock.Called(ctx, id)
+// DeleteTrackFile provides a mock function for the type MockManager
+func (_mock *MockManager) DeleteTrackFile(ctx context.Context, trackID uint32) error {
+	ret := _mock.Called(ctx, trackID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Get")
+		panic("no return value specified for DeleteTrackFile")
 	}
 
-	var r0 *ent.Artist
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Artist, error)); ok {
-		return returnFunc(ctx, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Artist); ok {
-		r0 = returnFunc(ctx, id)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, trackID)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Artist)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
-		r1 = returnFunc(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
-// MockManager_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
-type MockManager_Get_Call struct {
+// MockManager_DeleteTrackFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTrackFile'
+type MockManager_DeleteTrackFile_Call struct {
 	*mock.Call
 }
 
-// Get is a helper method to define mock.On call
+// DeleteTrackFile is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id uint32
-func (_e *MockManager_Expecter) Get(ctx any, id any) *MockManager_Get_Call {
-	return &MockManager_Get_Call{Call: _e.mock.On("Get", ctx, id)}
+//   - trackID uint32
+func (_e *MockManager_Expecter) DeleteTrackFile(ctx any, trackID any) *MockManager_DeleteTrackFile_Call {
+	return &MockManager_DeleteTrackFile_Call{Call: _e.mock.On("DeleteTrackFile", ctx, trackID)}
 }
 
-func (_c *MockManager_Get_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_Get_Call {
+func (_c *MockManager_DeleteTrackFile_Call) Run(run func(ctx context.Context, trackID uint32)) *MockManager_DeleteTrackFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -238,57 +430,58 @@ func (_c *MockManager_Get_Call) Run(run func(ctx context.Context, id uint32)) *M
 	return _c
 }
 
-func (_c *MockManager_Get_Call) Return(artist *ent.Artist, err error) *MockManager_Get_Call {
-	_c.Call.Return(artist, err)
+func (_c *MockManager_DeleteTrackFile_Call) Return(err error) *MockManager_DeleteTrackFile_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockManager_Get_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Artist, error)) *MockManager_Get_Call {
+func (_c *MockManager_DeleteTrackFile_Call) RunAndReturn(run func(ctx context.Context, trackID uint32) error) *MockManager_DeleteTrackFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetAlbum provides a mock function for the type MockManager
-func (_mock *MockManager) GetAlbum(ctx context.Context, id uint32) (*ent.Album, error) {
-	ret := _mock.Called(ctx, id)
+// Detail provides a mock function for the type MockManager
+func (_mock *MockManager) Detail(ctx context.Context, id uint32, lang string) (*music.ArtistView, error) {
+	ret := _mock.Called(ctx, id, lang)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAlbum")
+		panic("no return value specified for Detail")
 	}
 
-	var r0 *ent.Album
+	var r0 *music.ArtistView
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Album, error)); ok {
-		return returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*music.ArtistView, error)); ok {
+		return returnFunc(ctx, id, lang)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Album); ok {
-		r0 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *music.ArtistView); ok {
+		r0 = returnFunc(ctx, id, lang)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Album)
+			r0 = ret.Get(0).(*music.ArtistView)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
-		r1 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, id, lang)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// MockManager_GetAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAlbum'
-type MockManager_GetAlbum_Call struct {
+// MockManager_Detail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Detail'
+type MockManager_Detail_Call struct {
 	*mock.Call
 }
 
-// GetAlbum is a helper method to define mock.On call
+// Detail is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-func (_e *MockManager_Expecter) GetAlbum(ctx any, id any) *MockManager_GetAlbum_Call {
-	return &MockManager_GetAlbum_Call{Call: _e.mock.On("GetAlbum", ctx, id)}
+//   - lang string
+func (_e *MockManager_Expecter) Detail(ctx any, id any, lang any) *MockManager_Detail_Call {
+	return &MockManager_Detail_Call{Call: _e.mock.On("Detail", ctx, id, lang)}
 }
 
-func (_c *MockManager_GetAlbum_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_GetAlbum_Call {
+func (_c *MockManager_Detail_Call) Run(run func(ctx context.Context, id uint32, lang string)) *MockManager_Detail_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -298,20 +491,94 @@ func (_c *MockManager_GetAlbum_Call) Run(run func(ctx context.Context, id uint32
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_GetAlbum_Call) Return(album *ent.Album, err error) *MockManager_GetAlbum_Call {
-	_c.Call.Return(album, err)
+func (_c *MockManager_Detail_Call) Return(artistView *music.ArtistView, err error) *MockManager_Detail_Call {
+	_c.Call.Return(artistView, err)
 	return _c
 }
 
-func (_c *MockManager_GetAlbum_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Album, error)) *MockManager_GetAlbum_Call {
+func (_c *MockManager_Detail_Call) RunAndReturn(run func(ctx context.Context, id uint32, lang string) (*music.ArtistView, error)) *MockManager_Detail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GrabAlbum provides a mock function for the type MockManager
+func (_mock *MockManager) GrabAlbum(ctx context.Context, albumID uint32, result indexer.SearchResult, replace bool) error {
+	ret := _mock.Called(ctx, albumID, result, replace)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrabAlbum")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, indexer.SearchResult, bool) error); ok {
+		r0 = returnFunc(ctx, albumID, result, replace)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_GrabAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrabAlbum'
+type MockManager_GrabAlbum_Call struct {
+	*mock.Call
+}
+
+// GrabAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - result indexer.SearchResult
+//   - replace bool
+func (_e *MockManager_Expecter) GrabAlbum(ctx any, albumID any, result any, replace any) *MockManager_GrabAlbum_Call {
+	return &MockManager_GrabAlbum_Call{Call: _e.mock.On("GrabAlbum", ctx, albumID, result, replace)}
+}
+
+func (_c *MockManager_GrabAlbum_Call) Run(run func(ctx context.Context, albumID uint32, result indexer.SearchResult, replace bool)) *MockManager_GrabAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 indexer.SearchResult
+		if args[2] != nil {
+			arg2 = args[2].(indexer.SearchResult)
+		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_GrabAlbum_Call) Return(err error) *MockManager_GrabAlbum_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_GrabAlbum_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, result indexer.SearchResult, replace bool) error) *MockManager_GrabAlbum_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -379,38 +646,99 @@ func (_c *MockManager_GrabAlbumRelease_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// GrabArtistRelease provides a mock function for the type MockManager
+func (_mock *MockManager) GrabArtistRelease(ctx context.Context, artistID uint32, result indexer.SearchResult, replace bool) error {
+	ret := _mock.Called(ctx, artistID, result, replace)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GrabArtistRelease")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, indexer.SearchResult, bool) error); ok {
+		r0 = returnFunc(ctx, artistID, result, replace)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_GrabArtistRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GrabArtistRelease'
+type MockManager_GrabArtistRelease_Call struct {
+	*mock.Call
+}
+
+// GrabArtistRelease is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+//   - result indexer.SearchResult
+//   - replace bool
+func (_e *MockManager_Expecter) GrabArtistRelease(ctx any, artistID any, result any, replace any) *MockManager_GrabArtistRelease_Call {
+	return &MockManager_GrabArtistRelease_Call{Call: _e.mock.On("GrabArtistRelease", ctx, artistID, result, replace)}
+}
+
+func (_c *MockManager_GrabArtistRelease_Call) Run(run func(ctx context.Context, artistID uint32, result indexer.SearchResult, replace bool)) *MockManager_GrabArtistRelease_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 indexer.SearchResult
+		if args[2] != nil {
+			arg2 = args[2].(indexer.SearchResult)
+		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_GrabArtistRelease_Call) Return(err error) *MockManager_GrabArtistRelease_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_GrabArtistRelease_Call) RunAndReturn(run func(ctx context.Context, artistID uint32, result indexer.SearchResult, replace bool) error) *MockManager_GrabArtistRelease_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type MockManager
-func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.Artist, uint32, error) {
-	ret := _mock.Called(ctx, page, limit)
+func (_mock *MockManager) List(ctx context.Context, p db.ListArtistsParams) (music.ArtistPage, error) {
+	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []*ent.Artist
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.Artist, uint32, error)); ok {
-		return returnFunc(ctx, page, limit)
+	var r0 music.ArtistPage
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) (music.ArtistPage, error)); ok {
+		return returnFunc(ctx, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) []*ent.Artist); ok {
-		r0 = returnFunc(ctx, page, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListArtistsParams) music.ArtistPage); ok {
+		r0 = returnFunc(ctx, p)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ent.Artist)
-		}
+		r0 = ret.Get(0).(music.ArtistPage)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) uint32); ok {
-		r1 = returnFunc(ctx, page, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListArtistsParams) error); ok {
+		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint16, uint16) error); ok {
-		r2 = returnFunc(ctx, page, limit)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockManager_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
@@ -420,25 +748,93 @@ type MockManager_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-//   - page uint16
-//   - limit uint16
-func (_e *MockManager_Expecter) List(ctx any, page any, limit any) *MockManager_List_Call {
-	return &MockManager_List_Call{Call: _e.mock.On("List", ctx, page, limit)}
+//   - p db.ListArtistsParams
+func (_e *MockManager_Expecter) List(ctx any, p any) *MockManager_List_Call {
+	return &MockManager_List_Call{Call: _e.mock.On("List", ctx, p)}
 }
 
-func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, limit uint16)) *MockManager_List_Call {
+func (_c *MockManager_List_Call) Run(run func(ctx context.Context, p db.ListArtistsParams)) *MockManager_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint16
+		var arg1 db.ListArtistsParams
 		if args[1] != nil {
-			arg1 = args[1].(uint16)
+			arg1 = args[1].(db.ListArtistsParams)
 		}
-		var arg2 uint16
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_List_Call) Return(artistPage music.ArtistPage, err error) *MockManager_List_Call {
+	_c.Call.Return(artistPage, err)
+	return _c
+}
+
+func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, p db.ListArtistsParams) (music.ArtistPage, error)) *MockManager_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LookupArtist provides a mock function for the type MockManager
+func (_mock *MockManager) LookupArtist(ctx context.Context, mbid string, lang string) (*music.LookupDetail, error) {
+	ret := _mock.Called(ctx, mbid, lang)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LookupArtist")
+	}
+
+	var r0 *music.LookupDetail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (*music.LookupDetail, error)); ok {
+		return returnFunc(ctx, mbid, lang)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) *music.LookupDetail); ok {
+		r0 = returnFunc(ctx, mbid, lang)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.LookupDetail)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, mbid, lang)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_LookupArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LookupArtist'
+type MockManager_LookupArtist_Call struct {
+	*mock.Call
+}
+
+// LookupArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbid string
+//   - lang string
+func (_e *MockManager_Expecter) LookupArtist(ctx any, mbid any, lang any) *MockManager_LookupArtist_Call {
+	return &MockManager_LookupArtist_Call{Call: _e.mock.On("LookupArtist", ctx, mbid, lang)}
+}
+
+func (_c *MockManager_LookupArtist_Call) Run(run func(ctx context.Context, mbid string, lang string)) *MockManager_LookupArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint16)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -449,12 +845,12 @@ func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, 
 	return _c
 }
 
-func (_c *MockManager_List_Call) Return(artists []*ent.Artist, v uint32, err error) *MockManager_List_Call {
-	_c.Call.Return(artists, v, err)
+func (_c *MockManager_LookupArtist_Call) Return(lookupDetail *music.LookupDetail, err error) *MockManager_LookupArtist_Call {
+	_c.Call.Return(lookupDetail, err)
 	return _c
 }
 
-func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.Artist, uint32, error)) *MockManager_List_Call {
+func (_c *MockManager_LookupArtist_Call) RunAndReturn(run func(ctx context.Context, mbid string, lang string) (*music.LookupDetail, error)) *MockManager_LookupArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -527,6 +923,63 @@ func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
+// SearchAlbumNow provides a mock function for the type MockManager
+func (_mock *MockManager) SearchAlbumNow(ctx context.Context, albumID uint32) error {
+	ret := _mock.Called(ctx, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchAlbumNow")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, albumID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SearchAlbumNow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchAlbumNow'
+type MockManager_SearchAlbumNow_Call struct {
+	*mock.Call
+}
+
+// SearchAlbumNow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+func (_e *MockManager_Expecter) SearchAlbumNow(ctx any, albumID any) *MockManager_SearchAlbumNow_Call {
+	return &MockManager_SearchAlbumNow_Call{Call: _e.mock.On("SearchAlbumNow", ctx, albumID)}
+}
+
+func (_c *MockManager_SearchAlbumNow_Call) Run(run func(ctx context.Context, albumID uint32)) *MockManager_SearchAlbumNow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchAlbumNow_Call) Return(err error) *MockManager_SearchAlbumNow_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SearchAlbumNow_Call) RunAndReturn(run func(ctx context.Context, albumID uint32) error) *MockManager_SearchAlbumNow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SearchAlbumReleases provides a mock function for the type MockManager
 func (_mock *MockManager) SearchAlbumReleases(ctx context.Context, albumID uint32) ([]music.AlbumRelease, error) {
 	ret := _mock.Called(ctx, albumID)
@@ -595,6 +1048,188 @@ func (_c *MockManager_SearchAlbumReleases_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// SearchArtistNow provides a mock function for the type MockManager
+func (_mock *MockManager) SearchArtistNow(ctx context.Context, artistID uint32) error {
+	ret := _mock.Called(ctx, artistID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchArtistNow")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, artistID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SearchArtistNow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchArtistNow'
+type MockManager_SearchArtistNow_Call struct {
+	*mock.Call
+}
+
+// SearchArtistNow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+func (_e *MockManager_Expecter) SearchArtistNow(ctx any, artistID any) *MockManager_SearchArtistNow_Call {
+	return &MockManager_SearchArtistNow_Call{Call: _e.mock.On("SearchArtistNow", ctx, artistID)}
+}
+
+func (_c *MockManager_SearchArtistNow_Call) Run(run func(ctx context.Context, artistID uint32)) *MockManager_SearchArtistNow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchArtistNow_Call) Return(err error) *MockManager_SearchArtistNow_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SearchArtistNow_Call) RunAndReturn(run func(ctx context.Context, artistID uint32) error) *MockManager_SearchArtistNow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchArtists provides a mock function for the type MockManager
+func (_mock *MockManager) SearchArtists(ctx context.Context, query string) ([]music.LookupHit, error) {
+	ret := _mock.Called(ctx, query)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchArtists")
+	}
+
+	var r0 []music.LookupHit
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]music.LookupHit, error)); ok {
+		return returnFunc(ctx, query)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []music.LookupHit); ok {
+		r0 = returnFunc(ctx, query)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]music.LookupHit)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, query)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SearchArtists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchArtists'
+type MockManager_SearchArtists_Call struct {
+	*mock.Call
+}
+
+// SearchArtists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+func (_e *MockManager_Expecter) SearchArtists(ctx any, query any) *MockManager_SearchArtists_Call {
+	return &MockManager_SearchArtists_Call{Call: _e.mock.On("SearchArtists", ctx, query)}
+}
+
+func (_c *MockManager_SearchArtists_Call) Run(run func(ctx context.Context, query string)) *MockManager_SearchArtists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchArtists_Call) Return(lookupHits []music.LookupHit, err error) *MockManager_SearchArtists_Call {
+	_c.Call.Return(lookupHits, err)
+	return _c
+}
+
+func (_c *MockManager_SearchArtists_Call) RunAndReturn(run func(ctx context.Context, query string) ([]music.LookupHit, error)) *MockManager_SearchArtists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SearchTrackNow provides a mock function for the type MockManager
+func (_mock *MockManager) SearchTrackNow(ctx context.Context, trackID uint32) error {
+	ret := _mock.Called(ctx, trackID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchTrackNow")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, trackID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SearchTrackNow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchTrackNow'
+type MockManager_SearchTrackNow_Call struct {
+	*mock.Call
+}
+
+// SearchTrackNow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - trackID uint32
+func (_e *MockManager_Expecter) SearchTrackNow(ctx any, trackID any) *MockManager_SearchTrackNow_Call {
+	return &MockManager_SearchTrackNow_Call{Call: _e.mock.On("SearchTrackNow", ctx, trackID)}
+}
+
+func (_c *MockManager_SearchTrackNow_Call) Run(run func(ctx context.Context, trackID uint32)) *MockManager_SearchTrackNow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchTrackNow_Call) Return(err error) *MockManager_SearchTrackNow_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SearchTrackNow_Call) RunAndReturn(run func(ctx context.Context, trackID uint32) error) *MockManager_SearchTrackNow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumMonitored provides a mock function for the type MockManager
 func (_mock *MockManager) SetAlbumMonitored(ctx context.Context, id uint32, m bool) error {
 	ret := _mock.Called(ctx, id, m)
@@ -658,37 +1293,37 @@ func (_c *MockManager_SetAlbumMonitored_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// SetArtistMonitored provides a mock function for the type MockManager
-func (_mock *MockManager) SetArtistMonitored(ctx context.Context, id uint32, m bool) error {
-	ret := _mock.Called(ctx, id, m)
+// SetArtistMonitor provides a mock function for the type MockManager
+func (_mock *MockManager) SetArtistMonitor(ctx context.Context, id uint32, monitor string) error {
+	ret := _mock.Called(ctx, id, monitor)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SetArtistMonitored")
+		panic("no return value specified for SetArtistMonitor")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
-		r0 = returnFunc(ctx, id, m)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, monitor)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// MockManager_SetArtistMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistMonitored'
-type MockManager_SetArtistMonitored_Call struct {
+// MockManager_SetArtistMonitor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistMonitor'
+type MockManager_SetArtistMonitor_Call struct {
 	*mock.Call
 }
 
-// SetArtistMonitored is a helper method to define mock.On call
+// SetArtistMonitor is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - m bool
-func (_e *MockManager_Expecter) SetArtistMonitored(ctx any, id any, m any) *MockManager_SetArtistMonitored_Call {
-	return &MockManager_SetArtistMonitored_Call{Call: _e.mock.On("SetArtistMonitored", ctx, id, m)}
+//   - monitor string
+func (_e *MockManager_Expecter) SetArtistMonitor(ctx any, id any, monitor any) *MockManager_SetArtistMonitor_Call {
+	return &MockManager_SetArtistMonitor_Call{Call: _e.mock.On("SetArtistMonitor", ctx, id, monitor)}
 }
 
-func (_c *MockManager_SetArtistMonitored_Call) Run(run func(ctx context.Context, id uint32, m bool)) *MockManager_SetArtistMonitored_Call {
+func (_c *MockManager_SetArtistMonitor_Call) Run(run func(ctx context.Context, id uint32, monitor string)) *MockManager_SetArtistMonitor_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -698,9 +1333,9 @@ func (_c *MockManager_SetArtistMonitored_Call) Run(run func(ctx context.Context,
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 bool
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(bool)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -711,12 +1346,12 @@ func (_c *MockManager_SetArtistMonitored_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockManager_SetArtistMonitored_Call) Return(err error) *MockManager_SetArtistMonitored_Call {
+func (_c *MockManager_SetArtistMonitor_Call) Return(err error) *MockManager_SetArtistMonitor_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockManager_SetArtistMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, m bool) error) *MockManager_SetArtistMonitored_Call {
+func (_c *MockManager_SetArtistMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor string) error) *MockManager_SetArtistMonitor_Call {
 	_c.Call.Return(run)
 	return _c
 }

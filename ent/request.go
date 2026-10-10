@@ -24,12 +24,10 @@ type Request struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// MediaType holds the value of the "media_type" field.
 	MediaType request.MediaType `json:"media_type,omitempty"`
-	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for authors and books. Zero for artists and albums.
+	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists.
 	MediaID uint32 `json:"media_id,omitempty"`
-	// MusicBrainz ID: artist MBID for artist requests, release-group MBID for album requests.
+	// Artist MBID, for artist requests only.
 	MediaMbid string `json:"media_mbid,omitempty"`
-	// Slot a book request asks for. Only set when media_type=book.
-	BookKind request.BookKind `json:"book_kind,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Status holds the value of the "status" field.
@@ -86,7 +84,7 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case request.FieldID, request.FieldMediaID:
 			values[i] = new(sql.NullInt64)
-		case request.FieldMediaType, request.FieldMediaMbid, request.FieldBookKind, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
+		case request.FieldMediaType, request.FieldMediaMbid, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case request.FieldCreateTime, request.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -144,12 +142,6 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field media_mbid", values[i])
 			} else if value.Valid {
 				_m.MediaMbid = value.String
-			}
-		case request.FieldBookKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field book_kind", values[i])
-			} else if value.Valid {
-				_m.BookKind = request.BookKind(value.String)
 			}
 		case request.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -249,9 +241,6 @@ func (_m *Request) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("media_mbid=")
 	builder.WriteString(_m.MediaMbid)
-	builder.WriteString(", ")
-	builder.WriteString("book_kind=")
-	builder.WriteString(fmt.Sprintf("%v", _m.BookKind))
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

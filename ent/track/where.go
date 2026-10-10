@@ -90,6 +90,11 @@ func Duration(v uint32) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldDuration, v))
 }
 
+// Bonus applies equality check predicate on the "bonus" field. It's identical to BonusEQ.
+func Bonus(v bool) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldBonus, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldCreateTime, v))
@@ -440,6 +445,16 @@ func DurationNotNil() predicate.Track {
 	return predicate.Track(sql.FieldNotNull(FieldDuration))
 }
 
+// BonusEQ applies the EQ predicate on the "bonus" field.
+func BonusEQ(v bool) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldBonus, v))
+}
+
+// BonusNEQ applies the NEQ predicate on the "bonus" field.
+func BonusNEQ(v bool) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldBonus, v))
+}
+
 // HasAlbum applies the HasEdge predicate on the "album" edge.
 func HasAlbum() predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {
@@ -478,6 +493,29 @@ func HasMediaFiles() predicate.Track {
 func HasMediaFilesWith(preds ...predicate.MediaFile) predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {
 		step := newMediaFilesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredits applies the HasEdge predicate on the "credits" edge.
+func HasCredits() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreditsWith applies the HasEdge predicate on the "credits" edge with a given conditions (other predicates).
+func HasCreditsWith(preds ...predicate.MusicCredit) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newCreditsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

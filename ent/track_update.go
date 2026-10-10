@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
 )
@@ -140,6 +141,20 @@ func (_u *TrackUpdate) ClearDuration() *TrackUpdate {
 	return _u
 }
 
+// SetBonus sets the "bonus" field.
+func (_u *TrackUpdate) SetBonus(v bool) *TrackUpdate {
+	_u.mutation.SetBonus(v)
+	return _u
+}
+
+// SetNillableBonus sets the "bonus" field if the given value is not nil.
+func (_u *TrackUpdate) SetNillableBonus(v *bool) *TrackUpdate {
+	if v != nil {
+		_u.SetBonus(*v)
+	}
+	return _u
+}
+
 // SetAlbumID sets the "album" edge to the Album entity by ID.
 func (_u *TrackUpdate) SetAlbumID(id uint32) *TrackUpdate {
 	_u.mutation.SetAlbumID(id)
@@ -164,6 +179,21 @@ func (_u *TrackUpdate) AddMediaFiles(v ...*MediaFile) *TrackUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddMediaFileIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_u *TrackUpdate) AddCreditIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_u *TrackUpdate) AddCredits(v ...*MusicCredit) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -196,6 +226,27 @@ func (_u *TrackUpdate) RemoveMediaFiles(v ...*MediaFile) *TrackUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveMediaFileIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the MusicCredit entity.
+func (_u *TrackUpdate) ClearCredits() *TrackUpdate {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to MusicCredit entities by IDs.
+func (_u *TrackUpdate) RemoveCreditIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to MusicCredit entities.
+func (_u *TrackUpdate) RemoveCredits(v ...*MusicCredit) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -298,6 +349,9 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DurationCleared() {
 		_spec.ClearField(track.FieldDuration, field.TypeUint32)
 	}
+	if value, ok := _u.mutation.Bonus(); ok {
+		_spec.SetField(track.FieldBonus, field.TypeBool, value)
+	}
 	if _u.mutation.AlbumCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -365,6 +419,51 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediafile.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -503,6 +602,20 @@ func (_u *TrackUpdateOne) ClearDuration() *TrackUpdateOne {
 	return _u
 }
 
+// SetBonus sets the "bonus" field.
+func (_u *TrackUpdateOne) SetBonus(v bool) *TrackUpdateOne {
+	_u.mutation.SetBonus(v)
+	return _u
+}
+
+// SetNillableBonus sets the "bonus" field if the given value is not nil.
+func (_u *TrackUpdateOne) SetNillableBonus(v *bool) *TrackUpdateOne {
+	if v != nil {
+		_u.SetBonus(*v)
+	}
+	return _u
+}
+
 // SetAlbumID sets the "album" edge to the Album entity by ID.
 func (_u *TrackUpdateOne) SetAlbumID(id uint32) *TrackUpdateOne {
 	_u.mutation.SetAlbumID(id)
@@ -527,6 +640,21 @@ func (_u *TrackUpdateOne) AddMediaFiles(v ...*MediaFile) *TrackUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddMediaFileIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the MusicCredit entity by IDs.
+func (_u *TrackUpdateOne) AddCreditIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the MusicCredit entity.
+func (_u *TrackUpdateOne) AddCredits(v ...*MusicCredit) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the TrackMutation object of the builder.
@@ -559,6 +687,27 @@ func (_u *TrackUpdateOne) RemoveMediaFiles(v ...*MediaFile) *TrackUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveMediaFileIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the MusicCredit entity.
+func (_u *TrackUpdateOne) ClearCredits() *TrackUpdateOne {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to MusicCredit entities by IDs.
+func (_u *TrackUpdateOne) RemoveCreditIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to MusicCredit entities.
+func (_u *TrackUpdateOne) RemoveCredits(v ...*MusicCredit) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Where appends a list predicates to the TrackUpdate builder.
@@ -691,6 +840,9 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 	if _u.mutation.DurationCleared() {
 		_spec.ClearField(track.FieldDuration, field.TypeUint32)
 	}
+	if value, ok := _u.mutation.Bonus(); ok {
+		_spec.SetField(track.FieldBonus, field.TypeBool, value)
+	}
 	if _u.mutation.AlbumCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -758,6 +910,51 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediafile.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.CreditsTable,
+			Columns: []string{track.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -3,6 +3,7 @@
 package artist
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -26,16 +27,40 @@ const (
 	FieldSortName = "sort_name"
 	// FieldOverview holds the string denoting the overview field in the database.
 	FieldOverview = "overview"
-	// FieldMonitored holds the string denoting the monitored field in the database.
-	FieldMonitored = "monitored"
+	// FieldOverviewSource holds the string denoting the overview_source field in the database.
+	FieldOverviewSource = "overview_source"
+	// FieldOverviewFr holds the string denoting the overview_fr field in the database.
+	FieldOverviewFr = "overview_fr"
+	// FieldOverviewSourceFr holds the string denoting the overview_source_fr field in the database.
+	FieldOverviewSourceFr = "overview_source_fr"
+	// FieldMonitor holds the string denoting the monitor field in the database.
+	FieldMonitor = "monitor"
+	// FieldType holds the string denoting the type field in the database.
+	FieldType = "type"
+	// FieldOrigin holds the string denoting the origin field in the database.
+	FieldOrigin = "origin"
+	// FieldSince holds the string denoting the since field in the database.
+	FieldSince = "since"
+	// FieldGenre holds the string denoting the genre field in the database.
+	FieldGenre = "genre"
+	// FieldDeezerID holds the string denoting the deezer_id field in the database.
+	FieldDeezerID = "deezer_id"
+	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
+	FieldWikidataID = "wikidata_id"
 	// FieldPath holds the string denoting the path field in the database.
 	FieldPath = "path"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
 	FieldQualityProfile = "quality_profile"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
 	FieldLastRefreshedAt = "last_refreshed_at"
+	// FieldDetailsFetchedAt holds the string denoting the details_fetched_at field in the database.
+	FieldDetailsFetchedAt = "details_fetched_at"
 	// EdgeAlbums holds the string denoting the albums edge name in mutations.
 	EdgeAlbums = "albums"
+	// EdgeMembers holds the string denoting the members edge name in mutations.
+	EdgeMembers = "members"
+	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
+	EdgeDownloadRecords = "download_records"
 	// Table holds the table name of the artist in the database.
 	Table = "artists"
 	// AlbumsTable is the table that holds the albums relation/edge.
@@ -45,6 +70,20 @@ const (
 	AlbumsInverseTable = "albums"
 	// AlbumsColumn is the table column denoting the albums relation/edge.
 	AlbumsColumn = "artist_albums"
+	// MembersTable is the table that holds the members relation/edge.
+	MembersTable = "artist_members"
+	// MembersInverseTable is the table name for the ArtistMember entity.
+	// It exists in this package in order to avoid circular dependency with the "artistmember" package.
+	MembersInverseTable = "artist_members"
+	// MembersColumn is the table column denoting the members relation/edge.
+	MembersColumn = "artist_members"
+	// DownloadRecordsTable is the table that holds the download_records relation/edge.
+	DownloadRecordsTable = "download_records"
+	// DownloadRecordsInverseTable is the table name for the DownloadRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "downloadrecord" package.
+	DownloadRecordsInverseTable = "download_records"
+	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
+	DownloadRecordsColumn = "artist_download_records"
 )
 
 // Columns holds all SQL columns for artist fields.
@@ -56,10 +95,20 @@ var Columns = []string{
 	FieldName,
 	FieldSortName,
 	FieldOverview,
-	FieldMonitored,
+	FieldOverviewSource,
+	FieldOverviewFr,
+	FieldOverviewSourceFr,
+	FieldMonitor,
+	FieldType,
+	FieldOrigin,
+	FieldSince,
+	FieldGenre,
+	FieldDeezerID,
+	FieldWikidataID,
 	FieldPath,
 	FieldQualityProfile,
 	FieldLastRefreshedAt,
+	FieldDetailsFetchedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -83,9 +132,58 @@ var (
 	MbidValidator func(string) error
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultMonitored holds the default value on creation for the "monitored" field.
-	DefaultMonitored bool
 )
+
+// Monitor defines the type for the "monitor" enum field.
+type Monitor string
+
+// MonitorAll is the default value of the Monitor enum.
+const DefaultMonitor = MonitorAll
+
+// Monitor values.
+const (
+	MonitorAll    Monitor = "all"
+	MonitorFuture Monitor = "future"
+	MonitorManual Monitor = "manual"
+	MonitorNone   Monitor = "none"
+)
+
+func (m Monitor) String() string {
+	return string(m)
+}
+
+// MonitorValidator is a validator for the "monitor" field enum values. It is called by the builders before save.
+func MonitorValidator(m Monitor) error {
+	switch m {
+	case MonitorAll, MonitorFuture, MonitorManual, MonitorNone:
+		return nil
+	default:
+		return fmt.Errorf("artist: invalid enum value for monitor field: %q", m)
+	}
+}
+
+// Type defines the type for the "type" enum field.
+type Type string
+
+// Type values.
+const (
+	TypeGroup  Type = "group"
+	TypePerson Type = "person"
+)
+
+func (_type Type) String() string {
+	return string(_type)
+}
+
+// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
+func TypeValidator(_type Type) error {
+	switch _type {
+	case TypeGroup, TypePerson:
+		return nil
+	default:
+		return fmt.Errorf("artist: invalid enum value for type field: %q", _type)
+	}
+}
 
 // OrderOption defines the ordering options for the Artist queries.
 type OrderOption func(*sql.Selector)
@@ -125,9 +223,54 @@ func ByOverview(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOverview, opts...).ToFunc()
 }
 
-// ByMonitored orders the results by the monitored field.
-func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
+// ByOverviewSource orders the results by the overview_source field.
+func ByOverviewSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOverviewSource, opts...).ToFunc()
+}
+
+// ByOverviewFr orders the results by the overview_fr field.
+func ByOverviewFr(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOverviewFr, opts...).ToFunc()
+}
+
+// ByOverviewSourceFr orders the results by the overview_source_fr field.
+func ByOverviewSourceFr(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOverviewSourceFr, opts...).ToFunc()
+}
+
+// ByMonitor orders the results by the monitor field.
+func ByMonitor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitor, opts...).ToFunc()
+}
+
+// ByType orders the results by the type field.
+func ByType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
+// ByOrigin orders the results by the origin field.
+func ByOrigin(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOrigin, opts...).ToFunc()
+}
+
+// BySince orders the results by the since field.
+func BySince(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSince, opts...).ToFunc()
+}
+
+// ByGenre orders the results by the genre field.
+func ByGenre(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGenre, opts...).ToFunc()
+}
+
+// ByDeezerID orders the results by the deezer_id field.
+func ByDeezerID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeezerID, opts...).ToFunc()
+}
+
+// ByWikidataID orders the results by the wikidata_id field.
+func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
 }
 
 // ByPath orders the results by the path field.
@@ -145,6 +288,11 @@ func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
 }
 
+// ByDetailsFetchedAt orders the results by the details_fetched_at field.
+func ByDetailsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDetailsFetchedAt, opts...).ToFunc()
+}
+
 // ByAlbumsCount orders the results by albums count.
 func ByAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -158,10 +306,52 @@ func ByAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByMembersCount orders the results by members count.
+func ByMembersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMembersStep(), opts...)
+	}
+}
+
+// ByMembers orders the results by members terms.
+func ByMembers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMembersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByDownloadRecordsCount orders the results by download_records count.
+func ByDownloadRecordsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDownloadRecordsStep(), opts...)
+	}
+}
+
+// ByDownloadRecords orders the results by download_records terms.
+func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AlbumsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AlbumsTable, AlbumsColumn),
+	)
+}
+func newMembersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MembersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MembersTable, MembersColumn),
+	)
+}
+func newDownloadRecordsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
 	)
 }

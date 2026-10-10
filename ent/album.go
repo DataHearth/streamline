@@ -42,6 +42,20 @@ type Album struct {
 	LastSearchAt *time.Time `json:"last_search_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status album.Status `json:"status,omitempty"`
+	// Label holds the value of the "label" field.
+	Label string `json:"label,omitempty"`
+	// CatalogNumber holds the value of the "catalog_number" field.
+	CatalogNumber string `json:"catalog_number,omitempty"`
+	// Country holds the value of the "country" field.
+	Country string `json:"country,omitempty"`
+	// Media holds the value of the "media" field.
+	Media string `json:"media,omitempty"`
+	// Studio holds the value of the "studio" field.
+	Studio string `json:"studio,omitempty"`
+	// MetadataFetchedAt holds the value of the "metadata_fetched_at" field.
+	MetadataFetchedAt *time.Time `json:"metadata_fetched_at,omitempty"`
+	// CreditsFetchedAt holds the value of the "credits_fetched_at" field.
+	CreditsFetchedAt *time.Time `json:"credits_fetched_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AlbumQuery when eager-loading is set.
 	Edges         AlbumEdges `json:"edges"`
@@ -57,9 +71,13 @@ type AlbumEdges struct {
 	Tracks []*Track `json:"tracks,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
+	// Credits holds the value of the credits edge.
+	Credits []*MusicCredit `json:"credits,omitempty"`
+	// PackRecords holds the value of the pack_records edge.
+	PackRecords []*DownloadRecord `json:"pack_records,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // ArtistOrErr returns the Artist value or an error if the edge
@@ -91,6 +109,24 @@ func (e AlbumEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 	return nil, &NotLoadedError{edge: "download_records"}
 }
 
+// CreditsOrErr returns the Credits value or an error if the edge
+// was not loaded in eager-loading.
+func (e AlbumEdges) CreditsOrErr() ([]*MusicCredit, error) {
+	if e.loadedTypes[3] {
+		return e.Credits, nil
+	}
+	return nil, &NotLoadedError{edge: "credits"}
+}
+
+// PackRecordsOrErr returns the PackRecords value or an error if the edge
+// was not loaded in eager-loading.
+func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
+	if e.loadedTypes[4] {
+		return e.PackRecords, nil
+	}
+	return nil, &NotLoadedError{edge: "pack_records"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Album) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -100,9 +136,9 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
-		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt:
+		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
 		case album.ForeignKeys[0]: // artist_albums
 			values[i] = new(sql.NullInt64)
@@ -201,6 +237,50 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Status = album.Status(value.String)
 			}
+		case album.FieldLabel:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field label", values[i])
+			} else if value.Valid {
+				_m.Label = value.String
+			}
+		case album.FieldCatalogNumber:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field catalog_number", values[i])
+			} else if value.Valid {
+				_m.CatalogNumber = value.String
+			}
+		case album.FieldCountry:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field country", values[i])
+			} else if value.Valid {
+				_m.Country = value.String
+			}
+		case album.FieldMedia:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field media", values[i])
+			} else if value.Valid {
+				_m.Media = value.String
+			}
+		case album.FieldStudio:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field studio", values[i])
+			} else if value.Valid {
+				_m.Studio = value.String
+			}
+		case album.FieldMetadataFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field metadata_fetched_at", values[i])
+			} else if value.Valid {
+				_m.MetadataFetchedAt = new(time.Time)
+				*_m.MetadataFetchedAt = value.Time
+			}
+		case album.FieldCreditsFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field credits_fetched_at", values[i])
+			} else if value.Valid {
+				_m.CreditsFetchedAt = new(time.Time)
+				*_m.CreditsFetchedAt = value.Time
+			}
 		case album.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field artist_albums", value)
@@ -234,6 +314,16 @@ func (_m *Album) QueryTracks() *TrackQuery {
 // QueryDownloadRecords queries the "download_records" edge of the Album entity.
 func (_m *Album) QueryDownloadRecords() *DownloadRecordQuery {
 	return NewAlbumClient(_m.config).QueryDownloadRecords(_m)
+}
+
+// QueryCredits queries the "credits" edge of the Album entity.
+func (_m *Album) QueryCredits() *MusicCreditQuery {
+	return NewAlbumClient(_m.config).QueryCredits(_m)
+}
+
+// QueryPackRecords queries the "pack_records" edge of the Album entity.
+func (_m *Album) QueryPackRecords() *DownloadRecordQuery {
+	return NewAlbumClient(_m.config).QueryPackRecords(_m)
 }
 
 // Update returns a builder for updating this Album.
@@ -298,6 +388,31 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	builder.WriteString("label=")
+	builder.WriteString(_m.Label)
+	builder.WriteString(", ")
+	builder.WriteString("catalog_number=")
+	builder.WriteString(_m.CatalogNumber)
+	builder.WriteString(", ")
+	builder.WriteString("country=")
+	builder.WriteString(_m.Country)
+	builder.WriteString(", ")
+	builder.WriteString("media=")
+	builder.WriteString(_m.Media)
+	builder.WriteString(", ")
+	builder.WriteString("studio=")
+	builder.WriteString(_m.Studio)
+	builder.WriteString(", ")
+	if v := _m.MetadataFetchedAt; v != nil {
+		builder.WriteString("metadata_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.CreditsFetchedAt; v != nil {
+		builder.WriteString("credits_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

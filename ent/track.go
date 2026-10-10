@@ -32,6 +32,8 @@ type Track struct {
 	Position uint16 `json:"position,omitempty"`
 	// Duration holds the value of the "duration" field.
 	Duration uint32 `json:"duration,omitempty"`
+	// Bonus holds the value of the "bonus" field.
+	Bonus bool `json:"bonus,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TrackQuery when eager-loading is set.
 	Edges        TrackEdges `json:"edges"`
@@ -45,9 +47,11 @@ type TrackEdges struct {
 	Album *Album `json:"album,omitempty"`
 	// MediaFiles holds the value of the media_files edge.
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
+	// Credits holds the value of the credits edge.
+	Credits []*MusicCredit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // AlbumOrErr returns the Album value or an error if the edge
@@ -70,11 +74,22 @@ func (e TrackEdges) MediaFilesOrErr() ([]*MediaFile, error) {
 	return nil, &NotLoadedError{edge: "media_files"}
 }
 
+// CreditsOrErr returns the Credits value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) CreditsOrErr() ([]*MusicCredit, error) {
+	if e.loadedTypes[2] {
+		return e.Credits, nil
+	}
+	return nil, &NotLoadedError{edge: "credits"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Track) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case track.FieldBonus:
+			values[i] = new(sql.NullBool)
 		case track.FieldID, track.FieldDisc, track.FieldPosition, track.FieldDuration:
 			values[i] = new(sql.NullInt64)
 		case track.FieldMbid, track.FieldTitle:
@@ -146,6 +161,12 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Duration = uint32(value.Int64)
 			}
+		case track.FieldBonus:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field bonus", values[i])
+			} else if value.Valid {
+				_m.Bonus = value.Bool
+			}
 		case track.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field album_tracks", value)
@@ -174,6 +195,11 @@ func (_m *Track) QueryAlbum() *AlbumQuery {
 // QueryMediaFiles queries the "media_files" edge of the Track entity.
 func (_m *Track) QueryMediaFiles() *MediaFileQuery {
 	return NewTrackClient(_m.config).QueryMediaFiles(_m)
+}
+
+// QueryCredits queries the "credits" edge of the Track entity.
+func (_m *Track) QueryCredits() *MusicCreditQuery {
+	return NewTrackClient(_m.config).QueryCredits(_m)
 }
 
 // Update returns a builder for updating this Track.
@@ -219,6 +245,9 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("duration=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Duration))
+	builder.WriteString(", ")
+	builder.WriteString("bonus=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Bonus))
 	builder.WriteByte(')')
 	return builder.String()
 }

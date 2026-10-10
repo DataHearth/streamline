@@ -132,20 +132,6 @@ func (_c *ImportScanBookCreate) SetNillableBookHardcoverID(v *uint32) *ImportSca
 	return _c
 }
 
-// SetAuthorHardcoverID sets the "author_hardcover_id" field.
-func (_c *ImportScanBookCreate) SetAuthorHardcoverID(v uint32) *ImportScanBookCreate {
-	_c.mutation.SetAuthorHardcoverID(v)
-	return _c
-}
-
-// SetNillableAuthorHardcoverID sets the "author_hardcover_id" field if the given value is not nil.
-func (_c *ImportScanBookCreate) SetNillableAuthorHardcoverID(v *uint32) *ImportScanBookCreate {
-	if v != nil {
-		_c.SetAuthorHardcoverID(*v)
-	}
-	return _c
-}
-
 // SetCandidates sets the "candidates" field.
 func (_c *ImportScanBookCreate) SetCandidates(v []schema.ScannedBookCandidate) *ImportScanBookCreate {
 	_c.mutation.SetCandidates(v)
@@ -423,10 +409,6 @@ func (_c *ImportScanBookCreate) createSpec() (*ImportScanBook, *sqlgraph.CreateS
 	if value, ok := _c.mutation.BookHardcoverID(); ok {
 		_spec.SetField(importscanbook.FieldBookHardcoverID, field.TypeUint32, value)
 		_node.BookHardcoverID = value
-	}
-	if value, ok := _c.mutation.AuthorHardcoverID(); ok {
-		_spec.SetField(importscanbook.FieldAuthorHardcoverID, field.TypeUint32, value)
-		_node.AuthorHardcoverID = value
 	}
 	if value, ok := _c.mutation.Candidates(); ok {
 		_spec.SetField(importscanbook.FieldCandidates, field.TypeJSON, value)

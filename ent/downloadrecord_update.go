@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -459,6 +460,40 @@ func (_u *DownloadRecordUpdate) SetBook(v *Book) *DownloadRecordUpdate {
 	return _u.SetBookID(v.ID)
 }
 
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (_u *DownloadRecordUpdate) SetArtistID(id uint32) *DownloadRecordUpdate {
+	_u.mutation.SetArtistID(id)
+	return _u
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdate) SetNillableArtistID(id *uint32) *DownloadRecordUpdate {
+	if id != nil {
+		_u = _u.SetArtistID(*id)
+	}
+	return _u
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (_u *DownloadRecordUpdate) SetArtist(v *Artist) *DownloadRecordUpdate {
+	return _u.SetArtistID(v.ID)
+}
+
+// AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
+func (_u *DownloadRecordUpdate) AddAlbumIDs(ids ...uint32) *DownloadRecordUpdate {
+	_u.mutation.AddAlbumIDs(ids...)
+	return _u
+}
+
+// AddAlbums adds the "albums" edges to the Album entity.
+func (_u *DownloadRecordUpdate) AddAlbums(v ...*Album) *DownloadRecordUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlbumIDs(ids...)
+}
+
 // SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
 func (_u *DownloadRecordUpdate) SetAnchorEpisodeID(id uint32) *DownloadRecordUpdate {
 	_u.mutation.SetAnchorEpisodeID(id)
@@ -514,6 +549,33 @@ func (_u *DownloadRecordUpdate) ClearAlbum() *DownloadRecordUpdate {
 func (_u *DownloadRecordUpdate) ClearBook() *DownloadRecordUpdate {
 	_u.mutation.ClearBook()
 	return _u
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (_u *DownloadRecordUpdate) ClearArtist() *DownloadRecordUpdate {
+	_u.mutation.ClearArtist()
+	return _u
+}
+
+// ClearAlbums clears all "albums" edges to the Album entity.
+func (_u *DownloadRecordUpdate) ClearAlbums() *DownloadRecordUpdate {
+	_u.mutation.ClearAlbums()
+	return _u
+}
+
+// RemoveAlbumIDs removes the "albums" edge to Album entities by IDs.
+func (_u *DownloadRecordUpdate) RemoveAlbumIDs(ids ...uint32) *DownloadRecordUpdate {
+	_u.mutation.RemoveAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveAlbums removes "albums" edges to Album entities.
+func (_u *DownloadRecordUpdate) RemoveAlbums(v ...*Album) *DownloadRecordUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlbumIDs(ids...)
 }
 
 // ClearAnchorEpisode clears the "anchor_episode" edge to the Episode entity.
@@ -825,6 +887,80 @@ func (_u *DownloadRecordUpdate) sqlSave(ctx context.Context) (_node int, err err
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ArtistCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.ArtistTable,
+			Columns: []string{downloadrecord.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.ArtistTable,
+			Columns: []string{downloadrecord.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlbumsIDs(); len(nodes) > 0 && !_u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1352,6 +1488,40 @@ func (_u *DownloadRecordUpdateOne) SetBook(v *Book) *DownloadRecordUpdateOne {
 	return _u.SetBookID(v.ID)
 }
 
+// SetArtistID sets the "artist" edge to the Artist entity by ID.
+func (_u *DownloadRecordUpdateOne) SetArtistID(id uint32) *DownloadRecordUpdateOne {
+	_u.mutation.SetArtistID(id)
+	return _u
+}
+
+// SetNillableArtistID sets the "artist" edge to the Artist entity by ID if the given value is not nil.
+func (_u *DownloadRecordUpdateOne) SetNillableArtistID(id *uint32) *DownloadRecordUpdateOne {
+	if id != nil {
+		_u = _u.SetArtistID(*id)
+	}
+	return _u
+}
+
+// SetArtist sets the "artist" edge to the Artist entity.
+func (_u *DownloadRecordUpdateOne) SetArtist(v *Artist) *DownloadRecordUpdateOne {
+	return _u.SetArtistID(v.ID)
+}
+
+// AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
+func (_u *DownloadRecordUpdateOne) AddAlbumIDs(ids ...uint32) *DownloadRecordUpdateOne {
+	_u.mutation.AddAlbumIDs(ids...)
+	return _u
+}
+
+// AddAlbums adds the "albums" edges to the Album entity.
+func (_u *DownloadRecordUpdateOne) AddAlbums(v ...*Album) *DownloadRecordUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlbumIDs(ids...)
+}
+
 // SetAnchorEpisodeID sets the "anchor_episode" edge to the Episode entity by ID.
 func (_u *DownloadRecordUpdateOne) SetAnchorEpisodeID(id uint32) *DownloadRecordUpdateOne {
 	_u.mutation.SetAnchorEpisodeID(id)
@@ -1407,6 +1577,33 @@ func (_u *DownloadRecordUpdateOne) ClearAlbum() *DownloadRecordUpdateOne {
 func (_u *DownloadRecordUpdateOne) ClearBook() *DownloadRecordUpdateOne {
 	_u.mutation.ClearBook()
 	return _u
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (_u *DownloadRecordUpdateOne) ClearArtist() *DownloadRecordUpdateOne {
+	_u.mutation.ClearArtist()
+	return _u
+}
+
+// ClearAlbums clears all "albums" edges to the Album entity.
+func (_u *DownloadRecordUpdateOne) ClearAlbums() *DownloadRecordUpdateOne {
+	_u.mutation.ClearAlbums()
+	return _u
+}
+
+// RemoveAlbumIDs removes the "albums" edge to Album entities by IDs.
+func (_u *DownloadRecordUpdateOne) RemoveAlbumIDs(ids ...uint32) *DownloadRecordUpdateOne {
+	_u.mutation.RemoveAlbumIDs(ids...)
+	return _u
+}
+
+// RemoveAlbums removes "albums" edges to Album entities.
+func (_u *DownloadRecordUpdateOne) RemoveAlbums(v ...*Album) *DownloadRecordUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlbumIDs(ids...)
 }
 
 // ClearAnchorEpisode clears the "anchor_episode" edge to the Episode entity.
@@ -1748,6 +1945,80 @@ func (_u *DownloadRecordUpdateOne) sqlSave(ctx context.Context) (_node *Download
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(book.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ArtistCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.ArtistTable,
+			Columns: []string{downloadrecord.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ArtistIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   downloadrecord.ArtistTable,
+			Columns: []string{downloadrecord.ArtistColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(artist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlbumsIDs(); len(nodes) > 0 && !_u.mutation.AlbumsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlbumsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   downloadrecord.AlbumsTable,
+			Columns: downloadrecord.AlbumsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(album.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

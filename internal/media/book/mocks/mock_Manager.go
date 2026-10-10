@@ -8,6 +8,8 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -48,27 +50,27 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 	return &MockManager_Expecter{mock: &_m.Mock}
 }
 
-// Add provides a mock function for the type MockManager
-func (_mock *MockManager) Add(ctx context.Context, p book.AddParams) (*ent.Author, error) {
+// AddBook provides a mock function for the type MockManager
+func (_mock *MockManager) AddBook(ctx context.Context, p book.AddBookParams) (*ent.Book, error) {
 	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Add")
+		panic("no return value specified for AddBook")
 	}
 
-	var r0 *ent.Author
+	var r0 *ent.Book
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddParams) (*ent.Author, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddBookParams) (*ent.Book, error)); ok {
 		return returnFunc(ctx, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddParams) *ent.Author); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddBookParams) *ent.Book); ok {
 		r0 = returnFunc(ctx, p)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Author)
+			r0 = ret.Get(0).(*ent.Book)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, book.AddParams) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.AddBookParams) error); ok {
 		r1 = returnFunc(ctx, p)
 	} else {
 		r1 = ret.Error(1)
@@ -76,27 +78,27 @@ func (_mock *MockManager) Add(ctx context.Context, p book.AddParams) (*ent.Autho
 	return r0, r1
 }
 
-// MockManager_Add_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Add'
-type MockManager_Add_Call struct {
+// MockManager_AddBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddBook'
+type MockManager_AddBook_Call struct {
 	*mock.Call
 }
 
-// Add is a helper method to define mock.On call
+// AddBook is a helper method to define mock.On call
 //   - ctx context.Context
-//   - p book.AddParams
-func (_e *MockManager_Expecter) Add(ctx any, p any) *MockManager_Add_Call {
-	return &MockManager_Add_Call{Call: _e.mock.On("Add", ctx, p)}
+//   - p book.AddBookParams
+func (_e *MockManager_Expecter) AddBook(ctx any, p any) *MockManager_AddBook_Call {
+	return &MockManager_AddBook_Call{Call: _e.mock.On("AddBook", ctx, p)}
 }
 
-func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, p book.AddParams)) *MockManager_Add_Call {
+func (_c *MockManager_AddBook_Call) Run(run func(ctx context.Context, p book.AddBookParams)) *MockManager_AddBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 book.AddParams
+		var arg1 book.AddBookParams
 		if args[1] != nil {
-			arg1 = args[1].(book.AddParams)
+			arg1 = args[1].(book.AddBookParams)
 		}
 		run(
 			arg0,
@@ -106,22 +108,156 @@ func (_c *MockManager_Add_Call) Run(run func(ctx context.Context, p book.AddPara
 	return _c
 }
 
-func (_c *MockManager_Add_Call) Return(author *ent.Author, err error) *MockManager_Add_Call {
-	_c.Call.Return(author, err)
+func (_c *MockManager_AddBook_Call) Return(book1 *ent.Book, err error) *MockManager_AddBook_Call {
+	_c.Call.Return(book1, err)
 	return _c
 }
 
-func (_c *MockManager_Add_Call) RunAndReturn(run func(ctx context.Context, p book.AddParams) (*ent.Author, error)) *MockManager_Add_Call {
+func (_c *MockManager_AddBook_Call) RunAndReturn(run func(ctx context.Context, p book.AddBookParams) (*ent.Book, error)) *MockManager_AddBook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Delete provides a mock function for the type MockManager
-func (_mock *MockManager) Delete(ctx context.Context, id uint32, deleteFiles bool) error {
+// AddSeries provides a mock function for the type MockManager
+func (_mock *MockManager) AddSeries(ctx context.Context, p book.AddSeriesParams) (*ent.BookSeries, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddSeries")
+	}
+
+	var r0 *ent.BookSeries
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddSeriesParams) (*ent.BookSeries, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.AddSeriesParams) *ent.BookSeries); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.BookSeries)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.AddSeriesParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_AddSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddSeries'
+type MockManager_AddSeries_Call struct {
+	*mock.Call
+}
+
+// AddSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p book.AddSeriesParams
+func (_e *MockManager_Expecter) AddSeries(ctx any, p any) *MockManager_AddSeries_Call {
+	return &MockManager_AddSeries_Call{Call: _e.mock.On("AddSeries", ctx, p)}
+}
+
+func (_c *MockManager_AddSeries_Call) Run(run func(ctx context.Context, p book.AddSeriesParams)) *MockManager_AddSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 book.AddSeriesParams
+		if args[1] != nil {
+			arg1 = args[1].(book.AddSeriesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_AddSeries_Call) Return(bookSeries *ent.BookSeries, err error) *MockManager_AddSeries_Call {
+	_c.Call.Return(bookSeries, err)
+	return _c
+}
+
+func (_c *MockManager_AddSeries_Call) RunAndReturn(run func(ctx context.Context, p book.AddSeriesParams) (*ent.BookSeries, error)) *MockManager_AddSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Counts provides a mock function for the type MockManager
+func (_mock *MockManager) Counts(ctx context.Context, p book.ListParams) (db.ShelfCounts, error) {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Counts")
+	}
+
+	var r0 db.ShelfCounts
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.ListParams) (db.ShelfCounts, error)); ok {
+		return returnFunc(ctx, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.ListParams) db.ShelfCounts); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Get(0).(db.ShelfCounts)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.ListParams) error); ok {
+		r1 = returnFunc(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_Counts_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Counts'
+type MockManager_Counts_Call struct {
+	*mock.Call
+}
+
+// Counts is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p book.ListParams
+func (_e *MockManager_Expecter) Counts(ctx any, p any) *MockManager_Counts_Call {
+	return &MockManager_Counts_Call{Call: _e.mock.On("Counts", ctx, p)}
+}
+
+func (_c *MockManager_Counts_Call) Run(run func(ctx context.Context, p book.ListParams)) *MockManager_Counts_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 book.ListParams
+		if args[1] != nil {
+			arg1 = args[1].(book.ListParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Counts_Call) Return(shelfCounts db.ShelfCounts, err error) *MockManager_Counts_Call {
+	_c.Call.Return(shelfCounts, err)
+	return _c
+}
+
+func (_c *MockManager_Counts_Call) RunAndReturn(run func(ctx context.Context, p book.ListParams) (db.ShelfCounts, error)) *MockManager_Counts_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteBook provides a mock function for the type MockManager
+func (_mock *MockManager) DeleteBook(ctx context.Context, id uint32, deleteFiles bool) error {
 	ret := _mock.Called(ctx, id, deleteFiles)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Delete")
+		panic("no return value specified for DeleteBook")
 	}
 
 	var r0 error
@@ -133,20 +269,20 @@ func (_mock *MockManager) Delete(ctx context.Context, id uint32, deleteFiles boo
 	return r0
 }
 
-// MockManager_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type MockManager_Delete_Call struct {
+// MockManager_DeleteBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBook'
+type MockManager_DeleteBook_Call struct {
 	*mock.Call
 }
 
-// Delete is a helper method to define mock.On call
+// DeleteBook is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
 //   - deleteFiles bool
-func (_e *MockManager_Expecter) Delete(ctx any, id any, deleteFiles any) *MockManager_Delete_Call {
-	return &MockManager_Delete_Call{Call: _e.mock.On("Delete", ctx, id, deleteFiles)}
+func (_e *MockManager_Expecter) DeleteBook(ctx any, id any, deleteFiles any) *MockManager_DeleteBook_Call {
+	return &MockManager_DeleteBook_Call{Call: _e.mock.On("DeleteBook", ctx, id, deleteFiles)}
 }
 
-func (_c *MockManager_Delete_Call) Run(run func(ctx context.Context, id uint32, deleteFiles bool)) *MockManager_Delete_Call {
+func (_c *MockManager_DeleteBook_Call) Run(run func(ctx context.Context, id uint32, deleteFiles bool)) *MockManager_DeleteBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -169,57 +305,47 @@ func (_c *MockManager_Delete_Call) Run(run func(ctx context.Context, id uint32, 
 	return _c
 }
 
-func (_c *MockManager_Delete_Call) Return(err error) *MockManager_Delete_Call {
+func (_c *MockManager_DeleteBook_Call) Return(err error) *MockManager_DeleteBook_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockManager_Delete_Call) RunAndReturn(run func(ctx context.Context, id uint32, deleteFiles bool) error) *MockManager_Delete_Call {
+func (_c *MockManager_DeleteBook_Call) RunAndReturn(run func(ctx context.Context, id uint32, deleteFiles bool) error) *MockManager_DeleteBook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Get provides a mock function for the type MockManager
-func (_mock *MockManager) Get(ctx context.Context, id uint32) (*ent.Author, error) {
-	ret := _mock.Called(ctx, id)
+// DeleteSeries provides a mock function for the type MockManager
+func (_mock *MockManager) DeleteSeries(ctx context.Context, id uint32, deleteFiles bool) error {
+	ret := _mock.Called(ctx, id, deleteFiles)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Get")
+		panic("no return value specified for DeleteSeries")
 	}
 
-	var r0 *ent.Author
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Author, error)); ok {
-		return returnFunc(ctx, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Author); ok {
-		r0 = returnFunc(ctx, id)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+		r0 = returnFunc(ctx, id, deleteFiles)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Author)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
-		r1 = returnFunc(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
-// MockManager_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
-type MockManager_Get_Call struct {
+// MockManager_DeleteSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSeries'
+type MockManager_DeleteSeries_Call struct {
 	*mock.Call
 }
 
-// Get is a helper method to define mock.On call
+// DeleteSeries is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-func (_e *MockManager_Expecter) Get(ctx any, id any) *MockManager_Get_Call {
-	return &MockManager_Get_Call{Call: _e.mock.On("Get", ctx, id)}
+//   - deleteFiles bool
+func (_e *MockManager_Expecter) DeleteSeries(ctx any, id any, deleteFiles any) *MockManager_DeleteSeries_Call {
+	return &MockManager_DeleteSeries_Call{Call: _e.mock.On("DeleteSeries", ctx, id, deleteFiles)}
 }
 
-func (_c *MockManager_Get_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_Get_Call {
+func (_c *MockManager_DeleteSeries_Call) Run(run func(ctx context.Context, id uint32, deleteFiles bool)) *MockManager_DeleteSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -229,20 +355,25 @@ func (_c *MockManager_Get_Call) Run(run func(ctx context.Context, id uint32)) *M
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_Get_Call) Return(author *ent.Author, err error) *MockManager_Get_Call {
-	_c.Call.Return(author, err)
+func (_c *MockManager_DeleteSeries_Call) Return(err error) *MockManager_DeleteSeries_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockManager_Get_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Author, error)) *MockManager_Get_Call {
+func (_c *MockManager_DeleteSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32, deleteFiles bool) error) *MockManager_DeleteSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -315,6 +446,74 @@ func (_c *MockManager_GetBook_Call) RunAndReturn(run func(ctx context.Context, i
 	return _c
 }
 
+// GetSeries provides a mock function for the type MockManager
+func (_mock *MockManager) GetSeries(ctx context.Context, id uint32) (*ent.BookSeries, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSeries")
+	}
+
+	var r0 *ent.BookSeries
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.BookSeries, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.BookSeries); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.BookSeries)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_GetSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSeries'
+type MockManager_GetSeries_Call struct {
+	*mock.Call
+}
+
+// GetSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockManager_Expecter) GetSeries(ctx any, id any) *MockManager_GetSeries_Call {
+	return &MockManager_GetSeries_Call{Call: _e.mock.On("GetSeries", ctx, id)}
+}
+
+func (_c *MockManager_GetSeries_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_GetSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_GetSeries_Call) Return(bookSeries *ent.BookSeries, err error) *MockManager_GetSeries_Call {
+	_c.Call.Return(bookSeries, err)
+	return _c
+}
+
+func (_c *MockManager_GetSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.BookSeries, error)) *MockManager_GetSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GrabBookRelease provides a mock function for the type MockManager
 func (_mock *MockManager) GrabBookRelease(ctx context.Context, bookID uint32, p book.GrabParams) error {
 	ret := _mock.Called(ctx, bookID, p)
@@ -379,37 +578,29 @@ func (_c *MockManager_GrabBookRelease_Call) RunAndReturn(run func(ctx context.Co
 }
 
 // List provides a mock function for the type MockManager
-func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.Author, uint32, error) {
-	ret := _mock.Called(ctx, page, limit)
+func (_mock *MockManager) List(ctx context.Context, p book.ListParams) (book.ShelfPage, error) {
+	ret := _mock.Called(ctx, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []*ent.Author
-	var r1 uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) ([]*ent.Author, uint32, error)); ok {
-		return returnFunc(ctx, page, limit)
+	var r0 book.ShelfPage
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.ListParams) (book.ShelfPage, error)); ok {
+		return returnFunc(ctx, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint16, uint16) []*ent.Author); ok {
-		r0 = returnFunc(ctx, page, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, book.ListParams) book.ShelfPage); ok {
+		r0 = returnFunc(ctx, p)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*ent.Author)
-		}
+		r0 = ret.Get(0).(book.ShelfPage)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint16, uint16) uint32); ok {
-		r1 = returnFunc(ctx, page, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, book.ListParams) error); ok {
+		r1 = returnFunc(ctx, p)
 	} else {
-		r1 = ret.Get(1).(uint32)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint16, uint16) error); ok {
-		r2 = returnFunc(ctx, page, limit)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockManager_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
@@ -419,25 +610,93 @@ type MockManager_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-//   - page uint16
-//   - limit uint16
-func (_e *MockManager_Expecter) List(ctx any, page any, limit any) *MockManager_List_Call {
-	return &MockManager_List_Call{Call: _e.mock.On("List", ctx, page, limit)}
+//   - p book.ListParams
+func (_e *MockManager_Expecter) List(ctx any, p any) *MockManager_List_Call {
+	return &MockManager_List_Call{Call: _e.mock.On("List", ctx, p)}
 }
 
-func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, limit uint16)) *MockManager_List_Call {
+func (_c *MockManager_List_Call) Run(run func(ctx context.Context, p book.ListParams)) *MockManager_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 uint16
+		var arg1 book.ListParams
 		if args[1] != nil {
-			arg1 = args[1].(uint16)
+			arg1 = args[1].(book.ListParams)
 		}
-		var arg2 uint16
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_List_Call) Return(shelfPage book.ShelfPage, err error) *MockManager_List_Call {
+	_c.Call.Return(shelfPage, err)
+	return _c
+}
+
+func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, p book.ListParams) (book.ShelfPage, error)) *MockManager_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Lookup provides a mock function for the type MockManager
+func (_mock *MockManager) Lookup(ctx context.Context, query string, kind string) ([]book.LookupHit, error) {
+	ret := _mock.Called(ctx, query, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Lookup")
+	}
+
+	var r0 []book.LookupHit
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]book.LookupHit, error)); ok {
+		return returnFunc(ctx, query, kind)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []book.LookupHit); ok {
+		r0 = returnFunc(ctx, query, kind)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]book.LookupHit)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, query, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_Lookup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Lookup'
+type MockManager_Lookup_Call struct {
+	*mock.Call
+}
+
+// Lookup is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+//   - kind string
+func (_e *MockManager_Expecter) Lookup(ctx any, query any, kind any) *MockManager_Lookup_Call {
+	return &MockManager_Lookup_Call{Call: _e.mock.On("Lookup", ctx, query, kind)}
+}
+
+func (_c *MockManager_Lookup_Call) Run(run func(ctx context.Context, query string, kind string)) *MockManager_Lookup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint16)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
@@ -448,34 +707,315 @@ func (_c *MockManager_List_Call) Run(run func(ctx context.Context, page uint16, 
 	return _c
 }
 
-func (_c *MockManager_List_Call) Return(authors []*ent.Author, v uint32, err error) *MockManager_List_Call {
-	_c.Call.Return(authors, v, err)
+func (_c *MockManager_Lookup_Call) Return(lookupHits []book.LookupHit, err error) *MockManager_Lookup_Call {
+	_c.Call.Return(lookupHits, err)
 	return _c
 }
 
-func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page uint16, limit uint16) ([]*ent.Author, uint32, error)) *MockManager_List_Call {
+func (_c *MockManager_Lookup_Call) RunAndReturn(run func(ctx context.Context, query string, kind string) ([]book.LookupHit, error)) *MockManager_Lookup_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// RefreshOne provides a mock function for the type MockManager
-func (_mock *MockManager) RefreshOne(ctx context.Context, id uint32) (*ent.Author, error) {
+// LookupDetail provides a mock function for the type MockManager
+func (_mock *MockManager) LookupDetail(ctx context.Context, kind string, hardcoverID uint32) (*book.LookupDetail, error) {
+	ret := _mock.Called(ctx, kind, hardcoverID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LookupDetail")
+	}
+
+	var r0 *book.LookupDetail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) (*book.LookupDetail, error)); ok {
+		return returnFunc(ctx, kind, hardcoverID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) *book.LookupDetail); ok {
+		r0 = returnFunc(ctx, kind, hardcoverID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*book.LookupDetail)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, uint32) error); ok {
+		r1 = returnFunc(ctx, kind, hardcoverID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_LookupDetail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LookupDetail'
+type MockManager_LookupDetail_Call struct {
+	*mock.Call
+}
+
+// LookupDetail is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - hardcoverID uint32
+func (_e *MockManager_Expecter) LookupDetail(ctx any, kind any, hardcoverID any) *MockManager_LookupDetail_Call {
+	return &MockManager_LookupDetail_Call{Call: _e.mock.On("LookupDetail", ctx, kind, hardcoverID)}
+}
+
+func (_c *MockManager_LookupDetail_Call) Run(run func(ctx context.Context, kind string, hardcoverID uint32)) *MockManager_LookupDetail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_LookupDetail_Call) Return(lookupDetail *book.LookupDetail, err error) *MockManager_LookupDetail_Call {
+	_c.Call.Return(lookupDetail, err)
+	return _c
+}
+
+func (_c *MockManager_LookupDetail_Call) RunAndReturn(run func(ctx context.Context, kind string, hardcoverID uint32) (*book.LookupDetail, error)) *MockManager_LookupDetail_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PatchBook provides a mock function for the type MockManager
+func (_mock *MockManager) PatchBook(ctx context.Context, id uint32, p book.PatchBookParams) (*ent.Book, error) {
+	ret := _mock.Called(ctx, id, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PatchBook")
+	}
+
+	var r0 *ent.Book
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.PatchBookParams) (*ent.Book, error)); ok {
+		return returnFunc(ctx, id, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.PatchBookParams) *ent.Book); ok {
+		r0 = returnFunc(ctx, id, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.Book)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, book.PatchBookParams) error); ok {
+		r1 = returnFunc(ctx, id, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_PatchBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PatchBook'
+type MockManager_PatchBook_Call struct {
+	*mock.Call
+}
+
+// PatchBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - p book.PatchBookParams
+func (_e *MockManager_Expecter) PatchBook(ctx any, id any, p any) *MockManager_PatchBook_Call {
+	return &MockManager_PatchBook_Call{Call: _e.mock.On("PatchBook", ctx, id, p)}
+}
+
+func (_c *MockManager_PatchBook_Call) Run(run func(ctx context.Context, id uint32, p book.PatchBookParams)) *MockManager_PatchBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 book.PatchBookParams
+		if args[2] != nil {
+			arg2 = args[2].(book.PatchBookParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_PatchBook_Call) Return(book1 *ent.Book, err error) *MockManager_PatchBook_Call {
+	_c.Call.Return(book1, err)
+	return _c
+}
+
+func (_c *MockManager_PatchBook_Call) RunAndReturn(run func(ctx context.Context, id uint32, p book.PatchBookParams) (*ent.Book, error)) *MockManager_PatchBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PatchSeries provides a mock function for the type MockManager
+func (_mock *MockManager) PatchSeries(ctx context.Context, id uint32, p book.PatchSeriesParams) (*ent.BookSeries, error) {
+	ret := _mock.Called(ctx, id, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PatchSeries")
+	}
+
+	var r0 *ent.BookSeries
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.PatchSeriesParams) (*ent.BookSeries, error)); ok {
+		return returnFunc(ctx, id, p)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.PatchSeriesParams) *ent.BookSeries); ok {
+		r0 = returnFunc(ctx, id, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.BookSeries)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, book.PatchSeriesParams) error); ok {
+		r1 = returnFunc(ctx, id, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_PatchSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PatchSeries'
+type MockManager_PatchSeries_Call struct {
+	*mock.Call
+}
+
+// PatchSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - p book.PatchSeriesParams
+func (_e *MockManager_Expecter) PatchSeries(ctx any, id any, p any) *MockManager_PatchSeries_Call {
+	return &MockManager_PatchSeries_Call{Call: _e.mock.On("PatchSeries", ctx, id, p)}
+}
+
+func (_c *MockManager_PatchSeries_Call) Run(run func(ctx context.Context, id uint32, p book.PatchSeriesParams)) *MockManager_PatchSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 book.PatchSeriesParams
+		if args[2] != nil {
+			arg2 = args[2].(book.PatchSeriesParams)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_PatchSeries_Call) Return(bookSeries *ent.BookSeries, err error) *MockManager_PatchSeries_Call {
+	_c.Call.Return(bookSeries, err)
+	return _c
+}
+
+func (_c *MockManager_PatchSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32, p book.PatchSeriesParams) (*ent.BookSeries, error)) *MockManager_PatchSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Progress provides a mock function for the type MockManager
+func (_mock *MockManager) Progress(ctx context.Context, bookIDs []uint32) map[uint32]map[string]float64 {
+	ret := _mock.Called(ctx, bookIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Progress")
+	}
+
+	var r0 map[uint32]map[string]float64
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) map[uint32]map[string]float64); ok {
+		r0 = returnFunc(ctx, bookIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[uint32]map[string]float64)
+		}
+	}
+	return r0
+}
+
+// MockManager_Progress_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Progress'
+type MockManager_Progress_Call struct {
+	*mock.Call
+}
+
+// Progress is a helper method to define mock.On call
+//   - ctx context.Context
+//   - bookIDs []uint32
+func (_e *MockManager_Expecter) Progress(ctx any, bookIDs any) *MockManager_Progress_Call {
+	return &MockManager_Progress_Call{Call: _e.mock.On("Progress", ctx, bookIDs)}
+}
+
+func (_c *MockManager_Progress_Call) Run(run func(ctx context.Context, bookIDs []uint32)) *MockManager_Progress_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Progress_Call) Return(uint32ToStringToFloat64 map[uint32]map[string]float64) *MockManager_Progress_Call {
+	_c.Call.Return(uint32ToStringToFloat64)
+	return _c
+}
+
+func (_c *MockManager_Progress_Call) RunAndReturn(run func(ctx context.Context, bookIDs []uint32) map[uint32]map[string]float64) *MockManager_Progress_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RefreshBook provides a mock function for the type MockManager
+func (_mock *MockManager) RefreshBook(ctx context.Context, id uint32) (*ent.Book, error) {
 	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RefreshOne")
+		panic("no return value specified for RefreshBook")
 	}
 
-	var r0 *ent.Author
+	var r0 *ent.Book
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Author, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.Book, error)); ok {
 		return returnFunc(ctx, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Author); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.Book); ok {
 		r0 = returnFunc(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ent.Author)
+			r0 = ret.Get(0).(*ent.Book)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
@@ -486,19 +1026,19 @@ func (_mock *MockManager) RefreshOne(ctx context.Context, id uint32) (*ent.Autho
 	return r0, r1
 }
 
-// MockManager_RefreshOne_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshOne'
-type MockManager_RefreshOne_Call struct {
+// MockManager_RefreshBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshBook'
+type MockManager_RefreshBook_Call struct {
 	*mock.Call
 }
 
-// RefreshOne is a helper method to define mock.On call
+// RefreshBook is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-func (_e *MockManager_Expecter) RefreshOne(ctx any, id any) *MockManager_RefreshOne_Call {
-	return &MockManager_RefreshOne_Call{Call: _e.mock.On("RefreshOne", ctx, id)}
+func (_e *MockManager_Expecter) RefreshBook(ctx any, id any) *MockManager_RefreshBook_Call {
+	return &MockManager_RefreshBook_Call{Call: _e.mock.On("RefreshBook", ctx, id)}
 }
 
-func (_c *MockManager_RefreshOne_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_RefreshOne_Call {
+func (_c *MockManager_RefreshBook_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_RefreshBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -516,12 +1056,224 @@ func (_c *MockManager_RefreshOne_Call) Run(run func(ctx context.Context, id uint
 	return _c
 }
 
-func (_c *MockManager_RefreshOne_Call) Return(author *ent.Author, err error) *MockManager_RefreshOne_Call {
-	_c.Call.Return(author, err)
+func (_c *MockManager_RefreshBook_Call) Return(book1 *ent.Book, err error) *MockManager_RefreshBook_Call {
+	_c.Call.Return(book1, err)
 	return _c
 }
 
-func (_c *MockManager_RefreshOne_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Author, error)) *MockManager_RefreshOne_Call {
+func (_c *MockManager_RefreshBook_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.Book, error)) *MockManager_RefreshBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RefreshSeries provides a mock function for the type MockManager
+func (_mock *MockManager) RefreshSeries(ctx context.Context, id uint32) (*ent.BookSeries, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSeries")
+	}
+
+	var r0 *ent.BookSeries
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.BookSeries, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.BookSeries); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.BookSeries)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_RefreshSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshSeries'
+type MockManager_RefreshSeries_Call struct {
+	*mock.Call
+}
+
+// RefreshSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockManager_Expecter) RefreshSeries(ctx any, id any) *MockManager_RefreshSeries_Call {
+	return &MockManager_RefreshSeries_Call{Call: _e.mock.On("RefreshSeries", ctx, id)}
+}
+
+func (_c *MockManager_RefreshSeries_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_RefreshSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_RefreshSeries_Call) Return(bookSeries *ent.BookSeries, err error) *MockManager_RefreshSeries_Call {
+	_c.Call.Return(bookSeries, err)
+	return _c
+}
+
+func (_c *MockManager_RefreshSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.BookSeries, error)) *MockManager_RefreshSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameBook provides a mock function for the type MockManager
+func (_mock *MockManager) RenameBook(ctx context.Context, id uint32, preview bool) (library.RenamePlan, error) {
+	ret := _mock.Called(ctx, id, preview)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameBook")
+	}
+
+	var r0 library.RenamePlan
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) (library.RenamePlan, error)); ok {
+		return returnFunc(ctx, id, preview)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) library.RenamePlan); ok {
+		r0 = returnFunc(ctx, id, preview)
+	} else {
+		r0 = ret.Get(0).(library.RenamePlan)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, bool) error); ok {
+		r1 = returnFunc(ctx, id, preview)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_RenameBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameBook'
+type MockManager_RenameBook_Call struct {
+	*mock.Call
+}
+
+// RenameBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - preview bool
+func (_e *MockManager_Expecter) RenameBook(ctx any, id any, preview any) *MockManager_RenameBook_Call {
+	return &MockManager_RenameBook_Call{Call: _e.mock.On("RenameBook", ctx, id, preview)}
+}
+
+func (_c *MockManager_RenameBook_Call) Run(run func(ctx context.Context, id uint32, preview bool)) *MockManager_RenameBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_RenameBook_Call) Return(renamePlan library.RenamePlan, err error) *MockManager_RenameBook_Call {
+	_c.Call.Return(renamePlan, err)
+	return _c
+}
+
+func (_c *MockManager_RenameBook_Call) RunAndReturn(run func(ctx context.Context, id uint32, preview bool) (library.RenamePlan, error)) *MockManager_RenameBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameSeries provides a mock function for the type MockManager
+func (_mock *MockManager) RenameSeries(ctx context.Context, id uint32, preview bool) (library.RenamePlan, error) {
+	ret := _mock.Called(ctx, id, preview)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameSeries")
+	}
+
+	var r0 library.RenamePlan
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) (library.RenamePlan, error)); ok {
+		return returnFunc(ctx, id, preview)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) library.RenamePlan); ok {
+		r0 = returnFunc(ctx, id, preview)
+	} else {
+		r0 = ret.Get(0).(library.RenamePlan)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, bool) error); ok {
+		r1 = returnFunc(ctx, id, preview)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_RenameSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameSeries'
+type MockManager_RenameSeries_Call struct {
+	*mock.Call
+}
+
+// RenameSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - preview bool
+func (_e *MockManager_Expecter) RenameSeries(ctx any, id any, preview any) *MockManager_RenameSeries_Call {
+	return &MockManager_RenameSeries_Call{Call: _e.mock.On("RenameSeries", ctx, id, preview)}
+}
+
+func (_c *MockManager_RenameSeries_Call) Run(run func(ctx context.Context, id uint32, preview bool)) *MockManager_RenameSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_RenameSeries_Call) Return(renamePlan library.RenamePlan, err error) *MockManager_RenameSeries_Call {
+	_c.Call.Return(renamePlan, err)
+	return _c
+}
+
+func (_c *MockManager_RenameSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32, preview bool) (library.RenamePlan, error)) *MockManager_RenameSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -600,101 +1352,46 @@ func (_c *MockManager_SearchBookReleases_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
-// SetAuthorMonitored provides a mock function for the type MockManager
-func (_mock *MockManager) SetAuthorMonitored(ctx context.Context, id uint32, m bool) error {
-	ret := _mock.Called(ctx, id, m)
+// SearchNowBook provides a mock function for the type MockManager
+func (_mock *MockManager) SearchNowBook(ctx context.Context, id uint32, kind string) (uint32, error) {
+	ret := _mock.Called(ctx, id, kind)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SetAuthorMonitored")
+		panic("no return value specified for SearchNowBook")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
-		r0 = returnFunc(ctx, id, m)
-	} else {
-		r0 = ret.Error(0)
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (uint32, error)); ok {
+		return returnFunc(ctx, id, kind)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) uint32); ok {
+		r0 = returnFunc(ctx, id, kind)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, id, kind)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-// MockManager_SetAuthorMonitored_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAuthorMonitored'
-type MockManager_SetAuthorMonitored_Call struct {
+// MockManager_SearchNowBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchNowBook'
+type MockManager_SearchNowBook_Call struct {
 	*mock.Call
 }
 
-// SetAuthorMonitored is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-//   - m bool
-func (_e *MockManager_Expecter) SetAuthorMonitored(ctx any, id any, m any) *MockManager_SetAuthorMonitored_Call {
-	return &MockManager_SetAuthorMonitored_Call{Call: _e.mock.On("SetAuthorMonitored", ctx, id, m)}
-}
-
-func (_c *MockManager_SetAuthorMonitored_Call) Run(run func(ctx context.Context, id uint32, m bool)) *MockManager_SetAuthorMonitored_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		var arg2 bool
-		if args[2] != nil {
-			arg2 = args[2].(bool)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockManager_SetAuthorMonitored_Call) Return(err error) *MockManager_SetAuthorMonitored_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockManager_SetAuthorMonitored_Call) RunAndReturn(run func(ctx context.Context, id uint32, m bool) error) *MockManager_SetAuthorMonitored_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetBookSlot provides a mock function for the type MockManager
-func (_mock *MockManager) SetBookSlot(ctx context.Context, id uint32, kind string, monitored bool) error {
-	ret := _mock.Called(ctx, id, kind, monitored)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetBookSlot")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, bool) error); ok {
-		r0 = returnFunc(ctx, id, kind, monitored)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockManager_SetBookSlot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetBookSlot'
-type MockManager_SetBookSlot_Call struct {
-	*mock.Call
-}
-
-// SetBookSlot is a helper method to define mock.On call
+// SearchNowBook is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
 //   - kind string
-//   - monitored bool
-func (_e *MockManager_Expecter) SetBookSlot(ctx any, id any, kind any, monitored any) *MockManager_SetBookSlot_Call {
-	return &MockManager_SetBookSlot_Call{Call: _e.mock.On("SetBookSlot", ctx, id, kind, monitored)}
+func (_e *MockManager_Expecter) SearchNowBook(ctx any, id any, kind any) *MockManager_SearchNowBook_Call {
+	return &MockManager_SearchNowBook_Call{Call: _e.mock.On("SearchNowBook", ctx, id, kind)}
 }
 
-func (_c *MockManager_SetBookSlot_Call) Run(run func(ctx context.Context, id uint32, kind string, monitored bool)) *MockManager_SetBookSlot_Call {
+func (_c *MockManager_SearchNowBook_Call) Run(run func(ctx context.Context, id uint32, kind string)) *MockManager_SearchNowBook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -708,61 +1405,64 @@ func (_c *MockManager_SetBookSlot_Call) Run(run func(ctx context.Context, id uin
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		var arg3 bool
-		if args[3] != nil {
-			arg3 = args[3].(bool)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_SetBookSlot_Call) Return(err error) *MockManager_SetBookSlot_Call {
-	_c.Call.Return(err)
+func (_c *MockManager_SearchNowBook_Call) Return(v uint32, err error) *MockManager_SearchNowBook_Call {
+	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockManager_SetBookSlot_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string, monitored bool) error) *MockManager_SetBookSlot_Call {
+func (_c *MockManager_SearchNowBook_Call) RunAndReturn(run func(ctx context.Context, id uint32, kind string) (uint32, error)) *MockManager_SearchNowBook_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UpdateAuthor provides a mock function for the type MockManager
-func (_mock *MockManager) UpdateAuthor(ctx context.Context, id uint32, p book.UpdateAuthorParams) error {
-	ret := _mock.Called(ctx, id, p)
+// SearchNowSeries provides a mock function for the type MockManager
+func (_mock *MockManager) SearchNowSeries(ctx context.Context, id uint32) (uint32, error) {
+	ret := _mock.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateAuthor")
+		panic("no return value specified for SearchNowSeries")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, book.UpdateAuthorParams) error); ok {
-		r0 = returnFunc(ctx, id, p)
-	} else {
-		r0 = ret.Error(0)
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (uint32, error)); ok {
+		return returnFunc(ctx, id)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) uint32); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-// MockManager_UpdateAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAuthor'
-type MockManager_UpdateAuthor_Call struct {
+// MockManager_SearchNowSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchNowSeries'
+type MockManager_SearchNowSeries_Call struct {
 	*mock.Call
 }
 
-// UpdateAuthor is a helper method to define mock.On call
+// SearchNowSeries is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - p book.UpdateAuthorParams
-func (_e *MockManager_Expecter) UpdateAuthor(ctx any, id any, p any) *MockManager_UpdateAuthor_Call {
-	return &MockManager_UpdateAuthor_Call{Call: _e.mock.On("UpdateAuthor", ctx, id, p)}
+func (_e *MockManager_Expecter) SearchNowSeries(ctx any, id any) *MockManager_SearchNowSeries_Call {
+	return &MockManager_SearchNowSeries_Call{Call: _e.mock.On("SearchNowSeries", ctx, id)}
 }
 
-func (_c *MockManager_UpdateAuthor_Call) Run(run func(ctx context.Context, id uint32, p book.UpdateAuthorParams)) *MockManager_UpdateAuthor_Call {
+func (_c *MockManager_SearchNowSeries_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_SearchNowSeries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -772,25 +1472,20 @@ func (_c *MockManager_UpdateAuthor_Call) Run(run func(ctx context.Context, id ui
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 book.UpdateAuthorParams
-		if args[2] != nil {
-			arg2 = args[2].(book.UpdateAuthorParams)
-		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_UpdateAuthor_Call) Return(err error) *MockManager_UpdateAuthor_Call {
-	_c.Call.Return(err)
+func (_c *MockManager_SearchNowSeries_Call) Return(v uint32, err error) *MockManager_SearchNowSeries_Call {
+	_c.Call.Return(v, err)
 	return _c
 }
 
-func (_c *MockManager_UpdateAuthor_Call) RunAndReturn(run func(ctx context.Context, id uint32, p book.UpdateAuthorParams) error) *MockManager_UpdateAuthor_Call {
+func (_c *MockManager_SearchNowSeries_Call) RunAndReturn(run func(ctx context.Context, id uint32) (uint32, error)) *MockManager_SearchNowSeries_Call {
 	_c.Call.Return(run)
 	return _c
 }
