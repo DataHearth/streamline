@@ -903,8 +903,15 @@ func defaults() map[string]any {
 		"movie_quality_default_profile":  "default",
 		"series_quality_default_profile": "default",
 		"custom_formats":                 []any{},
-		"music_quality_profiles":         []any{},
-		"music_quality_default_profile":  "",
+		"music_quality_profiles": []map[string]any{
+			{
+				"name":            "default",
+				"tiers":           []string{"lossless", "high"},
+				"preferred":       "lossless",
+				"upgrade_allowed": true,
+			},
+		},
+		"music_quality_default_profile": "default",
 		"book_quality_profiles": []map[string]any{
 			{
 				"name":            "default",

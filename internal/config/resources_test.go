@@ -903,7 +903,10 @@ var _ = Describe("ResolveMusicQualityProfile", Label("unit", "config"), func() {
 	})
 
 	It("reports ok=false when no music profiles exist", func() {
-		configtest.Setup()
+		configtest.Setup(map[string]any{
+			"music_quality_profiles":        []any{},
+			"music_quality_default_profile": "",
+		})
 		_, ok := config.ResolveMusicQualityProfile("")
 		Expect(ok).To(BeFalse())
 	})
@@ -960,5 +963,15 @@ var _ = Describe("ResolveBookQualityProfile", Label("unit", "config"), func() {
 		p, ok := config.ResolveBookQualityProfile("", "")
 		Expect(ok).To(BeTrue())
 		Expect(p.Name).To(Equal("retail"))
+	})
+})
+
+var _ = Describe("stock music profile", Label("unit", "config"), func() {
+	It("resolves a default music profile on a stock install", func() {
+		configtest.Setup()
+		p, ok := config.ResolveMusicQualityProfile("")
+		Expect(ok).To(BeTrue())
+		Expect(p.Name).To(Equal("default"))
+		Expect(p.Tiers).To(Equal([]string{"lossless", "high"}))
 	})
 })

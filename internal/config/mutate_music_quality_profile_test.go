@@ -11,7 +11,12 @@ import (
 )
 
 var _ = Describe("Music quality profile CRUD", Label("unit", "config"), func() {
-	BeforeEach(func() { configtest.SetupFile() })
+	BeforeEach(func() {
+		configtest.SetupFile(map[string]any{
+			"music_quality_profiles":        []any{},
+			"music_quality_default_profile": "",
+		})
+	})
 
 	entry := func(name string) config.MusicQualityProfileEntry {
 		return config.MusicQualityProfileEntry{
