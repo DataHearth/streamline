@@ -70,7 +70,7 @@ let
       inherit (finalAttrs) pname version src;
       inherit pnpm;
       fetcherVersion = 4;
-      hash = "sha256-Zc4+pYnkJycBKAZFvpwwstu3KTHaVwrfh7S+x83KZjs=";
+      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
     };
 
     # Mirrors `task build:js` + `task build:css`. Keep the two in step: the Go
@@ -112,7 +112,7 @@ in
   pname = "streamline";
   inherit version src;
 
-  vendorHash = "sha256-+FD/bRdnD67FshTDTQXeRDnQHTiupEVdw/clXf5xwoE=";
+  vendorHash = "sha256-yDTaduStH8nmV6p7rJ23x0GMW9Xz7w0o2ptShQHACSU=";
 
   subPackages = [ "cmd" ];
 
