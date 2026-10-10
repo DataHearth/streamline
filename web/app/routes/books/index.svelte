@@ -229,7 +229,7 @@
 			.filter(Boolean)
 			.join(" · "),
 	);
-	$effect(() => pageTitle.claim(kind === "all" ? i18n.books_label() : kindTitle));
+	$effect(() => pageTitle.claim("/books", kind === "all" ? i18n.books_label() : kindTitle));
 </script>
 
 <div class="flex flex-col pb-6">

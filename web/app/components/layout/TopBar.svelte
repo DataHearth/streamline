@@ -87,7 +87,7 @@
 	);
 	let barTitle = $derived(
 		root && !pathname.slice(root.prefix.length).replace(/^\//, "")
-			? (pageTitle.value ?? root.label)
+			? (pageTitle.valueFor(pathname) ?? root.label)
 			: "",
 	);
 	const titleClass =

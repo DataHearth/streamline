@@ -409,7 +409,7 @@
 				: Promise.resolve(),
 		]);
 	}
-	$effect(() => pageTitle.claim(view === "events" ? i18n.activity_events() : i18n.activity_queue_and_history()));
+	$effect(() => pageTitle.claim("/activity", view === "events" ? i18n.activity_events() : i18n.activity_queue_and_history()));
 </script>
 
 <!-- At md and up the page is capped at the viewport and the list inside it does
