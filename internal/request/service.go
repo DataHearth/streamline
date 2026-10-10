@@ -273,11 +273,11 @@ func (s *Service) Create(
 			return nil, ErrDuplicate
 		}
 	case "album":
-		a, err := s.db.FindAlbumByMBID(ctx, p.MediaMBID)
+		monitored, err := s.db.IsAlbumMonitoredByMBID(ctx, p.MediaMBID)
 		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
-		if a != nil && a.Monitored {
+		if monitored {
 			return nil, ErrDuplicate
 		}
 	case "book":

@@ -159,7 +159,7 @@ func (s *Server) ApproveRequest(
 		}, nil
 	case errors.Is(err, metadata.ErrRateLimited):
 		return ApproveRequest429JSONResponse{
-			RateLimitedJSONResponse: errRateLimited(err),
+			RateLimitedJSONResponse: s.approveRateLimited(ctx, req.Id, err),
 		}, nil
 	case errors.Is(err, book.ErrNotConfigured),
 		errors.Is(err, requestsvc.ErrUnavailable):
@@ -592,4 +592,15 @@ func toLookupDetail(d RequestMediaDetails) LookupDetail {
 		TvdbId:           d.TvdbId,
 		VoteCount:        d.VoteCount,
 	}
+}
+
+func (s *Server) approveRateLimited(
+	ctx context.Context, id uint32, err error,
+) RateLimitedJSONResponse {
+	r, getErr := s.requests.Get(ctx, id)
+	if getErr == nil && r != nil &&
+		(r.MediaType == request.MediaTypeArtist || r.MediaType == request.MediaTypeAlbum) {
+		return errMusicBrainzRateLimited(err)
+	}
+	return errRateLimited(err)
 }

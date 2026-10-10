@@ -1141,6 +1141,9 @@ type Store interface {
 	AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error)
 	// AlbumIDsByMBID maps each release-group mbid that is a library album to its id.
 	AlbumIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
+	// IsAlbumMonitoredByMBID reports whether a library album with this
+	// release-group mbid exists and is monitored.
+	IsAlbumMonitoredByMBID(ctx context.Context, mbid string) (bool, error)
 	// FindAlbumByMBID returns nil, nil on a miss; tracks are eager-loaded
 	// (disc, then position) with their media files.
 	FindAlbumByMBID(ctx context.Context, mbid string) (*ent.Album, error)

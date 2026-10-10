@@ -190,6 +190,14 @@ func (db *DB) AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error) {
 	return idx, nil
 }
 
+func (db *DB) IsAlbumMonitoredByMBID(
+	ctx context.Context, mbid string,
+) (bool, error) {
+	return db.client.Album.Query().
+		Where(album.MbidEQ(mbid), album.Monitored(true)).
+		Exist(ctx)
+}
+
 // FindAlbumByMBID returns nil, nil on a miss.
 func (db *DB) FindAlbumByMBID(
 	ctx context.Context, mbid string,

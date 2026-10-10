@@ -437,7 +437,8 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		It("persists the hints and the requester's wording", func() {
 			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
 				Return(nil, nil).Once()
-			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).Return(nil, nil).Once()
+			storeMk.IsAlbumMonitoredByMBID(mock.Anything, rgMBID).
+				Return(false, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
 				return p.MediaType == "album" && p.MediaMBID == rgMBID &&
 					p.ArtistMBID == artistUUID && p.ArtistName == "Nirvana" &&
@@ -453,8 +454,8 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		It("rejects an album already monitored in the library", func() {
 			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
 				Return(nil, nil).Once()
-			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).
-				Return(&ent.Album{ID: 3, Monitored: true}, nil).Once()
+			storeMk.IsAlbumMonitoredByMBID(mock.Anything, rgMBID).
+				Return(true, nil).Once()
 
 			_, err := svc.Create(ctx, params)
 			Expect(err).To(MatchError(request.ErrDuplicate))
@@ -463,8 +464,8 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		It("lets an album that exists unmonitored be requested", func() {
 			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
 				Return(nil, nil).Once()
-			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).
-				Return(&ent.Album{ID: 3}, nil).Once()
+			storeMk.IsAlbumMonitoredByMBID(mock.Anything, rgMBID).
+				Return(false, nil).Once()
 			storeMk.CreateRequest(mock.Anything, mock.Anything).
 				Return(&ent.Request{ID: 2}, nil).Once()
 
