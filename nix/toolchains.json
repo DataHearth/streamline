@@ -1,5 +1,7 @@
 {
-  "go": {},
+  "go": {
+    "1.27.2": "sha256-A0ldorpkiU1A9cSZLklFT6eLUGkGBP+Stq//UIG3bmI="
+  },
   "node": {},
   "pnpm": {
     "12.11.2": {
