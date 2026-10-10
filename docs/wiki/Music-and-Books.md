@@ -84,7 +84,7 @@ RSS sync, the missing search and the metadata refresh ([Scheduled Jobs](Schedule
 
 ## Requests
 
-Users can request an artist (its whole discography), a single album, a single book or a whole series. Approving an artist adds it with every album monitored, and the request turns available on the artist's first imported album. Approving an album adds the artist unmonitored and monitors just that album; approving a book adds it with both slots monitored, and a series with every volume monitored. Change that on the title's page afterwards. See [Requests and Users](Requests-and-Users).
+Users can request an artist (its whole discography), a single album, a single book or a whole series. Approving an artist adds it with every album monitored, and the request turns available on the artist's first imported album. Approving an album asks MusicBrainz which artist the release group belongs to (never the requester's typed wording), adds that artist with every other album unmonitored if the library lacks it, and monitors just that album; an artist already in the library keeps its own profile, and a release group missing from the artist's list answers `422` with the request left pending; approving a book adds it with both slots monitored, and a series with every volume monitored. Change that on the title's page afterwards. See [Requests and Users](Requests-and-Users).
 
 ## Known gaps
 

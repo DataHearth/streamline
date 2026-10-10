@@ -481,9 +481,13 @@ func (s *Server) ListImportAlbums(
 	if err != nil {
 		return nil, err
 	}
+	artistIDs, err := s.libraryArtistIDs(ctx, items)
+	if err != nil {
+		return nil, err
+	}
 	apiItems := make([]ImportScanAlbum, 0, len(items))
 	for _, it := range items {
-		apiItems = append(apiItems, toAPIImportScanAlbum(it))
+		apiItems = append(apiItems, toAPIImportScanAlbum(it, artistIDs))
 	}
 	return ListImportAlbums200JSONResponse{
 		Items: apiItems,
@@ -528,11 +532,33 @@ func (s *Server) UpdateImportAlbumDecision(
 		}
 		return nil, err
 	}
+	artistIDs, err := s.libraryArtistIDs(ctx, []*ent.ImportScanAlbum{row})
+	if err != nil {
+		return nil, err
+	}
 	return UpdateImportAlbumDecision200JSONResponse{
 		ImportScanAlbumJSONResponse: ImportScanAlbumJSONResponse(
-			toAPIImportScanAlbum(row),
+			toAPIImportScanAlbum(row, artistIDs),
 		),
 	}, nil
+}
+
+// libraryArtistIDs maps the artists of a page of scan rows to the library
+// artists holding them, in one query.
+func (s *Server) libraryArtistIDs(
+	ctx context.Context,
+	rows []*ent.ImportScanAlbum,
+) (map[string]uint32, error) {
+	mbids := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if r.ArtistMbid != "" {
+			mbids = append(mbids, r.ArtistMbid)
+		}
+	}
+	if len(mbids) == 0 {
+		return nil, nil
+	}
+	return s.store.ArtistIDsByMBID(ctx, mbids)
 }
 
 func (s *Server) ListImportBooks(

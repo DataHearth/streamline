@@ -334,6 +334,21 @@ func luceneQuote(s string) string {
 	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
 }
 
+// luceneEscape backslash-escapes the characters Lucene reads as syntax, so a
+// person's free text cannot turn into an operator.
+func luceneEscape(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if strings.ContainsRune(`+-&|!(){}[]^"~*?:\/`, r) {
+			b.WriteByte('\\')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+const releaseGroupSearchLimit = 20
+
 func (m *MusicBrainz) SearchReleaseGroups(
 	ctx context.Context,
 	artist, album string,
@@ -349,6 +364,33 @@ func (m *MusicBrainz) SearchReleaseGroups(
 	if artist != "" {
 		q += " AND artist:" + luceneQuote(artist)
 	}
+	res, err := m.searchReleaseGroups(ctx, q, 10)
+	return res, otelx.RecordSpanError(span, err)
+}
+
+// SearchReleaseGroupsFreeText matches the text against release-group titles and
+// artist credits in one request, for a person typing into a picker.
+func (m *MusicBrainz) SearchReleaseGroupsFreeText(
+	ctx context.Context,
+	query string,
+) ([]ReleaseGroupSearchResult, error) {
+	ctx, span := tracer.Start(
+		ctx,
+		"metadata.musicbrainz.search_release_groups_free_text",
+	)
+	defer span.End()
+
+	text := luceneEscape(strings.TrimSpace(query))
+	q := "releasegroup:(" + text + ") OR artist:(" + text + ")"
+	res, err := m.searchReleaseGroups(ctx, q, releaseGroupSearchLimit)
+	return res, otelx.RecordSpanError(span, err)
+}
+
+func (m *MusicBrainz) searchReleaseGroups(
+	ctx context.Context,
+	q string,
+	limit int,
+) ([]ReleaseGroupSearchResult, error) {
 	var payload struct {
 		ReleaseGroups []struct {
 			mbReleaseGroup
@@ -361,9 +403,9 @@ func (m *MusicBrainz) SearchReleaseGroups(
 			} `json:"artist-credit"`
 		} `json:"release-groups"`
 	}
-	params := url.Values{"query": {q}, "limit": {"10"}}
+	params := url.Values{"query": {q}, "limit": {strconv.Itoa(limit)}}
 	if err := m.get(ctx, "/release-group", params, &payload); err != nil {
-		return nil, otelx.RecordSpanError(span, err)
+		return nil, err
 	}
 	results := make([]ReleaseGroupSearchResult, 0, len(payload.ReleaseGroups))
 	for _, rg := range payload.ReleaseGroups {
@@ -610,15 +652,20 @@ func (m *MusicBrainz) GetReleaseGroup(
 
 	var rg struct {
 		mbReleaseGroup
-		Releases []mbRelease `json:"releases"`
+		Releases     []mbRelease `json:"releases"`
+		ArtistCredit []mbCredit  `json:"artist-credit"`
 	}
 	if err := m.get(ctx, "/release-group/"+url.PathEscape(mbid),
-		url.Values{"inc": {"releases+media"}}, &rg); err != nil {
+		url.Values{"inc": {"releases+media+artist-credits"}}, &rg); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      canonicalRelease(rg.Releases),
+	}
+	if len(rg.ArtistCredit) > 0 {
+		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
+		details.ArtistName = rg.ArtistCredit[0].Artist.Name
 	}
 	var formats []string
 	for _, r := range rg.Releases {

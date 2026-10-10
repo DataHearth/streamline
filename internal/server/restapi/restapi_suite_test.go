@@ -81,6 +81,7 @@ type apiKeyApp struct {
 	music         *musicmocks.MockManager
 	books         *bookmocks.MockManager
 	metadataBook  *metadatamocks.MockBookProvider
+	metadataMusic *metadatamocks.MockMusicProvider
 	requests      *reqmocks.MockManager
 	torrents      *bittorrentmocks.MockManager
 	bulkImports   *bulkimportmocks.MockManager
@@ -120,6 +121,7 @@ func newAPIKeyApp() *apiKeyApp {
 		music:          musicmocks.NewMockManager(t),
 		books:          bookmocks.NewMockManager(t),
 		metadataBook:   metadatamocks.NewMockBookProvider(t),
+		metadataMusic:  metadatamocks.NewMockMusicProvider(t),
 		requests:       reqmocks.NewMockManager(t),
 		torrents:       bittorrentmocks.NewMockManager(t),
 		bulkImports:    bulkimportmocks.NewMockManager(t),
@@ -148,6 +150,7 @@ func newAPIKeyApp() *apiKeyApp {
 		Music:          a.music,
 		Books:          a.books,
 		MetadataBook:   a.metadataBook,
+		MetadataMusic:  a.metadataMusic,
 		Requests:       a.requests,
 		Torrents:       a.torrents,
 		BulkImports:    a.bulkImports,

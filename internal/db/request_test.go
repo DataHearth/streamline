@@ -339,6 +339,51 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			Expect(got.Status).To(Equal(request.StatusAvailable))
 		})
 
+		It("keeps album and artist requests apart on the same MBID", func() {
+			Expect(artist(mbidA)).To(Succeed())
+			_, err := store.CreateRequest(ctx, CreateRequestParams{
+				MediaType: "album", MediaMBID: mbidA, Title: "Al",
+				RequesterID: userID, ArtistMBID: mbidB, ArtistName: "Liar",
+				RequestedAs: "Liar",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CreateRequest(ctx, CreateRequestParams{
+				MediaType: "album", MediaMBID: mbidA, Title: "Al",
+				RequesterID: userID,
+			})
+			Expect(ent.IsConstraintError(err)).To(BeTrue())
+		})
+
+		It(
+			"approves an album request with the verified artist and keeps the wording",
+			func() {
+				row, err := store.CreateRequest(ctx, CreateRequestParams{
+					MediaType: "album", MediaMBID: mbidA, Title: "Al",
+					RequesterID: userID, ArtistMBID: mbidB, ArtistName: "Liar",
+					RequestedAs: "Liar",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(store.ApproveAlbumRequest(
+					ctx, row.ID, userID, "real-mbid", "Nirvana",
+				)).To(Succeed())
+
+				got, err := store.GetRequest(ctx, row.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Status).To(Equal(request.StatusApproved))
+				Expect(got.ArtistMbid).To(Equal("real-mbid"))
+				Expect(got.ArtistName).To(Equal("Nirvana"))
+				Expect(got.RequestedAs).To(Equal("Liar"))
+
+				Expect(
+					store.MarkRequestsAvailableByMBID(ctx, "album", mbidA),
+				).To(Succeed())
+				got, err = store.GetRequest(ctx, row.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Status).To(Equal(request.StatusAvailable))
+			},
+		)
+
 		It("filters the list by a set of media types", func() {
 			Expect(artist(mbidA)).To(Succeed())
 			Expect(book(1)).To(Succeed())

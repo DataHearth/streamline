@@ -4,8 +4,15 @@ import (
 	"github.com/datahearth/streamline/ent"
 )
 
-func toAPIImportScanAlbum(al *ent.ImportScanAlbum) ImportScanAlbum {
+// toAPIImportScanAlbum maps a row. artistIDs resolves artist_mbid to the library
+// artist, read live so it cannot go stale between scan and commit.
+func toAPIImportScanAlbum(
+	al *ent.ImportScanAlbum,
+	artistIDs map[string]uint32,
+) ImportScanAlbum {
 	out := ImportScanAlbum{
+		Size:            al.Size,
+		Format:          optString(al.Format),
 		Id:              al.ID,
 		FolderPath:      al.FolderPath,
 		Classification:  ImportScanAlbumClassification(al.Classification),
@@ -28,6 +35,13 @@ func toAPIImportScanAlbum(al *ent.ImportScanAlbum) ImportScanAlbum {
 			*dst = &v
 		}
 	}
+	if al.TaggedYear != 0 {
+		y := al.TaggedYear
+		out.TaggedYear = &y
+	}
+	if id, ok := artistIDs[al.ArtistMbid]; ok && al.ArtistMbid != "" {
+		out.ArtistId = &id
+	}
 	if len(al.Candidates) > 0 {
 		cands := make([]ImportScanAlbumCandidate, 0, len(al.Candidates))
 		for _, c := range al.Candidates {
@@ -46,6 +60,10 @@ func toAPIImportScanAlbum(al *ent.ImportScanAlbum) ImportScanAlbum {
 			if c.Year != 0 {
 				y := c.Year
 				cand.Year = &y
+			}
+			if c.Type != "" {
+				t := MusicAlbumType(c.Type)
+				cand.Type = &t
 			}
 			cands = append(cands, cand)
 		}

@@ -45,3 +45,26 @@ var _ = Describe("AudioFactsFromProbe", Label("unit", "library"), func() {
 		Entry("aac 256", ffmpeg.AudioInfo{Codec: "aac", BitrateKbps: 256}, "high"),
 	)
 })
+
+var _ = Describe("MusicFormatLabel", Label("unit", "library"), func() {
+	DescribeTable(
+		"labels a file the way an import row prints it",
+		func(ext string, info *ffmpeg.AudioInfo, want string) {
+			Expect(MusicFormatLabel(ext, info)).To(Equal(want))
+		},
+		Entry("hi-res flac", ".flac",
+			&ffmpeg.AudioInfo{Codec: "flac", BitDepth: 24, SampleRateHz: 96000},
+			"FLAC 24/96"),
+		Entry("cd flac", ".flac",
+			&ffmpeg.AudioInfo{Codec: "flac", BitDepth: 16, SampleRateHz: 44100},
+			"FLAC 16/44.1"),
+		Entry("flac without a measured depth", ".flac",
+			&ffmpeg.AudioInfo{Codec: "flac"}, "FLAC"),
+		Entry("cbr mp3", ".mp3",
+			&ffmpeg.AudioInfo{Codec: "mp3", BitrateKbps: 320}, "MP3 320"),
+		Entry("vbr mp3", ".mp3",
+			&ffmpeg.AudioInfo{Codec: "mp3", BitrateKbps: 245}, "MP3 V0"),
+		Entry("an unmeasured file", ".flac", nil, "FLAC"),
+		Entry("a probe that named no codec", ".mp3", &ffmpeg.AudioInfo{}, "MP3"),
+	)
+})

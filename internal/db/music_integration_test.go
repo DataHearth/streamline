@@ -197,6 +197,18 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		Expect(empty).To(BeEmpty())
 	})
 
+	It("maps the library albums among the given mbids to their ids", func() {
+		a := seed()
+		Expect(a.Edges.Albums).NotTo(BeEmpty())
+		held := a.Edges.Albums[0]
+		got, err := store.AlbumIDsByMBID(ctx, []string{held.Mbid, "nope"})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal(map[string]uint32{held.Mbid: held.ID}))
+		empty, err := store.AlbumIDsByMBID(ctx, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(empty).To(BeEmpty())
+	})
+
 	Describe("SetArtistMonitor", func() {
 		var a *ent.Artist
 

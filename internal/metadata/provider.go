@@ -270,6 +270,10 @@ type PerformerInfo struct {
 // ReleaseGroupDetails carries the canonical release pick and its track list.
 type ReleaseGroupDetails struct {
 	ReleaseGroupInfo
+	// ArtistMBID and ArtistName are the first credited artist, the one an
+	// album request is verified against.
+	ArtistMBID  string
+	ArtistName  string
 	ReleaseMBID string
 	// Barcode is the canonical release's UPC/EAN, empty when MusicBrainz has none.
 	Barcode       string
@@ -378,5 +382,11 @@ type MusicProvider interface {
 	SearchReleaseGroups(
 		ctx context.Context,
 		artist, album string,
+	) ([]ReleaseGroupSearchResult, error)
+	// SearchReleaseGroupsFreeText is one search over release-group titles and
+	// artist credits, for a person typing rather than the scanner's exact pair.
+	SearchReleaseGroupsFreeText(
+		ctx context.Context,
+		query string,
 	) ([]ReleaseGroupSearchResult, error)
 }

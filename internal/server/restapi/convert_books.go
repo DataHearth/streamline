@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -491,8 +492,59 @@ func firstCreator(b *ent.Book) (uint32, string) {
 	return 0, b.AuthorName
 }
 
+// bookItemFormat is the upper-case format an import row prints and the file
+// that stands for an ebook item: the best by the ebook ladder, or for an
+// audiobook the dominant audio extension.
+func bookItemFormat(slot string, paths []string) (string, string) {
+	if len(paths) == 0 {
+		return "", ""
+	}
+	ext := func(p string) string {
+		return strings.ToUpper(strings.TrimPrefix(filepath.Ext(p), "."))
+	}
+	if slot == slotAudio {
+		counts := map[string]int{}
+		for _, p := range paths {
+			counts[ext(p)]++
+		}
+		best := ""
+		for f, n := range counts {
+			if best == "" || n > counts[best] || (n == counts[best] && f < best) {
+				best = f
+			}
+		}
+		return best, commonDir(paths)
+	}
+	rank := func(f string) int {
+		if i := slices.Index(quality.EbookLadder, f); i >= 0 {
+			return i
+		}
+		return len(quality.EbookLadder)
+	}
+	bestPath := slices.MinFunc(paths, func(a, b string) int {
+		return cmp.Or(cmp.Compare(rank(ext(a)), rank(ext(b))), cmp.Compare(a, b))
+	})
+	return ext(bestPath), bestPath
+}
+
+func commonDir(paths []string) string {
+	dir := filepath.Dir(paths[0])
+	for _, p := range paths[1:] {
+		for dir != string(filepath.Separator) && dir != "." &&
+			!strings.HasPrefix(p, dir+string(filepath.Separator)) {
+			dir = filepath.Dir(dir)
+		}
+	}
+	return dir
+}
+
 func toAPIImportScanBook(sb *ent.ImportScanBook) ImportScanBook {
+	format, source := bookItemFormat(string(sb.Slot), sb.FilePaths)
 	out := ImportScanBook{
+		Format:         format,
+		SourcePath:     source,
+		Size:           sb.Size,
+		FileCount:      numeric.SaturateU16(len(sb.FilePaths)),
 		Id:             sb.ID,
 		FilePaths:      sb.FilePaths,
 		Slot:           ImportScanBookSlot(sb.Slot),
@@ -505,6 +557,10 @@ func toAPIImportScanBook(sb *ent.ImportScanBook) ImportScanBook {
 		ParsedAuthor:   optString(sb.ParsedAuthor),
 		ParsedIsbn:     optString(sb.ParsedIsbn),
 		OutcomeMessage: optString(sb.OutcomeMessage),
+	}
+	if sb.ParsedYear != 0 {
+		y := sb.ParsedYear
+		out.ParsedYear = &y
 	}
 	if sb.BookHardcoverID != 0 {
 		id := sb.BookHardcoverID

@@ -80,6 +80,14 @@ var _ = Describe("ClassifyAlbum", Label("unit", "bulkimport"), func() {
 		Expect(ClassifyAlbum(hits, nil).Candidates).To(HaveLen(5))
 	})
 
+	It("carries the release-group type on its candidates", func() {
+		hit := searchHit("rg-1", "a-1", 100)
+		hit.Type = metadata.AlbumTypeEP
+		c := ClassifyAlbum([]metadata.ReleaseGroupSearchResult{hit}, nil)
+		Expect(c.Candidates).To(HaveLen(1))
+		Expect(c.Candidates[0].Type).To(Equal("ep"))
+	})
+
 	It("flags a strong hit already in the library as existing", func() {
 		c := ClassifyAlbum(
 			[]metadata.ReleaseGroupSearchResult{searchHit("rg-1", "a-1", 100)},
@@ -136,14 +144,18 @@ var _ = Describe("StartScan kind dispatch", Label("unit", "bulkimport"), func() 
 		Expect(svc.Commit(ctx, 1)).To(MatchError(ErrUnsupportedKind))
 	})
 
-	It("rejects rename mode for music", func() {
-		_, err := svc.StartScan(ctx, StartScanParams{
-			SourcePath: GinkgoT().TempDir(),
-			Kind:       entimportscan.KindMusic,
-			Mode:       entimportscan.ModeRename,
-		})
-		Expect(err).To(MatchError(ErrRenameUnsupported))
-	})
+	DescribeTable("rejects rename mode before any other check",
+		func(kind entimportscan.Kind) {
+			_, err := svc.StartScan(ctx, StartScanParams{
+				SourcePath: GinkgoT().TempDir(),
+				Kind:       kind,
+				Mode:       entimportscan.ModeRename,
+			})
+			Expect(err).To(MatchError(ErrRenameUnsupported))
+		},
+		Entry("music", entimportscan.KindMusic),
+		Entry("book, even with no Hardcover key", entimportscan.KindBook),
+	)
 
 	It("holds an in_place music scan to library.music_path", func() {
 		configtest.Setup(map[string]any{
@@ -247,6 +259,9 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 		Expect(nm.TaggedArtist).To(Equal("Nirvana"))
 		Expect(nm.TaggedAlbum).To(Equal("Nevermind"))
 		Expect(nm.FileCount).To(Equal(uint16(1)))
+		Expect(nm.TaggedYear).To(BeNumerically(">", 0))
+		Expect(nm.Format).To(Equal("MP3"))
+		Expect(nm.Size).To(BeNumerically(">", 0))
 	})
 
 	It("falls back to folder names and leaves an untagged folder unmatched", func() {

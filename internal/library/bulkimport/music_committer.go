@@ -62,7 +62,7 @@ func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
 				"scan.id", scan.ID, "album.scan_id", sc.ID, "error", uerr)
 		}
 		switch outcome {
-		case entimportscanalbum.OutcomeCreated:
+		case entimportscanalbum.OutcomeCreated, entimportscanalbum.OutcomeAttached:
 			success++
 		case entimportscanalbum.OutcomeFailed:
 			failed++
@@ -153,7 +153,12 @@ func (s *Service) commitAlbum(
 	s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
 	slog.InfoContext(ctx, "album adopted",
 		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched)
-	return entimportscanalbum.OutcomeCreated, strings.Join(notes, "; "), alb.ID
+	outcome := entimportscanalbum.OutcomeCreated
+	if sc.Classification == entimportscanalbum.ClassificationExisting &&
+		sc.DecisionReleaseGroupMbid == "" {
+		outcome = entimportscanalbum.OutcomeAttached
+	}
+	return outcome, strings.Join(notes, "; "), alb.ID
 }
 
 // resolveAlbum returns the stored album a folder belongs to, seeding its

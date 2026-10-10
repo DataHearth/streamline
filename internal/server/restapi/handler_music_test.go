@@ -239,6 +239,110 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		})
 	})
 
+	Describe("SearchMusicReleases", func() {
+		It("maps the hits and flags the albums the library holds", func() {
+			released := time.Date(1991, 9, 24, 0, 0, 0, 0, time.UTC)
+			app.music.EXPECT().
+				SearchReleaseGroups(mock.Anything, "nirvana nevermind").
+				Return([]music.ReleaseHit{
+					{
+						MBID:        "rg-1",
+						Title:       "Nevermind",
+						Type:        metadata.AlbumTypeAlbum,
+						ReleaseDate: &released,
+						ArtistMBID:  "a-1", ArtistName: "Nirvana",
+						AlreadyAdded: true,
+					},
+					{
+						MBID: "rg-2", Title: "Bleach",
+						ArtistMBID: "a-1", ArtistName: "Nirvana",
+					},
+				}, nil).
+				Once()
+
+			resp := get("/api/v1/music/search/releases?query=nirvana+nevermind")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var out MusicReleaseSearchResultList
+			decodeInto(resp, &out)
+			Expect(out.Items).To(HaveLen(2))
+			first := out.Items[0]
+			Expect(first.Mbid).To(Equal("rg-1"))
+			Expect(first.Artist).To(Equal("Nirvana"))
+			Expect(first.ArtistMbid).To(Equal("a-1"))
+			Expect(first.Year).To(HaveValue(Equal(uint16(1991))))
+			Expect(first.Type).To(HaveValue(Equal(MusicAlbumType("album"))))
+			Expect(first.AlreadyAdded).To(BeTrue())
+			Expect(out.Items[1].Year).To(BeNil())
+			Expect(out.Items[1].Type).To(BeNil())
+			Expect(out.Items[1].AlreadyAdded).To(BeFalse())
+		})
+
+		It("caps the answer at limit", func() {
+			app.music.EXPECT().SearchReleaseGroups(mock.Anything, "nirvana").
+				Return([]music.ReleaseHit{
+					{
+						MBID: "rg-1",
+					},
+					{
+						MBID: "rg-2",
+					},
+				}, nil).Once()
+
+			resp := get("/api/v1/music/search/releases?query=nirvana&limit=1")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var out MusicReleaseSearchResultList
+			decodeInto(resp, &out)
+			Expect(out.Items).To(HaveLen(1))
+		})
+
+		DescribeTable(
+			"answers 400",
+			func(path string) {
+				resp := get(path)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+			},
+			Entry(
+				"for a one character query",
+				"/api/v1/music/search/releases?query=a",
+			),
+			Entry(
+				"for a limit of 0",
+				"/api/v1/music/search/releases?query=nirvana&limit=0",
+			),
+			Entry(
+				"for a limit over 20",
+				"/api/v1/music/search/releases?query=nirvana&limit=21",
+			),
+			Entry(
+				"for a query over 200 characters",
+				"/api/v1/music/search/releases?query="+strings.Repeat("n", 201),
+			),
+		)
+
+		It("answers 429 with Retry-After when MusicBrainz limits", func() {
+			app.music.EXPECT().SearchReleaseGroups(mock.Anything, "nirvana").
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Second}).
+				Once()
+			resp := get("/api/v1/music/search/releases?query=nirvana")
+			Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+			Expect(errCode(resp)).To(Equal("rate_limited"))
+		})
+
+		It("is open to a request-only caller", func() {
+			app.music.EXPECT().SearchReleaseGroups(mock.Anything, "nirvana").
+				Return(nil, nil).Once()
+			resp := send(
+				http.MethodGet,
+				"/api/v1/music/search/releases?query=nirvana",
+				app.requestOnlyKey,
+				"",
+			)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			resp.Body.Close()
+		})
+	})
+
 	Describe("GetMusicArtistLookup", func() {
 		It("maps the detail and passes the language", func() {
 			app.music.EXPECT().LookupArtist(mock.Anything, "a-1", "fr").

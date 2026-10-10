@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/datahearth/streamline/ent"
@@ -11,6 +12,8 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/metadata"
+	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/request"
 	reqmocks "github.com/datahearth/streamline/internal/request/mocks"
 	"github.com/datahearth/streamline/internal/role"
@@ -37,6 +40,8 @@ func (s barrierStore) CreateRequest(
 	return s.Store.CreateRequest(ctx, p)
 }
 
+const artistUUID = "5b11f4ce-a62d-471e-81fc-a69a8278c7da"
+
 var _ = Describe("Request service", Label("unit", "request"), func() {
 	var (
 		ctx      context.Context
@@ -44,7 +49,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		movieMk  *reqmocks.MockMovieAdder_Expecter
 		showMk   *reqmocks.MockShowAdder_Expecter
 		artistMk *reqmocks.MockArtistAdder_Expecter
+		albumMk  *reqmocks.MockAlbumMonitor_Expecter
 		bookMk   *reqmocks.MockBookAdder_Expecter
+		metaMk   *metadatamocks.MockMusicProvider_Expecter
 		svc      *request.Service
 	)
 
@@ -91,9 +98,13 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 		showMk = shows.EXPECT()
 		artists := reqmocks.NewMockArtistAdder(GinkgoT())
 		artistMk = artists.EXPECT()
+		albums := reqmocks.NewMockAlbumMonitor(GinkgoT())
+		albumMk = albums.EXPECT()
 		books := reqmocks.NewMockBookAdder(GinkgoT())
 		bookMk = books.EXPECT()
-		svc = request.NewService(store, movies, shows, artists, books)
+		meta := metadatamocks.NewMockMusicProvider(GinkgoT())
+		metaMk = meta.EXPECT()
+		svc = request.NewService(store, movies, shows, artists, albums, books, meta)
 	})
 
 	Describe("Create", func() {
@@ -327,8 +338,27 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				request.CreateParams{MediaType: "book", MediaID: 3, MediaMBID: "x"}),
 			Entry("book_series without a media_id",
 				request.CreateParams{MediaType: "book_series", Title: "S"}),
-			Entry("the removed album type",
+			Entry("album without hints",
 				request.CreateParams{MediaType: "album", MediaMBID: "x"}),
+			Entry("album with a media_id", request.CreateParams{
+				MediaType: "album", MediaMBID: "x", MediaID: 3,
+				ArtistMBID: artistUUID, ArtistName: "Nirvana",
+			}),
+			Entry("album with an artist_mbid that is not a UUID",
+				request.CreateParams{
+					MediaType: "album", MediaMBID: "x",
+					ArtistMBID: "artist-1", ArtistName: "Nirvana",
+				}),
+			Entry("album with an empty artist name", request.CreateParams{
+				MediaType: "album", MediaMBID: "x", ArtistMBID: artistUUID,
+			}),
+			Entry("album with an over-long artist name", request.CreateParams{
+				MediaType: "album", MediaMBID: "x", ArtistMBID: artistUUID,
+				ArtistName: strings.Repeat("n", 201),
+			}),
+			Entry("artist hints on a movie", request.CreateParams{
+				MediaType: "movie", MediaID: 3, ArtistName: "Nirvana",
+			}),
 			Entry("the removed author type",
 				request.CreateParams{MediaType: "author", MediaID: 3}),
 		)
@@ -393,6 +423,179 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				Return(artistReq, nil).Once()
 
 			_, err := svc.Approve(ctx, 1, 9, "Retail")
+			Expect(err).To(MatchError(request.ErrUnknownProfile))
+		})
+	})
+
+	Describe("Create album requests", func() {
+		const rgMBID = "rg-1"
+		params := request.CreateParams{
+			MediaType: "album", MediaMBID: rgMBID, Title: "Nevermind",
+			ArtistMBID: artistUUID, ArtistName: "Nirvana", RequesterID: 9,
+		}
+
+		It("persists the hints and the requester's wording", func() {
+			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
+				Return(nil, nil).Once()
+			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).Return(nil, nil).Once()
+			storeMk.CreateRequest(mock.Anything, mock.MatchedBy(func(p db.CreateRequestParams) bool {
+				return p.MediaType == "album" && p.MediaMBID == rgMBID &&
+					p.ArtistMBID == artistUUID && p.ArtistName == "Nirvana" &&
+					p.RequestedAs == "Nirvana"
+			})).
+				Return(&ent.Request{ID: 2}, nil).
+				Once()
+
+			_, err := svc.Create(ctx, params)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("rejects an album already monitored in the library", func() {
+			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
+				Return(nil, nil).Once()
+			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).
+				Return(&ent.Album{ID: 3, Monitored: true}, nil).Once()
+
+			_, err := svc.Create(ctx, params)
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+
+		It("lets an album that exists unmonitored be requested", func() {
+			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
+				Return(nil, nil).Once()
+			storeMk.FindAlbumByMBID(mock.Anything, rgMBID).
+				Return(&ent.Album{ID: 3}, nil).Once()
+			storeMk.CreateRequest(mock.Anything, mock.Anything).
+				Return(&ent.Request{ID: 2}, nil).Once()
+
+			_, err := svc.Create(ctx, params)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("rejects an active request for the same release group", func() {
+			storeMk.FindActiveRequestByMBID(mock.Anything, "album", rgMBID).
+				Return(&ent.Request{ID: 7}, nil).Once()
+
+			_, err := svc.Create(ctx, params)
+			Expect(err).To(MatchError(request.ErrDuplicate))
+		})
+	})
+
+	Describe("Approve album requests", func() {
+		const (
+			rgMBID     = "rg-1"
+			artistMBID = "artist-1"
+		)
+		albumReq := &ent.Request{
+			ID: 2, MediaType: "album", MediaMbid: rgMBID,
+			ArtistMbid: "liar-mbid", ArtistName: "Liar",
+		}
+		verified := &metadata.ReleaseGroupDetails{
+			ArtistMBID: artistMBID, ArtistName: "Nirvana",
+		}
+
+		It(
+			"adds a missing artist with manual monitoring and keeps only the verified pair",
+			func() {
+				storeMk.GetRequest(mock.Anything, uint32(2)).
+					Return(albumReq, nil).
+					Twice()
+				metaMk.GetReleaseGroup(mock.Anything, rgMBID).
+					Return(verified, nil).
+					Once()
+				storeMk.FindArtistByMBID(mock.Anything, artistMBID).
+					Return(nil, nil).
+					Once()
+				artistMk.AddArtist(mock.Anything, artistMBID, "manual", "Lossless").
+					Return(nil).Once()
+				albumMk.MonitorAlbum(mock.Anything, artistMBID, rgMBID).
+					Return(false, nil).Once()
+				storeMk.ApproveAlbumRequest(
+					mock.Anything, uint32(2), uint32(9), artistMBID, "Nirvana",
+				).Return(nil).Once()
+
+				_, err := svc.Approve(ctx, 2, 9, "Lossless")
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
+
+		It("ignores the reviewer's profile for an artist already held", func() {
+			storeMk.GetRequest(mock.Anything, uint32(2)).
+				Return(albumReq, nil).
+				Twice()
+			metaMk.GetReleaseGroup(mock.Anything, rgMBID).
+				Return(verified, nil).
+				Once()
+			storeMk.FindArtistByMBID(mock.Anything, artistMBID).
+				Return(&ent.Artist{ID: 4}, nil).Once()
+			albumMk.MonitorAlbum(mock.Anything, artistMBID, rgMBID).
+				Return(false, nil).Once()
+			storeMk.ApproveAlbumRequest(
+				mock.Anything, uint32(2), uint32(9), artistMBID, "Nirvana",
+			).Return(nil).Once()
+
+			_, err := svc.Approve(ctx, 2, 9, "Lossless")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It(
+			"marks the request available when the album is already monitored with files",
+			func() {
+				storeMk.GetRequest(mock.Anything, uint32(2)).
+					Return(albumReq, nil).
+					Twice()
+				metaMk.GetReleaseGroup(mock.Anything, rgMBID).
+					Return(verified, nil).
+					Once()
+				storeMk.FindArtistByMBID(mock.Anything, artistMBID).
+					Return(&ent.Artist{ID: 4}, nil).Once()
+				albumMk.MonitorAlbum(mock.Anything, artistMBID, rgMBID).
+					Return(true, nil).Once()
+				storeMk.ApproveAlbumRequest(
+					mock.Anything, uint32(2), uint32(9), artistMBID, "Nirvana",
+				).Return(nil).Once()
+				storeMk.MarkRequestAvailable(mock.Anything, uint32(2)).
+					Return(nil).
+					Once()
+
+				_, err := svc.Approve(ctx, 2, 9, "")
+				Expect(err).NotTo(HaveOccurred())
+			},
+		)
+
+		It("leaves the request pending when the album is not on the artist", func() {
+			storeMk.GetRequest(mock.Anything, uint32(2)).Return(albumReq, nil).Once()
+			metaMk.GetReleaseGroup(mock.Anything, rgMBID).
+				Return(verified, nil).
+				Once()
+			storeMk.FindArtistByMBID(mock.Anything, artistMBID).
+				Return(&ent.Artist{ID: 4}, nil).Once()
+			albumMk.MonitorAlbum(mock.Anything, artistMBID, rgMBID).
+				Return(false, fmt.Errorf("%w: %s", request.ErrAlbumNotFound, rgMBID)).
+				Once()
+
+			_, err := svc.Approve(ctx, 2, 9, "")
+			Expect(err).To(MatchError(request.ErrAlbumNotFound))
+		})
+
+		It(
+			"answers album not found for a release group MusicBrainz does not know",
+			func() {
+				storeMk.GetRequest(mock.Anything, uint32(2)).
+					Return(albumReq, nil).
+					Once()
+				metaMk.GetReleaseGroup(mock.Anything, rgMBID).
+					Return(nil, metadata.ErrNotFound).Once()
+
+				_, err := svc.Approve(ctx, 2, 9, "")
+				Expect(err).To(MatchError(request.ErrAlbumNotFound))
+			},
+		)
+
+		It("refuses a profile from another family before any lookup", func() {
+			storeMk.GetRequest(mock.Anything, uint32(2)).Return(albumReq, nil).Once()
+
+			_, err := svc.Approve(ctx, 2, 9, "Retail")
 			Expect(err).To(MatchError(request.ErrUnknownProfile))
 		})
 	})
@@ -555,7 +758,9 @@ var _ = Describe("Request service", Label("unit", "request"), func() {
 				movies,
 				reqmocks.NewMockShowAdder(GinkgoT()),
 				reqmocks.NewMockArtistAdder(GinkgoT()),
+				reqmocks.NewMockAlbumMonitor(GinkgoT()),
 				reqmocks.NewMockBookAdder(GinkgoT()),
+				metadatamocks.NewMockMusicProvider(GinkgoT()),
 			)
 
 			errs := make([]error, 2)

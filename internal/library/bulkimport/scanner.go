@@ -52,6 +52,9 @@ func (s *Service) StartScan(
 			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
 		}
 	case entimportscan.KindBook:
+		if p.Mode == entimportscan.ModeRename {
+			return nil, otelx.RecordSpanError(span, ErrRenameUnsupported)
+		}
 		if s.bookmeta == nil {
 			return nil, otelx.RecordSpanError(span, book.ErrNotConfigured)
 		}

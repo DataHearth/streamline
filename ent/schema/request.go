@@ -22,11 +22,17 @@ func (Request) Mixin() []ent.Mixin {
 func (Request) Fields() []ent.Field {
 	return []ent.Field{
 		field.Enum("media_type").
-			Values("movie", "tvshow", "artist", "book", "book_series"),
+			Values("movie", "tvshow", "artist", "album", "book", "book_series"),
 		field.Uint32("media_id").Optional().Default(0).
-			Comment("TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists."),
+			Comment("TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists and albums."),
 		field.String("media_mbid").Optional().
-			Comment("Artist MBID, for artist requests only."),
+			Comment("Artist MBID for artist requests, release-group MBID for album requests."),
+		field.String("artist_mbid").Optional().
+			Comment("Album requests only: the requester's hint until approval, the verified artist after."),
+		field.String("artist_name").Optional().
+			Comment("Album requests only: display companion of artist_mbid."),
+		field.String("requested_as").Optional().
+			Comment("Album requests only: the artist wording the requester typed, kept after approval overwrites artist_name."),
 		field.String("title").NotEmpty(),
 		field.Enum("status").
 			Values("pending", "approved", "denied", "available").

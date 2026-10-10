@@ -1139,6 +1139,8 @@ type Store interface {
 	) (int, error)
 	// AlbumMBIDIndex maps release-group mbid to album id.
 	AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error)
+	// AlbumIDsByMBID maps each release-group mbid that is a library album to its id.
+	AlbumIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error)
 	// FindAlbumByMBID returns nil, nil on a miss; tracks are eager-loaded
 	// (disc, then position) with their media files.
 	FindAlbumByMBID(ctx context.Context, mbid string) (*ent.Album, error)
@@ -1319,6 +1321,11 @@ type Store interface {
 	) ([]*ent.Request, int, error)
 	GetRequest(ctx context.Context, id uint32) (*ent.Request, error)
 	ApproveRequest(ctx context.Context, id, adminID uint32) error
+	ApproveAlbumRequest(
+		ctx context.Context,
+		id, adminID uint32,
+		artistMBID, artistName string,
+	) error
 	DenyRequest(ctx context.Context, id, adminID uint32, reason string) error
 	ReopenRequest(ctx context.Context, id uint32) error
 	MarkRequestsAvailableByMBID(

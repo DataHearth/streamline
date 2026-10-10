@@ -144,6 +144,9 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		storeMk.EXPECT().
 			MarkRequestsAvailableByMBID(mock.Anything, "artist", "artist-4").
 			Return(nil).Maybe()
+		storeMk.EXPECT().
+			MarkRequestsAvailableByMBID(mock.Anything, "album", mock.Anything).
+			Return(nil).Maybe()
 	})
 
 	It("imports matched tracks, tags the library copies and leaves the gap", func() {

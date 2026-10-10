@@ -307,7 +307,8 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				{"position":2,"title":"Bonus disc","format":"CD","tracks":[
 					{"position":1,"title":"Curse","recording":{"id":"rec-3"}}]}]}`
 
-		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24","releases":[
+		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24",
+			"artist-credit":[{"name":"Nirvana","artist":{"id":"a-n","name":"Nirvana"}}],"releases":[
 			{"id":"rel-2","status":"Official","date":"1992-01-01","media":[{"format":"12\" Vinyl"},{"format":"Digital Media"}]},
 			{"id":"rel-1","status":"Official","date":"1991-09-24","media":[{"format":"CD"}]},
 			{"id":"rel-0","status":"Bootleg","date":"1991-01-01","media":[{"format":"Cassette"}]}]}`
@@ -318,7 +319,9 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				func(r *http.Request) (*http.Response, error) {
 					switch r.URL.Path {
 					case "/ws/2/release-group/rg-1":
-						Expect(r.URL.Query().Get("inc")).To(Equal("releases+media"))
+						Expect(
+							r.URL.Query().Get("inc"),
+						).To(Equal("releases+media+artist-credits"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -338,6 +341,8 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rg.ReleaseMBID).To(Equal("rel-1"))
+			Expect(rg.ArtistMBID).To(Equal("a-n"))
+			Expect(rg.ArtistName).To(Equal("Nirvana"))
 			Expect(rg.Tracks).To(HaveLen(3))
 			Expect(rg.Tracks[0].Duration).To(Equal(uint32(301)))
 			Expect(rg.Tracks[0].Disc).To(Equal(uint8(1)))
@@ -630,6 +635,30 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			_, err := mb.SearchReleaseGroups(ctx, "", `The "Best" Of`)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(gotQuery).To(ContainSubstring(`releasegroup:"The \"Best\" Of"`))
+		})
+	})
+
+	Describe("SearchReleaseGroupsFreeText", func() {
+		It("searches title and artist credit with the syntax escaped", func() {
+			var gotQuery, gotLimit string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					gotQuery = r.URL.Query().Get("query")
+					gotLimit = r.URL.Query().Get("limit")
+					return jsonResponse(
+						200,
+						`{"release-groups":[{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24","artist-credit":[{"artist":{"id":"mbid-1","name":"Nirvana"}}],"score":100}]}`,
+					), nil
+				},
+			)
+			res, err := mb.SearchReleaseGroupsFreeText(ctx, `nirvana: "nevermind"`)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(HaveLen(1))
+			Expect(res[0].ArtistMBID).To(Equal("mbid-1"))
+			Expect(gotLimit).To(Equal("20"))
+			Expect(gotQuery).To(Equal(
+				`releasegroup:(nirvana\: \"nevermind\") OR artist:(nirvana\: \"nevermind\")`,
+			))
 		})
 	})
 })

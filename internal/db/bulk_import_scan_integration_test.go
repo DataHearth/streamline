@@ -40,6 +40,23 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 	})
 
 	Describe("UpdateImportScanStatus", func() {
+		It("records the machine-readable cause of a failure", func() {
+			s, err := store.CreateImportScan(ctx, CreateImportScanParams{
+				SourcePath: "/x",
+				Mode:       entimportscan.ModeInPlace,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			reason, code := "key rejected", "hardcover_key_rejected"
+			Expect(store.UpdateImportScanStatus(
+				ctx, s.ID, entimportscan.StatusFailed,
+				UpdateScanStatusOpts{FailureReason: &reason, FailureCode: &code},
+			)).To(Succeed())
+			got, err := store.FindImportScan(ctx, s.ID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(got.FailureReason).To(Equal(reason))
+			Expect(got.FailureCode).To(Equal(code))
+		})
+
 		It("updates status and optional opts", func() {
 			s, err := store.CreateImportScan(
 				ctx,
@@ -138,6 +155,7 @@ var _ = Describe("ImportScan store", Label("integration", "db"), func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rgot.Status).To(Equal(entimportscan.StatusFailed))
 			Expect(rgot.FailureReason).To(Equal("boot"))
+			Expect(rgot.FailureCode).To(BeEmpty())
 			cgot, err := store.FindImportScan(ctx, c.ID)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cgot.Status).To(Equal(entimportscan.StatusFailed))

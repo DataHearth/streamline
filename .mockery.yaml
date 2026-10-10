@@ -82,6 +82,7 @@ packages:
       Manager: {}
   github.com/datahearth/streamline/internal/request:
     interfaces:
+      AlbumMonitor: {}
       ArtistAdder: {}
       BookAdder: {}
       Manager: {}

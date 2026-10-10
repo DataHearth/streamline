@@ -355,7 +355,9 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		movieSvc,
 		tvSvc,
 		artistRequestAdder{svc: musicSvc},
+		albumRequestMonitor{svc: musicSvc, store: store},
 		bookRequestAdder{svc: bookSvc, client: dbClient},
+		mb,
 	)
 	tvMissing := rss.NewEpisodeMissingSearcher(store, indexerSvc, dlManager)
 	tvFeedScanner := rss.NewTVFeedScanner(store, indexerSvc, dlManager)
@@ -530,6 +532,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Music:           musicSvc,
 		Books:           bookSvc,
 		MetadataBook:    bookMeta,
+		MetadataMusic:   mb,
 		Hardcover:       hardcoverHealth,
 		AuthMiddleware:  authMW,
 		HTTPLog:         httpLogger.Middleware(httpAccessSkip),

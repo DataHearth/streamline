@@ -23,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/ebookmeta"
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 )
@@ -30,6 +31,9 @@ import (
 const (
 	bookSidecarName    = "metadata.opf"
 	bookProgressLogGap = 25
+
+	hardcoverRejectedReason = "Hardcover rejected the API key; check Settings -> Metadata"
+	hardcoverMissingReason  = "Hardcover is not configured; add an API key in Settings -> Metadata"
 )
 
 var bracketedSuffix = regexp.MustCompile(`\s*[\(\[][^\)\]]*[\)\]]`)
@@ -56,6 +60,17 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 			s.markScanFailed(ctx, scan.ID, fmt.Sprintf("panic: %v", r))
 		}
 	}()
+
+	if s.bookmeta == nil {
+		otelx.RecordSpanError(span, book.ErrNotConfigured)
+		s.markScanFailedWithCode(
+			ctx,
+			scan.ID,
+			hardcoverMissingReason,
+			codeHardcoverNotConfigured,
+		)
+		return
+	}
 
 	candidates, walkErrors, err := walkBookSource(ctx, scan.SourcePath)
 	if err != nil {
@@ -112,6 +127,13 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 
 		info := readBookInfo(ctx, cand)
 		c, errs, cerr := s.classifyBookCandidate(ctx, info, indexed[cand.slot])
+		if errors.Is(cerr, metadata.ErrHardcoverUnauthorized) {
+			otelx.RecordSpanError(span, cerr)
+			s.markScanFailedWithCode(
+				ctx, scan.ID, hardcoverRejectedReason, codeHardcoverKeyRejected,
+			)
+			return
+		}
 		if cerr != nil {
 			var rl *metadata.RateLimitedError
 			errors.As(cerr, &rl)
@@ -128,6 +150,8 @@ func (s *Service) runScanBooks(ctx context.Context, scan *ent.ImportScan) {
 			ParsedTitle:     info.Title,
 			ParsedAuthor:    info.Author,
 			ParsedISBN:      info.ISBN,
+			ParsedYear:      info.Year,
+			Size:            sizeOf(cand.paths),
 			Classification:  c.Kind,
 			BookHardcoverID: c.BookHardcoverID,
 			Candidates:      c.Candidates,
@@ -207,6 +231,16 @@ func rateLimitedReason(ctx context.Context, rl *metadata.RateLimitedError) strin
 	slog.WarnContext(ctx, "book scan stopped: hardcover rate limited",
 		"retry_after", wait.Round(time.Second))
 	return reason
+}
+
+func sizeOf(paths []string) int64 {
+	var total int64
+	for _, p := range paths {
+		if info, err := os.Stat(p); err == nil {
+			total += info.Size()
+		}
+	}
+	return total
 }
 
 func existingID(id uint32) *uint32 {
@@ -386,7 +420,8 @@ func (s *Service) classifyBookCandidate(
 	if info.ISBN != "" {
 		id, err := s.bookmeta.BookByISBN(ctx, info.ISBN)
 		switch {
-		case errors.Is(err, metadata.ErrRateLimited):
+		case errors.Is(err, metadata.ErrRateLimited),
+			errors.Is(err, metadata.ErrHardcoverUnauthorized):
 			return BookClassification{}, errs, err
 		case err != nil:
 			errs++
@@ -410,7 +445,8 @@ func (s *Service) classifyBookCandidate(
 		ctx,
 		strings.TrimSpace(info.Title+" "+info.Author),
 	)
-	if errors.Is(err, metadata.ErrRateLimited) {
+	if errors.Is(err, metadata.ErrRateLimited) ||
+		errors.Is(err, metadata.ErrHardcoverUnauthorized) {
 		return BookClassification{}, errs, err
 	}
 	if err != nil {
