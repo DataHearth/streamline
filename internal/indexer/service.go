@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -392,7 +393,9 @@ func (i *indexer) SearchAlbum(
 		return nil, nil
 	}
 
-	results := i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic})
+	results := withoutAudiobooks(
+		i.searchAll(ctx, span, queries, SearchParams{Kind: KindMusic}),
+	)
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
 }
@@ -416,14 +419,22 @@ func (i *indexer) SearchArtist(
 	if artist == "" {
 		return nil, nil
 	}
-	results := i.searchAll(
+	results := withoutAudiobooks(i.searchAll(
 		ctx,
 		span,
 		[]string{artist},
 		SearchParams{Kind: KindMusic},
-	)
+	))
 	span.SetAttributes(attribute.Int("results.total", len(results)))
 	return results, nil
+}
+
+// withoutAudiobooks drops the 3030 Audio/Audiobook subcategory, which sits inside
+// the 3000 Audio root a music search queries and belongs to the book search.
+func withoutAudiobooks(results []SearchResult) []SearchResult {
+	return slices.DeleteFunc(results, func(r SearchResult) bool {
+		return r.Category == catAudiobook
+	})
 }
 
 func (i *indexer) SearchBook(

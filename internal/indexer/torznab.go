@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/datahearth/streamline/internal/otelx"
@@ -168,7 +169,12 @@ func parseItems(items []torznabItem) []SearchResult {
 					r.Leechers = uint32(v)
 				}
 			case "category":
-				r.Category = attr.Value
+				// An item lists its root category and its subcategory in either
+				// order; the subcategory is the one that tells an audiobook (3030)
+				// from music under the same 3000 root.
+				if r.Category == "" || strings.HasSuffix(r.Category, "000") {
+					r.Category = attr.Value
+				}
 			// The tracker's own provider ids, when it publishes them. Both
 			// spellings are accepted because both are in the wild; Prowlarr
 			// reads the same pair (NewznabRssParser.GetIntAttribute). An

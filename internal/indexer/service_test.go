@@ -516,3 +516,19 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		})
 	})
 })
+
+var _ = Describe("withoutAudiobooks", Label("unit", "indexers"), func() {
+	It(
+		"drops the audiobook subcategory and keeps the rest of the audio root",
+		func() {
+			got := withoutAudiobooks([]SearchResult{
+				{Title: "album", Category: "3000"},
+				{Title: "lossless", Category: "3040"},
+				{Title: "audiobook", Category: catAudiobook},
+				{Title: "uncategorised"},
+			})
+			Expect(got).To(HaveLen(3))
+			Expect(got).NotTo(ContainElement(HaveField("Title", "audiobook")))
+		},
+	)
+})
