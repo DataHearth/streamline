@@ -5,8 +5,8 @@
   "node": {},
   "pnpm": {
     "12.11.2": {
-      "src": "sha256-YVDIcEx48eYrkI2WP18Evun2vaFT/vQfIHEuV71rrG4=",
-      "cargo": "sha256-3Xwkg0Y1EqJYnUrjUTAND2I5r3yv3MJKpnfOXGBcUxE="
+      "x86_64-linux": "sha512-FK7QKe24AYgppJwO3mpooYptduuvIGqKJPi5ac7MdnWkjUy46JBfYhCW0grnkWKC8YOf0x+vGviuQqJEj3SpQQ==",
+      "aarch64-linux": "sha512-6e8ZAQUwFXAWHHHv5FesWqf/kEK04wuitBv5f/gxzkC0DiBfaixr+f+6JQede8SF4Ji5LcMwVFJbzAtffpWxEg=="
     }
   }
 }

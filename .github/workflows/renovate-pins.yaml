@@ -12,7 +12,7 @@ name: Renovate pins
 #   2. the two base-image digests, which follow the tags renovate wrote
 #      — the digest is what resolves, so a tag moved without it silently keeps
 #        building the old image
-#   3. nix/toolchains.json: the source hashes nix/{go,node,pnpm}.nix override
+#   3. nix/toolchains.json: the hashes nix/{go,node,pnpm}.nix override
 #      nixpkgs' package with, for every tool whose declared version differs from
 #      the locked one — rebuilt from scratch each run, so a lock that has caught
 #      up drops its entry
@@ -130,9 +130,9 @@ jobs:
           redigest "node:${node_ref%@*}" "${node_ref#*@}"
 
       # Go and node are upstream's own source tarballs, so their hashes are a
-      # download each. pnpm 12+ is a Rust build from its GitHub tag: the tag is
-      # a prefetch, the vendored crates a build made to fail against a
-      # placeholder, like the package hashes below.
+      # download each. pnpm is its prebuilt @pnpm/exe binary (nix/pnpm.nix says
+      # why), whose hashes are npm's own `integrity`, one per platform the
+      # flake builds — read off the registry, nothing downloaded.
       - name: Toolchain hashes
         env:
           GO: ${{ steps.toolchains.outputs.go }}
@@ -143,14 +143,7 @@ jobs:
           LOCKED_PNPM: ${{ steps.toolchains.outputs.locked_pnpm }}
         run: |
           set -euo pipefail
-          fake="sha256-$(printf 'A%.0s' $(seq 43))="
 
-          remote=()
-          if [ -n "${NIX_BUILDER_STORE:-}" ]; then
-            remote=(--store "$NIX_BUILDER_STORE" --eval-store auto)
-          fi
-
-          write() { printf '%s\n' "$tc" | jq --indent 2 . > nix/toolchains.json; }
           prefetch() { nix store prefetch-file --json "$1" | jq -r .hash; }
 
           tc='{"go": {}, "node": {}, "pnpm": {}}'
@@ -161,23 +154,11 @@ jobs:
             tc=$(jq --arg v "$NODE" --arg h "$(prefetch "https://nodejs.org/dist/v${NODE}/node-v${NODE}.tar.xz")" '.node[$v] = $h' <<< "$tc")
           fi
           if [ "$PNPM" != "$LOCKED_PNPM" ]; then
-            src=$(nix flake prefetch --json "github:pnpm/pnpm/v${PNPM}" | jq -r .hash)
-            tc=$(jq --arg v "$PNPM" --arg s "$src" --arg c "$fake" '.pnpm[$v] = {src: $s, cargo: $c}' <<< "$tc")
-            write
-
-            if log=$(nix build --no-link "${remote[@]}" .#streamline.pnpm.cargoDeps 2>&1); then
-              echo "::error::pnpm's cargoDeps built against the placeholder hash — nothing to derive"
-              exit 1
-            fi
-            got=$(printf '%s\n' "$log" | grep -oE 'got: +sha256-[A-Za-z0-9+/=]+' | tail -1 | grep -oE 'sha256-[A-Za-z0-9+/=]+' || true)
-            if [ -z "$got" ]; then
-              printf '%s\n' "$log" >&2
-              echo "::error::pnpm's cargoDeps failed for a reason other than a hash mismatch"
-              exit 1
-            fi
-            tc=$(jq --arg v "$PNPM" --arg c "$got" '.pnpm[$v].cargo = $c' <<< "$tc")
+            integrity() { curl -fsS "https://registry.npmjs.org/@pnpm/exe.$1/${PNPM}" | jq -r .dist.integrity; }
+            tc=$(jq --arg v "$PNPM" --arg x "$(integrity linux-x64)" --arg a "$(integrity linux-arm64)" \
+              '.pnpm[$v] = {"x86_64-linux": $x, "aarch64-linux": $a}' <<< "$tc")
           fi
-          write
+          printf '%s\n' "$tc" | jq --indent 2 . > nix/toolchains.json
           cat nix/toolchains.json
 
       # vendorHash and pnpmDeps.hash are ordinary fixed-output derivations, so
