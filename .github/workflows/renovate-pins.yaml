@@ -1,20 +1,26 @@
 name: Renovate pins
 
-# flake.lock's nixpkgs decides both toolchain versions; go.mod, package.json,
-# deploy/Dockerfile and the workflows only record what it decided. Renovate
-# moves the lock and can derive none of the rest, so this job derives it, on
-# renovate's own branch, before CI reads any of it:
+# Upstream decides each toolchain's patch and nixpkgs decides which lines exist.
+# Renovate bumps every copy of a version itself — go.mod's `go` directive and the
+# Dockerfile's GO_VERSION; engines.node, the Dockerfile's node tag and the
+# workflows' node-version; packageManager — from go.dev, nodejs.org and the npm
+# registry. What it cannot compute, this job derives on renovate's own branch,
+# before CI reads any of it:
 #
-#   1. the two toolchain versions, read back out of the locked nixpkgs
-#   2. the two base-image digests, which follow the tags step 1 just wrote
+#   1. a check that the locked nixpkgs has each declared line (go_1_NN,
+#      nodejs_NN, pnpm_NN) and that every copy agrees with its source
+#   2. the two base-image digests, which follow the tags renovate wrote
 #      — the digest is what resolves, so a tag moved without it silently keeps
 #        building the old image
-#   3. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml
+#   3. nix/toolchains.json: the hashes nix/{go,node,pnpm}.nix override
+#      nixpkgs' package with, for every tool whose declared version differs from
+#      the locked one — rebuilt from scratch each run, so a lock that has caught
+#      up drops its entry
+#   4. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml (and
+#      the pnpm that lays out the store, so after step 3)
 #
-# nix/{go,node}.nix refuse to evaluate when a declaration and the locked package
-# disagree, so step 1 is not a convenience: without it every lock bump lands as a
-# red PR. Doing it here rather than through a renovate manager is what keeps the
-# two numbers from ever being sourced separately.
+# Renovate writes the workflow copies rather than this job because a push made
+# with the Actions token may not touch .github/workflows/; renovate's app may.
 on:
   pull_request:
     branches: [main]
@@ -22,9 +28,11 @@ on:
       - flake.lock
       - go.mod
       - go.sum
+      - package.json
       - pnpm-lock.yaml
       - deploy/Dockerfile
       - nix/package.nix
+      - nix/toolchains.json
 
 permissions:
   contents: write
@@ -33,8 +41,8 @@ jobs:
   pins:
     # Only renovate's own branches: on any other PR a stale pin is a mistake
     # worth seeing, not something to paper over with a commit the author did
-    # not write. A human moving the lock gets the same repair by hand — the
-    # throw from nix/{go,node}.nix names both versions.
+    # not write. A human bumping a toolchain gets the same repair by hand — the
+    # throws in nix/{go,node,pnpm}.nix name the missing line or hash.
     if: startsWith(github.head_ref, 'renovate/')
     runs-on: ubuntu-latest
     steps:
@@ -58,29 +66,50 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Only the patch is ever synced. The minor and the major are a
-          # deliberate choice and are read back out of the files, so moving to a
-          # new Go minor or Node major stays a human edit.
-          attr_go="go_$(sed -n 's/^go \([0-9]\+\)\.\([0-9]\+\).*/\1_\2/p' go.mod)"
-          attr_node="nodejs_$(jq -r '.engines.node' package.json | sed 's/^>=//' | cut -d. -f1)"
+          go=$(sed -n 's/^go //p' go.mod)
+          node=$(jq -r '.engines.node' package.json | sed 's/^>=//')
+          pnpm=$(jq -r '.packageManager' package.json | sed 's/^pnpm@//; s/+.*//')
 
+          # The copies renovate is meant to have moved with their source. One it
+          # missed would build CI or the image on a version nix never checked.
+          fail=0
+          check() {
+            local what=$1 have=$2 want=$3
+            if [ "$have" != "$want" ]; then
+              echo "::error::${what} is ${have}, but its source says ${want}"
+              fail=1
+            fi
+          }
+          check "deploy/Dockerfile GO_VERSION" "$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)" "$go"
+          check "deploy/Dockerfile node tag" "$(grep -oP 'FROM node:\K[^-@]+' deploy/Dockerfile)" "$node"
+          while read -r file version; do
+            check "${file} node-version" "$version" "$node"
+          done < <(grep -oP '^\s*node-version: \K\S+' --with-filename .github/workflows/*.yaml | tr ':' ' ')
+          [ "$fail" -eq 0 ]
+
+          # What the locked nixpkgs ships on each line — empty when it has no
+          # such line, which is the one thing that must wait for nixpkgs.
           locked() {
             nix eval --raw --impure --expr \
-              "(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}.$1.version"
+              "let p = (builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.\${builtins.currentSystem}; in p.$1.version or \"\""
           }
-
-          go_version=$(locked "$attr_go")
-          node_version=$(locked "$attr_node")
-          echo "Locked nixpkgs: $attr_go = $go_version, $attr_node = $node_version"
-
-          sed -i "s/^go .*/go ${go_version}/" go.mod
-          sed -i "s/^ARG GO_VERSION=.*/ARG GO_VERSION=${go_version}/" deploy/Dockerfile
-
-          # `>=` is the floor for anyone building without the devshell; the
-          # devshell itself is held to the exact value by nix/node.nix.
-          sed -i "s|\"node\": \">=.*\"|\"node\": \">=${node_version}\"|" package.json
-          sed -i "s|FROM node:[^-]*-alpine|FROM node:${node_version}-alpine|" deploy/Dockerfile
-          sed -i "s/^\( *node-version: \).*/\1${node_version}/" .github/workflows/*.yaml
+          attr_go="go_$(echo "$go" | cut -d. -f1-2 | tr . _)"
+          attr_node="nodejs_${node%%.*}"
+          attr_pnpm="pnpm_${pnpm%%.*}"
+          for attr in "$attr_go" "$attr_node" "$attr_pnpm"; do
+            v=$(locked "$attr")
+            if [ -z "$v" ]; then
+              echo "::error::the locked nixpkgs has no ${attr} — a new line waits for nixpkgs to package it"
+              exit 1
+            fi
+            echo "Locked nixpkgs: ${attr} = ${v}"
+            printf 'locked_%s=%s\n' "${attr%%_*}" "$v" >> "$GITHUB_OUTPUT"
+          done
+          {
+            echo "go=$go"
+            echo "node=$node"
+            echo "pnpm=$pnpm"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Base image digests
         run: |
@@ -99,6 +128,38 @@ jobs:
           # that exact tag, whatever order the two were rewritten in.
           node_ref=$(grep -oP 'FROM node:\K\S+' deploy/Dockerfile)
           redigest "node:${node_ref%@*}" "${node_ref#*@}"
+
+      # Go and node are upstream's own source tarballs, so their hashes are a
+      # download each. pnpm is its prebuilt @pnpm/exe binary (nix/pnpm.nix says
+      # why), whose hashes are npm's own `integrity`, one per platform the
+      # flake builds — read off the registry, nothing downloaded.
+      - name: Toolchain hashes
+        env:
+          GO: ${{ steps.toolchains.outputs.go }}
+          NODE: ${{ steps.toolchains.outputs.node }}
+          PNPM: ${{ steps.toolchains.outputs.pnpm }}
+          LOCKED_GO: ${{ steps.toolchains.outputs.locked_go }}
+          LOCKED_NODE: ${{ steps.toolchains.outputs.locked_nodejs }}
+          LOCKED_PNPM: ${{ steps.toolchains.outputs.locked_pnpm }}
+        run: |
+          set -euo pipefail
+
+          prefetch() { nix store prefetch-file --json "$1" | jq -r .hash; }
+
+          tc='{"go": {}, "node": {}, "pnpm": {}}'
+          if [ "$GO" != "$LOCKED_GO" ]; then
+            tc=$(jq --arg v "$GO" --arg h "$(prefetch "https://go.dev/dl/go${GO}.src.tar.gz")" '.go[$v] = $h' <<< "$tc")
+          fi
+          if [ "$NODE" != "$LOCKED_NODE" ]; then
+            tc=$(jq --arg v "$NODE" --arg h "$(prefetch "https://nodejs.org/dist/v${NODE}/node-v${NODE}.tar.xz")" '.node[$v] = $h' <<< "$tc")
+          fi
+          if [ "$PNPM" != "$LOCKED_PNPM" ]; then
+            integrity() { curl -fsS "https://registry.npmjs.org/@pnpm/exe.$1/${PNPM}" | jq -r .dist.integrity; }
+            tc=$(jq --arg v "$PNPM" --arg x "$(integrity linux-x64)" --arg a "$(integrity linux-arm64)" \
+              '.pnpm[$v] = {"x86_64-linux": $x, "aarch64-linux": $a}' <<< "$tc")
+          fi
+          printf '%s\n' "$tc" | jq --indent 2 . > nix/toolchains.json
+          cat nix/toolchains.json
 
       # vendorHash and pnpmDeps.hash are ordinary fixed-output derivations, so
       # each is derived from a build that is made to fail against a placeholder

@@ -39,6 +39,7 @@
         let
           go = pkgs.callPackage ./nix/go.nix { };
           nodejs = pkgs.callPackage ./nix/node.nix { };
+          pnpm = pkgs.callPackage ./nix/pnpm.nix { };
         in
         {
           packages = {
@@ -154,10 +155,8 @@
               # `let` binding wins over `with pkgs`. The devshell and the
               # package build must agree with what CI installs.
               nodejs
-              # package.json pins pnpm@12, which nixpkgs does not carry yet.
-              # The lockfile is v9, which 11 reads and writes identically, so
-              # the only symptom is corepack's version warning.
-              pnpm_11
+              # The let-bound pin from nix/pnpm.nix, for the same reason.
+              pnpm
               go-task
               openssl
               playwright-mcp

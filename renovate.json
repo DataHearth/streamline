@@ -11,6 +11,25 @@
 	"labels": ["dependencies"],
 	"reviewers": ["DataHearth"],
 	"postUpdateOptions": ["gomodTidy"],
+	"customManagers": [
+		{
+			"customType": "regex",
+			"description": "Go's version, from go.dev's release list: go.mod's `go` directive and the Dockerfile's GO_VERSION, moved in one PR. nix/go.nix overrides nixpkgs' go_1_NN onto it; renovate-pins.yaml re-pins GO_DIGEST and derives the source hash.",
+			"managerFilePatterns": ["/^go\\.mod$/", "/^deploy/Dockerfile$/"],
+			"matchStrings": ["(?m)^go (?<currentValue>\\d+\\.\\d+\\.\\d+)$", "(?m)^ARG GO_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
+			"depNameTemplate": "go",
+			"datasourceTemplate": "golang-version"
+		},
+		{
+			"customType": "regex",
+			"description": "Node's version, from nodejs.org's release list: engines.node (a `>=` floor), the Dockerfile's node tag and every setup-node node-version, moved in one PR. nix/node.nix overrides nixpkgs' nodejs_NN onto it; renovate-pins.yaml re-pins the image digest and derives the source hash.",
+			"managerFilePatterns": ["/^package\\.json$/", "/^deploy/Dockerfile$/", "/^\\.github/workflows/[^/]+\\.yaml$/"],
+			"matchStrings": ["\"node\": \">=(?<currentValue>\\d+\\.\\d+\\.\\d+)\"", "FROM node:(?<currentValue>\\d+\\.\\d+\\.\\d+)-alpine", "(?m)^\\s*node-version: (?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
+			"depNameTemplate": "node",
+			"datasourceTemplate": "node-version",
+			"versioningTemplate": "node"
+		}
+	],
 	"packageRules": [
 		{
 			"matchManagers": ["gomod"],
@@ -46,7 +65,7 @@
 			"dependencyDashboardApproval": true
 		},
 		{
-			"description": "Neither toolchain version is renovate's to choose: flake.lock's nixpkgs decides both, and go.mod, package.json, deploy/Dockerfile and the workflows only record what it decided. Left on, these managers would each offer upstream's newest release instead — the one version nix cannot use. nix/{go,node}.nix refuse to evaluate when a declaration and the locked package disagree, so an offer like that cannot merge anyway; it would just be a permanently red PR.",
+			"description": "go.mod's own `go` directive is bumped by the regex manager below, which moves the Dockerfile's GO_VERSION in the same PR; left on, gomod would bump the directive alone and leave the copy behind. Same for the node and golang images and the setup actions' node-version, which the node and go regex managers own.",
 			"matchManagers": ["gomod"],
 			"matchDepTypes": ["golang", "toolchain"],
 			"enabled": false
@@ -57,7 +76,7 @@
 			"enabled": false
 		},
 		{
-			"description": "The PR that does move both toolchains. .github/workflows/renovate-pins.yaml rewrites every declaration from the newly locked package on this branch, before CI reads them, so the bump and the four files that record it land together. Last on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
+			"description": "The PR that moves the locked nixpkgs. It no longer touches a toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
 			"matchManagers": ["nix"],
 			"groupName": "nix inputs",
 			"dependencyDashboardApproval": false
@@ -68,6 +87,20 @@
 			"matchDepNames": ["pnpm", "pnpm/action-setup"],
 			"groupName": "pnpm",
 			"dependencyDashboardApproval": false
+		},
+		{
+			"description": "A new Go minor is a new nixpkgs line (go_1_NN), so it waits on the dashboard until nixpkgs packages it; nix/go.nix throws on a line it does not have. Patches open straight away — that is the point of sourcing them from go.dev rather than from the lock.",
+			"matchManagers": ["custom.regex"],
+			"matchDepNames": ["go"],
+			"matchUpdateTypes": ["minor", "major"],
+			"dependencyDashboardApproval": true
+		},
+		{
+			"description": "The pnpm rule above lifts the dashboard gate for the whole group; a pnpm major is a new nixpkgs line (pnpm_NN) and has to wait for it like Go's minor. Node needs no rule of its own: its line is the major, which the generic major gate already holds.",
+			"matchManagers": ["npm"],
+			"matchDepNames": ["pnpm"],
+			"matchUpdateTypes": ["major"],
+			"dependencyDashboardApproval": true
 		}
 	],
 	"vulnerabilityAlerts": {

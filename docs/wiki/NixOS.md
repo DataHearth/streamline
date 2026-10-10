@@ -52,6 +52,8 @@ The overlay is what puts `pkgs.streamline` in scope, which is where the module's
 
 Supported systems are `x86_64-linux` and `aarch64-linux`.
 
+With `inputs.nixpkgs.follows`, streamline is built against your nixpkgs, but always with the Go, Node and pnpm versions it declares. When your nixpkgs packages a different patch of the same line, the package overrides it onto the declared one: Go and Node are then not on cache.nixos.org, so the first build compiles them from source (Node takes the longest), and pnpm is fetched as pnpm's own prebuilt binary for `x86_64-linux` or `aarch64-linux`. A nixpkgs that lacks the line entirely, such as an older release missing `go_1_27`, fails evaluation with a message naming it: drop the `follows` to use streamline's own lock.
+
 ## NixOS module
 
 ```nix
