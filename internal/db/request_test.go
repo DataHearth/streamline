@@ -50,6 +50,9 @@ var _ = Describe("Request store", Label("unit", "db"), func() {
 			MediaType: "movie", MediaID: 42, Title: "Flick", RequesterID: userID,
 		})
 		Expect(err).NotTo(HaveOccurred())
+		Expect(r.Edges.Requester).NotTo(BeNil())
+		Expect(r.Edges.Requester.ID).To(Equal(userID))
+		Expect(r.Edges.Requester.Email).To(Equal("u@x.io"))
 		got, err := store.GetRequest(ctx, r.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(got.Edges.Requester.ID).To(Equal(userID))
