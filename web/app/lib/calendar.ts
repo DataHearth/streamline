@@ -1,6 +1,10 @@
-import { posterUrl, tvPosterUrl } from "./posters";
+import type { StatusKind } from "@components/shared/StatusPill.svelte";
+import { albumPosterUrl, bookPosterUrl, posterUrl, tvPosterUrl } from "./posters";
+import { releaseTypeLabel } from "./music-books";
 import type {
 	EpisodeStatus,
+	UpcomingAlbum,
+	UpcomingBook,
 	UpcomingEpisode,
 	UpcomingList,
 	UpcomingMovie,
@@ -8,10 +12,11 @@ import type {
 import { getLocale } from "./paraglide/runtime.js";
 import { m as i18n } from "./paraglide/messages.js";
 
-export type CalendarKind = "movie" | "episode";
+export type CalendarKind = "movie" | "episode" | "album" | "book";
 
-// A calendar event is either a wanted-movie digital release or an upcoming
-// episode air-date. `status` is the item's real state and is only ever shown
+// A calendar event is a wanted-movie digital release, an upcoming episode
+// air-date, a monitored artist's next release or a monitored book's
+// publication. `status` is the item's real state and is only ever shown
 // with its label next to it (a pill), never as colour alone. Dots encode
 // `kind` instead — see dotToken. The rest of the fields let one row renderer
 // serve both kinds. `subtitle` / `time` / `detail` are the three segments of
@@ -25,6 +30,8 @@ export type CalendarEvent = {
 	detail?: string;
 	poster: string;
 	href: string;
+	// Album covers are square; everything else is a 2:3 poster or cover.
+	square?: boolean;
 	date: Date;
 	// Movies reach this list only while wanted; episodes carry their own.
 	status: EpisodeStatus;
@@ -41,7 +48,21 @@ export function dotToken(e: CalendarEvent): CalendarKind {
 
 export type GridCell = { date: Date; inMonth: boolean };
 
-export type CalendarFilter = "all" | "movies" | "episodes";
+export type CalendarFilter = "all" | "movies" | "episodes" | "albums" | "books";
+
+// The kind pill's word, and the filter cell each kind answers to.
+export function kindLabel(kind: CalendarKind): string {
+	if (kind === "movie") return i18n.common_movie();
+	if (kind === "episode") return i18n.common_episode();
+	if (kind === "album") return i18n.common_album();
+	return i18n.common_book();
+}
+const FILTER_KIND: Record<Exclude<CalendarFilter, "all">, CalendarKind> = {
+	movies: "movie",
+	episodes: "episode",
+	albums: "album",
+	books: "book",
+};
 
 const clock = new Intl.DateTimeFormat(getLocale(), {
 	hour: "2-digit",
@@ -93,11 +114,67 @@ export function episodesToCalendarEvents(
 	}));
 }
 
+// MusicBrainz and Hardcover date most releases to the day, so these carry no
+// time; parseDay keeps a bare day on the local calendar rather than UTC.
+function parseDay(iso: string): Date {
+	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+	return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
+}
+
+export function albumsToCalendarEvents(albums: UpcomingAlbum[]): CalendarEvent[] {
+	return albums.map((a) => ({
+		id: `album-${a.id}`,
+		kind: "album",
+		title: a.title,
+		subtitle: a.artist_name,
+		detail: releaseTypeLabel(a.type),
+		poster: albumPosterUrl(a.id),
+		square: true,
+		href: `/music/${a.artist_id}?release=${a.id}`,
+		date: parseDay(a.release_date),
+		status: a.status,
+	}));
+}
+
+export function booksToCalendarEvents(books: UpcomingBook[]): CalendarEvent[] {
+	return books.map((b) => ({
+		id: `book-${b.id}`,
+		kind: "book",
+		title: b.title,
+		subtitle: b.author,
+		detail: b.position
+			? b.title === b.series_title
+				? i18n.calendar_volume({ n: b.position })
+				: i18n.calendar_book_in_series({ series: b.series_title ?? "", n: b.position })
+			: b.series_title,
+		poster: bookPosterUrl(b.id),
+		href: b.series_id ? `/books/series/${b.series_id}` : `/books/${b.id}`,
+		date: parseDay(b.release_date),
+		status: b.status,
+	}));
+}
+
+// The pill an album or book row carries. Wanted is what every unreleased row
+// is, so it says nothing and gets none; the four states that do say something
+// are labelled. Movies and episodes keep the bare dot they had.
+const SAID: Partial<Record<EpisodeStatus, StatusKind>> = {
+	available: "available",
+	downloading: "downloading",
+	paused: "paused",
+	skipped: "skipped",
+};
+export function statusPill(e: CalendarEvent): StatusKind | null {
+	if (e.kind !== "album" && e.kind !== "book") return null;
+	return SAID[e.status] ?? null;
+}
+
 export function upcomingEvents(data: UpcomingList | undefined): CalendarEvent[] {
 	if (!data) return [];
 	return [
 		...toCalendarEvents(data.movies ?? []),
 		...episodesToCalendarEvents(data.episodes ?? []),
+		...albumsToCalendarEvents(data.albums ?? []),
+		...booksToCalendarEvents(data.books ?? []),
 	].sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
@@ -106,7 +183,7 @@ export function filterEvents(
 	filter: CalendarFilter,
 ): CalendarEvent[] {
 	if (filter === "all") return events;
-	const kind: CalendarKind = filter === "movies" ? "movie" : "episode";
+	const kind = FILTER_KIND[filter];
 	return events.filter((e) => e.kind === kind);
 }
 

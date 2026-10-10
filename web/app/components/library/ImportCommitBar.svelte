@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { CircleCheckBig } from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
+	import { unitText } from "@lib/imports-touch";
+	import type { ImportScanKind } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// B1: commit lives on a bar that stays with you through a long review list,
@@ -10,7 +12,7 @@
 		pendingCount,
 		commitableCount,
 		commitSummary,
-		series = false,
+		kind = "movie",
 		skipBusy = false,
 		commitBusy = false,
 		onSkipAll,
@@ -19,7 +21,7 @@
 		pendingCount: number;
 		commitableCount: number;
 		commitSummary: string;
-		series?: boolean;
+		kind?: ImportScanKind;
 		skipBusy?: boolean;
 		commitBusy?: boolean;
 		onSkipAll: () => void;
@@ -28,15 +30,7 @@
 
 	let confirmSkipOpen = $state(false);
 
-	const prefix = $derived(
-		series
-			? pendingCount === 1
-				? i18n.imports_skip_body_prefix_show_one
-				: i18n.imports_skip_body_prefix_show_other
-			: pendingCount === 1
-				? i18n.imports_skip_body_prefix_file_one
-				: i18n.imports_skip_body_prefix_file_other,
-	);
+	let text = $derived(unitText(kind));
 </script>
 
 <div
@@ -83,9 +77,7 @@
 
 <Dialog
 	open={confirmSkipOpen}
-	title={series
-		? i18n.imports_skip_all_unmatched_shows()
-		: i18n.imports_skip_all_unmatched_files()}
+	title={text.skipAllTitle}
 	onClose={() => (confirmSkipOpen = false)}
 	actions={[
 		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
@@ -93,8 +85,8 @@
 	]}
 >
 	<p class="text-sm text-fg-muted">
-		{prefix({ count: pendingCount })}
+		{text.skipPrefix(pendingCount)}
 		<span class="font-medium text-fg">{i18n.lc_skip()}</span>
-		{series ? i18n.imports_skip_body_suffix_show() : i18n.imports_skip_body_suffix_file()}
+		{text.skipSuffix}
 	</p>
 </Dialog>

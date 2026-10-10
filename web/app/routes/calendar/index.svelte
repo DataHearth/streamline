@@ -161,7 +161,7 @@
 		<h2 class="truncate text-[17px] font-semibold tracking-[-0.02em] text-fg">
 			{view === "month" ? monthLabelShort : i18n.dash_next_30_days()}
 		</h2>
-		<CalendarFilterSwitch {filter} onChange={(f) => (filter = f)} />
+		<CalendarFilterSwitch compact {filter} onChange={(f) => (filter = f)} />
 	</div>
 
 	<header class="hidden flex-wrap items-center justify-between gap-4 md:flex">

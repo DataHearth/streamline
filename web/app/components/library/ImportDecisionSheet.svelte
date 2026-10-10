@@ -9,8 +9,13 @@
 		CLASS_META,
 		isActionable,
 		outcomeWord,
+		shortId,
+		unitText,
+		type MatchId,
 		type TouchEntry,
 	} from "@lib/imports-touch";
+	import { IMPORT_KIND } from "@lib/imports";
+	import type { ImportScanKind } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The decision surface for one file / show folder below lg. The row's job is
@@ -18,7 +23,7 @@
 	// here, so the list stays a list.
 	let {
 		entry,
-		series = false,
+		kind = "movie",
 		reviewing,
 		busy = false,
 		onClose,
@@ -27,11 +32,11 @@
 		onSkipToggle,
 	}: {
 		entry: TouchEntry | null;
-		series?: boolean;
+		kind?: ImportScanKind;
 		reviewing: boolean;
 		busy?: boolean;
 		onClose: () => void;
-		onPick: (entry: TouchEntry, candidateId: number) => void;
+		onPick: (entry: TouchEntry, candidateId: MatchId) => void;
 		onSearch: (entry: TouchEntry) => void;
 		onSkipToggle: (entry: TouchEntry) => void;
 	} = $props();
@@ -50,7 +55,7 @@
 	});
 
 	let cls = $derived(entry ? CLASS_META[entry.classification] : null);
-	let word = $derived(entry ? outcomeWord(entry, series) : null);
+	let word = $derived(entry ? outcomeWord(entry, kind === "series") : null);
 	let skipped = $derived(entry?.decision === "skip");
 	let actionable = $derived(entry ? isActionable(entry.classification) : false);
 	// confirmed rows can still be re-pointed at a different title; existing rows
@@ -60,8 +65,8 @@
 			reviewing &&
 			(actionable || entry.classification === "confirmed"),
 	);
-	let source = $derived(series ? "TVDB" : "TMDB");
-	let noun = $derived(series ? "show" : "file");
+	let source = $derived(IMPORT_KIND[kind].source);
+	let text = $derived(unitText(kind));
 </script>
 
 {#if entry && cls && word}
@@ -69,7 +74,7 @@
 		class="fixed inset-0 z-50 lg:hidden"
 		role="dialog"
 		aria-modal="true"
-		aria-label={series ? i18n.imports_decide_show() : i18n.imports_decide_file()}
+		aria-label={text.decide}
 	>
 		<button
 			type="button"
@@ -117,8 +122,13 @@
 				>
 					{cls.label}
 				</span>
+				{#if entry.flag}
+					<span class="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-text">
+						{entry.flag}
+					</span>
+				{/if}
 				<span
-					class="rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] text-fg-muted"
+					class="max-w-full truncate rounded-full bg-surface px-2 py-0.5 font-mono text-[11px] text-fg-muted"
 				>
 					{entry.sub}
 				</span>
@@ -158,8 +168,8 @@
 										<span class="block truncate text-[13px] font-semibold text-fg">
 											{c.title}
 										</span>
-										<span class="mt-0.5 block font-mono text-[10.5px] text-fg-subtle">
-											{c.year ?? "—"} · {source} {c.id}
+										<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
+											{#if c.sub}{c.sub}{" · "}{/if}{c.year ?? "—"}{#if c.tag}{" · "}{c.tag}{/if} · {source} {shortId(c.id)}
 										</span>
 									</span>
 									{#if on}
@@ -170,9 +180,7 @@
 						</div>
 					{:else}
 						<p class="text-[13px] text-fg-muted">
-							{series
-								? i18n.imports_nothing_parsed_show()
-								: i18n.imports_nothing_parsed_file()}
+							{text.nothingParsed}
 						</p>
 					{/if}
 
@@ -195,9 +203,7 @@
 						{#if !reviewing}
 							{i18n.imports_no_longer_review()}
 						{:else}
-							{series
-								? i18n.imports_already_matched_show()
-								: i18n.imports_already_matched_file()}
+							{text.alreadyMatched}
 						{/if}
 					</p>
 				{/if}
@@ -213,11 +219,7 @@
 						onclick={() => onSkipToggle(entry)}
 						class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface text-[14px] font-medium text-fg transition active:bg-surface-2 disabled:opacity-60"
 					>
-						{skipped
-							? i18n.common_restore()
-							: series
-								? i18n.imports_skip_this_show()
-								: i18n.imports_skip_this_file()}
+						{skipped ? i18n.common_restore() : text.skipThis}
 					</button>
 					{#if entry.chosenId != null}
 						<button

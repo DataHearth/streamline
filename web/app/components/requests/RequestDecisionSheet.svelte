@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { Check, RotateCcw, X } from "@lucide/svelte";
+	import { Check, RotateCcw, TriangleAlert, X } from "@lucide/svelte";
 	import { formatRelative } from "@lib/dates";
 	import {
 		STATUS_META,
 		isMusicBook,
+		albumBy,
+		requestedAs,
 		kindLabel,
 		requesterName,
 	} from "@lib/requests-touch";
@@ -14,7 +16,16 @@
 	import Select from "@components/forms/Select.svelte";
 	import LookupDetailPanel from "@components/shared/LookupDetailPanel.svelte";
 	import MusicBookLookupPanel from "@components/shared/MusicBookLookupPanel.svelte";
-	import { requestHit, type ArtistMeta, type BookMeta, type RequestMetadata } from "@lib/music-books-lookup";
+	import { auth } from "@lib/auth.svelte";
+	import {
+		hardcoverCode,
+		hardcoverFix,
+		hardcoverTitle,
+		requestHit,
+		type ArtistMeta,
+		type BookMeta,
+		type RequestMetadata,
+	} from "@lib/music-books-lookup";
 	import type {
 		MediaRequest,
 		QualityProfile,
@@ -34,6 +45,7 @@
 		profiles = [],
 		profile,
 		onProfileChange,
+		approveError = null,
 		busy = false,
 		onClose,
 		onApprove,
@@ -48,6 +60,8 @@
 		profiles?: QualityProfile[];
 		profile: string;
 		onProfileChange: (v: string) => void;
+		// The code the last approval of this request failed with, if it did.
+		approveError?: string | null;
 		busy?: boolean;
 		onClose: () => void;
 		onApprove: (r: MediaRequest, profile: string) => void;
@@ -77,8 +91,25 @@
 	// Only the detail that belongs to this request, never a cached neighbour's.
 	let mbDetail = $derived(mbHit && (mbHit.artist || mbHit.book) ? mbMeta : undefined);
 	let videoDetail = $derived(mb ? undefined : (detail as RequestMediaDetails | undefined));
-	let year = $derived(mb ? mbHit?.year : videoDetail?.year);
+	// An album request is reviewed on its artist, whose year is when the artist
+	// started; the album's own year is on the discography, when it is there.
+	let year = $derived(
+		!mb
+			? videoDetail?.year
+			: request?.media_type === "album"
+				? (mbDetail as ArtistMeta | undefined)?.releases?.find((x) => x.mbid === request?.media_mbid)?.year
+				: mbHit?.year,
+	);
 	let pending = $derived(request?.status === "pending");
+	// An album whose artist is already in the library joins that artist under
+	// its profile, so there is no profile to pick.
+	// The artist approval will act on, from the metadata and not from what the
+	// requester typed.
+	let verifiedArtist = $derived(mbHit?.artist?.name ?? request?.artist_name ?? "");
+	let profileLocked = $derived(request?.media_type === "album" && !!mbHit?.held);
+	let notFound = $derived(approveError === "album_not_found");
+	// Hardcover refusing the add that approving a book or a series makes.
+	let keyIssue = $derived(hardcoverCode(approveError));
 	let options = $derived([
 		{ value: "", label: i18n.quality_server_default() },
 		...profiles.map((p) => ({ value: p.name, label: p.name })),
@@ -119,8 +150,11 @@
 					<p class="mt-1 font-mono text-[11px] text-fg-subtle">
 						{year ? `${year} · ` : ""}{kindLabel(
 							request.media_type,
-						)}
+						)}{albumBy(request) ? ` · ${albumBy(request)}` : ""}
 					</p>
+					{#if requestedAs(request)}
+						<p class="mt-0.5 truncate text-[11.5px] text-fg-faint">{requestedAs(request)}</p>
+					{/if}
 				</div>
 				<button
 					type="button"
@@ -187,7 +221,15 @@
 							loading={detailLoading}
 							showTitle={false}
 							compact
+							markedAlbum={request.media_type === "album" ? request.media_mbid : undefined}
 						/>
+						{#if request.media_type === "album" && verifiedArtist}
+							<p class="mt-3 text-[12px] text-fg-muted">
+								{mbHit.held
+									? i18n.requests_album_note_held({ artist: verifiedArtist })
+									: i18n.requests_album_note_new({ artist: verifiedArtist })}
+							</p>
+						{/if}
 					{:else}
 						<LookupDetailPanel
 							kind={request.media_type === "tvshow" ? "series" : "movie"}
@@ -216,11 +258,42 @@
 							id="qp-sheet-{request.id}"
 							value={profile}
 							{options}
+							disabled={profileLocked}
 							onChange={onProfileChange}
 						/>
+						{#if profileLocked && verifiedArtist}
+							<p class="mt-1.5 text-[12px] text-fg-muted">
+								{i18n.requests_album_profile_held({ artist: verifiedArtist })}
+							</p>
+						{/if}
 					</div>
 				{/if}
 			</div>
+
+			<!-- Pinned with the buttons, not in the scroll: it answers the tap that
+			     was just made, wherever the sheet was scrolled to. -->
+			{#if reviewer && pending && (notFound || keyIssue)}
+				<div
+					role="alert"
+					class="flex items-start gap-2.5 border-t border-status-failed/30 bg-status-failed/10 px-5 py-3 text-status-failed"
+				>
+					<TriangleAlert size={15} class="mt-0.5 shrink-0" aria-hidden="true" />
+					<div class="min-w-0">
+						<p class="text-[13px] font-semibold">
+							{keyIssue ? hardcoverTitle(keyIssue) : i18n.requests_album_not_found()}
+						</p>
+						<p class="mt-0.5 text-[12px] leading-relaxed text-fg-muted">
+							{keyIssue
+								? hardcoverFix(keyIssue, auth.user?.role === "admin")
+								: i18n.requests_album_not_found_body({
+										album: request.title,
+										artist: verifiedArtist,
+										requester: requesterName(request),
+									})}
+						</p>
+					</div>
+				</div>
+			{/if}
 
 			{#if reviewer}
 				<div

@@ -7,6 +7,7 @@
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
 	import { importStartForm } from "@lib/schemas";
+	import { hardcoverIssue } from "@lib/music-books-lookup";
 	import type {
 		ImportMode,
 		ImportScan,
@@ -17,6 +18,7 @@
 	import TextField from "@components/forms/TextField.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import RadioCards from "@components/forms/RadioCards.svelte";
+	import ProviderKeyNotice from "@components/shared/ProviderKeyNotice.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
@@ -40,6 +42,11 @@
 		() => {};
 	onMount(() => goto.subscribe((fn) => (navigate = fn)));
 
+	// Starting a book scan with no Hardcover key answers 503 before anything is
+	// queued. A key Hardcover refuses cannot fail the start: that surfaces on the
+	// scan itself.
+	let keyUnset = $state(false);
+
 	const start = createMutation<ImportScan, Error, ImportStartRequest>(() => ({
 		mutationFn: (body) =>
 			api<ImportScan>("/library/imports", { method: "POST", body }),
@@ -49,7 +56,10 @@
 			onCreated?.();
 			navigate("/imports/[id]", { id: String(scan.id) });
 		},
-		onError: (err) => toast.err(errorText(err)),
+		onError: (err) => {
+			if (hardcoverIssue(err) === "unset") keyUnset = true;
+			else toast.err(errorText(err));
+		},
 	}));
 
 	const form = createForm(() => ({
@@ -61,14 +71,19 @@
 		},
 		validators: { onChange: importStartForm },
 		onSubmit: ({ value }) => {
+			// Music and books are only ever adopted where they sit, whatever the
+			// mode field still holds from another kind — it is left alone on a kind
+			// change, since setting it would validate the untouched path too.
+			const adopt = value.kind === "music" || value.kind === "book";
 			const body: ImportStartRequest = {
 				source_path: value.source_path,
 				kind: value.kind,
-				mode: value.mode,
+				mode: adopt ? "in_place" : value.mode,
 			};
-			if (value.mode === "rename" && value.import_mode) {
+			if (!adopt && value.mode === "rename" && value.import_mode) {
 				body.import_mode = value.import_mode;
 			}
+			keyUnset = false;
 			start.mutate(body);
 		},
 	}));
@@ -78,8 +93,20 @@
 	// copy below would stay stuck on the movie wording and the transfer-mode
 	// select would never appear.
 	let kind = $state<ImportScanKind>("movie");
-	let isSeries = $derived(kind === "series");
+	// Where each kind's files usually wait, and what one entry in the review is.
+	// Music and books have no rename step at import, so no rename wording.
+	const PATH: Record<ImportScanKind, { placeholder: string; help: () => string; rename?: () => string }> = {
+		movie: { placeholder: "/data/movies/incoming", help: i18n.imports_path_help, rename: i18n.imports_rename_desc_movie },
+		series: { placeholder: "/data/tv/incoming", help: i18n.imports_shows_path_help, rename: i18n.imports_rename_desc_series },
+		music: { placeholder: "/data/music/incoming", help: i18n.imports_albums_path_help },
+		book: { placeholder: "/data/books/incoming", help: i18n.imports_books_path_help },
+	};
+	let path = $derived(PATH[kind]);
 	let mode = $state<ImportMode>("in_place");
+	// The backend adopts album folders and books in place and nothing else, so
+	// those two kinds get the mode as a fact rather than a choice, and no
+	// transfer mode. A book can still be renamed from its page afterwards.
+	let adoptOnly = $derived(kind === "music" || kind === "book");
 
 	const KINDS: { v: ImportScanKind; label: string; desc: string }[] = [
 		{
@@ -92,6 +119,16 @@
 			label: i18n.settings_series(),
 			desc: i18n.imports_one_per_show(),
 		},
+		{
+			v: "music",
+			label: i18n.music_label(),
+			desc: i18n.imports_one_per_album(),
+		},
+		{
+			v: "book",
+			label: i18n.books_label(),
+			desc: i18n.imports_one_per_book(),
+		},
 	];
 
 	const MODES: { v: ImportMode; label: string; desc: string }[] = $derived([
@@ -103,9 +140,7 @@
 		{
 			v: "rename",
 			label: i18n.imports_import_rename(),
-			desc: isSeries
-				? i18n.imports_rename_desc_series()
-				: i18n.imports_rename_desc_movie(),
+			desc: path.rename?.() ?? "",
 		},
 	]);
 
@@ -149,36 +184,46 @@
 			<TextField
 				{field}
 				label={i18n.imports_source_path()}
-				placeholder={isSeries ? "/data/tv/incoming" : "/data/movies/incoming"}
+				placeholder={path.placeholder}
 				autocomplete="off"
-				help={isSeries
-					? i18n.imports_shows_path_help()
-					: i18n.imports_path_help()}
+				help={path.help()}
 			/>
 		{/snippet}
 	</form.Field>
 
-	<form.Field name="mode">
-		{#snippet children(field)}
-			<RadioCards
-				legend={i18n.common_mode()}
-				columns={2}
-				name={field.name}
-				value={field.state.value}
-				onChange={(v) => {
-					field.handleChange(v);
-					mode = v;
-				}}
-				options={MODES.map((m) => ({
-					value: m.v,
-					label: m.label,
-					description: m.desc,
-				}))}
-			/>
-		{/snippet}
-	</form.Field>
+	{#if adoptOnly}
+		<div>
+			<p class="mb-2 text-sm font-medium text-fg-muted">{i18n.common_mode()}</p>
+			<div class="flex flex-col gap-1.5 rounded-md border border-border bg-bg-card p-4">
+				<span class="text-sm font-semibold text-fg">{i18n.imports_adopt_in_place()}</span>
+				<span class="text-xs text-fg-muted">
+					{kind === "book" ? i18n.imports_in_place_books() : i18n.imports_in_place_music()}
+				</span>
+			</div>
+		</div>
+	{:else}
+		<form.Field name="mode">
+			{#snippet children(field)}
+				<RadioCards
+					legend={i18n.common_mode()}
+					columns={2}
+					name={field.name}
+					value={field.state.value}
+					onChange={(v) => {
+						field.handleChange(v);
+						mode = v;
+					}}
+					options={MODES.map((m) => ({
+						value: m.v,
+						label: m.label,
+						description: m.desc,
+					}))}
+				/>
+			{/snippet}
+		</form.Field>
+	{/if}
 
-	{#if mode === "rename"}
+	{#if !adoptOnly && mode === "rename"}
 		<form.Field name="import_mode">
 			{#snippet children(field)}
 				<div>
@@ -197,6 +242,10 @@
 				</div>
 			{/snippet}
 		</form.Field>
+	{/if}
+
+	{#if keyUnset && kind === "book"}
+		<ProviderKeyNotice reason="unset" onNavigate={onCreated} />
 	{/if}
 
 	<div class="flex justify-end">

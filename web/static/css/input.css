@@ -125,6 +125,11 @@
 	   quieter than a filled status pill, and light enough to carry dark text. */
 	--kind-movie: oklch(0.8 0.095 105);
 	--kind-episode: oklch(0.8 0.09 220);
+	/* Music and books at the same lightness and chroma. Teal sat too close to
+	   sky as a 6px dot, so albums take lavender and books rose: four hues
+	   roughly evenly spaced (105, 220, 290, 355). */
+	--kind-album: oklch(0.78 0.09 290);
+	--kind-book: oklch(0.8 0.09 355);
 
 	/* Shadows */
 	--shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);

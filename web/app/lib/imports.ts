@@ -1,6 +1,26 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
-import type { ImportMode, ImportStatus, ImportTransferMode } from "./types";
+import type { ImportMode, ImportScanKind, ImportStatus, ImportTransferMode } from "./types";
+import { NOUN_ALBUM, NOUN_BOOK, NOUN_FILE, NOUN_SHOW, type Noun } from "./nouns";
 import { m as i18n } from "./paraglide/messages.js";
+
+// Each scan kind reviews one unit — a movie file, a show folder, an album
+// folder, a book — matched against one provider, at one endpoint under
+// /library/imports/{id}/. Everything that routes or words a review by kind
+// starts here.
+export type ImportRows = "files" | "shows" | "albums" | "books";
+export const IMPORT_KIND: Record<
+	ImportScanKind,
+	{ rows: ImportRows; source: string; noun: Noun; label: () => string }
+> = {
+	movie: { rows: "files", source: "TMDB", noun: NOUN_FILE, label: i18n.movies_label },
+	series: { rows: "shows", source: "TVDB", noun: NOUN_SHOW, label: i18n.settings_series },
+	music: { rows: "albums", source: "MusicBrainz", noun: NOUN_ALBUM, label: i18n.music_label },
+	book: { rows: "books", source: "Hardcover", noun: NOUN_BOOK, label: i18n.books_label },
+};
+
+// The query key the unfiltered row list lives under, which the review's
+// counts and its bulk skip read. Files predate the others and kept theirs.
+export const pendingRowsKey = (rows: ImportRows) => (rows === "files" ? "pending" : `pending-${rows}`);
 
 export type ImportStatusMeta = {
 	label: string;

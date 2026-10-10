@@ -7,12 +7,14 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Gauge, Pencil, Eye, Film, Tv } from "@lucide/svelte";
+	import { Plus, Trash2, Gauge, Pencil, Eye } from "@lucide/svelte";
+	import ProfileDefaultControl from "@components/settings/ProfileDefaultControl.svelte";
+	import { defaultBadge, heldLabels, videoKinds } from "@lib/profile-defaults";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { qualityProfile } from "@lib/schemas";
-	import type { DefaultMedia, QualityProfileFull } from "@lib/types";
+	import type { QualityProfileFull } from "@lib/types";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import QualityProfileForm, {
@@ -96,19 +98,18 @@
 
 	// Deleting the current default is a 409, so this is also the way to free a
 	// profile for deletion — not only a preference.
-	const makeDefault = createMutation<
-		null,
-		Error,
-		{ name: string; media: DefaultMedia }
-	>(() => ({
-		mutationFn: ({ name, media }) =>
-			api<null>(
-				`/quality-profiles/${encodeURIComponent(name)}/default?media=${media}`,
-				{ method: "POST" },
-			),
-		onSuccess: () => {
+	// Movies and series each have their own default.
+	const kinds = videoKinds();
+	const held = (p: QualityProfileFull) => p.default_for ?? (p.is_default ? ["movie", "series"] : []);
+	const makeDefault = createMutation<null, Error, { name: string; kind: string | null }>(() => ({
+		mutationFn: ({ name, kind }) =>
+			api<null>(`/quality-profiles/${encodeURIComponent(name)}/default?media=${kind}`, {
+				method: "POST",
+			}),
+		onSuccess: (_r, { name, kind }) => {
 			qc.invalidateQueries({ queryKey: ["quality-profiles"] });
-			toast.ok(i18n.quality_default_set());
+			const label = kinds.find((k) => k.value === kind)?.label;
+			toast.ok(label ? i18n.quality_default_set_for({ name, kind: label }) : i18n.quality_default_set());
 		},
 		onError: (err) => toast.err(errorText(err)),
 	}));
@@ -251,7 +252,7 @@
 		{:else}
 			{#each items as p (p.name)}
 				<div
-					class="flex items-center gap-4 rounded-lg border border-border bg-bg-elevated p-4 transition hover:border-border-strong"
+					class="flex items-center gap-3 rounded-lg border border-border bg-bg-elevated px-3.5 py-4 transition hover:border-border-strong md:gap-4 md:p-4"
 				>
 					<button
 						type="button"
@@ -262,7 +263,7 @@
 							: i18n.common_edit_name({ name: p.name })}
 					>
 						<div
-							class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"
+							class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted md:flex"
 						>
 							<Gauge size={20} aria-hidden="true" />
 						</div>
@@ -271,18 +272,9 @@
 								<span class="truncate text-sm font-semibold text-fg">
 									{p.name}
 								</span>
-								{#if p.default_for?.includes("movie")}
-									<span
-										class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent"
-									>
-										{i18n.quality_default_movies_badge()}
-									</span>
-								{/if}
-								{#if p.default_for?.includes("series")}
-									<span
-										class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent"
-									>
-										{i18n.quality_default_series_badge()}
+								{#if held(p).length}
+									<span class="inline-flex items-center rounded-full bg-accent/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+										{defaultBadge(kinds, held(p))}
 									</span>
 								{/if}
 								{#if p.upgrade_allowed}
@@ -320,7 +312,7 @@
 							</div>
 						</div>
 					</button>
-					<div class="flex shrink-0 items-center gap-1">
+					<div class="flex shrink-0 items-center gap-0.5 md:gap-1">
 						{#if config.readOnly}
 							<button
 								type="button"
@@ -331,32 +323,13 @@
 								<Eye size={16} aria-hidden="true" />
 							</button>
 						{:else}
-							{#if !p.default_for?.includes("movie")}
-								<button
-									type="button"
-									disabled={makeDefault.isPending}
-									onclick={() =>
-										makeDefault.mutate({ name: p.name, media: "movie" })}
-									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-									aria-label={i18n.quality_make_default_movies()}
-									title={i18n.quality_make_default_movies()}
-								>
-									<Film size={16} aria-hidden="true" />
-								</button>
-							{/if}
-							{#if !p.default_for?.includes("series")}
-								<button
-									type="button"
-									disabled={makeDefault.isPending}
-									onclick={() =>
-										makeDefault.mutate({ name: p.name, media: "series" })}
-									class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
-									aria-label={i18n.quality_make_default_series()}
-									title={i18n.quality_make_default_series()}
-								>
-									<Tv size={16} aria-hidden="true" />
-								</button>
-							{/if}
+							<ProfileDefaultControl
+								name={p.name}
+								{kinds}
+								held={held(p)}
+								busy={makeDefault.isPending}
+								onMake={(kind) => makeDefault.mutate({ name: p.name, kind })}
+							/>
 							<button
 								type="button"
 								onclick={() => openEdit(p)}
@@ -367,10 +340,8 @@
 							</button>
 							<button
 								type="button"
-								disabled={(p.default_for?.length ?? 0) > 0}
-								title={(p.default_for?.length ?? 0) > 0
-									? i18n.quality_default_undeletable()
-									: null}
+								disabled={held(p).length > 0}
+								title={held(p).length ? i18n.quality_default_undeletable_for({ kinds: heldLabels(kinds, held(p)) }) : null}
 								onclick={() => onDelete(p)}
 								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
 								aria-label={i18n.quality_delete()}

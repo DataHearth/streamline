@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { dotToken, type CalendarEvent } from "@lib/calendar";
+	import { dotToken, kindLabel, statusPill, type CalendarEvent } from "@lib/calendar";
+	import StatusPill from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { getLocale } from "@lib/paraglide/runtime.js";
 
@@ -88,6 +89,7 @@
 			{#each events as ev (ev.id)}
 				{@const date = stamp(ev.date)}
 				{@const when = daysUntil(ev.date)}
+				{@const pill = statusPill(ev)}
 				<!-- The meta line, in falling order of value: the episode number, the
 				     episode's own title, then how far off it is. A movie has only its
 				     reason for being here. `when` sits last because it is the one
@@ -129,16 +131,22 @@
 								{meta}
 							</div>
 						</div>
-						<!-- Kind, not status. Everything on this list is unreleased and
-						     wanted, so a status pill printed the same word down the whole
-						     panel; what the row does not otherwise say is whether it is a
-						     film or an episode. `--kind-*` are the calendar's own colours,
-						     deliberately outside the status ramp. -->
-						<span
-							class="kind-pill shrink-0 whitespace-nowrap rounded-full border px-1.5 py-[1px] text-[10px] font-semibold tracking-[0.02em]"
-							style:--c="var(--kind-{dotToken(ev)})"
-						>
-							{ev.kind === "movie" ? i18n.common_movie() : i18n.common_episode()}
+						<!-- Kind first: most rows are unreleased and wanted, so a status
+						     pill on every one printed the same word down the panel; what
+						     the row does not otherwise say is what kind of thing it is.
+						     `--kind-*` are the calendar's own colours, deliberately outside
+						     the status ramp. An album or book whose state is worth saying
+						     carries it under the kind, so the title keeps its width. -->
+						<span class="flex shrink-0 flex-col items-end gap-1">
+							<span
+								class="kind-pill whitespace-nowrap rounded-full border px-1.5 py-[1px] text-[10px] font-semibold tracking-[0.02em]"
+								style:--c="var(--kind-{dotToken(ev)})"
+							>
+								{kindLabel(ev.kind)}
+							</span>
+							{#if pill}
+								<StatusPill status={pill} size="sm" live={pill === "downloading"} />
+							{/if}
 						</span>
 					</a>
 				</li>

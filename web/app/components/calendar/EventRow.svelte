@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Film, Tv } from "@lucide/svelte";
+	import { BookOpen, Film, Music, Tv } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import Poster from "@components/shared/Poster.svelte";
+	import StatusPill from "@components/shared/StatusPill.svelte";
 	import EventDot from "./EventDot.svelte";
-	import { dotToken, type CalendarEvent } from "@lib/calendar";
+	import { dotToken, statusPill, type CalendarEvent } from "@lib/calendar";
 
 	let {
 		event,
@@ -15,6 +16,7 @@
 	let tail = $derived(
 		[event.time, event.detail].filter(Boolean).join(" · "),
 	);
+	let pill = $derived(statusPill(event));
 </script>
 
 <a
@@ -27,18 +29,27 @@
 	)}
 >
 	<span
-		class="relative grid aspect-[2/3] w-full place-items-center overflow-hidden rounded border border-border bg-bg-card text-fg-faint"
+		class={cn(
+			"relative grid w-full place-items-center overflow-hidden rounded border border-border bg-bg-card text-fg-faint",
+			event.square ? "aspect-square" : "aspect-[2/3]",
+		)}
 	>
 		{#if event.kind === "movie"}
 			<Film size={14} aria-hidden="true" />
+		{:else if event.kind === "album"}
+			<Music size={14} aria-hidden="true" />
+		{:else if event.kind === "book"}
+			<BookOpen size={14} aria-hidden="true" />
 		{:else}
 			<Tv size={14} aria-hidden="true" />
 		{/if}
-		<Poster
-			src={event.poster}
-			alt=""
-			class="absolute inset-0 h-full w-full object-cover"
-		/>
+		{#if event.poster}
+			<Poster
+				src={event.poster}
+				alt=""
+				class="absolute inset-0 h-full w-full object-cover"
+			/>
+		{/if}
 	</span>
 
 	<span class="min-w-0">
@@ -56,6 +67,13 @@
 	     and a bare dot on episodes, so the trailing column meant status on some
 	     rows and kind on others. The dot is kind only — the same amber/purple
 	     the filter switch and the grid chips use. A bare colour cannot carry
-	     state without a label; the Upcoming list's pill does that. -->
-	<EventDot kind={dotToken(event)} size="md" />
+	     state without a label, so an album or book whose state is worth saying
+	     (available, downloading, paused, skipped) carries a labelled pill
+	     beside it. -->
+	<span class="flex shrink-0 items-center gap-2.5">
+		{#if pill}
+			<StatusPill status={pill} size="sm" live={pill === "downloading"} />
+		{/if}
+		<EventDot kind={dotToken(event)} size="md" />
+	</span>
 </a>

@@ -45,6 +45,7 @@ export type BookHit = {
 	cover_id?: number;
 };
 
+// `mbid` is the release group's: what an album request names.
 export type LookupRelease = { mbid: string; title: string; year?: number; type: ReleaseType };
 export type ArtistDetail = {
 	overview?: string;
@@ -163,6 +164,30 @@ export const LOOKUP_SOURCE: Record<LookupKind, string> = {
 	book: "Hardcover",
 };
 
+// Hardcover answers a book call it cannot serve (search, lookup, add, refresh)
+// by code rather than coming back empty, and a book scan that stopped on either
+// cause carries the same code as its `failure_code`: no key at startup, or a
+// key Hardcover refuses. Either way the fix is the key in Settings → Metadata,
+// then a restart.
+export type HardcoverIssue = "unset" | "rejected";
+export function hardcoverCode(code: string | null | undefined): HardcoverIssue | null {
+	if (code === "hardcover_not_configured") return "unset";
+	if (code === "hardcover_key_rejected") return "rejected";
+	return null;
+}
+export const hardcoverIssue = (err: unknown) =>
+	hardcoverCode((err as { body?: { code?: string } | null } | null)?.body?.code);
+
+// The same two causes where the notice has no room (a toast after Refresh
+// metadata, the alert over a book request's Approve): what happened, then who
+// fixes it and where.
+export const hardcoverTitle = (issue: HardcoverIssue) =>
+	issue === "rejected" ? i18n.books_lookup_key_rejected() : i18n.err_hardcover_not_configured();
+export function hardcoverFix(issue: HardcoverIssue, isAdmin: boolean): string {
+	if (isAdmin) return issue === "rejected" ? i18n.books_key_fix_check() : i18n.books_key_fix_add();
+	return issue === "rejected" ? i18n.books_lookup_ask_admin_check() : i18n.books_lookup_ask_admin();
+}
+
 // The profile list a hit is added under, and the query root its library page
 // lives under.
 export const profileMedia = (k: LookupKind): ProfileMedia => (k === "artist" ? "music" : "books");
@@ -204,10 +229,20 @@ export function addRequest(h: LookupHit, profile: string, monitor: string) {
 }
 
 // The request a request_only member sends instead. The profile is a
-// preference; the reviewer can override it.
-export function requestBody(h: LookupHit, profile: string) {
+// preference; the reviewer can override it. With an album picked from an
+// artist's discography the request is for that album alone.
+export function requestBody(h: LookupHit, profile: string, album?: LookupRelease | null) {
 	const title = h.title;
 	const quality_profile = profile || undefined;
+	if (h.artist && album?.mbid)
+		return {
+			media_type: "album",
+			media_mbid: album.mbid,
+			title: album.title,
+			artist_mbid: h.artist.mbid,
+			artist_name: h.title,
+			quality_profile,
+		};
 	if (h.artist) return { media_type: "artist", media_mbid: h.artist.mbid, title, quality_profile };
 	return {
 		media_type: h.series ? "book_series" : "book",
@@ -244,13 +279,17 @@ export const volumesCount = (n: number) =>
 // pane — and metadata for another request (a cache still holding the last one)
 // is never shown under this one's title.
 export function requestHit(
-	r: { media_type: string; media_id: number; media_mbid?: string; title: string },
+	r: { media_type: string; media_id: number; media_mbid?: string; artist_mbid?: string; title: string },
 	meta?: ArtistMeta | BookMeta,
 ): LookupHit {
 	if (meta && r.media_type === "artist" && "mbid" in meta && meta.mbid === r.media_mbid) return artistHit(meta);
+	// An album request is reviewed on its artist: the panel shows the artist and
+	// marks the album asked for.
+	if (meta && r.media_type === "album" && "mbid" in meta && meta.mbid === r.artist_mbid) return artistHit(meta);
 	if (
 		meta &&
 		r.media_type !== "artist" &&
+		r.media_type !== "album" &&
 		"hardcover_id" in meta &&
 		meta.hardcover_id === r.media_id &&
 		(meta.type === "series") === (r.media_type === "book_series")
@@ -258,7 +297,7 @@ export function requestHit(
 		return bookHit(meta);
 	return {
 		key: r.media_mbid ?? (r.media_type === "book_series" ? "s" : "b") + r.media_id,
-		kind: r.media_type === "artist" ? "artist" : "book",
+		kind: r.media_type === "artist" || r.media_type === "album" ? "artist" : "book",
 		series: r.media_type === "book_series",
 		title: r.title,
 		held: false,

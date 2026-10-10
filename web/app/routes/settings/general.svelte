@@ -102,11 +102,13 @@
 	{/if}
 	{#if info.data?.hardcover_auth_warn}
 		<p class="mt-3 flex items-center gap-2">
-			<span
-				class="inline-flex items-center gap-1.5 rounded-full bg-status-wanted/14 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-wanted"
+			<a
+				href="/settings/metadata#hardcover"
+				onclick={() => sessionStorage.setItem("streamline:focus-field", "hardcover")}
+				class="inline-flex items-center gap-1.5 rounded-full bg-status-wanted/14 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-wanted hover:bg-status-wanted/20"
 			>
 				{i18n.settings_hardcover_token_rejected()}
-			</span>
+			</a>
 		</p>
 	{/if}
 </header>

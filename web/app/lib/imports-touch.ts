@@ -1,7 +1,11 @@
 import { formatBytes } from "./format";
+import { formatLabel, releaseTypeLabel } from "./music-books";
 import type {
 	ImportFileClassification,
+	ImportScanAlbum,
+	ImportScanBook,
 	ImportScanFile,
+	ImportScanKind,
 	ImportScanShow,
 } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
@@ -9,7 +13,20 @@ import { m as i18n } from "./paraglide/messages.js";
 // The touch review row (and the sheet behind it) renders movie files and series
 // show folders through one shape, so the phone/tablet list is built once and
 // takes a noun. Desktop keeps its two table rows.
-export type TouchCandidate = { id: number; title: string; year?: number | null };
+// MusicBrainz ids are strings; every other provider's are numbers.
+export type MatchId = number | string;
+export type TouchCandidate = {
+	id: MatchId;
+	title: string;
+	year?: number | null;
+	// Who made it — an album's artist, a book's author — where the title alone
+	// is ambiguous.
+	sub?: string;
+	// What follows the year: an album's release type. The line is then
+	// "artist · year · type" for an album and "author · year" for a book — a
+	// release group has no track count, a Hardcover hit no series position.
+	tag?: string;
+};
 
 export type TouchEntry = {
 	id: number;
@@ -23,9 +40,14 @@ export type TouchEntry = {
 	decision: string;
 	outcome: string;
 	outcomeMessage?: string;
-	chosenId: number | null;
+	chosenId: MatchId | null;
 	chosenLabel: string | null;
 	candidates: TouchCandidate[];
+	// What the provider search is seeded with: the parsed title, and an album's
+	// artist with it.
+	seed: string;
+	// One extra fact the row should state: an album that brings a new artist.
+	flag?: string;
 };
 
 export const CLASS_META: Record<
@@ -84,6 +106,7 @@ export function fileEntry(f: ImportScanFile): TouchEntry {
 			title: c.title,
 			year: c.year,
 		})),
+		seed: f.parsed_title ?? "",
 	};
 }
 
@@ -118,6 +141,170 @@ export function showEntry(sh: ImportScanShow): TouchEntry {
 			title: c.title,
 			year: c.year,
 		})),
+		seed: sh.parsed_title ?? "",
+	};
+}
+
+const trackCount = (n: number) =>
+	(n === 1 ? i18n.imports_track_count_one : i18n.imports_track_count_other)({ count: n });
+
+export function albumEntry(a: ImportScanAlbum): TouchEntry {
+	const chosen = a.decision_release_group_mbid ?? null;
+	const match = chosen != null ? (a.candidates ?? []).find((c) => c.release_group_mbid === chosen) : undefined;
+	return {
+		id: a.id,
+		heading: a.tagged_album || basename(a.folder_path),
+		headingWeak: !a.tagged_album,
+		path: a.folder_path,
+		sub: [a.tagged_artist, trackCount(a.file_count), a.format].filter(Boolean).join(" · "),
+		classification: a.classification,
+		decision: a.decision,
+		outcome: a.outcome,
+		outcomeMessage: a.outcome_message,
+		chosenId: chosen,
+		chosenLabel: chosen == null ? null : match ? titled(match.title, match.year) : i18n.imports_match_selected(),
+		candidates: (a.candidates ?? []).map((c) => ({
+			id: c.release_group_mbid,
+			title: c.title,
+			year: c.year,
+			sub: c.artist,
+			tag: c.type ? releaseTypeLabel(c.type) : undefined,
+		})),
+		seed: [a.tagged_artist, a.tagged_album].filter(Boolean).join(" "),
+		// Committing a confirmed album whose artist the library lacks adds the
+		// artist too, which is worth knowing before it happens.
+		flag: a.classification === "confirmed" && a.artist_id == null ? i18n.imports_new_artist() : undefined,
+	};
+}
+
+export function bookEntry(b: ImportScanBook): TouchEntry {
+	const chosen = b.decision_book_hardcover_id ?? null;
+	const match = chosen != null ? (b.candidates ?? []).find((c) => c.book_hardcover_id === chosen) : undefined;
+	const parts = b.file_count > 1 ? i18n.imports_file_count_other({ count: b.file_count }) : "";
+	return {
+		id: b.id,
+		heading: b.parsed_title || basename(b.source_path),
+		headingWeak: !b.parsed_title,
+		path: b.source_path,
+		sub: [b.parsed_author, `${formatLabel(b.slot)} · ${b.format}`, parts].filter(Boolean).join(" · "),
+		classification: b.classification,
+		decision: b.decision,
+		outcome: b.outcome,
+		outcomeMessage: b.outcome_message,
+		chosenId: chosen,
+		chosenLabel: chosen == null ? null : match ? titled(match.title, match.year) : i18n.imports_match_selected(),
+		candidates: (b.candidates ?? []).map((c) => ({
+			id: c.book_hardcover_id,
+			title: c.title,
+			year: c.year,
+			sub: c.author,
+		})),
+		seed: b.parsed_title ?? "",
+	};
+}
+
+// A provider id as the candidate rows print it: MusicBrainz's are UUIDs, so
+// the first block stands in for the rest, as on the artist page.
+export const shortId = (id: MatchId) => (typeof id === "string" ? id.slice(0, 8) : String(id));
+
+// The review's wording per kind. Movie and series keep the keys they always
+// had; albums and books carry their own, so no sentence is glued to a noun.
+export type UnitText = {
+	heading: string;
+	search: string;
+	loading: string;
+	empty: string;
+	decide: string;
+	nothingParsed: string;
+	alreadyMatched: string;
+	skipThis: string;
+	skipAllTitle: string;
+	skipPrefix: (n: number) => string;
+	skipSuffix: string;
+	skipped: (n: number) => string;
+	restore: string;
+	exclude: string;
+	exists: string;
+	column: string;
+};
+const pick = (one: (p: { count: number }) => string, other: (p: { count: number }) => string) => (n: number) =>
+	(n === 1 ? one : other)({ count: n });
+
+export function unitText(kind: ImportScanKind): UnitText {
+	if (kind === "series")
+		return {
+			heading: i18n.common_shows(),
+			search: i18n.imports_search_folder_title(),
+			loading: i18n.common_loading_shows(),
+			empty: i18n.imports_no_match_shows(),
+			decide: i18n.imports_decide_show(),
+			nothingParsed: i18n.imports_nothing_parsed_show(),
+			alreadyMatched: i18n.imports_already_matched_show(),
+			skipThis: i18n.imports_skip_this_show(),
+			skipAllTitle: i18n.imports_skip_all_unmatched_shows(),
+			skipPrefix: pick(i18n.imports_skip_body_prefix_show_one, i18n.imports_skip_body_prefix_show_other),
+			skipSuffix: i18n.imports_skip_body_suffix_show(),
+			skipped: pick(i18n.imports_skipped_show_one, i18n.imports_skipped_show_other),
+			restore: i18n.imports_restore_show(),
+			exclude: i18n.imports_exclude_show(),
+			exists: i18n.imports_show_exists(),
+			column: i18n.imports_show_folder(),
+		};
+	if (kind === "music")
+		return {
+			heading: i18n.common_albums(),
+			search: i18n.imports_search_album(),
+			loading: i18n.common_loading_albums(),
+			empty: i18n.imports_no_match_albums(),
+			decide: i18n.imports_decide_album(),
+			nothingParsed: i18n.imports_nothing_parsed_album(),
+			alreadyMatched: i18n.imports_already_matched_album(),
+			skipThis: i18n.imports_skip_this_album(),
+			skipAllTitle: i18n.imports_skip_all_unmatched_albums(),
+			skipPrefix: pick(i18n.imports_skip_body_prefix_album_one, i18n.imports_skip_body_prefix_album_other),
+			skipSuffix: i18n.imports_skip_body_suffix_album(),
+			skipped: pick(i18n.imports_skipped_album_one, i18n.imports_skipped_album_other),
+			restore: i18n.imports_restore_album(),
+			exclude: i18n.imports_exclude_album(),
+			exists: i18n.imports_album_exists(),
+			column: i18n.imports_album_folder(),
+		};
+	if (kind === "book")
+		return {
+			heading: i18n.books_label(),
+			search: i18n.imports_search_book(),
+			loading: i18n.common_loading_books(),
+			empty: i18n.imports_no_match_books(),
+			decide: i18n.imports_decide_book(),
+			nothingParsed: i18n.imports_nothing_parsed_book(),
+			alreadyMatched: i18n.imports_already_matched_book(),
+			skipThis: i18n.imports_skip_this_book(),
+			skipAllTitle: i18n.imports_skip_all_unmatched_books(),
+			skipPrefix: pick(i18n.imports_skip_body_prefix_book_one, i18n.imports_skip_body_prefix_book_other),
+			skipSuffix: i18n.imports_skip_body_suffix_book(),
+			skipped: pick(i18n.imports_skipped_book_one, i18n.imports_skipped_book_other),
+			restore: i18n.imports_restore_book(),
+			exclude: i18n.imports_exclude_book(),
+			exists: i18n.imports_book_exists(),
+			column: i18n.common_file(),
+		};
+	return {
+		heading: i18n.common_files(),
+		search: i18n.imports_search_filename(),
+		loading: i18n.common_loading_files(),
+		empty: i18n.imports_no_match_files(),
+		decide: i18n.imports_decide_file(),
+		nothingParsed: i18n.imports_nothing_parsed_file(),
+		alreadyMatched: i18n.imports_already_matched_file(),
+		skipThis: i18n.imports_skip_this_file(),
+		skipAllTitle: i18n.imports_skip_all_unmatched_files(),
+		skipPrefix: pick(i18n.imports_skip_body_prefix_file_one, i18n.imports_skip_body_prefix_file_other),
+		skipSuffix: i18n.imports_skip_body_suffix_file(),
+		skipped: pick(i18n.imports_skipped_file_one, i18n.imports_skipped_file_other),
+		restore: i18n.imports_restore_file(),
+		exclude: i18n.imports_exclude_file(),
+		exists: i18n.imports_movie_exists(),
+		column: i18n.common_file(),
 	};
 }
 

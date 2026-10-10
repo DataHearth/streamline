@@ -5,6 +5,7 @@
 	import {
 		STATUS_META,
 		TONE_CLASS,
+		albumBy,
 		kindColor,
 		outcomeWord,
 		requesterName,
@@ -60,7 +61,7 @@
 				{request.title}
 			</span>
 			<span class="mt-0.5 block truncate text-[12px] text-fg-subtle">
-				{mine ? "" : requesterName(request) + " · "}{formatRelative(request.created_at)}
+				{albumBy(request) ? albumBy(request) + " · " : ""}{mine ? "" : requesterName(request) + " · "}{formatRelative(request.created_at)}
 			</span>
 		</span>
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { BookOpen, ChevronLeft, ExternalLink, Music } from "@lucide/svelte";
+	import { BookOpen, Check, ChevronLeft, ExternalLink, Music } from "@lucide/svelte";
+	import { cn } from "@lib/cn";
 	import Img from "./Img.svelte";
 	import { lookupPosterUrl } from "@lib/posters";
 	import { formatLabel, languageName, releaseTypeLabel } from "@lib/music-books";
@@ -9,6 +10,7 @@
 		type ArtistDetail,
 		type BookDetail,
 		type LookupHit,
+		type LookupRelease,
 	} from "@lib/music-books-lookup";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -26,6 +28,8 @@
 		showTitle = true,
 		compact = false,
 		headless = false,
+		albumPick,
+		markedAlbum,
 	}: {
 		kind: "artist" | "book";
 		hit?: LookupHit;
@@ -36,6 +40,11 @@
 		showTitle?: boolean;
 		compact?: boolean;
 		headless?: boolean;
+		// A request_only member can ask for one album instead of the artist: the
+		// discography becomes a pick, and the host's request button follows it.
+		albumPick?: { selected: string | null; onToggle: (r: LookupRelease) => void };
+		// The album an album request asked for, marked on the reviewer's panel.
+		markedAlbum?: string;
 	} = $props();
 
 	let isArtist = $derived(kind === "artist");
@@ -195,16 +204,25 @@
 		{:else if isArtist && releases.length > 0}
 			<section>
 				<h4 class={h4}>{i18n.music_discography()}</h4>
+				{#if albumPick}
+					<p class="-mt-1 mb-2.5 text-[12px] text-fg-muted">{i18n.lookup_pick_album_hint()}</p>
+				{/if}
 				<ul class="grid grid-cols-3 gap-3 sm:grid-cols-4">
 					{#each releases as r (r.mbid)}
+						{@const on = albumPick ? albumPick.selected === r.mbid : markedAlbum === r.mbid}
 						<li class="min-w-0">
-							<div class="aspect-square overflow-hidden rounded-md border border-white/[0.06] bg-bg-card">
-								<Img src={lookupPosterUrl("albums", r.mbid)} alt="" class="h-full w-full object-cover" />
-							</div>
-							<p class="mt-1.5 truncate text-[12px] font-medium text-fg">{r.title}</p>
-							<p class="truncate font-mono text-[10.5px] text-fg-subtle">
-								{[r.year, releaseTypeLabel(r.type)].filter(Boolean).join(" · ")}
-							</p>
+							{#if albumPick && r.mbid}
+								<button
+									type="button"
+									aria-pressed={on}
+									onclick={() => albumPick.onToggle(r)}
+									class="block w-full rounded-md text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring active:opacity-80"
+								>
+									{@render tile(r, on)}
+								</button>
+							{:else}
+								{@render tile(r, on)}
+							{/if}
 						</li>
 					{/each}
 				</ul>
@@ -270,3 +288,23 @@
 		{/if}
 	</div>
 {/if}
+
+{#snippet tile(r: LookupRelease, on: boolean)}
+	<div
+		class={cn(
+			"relative aspect-square overflow-hidden rounded-md border bg-bg-card",
+			on ? "border-accent ring-2 ring-accent" : "border-white/[0.06]",
+		)}
+	>
+		<Img src={lookupPosterUrl("albums", r.mbid)} alt="" class="h-full w-full object-cover" />
+		{#if on}
+			<span class="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-accent text-fg-on-accent" aria-hidden="true">
+				<Check size={12} />
+			</span>
+		{/if}
+	</div>
+	<p class={cn("mt-1.5 truncate text-[12px] font-medium", on ? "text-accent-text" : "text-fg")}>{r.title}</p>
+	<p class="truncate font-mono text-[10.5px] text-fg-subtle">
+		{[r.year, releaseTypeLabel(r.type)].filter(Boolean).join(" · ")}
+	</p>
+{/snippet}

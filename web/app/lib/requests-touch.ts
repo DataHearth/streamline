@@ -69,13 +69,27 @@ export function requesterName(r: MediaRequest): string {
 
 type MediaType = MediaRequest["media_type"];
 
-export const isMusicBook = (t: MediaType) => t === "artist" || t === "book" || t === "book_series";
+export const isMusicBook = (t: MediaType) => t === "artist" || t === "album" || t === "book" || t === "book_series";
+
+// "by Rivière Noire" for an album request: its title alone does not say whose.
+// The name is MusicBrainz's, not the requester's wording.
+export const albumBy = (r: Pick<MediaRequest, "media_type" | "artist_name">) =>
+	r.media_type === "album" && r.artist_name ? i18n.lookup_by({ name: r.artist_name }) : "";
+
+// "requested as Riviere Noire": the requester's wording, exactly as typed,
+// under the verified name and only when the two differ. It is untrusted, so it
+// only ever renders as text; spaces at either end are no difference worth a
+// caption.
+export const requestedAs = (r: Pick<MediaRequest, "media_type" | "artist_name" | "requested_as">) => {
+	const said = r.media_type === "album" ? r.requested_as?.trim() : "";
+	return said && said !== r.artist_name ? i18n.requests_requested_as({ name: said }) : "";
+};
 
 // The kind dot. Movie and series keep the two status hues they always had;
 // music and books take the two the status ramp leaves free in this list.
 export function kindColor(mediaType: MediaType): string {
 	if (mediaType === "tvshow") return "var(--status-downloading)";
-	if (mediaType === "artist") return "var(--status-seeding)";
+	if (mediaType === "artist" || mediaType === "album") return "var(--status-seeding)";
 	if (mediaType === "book" || mediaType === "book_series") return "oklch(0.74 0.14 350)";
 	return "var(--status-grabbing)";
 }
@@ -83,6 +97,7 @@ export function kindColor(mediaType: MediaType): string {
 export function kindLabel(mediaType: MediaType): string {
 	if (mediaType === "tvshow") return i18n.lc_series();
 	if (mediaType === "artist") return i18n.lc_artist();
+	if (mediaType === "album") return i18n.lc_album();
 	if (mediaType === "book") return i18n.lc_book();
 	if (mediaType === "book_series") return i18n.lc_book_series();
 	return i18n.lc_movie();
@@ -92,7 +107,7 @@ export function kindLabel(mediaType: MediaType): string {
 export const KIND_MEDIA: Record<Exclude<RequestKind, "all">, MediaType[]> = {
 	movies: ["movie"],
 	series: ["tvshow"],
-	music: ["artist"],
+	music: ["artist", "album"],
 	books: ["book", "book_series"],
 };
 
