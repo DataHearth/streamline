@@ -46,6 +46,11 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
 
+      - name: Remote builder
+        uses: ./.github/actions/nix-builder
+        with:
+          ssh-key: ${{ secrets.NIX_BUILDER_SSH_KEY }}
+
       # Runs before anything writes to the tree: `builtins.getFlake` on a dirty
       # working copy ingests the whole checkout before it evaluates anything.
       - name: Toolchain declarations
@@ -114,11 +119,16 @@ jobs:
           # it to its own line is what keeps the two independent.
           fake="sha256-$(printf 'A%.0s' $(seq 43))="
 
+          remote=()
+          if [ -n "${NIX_BUILDER_STORE:-}" ]; then
+            remote=(--store "$NIX_BUILDER_STORE" --eval-store auto)
+          fi
+
           derive() {
             local attr=$1 anchor=$2 log got
             sed -i "s|^\( *\)${anchor} = \"sha256-[^\"]*\";|\1${anchor} = \"${fake}\";|" nix/package.nix
 
-            if log=$(nix build --no-link ".#streamline.${attr}" 2>&1); then
+            if log=$(nix build --no-link "${remote[@]}" ".#streamline.${attr}" 2>&1); then
               echo "::error::${attr} built against the placeholder hash — nothing to derive"
               exit 1
             fi

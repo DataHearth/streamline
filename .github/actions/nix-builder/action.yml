@@ -1,0 +1,35 @@
+name: Nix remote builder
+description: >-
+  Points nix at the homelab builder through its untrusted `ci` account by
+  exporting NIX_SSHOPTS and NIX_BUILDER_STORE. Without a key it exports
+  nothing, so callers fall back to building on the runner: fork PRs never
+  receive secrets.
+inputs:
+  ssh-key:
+    description: Private key of the builder's `ci` account
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Configure the builder
+      shell: bash
+      env:
+        SSH_KEY: ${{ inputs.ssh-key }}
+      run: |
+        set -euo pipefail
+        if [ -z "$SSH_KEY" ]; then
+          echo "No builder key: building on the runner"
+          exit 0
+        fi
+
+        install -d -m 700 ~/.ssh
+        printf '%s\n' "$SSH_KEY" > ~/.ssh/nix-builder
+        chmod 600 ~/.ssh/nix-builder
+        echo "nix-builder.nerds.casa ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBK0AD9BS0GmSgoEVseK4d8cvkoBML+uCyxeMcOjSeN+" \
+          > ~/.ssh/nix-builder-known-hosts
+
+        {
+          echo "NIX_SSHOPTS=-o UserKnownHostsFile=$HOME/.ssh/nix-builder-known-hosts -o IdentitiesOnly=yes -o IdentityFile=$HOME/.ssh/nix-builder -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15"
+          echo "NIX_BUILDER_STORE=ssh-ng://ci@nix-builder.nerds.casa"
+        } >> "$GITHUB_ENV"
