@@ -1,0 +1,10 @@
+{
+  "go": {},
+  "node": {},
+  "pnpm": {
+    "12.11.2": {
+      "src": "sha256-YVDIcEx48eYrkI2WP18Evun2vaFT/vQfIHEuV71rrG4=",
+      "cargo": "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    }
+  }
+}

@@ -5,13 +5,16 @@
   callPackage,
   fetchPnpmDeps,
   pnpmConfigHook,
-  pnpm,
   nix-update-script,
   version ? "3.2.0",
 }:
 let
   go = callPackage ./go.nix { };
   nodejs = callPackage ./node.nix { };
+  # Not the `pnpm` callPackage would hand in: that is whatever nixpkgs calls
+  # its default, and fetchPnpmDeps lays the store out the way the pnpm that
+  # runs it does — so it has to be the one package.json declares.
+  pnpm = callPackage ./pnpm.nix { };
   # The build tree, minus everything the frontend build regenerates. Those
   # outputs are gitignored, so they are absent in CI and present on a
   # developer's machine — including them would make the source hash depend on
@@ -65,6 +68,7 @@ let
 
     pnpmDeps = fetchPnpmDeps {
       inherit (finalAttrs) pname version src;
+      inherit pnpm;
       fetcherVersion = 4;
       hash = "sha256-Zc4+pYnkJycBKAZFvpwwstu3KTHaVwrfh7S+x83KZjs=";
     };
@@ -139,7 +143,10 @@ in
   '';
 
   passthru = {
-    inherit frontend;
+    # The pins, beside `go` (which buildGoModule already exposes), so
+    # renovate-pins.yaml can derive a toolchain hash from `.#streamline.pnpm`
+    # rather than an impure expression re-importing nix/pnpm.nix.
+    inherit frontend nodejs pnpm;
     updateScript = nix-update-script { };
   };
 
