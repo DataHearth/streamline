@@ -22,8 +22,7 @@
 	class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-end md:justify-between"
 >
 	<div>
-		<h1 class="text-2xl font-bold tracking-tight text-fg">{i18n.imports_label()}</h1>
-		<p class="mt-1 text-sm text-fg-muted">
+		<p class="text-sm text-fg-muted">
 			{i18n.imports_intro()}
 		</p>
 	</div>
