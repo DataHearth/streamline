@@ -356,6 +356,47 @@ type download struct {
 	// adoption sweep and read by the gauge in reachability.go.
 	reachable  sync.Map
 	gaugesOnce sync.Once
+
+	grabbing hashLocks
+}
+
+// hashLocks serialises grabs of one info hash. The in-flight lookup and the
+// record insert are separate statements, and AddTorrent on the builtin engine
+// answers a held hash with success, so without it two concurrent grabs of one
+// release both pass the lookup and both file a record.
+type hashLocks struct {
+	mu sync.Mutex
+	m  map[string]*hashLock
+}
+
+type hashLock struct {
+	mu   sync.Mutex
+	refs int
+}
+
+func (l *hashLocks) lock(hash string) func() {
+	l.mu.Lock()
+	if l.m == nil {
+		l.m = map[string]*hashLock{}
+	}
+	hl := l.m[hash]
+	if hl == nil {
+		hl = &hashLock{}
+		l.m[hash] = hl
+	}
+	hl.refs++
+	l.mu.Unlock()
+
+	hl.mu.Lock()
+	return func() {
+		hl.mu.Unlock()
+		l.mu.Lock()
+		hl.refs--
+		if hl.refs == 0 {
+			delete(l.m, hash)
+		}
+		l.mu.Unlock()
+	}
 }
 
 // New builds the download manager. builtin may be nil (no engine configured);
@@ -821,6 +862,11 @@ func (d *download) grabWith(
 		)
 	}
 
+	localHash := localInfoHash(src)
+	if localHash != "" {
+		defer d.grabbing.lock(localHash)()
+	}
+
 	// spec §4.6: a re-grab landing on a hash already tracked by a live record
 	// means "I also want these episodes", not "add a duplicate torrent" —
 	// checked before any client contact, and before Flow A's own decode runs,
@@ -873,6 +919,21 @@ func (d *download) grabWith(
 			// Completed and not widen-eligible: FindWidenableDownloadRecordByHash
 			// matches it but it is not "live" for dedupe purposes — see that
 			// function's doc. Fall through to a normal grab.
+		}
+	}
+
+	// With selective_files on the pre-check above already refused an in-flight
+	// hash; off, nothing else would: the builtin engine's AddTorrent answers a
+	// held hash with success.
+	if localHash != "" && !config.Get().Download.SelectiveFiles {
+		inFlight, lerr := d.db.FindLiveDownloadRecordByHash(ctx, localHash)
+		if lerr != nil {
+			slog.DebugContext(ctx, "grab: in-flight record lookup failed",
+				"hash", localHash, "error", lerr)
+		}
+		if inFlight != nil {
+			outcome = "already_exists"
+			return nil, otelx.RecordSpanError(span, ErrTorrentAlreadyExists)
 		}
 	}
 

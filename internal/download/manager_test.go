@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -747,6 +749,9 @@ var _ = Describe("GrabAlbum and GrabBook", Label("unit", "downloads"), func() {
 		store = dbmocks.NewMockStore(GinkgoT())
 		client = &fakeSelectiveClient{addHash: "abc123"}
 		mgr = New(store, client)
+		store.EXPECT().
+			FindLiveDownloadRecordByHash(mock.Anything, mock.Anything).
+			Return(nil, nil).Maybe()
 		configtest.Setup(map[string]any{
 			"download_clients": []map[string]any{{
 				"name": "embedded", "client_type": "builtin",
@@ -995,6 +1000,9 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 		store = dbmocks.NewMockStore(GinkgoT())
 		client = &fakeSelectiveClient{addHash: "abc123"}
 		mgr = New(store, client)
+		store.EXPECT().
+			FindLiveDownloadRecordByHash(mock.Anything, mock.Anything).
+			Return(nil, nil).Maybe()
 		// The §4.6 hash pre-check runs before Flow A on every grab whose
 		// selective_files is on; these specs are all about a hash with no live
 		// record behind it. Maybe rather than Once because the flag-off spec
@@ -1519,6 +1527,9 @@ var _ = Describe(
 				// exactly as it did before this feature and a duplicate hash is
 				// whatever AddTorrent says it is.
 				store.EXPECT().
+					FindLiveDownloadRecordByHash(mock.Anything, hash).
+					Return(nil, nil).Once()
+				store.EXPECT().
 					CreateDownloadRecord(mock.Anything, mock.Anything).
 					Return(&ent.DownloadRecord{ID: 99}, nil).Once()
 
@@ -1534,6 +1545,67 @@ var _ = Describe(
 				// above: calling it would panic the mock.
 			},
 		)
+
+		It(
+			"selective_files off: an in-flight record on the hash refuses the grab",
+			func() {
+				store.EXPECT().
+					FindLiveDownloadRecordByHash(mock.Anything, hash).
+					Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+				result := indexer.SearchResult{
+					Title: "Show S01", Download: "magnet:?xt=urn:btih:" + hash,
+				}
+				_, err := mgr.GrabEpisode(ctx, result, 22, []uint32{22})
+
+				Expect(err).To(MatchError(ErrTorrentAlreadyExists))
+				Expect(client.addTorrentCalls).To(Equal(0))
+			},
+		)
+
+		It("concurrent grabs of one hash file exactly one record", func() {
+			var created atomic.Int32
+			store.EXPECT().
+				FindLiveDownloadRecordByHash(mock.Anything, hash).
+				RunAndReturn(func(
+					context.Context, string,
+				) (*ent.DownloadRecord, error) {
+					if created.Load() > 0 {
+						return &ent.DownloadRecord{ID: 1}, nil
+					}
+					time.Sleep(20 * time.Millisecond)
+					return nil, nil
+				}).Maybe()
+			store.EXPECT().
+				CreateDownloadRecord(mock.Anything, mock.Anything).
+				RunAndReturn(func(
+					context.Context, db.CreateDownloadRecordParams,
+				) (*ent.DownloadRecord, error) {
+					created.Add(1)
+					return &ent.DownloadRecord{ID: 1}, nil
+				}).Maybe()
+
+			result := indexer.SearchResult{
+				Title: "Show S01", Download: "magnet:?xt=urn:btih:" + hash,
+			}
+			errs := make([]error, 4)
+			var wg sync.WaitGroup
+			for i := range errs {
+				wg.Go(func() {
+					_, errs[i] = mgr.GrabEpisode(ctx, result, 22, []uint32{22})
+				})
+			}
+			wg.Wait()
+
+			Expect(created.Load()).To(Equal(int32(1)))
+			refused := 0
+			for _, err := range errs {
+				if errors.Is(err, ErrTorrentAlreadyExists) {
+					refused++
+				}
+			}
+			Expect(refused).To(Equal(3))
+		})
 
 		It("no live record: normal grab proceeds", func() {
 			selectiveConfig()
