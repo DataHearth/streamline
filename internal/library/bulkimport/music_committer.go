@@ -233,7 +233,50 @@ func (s *Service) resolveArtist(
 	return nil
 }
 
-// planAlbumFiles binds the audio files directly in folder to the album's
+// albumFolderFiles lists the audio files of an album folder: those directly in
+// it and those in its disc subfolders, each with the disc number its folder
+// names (0 for a file outside one).
+func albumFolderFiles(folder string) ([]albumFile, error) {
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return nil, err
+	}
+	var out []albumFile
+	for _, e := range entries {
+		path := filepath.Join(folder, e.Name())
+		if !e.IsDir() {
+			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(path))]; ok {
+				out = append(out, albumFile{path: path})
+			}
+			continue
+		}
+		disc, ok := library.DiscFolderNumber(e.Name())
+		if !ok {
+			continue
+		}
+		sub, err := os.ReadDir(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, se := range sub {
+			sp := filepath.Join(path, se.Name())
+			if se.IsDir() {
+				continue
+			}
+			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(sp))]; ok {
+				out = append(out, albumFile{path: sp, disc: disc})
+			}
+		}
+	}
+	return out, nil
+}
+
+type albumFile struct {
+	path string
+	disc uint8
+}
+
+// planAlbumFiles binds the audio files in folder, disc subfolders included, to the album's
 // tracks without touching the database. adopted counts files a track already
 // holds at the same path (an idempotent re-scan); unmatched counts files that
 // bind to no track or to a track another file in the folder already claimed;
@@ -241,7 +284,7 @@ func (s *Service) resolveArtist(
 func (s *Service) planAlbumFiles(
 	ctx context.Context, folder string, alb *ent.Album,
 ) ([]db.AdoptAlbumFile, int, int, int, error) {
-	entries, err := os.ReadDir(folder)
+	files, err := albumFolderFiles(folder)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
@@ -259,14 +302,8 @@ func (s *Service) planAlbumFiles(
 
 	var plan []db.AdoptAlbumFile
 	unmatched, adopted := 0, 0
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		path := filepath.Join(folder, e.Name())
-		if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(path))]; !ok {
-			continue
-		}
+	for _, af := range files {
+		path := af.path
 		if _, ok := held[path]; ok {
 			adopted++
 			continue
@@ -284,6 +321,9 @@ func (s *Service) planAlbumFiles(
 				"file", path, "error", err)
 			unmatched++
 			continue
+		}
+		if info.Disc == 0 {
+			info.Disc = af.disc
 		}
 		tr := library.MatchTrack(alb.Edges.Tracks, info)
 		if tr == nil {
