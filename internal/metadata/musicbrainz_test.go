@@ -174,6 +174,8 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			"relations":[
 				{"type":"member of band","direction":"backward","begin":"1987","end":"1994","ended":true,"attributes":["original","guitar","lead vocals"],"artist":{"id":"m-kurt","name":"Kurt Cobain"}},
 				{"type":"member of band","direction":"backward","begin":"1990","ended":false,"attributes":["additional","drums"],"artist":{"id":"m-dave","name":"Dave Grohl"}},
+				{"type":"member of band","direction":"backward","begin":"1985","end":"1986","ended":true,"attributes":["vocals"],"artist":{"id":"m-kurt","name":"Kurt Cobain"}},
+				{"type":"member of band","direction":"backward","begin":"1990","end":"1991","ended":true,"attributes":["percussion"],"artist":{"id":"m-dave","name":"Dave Grohl"}},
 				{"type":"member of band","direction":"forward","artist":{"id":"other","name":"Other Band"}},
 				{"type":"wikidata","url":{"resource":"https://www.wikidata.org/wiki/Q11649"}},
 				{"type":"streaming","url":{"resource":"https://www.deezer.com/en/artist/415"}}
@@ -234,12 +236,12 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(a.Members).To(Equal([]ArtistMemberInfo{
 					{
 						Name: "Kurt Cobain", MBID: "m-kurt",
-						Instruments: []string{"guitar", "lead vocals"},
-						FromYear:    1987, ToYear: 1994, Ended: true,
+						Instruments: []string{"guitar", "lead vocals", "vocals"},
+						FromYear:    1985, ToYear: 1994, Ended: true,
 					},
 					{
 						Name: "Dave Grohl", MBID: "m-dave",
-						Instruments: []string{"drums"}, FromYear: 1990,
+						Instruments: []string{"drums", "percussion"}, FromYear: 1990,
 					},
 				}))
 			},

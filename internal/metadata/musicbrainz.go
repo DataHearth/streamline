@@ -502,7 +502,7 @@ func (m *MusicBrainz) GetArtist(
 		switch {
 		case rel.Type == "member of band" && rel.Direction == "backward" &&
 			rel.Artist != nil:
-			details.Members = append(details.Members, memberOf(rel))
+			details.Members = mergeMember(details.Members, memberOf(rel))
 		case rel.URL != nil:
 			readURLRel(rel, details)
 		}
@@ -533,6 +533,33 @@ func (m *MusicBrainz) GetArtist(
 }
 
 var ignoredMemberAttributes = []string{"original", "additional"}
+
+// mergeMember folds one more membership relation into the list. MusicBrainz files
+// a relation per instrument and per stint, so one person arrives several times.
+func mergeMember(members []ArtistMemberInfo, m ArtistMemberInfo) []ArtistMemberInfo {
+	i := slices.IndexFunc(
+		members,
+		func(x ArtistMemberInfo) bool { return x.MBID == m.MBID },
+	)
+	if i < 0 {
+		return append(members, m)
+	}
+	cur := &members[i]
+	for _, inst := range m.Instruments {
+		if !slices.Contains(cur.Instruments, inst) {
+			cur.Instruments = append(cur.Instruments, inst)
+		}
+	}
+	if m.FromYear != 0 && (cur.FromYear == 0 || m.FromYear < cur.FromYear) {
+		cur.FromYear = m.FromYear
+	}
+	if !cur.Ended || !m.Ended {
+		cur.Ended, cur.ToYear = false, 0
+	} else {
+		cur.ToYear = max(cur.ToYear, m.ToYear)
+	}
+	return members
+}
 
 func memberOf(rel mbRel) ArtistMemberInfo {
 	mem := ArtistMemberInfo{
