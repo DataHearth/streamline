@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -142,9 +143,6 @@ func (p *posters) Fetch(
 		outcome = "cached"
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
-		return otelx.RecordSpanError(span, fmt.Errorf("mkdir poster dir: %w", err))
-	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
@@ -246,6 +244,23 @@ func store(dst string, r io.Reader, replace bool) error {
 	return nil
 }
 
+// sniffImageType reports the cached file's real image type: sources hand back
+// PNG, WebP or GIF as readily as JPEG, and the file is always named poster.jpg.
+// Anything that does not sniff as an image keeps image/jpeg, so a hostile body
+// is never served as a type a browser would render as a page.
+func sniffImageType(f *os.File) string {
+	head := make([]byte, 512)
+	n, err := f.ReadAt(head, 0)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "image/jpeg"
+	}
+	t := http.DetectContentType(head[:n])
+	if !strings.HasPrefix(t, "image/") {
+		return "image/jpeg"
+	}
+	return t
+}
+
 func (p *posters) Serve(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -283,7 +298,7 @@ func (p *posters) Serve(
 		return
 	}
 	record("hit")
-	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Content-Type", sniffImageType(f))
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	http.ServeContent(w, r, "poster.jpg", st.ModTime(), f)
 }
