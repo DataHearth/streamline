@@ -278,7 +278,7 @@ var _ = Describe(
 				Expect(body.Albums[0].ArtistName).To(Equal("Nirvana"))
 			})
 
-			It("returns monitored books with their author", func() {
+			It("returns monitored books with author, series and status", func() {
 				now := time.Now().UTC()
 				future := now.Add(3 * 24 * time.Hour)
 
@@ -300,15 +300,11 @@ var _ = Describe(
 					AuthorName:     "Frank Herbert",
 					ReleaseDate:    &future,
 					EbookMonitored: true,
+					EbookStatus:    "paused",
 				}
-				bk.Edges.Contributions = []*ent.BookContribution{
-					{
-						Role: "author",
-						Edges: ent.BookContributionEdges{
-							Author: &ent.Author{ID: 9, Name: "Frank Herbert"},
-						},
-					},
-				}
+				pos := 1.0
+				bk.SeriesPosition = &pos
+				bk.Edges.Series = &ent.BookSeries{ID: 9, Title: "Dune Chronicles"}
 				app.store.EXPECT().
 					ListUpcomingBooks(mock.Anything, mock.AnythingOfType("time.Time"), mock.AnythingOfType("time.Time")).
 					Return([]*ent.Book{bk}, nil).
@@ -329,8 +325,11 @@ var _ = Describe(
 				Expect(body.Books).To(HaveLen(1))
 				Expect(body.Books[0].Id).To(Equal(uint32(4)))
 				Expect(body.Books[0].Title).To(Equal("Dune"))
-				Expect(body.Books[0].AuthorId).To(Equal(uint32(9)))
-				Expect(body.Books[0].AuthorName).To(Equal("Frank Herbert"))
+				Expect(body.Books[0].Author).To(Equal("Frank Herbert"))
+				Expect(body.Books[0].Status).To(Equal(UpcomingBookStatusPaused))
+				Expect(*body.Books[0].SeriesId).To(Equal(uint32(9)))
+				Expect(*body.Books[0].SeriesTitle).To(Equal("Dune Chronicles"))
+				Expect(*body.Books[0].Position).To(BeNumerically("==", 1))
 			})
 
 			It("400s when from is after to", func() {

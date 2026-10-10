@@ -7,6 +7,7 @@ import (
 
 	oasspec "github.com/datahearth/streamline/api"
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/bittorrent"
 	"github.com/datahearth/streamline/internal/config"
@@ -193,11 +194,16 @@ func New(cfg Config) *Server {
 	restapi.Mount(s.router, s.api)
 	web.Mount(s.router, s.web)
 
+	appAccess := appaccess.NewTracker(cfg.Ent)
 	s.router.Mount(
 		"/rest",
-		subsonic.New(subsonic.Deps{Ent: cfg.Ent, Posters: cfg.Posters}).Routes(),
+		subsonic.New(subsonic.Deps{
+			Ent:     cfg.Ent,
+			Posters: cfg.Posters,
+			Tracker: appAccess,
+		}).Routes(),
 	)
-	s.router.Mount("/opds", opds.New(cfg.Ent).Router())
+	s.router.Mount("/opds", opds.New(cfg.Ent, appAccess).Router())
 
 	s.router.Get(
 		"/posters/{kind}/{id}/poster.jpg",

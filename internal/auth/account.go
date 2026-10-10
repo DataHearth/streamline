@@ -2,10 +2,13 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
@@ -180,6 +183,14 @@ func (s *auth) RevokeAPIKeyByID(
 
 const accountSecretLen = 24
 
+// HashOPDSToken is the form an OPDS token is stored in. The token is a random
+// 24-character secret, so an unsalted digest is enough: there is nothing to
+// guess from.
+func HashOPDSToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
 // RotateSubsonicPassword replaces the user's Subsonic password with a fresh
 // generated one and returns it.
 func (s *auth) RotateSubsonicPassword(
@@ -192,16 +203,18 @@ func (s *auth) RotateSubsonicPassword(
 	defer span.End()
 
 	pw := random.Alphanumeric(accountSecretLen)
+	now := time.Now().UTC()
 	if _, err := s.db.UpdateUser(
 		ctx,
 		userID,
-		db.UpdateUserParams{SubsonicPassword: &pw},
+		db.UpdateUserParams{SubsonicPassword: &pw, SubsonicCreatedAt: &now},
 	); err != nil {
 		return "", otelx.RecordSpanError(
 			span,
 			fmt.Errorf("rotate subsonic password: %w", err),
 		)
 	}
+	slog.InfoContext(ctx, "subsonic password rotated", "user.id", userID)
 	return pw, nil
 }
 
@@ -223,11 +236,13 @@ func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error
 			fmt.Errorf("disable subsonic password: %w", err),
 		)
 	}
+	slog.InfoContext(ctx, "subsonic password disabled", "user.id", userID)
 	return nil
 }
 
 // RotateOPDSToken replaces the user's OPDS token with a fresh generated one
-// and returns it.
+// and returns it. Only its hash is stored, so this return is the one time the
+// token is readable.
 func (s *auth) RotateOPDSToken(ctx context.Context, userID uint32) (string, error) {
 	ctx, span := tracer.Start(ctx, "auth.rotate_opds_token",
 		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
@@ -235,16 +250,19 @@ func (s *auth) RotateOPDSToken(ctx context.Context, userID uint32) (string, erro
 	defer span.End()
 
 	token := random.Alphanumeric(accountSecretLen)
+	hashed := HashOPDSToken(token)
+	now := time.Now().UTC()
 	if _, err := s.db.UpdateUser(
 		ctx,
 		userID,
-		db.UpdateUserParams{OPDSToken: &token},
+		db.UpdateUserParams{OPDSToken: &hashed, OPDSCreatedAt: &now},
 	); err != nil {
 		return "", otelx.RecordSpanError(
 			span,
 			fmt.Errorf("rotate opds token: %w", err),
 		)
 	}
+	slog.InfoContext(ctx, "opds token rotated", "user.id", userID)
 	return token, nil
 }
 
@@ -262,5 +280,6 @@ func (s *auth) DisableOPDSToken(ctx context.Context, userID uint32) error {
 	); err != nil {
 		return otelx.RecordSpanError(span, fmt.Errorf("disable opds token: %w", err))
 	}
+	slog.InfoContext(ctx, "opds token disabled", "user.id", userID)
 	return nil
 }

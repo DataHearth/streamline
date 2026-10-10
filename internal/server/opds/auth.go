@@ -6,20 +6,27 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/appaccess"
+	"github.com/datahearth/streamline/internal/auth"
 )
 
 var errUnauthorized = errors.New("opds: unauthorized")
 
-// checkToken compares the stored OPDS token with the presented Basic
-// password. Empty stored token disables OPDS for the user entirely.
+// checkToken compares the stored OPDS token hash with the hash of the
+// presented Basic password. Empty stored token disables OPDS for the user
+// entirely.
 func checkToken(stored, presented string) bool {
 	if stored == "" {
 		return false
 	}
-	return subtle.ConstantTimeCompare([]byte(stored), []byte(presented)) == 1
+	return subtle.ConstantTimeCompare(
+		[]byte(stored),
+		[]byte(auth.HashOPDSToken(presented)),
+	) == 1
 }
 
 func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
@@ -39,6 +46,13 @@ func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
 	if !checkToken(u.OpdsToken, pass) {
 		return nil, errUnauthorized
 	}
+	h.tracker.Touch(
+		r.Context(),
+		u.ID,
+		appaccess.OPDS,
+		deref(u.OpdsCreatedAt),
+		clientFromUserAgent(r.UserAgent()),
+	)
 	return u, nil
 }
 
@@ -61,4 +75,19 @@ func (h *Handler) requireAuth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+func deref(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
+}
+
+// clientFromUserAgent keeps the first product token of a User-Agent:
+// "KOReader/2024.11 (Linux)" is "KOReader".
+func clientFromUserAgent(ua string) string {
+	product, _, _ := strings.Cut(strings.TrimSpace(ua), " ")
+	name, _, _ := strings.Cut(product, "/")
+	return name
 }

@@ -49,9 +49,7 @@ func (s *Server) StartImport(
 			}, nil
 		case errors.Is(err, book.ErrNotConfigured):
 			return StartImport503JSONResponse{
-				ServiceUnavailableJSONResponse: errServiceUnavailable(
-					errBookProviderMissing.Error(),
-				),
+				ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 			}, nil
 		default:
 			return nil, err
@@ -183,9 +181,7 @@ func (s *Server) CommitImport(
 			}, nil
 		case errors.Is(err, book.ErrNotConfigured):
 			return CommitImport503JSONResponse{
-				ServiceUnavailableJSONResponse: errServiceUnavailable(
-					errBookProviderMissing.Error(),
-				),
+				ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 			}, nil
 		default:
 			return nil, err

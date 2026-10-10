@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/internal/appaccess"
 	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 )
 
@@ -32,7 +33,11 @@ var _ = g.Describe("stream", g.Label("integration"), func() {
 		Expect(f.client.MediaFile.Update().SetPath(path).Exec(ctx)).To(Succeed())
 
 		posters = postersmocks.NewMockManager(g.GinkgoT())
-		f.handler = New(Deps{Ent: f.client, Posters: posters}).Routes()
+		f.handler = New(Deps{
+			Ent:     f.client,
+			Posters: posters,
+			Tracker: appaccess.NewTracker(f.client),
+		}).Routes()
 	})
 
 	serve := func(endpoint string, id string, hdr http.Header) *httptest.ResponseRecorder {

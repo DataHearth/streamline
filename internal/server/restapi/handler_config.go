@@ -792,10 +792,11 @@ func downloadConfigView(d config.DownloadConfig) DownloadConfigJSONResponse {
 // offer the field read-only rather than accept an edit UpdateMetadata refuses.
 //
 // restart_required is the same process-wide flag the ffmpeg and OIDC views
-// report: these four keys are read once, at client construction.
+// report: these six keys are read once, at client construction.
 func metadataConfigView(m config.MetadataConfig) MetadataConfigJSONResponse {
 	tmdbFile := m.TMDBAPIKeyFile != ""
 	tvdbFile := m.TVDBAPIKeyFile != ""
+	hardcoverFile := m.HardcoverAPIKeyFile != ""
 	return MetadataConfigJSONResponse{
 		Language:   m.Language,
 		TmdbRegion: m.TMDBRegion,
@@ -807,9 +808,14 @@ func metadataConfigView(m config.MetadataConfig) MetadataConfigJSONResponse {
 			m.TVDBAPIKey,
 			m.TVDBAPIKeyFile,
 		) != "",
-		TmdbApiKeyFileManaged: &tmdbFile,
-		TvdbApiKeyFileManaged: &tvdbFile,
-		RestartRequired:       restart.Pending(),
+		HardcoverApiKeySet: config.SecretValue(
+			m.HardcoverAPIKey,
+			m.HardcoverAPIKeyFile,
+		) != "",
+		TmdbApiKeyFileManaged:      &tmdbFile,
+		TvdbApiKeyFileManaged:      &tvdbFile,
+		HardcoverApiKeyFileManaged: &hardcoverFile,
+		RestartRequired:            restart.Pending(),
 	}
 }
 
@@ -894,7 +900,7 @@ func (s *Server) GetConfigMetadata(
 }
 
 // UpdateConfigMetadata applies a partial update to the metadata config. Admin
-// only. Every key here is read once at boot by metadata.NewTMDB/NewTVDB, so a
+// only. Every key here is read once at boot by metadata.NewTMDB/NewTVDB/NewHardcover, so a
 // real change flips the restart flag; re-sending the stored value does not.
 func (s *Server) UpdateConfigMetadata(
 	ctx context.Context,
@@ -908,10 +914,11 @@ func (s *Server) UpdateConfigMetadata(
 
 	prev := config.Get().Metadata
 	updated, err := config.UpdateMetadata(ctx, config.MetadataPatch{
-		TMDBAPIKey: req.Body.TmdbApiKey,
-		TVDBAPIKey: req.Body.TvdbApiKey,
-		Language:   req.Body.Language,
-		TMDBRegion: req.Body.TmdbRegion,
+		TMDBAPIKey:      req.Body.TmdbApiKey,
+		TVDBAPIKey:      req.Body.TvdbApiKey,
+		HardcoverAPIKey: req.Body.HardcoverApiKey,
+		Language:        req.Body.Language,
+		TMDBRegion:      req.Body.TmdbRegion,
 	})
 	if configLocked(err) {
 		return UpdateConfigMetadata403JSONResponse{

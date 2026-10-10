@@ -7,14 +7,16 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/appaccess"
 )
 
 type Handler struct {
-	client *ent.Client
+	client  *ent.Client
+	tracker *appaccess.Tracker
 }
 
-func New(client *ent.Client) *Handler {
-	return &Handler{client: client}
+func New(client *ent.Client, tracker *appaccess.Tracker) *Handler {
+	return &Handler{client: client, tracker: tracker}
 }
 
 func (h *Handler) Router() chi.Router {

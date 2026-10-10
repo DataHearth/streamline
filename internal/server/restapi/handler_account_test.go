@@ -311,8 +311,10 @@ var _ = Describe(
 			const secret = "abcdefghijklmnopqrstuvwx"
 
 			type state struct {
-				Enabled  bool   `json:"enabled"`
-				Password string `json:"password"`
+				Enabled    bool   `json:"enabled"`
+				Username   string `json:"username"`
+				Secret     string `json:"secret"`
+				LastClient string `json:"last_client"`
 			}
 			decode := func(resp *http.Response) state {
 				GinkgoHelper()
@@ -322,28 +324,41 @@ var _ = Describe(
 				return st
 			}
 
-			It("POST returns the rotated password", func() {
+			It("POST returns the rotated password once", func() {
 				app.auth.EXPECT().
 					RotateSubsonicPassword(mock.Anything, app.adminID).
 					Return(secret, nil).
 					Once()
-				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(
-					decode(resp),
-				).To(Equal(state{Enabled: true, Password: secret}))
-			})
-
-			It("GET reports an enabled password", func() {
 				app.auth.EXPECT().
 					GetUserByID(mock.Anything, app.adminID).
-					Return(&ent.User{ID: app.adminID, SubsonicPassword: secret}, nil).
+					Return(&ent.User{ID: app.adminID, Email: "a@example.com"}, nil).
+					Once()
+				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(decode(resp)).To(Equal(state{
+					Enabled:  true,
+					Username: "a@example.com",
+					Secret:   secret,
+				}))
+			})
+
+			It("GET reports an enabled password without ever returning it", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{
+						ID:                 app.adminID,
+						Email:              "a@example.com",
+						SubsonicPassword:   secret,
+						SubsonicLastClient: "Symfonium",
+					}, nil).
 					Once()
 				resp := authGET(app, app.adminKey, path)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(
-					decode(resp),
-				).To(Equal(state{Enabled: true, Password: secret}))
+				Expect(decode(resp)).To(Equal(state{
+					Enabled:    true,
+					Username:   "a@example.com",
+					LastClient: "Symfonium",
+				}))
 			})
 
 			It("GET reports disabled when no password is set", func() {
@@ -395,8 +410,10 @@ var _ = Describe(
 			const secret = "abcdefghijklmnopqrstuvwx"
 
 			type state struct {
-				Enabled bool   `json:"enabled"`
-				Token   string `json:"token"`
+				Enabled    bool   `json:"enabled"`
+				Username   string `json:"username"`
+				Secret     string `json:"secret"`
+				LastClient string `json:"last_client"`
 			}
 			decode := func(resp *http.Response) state {
 				GinkgoHelper()
@@ -406,28 +423,41 @@ var _ = Describe(
 				return st
 			}
 
-			It("POST returns the rotated token", func() {
+			It("POST returns the rotated token once", func() {
 				app.auth.EXPECT().
 					RotateOPDSToken(mock.Anything, app.adminID).
 					Return(secret, nil).
 					Once()
-				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
-				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(
-					decode(resp),
-				).To(Equal(state{Enabled: true, Token: secret}))
-			})
-
-			It("GET reports an enabled token", func() {
 				app.auth.EXPECT().
 					GetUserByID(mock.Anything, app.adminID).
-					Return(&ent.User{ID: app.adminID, OpdsToken: secret}, nil).
+					Return(&ent.User{ID: app.adminID, Email: "a@example.com"}, nil).
+					Once()
+				resp := app.do(app.req(http.MethodPost, path, app.adminKey, nil))
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(decode(resp)).To(Equal(state{
+					Enabled:  true,
+					Username: "a@example.com",
+					Secret:   secret,
+				}))
+			})
+
+			It("GET reports an enabled token without ever returning it", func() {
+				app.auth.EXPECT().
+					GetUserByID(mock.Anything, app.adminID).
+					Return(&ent.User{
+						ID:             app.adminID,
+						Email:          "a@example.com",
+						OpdsToken:      "hashed",
+						OpdsLastClient: "KOReader",
+					}, nil).
 					Once()
 				resp := authGET(app, app.adminKey, path)
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
-				Expect(
-					decode(resp),
-				).To(Equal(state{Enabled: true, Token: secret}))
+				Expect(decode(resp)).To(Equal(state{
+					Enabled:    true,
+					Username:   "a@example.com",
+					LastClient: "KOReader",
+				}))
 			})
 
 			It("GET reports disabled when no token is set", func() {

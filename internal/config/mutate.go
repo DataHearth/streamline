@@ -115,8 +115,11 @@ type LogRotatePatch struct {
 type MetadataPatch struct {
 	TMDBAPIKey *string
 	TVDBAPIKey *string
-	Language   *string
-	TMDBRegion *string
+	// HardcoverAPIKey is restart-required like the other two: wire.go builds
+	// the Hardcover client once.
+	HardcoverAPIKey *string
+	Language        *string
+	TMDBRegion      *string
 }
 
 // ProbePatch carries optional field updates to the library.probe section.
@@ -457,8 +460,8 @@ func UpdateDownload(
 // is the source of truth, and the loader would read straight past an inline
 // value anyway (see SecretValue).
 //
-// Nothing here applies before a restart: metadata.NewTMDB and metadata.NewTVDB
-// read these four keys once, when wire.go constructs the clients.
+// Nothing here applies before a restart: metadata.NewTMDB, NewTVDB and
+// NewHardcover read these six keys once, when wire.go constructs the clients.
 func UpdateMetadata(
 	ctx context.Context,
 	patch MetadataPatch,
@@ -482,6 +485,13 @@ func UpdateMetadata(
 		}
 		if err := set(
 			&c.Metadata.TVDBAPIKey, c.Metadata.TVDBAPIKeyFile, patch.TVDBAPIKey,
+		); err != nil {
+			return err
+		}
+		if err := set(
+			&c.Metadata.HardcoverAPIKey,
+			c.Metadata.HardcoverAPIKeyFile,
+			patch.HardcoverAPIKey,
 		); err != nil {
 			return err
 		}

@@ -468,29 +468,6 @@ func toRenameOperations(ops []library.RenameOperation) []RenameOperation {
 	return out
 }
 
-// firstCreator is the person an upcoming book is listed under: the name is the
-// book's display author, the id the first author-role contribution, else the
-// first writer's, else the first artist's. The contributions arrive ordered.
-func firstCreator(b *ent.Book) (uint32, string) {
-	for _, role := range []bookcontribution.Role{
-		bookcontribution.RoleAuthor,
-		bookcontribution.RoleWriter,
-		bookcontribution.RoleArtist,
-	} {
-		for _, c := range b.Edges.Contributions {
-			if c.Role != role || c.Edges.Author == nil {
-				continue
-			}
-			name := b.AuthorName
-			if name == "" {
-				name = c.Edges.Author.Name
-			}
-			return c.Edges.Author.ID, name
-		}
-	}
-	return 0, b.AuthorName
-}
-
 func toAPIImportScanBook(sb *ent.ImportScanBook) ImportScanBook {
 	out := ImportScanBook{
 		Id:             sb.ID,

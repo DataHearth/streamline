@@ -9,7 +9,6 @@ import (
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/db"
-	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -155,8 +154,11 @@ func (s *Server) ApproveRequest(
 		return ApproveRequest429JSONResponse{
 			RateLimitedJSONResponse: errRateLimited(err),
 		}, nil
-	case errors.Is(err, book.ErrNotConfigured),
-		errors.Is(err, requestsvc.ErrUnavailable):
+	case providerUnavailable(err):
+		return ApproveRequest503JSONResponse{
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
+		}, nil
+	case errors.Is(err, requestsvc.ErrUnavailable):
 		return ApproveRequest503JSONResponse{
 			ServiceUnavailableJSONResponse: errServiceUnavailable(err.Error()),
 		}, nil

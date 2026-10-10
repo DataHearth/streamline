@@ -599,9 +599,14 @@ func toUpcomingEpisode(e *ent.Episode, now time.Time) UpcomingEpisode {
 }
 
 func toUpcomingAlbum(a *ent.Album) UpcomingAlbum {
-	out := UpcomingAlbum{Id: a.ID, Title: a.Title}
+	out := UpcomingAlbum{
+		Id:     a.ID,
+		Title:  a.Title,
+		Type:   MusicAlbumType(a.Type),
+		Status: UpcomingAlbumStatus(a.Status),
+	}
 	if a.ReleaseDate != nil {
-		out.ReleaseDate = *a.ReleaseDate
+		out.ReleaseDate = openapi_types.Date{Time: a.ReleaseDate.UTC()}
 	}
 	if ar := a.Edges.Artist; ar != nil {
 		out.ArtistId = ar.ID
@@ -611,12 +616,47 @@ func toUpcomingAlbum(a *ent.Album) UpcomingAlbum {
 }
 
 func toUpcomingBook(b *ent.Book) UpcomingBook {
-	out := UpcomingBook{Id: b.ID, Title: b.Title}
-	if b.ReleaseDate != nil {
-		out.ReleaseDate = *b.ReleaseDate
+	out := UpcomingBook{
+		Id:       b.ID,
+		Title:    b.Title,
+		Author:   b.AuthorName,
+		Status:   upcomingBookStatus(b),
+		Position: b.SeriesPosition,
 	}
-	out.AuthorId, out.AuthorName = firstCreator(b)
+	if b.ReleaseDate != nil {
+		out.ReleaseDate = openapi_types.Date{Time: b.ReleaseDate.UTC()}
+	}
+	if sr := b.Edges.Series; sr != nil {
+		out.SeriesId = &sr.ID
+		out.SeriesTitle = &sr.Title
+	}
 	return out
+}
+
+// upcomingBookStatus folds the two slots into the one word a calendar entry
+// carries, over the monitored slots only and total over the five statuses. A
+// skipped slot is set aside first, so a book whose only monitored slot is
+// skipped reads skipped, and a paused slot never reads available.
+func upcomingBookStatus(b *ent.Book) UpcomingBookStatus {
+	var slots []string
+	if b.EbookMonitored {
+		slots = append(slots, string(b.EbookStatus))
+	}
+	if b.AudiobookMonitored {
+		slots = append(slots, string(b.AudiobookStatus))
+	}
+	slots = slices.DeleteFunc(slots, func(st string) bool { return st == "skipped" })
+	for _, want := range []UpcomingBookStatus{
+		UpcomingBookStatusDownloading,
+		UpcomingBookStatusWanted,
+		UpcomingBookStatusPaused,
+		UpcomingBookStatusAvailable,
+	} {
+		if slices.Contains(slots, string(want)) {
+			return want
+		}
+	}
+	return UpcomingBookStatusSkipped
 }
 
 func toUpcomingMovie(m *ent.Movie) UpcomingMovie {

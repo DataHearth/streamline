@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/appaccess"
 )
 
 const wrongCredentialsMsg = "Wrong username or password"
@@ -67,5 +69,10 @@ func (h *Handler) authenticate(r *http.Request) (*ent.User, error) {
 			Message: wrongCredentialsMsg,
 		}
 	}
+	var since time.Time
+	if u.SubsonicCreatedAt != nil {
+		since = *u.SubsonicCreatedAt
+	}
+	h.tracker.Touch(r.Context(), u.ID, appaccess.Subsonic, since, r.FormValue("c"))
 	return u, nil
 }

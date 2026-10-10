@@ -10,7 +10,6 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/media/book"
-	"github.com/datahearth/streamline/internal/metadata"
 )
 
 const (
@@ -22,21 +21,6 @@ const (
 
 	minBookQueryLen = 2
 )
-
-var errBookProviderMissing = errors.New(
-	"hardcover is not configured: set metadata.hardcover_api_key",
-)
-
-// providerUnavailable reports whether err means Hardcover cannot be reached
-// with the configured credentials, which is the operator's to fix and not a
-// fault in the request.
-func providerUnavailable(err error) bool {
-	return errors.Is(err, book.ErrNotConfigured) ||
-		errors.Is(err, metadata.ErrHardcoverKeyMissing) ||
-		errors.Is(err, metadata.ErrHardcoverUnauthorized)
-}
-
-func rateLimited(err error) bool { return errors.Is(err, metadata.ErrRateLimited) }
 
 func errSeriesVolume(msg string) ConflictJSONResponse {
 	code := codeSeriesVolume
@@ -114,9 +98,7 @@ func (s *Server) SearchBooks(
 		}, nil
 	case providerUnavailable(err):
 		return SearchBooks503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	case err != nil:
 		return SearchBooks500JSONResponse{
@@ -153,9 +135,7 @@ func (s *Server) GetBookLookup(
 		}, nil
 	case providerUnavailable(err):
 		return GetBookLookup503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	case err != nil:
 		return GetBookLookup500JSONResponse{
@@ -322,9 +302,7 @@ func (s *Server) AddBook(
 		}, nil
 	case providerUnavailable(err):
 		return AddBook503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	default:
 		return AddBook500JSONResponse{
@@ -370,9 +348,7 @@ func (s *Server) AddBookSeries(
 		}, nil
 	case providerUnavailable(err):
 		return AddBookSeries503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	default:
 		return AddBookSeries500JSONResponse{
@@ -572,9 +548,7 @@ func (s *Server) RefreshBook(
 		}, nil
 	case providerUnavailable(err):
 		return RefreshBook503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	default:
 		return RefreshBook500JSONResponse{
@@ -610,9 +584,7 @@ func (s *Server) RefreshBookSeries(
 		}, nil
 	case providerUnavailable(err):
 		return RefreshBookSeries503JSONResponse{
-			ServiceUnavailableJSONResponse: errServiceUnavailable(
-				errBookProviderMissing.Error(),
-			),
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	default:
 		return RefreshBookSeries500JSONResponse{

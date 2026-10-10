@@ -239,7 +239,7 @@ A book quality profile is `{name, upgrade_allowed, ebook: {formats, preferred}, 
 
 A slot with no usable quality profile answers `422` with `code: no_quality_profile`, and a refused grab `422` with `code: grab_rejected`. The grab flips the slot to `downloading`. A book's profile is its own, else its series', else the default of its kind.
 
-Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add and refresh endpoints answer `503` while browsing the library keeps working. There are no authors to follow: people are credits on a book or a series. Poster URLs are not in the payloads: clients build `/posters/books/{id}/poster.jpg` (a series uses `cover_id`, a book's own id), `/posters/authors/{author_id}/poster.jpg` for the author, writer and artist credits, and `/posters/lookup/books/{hardcover_id}/poster.jpg` for a lookup hit not in the library yet.
+Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it the search, add, refresh and request-approve endpoints answer `503` with `code: hardcover_not_configured`, and with `code: hardcover_key_rejected` when a key is set but Hardcover refused it, while browsing the library keeps working. A rate-limited Hardcover is a separate `429` (`code: rate_limited`). The key itself is `hardcover_api_key` on `PATCH /config/metadata` (write-only, restart required, like the TMDB and TVDB keys); the view carries `hardcover_api_key_set` and `hardcover_api_key_file_managed`. There are no authors to follow: people are credits on a book or a series. Poster URLs are not in the payloads: clients build `/posters/books/{id}/poster.jpg` (a series uses `cover_id`, a book's own id), `/posters/authors/{author_id}/poster.jpg` for the author, writer and artist credits, and `/posters/lookup/books/{hardcover_id}/poster.jpg` for a lookup hit not in the library yet.
 
 ### People (cast)
 
@@ -394,8 +394,8 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` scan
 | `PUT` | `/auth/password` | Change your password | Any |
 | `GET` `POST` | `/auth/me/api-keys` · `/auth/me/sessions` | List / create your API keys or sessions | Any |
 | `DELETE` | `/auth/me/api-keys/{id}` · `/auth/me/sessions/{id}` | Revoke your own key or session | Any |
-| `GET` `POST` `DELETE` | `/account/subsonic-password` | Read / generate-or-rotate / disable your Subsonic password | Any, session only |
-| `GET` `POST` `DELETE` | `/account/opds-token` | Read / generate-or-rotate / disable your OPDS token | Any, session only |
+| `GET` `POST` `DELETE` | `/account/subsonic-password` | State (`enabled`, `username`, `created_at`, `last_used_at`, `last_client`, never the secret) / generate-or-rotate (the only response carrying `secret`) / disable your Subsonic password | Any, session only |
+| `GET` `POST` `DELETE` | `/account/opds-token` | The same shape for your OPDS token; `username` is your email and `secret` is the Basic password. Only a hash is stored | Any, session only |
 | `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |
@@ -421,7 +421,7 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` scan
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/calendar/upcoming?from=&to=` | Movie releases (digital, or theatrical when TMDB has no digital date — see `release_type`), episode air dates, monitored album releases (`albums`: `id`, `title`, `artist_id`, `artist_name`, `release_date`) and monitored book releases (`books`: `id`, `title`, `author_id`, `author_name`, `release_date`; either slot monitored) | Authenticated |
+| `GET` | `/calendar/upcoming?from=&to=` | Movie releases (digital, or theatrical when TMDB has no digital date — see `release_type`), episode air dates, monitored album releases (`albums`: `id`, `title`, `type`, `artist_id`, `artist_name`, `release_date` as `YYYY-MM-DD`, `status`) and monitored book releases (`books`: `id`, `title`, `author`, `release_date`, `status`, and `series_id`/`series_title`/`position` for a volume; either slot monitored). Albums and books are listed whatever their status; a book's `status` folds its monitored slots (downloading, wanted, paused, available; `skipped` when no monitored slot is left) | Authenticated |
 
 ### Outside `/api/v1`
 

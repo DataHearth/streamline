@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -96,8 +97,10 @@ func newFixture(ctx context.Context) *fixture {
 	Expect(err).NotTo(HaveOccurred())
 
 	return &fixture{
-		client:   client,
-		handler:  New(Deps{Ent: client}).Routes(),
+		client: client,
+		handler: New(
+			Deps{Ent: client, Tracker: appaccess.NewTracker(client)},
+		).Routes(),
 		artist:   ar,
 		album:    al,
 		withFile: withFile,

@@ -828,9 +828,7 @@ func (db *DB) ListUpcomingBooks(
 			book.ReleaseDateGTE(from),
 			book.ReleaseDateLT(to),
 		).
-		WithContributions(func(cq *ent.BookContributionQuery) {
-			cq.WithAuthor().Order(ent.Asc(bookcontribution.FieldOrder))
-		}).
+		WithSeries().
 		Order(ent.Asc(book.FieldReleaseDate)).
 		All(ctx)
 }

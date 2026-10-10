@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/metadata"
 	requestsvc "github.com/datahearth/streamline/internal/request"
 )
 
@@ -163,16 +164,28 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 			},
 		)
 
-		It("answers 503 for a book when Hardcover is not configured", func() {
-			app.requests.EXPECT().
-				Approve(mock.Anything, uint32(4), app.memberID, "").
-				Return(nil, fmt.Errorf("approve: add book: %w", book.ErrNotConfigured)).
-				Once()
+		DescribeTable(
+			"answers 503 with a code when Hardcover cannot serve the add",
+			func(cause error, code string) {
+				app.requests.EXPECT().
+					Approve(mock.Anything, uint32(4), app.memberID, "").
+					Return(nil, fmt.Errorf("approve: add book: %w", cause)).
+					Once()
 
-			resp := approve("")
-			defer resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
-		})
+				resp := approve("")
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Code).To(HaveValue(Equal(code)))
+			},
+			Entry("no key", book.ErrNotConfigured, "hardcover_not_configured"),
+			Entry(
+				"key refused",
+				metadata.ErrHardcoverUnauthorized,
+				"hardcover_key_rejected",
+			),
+		)
 
 		It("answers 403 to a request-only caller", func() {
 			resp := send(

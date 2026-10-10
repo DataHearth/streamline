@@ -11,21 +11,24 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/appaccess"
 	"github.com/datahearth/streamline/internal/posters"
 )
 
 type Handler struct {
 	ent     *ent.Client
 	posters posters.Manager
+	tracker *appaccess.Tracker
 }
 
 type Deps struct {
 	Ent     *ent.Client
 	Posters posters.Manager
+	Tracker *appaccess.Tracker
 }
 
 func New(d Deps) *Handler {
-	return &Handler{ent: d.Ent, posters: d.Posters}
+	return &Handler{ent: d.Ent, posters: d.Posters, tracker: d.Tracker}
 }
 
 type endpoint func(w http.ResponseWriter, r *http.Request) error

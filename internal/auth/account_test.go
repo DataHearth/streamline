@@ -253,11 +253,13 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 	Describe("RotateSubsonicPassword", func() {
 		It("stores a 24-char alphanumeric password and returns it", func() {
 			var stored string
+			var createdAt *time.Time
 			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
 				if p.SubsonicPassword == nil {
 					return false
 				}
 				stored = *p.SubsonicPassword
+				createdAt = p.SubsonicCreatedAt
 				return true
 			})).
 				Return(&ent.User{ID: 1}, nil).
@@ -267,6 +269,7 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pw).To(MatchRegexp(`^[a-zA-Z0-9]{24}$`))
 			Expect(stored).To(Equal(pw))
+			Expect(createdAt).NotTo(BeNil())
 		})
 
 		It("wraps store errors", func() {
@@ -305,7 +308,8 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 			token, err := svc.RotateOPDSToken(ctx, 1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(token).To(MatchRegexp(`^[a-zA-Z0-9]{24}$`))
-			Expect(stored).To(Equal(token))
+			Expect(stored).To(Equal(HashOPDSToken(token)))
+			Expect(stored).NotTo(Equal(token))
 		})
 
 		It("wraps store errors", func() {

@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/datahearth/streamline/internal/auth"
 )
@@ -193,8 +194,8 @@ func (s *Server) DeleteMySession(
 	return DeleteMySession204Response{}, nil
 }
 
-// GetSubsonicPassword returns the caller's Subsonic password. Session-only:
-// the value is plaintext, and an API key must not be able to read it.
+// GetSubsonicPassword reports the caller's Subsonic access. Session-only,
+// like the rest of the credential endpoints. It never carries the password.
 func (s *Server) GetSubsonicPassword(
 	ctx context.Context,
 	_ GetSubsonicPasswordRequestObject,
@@ -216,10 +217,13 @@ func (s *Server) GetSubsonicPassword(
 	if err != nil {
 		return nil, err
 	}
-	return GetSubsonicPassword200JSONResponse{
-		Enabled:  u.SubsonicPassword != "",
-		Password: &u.SubsonicPassword,
-	}, nil
+	return GetSubsonicPassword200JSONResponse(toAppAccess(
+		u.SubsonicPassword != "",
+		u.Email,
+		u.SubsonicCreatedAt,
+		u.SubsonicLastUsedAt,
+		u.SubsonicLastClient,
+	)), nil
 }
 
 // RotateSubsonicPassword generates a new Subsonic password for the caller.
@@ -244,7 +248,20 @@ func (s *Server) RotateSubsonicPassword(
 	if err != nil {
 		return nil, err
 	}
-	return RotateSubsonicPassword200JSONResponse{Enabled: true, Password: &pw}, nil
+	u, err := s.auth.GetUserByID(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return RotateSubsonicPassword200JSONResponse(toAppAccessCreated(
+		toAppAccess(
+			true,
+			u.Email,
+			u.SubsonicCreatedAt,
+			u.SubsonicLastUsedAt,
+			u.SubsonicLastClient,
+		),
+		pw,
+	)), nil
 }
 
 // DisableSubsonicPassword clears the caller's Subsonic password.
@@ -271,8 +288,8 @@ func (s *Server) DisableSubsonicPassword(
 	return DisableSubsonicPassword204Response{}, nil
 }
 
-// GetOpdsToken returns the caller's OPDS token. Session-only:
-// the value is plaintext, and an API key must not be able to read it.
+// GetOpdsToken reports the caller's OPDS access. Session-only, and the token
+// is stored hashed, so there is nothing to return but its state.
 func (s *Server) GetOpdsToken(
 	ctx context.Context,
 	_ GetOpdsTokenRequestObject,
@@ -294,10 +311,13 @@ func (s *Server) GetOpdsToken(
 	if err != nil {
 		return nil, err
 	}
-	return GetOpdsToken200JSONResponse{
-		Enabled: u.OpdsToken != "",
-		Token:   &u.OpdsToken,
-	}, nil
+	return GetOpdsToken200JSONResponse(toAppAccess(
+		u.OpdsToken != "",
+		u.Email,
+		u.OpdsCreatedAt,
+		u.OpdsLastUsedAt,
+		u.OpdsLastClient,
+	)), nil
 }
 
 // RotateOpdsToken generates a new OPDS token for the caller.
@@ -322,7 +342,20 @@ func (s *Server) RotateOpdsToken(
 	if err != nil {
 		return nil, err
 	}
-	return RotateOpdsToken200JSONResponse{Enabled: true, Token: &token}, nil
+	u, err := s.auth.GetUserByID(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return RotateOpdsToken200JSONResponse(toAppAccessCreated(
+		toAppAccess(
+			true,
+			u.Email,
+			u.OpdsCreatedAt,
+			u.OpdsLastUsedAt,
+			u.OpdsLastClient,
+		),
+		token,
+	)), nil
 }
 
 // DisableOpdsToken clears the caller's OPDS token.
@@ -347,4 +380,33 @@ func (s *Server) DisableOpdsToken(
 		return nil, err
 	}
 	return DisableOpdsToken204Response{}, nil
+}
+
+func toAppAccess(
+	enabled bool,
+	email string,
+	createdAt, lastUsedAt *time.Time,
+	lastClient string,
+) AppAccess {
+	out := AppAccess{
+		Enabled:    enabled,
+		Username:   email,
+		CreatedAt:  createdAt,
+		LastUsedAt: lastUsedAt,
+	}
+	if lastClient != "" {
+		out.LastClient = &lastClient
+	}
+	return out
+}
+
+func toAppAccessCreated(a AppAccess, secret string) AppAccessCreated {
+	return AppAccessCreated{
+		Enabled:    a.Enabled,
+		Username:   a.Username,
+		CreatedAt:  a.CreatedAt,
+		LastUsedAt: a.LastUsedAt,
+		LastClient: a.LastClient,
+		Secret:     secret,
+	}
 }

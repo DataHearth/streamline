@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/auth"
 	posmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	mwmocks "github.com/datahearth/streamline/internal/server/middleware/mocks"
@@ -115,7 +116,7 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 		It("serves the catalog to a user with an OPDS token", func() {
 			client.User.Create().
 				SetEmail("reader@example.com").
-				SetOpdsToken("sesame").
+				SetOpdsToken(auth.HashOPDSToken("sesame")).
 				SaveX(context.Background())
 			resp := get("/opds/", "reader@example.com", "sesame")
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))

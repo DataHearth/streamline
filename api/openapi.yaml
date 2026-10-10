@@ -3208,38 +3208,46 @@ paths:
   /account/subsonic-password:
     get:
       operationId: getSubsonicPassword
-      summary: Whether a Subsonic password is set, and its value
+      summary: Whether a Subsonic password is set, and when it was last used
       description: >-
         Requires session authentication (JWT); a request authenticated with an
-        API key is rejected, because the response carries the plaintext.
+        API key is rejected. Never carries the secret: only the POST that
+        generates it does.
       tags: [account]
       security:
         - BearerAuth: []
       responses:
         "200":
-          description: Subsonic password state
+          description: Access state
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SubsonicPassword" }
+              schema: { $ref: "#/components/schemas/AppAccess" }
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
       operationId: rotateSubsonicPassword
       summary: Generate or rotate the Subsonic password
+      description: >-
+        Requires session authentication (JWT). The only response that carries
+        the secret, in plaintext; a lost one is replaced, not read back.
+        Rotation signs every Subsonic client out.
       tags: [account]
       security:
         - BearerAuth: []
       responses:
         "200":
-          description: The new password, which is also readable via GET
+          description: The new secret, shown this once
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SubsonicPassword" }
+              schema: { $ref: "#/components/schemas/AppAccessCreated" }
         "401":
           $ref: "#/components/responses/Unauthorized"
     delete:
       operationId: disableSubsonicPassword
-      summary: Disable Subsonic access by clearing the password
+      summary: Disable access by clearing the Subsonic password
+      description: >-
+        Requires session authentication (JWT). Also clears created, last used
+        and client.
       tags: [account]
       security:
         - BearerAuth: []
@@ -3251,38 +3259,46 @@ paths:
   /account/opds-token:
     get:
       operationId: getOpdsToken
-      summary: Whether an OPDS token is set, and its value
+      summary: Whether a OPDS token is set, and when it was last used
       description: >-
         Requires session authentication (JWT); a request authenticated with an
-        API key is rejected, because the response carries the plaintext.
+        API key is rejected. Never carries the secret: only the POST that
+        generates it does.
       tags: [account]
       security:
         - BearerAuth: []
       responses:
         "200":
-          description: OPDS token state
+          description: Access state
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/OpdsToken" }
+              schema: { $ref: "#/components/schemas/AppAccess" }
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
       operationId: rotateOpdsToken
       summary: Generate or rotate the OPDS token
+      description: >-
+        Requires session authentication (JWT). The only response that carries
+        the secret, in plaintext; a lost one is replaced, not read back.
+        The secret is the HTTP Basic password; the user name is the account email. Only its hash is stored. Rotation signs every reader out.
       tags: [account]
       security:
         - BearerAuth: []
       responses:
         "200":
-          description: The new token, which is also readable via GET
+          description: The new secret, shown this once
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/OpdsToken" }
+              schema: { $ref: "#/components/schemas/AppAccessCreated" }
         "401":
           $ref: "#/components/responses/Unauthorized"
     delete:
       operationId: disableOpdsToken
-      summary: Disable OPDS access by clearing the token
+      summary: Disable access by clearing the OPDS token
+      description: >-
+        Requires session authentication (JWT). Also clears created, last used
+        and client.
       tags: [account]
       security:
         - BearerAuth: []
@@ -7117,7 +7133,8 @@ components:
           description: |
             Stable machine-readable error code (e.g. last_admin,
             self_delete_forbidden, email_exists, connection_failed,
-            invalid_condition, grab_rejected, rate_limited, worker_unavailable). Present for domain errors
+            invalid_condition, grab_rejected, rate_limited, worker_unavailable,
+            hardcover_not_configured, hardcover_key_rejected). Present for domain errors
             where the caller needs to branch on the specific reason; absent
             for generic errors where the message is sufficient.
 
@@ -10669,25 +10686,48 @@ components:
             raw_token:
               type: string
 
-    SubsonicPassword:
+    AppAccess:
       type: object
-      required: [enabled]
+      description: >-
+        One Subsonic or OPDS credential of the caller. Never carries the
+        secret.
+      required: [enabled, username]
       properties:
         enabled:
           type: boolean
-        password:
+        username:
           type: string
-          description: Empty or absent when disabled.
+          description: >-
+            The account email, which is what a player or reader types as its
+            user name.
+        created_at:
+          type: string
+          format: date-time
+          description: Set when the secret is generated or rotated.
+        last_used_at:
+          type: string
+          format: date-time
+          description: >-
+            Recorded after a successful authentication, at most once every five
+            minutes.
+        last_client:
+          type: string
+          maxLength: 64
+          description: >-
+            Client-supplied: the Subsonic `c` parameter, or the first product
+            token of the OPDS User-Agent. Display as text only.
 
-    OpdsToken:
-      type: object
-      required: [enabled]
-      properties:
-        enabled:
-          type: boolean
-        token:
-          type: string
-          description: Empty or absent when disabled.
+    AppAccessCreated:
+      allOf:
+        - $ref: "#/components/schemas/AppAccess"
+        - type: object
+          required: [secret]
+          properties:
+            secret:
+              type: string
+              description: >-
+                The Subsonic password or the OPDS token, in plaintext. This
+                response only.
 
     Session:
       type: object
@@ -11052,6 +11092,7 @@ components:
         - tmdb_region
         - tmdb_api_key_set
         - tvdb_api_key_set
+        - hardcover_api_key_set
         - restart_required
       properties:
         language:
@@ -11066,6 +11107,8 @@ components:
           type: boolean
         tvdb_api_key_set:
           type: boolean
+        hardcover_api_key_set:
+          type: boolean
         tmdb_api_key_file_managed:
           type: boolean
           description: >-
@@ -11073,6 +11116,9 @@ components:
             here is refused — the file is the source of truth.
         tvdb_api_key_file_managed:
           type: boolean
+        hardcover_api_key_file_managed:
+          type: boolean
+          description: True when the key comes from metadata.hardcover_api_key_file.
         restart_required:
           type: boolean
           description: >-
@@ -11093,6 +11139,9 @@ components:
           type: string
           format: password
         tvdb_api_key:
+          type: string
+          format: password
+        hardcover_api_key:
           type: string
           format: password
 
@@ -12762,13 +12811,15 @@ components:
 
     UpcomingAlbum:
       type: object
-      required: [id, title, artist_id, artist_name, release_date]
+      required: [id, title, type, artist_id, artist_name, release_date, status]
       properties:
         id:
           type: integer
           x-go-type: uint32
         title:
           type: string
+        type:
+          $ref: "#/components/schemas/MusicAlbumType"
         artist_id:
           type: integer
           x-go-type: uint32
@@ -12776,25 +12827,42 @@ components:
           type: string
         release_date:
           type: string
-          format: date-time
+          format: date
+        status:
+          type: string
+          enum: [wanted, downloading, paused, available, skipped]
+          description: The stored album status; never `upcoming`.
 
     UpcomingBook:
       type: object
-      required: [id, title, author_id, author_name, release_date]
+      required: [id, title, author, release_date, status]
       properties:
         id:
           type: integer
           x-go-type: uint32
         title:
           type: string
-        author_id:
-          type: integer
-          x-go-type: uint32
-        author_name:
+        author:
           type: string
         release_date:
           type: string
-          format: date-time
+          format: date
+        status:
+          type: string
+          enum: [wanted, downloading, paused, available, skipped]
+          description: >-
+            Over the monitored slots only, ignoring the unaired rule. Skipped
+            slots are set aside; of the rest the first match wins: downloading,
+            wanted, paused, available. A book with no monitored non-skipped
+            slot is `skipped`.
+        series_id:
+          type: integer
+          x-go-type: uint32
+        series_title:
+          type: string
+        position:
+          type: number
+          format: double
 
     UpcomingList:
       type: object

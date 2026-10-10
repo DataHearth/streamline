@@ -16,6 +16,8 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/appaccess"
+	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
 
@@ -83,10 +85,13 @@ func newCatalogFixture(ctx context.Context) *catalogFixture {
 		SetBook(audioOnly).
 		SaveX(ctx)
 
-	client.User.Create().SetEmail(testEmail).SetOpdsToken("sesame").SaveX(ctx)
+	client.User.Create().
+		SetEmail(testEmail).
+		SetOpdsToken(auth.HashOPDSToken("sesame")).
+		SaveX(ctx)
 
 	root := chi.NewRouter()
-	root.Mount("/opds", New(client).Router())
+	root.Mount("/opds", New(client, appaccess.NewTracker(client)).Router())
 	return &catalogFixture{
 		client:    client,
 		router:    root,

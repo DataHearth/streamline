@@ -145,7 +145,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ⚠️ API and YAML only — the profile form does not edit it | — |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
-| `metadata.*` | ⚠️ Accepted immediately, but the TMDB and TVDB clients are built at boot — restart required | Settings → Metadata |
+| `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB and Hardcover clients are built at boot — restart required | Settings → Metadata |
 | `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → General |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
 | Everything else | ❌ File only, restart required | — |
@@ -319,7 +319,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | --- | --- | --- | --- |
 | `metadata.tmdb_api_key` | string | `""` | **Required for movies.** No key, no movie search |
 | `metadata.tvdb_api_key` | string | `""` | **Required for TV.** |
-| `metadata.hardcover_api_key` | string | `""` | **Required for books.** File-only |
+| `metadata.hardcover_api_key` | string | `""` | **Required for books.** Settable in Settings → Metadata (write-only, restart required) |
 | `metadata.language` | BCP-47 | `en` | Empty lets the provider pick its own default |
 | `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar — set it to yours |
 
