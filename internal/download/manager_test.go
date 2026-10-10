@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -377,6 +378,42 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(completed).To(BeEmpty())
 			})
+		})
+
+		When("the client refused the torrent for good", func() {
+			It("fails the record with the client's reason and bumps the anchor",
+				func() {
+					configtest.Setup(map[string]any{
+						"download_clients": []map[string]any{{
+							"name": "embedded", "client_type": "builtin",
+							"download_dir": "/downloads", "enabled": true,
+						}},
+					})
+					refusal := fmt.Errorf("%w: name %q is held",
+						ErrTorrentRefused, "pack")
+					refusedMgr := New(store, &fakePassClient{getTorrentErr: refusal})
+					store.EXPECT().
+						ListDownloadingRecordsWithMovie(mock.Anything).
+						Return([]*ent.DownloadRecord{{
+							ID:                 11,
+							TorrentHash:        "abc",
+							DownloadClientName: "embedded",
+							Edges: ent.DownloadRecordEdges{
+								AnchorEpisode: &ent.Episode{ID: 5},
+							},
+						}}, nil).Once()
+					store.EXPECT().
+						FailDownloadRecord(mock.Anything, uint32(11), refusal.Error()).
+						Return(nil).Once()
+					store.EXPECT().
+						IncrementEpisodeGrabFailures(mock.Anything, uint32(5)).
+						Return(nil).Once()
+
+					completed, err := refusedMgr.CheckStatus(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeEmpty())
+				})
 		})
 
 		When(

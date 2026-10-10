@@ -118,6 +118,9 @@ func (e *Engine) AddTorrent(
 		return "", otelx.RecordSpanError(span, err)
 	}
 	hash := spec.InfoHash.HexString()
+	e.mu.Lock()
+	delete(e.refusals, hash)
+	e.mu.Unlock()
 	if _, held := e.client.Torrent(spec.InfoHash); !held &&
 		len(e.client.Torrents()) >= maxTorrents {
 		return "", otelx.RecordSpanError(span, download.ErrClientFull)
@@ -213,6 +216,12 @@ func (e *Engine) GetTorrent(
 ) (*download.Torrent, error) {
 	t, err := e.torrent(hash)
 	if err != nil {
+		e.mu.Lock()
+		reason, refused := e.refusals[hash]
+		e.mu.Unlock()
+		if refused {
+			return nil, fmt.Errorf("%w: %s", download.ErrTorrentRefused, reason)
+		}
 		return nil, err
 	}
 	v := e.view(t)
@@ -291,6 +300,42 @@ func (e *Engine) RemoveTorrent(
 		}
 	}
 	return nil
+}
+
+// refuseTorrent is the path guard's verdict on a magnet whose info just
+// arrived. anacrolix leaves such a torrent registered without info, fetching
+// at 0% for good, so it is dropped here and the reason kept for GetTorrent to
+// hand the download manager. It runs off the guard's goroutine: that one holds
+// the client lock Drop needs.
+func (e *Engine) refuseTorrent(
+	ih metainfo.Hash,
+	name string,
+	holder *metainfo.Hash,
+) {
+	hash := ih.HexString()
+	reason := fmt.Sprintf("the torrent name %q is unsafe", name)
+	logAttrs := []any{"hash", hash, "name", name}
+	if holder != nil {
+		reason = fmt.Sprintf(
+			"the engine already holds %q under torrent %s", name, holder.HexString(),
+		)
+		logAttrs = append(logAttrs, "held_by", holder.HexString())
+	}
+	e.mu.Lock()
+	if _, seen := e.refusals[hash]; seen {
+		e.mu.Unlock()
+		return
+	}
+	e.refusals[hash] = reason
+	e.mu.Unlock()
+
+	e.wg.Go(func() {
+		ctx := context.Background()
+		defer observability.RecoverPanic(ctx, "refuse torrent", nil)
+		slog.WarnContext(ctx, "dropping torrent refused by the path guard",
+			append(logAttrs, "reason", reason)...)
+		e.rollbackAdd(ctx, hash)
+	})
 }
 
 // forget drops everything the engine holds for a torrent that is gone.

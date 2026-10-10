@@ -38,6 +38,10 @@ type contentPaths struct {
 	owners  map[string]metainfo.Hash
 	refused map[*metainfo.Info]bool
 	trusted map[metainfo.Hash]bool
+	// onRefuse hears of every torrent torrentDir refuses. anacrolix swallows
+	// the OpenTorrent failure on a magnet — the torrent stays registered, with
+	// no info, forever — so this is the only place the refusal is visible.
+	onRefuse func(ih metainfo.Hash, name string, holder *metainfo.Hash)
 }
 
 // newContentStorage is the engine's file storage, placed by a fresh
@@ -102,12 +106,22 @@ func (p *contentPaths) torrentDir(
 	ih metainfo.Hash,
 ) string {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	if !p.admitsLocked(base, info, ih) {
 		p.refused[info] = true
+		name := info.BestName()
+		var holder *metainfo.Hash
+		if owner, taken := p.owners[name]; taken && owner != ih {
+			holder = &owner
+		}
+		onRefuse := p.onRefuse
+		p.mu.Unlock()
+		if onRefuse != nil {
+			onRefuse(ih, name, holder)
+		}
 		return base
 	}
 	p.owners[info.BestName()] = ih
+	p.mu.Unlock()
 	return base
 }
 

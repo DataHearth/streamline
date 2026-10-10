@@ -54,6 +54,7 @@ var (
 	ErrUnexpectedStatus  = errors.New("download client returned unexpected status")
 	ErrBadResponse       = errors.New("download client returned malformed response")
 	ErrTorrentNotFound   = errors.New("torrent not found in download client")
+	ErrTorrentRefused    = errors.New("download client refused the torrent")
 	ErrUntrustedSource   = errors.New(
 		"download URL does not belong to a configured indexer",
 	)
@@ -1351,6 +1352,8 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 			torrent, err := client.GetTorrent(ctx, record.TorrentHash)
 			if err != nil {
 				switch {
+				case errors.Is(err, ErrTorrentRefused):
+					d.failRefusedRecord(ctx, record, err)
 				case errors.Is(err, ErrTorrentNotFound) &&
 					time.Since(record.CreateTime) >= monitorOrphanGrace:
 					// Cancelled/removed in the client: drop the orphaned record
@@ -1465,6 +1468,37 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 		completedCount.Add(ctx, int64(len(completed)))
 	}
 	return completed, nil
+}
+
+// failRefusedRecord finalizes a record whose torrent the client took and then
+// refused for good (the builtin engine's path guard, once a magnet's info
+// arrives). The record fails with the client's reason; its episodes are
+// un-stranded by ReconcileEpisodeStatuses, and the anchor's grab_failures is
+// bumped so the next search does not grab the same release straight back.
+func (d *download) failRefusedRecord(
+	ctx context.Context,
+	rec *ent.DownloadRecord,
+	cause error,
+) {
+	slog.WarnContext(ctx, "failing download record; client refused the torrent",
+		"record.id", rec.ID, "hash", rec.TorrentHash, "error", cause)
+	if err := d.db.FailDownloadRecord(ctx, rec.ID, cause.Error()); err != nil {
+		slog.WarnContext(ctx, "fail refused record failed",
+			"record.id", rec.ID, "error", err)
+		return
+	}
+	if anchor := rec.Edges.AnchorEpisode; anchor != nil {
+		if err := d.db.IncrementEpisodeGrabFailures(ctx, anchor.ID); err != nil {
+			slog.WarnContext(ctx, "fail refused record: bump grab_failures failed",
+				"episode.id", anchor.ID, "error", err)
+		}
+	}
+	if m := rec.Edges.Movie; m != nil {
+		if err := d.db.RevertMovieToWantedIfNoFile(ctx, m.ID); err != nil {
+			slog.WarnContext(ctx, "fail refused record: revert movie failed",
+				"movie.id", m.ID, "error", err)
+		}
+	}
 }
 
 // purgeOrphanedRecord drops a "downloading" record whose torrent has vanished
