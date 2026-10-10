@@ -232,8 +232,11 @@
 		queryFn: () => apiAllPages<MBRow>(`/library/imports/${importId}/${kindMeta.rows}`),
 		enabled: Number.isFinite(importId) && importId > 0 && isMB && scan?.status === "awaiting_review",
 	}));
+	// The row says what it is: across a scan-to-scan navigation the rows and
+	// `kind` can briefly come from different scans, and reading an album row
+	// as a book threw on its missing file_paths.
 	const toEntry = (row: MBRow) =>
-		kind === "music" ? albumEntry(row as ImportScanAlbum) : bookEntry(row as ImportScanBook);
+		"folder_path" in row ? albumEntry(row) : bookEntry(row);
 	let mbEntries = $derived((mbQuery.data?.items ?? []).map(toEntry));
 	let mbTotal = $derived(mbQuery.data?.total ?? 0);
 	let mbAll = $derived((mbAllQuery.data?.items ?? []).map(toEntry));
