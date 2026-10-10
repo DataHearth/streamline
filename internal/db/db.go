@@ -724,6 +724,7 @@ type Store interface {
 	DeleteAllCompletedDownloadRecords(ctx context.Context) (int, error)
 	RevertMovieToWantedIfNoFile(ctx context.Context, movieID uint32) error
 	RevertOrphanedDownloadingEpisodes(ctx context.Context) (int, error)
+	RevertOrphanedDownloadingAlbumsAndBooks(ctx context.Context) (int, error)
 	SyncDownloadStateForRecord(
 		ctx context.Context,
 		recordID uint32,

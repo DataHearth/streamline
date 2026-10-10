@@ -1719,6 +1719,80 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 	return toWanted + toAvailable, err
 }
 
+// RevertOrphanedDownloadingAlbumsAndBooks is RevertOrphanedDownloadingEpisodes
+// for albums and book slots: one left "downloading" with no in-flight record
+// covering it — the client refused the torrent, it was removed from the
+// Torrents page, or its record was purged — goes back to "wanted", or to
+// "available" when it already holds files. Only the import-failure path moved
+// them before, so every other way a record ended stranded the title, and the
+// searches skip anything downloading. Returns rows reverted.
+func (db *DB) RevertOrphanedDownloadingAlbumsAndBooks(
+	ctx context.Context,
+) (int, error) {
+	inFlight := downloadrecord.StatusIn(inFlightRecordStatuses...)
+	strandedAlbum := album.And(
+		album.StatusEQ(album.StatusDownloading),
+		album.Not(album.HasDownloadRecordsWith(inFlight)),
+		album.Not(album.HasPackRecordsWith(inFlight)),
+	)
+	total := 0
+	for _, arm := range []struct {
+		files bool
+		to    album.Status
+	}{{false, album.StatusWanted}, {true, album.StatusAvailable}} {
+		held := album.HasTracksWith(track.HasMediaFiles())
+		if !arm.files {
+			held = album.Not(held)
+		}
+		n, err := db.client.Album.Update().
+			Where(strandedAlbum, held).
+			SetStatus(arm.to).
+			Save(ctx)
+		total += n
+		if err != nil {
+			return total, fmt.Errorf("revert stranded albums: %w", err)
+		}
+	}
+
+	for _, kind := range []downloadrecord.BookKind{
+		downloadrecord.BookKindEbook, downloadrecord.BookKindAudiobook,
+	} {
+		noRecord := book.Not(book.HasDownloadRecordsWith(
+			inFlight, downloadrecord.BookKindEQ(kind),
+		))
+		held := book.HasMediaFilesWith(
+			mediafile.BookKindEQ(mediafile.BookKind(kind)),
+		)
+		for _, files := range []bool{false, true} {
+			pred := held
+			if !files {
+				pred = book.Not(held)
+			}
+			u := db.client.Book.Update().Where(noRecord, pred)
+			switch {
+			case kind == downloadrecord.BookKindEbook && files:
+				u = u.Where(book.EbookStatusEQ(book.EbookStatusDownloading)).
+					SetEbookStatus(book.EbookStatusAvailable)
+			case kind == downloadrecord.BookKindEbook:
+				u = u.Where(book.EbookStatusEQ(book.EbookStatusDownloading)).
+					SetEbookStatus(book.EbookStatusWanted)
+			case files:
+				u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusDownloading)).
+					SetAudiobookStatus(book.AudiobookStatusAvailable)
+			default:
+				u = u.Where(book.AudiobookStatusEQ(book.AudiobookStatusDownloading)).
+					SetAudiobookStatus(book.AudiobookStatusWanted)
+			}
+			n, err := u.Save(ctx)
+			total += n
+			if err != nil {
+				return total, fmt.Errorf("revert stranded %s slots: %w", kind, err)
+			}
+		}
+	}
+	return total, nil
+}
+
 // MarkEpisodeDownloading flips one episode to "downloading" after a grab, and
 // only from "wanted": an episode that already has a file is a replace target,
 // and claiming it is downloading would strand it as "wanted" — file and all —

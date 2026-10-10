@@ -717,6 +717,9 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			store.EXPECT().
 				RevertOrphanedDownloadingEpisodes(mock.Anything).
 				Return(0, nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingAlbumsAndBooks(mock.Anything).
+				Return(0, nil).Once()
 			Expect(mgr.PurgeRecordForHash(ctx, "H")).To(Succeed())
 		})
 	})
@@ -2043,3 +2046,18 @@ var _ = Describe(
 		})
 	},
 )
+
+var _ = Describe("extractBtihFromMagnet", Label("unit", "downloads"), func() {
+	DescribeTable("returns the infohash as lowercase hex",
+		func(magnet, want string) {
+			Expect(extractBtihFromMagnet(magnet)).To(Equal(want))
+		},
+		Entry("hex",
+			"magnet:?xt=urn:btih:AABBCCDDEEFF00112233445566778899AABBCCDD&dn=x",
+			"aabbccddeeff00112233445566778899aabbccdd"),
+		Entry("base32 decodes to the same hex the client reports",
+			"magnet:?xt=urn:btih:VK54ZXPO74ABCIRTIRKWM54ITGVLXTG5&dn=x",
+			"aabbccddeeff00112233445566778899aabbccdd"),
+		Entry("no btih", "magnet:?dn=x", ""),
+	)
+})

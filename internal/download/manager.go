@@ -3,6 +3,8 @@ package download
 import (
 	"bytes"
 	"context"
+	"encoding/base32"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -226,7 +228,7 @@ type CompletedDownload struct {
 // without pulling in the full Manager.
 type Checker interface {
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
-	ReconcileEpisodeStatuses(ctx context.Context) error
+	ReconcileStrandedMedia(ctx context.Context) error
 }
 
 // SelectionResolver is the consumer-facing surface for the file_selection
@@ -278,7 +280,7 @@ type Downloader interface {
 		kind mediafile.BookKind,
 	) (*ent.DownloadRecord, error)
 	CheckStatus(ctx context.Context) ([]CompletedDownload, error)
-	ReconcileEpisodeStatuses(ctx context.Context) error
+	ReconcileStrandedMedia(ctx context.Context) error
 	RemoveTorrent(
 		ctx context.Context,
 		downloadClientName string,
@@ -1129,14 +1131,25 @@ func (d *download) grabWith(
 }
 
 // extractBtihFromMagnet pulls the btih infohash out of a magnet URI,
-// lowercased. Used both as qBittorrent's pre-2.15 AddTorrent fallback (its
+// as lowercase hex. Used both as qBittorrent's pre-2.15 AddTorrent fallback (its
 // envelope-less "Ok." response carries no hash) and by localInfoHash below.
 func extractBtihFromMagnet(magnet string) string {
 	parts := strings.SplitAfter(magnet, "btih:")
 	if len(parts) < 2 {
 		return ""
 	}
-	return strings.ToLower(strings.SplitN(parts[1], "&", 2)[0])
+	btih, _, _ := strings.Cut(parts[1], "&")
+	// A btih may be the 32-character base32 form; every client and every
+	// stored torrent_hash is 40-character hex, so a base32 hash compared raw
+	// matched nothing and slipped past the duplicate-grab lock.
+	if len(btih) == 32 {
+		if raw, err := base32.StdEncoding.DecodeString(
+			strings.ToUpper(btih),
+		); err == nil {
+			return hex.EncodeToString(raw)
+		}
+	}
+	return strings.ToLower(btih)
 }
 
 // localInfoHash derives a torrent's infohash from src without contacting the
@@ -1534,7 +1547,7 @@ func (d *download) CheckStatus(ctx context.Context) ([]CompletedDownload, error)
 // failRefusedRecord finalizes a record whose torrent the client took and then
 // refused for good (the builtin engine's path guard, once a magnet's info
 // arrives). The record fails with the client's reason; its episodes are
-// un-stranded by ReconcileEpisodeStatuses, and the anchor's grab_failures is
+// un-stranded by ReconcileStrandedMedia, and the anchor's grab_failures is
 // bumped so the next search does not grab the same release straight back.
 func (d *download) failRefusedRecord(
 	ctx context.Context,
@@ -1564,7 +1577,7 @@ func (d *download) failRefusedRecord(
 
 // purgeOrphanedRecord drops a "downloading" record whose torrent has vanished
 // from the client (cancelled out-of-band) and reverts its movie to wanted.
-// Episode records are reconciled by ReconcileEpisodeStatuses instead, which
+// Episode records are reconciled by ReconcileStrandedMedia instead, which
 // also covers the season-pack siblings a single record can't reach.
 func (d *download) purgeOrphanedRecord(
 	ctx context.Context,
@@ -1609,15 +1622,16 @@ func (d *download) PurgeRecordForHash(
 		return nil
 	}
 	d.purgeOrphanedRecord(ctx, rec)
-	return d.ReconcileEpisodeStatuses(ctx)
+	return d.ReconcileStrandedMedia(ctx)
 }
 
-// ReconcileEpisodeStatuses reverts episodes stranded in "downloading" with no
-// active download record — chiefly the season-pack fan-out left behind when a
-// pack's single record is cancelled or lost. Runs on the download-monitor tick
+// ReconcileStrandedMedia reverts episodes, albums and book slots stranded in
+// "downloading" with no active download record — chiefly the season-pack
+// fan-out left behind when a pack's single record is cancelled or lost, and an
+// album or book whose torrent the client refused or someone removed. Runs on the download-monitor tick
 // so stuck rows self-heal rather than requiring a manual reset.
-func (d *download) ReconcileEpisodeStatuses(ctx context.Context) error {
-	ctx, span := tracer.Start(ctx, "download.reconcile_episode_statuses")
+func (d *download) ReconcileStrandedMedia(ctx context.Context) error {
+	ctx, span := tracer.Start(ctx, "download.reconcile_stranded_media")
 	defer span.End()
 
 	n, err := d.db.RevertOrphanedDownloadingEpisodes(ctx)
@@ -1630,6 +1644,18 @@ func (d *download) ReconcileEpisodeStatuses(ctx context.Context) error {
 	if n > 0 {
 		slog.InfoContext(ctx, "reconciled stranded downloading episodes",
 			"reverted", n)
+	}
+	m, err := d.db.RevertOrphanedDownloadingAlbumsAndBooks(ctx)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("revert orphaned downloading albums and books: %w", err),
+		)
+	}
+	span.SetAttributes(attribute.Int("albums_books.reverted", m))
+	if m > 0 {
+		slog.InfoContext(ctx, "reconciled stranded downloading albums and books",
+			"reverted", m)
 	}
 	return nil
 }

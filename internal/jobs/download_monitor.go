@@ -25,10 +25,11 @@ func DownloadMonitor(
 		if err != nil {
 			return err
 		}
-		// Self-heal episodes left "downloading" by a cancelled/lost season pack.
+		// Self-heal episodes, albums and book slots left "downloading" by a
+		// cancelled, refused or lost record.
 		// Non-fatal: a reconcile failure must not abort the completion pass.
-		if err := c.ReconcileEpisodeStatuses(ctx); err != nil {
-			slog.WarnContext(ctx, "reconcile episode statuses failed", "error", err)
+		if err := c.ReconcileStrandedMedia(ctx); err != nil {
+			slog.WarnContext(ctx, "reconcile stranded media failed", "error", err)
 		}
 		for _, cd := range completed {
 			slog.InfoContext(

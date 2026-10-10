@@ -799,12 +799,12 @@ func (_c *MockDownloader_Queue_Call) RunAndReturn(run func(ctx context.Context) 
 	return _c
 }
 
-// ReconcileEpisodeStatuses provides a mock function for the type MockDownloader
-func (_mock *MockDownloader) ReconcileEpisodeStatuses(ctx context.Context) error {
+// ReconcileStrandedMedia provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) ReconcileStrandedMedia(ctx context.Context) error {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ReconcileEpisodeStatuses")
+		panic("no return value specified for ReconcileStrandedMedia")
 	}
 
 	var r0 error
@@ -816,18 +816,18 @@ func (_mock *MockDownloader) ReconcileEpisodeStatuses(ctx context.Context) error
 	return r0
 }
 
-// MockDownloader_ReconcileEpisodeStatuses_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReconcileEpisodeStatuses'
-type MockDownloader_ReconcileEpisodeStatuses_Call struct {
+// MockDownloader_ReconcileStrandedMedia_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReconcileStrandedMedia'
+type MockDownloader_ReconcileStrandedMedia_Call struct {
 	*mock.Call
 }
 
-// ReconcileEpisodeStatuses is a helper method to define mock.On call
+// ReconcileStrandedMedia is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDownloader_Expecter) ReconcileEpisodeStatuses(ctx any) *MockDownloader_ReconcileEpisodeStatuses_Call {
-	return &MockDownloader_ReconcileEpisodeStatuses_Call{Call: _e.mock.On("ReconcileEpisodeStatuses", ctx)}
+func (_e *MockDownloader_Expecter) ReconcileStrandedMedia(ctx any) *MockDownloader_ReconcileStrandedMedia_Call {
+	return &MockDownloader_ReconcileStrandedMedia_Call{Call: _e.mock.On("ReconcileStrandedMedia", ctx)}
 }
 
-func (_c *MockDownloader_ReconcileEpisodeStatuses_Call) Run(run func(ctx context.Context)) *MockDownloader_ReconcileEpisodeStatuses_Call {
+func (_c *MockDownloader_ReconcileStrandedMedia_Call) Run(run func(ctx context.Context)) *MockDownloader_ReconcileStrandedMedia_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -840,12 +840,12 @@ func (_c *MockDownloader_ReconcileEpisodeStatuses_Call) Run(run func(ctx context
 	return _c
 }
 
-func (_c *MockDownloader_ReconcileEpisodeStatuses_Call) Return(err error) *MockDownloader_ReconcileEpisodeStatuses_Call {
+func (_c *MockDownloader_ReconcileStrandedMedia_Call) Return(err error) *MockDownloader_ReconcileStrandedMedia_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *MockDownloader_ReconcileEpisodeStatuses_Call) RunAndReturn(run func(ctx context.Context) error) *MockDownloader_ReconcileEpisodeStatuses_Call {
+func (_c *MockDownloader_ReconcileStrandedMedia_Call) RunAndReturn(run func(ctx context.Context) error) *MockDownloader_ReconcileStrandedMedia_Call {
 	_c.Call.Return(run)
 	return _c
 }
