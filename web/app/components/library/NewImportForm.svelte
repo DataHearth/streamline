@@ -67,7 +67,7 @@
 			source_path: "",
 			kind: "movie" as ImportScanKind,
 			mode: "in_place" as ImportMode,
-			import_mode: "" as Values["import_mode"],
+			import_mode: "hardlink" as Values["import_mode"],
 		},
 		validators: { onChange: importStartForm },
 		onSubmit: ({ value }) => {
