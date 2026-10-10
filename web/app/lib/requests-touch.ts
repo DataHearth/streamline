@@ -73,16 +73,21 @@ export const isMusicBook = (t: MediaType) => t === "artist" || t === "album" || 
 
 // "by Rivière Noire" for an album request: its title alone does not say whose.
 // The name is MusicBrainz's, not the requester's wording.
-export const albumBy = (r: Pick<MediaRequest, "media_type" | "artist_name">) =>
-	r.media_type === "album" && r.artist_name ? i18n.lookup_by({ name: r.artist_name }) : "";
+export const albumBy = (r: Pick<MediaRequest, "media_type" | "artist_name">, verified?: string) => {
+	const name = verified || r.artist_name;
+	return r.media_type === "album" && name ? i18n.lookup_by({ name }) : "";
+};
 
 // "requested as Riviere Noire": the requester's wording, exactly as typed,
 // under the verified name and only when the two differ. It is untrusted, so it
 // only ever renders as text; spaces at either end are no difference worth a
 // caption.
-export const requestedAs = (r: Pick<MediaRequest, "media_type" | "artist_name" | "requested_as">) => {
+export const requestedAs = (
+	r: Pick<MediaRequest, "media_type" | "artist_name" | "requested_as">,
+	verified?: string,
+) => {
 	const said = r.media_type === "album" ? r.requested_as?.trim() : "";
-	return said && said !== r.artist_name ? i18n.requests_requested_as({ name: said }) : "";
+	return said && said !== (verified || r.artist_name) ? i18n.requests_requested_as({ name: said }) : "";
 };
 
 // The kind dot. Movie and series keep the two status hues they always had;

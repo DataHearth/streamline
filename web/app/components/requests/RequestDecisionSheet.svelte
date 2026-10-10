@@ -150,10 +150,10 @@
 					<p class="mt-1 font-mono text-[11px] text-fg-subtle">
 						{year ? `${year} · ` : ""}{kindLabel(
 							request.media_type,
-						)}{albumBy(request) ? ` · ${albumBy(request)}` : ""}
+						)}{albumBy(request, verifiedArtist) ? ` · ${albumBy(request, verifiedArtist)}` : ""}
 					</p>
-					{#if requestedAs(request)}
-						<p class="mt-0.5 truncate text-[11.5px] text-fg-faint">{requestedAs(request)}</p>
+					{#if requestedAs(request, verifiedArtist)}
+						<p class="mt-0.5 truncate text-[11.5px] text-fg-faint">{requestedAs(request, verifiedArtist)}</p>
 					{/if}
 				</div>
 				<button
