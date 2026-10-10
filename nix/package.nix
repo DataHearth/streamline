@@ -15,6 +15,23 @@ let
   # its default, and fetchPnpmDeps lays the store out the way the pnpm that
   # runs it does — so it has to be the one package.json declares.
   pnpm = callPackage ./pnpm.nix { };
+
+  # A fixed-output derivation's store path is its name and its declared hash,
+  # nothing else — so while the name stays put, a hash left stale by a lockfile
+  # or toolchain change still resolves to the old output wherever that path is
+  # already in a store, and nothing re-fetches to notice. The homelab builder
+  # did exactly that for pnpmDeps after the pnpm 12.11.2 bump: CI passed a hash
+  # a clean machine would have rejected. Naming each one after what decides its
+  # content moves the path whenever that does, so the fetch runs and the hash
+  # is checked for real.
+  inputsId =
+    files: extra:
+    builtins.substring 0 12 (
+      builtins.hashString "sha256" (
+        lib.concatStringsSep "\n" (map (builtins.hashFile "sha256") files ++ extra)
+      )
+    );
+
   # The build tree, minus everything the frontend build regenerates. Those
   # outputs are gitignored, so they are absent in CI and present on a
   # developer's machine — including them would make the source hash depend on
@@ -67,7 +84,11 @@ let
     ];
 
     pnpmDeps = fetchPnpmDeps {
-      inherit (finalAttrs) pname version src;
+      # Its output is named `${pname}-pnpm-deps`.
+      pname = "${finalAttrs.pname}-${
+        inputsId [ ../pnpm-lock.yaml ../pnpm-workspace.yaml ] [ pnpm.version ]
+      }";
+      inherit (finalAttrs) version src;
       inherit pnpm;
       fetcherVersion = 4;
       hash = "sha256-RZd8Suj4qyVfrVeXwn3cYoAteTyHBmkb5XCEbDAhGMA=";
@@ -113,6 +134,12 @@ in
   inherit version src;
 
   vendorHash = "sha256-yDTaduStH8nmV6p7rJ23x0GMW9Xz7w0o2ptShQHACSU=";
+  # Named by what decides the vendored set rather than by the app version, for
+  # the reason inputsId gives. Fixed rather than derived from pname, so the lint
+  # check's overrideAttrs shares this fetch instead of repeating it.
+  overrideModAttrs = {
+    name = "streamline-go-modules-${inputsId [ ../go.mod ../go.sum ] [ go.version ]}";
+  };
 
   subPackages = [ "cmd" ];
 
