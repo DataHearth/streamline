@@ -1,6 +1,7 @@
 package subsonic
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -300,22 +301,23 @@ func (h *Handler) getArtists(w http.ResponseWriter, r *http.Request) error {
 
 // getIndexes is the folder-based twin of getArtists: the library has the one
 // music folder, so the same artist grouping answers it.
+//
+// ifModifiedSince is read but never short-circuits: no timestamp here moves
+// when an artist is deleted (the newest remaining row can be older than the
+// client's copy), so answering "unchanged" could leave a client holding a
+// removed artist for good. The full index is always a correct answer.
 func (h *Handler) getIndexes(w http.ResponseWriter, r *http.Request) error {
 	artists, err := h.sortedArtists(r)
 	if err != nil {
 		return err
 	}
-	var lastModified int64
-	for _, ar := range artists {
-		lastModified = max(lastModified, ar.UpdateTime.UnixMilli())
+	lastModified, err := h.libraryModified(r.Context(), artists)
+	if err != nil {
+		return err
 	}
 
 	out := &folderIndexes{LastModified: lastModified, Index: []index{}}
 	if folder := r.FormValue("musicFolderId"); folder != "" && folder != "1" {
-		artists = nil
-	}
-	since, err := strconv.ParseInt(r.FormValue("ifModifiedSince"), 10, 64)
-	if err == nil && lastModified <= since {
 		artists = nil
 	}
 	out.Index = groupArtists(artists)
@@ -471,4 +473,31 @@ func (h *Handler) search3(w http.ResponseWriter, r *http.Request) error {
 
 	writeOK(w, r, &body{SearchResult: out})
 	return nil
+}
+
+// libraryModified is the newest change to anything an index entry reflects:
+// an artist row, or an album or track under it (album_count, a new release).
+func (h *Handler) libraryModified(
+	ctx context.Context,
+	artists []*ent.Artist,
+) (int64, error) {
+	var newest int64
+	for _, ar := range artists {
+		newest = max(newest, ar.UpdateTime.UnixMilli())
+	}
+	al, err := h.ent.Album.Query().Order(ent.Desc(album.FieldUpdateTime)).First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return 0, err
+	}
+	if al != nil {
+		newest = max(newest, al.UpdateTime.UnixMilli())
+	}
+	tr, err := h.ent.Track.Query().Order(ent.Desc(track.FieldUpdateTime)).First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return 0, err
+	}
+	if tr != nil {
+		newest = max(newest, tr.UpdateTime.UnixMilli())
+	}
+	return newest, nil
 }

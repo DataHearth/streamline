@@ -179,18 +179,20 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 		},
 	)
 
-	g.It("filters getIndexes by music folder and ifModifiedSince", func() {
+	g.It("filters getIndexes by music folder and never by ifModifiedSince", func() {
 		resp := f.call("getIndexes", url.Values{"musicFolderId": {"2"}})
 		Expect(resp["indexes"].(map[string]any)["index"]).To(BeEmpty())
 
 		resp = f.call("getIndexes", url.Values{"musicFolderId": {"1"}})
 		Expect(resp["indexes"].(map[string]any)["index"]).To(HaveLen(1))
 
+		// A deletion moves no timestamp, so a client copy newer than every row
+		// can still be stale: the full index is always answered.
 		resp = f.call(
 			"getIndexes",
 			url.Values{"ifModifiedSince": {"99999999999999"}},
 		)
-		Expect(resp["indexes"].(map[string]any)["index"]).To(BeEmpty())
+		Expect(resp["indexes"].(map[string]any)["index"]).To(HaveLen(1))
 
 		resp = f.call("getIndexes", url.Values{"ifModifiedSince": {"0"}})
 		Expect(resp["indexes"].(map[string]any)["index"]).To(HaveLen(1))
