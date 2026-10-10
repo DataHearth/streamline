@@ -9,6 +9,10 @@ tasks:
 
   go:
     desc: Build Go binary
+    # Task keys the fingerprint on the label, so each BINARY path gets its own:
+    # with one shared fingerprint, a binary left at another path by an older
+    # build counted as up to date and a throwaway instance ran stale code.
+    label: "build:go {{.BINARY}}"
     # Frontend assets are embedded via //go:embed — must exist at compile time.
     deps: [js, css]
     cmd: go build -o {{.BINARY}} ./cmd
