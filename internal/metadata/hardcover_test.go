@@ -225,6 +225,26 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(*b.Series[0].Position).To(Equal(1.0))
 		})
 
+		It("dates a book by its original edition, not a fragment's year", func() {
+			hc.client.Transport = srv.transport(wrap(`{
+  "id": 9, "title": "Exhalation", "release_date": "2014-01-01", "release_year": 2014,
+  "digital": [],
+  "physical": [
+    {"id": 1, "title": "Exhalation", "release_date": "2019-05-07", "release_year": 2019, "pages": 208, "reading_format_id": 1, "language": {"code2": "en"}},
+    {"id": 2, "title": "Exhalation", "release_date": "2019-09-01", "release_year": 2019, "pages": 464, "reading_format_id": 1, "language": {"code2": "fr"}},
+    {"id": 3, "title": "Exhalation", "release_date": "2020-01-01", "release_year": 2020, "pages": 380, "reading_format_id": 1, "language": {"code2": "de"}}
+  ],
+  "earliest": [
+    {"id": 4, "title": "Exhalation", "release_date": "2014-01-01", "release_year": 2014, "pages": 12, "reading_format_id": 1, "language": {"code2": "he"}}
+  ]
+}`))
+
+			recs, err := hc.GetBooks(ctx, []uint32{9})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs[0].ReleaseYear).To(Equal(uint16(2019)))
+		})
+
 		It(
 			"keeps the makers only, null counting as author, and drops the rest",
 			func() {

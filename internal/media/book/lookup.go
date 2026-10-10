@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -113,7 +115,8 @@ func (s *Service) Lookup(
 }
 
 // orderHits puts the series named like the query first, then the books in
-// Hardcover's relevance order, then the other series.
+// Hardcover's relevance order with the ones credited to an author the query
+// names ahead of the rest, then the other series.
 func orderHits(
 	query string,
 	books, series []metadata.BookLookupHit,
@@ -129,8 +132,65 @@ func orderHits(
 	}
 	out := make([]metadata.BookLookupHit, 0, len(books)+len(series))
 	out = append(out, named...)
-	out = append(out, books...)
+	out = append(out, authorMatchedFirst(query, books)...)
 	return append(out, rest...)
+}
+
+// authorMatchedFirst moves the books whose credited author is named in the
+// query and whose title covers the rest of it ahead of the others, keeping
+// Hardcover's order within both groups. Hardcover ranks on text alone, so a
+// compilation titled "Ted Chiang - Exhalation Stories" credited to someone else
+// outranks the book by the author the user typed.
+func authorMatchedFirst(
+	query string,
+	books []metadata.BookLookupHit,
+) []metadata.BookLookupHit {
+	q := queryTokens(query)
+	matched := make([]metadata.BookLookupHit, 0, len(books))
+	rest := make([]metadata.BookLookupHit, 0, len(books))
+	for _, b := range books {
+		if creditedAndTitled(q, b) {
+			matched = append(matched, b)
+		} else {
+			rest = append(rest, b)
+		}
+	}
+	return append(matched, rest...)
+}
+
+func creditedAndTitled(q []string, b metadata.BookLookupHit) bool {
+	title := queryTokens(b.Title)
+	for name := range strings.SplitSeq(b.Author, " & ") {
+		a := queryTokens(name)
+		if len(a) == 0 {
+			continue
+		}
+		for i := 0; i+len(a) <= len(q); i++ {
+			if !slices.Equal(q[i:i+len(a)], a) {
+				continue
+			}
+			remainder := slices.Concat(q[:i], q[i+len(a):])
+			if len(remainder) > 0 && titleCovers(title, remainder) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func titleCovers(title, tokens []string) bool {
+	for _, t := range tokens {
+		if !slices.Contains(title, t) {
+			return false
+		}
+	}
+	return true
+}
+
+func queryTokens(s string) []string {
+	return strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
 }
 
 func hitFrom(h metadata.BookLookupHit) LookupHit {
