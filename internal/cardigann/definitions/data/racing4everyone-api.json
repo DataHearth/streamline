@@ -1,0 +1,425 @@
+{
+  "id": "racing4everyone-api",
+  "name": "Racing4Everyone (API)",
+  "description": "Racing4Everyone (R4E) is a Private Torrent Tracker for RACING",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://racing4everyone.eu/"
+  ],
+  "legacylinks": [
+    "https://racing4everyone.jp/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "72",
+        "cat": "TV/Sport",
+        "desc": "AMA Pro Motocross"
+      },
+      {
+        "id": "73",
+        "cat": "TV/Sport",
+        "desc": "AMA Supercross"
+      },
+      {
+        "id": "76",
+        "cat": "TV/Sport",
+        "desc": "ARCA"
+      },
+      {
+        "id": "77",
+        "cat": "TV/Sport",
+        "desc": "Blancpain GT"
+      },
+      {
+        "id": "1",
+        "cat": "TV/Sport",
+        "desc": "BTCC"
+      },
+      {
+        "id": "60",
+        "cat": "TV/Sport",
+        "desc": "Drag Racing"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Sport",
+        "desc": "DTM"
+      },
+      {
+        "id": "61",
+        "cat": "TV/Sport",
+        "desc": "ERC"
+      },
+      {
+        "id": "81",
+        "cat": "TV/Sport",
+        "desc": "Extreme E"
+      },
+      {
+        "id": "86",
+        "cat": "TV/Sport",
+        "desc": "EWC"
+      },
+      {
+        "id": "67",
+        "cat": "TV/Sport",
+        "desc": "Formula 1"
+      },
+      {
+        "id": "22",
+        "cat": "TV/Sport",
+        "desc": "Formula 2"
+      },
+      {
+        "id": "68",
+        "cat": "TV/Sport",
+        "desc": "Formula 3"
+      },
+      {
+        "id": "23",
+        "cat": "TV/Sport",
+        "desc": "Formula E"
+      },
+      {
+        "id": "62",
+        "cat": "TV/Sport",
+        "desc": "Indycar Series"
+      },
+      {
+        "id": "26",
+        "cat": "TV/Sport",
+        "desc": "MotoGP-2-3-E"
+      },
+      {
+        "id": "82",
+        "cat": "TV/Sport",
+        "desc": "Motorcycle Speedway"
+      },
+      {
+        "id": "85",
+        "cat": "TV/Sport",
+        "desc": "MXGP"
+      },
+      {
+        "id": "31",
+        "cat": "TV/Sport",
+        "desc": "Nascar"
+      },
+      {
+        "id": "25",
+        "cat": "TV/Sport",
+        "desc": "Other Bikes"
+      },
+      {
+        "id": "69",
+        "cat": "TV/Sport",
+        "desc": "Other Cars"
+      },
+      {
+        "id": "78",
+        "cat": "TV/Sport",
+        "desc": "Porsche Supercup"
+      },
+      {
+        "id": "32",
+        "cat": "TV/Sport",
+        "desc": "Stock Car Brazil"
+      },
+      {
+        "id": "63",
+        "cat": "TV/Sport",
+        "desc": "Supercars"
+      },
+      {
+        "id": "84",
+        "cat": "TV/Sport",
+        "desc": "Super Formula"
+      },
+      {
+        "id": "83",
+        "cat": "TV/Sport",
+        "desc": "Super GT"
+      },
+      {
+        "id": "80",
+        "cat": "TV/Sport",
+        "desc": "Touring Cars"
+      },
+      {
+        "id": "57",
+        "cat": "TV/Sport",
+        "desc": "WEC"
+      },
+      {
+        "id": "50",
+        "cat": "TV/Sport",
+        "desc": "WRC"
+      },
+      {
+        "id": "56",
+        "cat": "TV/Sport",
+        "desc": "WRX"
+      },
+      {
+        "id": "71",
+        "cat": "TV/Sport",
+        "desc": "WSBK"
+      },
+      {
+        "id": "74",
+        "cat": "TV/Sport",
+        "desc": "WTCR"
+      },
+      {
+        "id": "58",
+        "cat": "TV/Sport",
+        "desc": "W Series"
+      },
+      {
+        "id": "24",
+        "cat": "TV/Sport",
+        "desc": "Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://racing4everyone.eu/\" target=\"_blank\">Racing4Everyone</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "single_file_release_use_filename",
+      "label": "Use filename as title for single file releases",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "After 6 months without any log in or usage of your account, it will be pruned and can only be reactivated by a staff member. Make sure to keep your account active and do not use programs to keep your account active, as your account may still get pruned."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title_optional": {
+        "selector": "name"
+      },
+      "title_filename": {
+        "selector": "files[0].name",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "title": {
+        "text": "{{ if and (.Config.single_file_release_use_filename) (eq .Result.files \"1\") (.Result.title_filename) }}{{ .Result.title_filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "poster": {
+        "selector": "meta.poster",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "_internal": {
+        "selector": "internal",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "604800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/racing4everyone-api.yml",
+    "sha256": "8c271dd3b5856de7ea3d326c82515befa5ec8a51306f797df098b19bccb17481",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

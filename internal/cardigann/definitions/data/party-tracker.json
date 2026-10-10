@@ -1,0 +1,365 @@
+{
+  "id": "party-tracker",
+  "name": "Party-Tracker",
+  "description": "Party-Tracker is a HUNGARIAN private tracker for MOVIES / TV / GENERAL",
+  "language": "hu-HU",
+  "type": "private",
+  "encoding": "ISO-8859-2",
+  "links": [
+    "https://party-tracker.info/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "47",
+        "cat": "Console/XBox",
+        "desc": "Játék/Xbox"
+      },
+      {
+        "id": "46",
+        "cat": "Console/PS3",
+        "desc": "Játék/Ps2"
+      },
+      {
+        "id": "45",
+        "cat": "PC/Games",
+        "desc": "Játék/Pc"
+      },
+      {
+        "id": "44",
+        "cat": "Movies/SD",
+        "desc": "Cam/hun"
+      },
+      {
+        "id": "69",
+        "cat": "Movies/SD",
+        "desc": "Cam/eng"
+      },
+      {
+        "id": "43",
+        "cat": "Movies/SD",
+        "desc": "Film/Hun/XviD"
+      },
+      {
+        "id": "42",
+        "cat": "Movies/SD",
+        "desc": "Film/Eng/XviD"
+      },
+      {
+        "id": "41",
+        "cat": "Movies/DVD",
+        "desc": "Film/Hun/DVD"
+      },
+      {
+        "id": "40",
+        "cat": "Movies/DVD",
+        "desc": "Film/Eng/DVD"
+      },
+      {
+        "id": "39",
+        "cat": "Books/EBook",
+        "desc": "E-book"
+      },
+      {
+        "id": "38",
+        "cat": "TV/HD",
+        "desc": "HD/Hun"
+      },
+      {
+        "id": "57",
+        "cat": "TV/SD",
+        "desc": "Sorozat/Eng"
+      },
+      {
+        "id": "66",
+        "cat": "TV/HD",
+        "desc": "HD/Eng"
+      },
+      {
+        "id": "50",
+        "cat": "PC/Mobile-Other",
+        "desc": "Mobil"
+      },
+      {
+        "id": "51",
+        "cat": "PC/0day",
+        "desc": "Programok"
+      },
+      {
+        "id": "52",
+        "cat": "TV/SD",
+        "desc": "Sorozat/Hun"
+      },
+      {
+        "id": "53",
+        "cat": "XXX/x264",
+        "desc": "XXX/Film"
+      },
+      {
+        "id": "54",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX/Kép"
+      },
+      {
+        "id": "48",
+        "cat": "Other",
+        "desc": "Képek"
+      },
+      {
+        "id": "49",
+        "cat": "TV/Anime",
+        "desc": "Mese"
+      },
+      {
+        "id": "55",
+        "cat": "Audio",
+        "desc": "Zene/Eng"
+      },
+      {
+        "id": "56",
+        "cat": "Audio",
+        "desc": "Zene/Hun"
+      },
+      {
+        "id": "65",
+        "cat": "Audio/Audiobook",
+        "desc": "Hangoskönyv"
+      },
+      {
+        "id": "67",
+        "cat": "Audio/Video",
+        "desc": "Klipp"
+      },
+      {
+        "id": "68",
+        "cat": "Books/EBook",
+        "desc": "Ebook/eng"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search FreeLeech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "added",
+        "5": "size",
+        "7": "seeders"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrent oldalanként:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "table.main:contains(\"Hiba\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?url=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "letoltes.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "ker": "0",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
+          "%"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "table.main > tbody > tr:has(a[href^=\"letoltes.php?tipus=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"letoltes.php?tipus=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "tipus"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "span[onmouseover]",
+        "attribute": "onmouseover",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=([^\\t-\\r\\x{85}\\p{Z}]+)"
+            ]
+          }
+        ]
+      },
+      "genre": {
+        "selector": "a[href^=\"/letoltes.php?cimke=\"]",
+        "optional": true
+      },
+      "description": {
+        "optional": true,
+        "case": {
+          "img[src=\"/fajlok/kepek/yes.svg\"]": "Verified: {{ .Result.genre }}",
+          "*": "Unverified: {{ .Result.genre }}"
+        }
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "remove": "font",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(8)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(9)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"fajlok/kepek/free.gif\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src=\"fajlok/kepek/x2.gif\"]": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/party-tracker.yml",
+    "sha256": "ae87b1b47e068fc8af3119ebb0d398fe6d29ccfc00c5baba4fcea4f98acbb958",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

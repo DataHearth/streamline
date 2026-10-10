@@ -1,0 +1,116 @@
+{
+  "id": "ehentai",
+  "name": "E-Hentai",
+  "description": "E-Hentai is a Public site for Hentai doujinshi, manga.",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://e-hentai.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [],
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      },
+      {
+        "path": "torrents.php",
+        "inputs": {
+          "page": "1"
+        }
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "table.itg > tbody > tr:has(td)"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "a[href*=\"/gallerytorrents.php?gid=\"]"
+      },
+      "details": {
+        "selector": "a[href*=\"/g/\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href*=\"/gallerytorrents.php?gid=\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "td:first-child",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04 -07:00",
+              "2006-01-02 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(5)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href*=\"/get/\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/ehentai.yml",
+    "sha256": "83431bebe474351e71caf9f13ed803b248dff7efd002db30ceff4960b6b6f79d",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

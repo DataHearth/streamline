@@ -1,0 +1,241 @@
+{
+  "id": "52bt",
+  "name": "52BT",
+  "description": "52BT is a Public tracker for MOVIES / TV / MUSIC / GENERAL",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://rav0mz0e.529075.xyz/",
+    "https://1xzwn2ev.529076.xyz/"
+  ],
+  "legacylinks": [
+    "https://www.52btbt.icu/",
+    "https://snndp8mm.529075.xyz/",
+    "https://hbak3ww9.529076.xyz/",
+    "https://ucex8fed.529075.xyz/",
+    "https://pbzu8f1s.529076.xyz/",
+    "https://y1yb6427.529075.xyz/",
+    "https://g8ixbu6t.529076.xyz/",
+    "https://halawio6.529075.xyz/",
+    "https://78qks3de.529076.xyz/",
+    "https://ubebcsd6.529075.xyz/",
+    "https://p5nze4m1.529076.xyz/",
+    "https://rakwukic.529075.xyz/",
+    "https://b9uc0d0c.529076.xyz/",
+    "https://opc0azhg.529075.xyz/",
+    "https://jqq7oqdr.529076.xyz/",
+    "https://kkhuepih.529075.xyz/",
+    "https://7abzqa7a.529076.xyz/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "Video",
+        "cat": "TV",
+        "desc": "Video"
+      },
+      {
+        "id": "Video",
+        "cat": "Movies",
+        "desc": "Video"
+      },
+      {
+        "id": "Music",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "Images",
+        "cat": "Other",
+        "desc": "Images"
+      },
+      {
+        "id": "Documents",
+        "cat": "Books",
+        "desc": "Documents"
+      },
+      {
+        "id": "Archives",
+        "cat": "Other",
+        "desc": "Archives"
+      },
+      {
+        "id": "Apps",
+        "cat": "PC",
+        "desc": "Apps"
+      },
+      {
+        "id": "Other",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cat-id",
+      "label": "Category",
+      "type": "select",
+      "default": "0",
+      "options": {
+        "0": "All categories",
+        "1": "Film and Television",
+        "2": "Music",
+        "3": "Images",
+        "4": "Books",
+        "5": "Zip Files",
+        "6": "Software",
+        "7": "Other"
+      }
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "created",
+        "1": "size",
+        "0": "relevance"
+      }
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "search-{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}-{{ (index .Config \"cat-id\") }}-{{ .Config.sort }}-1.html?lang=en"
+      },
+      {
+        "path": "search-{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}-{{ (index .Config \"cat-id\") }}-{{ .Config.sort }}-2.html?lang=en"
+      }
+    ],
+    "error": [
+      {
+        "selector": ":root:contains(\"Internal Server Error\")"
+      }
+    ],
+    "rows": {
+      "selector": "article.resource-card"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "a[href^=\"/hash/\"] span",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "【",
+              ""
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "】",
+              ""
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"/hash/\"]",
+        "remove": "span"
+      },
+      "details": {
+        "selector": "a[href^=\"/hash/\"]",
+        "attribute": "href"
+      },
+      "infohash": {
+        "selector": "a[href^=\"/hash/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "div.meta span:nth-child(1)",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Added：",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 -07:00",
+              "2006-01-02 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "div.meta span:nth-child(2)",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Size：",
+              ""
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/52bt.yml",
+    "sha256": "12c8dae6fd953a82c1ec7ebe7a8e07797a8d455e9d46bd6a6f9b3aeeca89da0e",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

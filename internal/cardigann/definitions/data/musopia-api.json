@@ -1,0 +1,230 @@
+{
+  "id": "musopia-api",
+  "name": "Musopia (音乐乌托邦) (API)",
+  "description": "Musopia (音乐乌托邦) is a CHINESE Private Torrent Tracker for MUSIC",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.musopia.vip/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "406",
+        "cat": "Audio/Video",
+        "desc": "音乐MV / Music Videos"
+      },
+      {
+        "id": "407",
+        "cat": "Audio/Lossless",
+        "desc": "音乐 / Audio"
+      },
+      {
+        "id": "408",
+        "cat": "Audio/Lossless",
+        "desc": "音乐 / HQ Audio"
+      },
+      {
+        "id": "409",
+        "cat": "Audio/Other",
+        "desc": "其他 / Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Token",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_apikey",
+      "label": "About your API Token",
+      "type": "info",
+      "default": "Find/Generate an API token from your <a href=\"https://www.musopia.vip/usercp.php\" target=\"_blank\">Musopia</a> account control panel."
+    },
+    {
+      "name": "passkey",
+      "label": "Passkey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_passkey",
+      "label": "About your Passkey",
+      "type": "info",
+      "default": "Find the Passkey from your account control panel."
+    },
+    {
+      "name": "freeleech",
+      "label": "Filter freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "-id",
+      "options": {
+        "-id": "created",
+        "-seeders": "seeders",
+        "-size": "size",
+        "-times_completed": "grabs"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules:<ol><li>Veteran User and above will be retained forever</li><li>Elite User and above will not have their account deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 400 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users who have no traffic (i.e. upload/download data are both 0) will be deleted if they do not log in for 100 consecutive days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/v1/torrents",
+    "inputs": {
+      "per_page": "1"
+    },
+    "error": [
+      {
+        "selector": ":root:contains(\"login.php?returnto\")",
+        "message": {
+          "text": "The API token was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Unauthenticated\")",
+        "message": {
+          "text": "The API token was not accepted by {{ .Config.sitelink }}."
+        }
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/v1/torrents",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&filter[category][in][]={{.}}{{end}}",
+      "filter[title]": "{{ .Keywords }}",
+      "sorts": "{{ .Config.sort }}",
+      "per_page": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data.data{{ if .Config.freeleech }}:not(promotion_info.down_multiplier:contains(1)):not(promotion_info.down_multiplier:contains(.)){{ else }}{{ end }}"
+    },
+    "fields": {
+      "category": {
+        "selector": "category"
+      },
+      "_id": {
+        "selector": "id"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "details": {
+        "text": "{{ .Config.sitelink }}details.php?id={{ .Result._id }}&hit=1"
+      },
+      "download": {
+        "text": "{{ .Config.sitelink }}download.php?id={{ .Result._id }}&passkey={{ .Config.passkey }}"
+      },
+      "infohash": {
+        "selector": "hash"
+      },
+      "poster": {
+        "selector": "cover",
+        "optional": true
+      },
+      "description": {
+        "selector": "small_descr",
+        "optional": true
+      },
+      "size": {
+        "selector": "size"
+      },
+      "files": {
+        "selector": "numfiles"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "added",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04 -07:00",
+              "2006-01-02 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "selector": "promotion_info.down_multiplier"
+      },
+      "uploadvolumefactor": {
+        "selector": "promotion_info.up_multiplier"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "518400"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/musopia-api.yml",
+    "sha256": "f63d1afcdf61d63d8cbdd408503d323dfe5ac6352627cd2097a44457cf5290fe",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

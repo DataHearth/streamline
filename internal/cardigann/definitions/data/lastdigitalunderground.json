@@ -1,0 +1,699 @@
+{
+  "id": "lastdigitalunderground",
+  "name": "Last Digital Underground",
+  "description": "Last Digital Underground (LDU) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://theldu.to/"
+  ],
+  "legacylinks": [
+    "https://theldu.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Films: General"
+      },
+      {
+        "id": "21",
+        "cat": "Movies/3D",
+        "desc": "Films: 3D"
+      },
+      {
+        "id": "33",
+        "cat": "Movies/Other",
+        "desc": "Films: [TMDB UnListed]"
+      },
+      {
+        "id": "25",
+        "cat": "Movies/Other",
+        "desc": "Films: Musical"
+      },
+      {
+        "id": "18",
+        "cat": "Movies/Other",
+        "desc": "Films: Silent"
+      },
+      {
+        "id": "24",
+        "cat": "Movies/Other",
+        "desc": "Films: Holiday"
+      },
+      {
+        "id": "19",
+        "cat": "Movies/Other",
+        "desc": "Films: Shorts"
+      },
+      {
+        "id": "17",
+        "cat": "TV/Documentary",
+        "desc": "Films: Documentary"
+      },
+      {
+        "id": "42",
+        "cat": "Movies/Other",
+        "desc": "Films: Shorts [TMDB UnListed]"
+      },
+      {
+        "id": "12",
+        "cat": "Movies/Other",
+        "desc": "Films: FanEdits/Restorations"
+      },
+      {
+        "id": "57",
+        "cat": "Movies/Foreign",
+        "desc": "Films: Desi [No ENG subs]"
+      },
+      {
+        "id": "58",
+        "cat": "Movies/Foreign",
+        "desc": "Films: GER [No ENG subs]"
+      },
+      {
+        "id": "59",
+        "cat": "Movies/Foreign",
+        "desc": "Films: FRE [No ENG subs]"
+      },
+      {
+        "id": "63",
+        "cat": "Movies/Foreign",
+        "desc": "Films: POL [No ENG subs]"
+      },
+      {
+        "id": "64",
+        "cat": "Movies/Foreign",
+        "desc": "Films: ITA [No ENG subs]"
+      },
+      {
+        "id": "66",
+        "cat": "Movies/Foreign",
+        "desc": "Films: ARA [No ENG subs]"
+      },
+      {
+        "id": "82",
+        "cat": "Movies/Foreign",
+        "desc": "Films: POR [No ENG subs]"
+      },
+      {
+        "id": "27",
+        "cat": "Movies/Foreign",
+        "desc": "Films SP1: Dubs/Cams/Vid Issues"
+      },
+      {
+        "id": "22",
+        "cat": "Movies/Foreign",
+        "desc": "Films SP2: No English"
+      },
+      {
+        "id": "28",
+        "cat": "Movies/Other",
+        "desc": "Films SP3: Other"
+      },
+      {
+        "id": "8",
+        "cat": "Movies/Other",
+        "desc": "Anime: Films"
+      },
+      {
+        "id": "9",
+        "cat": "TV/Anime",
+        "desc": "Anime: Series/OVAs"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "Series/TV: Complete Seasons"
+      },
+      {
+        "id": "41",
+        "cat": "TV",
+        "desc": "Series/TV: Single Episodes"
+      },
+      {
+        "id": "31",
+        "cat": "TV/Foreign",
+        "desc": "Series/TV SP1: video issues or Dub"
+      },
+      {
+        "id": "29",
+        "cat": "TV/Foreign",
+        "desc": "Series/TV SP2: No English"
+      },
+      {
+        "id": "32",
+        "cat": "TV/Other",
+        "desc": "Series/TV SP3: Other"
+      },
+      {
+        "id": "38",
+        "cat": "TV/Other",
+        "desc": "Series/TV [TMDB unlisted]"
+      },
+      {
+        "id": "40",
+        "cat": "TV/Documentary",
+        "desc": "Series: Documentary"
+      },
+      {
+        "id": "46",
+        "cat": "Other",
+        "desc": "Collections [Various Media]"
+      },
+      {
+        "id": "20",
+        "cat": "TV/Other",
+        "desc": "Culture: Stand-up"
+      },
+      {
+        "id": "7",
+        "cat": "Books/EBook",
+        "desc": "Culture: Ebooks"
+      },
+      {
+        "id": "65",
+        "cat": "Books/EBook",
+        "desc": "Culture: Islamic Studies"
+      },
+      {
+        "id": "3",
+        "cat": "Audio",
+        "desc": "Culture: Music"
+      },
+      {
+        "id": "16",
+        "cat": "Audio/Video",
+        "desc": "Culture: Music Videos"
+      },
+      {
+        "id": "34",
+        "cat": "Audio/Audiobook",
+        "desc": "Culture: Audio Books"
+      },
+      {
+        "id": "35",
+        "cat": "TV/Sport",
+        "desc": "Culture: Sports"
+      },
+      {
+        "id": "37",
+        "cat": "TV/Other",
+        "desc": "Culture: Firearms and Freedom"
+      },
+      {
+        "id": "47",
+        "cat": "PC/0day",
+        "desc": "Software: PC"
+      },
+      {
+        "id": "48",
+        "cat": "PC/Mac",
+        "desc": "Software: Mac"
+      },
+      {
+        "id": "49",
+        "cat": "PC",
+        "desc": "Software: Linux/Unix"
+      },
+      {
+        "id": "83",
+        "cat": "PC/Games",
+        "desc": "Software: Games"
+      },
+      {
+        "id": "36",
+        "cat": "Console",
+        "desc": "Software: Console/ROMS"
+      },
+      {
+        "id": "73",
+        "cat": "Other",
+        "desc": "AI: MODELS [MIXED]"
+      },
+      {
+        "id": "74",
+        "cat": "Other",
+        "desc": "3D Prints and CAD"
+      },
+      {
+        "id": "23",
+        "cat": "Other",
+        "desc": "Other_Or_Not_Sure"
+      },
+      {
+        "id": "43",
+        "cat": "Other",
+        "desc": "Internal Testing"
+      },
+      {
+        "id": "30",
+        "cat": "XXX",
+        "desc": "Mature: NSFW [UnListed]"
+      },
+      {
+        "id": "6",
+        "cat": "XXX",
+        "desc": "Mature: NSFW [TMDB Listed]"
+      },
+      {
+        "id": "45",
+        "cat": "XXX",
+        "desc": "Mature: NSFW [No ENG Subs]"
+      },
+      {
+        "id": "70",
+        "cat": "XXX",
+        "desc": "Mature: Lesbian"
+      },
+      {
+        "id": "52",
+        "cat": "XXX",
+        "desc": "Mature: Tranny"
+      },
+      {
+        "id": "72",
+        "cat": "XXX",
+        "desc": "Mature: Gay"
+      },
+      {
+        "id": "15",
+        "cat": "XXX/Pack",
+        "desc": "Mature: NSFW (MegaPacks)"
+      },
+      {
+        "id": "71",
+        "cat": "XXX",
+        "desc": "Mature: BDSM/Kink"
+      },
+      {
+        "id": "10",
+        "cat": "XXX",
+        "desc": "Mature: Hentai/Animated [Unlist]"
+      },
+      {
+        "id": "62",
+        "cat": "XXX",
+        "desc": "Mature: NSFW Fansite"
+      },
+      {
+        "id": "81",
+        "cat": "XXX",
+        "desc": "Mature:  AI/KI"
+      },
+      {
+        "id": "61",
+        "cat": "XXX",
+        "desc": "Mature: NSFW Parody"
+      },
+      {
+        "id": "77",
+        "cat": "XXX",
+        "desc": "Mature: Solo"
+      },
+      {
+        "id": "79",
+        "cat": "XXX",
+        "desc": "Mature: Preggers"
+      },
+      {
+        "id": "80",
+        "cat": "XXX",
+        "desc": "Mature: VR"
+      },
+      {
+        "id": "75",
+        "cat": "XXX",
+        "desc": "Mature: Pics"
+      },
+      {
+        "id": "60",
+        "cat": "XXX",
+        "desc": "Mature: PMV"
+      },
+      {
+        "id": "76",
+        "cat": "XXX",
+        "desc": "Mature: BBW"
+      },
+      {
+        "id": "67",
+        "cat": "XXX",
+        "desc": "Mature: Scheiße"
+      },
+      {
+        "id": "68",
+        "cat": "XXX",
+        "desc": "Mature: Golden Showers"
+      },
+      {
+        "id": "69",
+        "cat": "XXX",
+        "desc": "Mature: Rainbow Showers"
+      },
+      {
+        "id": "14",
+        "cat": "XXX/Other",
+        "desc": "Mature: Creators Corner"
+      },
+      {
+        "id": "44",
+        "cat": "XXX/Other",
+        "desc": "Mature: Audio"
+      },
+      {
+        "id": "53",
+        "cat": "XXX/Other",
+        "desc": "Mature: Ebooks"
+      },
+      {
+        "id": "51",
+        "cat": "XXX/Other",
+        "desc": "Mature: Software & Games"
+      },
+      {
+        "id": "39",
+        "cat": "XXX/Other",
+        "desc": "Mature: NSFL [TMDB Listed]"
+      },
+      {
+        "id": "11",
+        "cat": "XXX/Other",
+        "desc": "Mature: NSFL [Unlisted]"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid",
+        "tmdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://theldu.to/\" target=\"_blank\">Last Digital Underground</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "single_file_release_use_filename",
+      "label": "Use filename as title for single file releases",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "You must log in once every 60 days. You must download at least 1 item within your first month."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "seasonNumber": "{{ .Query.Season }}",
+      "episodeNumber": "{{ .Query.Ep }}",
+      "imdbId": "{{ .Query.IMDBIDShort }}",
+      "tmdbId": "{{ .Query.TMDBID }}",
+      "tvdbId": "{{ .Query.TVDBID }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title_optional": {
+        "selector": "name"
+      },
+      "title_filename": {
+        "selector": "files[0].name",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "title": {
+        "text": "{{ if and (.Config.single_file_release_use_filename) (eq .Result.files \"1\") (.Result.title_filename) }}{{ .Result.title_filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "poster": {
+        "selector": "meta.poster",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "imdb_id",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "tmdb_id",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "tvdb_id",
+        "optional": true
+      },
+      "genre": {
+        "selector": "meta.genres",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(Science Fiction)",
+              "Science_Fiction"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(TV Movie)",
+              "TV_Movie"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " & ",
+              "_&_"
+            ]
+          }
+        ]
+      },
+      "_internal": {
+        "selector": "internal",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "5%": "0.95",
+          "10%": "0.9",
+          "15%": "0.85",
+          "20%": "0.8",
+          "25%": "0.75",
+          "30%": "0.7",
+          "35%": "0.65",
+          "40%": "0.6",
+          "45%": "0.55",
+          "50%": "0.5",
+          "55%": "0.45",
+          "60%": "0.4",
+          "65%": "0.35",
+          "70%": "0.3",
+          "75%": "0.25",
+          "80%": "0.2",
+          "85%": "0.15",
+          "90%": "0.1",
+          "95%": "0.05",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "604800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/lastdigitalunderground.yml",
+    "sha256": "0c8701ceeacba341d255bc5ba377a244d62d3df8f6aa89a7297eb7ef523a0b15",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

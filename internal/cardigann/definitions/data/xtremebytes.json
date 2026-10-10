@@ -1,0 +1,315 @@
+{
+  "id": "xtremebytes",
+  "replaces": [
+    "torrentsurf"
+  ],
+  "name": "Xtreme Bytes",
+  "description": "Xtreme Bytes (TorrentSurf) is a Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://xtremebytes.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "13",
+        "cat": "PC/Mac",
+        "desc": "Appz/Mac"
+      },
+      {
+        "id": "3",
+        "cat": "PC/0day",
+        "desc": "Appz/PC"
+      },
+      {
+        "id": "35",
+        "cat": "TV",
+        "desc": "Big Brother"
+      },
+      {
+        "id": "28",
+        "cat": "Books/Comics",
+        "desc": "Comics"
+      },
+      {
+        "id": "4",
+        "cat": "Books/EBook",
+        "desc": "E-Book"
+      },
+      {
+        "id": "39",
+        "cat": "Console",
+        "desc": "Games/Console"
+      },
+      {
+        "id": "33",
+        "cat": "PC/Games",
+        "desc": "Games/PC"
+      },
+      {
+        "id": "27",
+        "cat": "Other",
+        "desc": "Misc"
+      },
+      {
+        "id": "37",
+        "cat": "Movies/SD",
+        "desc": "Movies/Cam/TS"
+      },
+      {
+        "id": "14",
+        "cat": "Movies/DVD",
+        "desc": "Movies/DVD-R"
+      },
+      {
+        "id": "18",
+        "cat": "Movies/HD",
+        "desc": "Movies/HD"
+      },
+      {
+        "id": "19",
+        "cat": "Movies/SD",
+        "desc": "Movies/SD"
+      },
+      {
+        "id": "42",
+        "cat": "Movies/HD",
+        "desc": "Movies/x264"
+      },
+      {
+        "id": "41",
+        "cat": "Movies/SD",
+        "desc": "Movies/Xvid"
+      },
+      {
+        "id": "29",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "30",
+        "cat": "TV",
+        "desc": "Packs"
+      },
+      {
+        "id": "24",
+        "cat": "TV/HD",
+        "desc": "TV/HD"
+      },
+      {
+        "id": "25",
+        "cat": "TV/SD",
+        "desc": "TV/SD"
+      },
+      {
+        "id": "44",
+        "cat": "TV/HD",
+        "desc": "TV/x264"
+      },
+      {
+        "id": "43",
+        "cat": "TV/SD",
+        "desc": "TV/Xvid"
+      },
+      {
+        "id": "36",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "seedbox",
+      "label": "Use SeedBox Download Link",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "returnto": "/"
+    },
+    "error": [
+      {
+        "selector": "table.main:contains(\"Login failed!\")",
+        "message": {
+          "selector": "table tr td.text"
+        }
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "search": "{{ .Keywords }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table[border=\"0\"][cellspacing=\"0\"][cellpadding=\"5\"] tr:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download_1": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "download_2": {
+        "selector": "a[href^=\"download2.php\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "text": "{{ if .Config.seedbox }}{{ .Result.download_2 }}{{ else }}{{ .Result.download_1 }}{{ end }}"
+      },
+      "files": {
+        "selector": "td:nth-child(3)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " -07:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/freeleech.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.8"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/xtremebytes.yml",
+    "sha256": "7267a2c3a0ea5d9332cf101ff6c4da904a387c8beb1e3417456d11e6d809f108",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

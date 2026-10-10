@@ -1,0 +1,170 @@
+{
+  "id": "periodical",
+  "name": "Periodical",
+  "description": "Periodical (PER) is a Private Torrent Tracker for MAGAZINES",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://periodical.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "7000",
+        "cat": "Books",
+        "desc": "Books"
+      },
+      {
+        "id": "7010",
+        "cat": "Books/Mags",
+        "desc": "Books/Mags"
+      },
+      {
+        "id": "7020",
+        "cat": "Books/EBook",
+        "desc": "Books/EBook"
+      },
+      {
+        "id": "7030",
+        "cat": "Books/Comics",
+        "desc": "Books/Comics"
+      },
+      {
+        "id": "7040",
+        "cat": "Books/Other",
+        "desc": "Books/Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "book-search": [
+        "q",
+        "title",
+        "author"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "passkey",
+      "label": "PassKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your PassKey",
+      "type": "info",
+      "default": "You can find the API PassKey by accessing your <a href=\"https://periodical.me/\" target=\"_blank\">Periodical</a> account profile."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torznab",
+    "inputs": {
+      "t": "search",
+      "apikey": "{{ .Config.passkey }}",
+      "limit": "1"
+    },
+    "error": [
+      {
+        "selector": "error",
+        "message": {
+          "selector": "error[description]",
+          "attribute": "description"
+        }
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torznab",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "apikey": "{{ .Config.passkey }}",
+      "t": "{{ if .Keywords }}book{{ else }}search{{ end }}",
+      "q": "{{ .Keywords }}",
+      "cat": "{{ join .Categories \",\" }}",
+      "title": "{{ .Query.Title }}",
+      "author": "{{ .Query.Author }}",
+      "limit": "100"
+    },
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title": {
+        "selector": "title"
+      },
+      "details": {
+        "selector": "comments",
+        "filters": [
+          {
+            "name": "htmldecode"
+          }
+        ]
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "[name=size]",
+        "attribute": "value"
+      },
+      "files": {
+        "selector": "[name=files]",
+        "attribute": "value"
+      },
+      "seeders": {
+        "selector": "[name=seeders]",
+        "attribute": "value"
+      },
+      "leechers": {
+        "selector": "[name=peers]",
+        "attribute": "value"
+      },
+      "downloadvolumefactor": {
+        "selector": "[name=downloadvolumefactor]",
+        "attribute": "value"
+      },
+      "uploadvolumefactor": {
+        "selector": "[name=uploadvolumefactor]",
+        "attribute": "value"
+      },
+      "minimumseedtime": {
+        "selector": "[name=minimumseedtime]",
+        "attribute": "value"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/periodical.yml",
+    "sha256": "1ec0fe54f28ea67c820bf44360306a66b305b7b1dd5011401105a7186229fd01",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

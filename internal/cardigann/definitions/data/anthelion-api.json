@@ -1,0 +1,335 @@
+{
+  "id": "anthelion-api",
+  "replaces": [
+    "tehconnectionme",
+    "anthelion"
+  ],
+  "name": "Anthelion (API)",
+  "description": "Anthelion (ANT) is a Private Torrent Tracker for MOVIES",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://anthelion.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "2000",
+        "cat": "Movies"
+      },
+      {
+        "id": "2030",
+        "cat": "Movies/SD"
+      },
+      {
+        "id": "2040",
+        "cat": "Movies/HD"
+      },
+      {
+        "id": "2045",
+        "cat": "Movies/UHD"
+      },
+      {
+        "id": "2050",
+        "cat": "Movies/BluRay"
+      },
+      {
+        "id": "2080",
+        "cat": "Movies/WEB-DL"
+      },
+      {
+        "id": "8000",
+        "cat": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Key by accessing your <a href=\"https://anthelion.me/\" target=\"_blank\">Anthelion</a> account <i>Settings</i> page and scrolling down to the <b>API Key</b> section.<br>Tick the <b>Search</b> and <b>Download</b> checkboxes and click the <b>save profile</b> button to generate the key."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Activity is defined as actually using your account, including the snatch/grab/seeding of torrents. You are also required to sign-in to the web frontend of Anthelion at least once per 3mo (90 days) (Note, using autodl/ARR does not satisfy this)."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api.php",
+    "inputs": {
+      "api_key": "{{ .Config.apikey }}"
+    },
+    "error": [
+      {
+        "selector": ":root:contains(\"Unrecognized key\")",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"No API_KEY provided\")",
+        "message": {
+          "text": "You did not enter an API key."
+        }
+      },
+      {
+        "selector": ":root:contains(\"not have MFA\")",
+        "message": {
+          "text": "User does not have MFA enabled on the account."
+        }
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api.php",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "api_key": "{{ .Config.apikey }}",
+      "o": "json",
+      "t": "movie",
+      "q": "{{ .Keywords }}",
+      "tmdb": "{{ .Query.TMDBID }}",
+      "imdb": "{{ .Query.IMDBIDShort }}",
+      "limit": "100",
+      "offset": "0",
+      "freetorrent": "{{ if .Config.freeleech }}1{{ else }}{{ end }}"
+    },
+    "rows": {
+      "selector": "item",
+      "count": {
+        "selector": "response.total"
+      }
+    },
+    "fields": {
+      "category": {
+        "selector": "category",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              ",",
+              "-1"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "1\\p{Nd}{5}",
+              "2000"
+            ]
+          }
+        ]
+      },
+      "year": {
+        "selector": "year",
+        "optional": true
+      },
+      "_codec": {
+        "selector": "codec"
+      },
+      "_container": {
+        "selector": "container",
+        "filters": [
+          {
+            "name": "toupper"
+          }
+        ]
+      },
+      "_media": {
+        "selector": "media",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "WEB",
+              "WEB-DL"
+            ]
+          }
+        ]
+      },
+      "_resolution": {
+        "selector": "resolution"
+      },
+      "_audioFormat": {
+        "selector": "audioFormat"
+      },
+      "_subbing": {
+        "selector": "subbing",
+        "optional": true
+      },
+      "_flags": {
+        "selector": "flags",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              ",",
+              " "
+            ]
+          }
+        ]
+      },
+      "_language": {
+        "selector": "language",
+        "optional": true
+      },
+      "_releaseGroup": {
+        "selector": "releaseGroup",
+        "optional": true,
+        "filters": [
+          {
+            "name": "trim"
+          }
+        ]
+      },
+      "title_optional": {
+        "selector": "title",
+        "filters": [
+          {
+            "name": "htmldecode"
+          },
+          {
+            "name": "append",
+            "args": [
+              " {{ .Result.year }} {{ .Result._resolution }} {{ .Result._media }} {{ .Result._container }} {{ .Result._codec }} {{ .Result._audioFormat }}{{ if .Result._subbing }} Subs{{ else }}{{ end }}{{ if .Result._flags }} {{ .Result._flags }}{{ else }}{{ end }}{{ if .Result._language }} {{ .Result._language }}{{ else }}{{ end }}{{ if and (.Result._releaseGroup) (ne .Result._releaseGroup \"NULL\") }}-{{ .Result._releaseGroup }}{{ else }}{{ end }}"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "M2TS H265",
+              "M2TS HEVC"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "M2TS H264",
+              "M2TS AVC"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "guid"
+      },
+      "download": {
+        "selector": "link",
+        "filters": [
+          {
+            "name": "htmldecode"
+          }
+        ]
+      },
+      "infohash": {
+        "selector": "infohash"
+      },
+      "imdbid": {
+        "selector": "imdb",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "tmdb",
+        "optional": true
+      },
+      "genre": {
+        "selector": "tags",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              ".",
+              "_"
+            ]
+          }
+        ]
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.genre }}"
+      },
+      "files": {
+        "selector": "fileCount"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "grabs"
+      },
+      "date": {
+        "selector": "pubDate"
+      },
+      "size": {
+        "selector": "size"
+      },
+      "downloadvolumefactor": {
+        "selector": "downloadvolumefactor"
+      },
+      "uploadvolumefactor": {
+        "selector": "uploadvolumefactor"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      },
+      "_filename": {
+        "selector": "files[0].name",
+        "optional": true,
+        "filters": [
+          {
+            "name": "htmldecode"
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if and (eq .Result.files \"1\") (.Result._filename) }}{{ .Result._filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/anthelion-api.yml",
+    "sha256": "7708d7f9e94ff3cd2a010f6e7420c8144667d2f316a8e9632235318a889a9078",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

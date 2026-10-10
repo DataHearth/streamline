@@ -1,0 +1,331 @@
+{
+  "id": "nethd",
+  "name": "NetHD",
+  "description": "NetHD (VietTorrent) is a VIETNAMESE Semi-Private Torrent Tracker for HD MOVIES / TV",
+  "language": "vi-VN",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://nethd.org/"
+  ],
+  "legacylinks": [
+    "http://nethd.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "401",
+        "cat": "Movies",
+        "desc": "Movie"
+      },
+      {
+        "id": "401",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "402",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "403",
+        "cat": "PC/Games",
+        "desc": "Game"
+      },
+      {
+        "id": "404",
+        "cat": "PC",
+        "desc": "Software"
+      },
+      {
+        "id": "405",
+        "cat": "Other",
+        "desc": "Image"
+      },
+      {
+        "id": "406",
+        "cat": "Books",
+        "desc": "Book"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "If the account is not used regularly within 2 years, the system will automatically delete the account."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "logout": "",
+      "securelogin": "",
+      "ssl": "yes",
+      "trackerssl": "yes"
+    },
+    "error": [
+      {
+        "selector": "form#loginform > span.warning"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat={{.}}&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "search_area": "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}",
+      "search_mode": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "incldead": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "tr:has(td.name)",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "title": {
+        "selector": "td.name > div > a[href*=\"-torrent-\"][title]",
+        "attribute": "title"
+      },
+      "category_is_tv_show": {
+        "text": "{{ .Result.title }}",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\\b(S\\d+(?:E\\d+)?)\\b"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "categorydesc": {
+        "selector": "td.category > a",
+        "attribute": "title",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "movie",
+              "{{ if .Result.category_is_tv_show }}tv{{ else }}movie{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "td.name > div > a[href*=\"-torrent-\"][title]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "td.name > a.poster-preview img",
+        "attribute": "src",
+        "optional": true
+      },
+      "download": {
+        "selector": "td.name > div > a[href*=\"-torrent-\"][title]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "-torrent-(\\p{Nd}+).html"
+            ]
+          },
+          {
+            "name": "prepend",
+            "args": [
+              "download.php?id="
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "td:nth-child(5):contains(\"-\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05"
+            ]
+          }
+        ]
+      },
+      "date_ago": {
+        "selector": "td:nth-child(5):not(:contains(\"-\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "năm",
+              "years "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "tháng",
+              "months "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "ngày",
+              "days "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "phút",
+              "minutes "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "giờ",
+              "hours "
+            ]
+          },
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_year .Result.date_ago }}{{ or .Result.date_year .Result.date_ago }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(7)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(8)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(9)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.label:contains(\"Free\")": "0",
+          "span.label:contains(\"50%\")": "0.5",
+          "span.label:contains(\"30%\")": "0.7",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "span.label:contains(\"2X\")": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.5"
+      },
+      "description": {
+        "selector": "td:nth-child(3) > div:nth-child(2)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/nethd.yml",
+    "sha256": "c7c2925041892834dfbc33ecb02a0a80e4d9742eed64a7452fadb38523b1dbb3",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

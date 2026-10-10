@@ -1,0 +1,292 @@
+{
+  "id": "ggpt",
+  "name": "GGPT",
+  "description": "GGPT is a CHINESE Private Torrent Tracker for GAMES",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.gamegamept.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "401",
+        "cat": "PC/Games",
+        "desc": "PC游戏(PC Games)",
+        "default": true
+      },
+      {
+        "id": "404",
+        "cat": "Console/PS4",
+        "desc": "索尼主机游戏(Sony console games)",
+        "default": true
+      },
+      {
+        "id": "405",
+        "cat": "Console/XBox",
+        "desc": "微软主机游戏(Microsoft console games)",
+        "default": true
+      },
+      {
+        "id": "406",
+        "cat": "Console/NDS",
+        "desc": "任天堂主机游戏(Nintendo console games)",
+        "default": true
+      },
+      {
+        "id": "407",
+        "cat": "PC/Mac",
+        "desc": "苹果游戏(Apple Games)",
+        "default": true
+      },
+      {
+        "id": "409",
+        "cat": "PC/Mobile-Android",
+        "desc": "安卓游戏(Android Games)",
+        "default": true
+      },
+      {
+        "id": "410",
+        "cat": "Books/Mags",
+        "desc": "游戏书藉(Game Magazines)",
+        "default": true
+      },
+      {
+        "id": "412",
+        "cat": "XXX/Other",
+        "desc": "9KG-PC"
+      },
+      {
+        "id": "418",
+        "cat": "XXX/Other",
+        "desc": "9KG-其他"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules:<ol><li>Extreme User and above will be retained forever</li><li>Elite User and above will not have their account deleted within 180 days after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 180 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 180 consecutive days</li><li>Users who have no traffic (i.e. upload/download data are both 0) will be deleted if they do not log in for 30 consecutive days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php",
+        "categories": [
+          "401",
+          "404",
+          "405",
+          "406",
+          "407",
+          "409",
+          "410"
+        ]
+      },
+      {
+        "path": "special.php",
+        "categories": [
+          "412",
+          "418"
+        ]
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "0",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(table.torrentname)"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href^=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img[data-src]",
+        "attribute": "data-src",
+        "optional": true
+      },
+      "date_elapsed": {
+        "selector": "td:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-child(5)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(6)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(7)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(8)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "2.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      },
+      "description": {
+        "selector": "td:nth-child(2)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/ggpt.yml",
+    "sha256": "305aa2a8e4954647449dd0fcad8f70294c6e187fc88e2d81ae7acd86dc7c4152",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

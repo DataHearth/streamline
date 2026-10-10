@@ -1,0 +1,261 @@
+{
+  "id": "animetorrentsro",
+  "name": "AnimeTorrents.ro",
+  "description": "AnimeTorrents.ro (Anime Torrents Romania) is a ROMANIAN Private Torrent Tracker for ANIME / MANGA",
+  "language": "ro-RO",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://animetorrents.io/"
+  ],
+  "legacylinks": [
+    "https://animetorrents.ro/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "ANIME"
+      },
+      {
+        "id": "1",
+        "cat": "Movies/Other",
+        "desc": "ANIME"
+      },
+      {
+        "id": "2",
+        "cat": "Books/Comics",
+        "desc": "MANGA"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "cat-id",
+      "label": "Category",
+      "type": "select",
+      "default": "0",
+      "options": {
+        "0": "All categories",
+        "1": "Anime",
+        "2": "Manga"
+      }
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts under VIP and without parked are automatically deleted after about a year."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php",
+    "form": "form",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "referer": "/"
+    },
+    "selectorinputs": {
+      "csrf_token": {
+        "selector": "input[name=\"csrf_token\"]",
+        "attribute": "value"
+      }
+    },
+    "error": [
+      {
+        "selector": "table.main:contains(\"esuat\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "blah": "0",
+      "cat": "{{ (index .Config \"cat-id\") }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "div > div > table > tbody > tr:has(a[href^=\"download.php/\"])"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "span.at-cat"
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^(\\[.+?\\]).(.+)",
+              "${2}.${1}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php/\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[onmouseover]",
+        "attribute": "onmouseover",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=\\\\\"(.+?)\\\\\" width"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "span.at-t-meta",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "· (\\p{Nd}+) fișiere"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "span.at-t-meta",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "· (.+?) · de"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02 Jan 2006 -07:00",
+              "02 Jan 2006 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(1)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.at-free": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/animetorrentsro.yml",
+    "sha256": "d63b150f1cf8f2d8491cf827a57633360ed6d9859ff6a76229100c1db9ea1fd1",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

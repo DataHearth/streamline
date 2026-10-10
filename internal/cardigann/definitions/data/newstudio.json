@@ -1,0 +1,372 @@
+{
+  "id": "newstudio",
+  "name": "NewStudio",
+  "description": "NewStudio is a RUSSIAN Public site for TV",
+  "language": "ru-RU",
+  "type": "public",
+  "encoding": "UTF-8",
+  "requestDelay": 2,
+  "links": [
+    "https://newstudio.tv/"
+  ],
+  "legacylinks": [
+    "http://newstudio.tv/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "6",
+        "cat": "TV",
+        "desc": "TV series"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "ip_filtering",
+      "label": "IP Filtering",
+      "type": "info",
+      "default": "NewStudio allows only certain IP addressess. If your connection times out it is likely due to your IP address not being accepted."
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "addrussiantotitle",
+      "label": "Add RUS to end of all titles to improve language detection by Sonarr and Radarr. Will cause English-only results to be misidentified.",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "1",
+      "options": {
+        "1": "created",
+        "10": "seeders",
+        "7": "size",
+        "2": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "desc",
+        "1": "asc"
+      }
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "tracker.php"
+      },
+      {
+        "path": "tracker.php",
+        "inputs": {
+          "start": "50"
+        }
+      }
+    ],
+    "inputs": {
+      "nm": "{{ .Keywords }}",
+      "o": "{{ .Config.sort }}",
+      "s": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
+          ""
+        ],
+        "engine": "regexp2"
+      }
+    ],
+    "rows": {
+      "selector": "table.well > tbody > tr:has(a[href^=\"./viewtopic.php?t=\"])",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "6"
+      },
+      "title": {
+        "selector": "a[href^=\"./viewtopic.php?t=\"] > b",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)Сезон[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+).+Серия[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+)",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)Сезон[\\t-\\r\\x{85}\\p{Z}]*(\\p{Nd}+)",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\u0400-\\u04FF\\W\\u200C\\u200D]+\\))|(^[\\u0400-\\u04FF\\W\\u200C\\u200D\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bHDTV[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bSAT[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB[-\\s]?DL[-\\s]?Rip\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sRip\\b",
+              "WEBRip"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sDL\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "[\\[\\(\\{<«][\\s\\W\\u200C\\u200D]*[\\]\\)\\}>»]",
+              ""
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^[\\t-\\r\\x{85}\\p{Z}&,\\.!\\?\\+\\-_\\|\\/':]+",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)^\\([\\t-\\r\\x{85}\\p{Z}]*([SE]\\p{Nd}+.*?)[\\t-\\r\\x{85}\\p{Z}]*\\)[\\t-\\r\\x{85}\\p{Z}\\/\\|]*(.+)",
+              "${2} ${1}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Config.addrussiantotitle }} RUS{{ else }}{{ end }}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "-NewStudio"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"./viewtopic.php?t=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"./download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "td:nth-child(3) > a > img",
+        "attribute": "src",
+        "optional": true
+      },
+      "size": {
+        "selector": "td:nth-child(5) > a"
+      },
+      "date": {
+        "selector": "td:nth-child(6)",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(Сегодня|Вчера|[\\t-\\r\\x{85}\\p{Z}]|,|-)+",
+              " "
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(Today|Yesterday|[\\t-\\r\\x{85}\\p{Z}]|,|-)+",
+              " "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Янв",
+              "Jan"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Фев",
+              "Feb"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Мар",
+              "Mar"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Апр",
+              "Apr"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Май",
+              "May"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Июн",
+              "Jun"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Июл",
+              "Jul"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Авг",
+              "Aug"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Сен",
+              "Sep"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Окт",
+              "Oct"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Ноя",
+              "Nov"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Дек",
+              "Dec"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              ":00 +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2 Jan 06 15:04:05 -07:00",
+              "2 Jan 06 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "description": {
+        "selector": "a[href^=\"./viewtopic.php?t=\"] > b",
+        "optional": true
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/newstudio.yml",
+    "sha256": "376043fcd9038aeabebec8338691a91d85f398548de7808126100e5ad1f5a73e",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

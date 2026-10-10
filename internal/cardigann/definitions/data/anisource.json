@@ -1,0 +1,171 @@
+{
+  "id": "anisource",
+  "name": "AniSource",
+  "description": "AniSource is a Public site for HD Anime raws.",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "requestDelay": 5,
+  "links": [
+    "https://asnet.pw/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV/Anime",
+        "desc": "Raw Animes"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_ipv6",
+      "label": "IPv6 only",
+      "type": "info",
+      "default": "This site only accepts IPv6 addresses. If you are using IPv4 you will get a DNS Lookup Error OR a Connection Failure."
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "/"
+      },
+      {
+        "path": "/",
+        "inputs": {
+          "tpage": "2"
+        }
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "div[class^=\"item\"]"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "a[href*=\"/showprofile/\"]",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^(\\[.+?\\]) (.+?)$",
+              "$2 $1"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href*=\"/showprofile/\"]",
+        "attribute": "href"
+      },
+      "infohash": {
+        "selector": "a[href*=\"/showprofile/\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "font[color=\"Black\"]",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Date: (.+?) Central"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " at ",
+              " "
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " -09:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04 -07:00",
+              "2006-01-02 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "font[color=\"Black\"]",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Size: (.+?) \\|"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "b",
+              "B"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "font[color=\"Black\"]",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\d+)$"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/anisource.yml",
+    "sha256": "122a960657ce1f13c7f1a07da4893a0cb0640966e3811f9229068441324896cc",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

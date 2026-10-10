@@ -1,0 +1,503 @@
+{
+  "id": "thecrazyones",
+  "name": "The Crazy Ones",
+  "description": "The Crazy Ones is a Private GERMAN Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://thecrazyones.hopto.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "123",
+        "cat": "TV/Anime",
+        "desc": "Anime Alles"
+      },
+      {
+        "id": "122",
+        "cat": "Movies/UHD",
+        "desc": "Movie 4K"
+      },
+      {
+        "id": "114",
+        "cat": "Movies/DVD",
+        "desc": "Movie DVD"
+      },
+      {
+        "id": "118",
+        "cat": "Movies",
+        "desc": "Movie Klassiker"
+      },
+      {
+        "id": "124",
+        "cat": "Movies",
+        "desc": "Movie Pack"
+      },
+      {
+        "id": "28",
+        "cat": "Movies/SD",
+        "desc": "Movie SD"
+      },
+      {
+        "id": "32",
+        "cat": "Movies/HD",
+        "desc": "Movie HD"
+      },
+      {
+        "id": "26",
+        "cat": "Movies/3D",
+        "desc": "Movie 3D"
+      },
+      {
+        "id": "152",
+        "cat": "TV/SD",
+        "desc": "Serien DVD"
+      },
+      {
+        "id": "139",
+        "cat": "TV/HD",
+        "desc": "Serien HD"
+      },
+      {
+        "id": "59",
+        "cat": "TV",
+        "desc": "Serien Pack"
+      },
+      {
+        "id": "57",
+        "cat": "TV/SD",
+        "desc": "Serien SD"
+      },
+      {
+        "id": "60",
+        "cat": "TV",
+        "desc": "Serien Klassiker"
+      },
+      {
+        "id": "121",
+        "cat": "TV/Documentary",
+        "desc": "Doku Pack"
+      },
+      {
+        "id": "14",
+        "cat": "TV/Documentary",
+        "desc": "Doku HD"
+      },
+      {
+        "id": "15",
+        "cat": "TV/Documentary",
+        "desc": "Doku SD"
+      },
+      {
+        "id": "12",
+        "cat": "PC/0day",
+        "desc": "App Win"
+      },
+      {
+        "id": "11",
+        "cat": "PC/Mobile-Other",
+        "desc": "App Other"
+      },
+      {
+        "id": "10",
+        "cat": "PC/Mac",
+        "desc": "App Mac"
+      },
+      {
+        "id": "9",
+        "cat": "PC",
+        "desc": "App Linux"
+      },
+      {
+        "id": "120",
+        "cat": "Console/PS3",
+        "desc": "Game PlayStation"
+      },
+      {
+        "id": "16",
+        "cat": "Console",
+        "desc": "Game Wimmelbild"
+      },
+      {
+        "id": "17",
+        "cat": "PC/Games",
+        "desc": "Game PC"
+      },
+      {
+        "id": "20",
+        "cat": "Console/PSP",
+        "desc": "Game PSP"
+      },
+      {
+        "id": "22",
+        "cat": "Console/Wii",
+        "desc": "Game Wii"
+      },
+      {
+        "id": "24",
+        "cat": "Console/XBox",
+        "desc": "Game XBOX"
+      },
+      {
+        "id": "48",
+        "cat": "Audio",
+        "desc": "Music Album"
+      },
+      {
+        "id": "49",
+        "cat": "Audio",
+        "desc": "Music Charts"
+      },
+      {
+        "id": "52",
+        "cat": "Audio",
+        "desc": "Music Pack"
+      },
+      {
+        "id": "54",
+        "cat": "Audio",
+        "desc": "Music Single"
+      },
+      {
+        "id": "55",
+        "cat": "Audio/Video",
+        "desc": "Music Video"
+      },
+      {
+        "id": "125",
+        "cat": "Audio",
+        "desc": "Music Mixe"
+      },
+      {
+        "id": "126",
+        "cat": "Audio",
+        "desc": "Music Audio"
+      },
+      {
+        "id": "61",
+        "cat": "TV/Sport",
+        "desc": "Sport Other"
+      },
+      {
+        "id": "63",
+        "cat": "Audio/Audiobook",
+        "desc": "Sonstiges A-Book"
+      },
+      {
+        "id": "96",
+        "cat": "Books/EBook",
+        "desc": "Sonstiges E-Book"
+      },
+      {
+        "id": "69",
+        "cat": "Books",
+        "desc": "Sonstiges Tutorial"
+      },
+      {
+        "id": "71",
+        "cat": "Books/Other",
+        "desc": "Sonstiges Other"
+      },
+      {
+        "id": "102",
+        "cat": "TV/SD",
+        "desc": "Internt'l Serie SD"
+      },
+      {
+        "id": "98",
+        "cat": "Movies/HD",
+        "desc": "Internt'l Movie HD"
+      },
+      {
+        "id": "99",
+        "cat": "TV/HD",
+        "desc": "Internt'l Serie HD"
+      },
+      {
+        "id": "105",
+        "cat": "TV/Documentary",
+        "desc": "Internt'l Doku"
+      },
+      {
+        "id": "103",
+        "cat": "Movies/SD",
+        "desc": "Internt'l Movie SD"
+      },
+      {
+        "id": "104",
+        "cat": "Other",
+        "desc": "Internt'l Misc"
+      },
+      {
+        "id": "106",
+        "cat": "Books/EBook",
+        "desc": "Internt'l E-Book"
+      },
+      {
+        "id": "107",
+        "cat": "Audio/Audiobook",
+        "desc": "Internt'l A-Book"
+      },
+      {
+        "id": "115",
+        "cat": "Movies/DVD",
+        "desc": "Internt'l DVD"
+      },
+      {
+        "id": "73",
+        "cat": "XXX/x264",
+        "desc": "XXX HD"
+      },
+      {
+        "id": "75",
+        "cat": "XXX/Pack",
+        "desc": "XXX Pack"
+      },
+      {
+        "id": "76",
+        "cat": "XXX/SD",
+        "desc": "XXX SD"
+      },
+      {
+        "id": "113",
+        "cat": "XXX/DVD",
+        "desc": "XXX DVD"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "pin",
+      "label": "Pin",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeds": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Anzahl der Torrents beim Durchsuchen</b> <i>Torrents per page:</i> setting to <b>60</b> on your account profile. The default is <i>15</i>."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "cookies": [
+      "JAVA=OK"
+    ],
+    "path": "login.php",
+    "form": "form[action=\"/login.php\"]",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "pin": "{{ .Config.pin }}"
+    },
+    "error": [
+      {
+        "selector": "div#login_error"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "selection.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "blah": "0",
+      "orderby": "{{ .Config.sort }}",
+      "sort": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "div.selection_wrap"
+    },
+    "fields": {
+      "category_p1": {
+        "selector": "div.kat_cat_pic_name"
+      },
+      "category_p2": {
+        "selector": "div.kat_cat_pic_name_b"
+      },
+      "categorydesc": {
+        "text": "{{ .Result.category_p1 }} {{ .Result.category_p2 }}"
+      },
+      "title": {
+        "selector": "a.selection_a",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^\\[[\\p{L}\\p{Mn}\\p{Nd}\\p{Pc} ]*\\][\\t-\\r\\x{85}\\p{Z}]?",
+              ""
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a.selection_a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a.selection_a",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "div[id^=\"details\"] img",
+        "attribute": "src",
+        "optional": true
+      },
+      "size": {
+        "selector": "div.selection_unter_ad"
+      },
+      "grabs": {
+        "selector": "div.selection_unter_ae"
+      },
+      "date_day": {
+        "selector": "div.selection_unter_ab:not(:contains(\".\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Heute",
+              "Today"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Gestern",
+              "Yesterday"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "div.selection_unter_ab:contains(\".\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              " um",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04:05 -07:00",
+              "02.01.2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_year .Result.date_day }}{{ or .Result.date_year .Result.date_day }}{{ else }}now{{ end }}"
+      },
+      "seeders": {
+        "selector": "div.selection_unter_aa"
+      },
+      "leechers": {
+        "selector": "div.selection_unter_aaa"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          ":root:has(div.onlyup)": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"download_ssl.php?torrent=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/thecrazyones.yml",
+    "sha256": "ec2c203b2f6160542ca4880b1137bdd97db5e8d4a8fe973575789f6bc1b07849",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

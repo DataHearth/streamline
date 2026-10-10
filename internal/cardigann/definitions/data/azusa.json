@@ -1,0 +1,252 @@
+{
+  "id": "azusa",
+  "name": "Azusa (梓喵)",
+  "description": "Azusa (梓喵) is a CHINESE Private Torrent Tracker focusing on COMICS",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://azusa.wiki/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "404",
+        "cat": "PC/Games",
+        "desc": "Game"
+      },
+      {
+        "id": "402",
+        "cat": "Books/Comics",
+        "desc": "Comic"
+      },
+      {
+        "id": "403",
+        "cat": "Books/EBook",
+        "desc": "Light Novel"
+      },
+      {
+        "id": "407",
+        "cat": "Other",
+        "desc": "CG"
+      },
+      {
+        "id": "409",
+        "cat": "Audio",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?csrf_token=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "allowEmptyInputs": true,
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "inclbookmarked": "0",
+      "approval_status": "",
+      "trackerStatus": "",
+      "search": "{{ .Keywords }}",
+      "search_area": "0",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(table.torrentname)"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href^=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "date_elapsed": {
+        "selector": "td.rowfollow:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td.rowfollow:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td.rowfollow:nth-child(5)",
+        "optional": true,
+        "default": "512MB"
+      },
+      "seeders": {
+        "selector": "a[href$=\"dllist=1#seeders\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "a[href$=\"dllist=1#leechers\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "grabs": {
+        "selector": "a[href^=\"viewsnatches.php?id=\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "description": {
+        "selector": "td:nth-child(2)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/azusa.yml",
+    "sha256": "fc746e9ab8b5686c5fa3ae066e1623c1f637896068a1b5bcd1bb04ac3f026061",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

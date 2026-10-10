@@ -1,0 +1,270 @@
+{
+  "id": "cyclingarchiveclub",
+  "name": "CyclingArchiveClub",
+  "description": "CyclingArchiveClub is a Private tracker for Professional road and Cyclocross racing VIDEOS",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://cyclingarchive.club/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "25",
+        "cat": "TV",
+        "desc": "BMX"
+      },
+      {
+        "id": "28",
+        "cat": "TV",
+        "desc": "Cross"
+      },
+      {
+        "id": "21",
+        "cat": "TV/Documentary",
+        "desc": "Documentary"
+      },
+      {
+        "id": "24",
+        "cat": "TV",
+        "desc": "MTB"
+      },
+      {
+        "id": "26",
+        "cat": "TV",
+        "desc": "Real Life Video"
+      },
+      {
+        "id": "22",
+        "cat": "TV",
+        "desc": "Road"
+      },
+      {
+        "id": "23",
+        "cat": "TV",
+        "desc": "Track"
+      },
+      {
+        "id": "27",
+        "cat": "TV",
+        "desc": "Triathlon"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "DESC",
+      "options": {
+        "DESC": "desc",
+        "ASC": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td.embedded:contains(\"Login failed\")",
+        "message": {
+          "selector": "td.text"
+        }
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href$=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "_by": "0",
+      "format": "0",
+      "incldead": "0",
+      "language": "0",
+      "freebrowse": "{{ if .Config.freeleech }}Free{{ else }}{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "d": "{{ .Config.type }}"
+    },
+    "rows": {
+      "dateheaders": {
+        "selector": ":has(td.ui-widget-header:contains(\"Torrents added\") > b)",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Torrents added ",
+              ""
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Monday 02 Jan 2006"
+            ]
+          }
+        ]
+      },
+      "selector": "table[width=\"95%\"] > tbody > tr.trhover"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "_type": {
+        "selector": "a[href*=\"browse.php?cat=\"]",
+        "attribute": "title"
+      },
+      "_language": {
+        "selector": "td:nth-child(2) img",
+        "attribute": "title"
+      },
+      "_format": {
+        "selector": "td:nth-child(3) img",
+        "attribute": "title"
+      },
+      "title": {
+        "selector": "a[href*=\"details.php?hit=\"]"
+      },
+      "details": {
+        "selector": "a[href*=\"details.php?hit=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "hit=1&",
+              ""
+            ]
+          }
+        ]
+      },
+      "download": {
+        "selector": "a[href*=\"details.php?hit=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "hit=1&",
+              ""
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "td:nth-child(6)"
+      },
+      "size": {
+        "selector": "td:nth-child(9)",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "^(.*?)B"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "B"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "td:nth-child(9) > b"
+      },
+      "seeders": {
+        "selector": "td:nth-child(10)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(11)"
+      },
+      "description": {
+        "optional": true,
+        "text": " {{ .Result._type }} {{ .Result._language }} {{ .Result._format }}"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span:contains(\"Free\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href*=\"download.php?\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/cyclingarchiveclub.yml",
+    "sha256": "bf8278e8edc8413bec63b5c57c571e6d937ceebd3ab19a7e32bd14ead08ec2e6",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

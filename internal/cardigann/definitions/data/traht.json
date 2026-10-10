@@ -1,0 +1,147 @@
+{
+  "id": "traht",
+  "name": "TrahT",
+  "description": "TrahT is a RUSSIAN Semi-Private Torrent Tracker for 3X",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "windows-1251",
+  "links": [
+    "https://traht.org/"
+  ],
+  "legacylinks": [
+    "http://traht.org/"
+  ],
+  "caps": {
+    "categories": {
+      "xxx": "XXX"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "td.embedded:has(div.error)"
+      },
+      {
+        "selector": "title:contains(\"403\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href*=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "cat": "0",
+      "year": "0",
+      "format": "0"
+    },
+    "rows": {
+      "selector": "div[id^=\"releases-table\"] table.embedded tbody tr:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "text": "xxx"
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "&ok="
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "now"
+      },
+      "size": {
+        "selector": "td:nth-child(5)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(6)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "0"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              "|",
+              "1"
+            ]
+          }
+        ]
+      },
+      "description": {
+        "selector": "img",
+        "attribute": "title",
+        "optional": true
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/traht.yml",
+    "sha256": "5b9fd3439d4e2ffbf0ffa2fdbaab50d4643dc6dd0efe51994cadc560d56df988",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,428 @@
+{
+  "id": "animebybelka",
+  "name": "Anime by Belka",
+  "description": "Anime by Belka (Аниме от Белки) is a RUSSIAN Semi-Private Torrent Tracker for ANIME",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://anibelka.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "32",
+        "cat": "TV/Anime",
+        "desc": "Аниме универсальные"
+      },
+      {
+        "id": "33",
+        "cat": "TV/Anime",
+        "desc": "Аниме с озвучкой"
+      },
+      {
+        "id": "34",
+        "cat": "TV/Anime",
+        "desc": "Аниме с субтитрами"
+      },
+      {
+        "id": "36",
+        "cat": "Movies/Other",
+        "desc": "Полнометражки"
+      },
+      {
+        "id": "37",
+        "cat": "TV/Anime",
+        "desc": "Аниме для PSP"
+      },
+      {
+        "id": "39",
+        "cat": "TV/Anime",
+        "desc": "Сэмплы"
+      },
+      {
+        "id": "7",
+        "cat": "Audio",
+        "desc": "Аудио"
+      },
+      {
+        "id": "8",
+        "cat": "Books/Comics",
+        "desc": "Манга"
+      },
+      {
+        "id": "21",
+        "cat": "Other",
+        "desc": "Изображения аниме"
+      },
+      {
+        "id": "9",
+        "cat": "Other",
+        "desc": "Япония"
+      },
+      {
+        "id": "52",
+        "cat": "TV/Anime",
+        "desc": "Альтернативные части"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "useragent",
+      "label": "User-Agent",
+      "type": "text"
+    },
+    {
+      "name": "info_useragent",
+      "type": "info_useragent"
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "addrussiantotitle",
+      "label": "Add RUS to end of all titles to improve language detection by Sonarr and Radarr. Will cause English-only results to be misidentified.",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "t",
+      "options": {
+        "t": "created",
+        "ts": "seeders",
+        "sz": "size",
+        "i": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "d",
+      "options": {
+        "d": "desc",
+        "a": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "/",
+      "selector": "a[href^=\"./ucp.php?mode=logout&sid=\"]"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "search.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&fid[]={{.}}{{end}}",
+      "tracker_search": "{{ if .Keywords }}torrent{{ else }}tracker{{ end }}",
+      "keywords": "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}",
+      "terms": "all",
+      "sc": "1",
+      "sf": "titleonly",
+      "sr": "topics",
+      "sk": "{{ .Config.sort }}",
+      "sd": "{{ .Config.type }}",
+      "st": "0",
+      "ch": "300",
+      "t": "0"
+    },
+    "headers": {
+      "User-Agent": [
+        "{{ .Config.useragent }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
+          ""
+        ],
+        "engine": "regexp2"
+      }
+    ],
+    "rows": {
+      "selector": "tr:has(a[href^=\"./download/file.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"./viewforum.php?f=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "f"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a.topictitle",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\u0400-\\u04FF\\W\\u200C\\u200D]+\\))|(^[\\u0400-\\u04FF\\W\\u200C\\u200D\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Config.addrussiantotitle }} RUS{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a.topictitle",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"./download/file.php?id=\"]",
+        "attribute": "href"
+      },
+      "size": {
+        "selector": "p b",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "ТБ",
+              "TB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "ГБ",
+              "GB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "МБ",
+              "MB"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "КБ",
+              "KB"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "span.seed"
+      },
+      "leechers": {
+        "selector": "span.leech"
+      },
+      "grabs": {
+        "selector": "span.complet",
+        "optional": true
+      },
+      "date_today": {
+        "selector": "td:nth-last-child(1) p:contains(\"Сегодня\"), td:nth-last-child(1) p:contains(\"Вчера\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Сегодня",
+              "Today"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Вчера",
+              "Yesterday"
+            ]
+          },
+          {
+            "name": "fuzzytime"
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "td:nth-last-child(1) p:not(:contains(\"Сегодня\")), td:nth-last-child(1) p:not(:contains(\"Вчера\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "янв",
+              "Jan"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "фев",
+              "Feb"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "мар",
+              "Mar"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "апр",
+              "Apr"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "май",
+              "May"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июн",
+              "Jun"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "июл",
+              "Jul"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "авг",
+              "Aug"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "сен",
+              "Sep"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "окт",
+              "Oct"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "ноя",
+              "Nov"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "дек",
+              "Dec"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02 Jan 2006, 15:04 -07:00",
+              "02 Jan 2006, 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_today .Result.date_year }}{{ or .Result.date_today .Result.date_year }}{{ else }}now{{ end }}"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "description": {
+        "selector": "td:nth-last-child(5)",
+        "optional": true,
+        "remove": "a, b, p, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/animebybelka.yml",
+    "sha256": "f2c36ce5a2f357bbb170a11a764b84c5b9382e7ebb87caaff4b07bbd2e2a51bf",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

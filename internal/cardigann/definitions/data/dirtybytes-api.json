@@ -1,0 +1,317 @@
+{
+  "id": "dirtybytes-api",
+  "name": "DirtyBytes (API)",
+  "description": "DirtyBytes is a Private Torrent Tracker for 3X",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://dirtybytes.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "XXX/SD",
+        "desc": "XXX Movies/SD"
+      },
+      {
+        "id": "2",
+        "cat": "XXX/x264",
+        "desc": "XXX Movies/720p"
+      },
+      {
+        "id": "3",
+        "cat": "XXX/x264",
+        "desc": "XXX Movies/1080p"
+      },
+      {
+        "id": "4",
+        "cat": "XXX/x264",
+        "desc": "XXX Movies/1440p"
+      },
+      {
+        "id": "5",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/2160p"
+      },
+      {
+        "id": "6",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/4320p"
+      },
+      {
+        "id": "7",
+        "cat": "XXX/SD",
+        "desc": "XXX Scene/SD"
+      },
+      {
+        "id": "8",
+        "cat": "XXX/x264",
+        "desc": "XXX Scene/720p"
+      },
+      {
+        "id": "9",
+        "cat": "XXX/x264",
+        "desc": "XXX Scene/1080p"
+      },
+      {
+        "id": "10",
+        "cat": "XXX/x264",
+        "desc": "XXX Scene/1440p"
+      },
+      {
+        "id": "11",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/2160p"
+      },
+      {
+        "id": "12",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/4320p"
+      },
+      {
+        "id": "13",
+        "cat": "XXX/x264",
+        "desc": "XXX Movies/VR180/1080p"
+      },
+      {
+        "id": "14",
+        "cat": "XXX/x264",
+        "desc": "XXX Movies/VR180/1440p"
+      },
+      {
+        "id": "15",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/VR180/2160p"
+      },
+      {
+        "id": "16",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/VR180/2880p"
+      },
+      {
+        "id": "17",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/VR180/3600p"
+      },
+      {
+        "id": "18",
+        "cat": "XXX/UHD",
+        "desc": "XXX Movies/VR180/4320p"
+      },
+      {
+        "id": "19",
+        "cat": "XXX/x264",
+        "desc": "XXX Scene/VR180/1080p"
+      },
+      {
+        "id": "20",
+        "cat": "XXX/x264",
+        "desc": "XXX Scene/VR180/1440p"
+      },
+      {
+        "id": "21",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/VR180/2160p"
+      },
+      {
+        "id": "22",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/VR180/2880p"
+      },
+      {
+        "id": "23",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/VR180/3600p"
+      },
+      {
+        "id": "24",
+        "cat": "XXX/UHD",
+        "desc": "XXX Scene/VR180/4320p"
+      },
+      {
+        "id": "25",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX Photo Sets"
+      },
+      {
+        "id": "26",
+        "cat": "XXX/Pack",
+        "desc": "XXX Packs"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Token",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_apikey",
+      "label": "About your API Token",
+      "type": "info",
+      "default": "Find/Generate an API key from your <a href=\"https://dirtybytes.net/\" target=\"_blank\">DirtyBytes</a> account settings page, at the <b>Security</b> tab, in the <b>API Key</b> section."
+    },
+    {
+      "name": "passkey",
+      "label": "Passkey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_passkey",
+      "label": "About your Passkey",
+      "type": "info",
+      "default": "Find the <b>Passkey</b> just above the <i>API key</i> section."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "d",
+      "options": {
+        "d": "created",
+        "up": "seeders",
+        "s": "size",
+        "n": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/v1/torrents",
+    "inputs": {
+      "limit": "1"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/v1/torrents",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}categories[]={{.}}&{{end}}",
+      "index": "0",
+      "limit": "100",
+      "page": "search",
+      "searchText": "{{ .Keywords }}",
+      "section": "all",
+      "sort": "{{ .Config.sort }}",
+      "order": "{{ .Config.type }}",
+      "freeleech": "{{ if .Config.freeleech }}true{{ else }}{{ end }}",
+      "dead": "true"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "rows": {
+      "selector": "$"
+    },
+    "fields": {
+      "category": {
+        "selector": "category"
+      },
+      "_id": {
+        "selector": "id"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "details": {
+        "text": "{{ .Config.sitelink }}torrent/{{ .Result._id }}"
+      },
+      "download": {
+        "text": "{{ .Config.sitelink }}api/v1/torrents/download/{{ .Result._id }}/{{ .Config.passkey }}"
+      },
+      "poster": {
+        "selector": "firstpic",
+        "optional": true
+      },
+      "size": {
+        "selector": "size"
+      },
+      "files": {
+        "selector": "numfiles"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "added",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +02:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "selector": "frileech"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "432000"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/dirtybytes-api.yml",
+    "sha256": "d9a81e5d559e89e0cbe4bdd65ebac78e4670cf2d5ffe366f63bacc3539db0eb0",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

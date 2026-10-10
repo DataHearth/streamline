@@ -1,0 +1,192 @@
+{
+  "id": "anibt",
+  "name": "Anibt",
+  "description": "Anibt is a CHINESE Public aggregate indexer for ANIME\"",
+  "language": "zh-CN",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://anibt.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "anime",
+        "cat": "TV/Anime",
+        "desc": "Anime",
+        "default": true
+      },
+      {
+        "id": "manga",
+        "cat": "Books/Comics",
+        "desc": "Manga"
+      },
+      {
+        "id": "music",
+        "cat": "Audio/Lossless",
+        "desc": "Music"
+      },
+      {
+        "id": "raw",
+        "cat": "TV/Anime",
+        "desc": "Raw"
+      },
+      {
+        "id": "stage",
+        "cat": "Audio/Video",
+        "desc": "Stage"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "publishedAt",
+      "options": {
+        "publishedAt": "created",
+        "fileSize": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "rss/magnets.xml",
+        "categories": [
+          "anime"
+        ],
+        "response": {
+          "type": "xml"
+        }
+      },
+      {
+        "path": "rss/other/manga.xml",
+        "categories": [
+          "manga"
+        ],
+        "response": {
+          "type": "xml"
+        }
+      },
+      {
+        "path": "rss/other/music.xml",
+        "categories": [
+          "music"
+        ],
+        "response": {
+          "type": "xml"
+        }
+      },
+      {
+        "path": "rss/other/raw.xml",
+        "categories": [
+          "raw"
+        ],
+        "response": {
+          "type": "xml"
+        }
+      },
+      {
+        "path": "rss/other/stage.xml",
+        "categories": [
+          "stage"
+        ],
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "q": "{{ .Keywords }}",
+      "sortField": "{{ re_replace .Config.sort \"publishedAt\" \"\" }}",
+      "sortOrder": "{{ re_replace .Config.type \"desc\" \"\" }}"
+    },
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "title": {
+        "selector": "title"
+      },
+      "description": {
+        "selector": "animeTitle",
+        "optional": true
+      },
+      "details": {
+        "selector": "link"
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "category_default": {
+        "selector": "type"
+      },
+      "category": {
+        "selector": "category",
+        "optional": true,
+        "default": "{{ .Result.category_default }}"
+      },
+      "size": {
+        "selector": "fileSize"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/anibt.yml",
+    "sha256": "cf895989215da0655b560b40c48ea9a8b101b40c16b36ebf73a37a70f48c00bf",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

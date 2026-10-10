@@ -1,0 +1,495 @@
+{
+  "id": "bestcore",
+  "name": "Best-Core",
+  "description": "Best-Core is a HUNGARIAN Private Tracker for MOVIES / TV / GENERAL",
+  "language": "hu-HU",
+  "type": "private",
+  "encoding": "ISO-8859-2",
+  "links": [
+    "https://best-core.info/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "81",
+        "cat": "Movies/3D",
+        "desc": "3D"
+      },
+      {
+        "id": "83",
+        "cat": "Movies/UHD",
+        "desc": "4K/UHD"
+      },
+      {
+        "id": "80",
+        "cat": "Movies/Other",
+        "desc": "Best-Core"
+      },
+      {
+        "id": "51",
+        "cat": "Books/EBook",
+        "desc": "E-book"
+      },
+      {
+        "id": "88",
+        "cat": "Audio/Audiobook",
+        "desc": "E-book/Hangoskönyv"
+      },
+      {
+        "id": "77",
+        "cat": "Movies/HD",
+        "desc": "Film/BDRip/Eng"
+      },
+      {
+        "id": "86",
+        "cat": "Movies/HD",
+        "desc": "Film/BDRip/Ger"
+      },
+      {
+        "id": "76",
+        "cat": "Movies/HD",
+        "desc": "Film/BDRip/Hun"
+      },
+      {
+        "id": "75",
+        "cat": "Movies/BluRay",
+        "desc": "Film/Blu-ray/Eng"
+      },
+      {
+        "id": "74",
+        "cat": "Movies/BluRay",
+        "desc": "Film/Blu-ray/Hun"
+      },
+      {
+        "id": "25",
+        "cat": "Movies/DVD",
+        "desc": "Film/DVD/Eng"
+      },
+      {
+        "id": "24",
+        "cat": "Movies/DVD",
+        "desc": "Film/DVD/Hun"
+      },
+      {
+        "id": "85",
+        "cat": "Movies/DVD",
+        "desc": "Film/DVD9"
+      },
+      {
+        "id": "21",
+        "cat": "Movies/HD",
+        "desc": "Film/HD/Eng"
+      },
+      {
+        "id": "53",
+        "cat": "Movies/HD",
+        "desc": "Film/HD/Hun"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/SD",
+        "desc": "Film/XviD/Eng"
+      },
+      {
+        "id": "34",
+        "cat": "Movies/SD",
+        "desc": "Film/XviD/Hun"
+      },
+      {
+        "id": "90",
+        "cat": "Movies/SD",
+        "desc": "Film/XviD/Pack"
+      },
+      {
+        "id": "26",
+        "cat": "PC/Games",
+        "desc": "Játék/ISO"
+      },
+      {
+        "id": "52",
+        "cat": "PC/Games",
+        "desc": "Játék/Rip"
+      },
+      {
+        "id": "89",
+        "cat": "Movies/SD",
+        "desc": "Kamerás/Eng"
+      },
+      {
+        "id": "82",
+        "cat": "Movies/SD",
+        "desc": "Kamerás/Hun"
+      },
+      {
+        "id": "38",
+        "cat": "Other",
+        "desc": "Képek"
+      },
+      {
+        "id": "43",
+        "cat": "Console/PS3",
+        "desc": "Konzol/PS"
+      },
+      {
+        "id": "45",
+        "cat": "Console/PSP",
+        "desc": "Konzol/PSP"
+      },
+      {
+        "id": "44",
+        "cat": "Console/XBox",
+        "desc": "Konzol/Xbox"
+      },
+      {
+        "id": "73",
+        "cat": "TV/Anime",
+        "desc": "Mese/Eng"
+      },
+      {
+        "id": "70",
+        "cat": "TV/Anime",
+        "desc": "Mese/Hun"
+      },
+      {
+        "id": "37",
+        "cat": "PC/Mobile-Other",
+        "desc": "Mobil"
+      },
+      {
+        "id": "1",
+        "cat": "PC/ISO",
+        "desc": "Program/ISO"
+      },
+      {
+        "id": "22",
+        "cat": "PC/0day",
+        "desc": "Program/Rip"
+      },
+      {
+        "id": "54",
+        "cat": "TV/SD",
+        "desc": "Sorozat/DVD/Eng"
+      },
+      {
+        "id": "55",
+        "cat": "TV/SD",
+        "desc": "Sorozat/DVD/Hun"
+      },
+      {
+        "id": "58",
+        "cat": "TV/SD",
+        "desc": "Sorozat/Xvid/Eng"
+      },
+      {
+        "id": "7",
+        "cat": "TV/SD",
+        "desc": "Sorozat/Xvid/Hun"
+      },
+      {
+        "id": "62",
+        "cat": "Audio/Video",
+        "desc": "Videoklip"
+      },
+      {
+        "id": "64",
+        "cat": "XXX/DVD",
+        "desc": "XXX/DVD"
+      },
+      {
+        "id": "48",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX/Képek"
+      },
+      {
+        "id": "9",
+        "cat": "XXX/XviD",
+        "desc": "XXX/Xvid"
+      },
+      {
+        "id": "40",
+        "cat": "Audio/MP3",
+        "desc": "Zene/Eng"
+      },
+      {
+        "id": "6",
+        "cat": "Audio/MP3",
+        "desc": "Zene/Hun"
+      },
+      {
+        "id": "87",
+        "cat": "Audio/Lossless",
+        "desc": "Zene/Lossless"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search FreeLeech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "1": "title",
+        "4": "added",
+        "5": "size",
+        "7": "seeders"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrent oldalankén:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_login",
+      "label": "About login error",
+      "type": "info",
+      "default": "If you get a <b>Login Failed, got redirected.</b> error during your config <i>save</i> then most likely you have used an incorrect username or password."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "<ol><li>Users who have not accessed the site for 180 days will be deleted!</li><li>If the vacation mode is set, the system will not delete the given user for 365 days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": ":root:contains(\"Sikertelen bejelentkezés\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?c=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "tr.torrent_h",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category_optional": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "optional": true,
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "category": {
+        "text": "{{ if .Result.category_optional }}{{ .Result.category_optional }}{{ else }}38{{ end }}"
+      },
+      "title_default": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[onmouseover]",
+        "attribute": "onmouseover",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=(.*?) "
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "https://i.kek.sh/null",
+              ""
+            ]
+          }
+        ]
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "date": {
+        "selector": "td:nth-child(2)",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2}[\\t-\\r\\x{85}\\p{Z}]\\p{Nd}{2}:\\p{Nd}{2}:\\p{Nd}{2})"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "td:nth-child(5)"
+      },
+      "size": {
+        "selector": "td:nth-child(7)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "x \\d(\\d+) x$"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "td:nth-child(8)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(9)"
+      },
+      "description": {
+        "optional": true,
+        "case": {
+          "img[src=\"pic/yes.png\"]": "Verified",
+          "img[src=\"pic/nincs.png\"]": "Unverified"
+        }
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/free.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "selector": "td:nth-child(7) b",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\p{Nd}+)"
+            ]
+          }
+        ]
+      },
+      "minimumratio": {
+        "text": "0.8"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/bestcore.yml",
+    "sha256": "a8440a00ecd142f1956576a9fe0433fdb94e5fd7f4c3146cbc84373f58bbd286",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

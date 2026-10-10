@@ -1,0 +1,243 @@
+{
+  "id": "phoenixproject",
+  "name": "Phoenix Project",
+  "description": "Phoenix Project is a Private MacOS software tracker",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://phoenixproject.app/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "PC/Mac",
+        "desc": "Applications"
+      },
+      {
+        "id": "2",
+        "cat": "PC/Games",
+        "desc": "Games"
+      },
+      {
+        "id": "3",
+        "cat": "PC/Mobile-iOS",
+        "desc": "IOS Applications"
+      },
+      {
+        "id": "4",
+        "cat": "PC/Mobile-iOS",
+        "desc": "IOS Games"
+      },
+      {
+        "id": "5",
+        "cat": "Other",
+        "desc": "Graphics"
+      },
+      {
+        "id": "6",
+        "cat": "Audio",
+        "desc": "Audio"
+      },
+      {
+        "id": "7",
+        "cat": "Other",
+        "desc": "Tutorials"
+      },
+      {
+        "id": "8",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "2fa_code",
+      "label": "2FA code",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_2fa",
+      "label": "About 2FA code",
+      "type": "info",
+      "default": "Only fill in the <b>2FA code</b> box if you have enabled <b>2FA</b> on the Phoenix Project Web Site. Otherwise just leave it empty."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "time",
+      "options": {
+        "time": "created",
+        "seeders": "seeders",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "login.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "twofa": "{{ (index .Config \"2fa_code\") }}",
+      "keeplogged": "1"
+    },
+    "error": [
+      {
+        "selector": "div.main div.warning-login"
+      }
+    ],
+    "test": {
+      "path": "torrents.php",
+      "selector": "a[href^=\"logout.php?auth=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}filter_cat[{{.}}]=1&{{end}}",
+      "searchstr": "{{ .Keywords }}",
+      "freetorrent": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "group_results": "0",
+      "action": "advanced",
+      "order": "{{ .Config.sort }}",
+      "sort": "{{ .Config.type }}",
+      "searchsubmit": "1"
+    },
+    "rows": {
+      "selector": "table.torrent_table tr.torrent:has(a[title=\"Download\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"filter_cat\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\\[(\\p{Nd}+?)\\]"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"torrents.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"torrents.php?id=\"]",
+        "attribute": "href"
+      },
+      "genre": {
+        "selector": "div.tags a[href*=\"taglist\"]",
+        "optional": true
+      },
+      "download": {
+        "selector": "span > a[href^=\"torrents.php?action=download&id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "div.group_image > img",
+        "attribute": "src",
+        "optional": true
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.genre }}"
+      },
+      "date": {
+        "selector": "span.time.tooltip",
+        "attribute": "title",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Jan 02 2006, 15:04 -07:00",
+              "Jan 02 2006, 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td.td_size"
+      },
+      "files": {
+        "selector": "td.td_file_count"
+      },
+      "seeders": {
+        "selector": "td.td_seeders"
+      },
+      "leechers": {
+        "selector": "td.td_leechers"
+      },
+      "grabs": {
+        "selector": "td.td_snatched"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "strong.torrent_label.tl_free": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.6"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/phoenixproject.yml",
+    "sha256": "52daba28a1ecb031e3ae09168c9adc7beebf4904455b833db44c2840092b6d09",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

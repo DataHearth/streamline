@@ -1,0 +1,235 @@
+{
+  "id": "dreamingtree",
+  "name": "DreamingTree",
+  "description": "DreamingTree is a Semi-Private Torrent Tracker for DAVE MATHEWS MUSIC / BOOTLEGS",
+  "language": "en-US",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://dreamingtree.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Audio",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q",
+        "year",
+        "genre"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "time",
+      "options": {
+        "time": "created",
+        "seeders": "seeders",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Covers per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php",
+    "form": "form[action=\"login.php\"]",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "keeplogged": "1",
+      "login": "Log in"
+    },
+    "error": [
+      {
+        "selector": "span.warning",
+        "message": {
+          "selector": "span[class=\"warning\"]:not(:contains(\"JavaScript\"))"
+        }
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}filter_cat[{{.}}]=1&{{end}}",
+      "searchstr": "{{ .Keywords }}",
+      "freetorrent": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "group_results": "0",
+      "action": "advanced",
+      "year": "{{ .Query.Year }}",
+      "taglist": "{{ .Query.Genre }}",
+      "order_by": "{{ .Config.sort }}",
+      "order_way": "{{ .Config.type }}",
+      "searchsubmit": "1"
+    },
+    "rows": {
+      "selector": "tr.torrent"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title_artist": {
+        "selector": "a[href^=\"artist.php?id=\"]",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " - "
+            ]
+          }
+        ]
+      },
+      "title_name": {
+        "selector": "a[href^=\"torrents.php?id=\"]"
+      },
+      "year": {
+        "selector": "div.group_info.clear",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\\[(\\p{Nd}{4})\\]"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ .Result.title_artist }}{{ .Result.title_name }} [{{ .Result.year }}]"
+      },
+      "details": {
+        "selector": "a[href^=\"torrents.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img",
+        "attribute": "src",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "static/common/noartwork/music.png",
+              ""
+            ]
+          }
+        ]
+      },
+      "genre": {
+        "selector": "div.tags",
+        "optional": true
+      },
+      "description_info": {
+        "selector": "div.torrent_info"
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.description_info }}</br>{{ .Result.genre }}"
+      },
+      "download": {
+        "selector": "span > a[href^=\"torrents.php?action=download&id=\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "span.time.tooltip",
+        "filters": [
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "size": {
+        "selector": "td.number_column.nobr"
+      },
+      "files": {
+        "selector": "td:nth-last-child(6)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(1)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "div.torrent_info:contains(\"Freeleech\")": "0",
+          "div.torrent_info:contains(\"Neutral Leech\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "div.torrent_info:contains(\"Neutral Leech\")": "0",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.6"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/dreamingtree.yml",
+    "sha256": "ff2950856b2add28fff3e4ffb58a5376ce7b8839006ff954dbc83c63a1a78995",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

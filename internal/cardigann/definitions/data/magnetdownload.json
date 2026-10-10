@@ -1,0 +1,166 @@
+{
+  "id": "magnetdownload",
+  "name": "MagnetDownload",
+  "description": "MagnetDownload is a Public DHT Crawler",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.magnetdownload.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "Other",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_category_8000",
+      "type": "info_category_8000"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "search/{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}/"
+      }
+    ],
+    "rows": {
+      "selector": "tr > td.x-item"
+    },
+    "fields": {
+      "category": {
+        "text": "Other"
+      },
+      "title": {
+        "selector": "a",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "span.ctime",
+        "filters": [
+          {
+            "name": "timeago"
+          }
+        ]
+      },
+      "files": {
+        "selector": "div.tail",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Files. (\\p{Nd}+)"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "div.tail",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "size. (.+?)  T"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "div.tail",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "requests. (\\p{Nd}+)"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "before": {
+      "path": "api/json_info",
+      "inputs": {
+        "hashes": "{{ re_replace .DownloadUri.AbsolutePath \"/info/\" \"\" }}"
+      }
+    },
+    "infohash": {
+      "hash": {
+        "selector": ":root",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": ":root",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "name\\\". \\\"(.+?)\\\""
+            ]
+          },
+          {
+            "name": "validfilename"
+          }
+        ]
+      },
+      "usebeforeresponse": true
+    }
+  },
+  "source": {
+    "path": "definitions/v11/magnetdownload.yml",
+    "sha256": "b3317407a6c6cedaa8d3656df4ef5671fb267948d4111f04e9aea42809be009f",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

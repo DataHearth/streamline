@@ -22,6 +22,7 @@ Music and books work like movies and TV: adopt your existing library, then let a
 | qBittorrent, Transmission, Deluge | ✅ Shipped |
 | Torznab indexers | ✅ Shipped |
 | Prowlarr | ✅ Shipped |
+| Built-in indexers — Prowlarr/Jackett's tracker definitions, no Prowlarr or Jackett needed | 🚧 In progress |
 | Built-in torrent client (no external download client needed) | ✅ Shipped |
 | Media info from ffprobe (codec, resolution, duration, bitrate) | ✅ Shipped |
 | Import verification — hold a download that doesn't match what it claimed | ✅ Shipped |

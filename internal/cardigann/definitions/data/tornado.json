@@ -1,0 +1,368 @@
+{
+  "id": "tornado",
+  "name": "Tornado",
+  "description": "Tornado is a SLOVENIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "sl-SI",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.tornado.si/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "32",
+        "cat": "Movies/SD",
+        "desc": "Filmi Xvid"
+      },
+      {
+        "id": "33",
+        "cat": "Movies/DVD",
+        "desc": "Filmi DVD"
+      },
+      {
+        "id": "34",
+        "cat": "Movies/BluRay",
+        "desc": "Filmi BluRay"
+      },
+      {
+        "id": "35",
+        "cat": "TV/Documentary",
+        "desc": "Dokumentarci Filmi"
+      },
+      {
+        "id": "36",
+        "cat": "TV/Anime",
+        "desc": "Risanke"
+      },
+      {
+        "id": "37",
+        "cat": "Audio/Video",
+        "desc": "Koncerti"
+      },
+      {
+        "id": "38",
+        "cat": "Audio/MP3",
+        "desc": "Glasba MP3"
+      },
+      {
+        "id": "39",
+        "cat": "Audio/Lossless",
+        "desc": "Glasba FLAC"
+      },
+      {
+        "id": "40",
+        "cat": "PC/Games",
+        "desc": "Igre PC"
+      },
+      {
+        "id": "41",
+        "cat": "Console/PS3",
+        "desc": "Igre PS3"
+      },
+      {
+        "id": "43",
+        "cat": "Console/XBox",
+        "desc": "Igre Xbox"
+      },
+      {
+        "id": "47",
+        "cat": "Console/NDS",
+        "desc": "Igre Nintendo"
+      },
+      {
+        "id": "44",
+        "cat": "PC",
+        "desc": "Programi"
+      },
+      {
+        "id": "45",
+        "cat": "Books/EBook",
+        "desc": "E-Knjige"
+      },
+      {
+        "id": "46",
+        "cat": "Books/Mags",
+        "desc": "E-Revije"
+      },
+      {
+        "id": "48",
+        "cat": "TV",
+        "desc": "TV-Rip"
+      },
+      {
+        "id": "49",
+        "cat": "XXX/ImageSet",
+        "desc": "Slike"
+      },
+      {
+        "id": "53",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "50",
+        "cat": "XXX/DVD",
+        "desc": "Erotika"
+      },
+      {
+        "id": "51",
+        "cat": "Other/Misc",
+        "desc": "Ostalo"
+      },
+      {
+        "id": "52",
+        "cat": "Other",
+        "desc": "VIP"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Filter freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeders": "seeders",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_results",
+      "label": "Search results",
+      "type": "info",
+      "default": "If you are getting the error <b>Found no results while trying to browse this tracker</b> then first access the site with your browser and check that you are not being forced to change your password because it has expired after 180 days."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "?p=home&pid=1",
+    "submitpath": "ajax/login.php",
+    "form": "form#sls_form",
+    "inputs": {
+      "action": "login",
+      "loginbox_membername": "{{ .Config.username }}",
+      "loginbox_password": "{{ .Config.password }}",
+      "loginbox_remember": "1"
+    },
+    "selectorinputs": {
+      "securitytoken": {
+        "selector": "script:contains(\"stKey: \")",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "stKey: \"(.+?)\","
+            ]
+          }
+        ]
+      }
+    },
+    "error": [
+      {
+        "selector": "div.error"
+      },
+      {
+        "selector": ":contains(\"-ERROR-\")"
+      }
+    ],
+    "test": {
+      "path": "?p=home&pid=1",
+      "selector": "div#member_info_bar"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "/"
+      }
+    ],
+    "inputs": {
+      "p": "torrents",
+      "pid": "32",
+      "$raw": "{{ range .Categories }}cid[]={{.}}&{{end}}",
+      "keywords": "{{ .Keywords }}",
+      "search_type": "name",
+      "sortOptions[sortBy]": "{{ .Config.sort }}",
+      "sortOptions[sortOrder]": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "[^a-zA-Z0-9]+",
+          "%25"
+        ]
+      }
+    ],
+    "error": [
+      {
+        "selector": "div.error:not(:contains(\"There are no results found.\"))"
+      }
+    ],
+    "rows": {
+      "selector": "div.torrent-box[id^=\"torrent_\"]{{ if .Config.freeleech }}:has(img[src$=\"/torrent_free.png\"]){{ else }}{{ end }}"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"?p=torrents&pid=10&cid=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cid"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href*=\"?p=torrents&pid=10&action=details&tid=\"]"
+      },
+      "details": {
+        "selector": "a[href*=\"?p=torrents&pid=10&action=details&tid=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href*=\"?p=torrents&pid=10&action=download&tid=\"]",
+        "attribute": "href"
+      },
+      "magnet": {
+        "selector": "a[href^=\"magnet:?xt=\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "poster": {
+        "selector": "a[href*=\"data/torrents/torrent_images/\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "size": {
+        "selector": "a[rel=\"torrent_size\"]"
+      },
+      "grabs": {
+        "selector": "a[rel=\"times_completed\"]"
+      },
+      "seeders": {
+        "selector": "a[rel=\"torrent_seeders\"]"
+      },
+      "leechers": {
+        "selector": "a[rel=\"torrent_leechers\"]"
+      },
+      "date_day": {
+        "selector": "div.torrentOwner:contains(\"day\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Uploaded (.+?) by"
+            ]
+          },
+          {
+            "name": "fuzzytime"
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "div.torrentOwner:contains(\"-\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "Uploaded (.+?) by"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02-01-2006 15:04"
+            ]
+          }
+        ]
+      },
+      "date_unix": {
+        "selector": "div.torrentOwner abbr",
+        "attribute": "data-time",
+        "optional": true
+      },
+      "date": {
+        "text": "{{ if or .Result.date_day .Result.date_year .Result.date_unix }}{{ or .Result.date_day .Result.date_year .Result.date_unix }}{{ else }}now{{ end }}"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src$=\"/torrent_free.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/tornado.yml",
+    "sha256": "f6416e5ebbffcca3ef3513b91c7af156dc7ef4e9fab4dda04e2710749c9cca59",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

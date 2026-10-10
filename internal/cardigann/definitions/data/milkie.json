@@ -1,0 +1,166 @@
+{
+  "id": "milkie",
+  "name": "Milkie",
+  "description": "Milkie.cc (ME) is Private Torrent Tracker for 0DAY / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://milkie.cc/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "3",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "4",
+        "cat": "PC/Games",
+        "desc": "Games"
+      },
+      {
+        "id": "5",
+        "cat": "Books",
+        "desc": "Ebook"
+      },
+      {
+        "id": "6",
+        "cat": "PC",
+        "desc": "Apps"
+      },
+      {
+        "id": "7",
+        "cat": "XXX",
+        "desc": "Adult"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new key <a href=\"https://milkie.cc/settings/security\" target=\"_blank\">here</a>."
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "api/v1/torrents",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "ps": "100",
+      "query": "{{ .Keywords }}",
+      "categories": "{{ join .Categories \",\" }}"
+    },
+    "headers": {
+      "x-milkie-auth": [
+        "{{ .Config.apikey }}"
+      ]
+    },
+    "rows": {
+      "selector": "torrents",
+      "count": {
+        "selector": "hits"
+      }
+    },
+    "fields": {
+      "_id": {
+        "selector": "id"
+      },
+      "category": {
+        "selector": "category"
+      },
+      "title": {
+        "selector": "releaseName"
+      },
+      "details": {
+        "text": "/browse/{{ .Result._id }}"
+      },
+      "_apikey": {
+        "text": "{{ .Config.apikey }}",
+        "filters": [
+          {
+            "name": "urlencode"
+          }
+        ]
+      },
+      "download": {
+        "text": "/api/v1/torrents/{{ .Result._id }}/torrent?key={{ .Result._apikey }}"
+      },
+      "date": {
+        "selector": "createdAt"
+      },
+      "size": {
+        "selector": "size"
+      },
+      "grabs": {
+        "selector": "downloaded"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/milkie.yml",
+    "sha256": "3fa4b7f4415b4cb38bb9bfd38f5c6a43522684ad58be6a95af4350c082b1fcb7",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}
