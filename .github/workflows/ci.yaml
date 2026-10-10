@@ -328,7 +328,7 @@ jobs:
           if [ "${{ steps.filter.outputs.nix }}" != "true" ]; then
             echo "⏭️ No nix-relevant changes — skipped" >> "$GITHUB_STEP_SUMMARY"
           elif [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Package, NixOS VM test and home-manager module all built" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ Package, lint, NixOS VM test and home-manager module all built" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "❌ nix checks failed" >> "$GITHUB_STEP_SUMMARY"
           fi
