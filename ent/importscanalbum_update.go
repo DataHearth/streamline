@@ -212,6 +212,74 @@ func (_u *ImportScanAlbumUpdate) AddFileCount(v int16) *ImportScanAlbumUpdate {
 	return _u
 }
 
+// SetTaggedYear sets the "tagged_year" field.
+func (_u *ImportScanAlbumUpdate) SetTaggedYear(v uint16) *ImportScanAlbumUpdate {
+	_u.mutation.ResetTaggedYear()
+	_u.mutation.SetTaggedYear(v)
+	return _u
+}
+
+// SetNillableTaggedYear sets the "tagged_year" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdate) SetNillableTaggedYear(v *uint16) *ImportScanAlbumUpdate {
+	if v != nil {
+		_u.SetTaggedYear(*v)
+	}
+	return _u
+}
+
+// AddTaggedYear adds value to the "tagged_year" field.
+func (_u *ImportScanAlbumUpdate) AddTaggedYear(v int16) *ImportScanAlbumUpdate {
+	_u.mutation.AddTaggedYear(v)
+	return _u
+}
+
+// ClearTaggedYear clears the value of the "tagged_year" field.
+func (_u *ImportScanAlbumUpdate) ClearTaggedYear() *ImportScanAlbumUpdate {
+	_u.mutation.ClearTaggedYear()
+	return _u
+}
+
+// SetFormat sets the "format" field.
+func (_u *ImportScanAlbumUpdate) SetFormat(v string) *ImportScanAlbumUpdate {
+	_u.mutation.SetFormat(v)
+	return _u
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdate) SetNillableFormat(v *string) *ImportScanAlbumUpdate {
+	if v != nil {
+		_u.SetFormat(*v)
+	}
+	return _u
+}
+
+// ClearFormat clears the value of the "format" field.
+func (_u *ImportScanAlbumUpdate) ClearFormat() *ImportScanAlbumUpdate {
+	_u.mutation.ClearFormat()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *ImportScanAlbumUpdate) SetSize(v int64) *ImportScanAlbumUpdate {
+	_u.mutation.ResetSize()
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdate) SetNillableSize(v *int64) *ImportScanAlbumUpdate {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// AddSize adds value to the "size" field.
+func (_u *ImportScanAlbumUpdate) AddSize(v int64) *ImportScanAlbumUpdate {
+	_u.mutation.AddSize(v)
+	return _u
+}
+
 // SetDecision sets the "decision" field.
 func (_u *ImportScanAlbumUpdate) SetDecision(v importscanalbum.Decision) *ImportScanAlbumUpdate {
 	_u.mutation.SetDecision(v)
@@ -470,6 +538,27 @@ func (_u *ImportScanAlbumUpdate) sqlSave(ctx context.Context) (_node int, err er
 	if value, ok := _u.mutation.AddedFileCount(); ok {
 		_spec.AddField(importscanalbum.FieldFileCount, field.TypeUint16, value)
 	}
+	if value, ok := _u.mutation.TaggedYear(); ok {
+		_spec.SetField(importscanalbum.FieldTaggedYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedTaggedYear(); ok {
+		_spec.AddField(importscanalbum.FieldTaggedYear, field.TypeUint16, value)
+	}
+	if _u.mutation.TaggedYearCleared() {
+		_spec.ClearField(importscanalbum.FieldTaggedYear, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Format(); ok {
+		_spec.SetField(importscanalbum.FieldFormat, field.TypeString, value)
+	}
+	if _u.mutation.FormatCleared() {
+		_spec.ClearField(importscanalbum.FieldFormat, field.TypeString)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(importscanalbum.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSize(); ok {
+		_spec.AddField(importscanalbum.FieldSize, field.TypeInt64, value)
+	}
 	if value, ok := _u.mutation.Decision(); ok {
 		_spec.SetField(importscanalbum.FieldDecision, field.TypeEnum, value)
 	}
@@ -725,6 +814,74 @@ func (_u *ImportScanAlbumUpdateOne) SetNillableFileCount(v *uint16) *ImportScanA
 // AddFileCount adds value to the "file_count" field.
 func (_u *ImportScanAlbumUpdateOne) AddFileCount(v int16) *ImportScanAlbumUpdateOne {
 	_u.mutation.AddFileCount(v)
+	return _u
+}
+
+// SetTaggedYear sets the "tagged_year" field.
+func (_u *ImportScanAlbumUpdateOne) SetTaggedYear(v uint16) *ImportScanAlbumUpdateOne {
+	_u.mutation.ResetTaggedYear()
+	_u.mutation.SetTaggedYear(v)
+	return _u
+}
+
+// SetNillableTaggedYear sets the "tagged_year" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdateOne) SetNillableTaggedYear(v *uint16) *ImportScanAlbumUpdateOne {
+	if v != nil {
+		_u.SetTaggedYear(*v)
+	}
+	return _u
+}
+
+// AddTaggedYear adds value to the "tagged_year" field.
+func (_u *ImportScanAlbumUpdateOne) AddTaggedYear(v int16) *ImportScanAlbumUpdateOne {
+	_u.mutation.AddTaggedYear(v)
+	return _u
+}
+
+// ClearTaggedYear clears the value of the "tagged_year" field.
+func (_u *ImportScanAlbumUpdateOne) ClearTaggedYear() *ImportScanAlbumUpdateOne {
+	_u.mutation.ClearTaggedYear()
+	return _u
+}
+
+// SetFormat sets the "format" field.
+func (_u *ImportScanAlbumUpdateOne) SetFormat(v string) *ImportScanAlbumUpdateOne {
+	_u.mutation.SetFormat(v)
+	return _u
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdateOne) SetNillableFormat(v *string) *ImportScanAlbumUpdateOne {
+	if v != nil {
+		_u.SetFormat(*v)
+	}
+	return _u
+}
+
+// ClearFormat clears the value of the "format" field.
+func (_u *ImportScanAlbumUpdateOne) ClearFormat() *ImportScanAlbumUpdateOne {
+	_u.mutation.ClearFormat()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *ImportScanAlbumUpdateOne) SetSize(v int64) *ImportScanAlbumUpdateOne {
+	_u.mutation.ResetSize()
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *ImportScanAlbumUpdateOne) SetNillableSize(v *int64) *ImportScanAlbumUpdateOne {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// AddSize adds value to the "size" field.
+func (_u *ImportScanAlbumUpdateOne) AddSize(v int64) *ImportScanAlbumUpdateOne {
+	_u.mutation.AddSize(v)
 	return _u
 }
 
@@ -1015,6 +1172,27 @@ func (_u *ImportScanAlbumUpdateOne) sqlSave(ctx context.Context) (_node *ImportS
 	}
 	if value, ok := _u.mutation.AddedFileCount(); ok {
 		_spec.AddField(importscanalbum.FieldFileCount, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.TaggedYear(); ok {
+		_spec.SetField(importscanalbum.FieldTaggedYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedTaggedYear(); ok {
+		_spec.AddField(importscanalbum.FieldTaggedYear, field.TypeUint16, value)
+	}
+	if _u.mutation.TaggedYearCleared() {
+		_spec.ClearField(importscanalbum.FieldTaggedYear, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Format(); ok {
+		_spec.SetField(importscanalbum.FieldFormat, field.TypeString, value)
+	}
+	if _u.mutation.FormatCleared() {
+		_spec.ClearField(importscanalbum.FieldFormat, field.TypeString)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(importscanalbum.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSize(); ok {
+		_spec.AddField(importscanalbum.FieldSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
 		_spec.SetField(importscanalbum.FieldDecision, field.TypeEnum, value)

@@ -124,6 +124,54 @@ func (_u *ImportScanBookUpdate) ClearParsedIsbn() *ImportScanBookUpdate {
 	return _u
 }
 
+// SetParsedYear sets the "parsed_year" field.
+func (_u *ImportScanBookUpdate) SetParsedYear(v uint16) *ImportScanBookUpdate {
+	_u.mutation.ResetParsedYear()
+	_u.mutation.SetParsedYear(v)
+	return _u
+}
+
+// SetNillableParsedYear sets the "parsed_year" field if the given value is not nil.
+func (_u *ImportScanBookUpdate) SetNillableParsedYear(v *uint16) *ImportScanBookUpdate {
+	if v != nil {
+		_u.SetParsedYear(*v)
+	}
+	return _u
+}
+
+// AddParsedYear adds value to the "parsed_year" field.
+func (_u *ImportScanBookUpdate) AddParsedYear(v int16) *ImportScanBookUpdate {
+	_u.mutation.AddParsedYear(v)
+	return _u
+}
+
+// ClearParsedYear clears the value of the "parsed_year" field.
+func (_u *ImportScanBookUpdate) ClearParsedYear() *ImportScanBookUpdate {
+	_u.mutation.ClearParsedYear()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *ImportScanBookUpdate) SetSize(v int64) *ImportScanBookUpdate {
+	_u.mutation.ResetSize()
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *ImportScanBookUpdate) SetNillableSize(v *int64) *ImportScanBookUpdate {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// AddSize adds value to the "size" field.
+func (_u *ImportScanBookUpdate) AddSize(v int64) *ImportScanBookUpdate {
+	_u.mutation.AddSize(v)
+	return _u
+}
+
 // SetClassification sets the "classification" field.
 func (_u *ImportScanBookUpdate) SetClassification(v importscanbook.Classification) *ImportScanBookUpdate {
 	_u.mutation.SetClassification(v)
@@ -448,6 +496,21 @@ func (_u *ImportScanBookUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if _u.mutation.ParsedIsbnCleared() {
 		_spec.ClearField(importscanbook.FieldParsedIsbn, field.TypeString)
 	}
+	if value, ok := _u.mutation.ParsedYear(); ok {
+		_spec.SetField(importscanbook.FieldParsedYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedParsedYear(); ok {
+		_spec.AddField(importscanbook.FieldParsedYear, field.TypeUint16, value)
+	}
+	if _u.mutation.ParsedYearCleared() {
+		_spec.ClearField(importscanbook.FieldParsedYear, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(importscanbook.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSize(); ok {
+		_spec.AddField(importscanbook.FieldSize, field.TypeInt64, value)
+	}
 	if value, ok := _u.mutation.Classification(); ok {
 		_spec.SetField(importscanbook.FieldClassification, field.TypeEnum, value)
 	}
@@ -650,6 +713,54 @@ func (_u *ImportScanBookUpdateOne) SetNillableParsedIsbn(v *string) *ImportScanB
 // ClearParsedIsbn clears the value of the "parsed_isbn" field.
 func (_u *ImportScanBookUpdateOne) ClearParsedIsbn() *ImportScanBookUpdateOne {
 	_u.mutation.ClearParsedIsbn()
+	return _u
+}
+
+// SetParsedYear sets the "parsed_year" field.
+func (_u *ImportScanBookUpdateOne) SetParsedYear(v uint16) *ImportScanBookUpdateOne {
+	_u.mutation.ResetParsedYear()
+	_u.mutation.SetParsedYear(v)
+	return _u
+}
+
+// SetNillableParsedYear sets the "parsed_year" field if the given value is not nil.
+func (_u *ImportScanBookUpdateOne) SetNillableParsedYear(v *uint16) *ImportScanBookUpdateOne {
+	if v != nil {
+		_u.SetParsedYear(*v)
+	}
+	return _u
+}
+
+// AddParsedYear adds value to the "parsed_year" field.
+func (_u *ImportScanBookUpdateOne) AddParsedYear(v int16) *ImportScanBookUpdateOne {
+	_u.mutation.AddParsedYear(v)
+	return _u
+}
+
+// ClearParsedYear clears the value of the "parsed_year" field.
+func (_u *ImportScanBookUpdateOne) ClearParsedYear() *ImportScanBookUpdateOne {
+	_u.mutation.ClearParsedYear()
+	return _u
+}
+
+// SetSize sets the "size" field.
+func (_u *ImportScanBookUpdateOne) SetSize(v int64) *ImportScanBookUpdateOne {
+	_u.mutation.ResetSize()
+	_u.mutation.SetSize(v)
+	return _u
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_u *ImportScanBookUpdateOne) SetNillableSize(v *int64) *ImportScanBookUpdateOne {
+	if v != nil {
+		_u.SetSize(*v)
+	}
+	return _u
+}
+
+// AddSize adds value to the "size" field.
+func (_u *ImportScanBookUpdateOne) AddSize(v int64) *ImportScanBookUpdateOne {
+	_u.mutation.AddSize(v)
 	return _u
 }
 
@@ -1006,6 +1117,21 @@ func (_u *ImportScanBookUpdateOne) sqlSave(ctx context.Context) (_node *ImportSc
 	}
 	if _u.mutation.ParsedIsbnCleared() {
 		_spec.ClearField(importscanbook.FieldParsedIsbn, field.TypeString)
+	}
+	if value, ok := _u.mutation.ParsedYear(); ok {
+		_spec.SetField(importscanbook.FieldParsedYear, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedParsedYear(); ok {
+		_spec.AddField(importscanbook.FieldParsedYear, field.TypeUint16, value)
+	}
+	if _u.mutation.ParsedYearCleared() {
+		_spec.ClearField(importscanbook.FieldParsedYear, field.TypeUint16)
+	}
+	if value, ok := _u.mutation.Size(); ok {
+		_spec.SetField(importscanbook.FieldSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedSize(); ok {
+		_spec.AddField(importscanbook.FieldSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.Classification(); ok {
 		_spec.SetField(importscanbook.FieldClassification, field.TypeEnum, value)

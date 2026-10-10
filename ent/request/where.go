@@ -75,6 +75,21 @@ func MediaMbid(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldMediaMbid, v))
 }
 
+// ArtistMbid applies equality check predicate on the "artist_mbid" field. It's identical to ArtistMbidEQ.
+func ArtistMbid(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldArtistMbid, v))
+}
+
+// ArtistName applies equality check predicate on the "artist_name" field. It's identical to ArtistNameEQ.
+func ArtistName(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldArtistName, v))
+}
+
+// RequestedAs applies equality check predicate on the "requested_as" field. It's identical to RequestedAsEQ.
+func RequestedAs(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldRequestedAs, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Request {
 	return predicate.Request(sql.FieldEQ(FieldTitle, v))
@@ -313,6 +328,231 @@ func MediaMbidEqualFold(v string) predicate.Request {
 // MediaMbidContainsFold applies the ContainsFold predicate on the "media_mbid" field.
 func MediaMbidContainsFold(v string) predicate.Request {
 	return predicate.Request(sql.FieldContainsFold(FieldMediaMbid, v))
+}
+
+// ArtistMbidEQ applies the EQ predicate on the "artist_mbid" field.
+func ArtistMbidEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldArtistMbid, v))
+}
+
+// ArtistMbidNEQ applies the NEQ predicate on the "artist_mbid" field.
+func ArtistMbidNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldArtistMbid, v))
+}
+
+// ArtistMbidIn applies the In predicate on the "artist_mbid" field.
+func ArtistMbidIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldArtistMbid, vs...))
+}
+
+// ArtistMbidNotIn applies the NotIn predicate on the "artist_mbid" field.
+func ArtistMbidNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldArtistMbid, vs...))
+}
+
+// ArtistMbidGT applies the GT predicate on the "artist_mbid" field.
+func ArtistMbidGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldArtistMbid, v))
+}
+
+// ArtistMbidGTE applies the GTE predicate on the "artist_mbid" field.
+func ArtistMbidGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldArtistMbid, v))
+}
+
+// ArtistMbidLT applies the LT predicate on the "artist_mbid" field.
+func ArtistMbidLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldArtistMbid, v))
+}
+
+// ArtistMbidLTE applies the LTE predicate on the "artist_mbid" field.
+func ArtistMbidLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldArtistMbid, v))
+}
+
+// ArtistMbidContains applies the Contains predicate on the "artist_mbid" field.
+func ArtistMbidContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldArtistMbid, v))
+}
+
+// ArtistMbidHasPrefix applies the HasPrefix predicate on the "artist_mbid" field.
+func ArtistMbidHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldArtistMbid, v))
+}
+
+// ArtistMbidHasSuffix applies the HasSuffix predicate on the "artist_mbid" field.
+func ArtistMbidHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldArtistMbid, v))
+}
+
+// ArtistMbidIsNil applies the IsNil predicate on the "artist_mbid" field.
+func ArtistMbidIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldArtistMbid))
+}
+
+// ArtistMbidNotNil applies the NotNil predicate on the "artist_mbid" field.
+func ArtistMbidNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldArtistMbid))
+}
+
+// ArtistMbidEqualFold applies the EqualFold predicate on the "artist_mbid" field.
+func ArtistMbidEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldArtistMbid, v))
+}
+
+// ArtistMbidContainsFold applies the ContainsFold predicate on the "artist_mbid" field.
+func ArtistMbidContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldArtistMbid, v))
+}
+
+// ArtistNameEQ applies the EQ predicate on the "artist_name" field.
+func ArtistNameEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldArtistName, v))
+}
+
+// ArtistNameNEQ applies the NEQ predicate on the "artist_name" field.
+func ArtistNameNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldArtistName, v))
+}
+
+// ArtistNameIn applies the In predicate on the "artist_name" field.
+func ArtistNameIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldArtistName, vs...))
+}
+
+// ArtistNameNotIn applies the NotIn predicate on the "artist_name" field.
+func ArtistNameNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldArtistName, vs...))
+}
+
+// ArtistNameGT applies the GT predicate on the "artist_name" field.
+func ArtistNameGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldArtistName, v))
+}
+
+// ArtistNameGTE applies the GTE predicate on the "artist_name" field.
+func ArtistNameGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldArtistName, v))
+}
+
+// ArtistNameLT applies the LT predicate on the "artist_name" field.
+func ArtistNameLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldArtistName, v))
+}
+
+// ArtistNameLTE applies the LTE predicate on the "artist_name" field.
+func ArtistNameLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldArtistName, v))
+}
+
+// ArtistNameContains applies the Contains predicate on the "artist_name" field.
+func ArtistNameContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldArtistName, v))
+}
+
+// ArtistNameHasPrefix applies the HasPrefix predicate on the "artist_name" field.
+func ArtistNameHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldArtistName, v))
+}
+
+// ArtistNameHasSuffix applies the HasSuffix predicate on the "artist_name" field.
+func ArtistNameHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldArtistName, v))
+}
+
+// ArtistNameIsNil applies the IsNil predicate on the "artist_name" field.
+func ArtistNameIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldArtistName))
+}
+
+// ArtistNameNotNil applies the NotNil predicate on the "artist_name" field.
+func ArtistNameNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldArtistName))
+}
+
+// ArtistNameEqualFold applies the EqualFold predicate on the "artist_name" field.
+func ArtistNameEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldArtistName, v))
+}
+
+// ArtistNameContainsFold applies the ContainsFold predicate on the "artist_name" field.
+func ArtistNameContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldArtistName, v))
+}
+
+// RequestedAsEQ applies the EQ predicate on the "requested_as" field.
+func RequestedAsEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldEQ(FieldRequestedAs, v))
+}
+
+// RequestedAsNEQ applies the NEQ predicate on the "requested_as" field.
+func RequestedAsNEQ(v string) predicate.Request {
+	return predicate.Request(sql.FieldNEQ(FieldRequestedAs, v))
+}
+
+// RequestedAsIn applies the In predicate on the "requested_as" field.
+func RequestedAsIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldIn(FieldRequestedAs, vs...))
+}
+
+// RequestedAsNotIn applies the NotIn predicate on the "requested_as" field.
+func RequestedAsNotIn(vs ...string) predicate.Request {
+	return predicate.Request(sql.FieldNotIn(FieldRequestedAs, vs...))
+}
+
+// RequestedAsGT applies the GT predicate on the "requested_as" field.
+func RequestedAsGT(v string) predicate.Request {
+	return predicate.Request(sql.FieldGT(FieldRequestedAs, v))
+}
+
+// RequestedAsGTE applies the GTE predicate on the "requested_as" field.
+func RequestedAsGTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldGTE(FieldRequestedAs, v))
+}
+
+// RequestedAsLT applies the LT predicate on the "requested_as" field.
+func RequestedAsLT(v string) predicate.Request {
+	return predicate.Request(sql.FieldLT(FieldRequestedAs, v))
+}
+
+// RequestedAsLTE applies the LTE predicate on the "requested_as" field.
+func RequestedAsLTE(v string) predicate.Request {
+	return predicate.Request(sql.FieldLTE(FieldRequestedAs, v))
+}
+
+// RequestedAsContains applies the Contains predicate on the "requested_as" field.
+func RequestedAsContains(v string) predicate.Request {
+	return predicate.Request(sql.FieldContains(FieldRequestedAs, v))
+}
+
+// RequestedAsHasPrefix applies the HasPrefix predicate on the "requested_as" field.
+func RequestedAsHasPrefix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasPrefix(FieldRequestedAs, v))
+}
+
+// RequestedAsHasSuffix applies the HasSuffix predicate on the "requested_as" field.
+func RequestedAsHasSuffix(v string) predicate.Request {
+	return predicate.Request(sql.FieldHasSuffix(FieldRequestedAs, v))
+}
+
+// RequestedAsIsNil applies the IsNil predicate on the "requested_as" field.
+func RequestedAsIsNil() predicate.Request {
+	return predicate.Request(sql.FieldIsNull(FieldRequestedAs))
+}
+
+// RequestedAsNotNil applies the NotNil predicate on the "requested_as" field.
+func RequestedAsNotNil() predicate.Request {
+	return predicate.Request(sql.FieldNotNull(FieldRequestedAs))
+}
+
+// RequestedAsEqualFold applies the EqualFold predicate on the "requested_as" field.
+func RequestedAsEqualFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldEqualFold(FieldRequestedAs, v))
+}
+
+// RequestedAsContainsFold applies the ContainsFold predicate on the "requested_as" field.
+func RequestedAsContainsFold(v string) predicate.Request {
+	return predicate.Request(sql.FieldContainsFold(FieldRequestedAs, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

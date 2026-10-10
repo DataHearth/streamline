@@ -97,6 +97,66 @@ func (_u *RequestUpdate) ClearMediaMbid() *RequestUpdate {
 	return _u
 }
 
+// SetArtistMbid sets the "artist_mbid" field.
+func (_u *RequestUpdate) SetArtistMbid(v string) *RequestUpdate {
+	_u.mutation.SetArtistMbid(v)
+	return _u
+}
+
+// SetNillableArtistMbid sets the "artist_mbid" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableArtistMbid(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetArtistMbid(*v)
+	}
+	return _u
+}
+
+// ClearArtistMbid clears the value of the "artist_mbid" field.
+func (_u *RequestUpdate) ClearArtistMbid() *RequestUpdate {
+	_u.mutation.ClearArtistMbid()
+	return _u
+}
+
+// SetArtistName sets the "artist_name" field.
+func (_u *RequestUpdate) SetArtistName(v string) *RequestUpdate {
+	_u.mutation.SetArtistName(v)
+	return _u
+}
+
+// SetNillableArtistName sets the "artist_name" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableArtistName(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetArtistName(*v)
+	}
+	return _u
+}
+
+// ClearArtistName clears the value of the "artist_name" field.
+func (_u *RequestUpdate) ClearArtistName() *RequestUpdate {
+	_u.mutation.ClearArtistName()
+	return _u
+}
+
+// SetRequestedAs sets the "requested_as" field.
+func (_u *RequestUpdate) SetRequestedAs(v string) *RequestUpdate {
+	_u.mutation.SetRequestedAs(v)
+	return _u
+}
+
+// SetNillableRequestedAs sets the "requested_as" field if the given value is not nil.
+func (_u *RequestUpdate) SetNillableRequestedAs(v *string) *RequestUpdate {
+	if v != nil {
+		_u.SetRequestedAs(*v)
+	}
+	return _u
+}
+
+// ClearRequestedAs clears the value of the "requested_as" field.
+func (_u *RequestUpdate) ClearRequestedAs() *RequestUpdate {
+	_u.mutation.ClearRequestedAs()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *RequestUpdate) SetTitle(v string) *RequestUpdate {
 	_u.mutation.SetTitle(v)
@@ -310,6 +370,24 @@ func (_u *RequestUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.MediaMbidCleared() {
 		_spec.ClearField(request.FieldMediaMbid, field.TypeString)
 	}
+	if value, ok := _u.mutation.ArtistMbid(); ok {
+		_spec.SetField(request.FieldArtistMbid, field.TypeString, value)
+	}
+	if _u.mutation.ArtistMbidCleared() {
+		_spec.ClearField(request.FieldArtistMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.ArtistName(); ok {
+		_spec.SetField(request.FieldArtistName, field.TypeString, value)
+	}
+	if _u.mutation.ArtistNameCleared() {
+		_spec.ClearField(request.FieldArtistName, field.TypeString)
+	}
+	if value, ok := _u.mutation.RequestedAs(); ok {
+		_spec.SetField(request.FieldRequestedAs, field.TypeString, value)
+	}
+	if _u.mutation.RequestedAsCleared() {
+		_spec.ClearField(request.FieldRequestedAs, field.TypeString)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)
 	}
@@ -472,6 +550,66 @@ func (_u *RequestUpdateOne) SetNillableMediaMbid(v *string) *RequestUpdateOne {
 // ClearMediaMbid clears the value of the "media_mbid" field.
 func (_u *RequestUpdateOne) ClearMediaMbid() *RequestUpdateOne {
 	_u.mutation.ClearMediaMbid()
+	return _u
+}
+
+// SetArtistMbid sets the "artist_mbid" field.
+func (_u *RequestUpdateOne) SetArtistMbid(v string) *RequestUpdateOne {
+	_u.mutation.SetArtistMbid(v)
+	return _u
+}
+
+// SetNillableArtistMbid sets the "artist_mbid" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableArtistMbid(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetArtistMbid(*v)
+	}
+	return _u
+}
+
+// ClearArtistMbid clears the value of the "artist_mbid" field.
+func (_u *RequestUpdateOne) ClearArtistMbid() *RequestUpdateOne {
+	_u.mutation.ClearArtistMbid()
+	return _u
+}
+
+// SetArtistName sets the "artist_name" field.
+func (_u *RequestUpdateOne) SetArtistName(v string) *RequestUpdateOne {
+	_u.mutation.SetArtistName(v)
+	return _u
+}
+
+// SetNillableArtistName sets the "artist_name" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableArtistName(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetArtistName(*v)
+	}
+	return _u
+}
+
+// ClearArtistName clears the value of the "artist_name" field.
+func (_u *RequestUpdateOne) ClearArtistName() *RequestUpdateOne {
+	_u.mutation.ClearArtistName()
+	return _u
+}
+
+// SetRequestedAs sets the "requested_as" field.
+func (_u *RequestUpdateOne) SetRequestedAs(v string) *RequestUpdateOne {
+	_u.mutation.SetRequestedAs(v)
+	return _u
+}
+
+// SetNillableRequestedAs sets the "requested_as" field if the given value is not nil.
+func (_u *RequestUpdateOne) SetNillableRequestedAs(v *string) *RequestUpdateOne {
+	if v != nil {
+		_u.SetRequestedAs(*v)
+	}
+	return _u
+}
+
+// ClearRequestedAs clears the value of the "requested_as" field.
+func (_u *RequestUpdateOne) ClearRequestedAs() *RequestUpdateOne {
+	_u.mutation.ClearRequestedAs()
 	return _u
 }
 
@@ -717,6 +855,24 @@ func (_u *RequestUpdateOne) sqlSave(ctx context.Context) (_node *Request, err er
 	}
 	if _u.mutation.MediaMbidCleared() {
 		_spec.ClearField(request.FieldMediaMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.ArtistMbid(); ok {
+		_spec.SetField(request.FieldArtistMbid, field.TypeString, value)
+	}
+	if _u.mutation.ArtistMbidCleared() {
+		_spec.ClearField(request.FieldArtistMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.ArtistName(); ok {
+		_spec.SetField(request.FieldArtistName, field.TypeString, value)
+	}
+	if _u.mutation.ArtistNameCleared() {
+		_spec.ClearField(request.FieldArtistName, field.TypeString)
+	}
+	if value, ok := _u.mutation.RequestedAs(); ok {
+		_spec.SetField(request.FieldRequestedAs, field.TypeString, value)
+	}
+	if _u.mutation.RequestedAsCleared() {
+		_spec.ClearField(request.FieldRequestedAs, field.TypeString)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)

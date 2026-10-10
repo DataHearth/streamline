@@ -25,6 +25,12 @@ const (
 	FieldMediaID = "media_id"
 	// FieldMediaMbid holds the string denoting the media_mbid field in the database.
 	FieldMediaMbid = "media_mbid"
+	// FieldArtistMbid holds the string denoting the artist_mbid field in the database.
+	FieldArtistMbid = "artist_mbid"
+	// FieldArtistName holds the string denoting the artist_name field in the database.
+	FieldArtistName = "artist_name"
+	// FieldRequestedAs holds the string denoting the requested_as field in the database.
+	FieldRequestedAs = "requested_as"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -63,6 +69,9 @@ var Columns = []string{
 	FieldMediaType,
 	FieldMediaID,
 	FieldMediaMbid,
+	FieldArtistMbid,
+	FieldArtistName,
+	FieldRequestedAs,
 	FieldTitle,
 	FieldStatus,
 	FieldReason,
@@ -112,6 +121,7 @@ const (
 	MediaTypeMovie      MediaType = "movie"
 	MediaTypeTvshow     MediaType = "tvshow"
 	MediaTypeArtist     MediaType = "artist"
+	MediaTypeAlbum      MediaType = "album"
 	MediaTypeBook       MediaType = "book"
 	MediaTypeBookSeries MediaType = "book_series"
 )
@@ -123,7 +133,7 @@ func (mt MediaType) String() string {
 // MediaTypeValidator is a validator for the "media_type" field enum values. It is called by the builders before save.
 func MediaTypeValidator(mt MediaType) error {
 	switch mt {
-	case MediaTypeMovie, MediaTypeTvshow, MediaTypeArtist, MediaTypeBook, MediaTypeBookSeries:
+	case MediaTypeMovie, MediaTypeTvshow, MediaTypeArtist, MediaTypeAlbum, MediaTypeBook, MediaTypeBookSeries:
 		return nil
 	default:
 		return fmt.Errorf("request: invalid enum value for media_type field: %q", mt)
@@ -189,6 +199,21 @@ func ByMediaID(opts ...sql.OrderTermOption) OrderOption {
 // ByMediaMbid orders the results by the media_mbid field.
 func ByMediaMbid(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMediaMbid, opts...).ToFunc()
+}
+
+// ByArtistMbid orders the results by the artist_mbid field.
+func ByArtistMbid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtistMbid, opts...).ToFunc()
+}
+
+// ByArtistName orders the results by the artist_name field.
+func ByArtistName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtistName, opts...).ToFunc()
+}
+
+// ByRequestedAs orders the results by the requested_as field.
+func ByRequestedAs(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequestedAs, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

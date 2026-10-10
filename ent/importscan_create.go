@@ -176,6 +176,20 @@ func (_c *ImportScanCreate) SetNillableFailureReason(v *string) *ImportScanCreat
 	return _c
 }
 
+// SetFailureCode sets the "failure_code" field.
+func (_c *ImportScanCreate) SetFailureCode(v string) *ImportScanCreate {
+	_c.mutation.SetFailureCode(v)
+	return _c
+}
+
+// SetNillableFailureCode sets the "failure_code" field if the given value is not nil.
+func (_c *ImportScanCreate) SetNillableFailureCode(v *string) *ImportScanCreate {
+	if v != nil {
+		_c.SetFailureCode(*v)
+	}
+	return _c
+}
+
 // SetScannedAt sets the "scanned_at" field.
 func (_c *ImportScanCreate) SetScannedAt(v time.Time) *ImportScanCreate {
 	_c.mutation.SetScannedAt(v)
@@ -475,6 +489,10 @@ func (_c *ImportScanCreate) createSpec() (*ImportScan, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.FailureReason(); ok {
 		_spec.SetField(importscan.FieldFailureReason, field.TypeString, value)
 		_node.FailureReason = value
+	}
+	if value, ok := _c.mutation.FailureCode(); ok {
+		_spec.SetField(importscan.FieldFailureCode, field.TypeString, value)
+		_node.FailureCode = value
 	}
 	if value, ok := _c.mutation.ScannedAt(); ok {
 		_spec.SetField(importscan.FieldScannedAt, field.TypeTime, value)

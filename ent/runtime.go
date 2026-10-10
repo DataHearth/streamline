@@ -411,6 +411,10 @@ func init() {
 	importscanalbumDescFileCount := importscanalbumFields[8].Descriptor()
 	// importscanalbum.DefaultFileCount holds the default value on creation for the file_count field.
 	importscanalbum.DefaultFileCount = importscanalbumDescFileCount.Default.(uint16)
+	// importscanalbumDescSize is the schema descriptor for size field.
+	importscanalbumDescSize := importscanalbumFields[11].Descriptor()
+	// importscanalbum.DefaultSize holds the default value on creation for the size field.
+	importscanalbum.DefaultSize = importscanalbumDescSize.Default.(int64)
 	importscanbookMixin := schema.ImportScanBook{}.Mixin()
 	importscanbookMixinFields1 := importscanbookMixin[1].Fields()
 	_ = importscanbookMixinFields1
@@ -426,6 +430,10 @@ func init() {
 	importscanbook.DefaultUpdateTime = importscanbookDescUpdateTime.Default.(func() time.Time)
 	// importscanbook.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	importscanbook.UpdateDefaultUpdateTime = importscanbookDescUpdateTime.UpdateDefault.(func() time.Time)
+	// importscanbookDescSize is the schema descriptor for size field.
+	importscanbookDescSize := importscanbookFields[6].Descriptor()
+	// importscanbook.DefaultSize holds the default value on creation for the size field.
+	importscanbook.DefaultSize = importscanbookDescSize.Default.(int64)
 	importscanfileMixin := schema.ImportScanFile{}.Mixin()
 	importscanfileMixinFields1 := importscanfileMixin[1].Fields()
 	_ = importscanfileMixinFields1
@@ -657,7 +665,7 @@ func init() {
 	// request.DefaultMediaID holds the default value on creation for the media_id field.
 	request.DefaultMediaID = requestDescMediaID.Default.(uint32)
 	// requestDescTitle is the schema descriptor for title field.
-	requestDescTitle := requestFields[3].Descriptor()
+	requestDescTitle := requestFields[6].Descriptor()
 	// request.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	request.TitleValidator = requestDescTitle.Validators[0].(func(string) error)
 	scheduledjobFields := schema.ScheduledJob{}.Fields()
@@ -853,8 +861,16 @@ func init() {
 	userDescEmail := userFields[0].Descriptor()
 	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
+	// userDescSubsonicLastClient is the schema descriptor for subsonic_last_client field.
+	userDescSubsonicLastClient := userFields[8].Descriptor()
+	// user.SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
+	user.SubsonicLastClientValidator = userDescSubsonicLastClient.Validators[0].(func(string) error)
+	// userDescOpdsLastClient is the schema descriptor for opds_last_client field.
+	userDescOpdsLastClient := userFields[12].Descriptor()
+	// user.OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
+	user.OpdsLastClientValidator = userDescOpdsLastClient.Validators[0].(func(string) error)
 	// userDescFailedLoginCount is the schema descriptor for failed_login_count field.
-	userDescFailedLoginCount := userFields[7].Descriptor()
+	userDescFailedLoginCount := userFields[13].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
 }

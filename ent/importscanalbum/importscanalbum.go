@@ -37,6 +37,12 @@ const (
 	FieldExistingAlbumID = "existing_album_id"
 	// FieldFileCount holds the string denoting the file_count field in the database.
 	FieldFileCount = "file_count"
+	// FieldTaggedYear holds the string denoting the tagged_year field in the database.
+	FieldTaggedYear = "tagged_year"
+	// FieldFormat holds the string denoting the format field in the database.
+	FieldFormat = "format"
+	// FieldSize holds the string denoting the size field in the database.
+	FieldSize = "size"
 	// FieldDecision holds the string denoting the decision field in the database.
 	FieldDecision = "decision"
 	// FieldDecisionReleaseGroupMbid holds the string denoting the decision_release_group_mbid field in the database.
@@ -74,6 +80,9 @@ var Columns = []string{
 	FieldCandidates,
 	FieldExistingAlbumID,
 	FieldFileCount,
+	FieldTaggedYear,
+	FieldFormat,
+	FieldSize,
 	FieldDecision,
 	FieldDecisionReleaseGroupMbid,
 	FieldOutcome,
@@ -113,6 +122,8 @@ var (
 	FolderPathValidator func(string) error
 	// DefaultFileCount holds the default value on creation for the "file_count" field.
 	DefaultFileCount uint16
+	// DefaultSize holds the default value on creation for the "size" field.
+	DefaultSize int64
 )
 
 // Classification defines the type for the "classification" enum field.
@@ -178,9 +189,10 @@ const DefaultOutcome = OutcomePending
 
 // Outcome values.
 const (
-	OutcomePending Outcome = "pending"
-	OutcomeCreated Outcome = "created"
-	OutcomeFailed  Outcome = "failed"
+	OutcomePending  Outcome = "pending"
+	OutcomeCreated  Outcome = "created"
+	OutcomeAttached Outcome = "attached"
+	OutcomeFailed   Outcome = "failed"
 )
 
 func (o Outcome) String() string {
@@ -190,7 +202,7 @@ func (o Outcome) String() string {
 // OutcomeValidator is a validator for the "outcome" field enum values. It is called by the builders before save.
 func OutcomeValidator(o Outcome) error {
 	switch o {
-	case OutcomePending, OutcomeCreated, OutcomeFailed:
+	case OutcomePending, OutcomeCreated, OutcomeAttached, OutcomeFailed:
 		return nil
 	default:
 		return fmt.Errorf("importscanalbum: invalid enum value for outcome field: %q", o)
@@ -253,6 +265,21 @@ func ByExistingAlbumID(opts ...sql.OrderTermOption) OrderOption {
 // ByFileCount orders the results by the file_count field.
 func ByFileCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFileCount, opts...).ToFunc()
+}
+
+// ByTaggedYear orders the results by the tagged_year field.
+func ByTaggedYear(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTaggedYear, opts...).ToFunc()
+}
+
+// ByFormat orders the results by the format field.
+func ByFormat(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFormat, opts...).ToFunc()
+}
+
+// BySize orders the results by the size field.
+func BySize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSize, opts...).ToFunc()
 }
 
 // ByDecision orders the results by the decision field.

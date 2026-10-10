@@ -31,8 +31,20 @@ const (
 	FieldDisplayName = "display_name"
 	// FieldSubsonicPassword holds the string denoting the subsonic_password field in the database.
 	FieldSubsonicPassword = "subsonic_password"
+	// FieldSubsonicCreatedAt holds the string denoting the subsonic_created_at field in the database.
+	FieldSubsonicCreatedAt = "subsonic_created_at"
+	// FieldSubsonicLastUsedAt holds the string denoting the subsonic_last_used_at field in the database.
+	FieldSubsonicLastUsedAt = "subsonic_last_used_at"
+	// FieldSubsonicLastClient holds the string denoting the subsonic_last_client field in the database.
+	FieldSubsonicLastClient = "subsonic_last_client"
 	// FieldOpdsToken holds the string denoting the opds_token field in the database.
 	FieldOpdsToken = "opds_token"
+	// FieldOpdsCreatedAt holds the string denoting the opds_created_at field in the database.
+	FieldOpdsCreatedAt = "opds_created_at"
+	// FieldOpdsLastUsedAt holds the string denoting the opds_last_used_at field in the database.
+	FieldOpdsLastUsedAt = "opds_last_used_at"
+	// FieldOpdsLastClient holds the string denoting the opds_last_client field in the database.
+	FieldOpdsLastClient = "opds_last_client"
 	// FieldFailedLoginCount holds the string denoting the failed_login_count field in the database.
 	FieldFailedLoginCount = "failed_login_count"
 	// FieldLastFailedLoginAt holds the string denoting the last_failed_login_at field in the database.
@@ -90,7 +102,13 @@ var Columns = []string{
 	FieldAuthMethod,
 	FieldDisplayName,
 	FieldSubsonicPassword,
+	FieldSubsonicCreatedAt,
+	FieldSubsonicLastUsedAt,
+	FieldSubsonicLastClient,
 	FieldOpdsToken,
+	FieldOpdsCreatedAt,
+	FieldOpdsLastUsedAt,
+	FieldOpdsLastClient,
 	FieldFailedLoginCount,
 	FieldLastFailedLoginAt,
 	FieldLockedUntil,
@@ -115,6 +133,10 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	EmailValidator func(string) error
+	// SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
+	SubsonicLastClientValidator func(string) error
+	// OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
+	OpdsLastClientValidator func(string) error
 	// DefaultFailedLoginCount holds the default value on creation for the "failed_login_count" field.
 	DefaultFailedLoginCount uint8
 )
@@ -221,9 +243,39 @@ func BySubsonicPassword(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubsonicPassword, opts...).ToFunc()
 }
 
+// BySubsonicCreatedAt orders the results by the subsonic_created_at field.
+func BySubsonicCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCreatedAt, opts...).ToFunc()
+}
+
+// BySubsonicLastUsedAt orders the results by the subsonic_last_used_at field.
+func BySubsonicLastUsedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicLastUsedAt, opts...).ToFunc()
+}
+
+// BySubsonicLastClient orders the results by the subsonic_last_client field.
+func BySubsonicLastClient(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicLastClient, opts...).ToFunc()
+}
+
 // ByOpdsToken orders the results by the opds_token field.
 func ByOpdsToken(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOpdsToken, opts...).ToFunc()
+}
+
+// ByOpdsCreatedAt orders the results by the opds_created_at field.
+func ByOpdsCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOpdsCreatedAt, opts...).ToFunc()
+}
+
+// ByOpdsLastUsedAt orders the results by the opds_last_used_at field.
+func ByOpdsLastUsedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOpdsLastUsedAt, opts...).ToFunc()
+}
+
+// ByOpdsLastClient orders the results by the opds_last_client field.
+func ByOpdsLastClient(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOpdsLastClient, opts...).ToFunc()
 }
 
 // ByFailedLoginCount orders the results by the failed_login_count field.

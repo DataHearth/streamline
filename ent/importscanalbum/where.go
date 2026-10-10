@@ -100,6 +100,21 @@ func FileCount(v uint16) predicate.ImportScanAlbum {
 	return predicate.ImportScanAlbum(sql.FieldEQ(FieldFileCount, v))
 }
 
+// TaggedYear applies equality check predicate on the "tagged_year" field. It's identical to TaggedYearEQ.
+func TaggedYear(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldTaggedYear, v))
+}
+
+// Format applies equality check predicate on the "format" field. It's identical to FormatEQ.
+func Format(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldFormat, v))
+}
+
+// Size applies equality check predicate on the "size" field. It's identical to SizeEQ.
+func Size(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldSize, v))
+}
+
 // DecisionReleaseGroupMbid applies equality check predicate on the "decision_release_group_mbid" field. It's identical to DecisionReleaseGroupMbidEQ.
 func DecisionReleaseGroupMbid(v string) predicate.ImportScanAlbum {
 	return predicate.ImportScanAlbum(sql.FieldEQ(FieldDecisionReleaseGroupMbid, v))
@@ -678,6 +693,171 @@ func FileCountLT(v uint16) predicate.ImportScanAlbum {
 // FileCountLTE applies the LTE predicate on the "file_count" field.
 func FileCountLTE(v uint16) predicate.ImportScanAlbum {
 	return predicate.ImportScanAlbum(sql.FieldLTE(FieldFileCount, v))
+}
+
+// TaggedYearEQ applies the EQ predicate on the "tagged_year" field.
+func TaggedYearEQ(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldTaggedYear, v))
+}
+
+// TaggedYearNEQ applies the NEQ predicate on the "tagged_year" field.
+func TaggedYearNEQ(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNEQ(FieldTaggedYear, v))
+}
+
+// TaggedYearIn applies the In predicate on the "tagged_year" field.
+func TaggedYearIn(vs ...uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldIn(FieldTaggedYear, vs...))
+}
+
+// TaggedYearNotIn applies the NotIn predicate on the "tagged_year" field.
+func TaggedYearNotIn(vs ...uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNotIn(FieldTaggedYear, vs...))
+}
+
+// TaggedYearGT applies the GT predicate on the "tagged_year" field.
+func TaggedYearGT(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGT(FieldTaggedYear, v))
+}
+
+// TaggedYearGTE applies the GTE predicate on the "tagged_year" field.
+func TaggedYearGTE(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGTE(FieldTaggedYear, v))
+}
+
+// TaggedYearLT applies the LT predicate on the "tagged_year" field.
+func TaggedYearLT(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLT(FieldTaggedYear, v))
+}
+
+// TaggedYearLTE applies the LTE predicate on the "tagged_year" field.
+func TaggedYearLTE(v uint16) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLTE(FieldTaggedYear, v))
+}
+
+// TaggedYearIsNil applies the IsNil predicate on the "tagged_year" field.
+func TaggedYearIsNil() predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldIsNull(FieldTaggedYear))
+}
+
+// TaggedYearNotNil applies the NotNil predicate on the "tagged_year" field.
+func TaggedYearNotNil() predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNotNull(FieldTaggedYear))
+}
+
+// FormatEQ applies the EQ predicate on the "format" field.
+func FormatEQ(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldFormat, v))
+}
+
+// FormatNEQ applies the NEQ predicate on the "format" field.
+func FormatNEQ(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNEQ(FieldFormat, v))
+}
+
+// FormatIn applies the In predicate on the "format" field.
+func FormatIn(vs ...string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldIn(FieldFormat, vs...))
+}
+
+// FormatNotIn applies the NotIn predicate on the "format" field.
+func FormatNotIn(vs ...string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNotIn(FieldFormat, vs...))
+}
+
+// FormatGT applies the GT predicate on the "format" field.
+func FormatGT(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGT(FieldFormat, v))
+}
+
+// FormatGTE applies the GTE predicate on the "format" field.
+func FormatGTE(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGTE(FieldFormat, v))
+}
+
+// FormatLT applies the LT predicate on the "format" field.
+func FormatLT(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLT(FieldFormat, v))
+}
+
+// FormatLTE applies the LTE predicate on the "format" field.
+func FormatLTE(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLTE(FieldFormat, v))
+}
+
+// FormatContains applies the Contains predicate on the "format" field.
+func FormatContains(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldContains(FieldFormat, v))
+}
+
+// FormatHasPrefix applies the HasPrefix predicate on the "format" field.
+func FormatHasPrefix(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldHasPrefix(FieldFormat, v))
+}
+
+// FormatHasSuffix applies the HasSuffix predicate on the "format" field.
+func FormatHasSuffix(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldHasSuffix(FieldFormat, v))
+}
+
+// FormatIsNil applies the IsNil predicate on the "format" field.
+func FormatIsNil() predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldIsNull(FieldFormat))
+}
+
+// FormatNotNil applies the NotNil predicate on the "format" field.
+func FormatNotNil() predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNotNull(FieldFormat))
+}
+
+// FormatEqualFold applies the EqualFold predicate on the "format" field.
+func FormatEqualFold(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEqualFold(FieldFormat, v))
+}
+
+// FormatContainsFold applies the ContainsFold predicate on the "format" field.
+func FormatContainsFold(v string) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldContainsFold(FieldFormat, v))
+}
+
+// SizeEQ applies the EQ predicate on the "size" field.
+func SizeEQ(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldEQ(FieldSize, v))
+}
+
+// SizeNEQ applies the NEQ predicate on the "size" field.
+func SizeNEQ(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNEQ(FieldSize, v))
+}
+
+// SizeIn applies the In predicate on the "size" field.
+func SizeIn(vs ...int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldIn(FieldSize, vs...))
+}
+
+// SizeNotIn applies the NotIn predicate on the "size" field.
+func SizeNotIn(vs ...int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldNotIn(FieldSize, vs...))
+}
+
+// SizeGT applies the GT predicate on the "size" field.
+func SizeGT(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGT(FieldSize, v))
+}
+
+// SizeGTE applies the GTE predicate on the "size" field.
+func SizeGTE(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldGTE(FieldSize, v))
+}
+
+// SizeLT applies the LT predicate on the "size" field.
+func SizeLT(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLT(FieldSize, v))
+}
+
+// SizeLTE applies the LTE predicate on the "size" field.
+func SizeLTE(v int64) predicate.ImportScanAlbum {
+	return predicate.ImportScanAlbum(sql.FieldLTE(FieldSize, v))
 }
 
 // DecisionEQ applies the EQ predicate on the "decision" field.

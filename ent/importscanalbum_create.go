@@ -160,6 +160,48 @@ func (_c *ImportScanAlbumCreate) SetNillableFileCount(v *uint16) *ImportScanAlbu
 	return _c
 }
 
+// SetTaggedYear sets the "tagged_year" field.
+func (_c *ImportScanAlbumCreate) SetTaggedYear(v uint16) *ImportScanAlbumCreate {
+	_c.mutation.SetTaggedYear(v)
+	return _c
+}
+
+// SetNillableTaggedYear sets the "tagged_year" field if the given value is not nil.
+func (_c *ImportScanAlbumCreate) SetNillableTaggedYear(v *uint16) *ImportScanAlbumCreate {
+	if v != nil {
+		_c.SetTaggedYear(*v)
+	}
+	return _c
+}
+
+// SetFormat sets the "format" field.
+func (_c *ImportScanAlbumCreate) SetFormat(v string) *ImportScanAlbumCreate {
+	_c.mutation.SetFormat(v)
+	return _c
+}
+
+// SetNillableFormat sets the "format" field if the given value is not nil.
+func (_c *ImportScanAlbumCreate) SetNillableFormat(v *string) *ImportScanAlbumCreate {
+	if v != nil {
+		_c.SetFormat(*v)
+	}
+	return _c
+}
+
+// SetSize sets the "size" field.
+func (_c *ImportScanAlbumCreate) SetSize(v int64) *ImportScanAlbumCreate {
+	_c.mutation.SetSize(v)
+	return _c
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_c *ImportScanAlbumCreate) SetNillableSize(v *int64) *ImportScanAlbumCreate {
+	if v != nil {
+		_c.SetSize(*v)
+	}
+	return _c
+}
+
 // SetDecision sets the "decision" field.
 func (_c *ImportScanAlbumCreate) SetDecision(v importscanalbum.Decision) *ImportScanAlbumCreate {
 	_c.mutation.SetDecision(v)
@@ -298,6 +340,10 @@ func (_c *ImportScanAlbumCreate) defaults() {
 		v := importscanalbum.DefaultFileCount
 		_c.mutation.SetFileCount(v)
 	}
+	if _, ok := _c.mutation.Size(); !ok {
+		v := importscanalbum.DefaultSize
+		_c.mutation.SetSize(v)
+	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		v := importscanalbum.DefaultDecision
 		_c.mutation.SetDecision(v)
@@ -334,6 +380,9 @@ func (_c *ImportScanAlbumCreate) check() error {
 	}
 	if _, ok := _c.mutation.FileCount(); !ok {
 		return &ValidationError{Name: "file_count", err: errors.New(`ent: missing required field "ImportScanAlbum.file_count"`)}
+	}
+	if _, ok := _c.mutation.Size(); !ok {
+		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "ImportScanAlbum.size"`)}
 	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		return &ValidationError{Name: "decision", err: errors.New(`ent: missing required field "ImportScanAlbum.decision"`)}
@@ -429,6 +478,18 @@ func (_c *ImportScanAlbumCreate) createSpec() (*ImportScanAlbum, *sqlgraph.Creat
 	if value, ok := _c.mutation.FileCount(); ok {
 		_spec.SetField(importscanalbum.FieldFileCount, field.TypeUint16, value)
 		_node.FileCount = value
+	}
+	if value, ok := _c.mutation.TaggedYear(); ok {
+		_spec.SetField(importscanalbum.FieldTaggedYear, field.TypeUint16, value)
+		_node.TaggedYear = value
+	}
+	if value, ok := _c.mutation.Format(); ok {
+		_spec.SetField(importscanalbum.FieldFormat, field.TypeString, value)
+		_node.Format = value
+	}
+	if value, ok := _c.mutation.Size(); ok {
+		_spec.SetField(importscanalbum.FieldSize, field.TypeInt64, value)
+		_node.Size = value
 	}
 	if value, ok := _c.mutation.Decision(); ok {
 		_spec.SetField(importscanalbum.FieldDecision, field.TypeEnum, value)

@@ -85,9 +85,39 @@ func SubsonicPassword(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldSubsonicPassword, v))
 }
 
+// SubsonicCreatedAt applies equality check predicate on the "subsonic_created_at" field. It's identical to SubsonicCreatedAtEQ.
+func SubsonicCreatedAt(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicLastUsedAt applies equality check predicate on the "subsonic_last_used_at" field. It's identical to SubsonicLastUsedAtEQ.
+func SubsonicLastUsedAt(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastClient applies equality check predicate on the "subsonic_last_client" field. It's identical to SubsonicLastClientEQ.
+func SubsonicLastClient(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicLastClient, v))
+}
+
 // OpdsToken applies equality check predicate on the "opds_token" field. It's identical to OpdsTokenEQ.
 func OpdsToken(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
+}
+
+// OpdsCreatedAt applies equality check predicate on the "opds_created_at" field. It's identical to OpdsCreatedAtEQ.
+func OpdsCreatedAt(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsCreatedAt, v))
+}
+
+// OpdsLastUsedAt applies equality check predicate on the "opds_last_used_at" field. It's identical to OpdsLastUsedAtEQ.
+func OpdsLastUsedAt(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastClient applies equality check predicate on the "opds_last_client" field. It's identical to OpdsLastClientEQ.
+func OpdsLastClient(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsLastClient, v))
 }
 
 // FailedLoginCount applies equality check predicate on the "failed_login_count" field. It's identical to FailedLoginCountEQ.
@@ -515,6 +545,181 @@ func SubsonicPasswordContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldSubsonicPassword, v))
 }
 
+// SubsonicCreatedAtEQ applies the EQ predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtNEQ applies the NEQ predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtIn applies the In predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSubsonicCreatedAt, vs...))
+}
+
+// SubsonicCreatedAtNotIn applies the NotIn predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSubsonicCreatedAt, vs...))
+}
+
+// SubsonicCreatedAtGT applies the GT predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtGTE applies the GTE predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtLT applies the LT predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtLTE applies the LTE predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSubsonicCreatedAt, v))
+}
+
+// SubsonicCreatedAtIsNil applies the IsNil predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldSubsonicCreatedAt))
+}
+
+// SubsonicCreatedAtNotNil applies the NotNil predicate on the "subsonic_created_at" field.
+func SubsonicCreatedAtNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldSubsonicCreatedAt))
+}
+
+// SubsonicLastUsedAtEQ applies the EQ predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtNEQ applies the NEQ predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtIn applies the In predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSubsonicLastUsedAt, vs...))
+}
+
+// SubsonicLastUsedAtNotIn applies the NotIn predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSubsonicLastUsedAt, vs...))
+}
+
+// SubsonicLastUsedAtGT applies the GT predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtGTE applies the GTE predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtLT applies the LT predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtLTE applies the LTE predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSubsonicLastUsedAt, v))
+}
+
+// SubsonicLastUsedAtIsNil applies the IsNil predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldSubsonicLastUsedAt))
+}
+
+// SubsonicLastUsedAtNotNil applies the NotNil predicate on the "subsonic_last_used_at" field.
+func SubsonicLastUsedAtNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldSubsonicLastUsedAt))
+}
+
+// SubsonicLastClientEQ applies the EQ predicate on the "subsonic_last_client" field.
+func SubsonicLastClientEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientNEQ applies the NEQ predicate on the "subsonic_last_client" field.
+func SubsonicLastClientNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientIn applies the In predicate on the "subsonic_last_client" field.
+func SubsonicLastClientIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSubsonicLastClient, vs...))
+}
+
+// SubsonicLastClientNotIn applies the NotIn predicate on the "subsonic_last_client" field.
+func SubsonicLastClientNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSubsonicLastClient, vs...))
+}
+
+// SubsonicLastClientGT applies the GT predicate on the "subsonic_last_client" field.
+func SubsonicLastClientGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientGTE applies the GTE predicate on the "subsonic_last_client" field.
+func SubsonicLastClientGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientLT applies the LT predicate on the "subsonic_last_client" field.
+func SubsonicLastClientLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientLTE applies the LTE predicate on the "subsonic_last_client" field.
+func SubsonicLastClientLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientContains applies the Contains predicate on the "subsonic_last_client" field.
+func SubsonicLastClientContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientHasPrefix applies the HasPrefix predicate on the "subsonic_last_client" field.
+func SubsonicLastClientHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientHasSuffix applies the HasSuffix predicate on the "subsonic_last_client" field.
+func SubsonicLastClientHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientIsNil applies the IsNil predicate on the "subsonic_last_client" field.
+func SubsonicLastClientIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldSubsonicLastClient))
+}
+
+// SubsonicLastClientNotNil applies the NotNil predicate on the "subsonic_last_client" field.
+func SubsonicLastClientNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldSubsonicLastClient))
+}
+
+// SubsonicLastClientEqualFold applies the EqualFold predicate on the "subsonic_last_client" field.
+func SubsonicLastClientEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldSubsonicLastClient, v))
+}
+
+// SubsonicLastClientContainsFold applies the ContainsFold predicate on the "subsonic_last_client" field.
+func SubsonicLastClientContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldSubsonicLastClient, v))
+}
+
 // OpdsTokenEQ applies the EQ predicate on the "opds_token" field.
 func OpdsTokenEQ(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
@@ -588,6 +793,181 @@ func OpdsTokenEqualFold(v string) predicate.User {
 // OpdsTokenContainsFold applies the ContainsFold predicate on the "opds_token" field.
 func OpdsTokenContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldOpdsToken, v))
+}
+
+// OpdsCreatedAtEQ applies the EQ predicate on the "opds_created_at" field.
+func OpdsCreatedAtEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtNEQ applies the NEQ predicate on the "opds_created_at" field.
+func OpdsCreatedAtNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtIn applies the In predicate on the "opds_created_at" field.
+func OpdsCreatedAtIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldOpdsCreatedAt, vs...))
+}
+
+// OpdsCreatedAtNotIn applies the NotIn predicate on the "opds_created_at" field.
+func OpdsCreatedAtNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldOpdsCreatedAt, vs...))
+}
+
+// OpdsCreatedAtGT applies the GT predicate on the "opds_created_at" field.
+func OpdsCreatedAtGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtGTE applies the GTE predicate on the "opds_created_at" field.
+func OpdsCreatedAtGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtLT applies the LT predicate on the "opds_created_at" field.
+func OpdsCreatedAtLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtLTE applies the LTE predicate on the "opds_created_at" field.
+func OpdsCreatedAtLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldOpdsCreatedAt, v))
+}
+
+// OpdsCreatedAtIsNil applies the IsNil predicate on the "opds_created_at" field.
+func OpdsCreatedAtIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldOpdsCreatedAt))
+}
+
+// OpdsCreatedAtNotNil applies the NotNil predicate on the "opds_created_at" field.
+func OpdsCreatedAtNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldOpdsCreatedAt))
+}
+
+// OpdsLastUsedAtEQ applies the EQ predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtNEQ applies the NEQ predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtIn applies the In predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldOpdsLastUsedAt, vs...))
+}
+
+// OpdsLastUsedAtNotIn applies the NotIn predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldOpdsLastUsedAt, vs...))
+}
+
+// OpdsLastUsedAtGT applies the GT predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtGTE applies the GTE predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtLT applies the LT predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtLTE applies the LTE predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldOpdsLastUsedAt, v))
+}
+
+// OpdsLastUsedAtIsNil applies the IsNil predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldOpdsLastUsedAt))
+}
+
+// OpdsLastUsedAtNotNil applies the NotNil predicate on the "opds_last_used_at" field.
+func OpdsLastUsedAtNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldOpdsLastUsedAt))
+}
+
+// OpdsLastClientEQ applies the EQ predicate on the "opds_last_client" field.
+func OpdsLastClientEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientNEQ applies the NEQ predicate on the "opds_last_client" field.
+func OpdsLastClientNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientIn applies the In predicate on the "opds_last_client" field.
+func OpdsLastClientIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldOpdsLastClient, vs...))
+}
+
+// OpdsLastClientNotIn applies the NotIn predicate on the "opds_last_client" field.
+func OpdsLastClientNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldOpdsLastClient, vs...))
+}
+
+// OpdsLastClientGT applies the GT predicate on the "opds_last_client" field.
+func OpdsLastClientGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientGTE applies the GTE predicate on the "opds_last_client" field.
+func OpdsLastClientGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientLT applies the LT predicate on the "opds_last_client" field.
+func OpdsLastClientLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientLTE applies the LTE predicate on the "opds_last_client" field.
+func OpdsLastClientLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientContains applies the Contains predicate on the "opds_last_client" field.
+func OpdsLastClientContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientHasPrefix applies the HasPrefix predicate on the "opds_last_client" field.
+func OpdsLastClientHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientHasSuffix applies the HasSuffix predicate on the "opds_last_client" field.
+func OpdsLastClientHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientIsNil applies the IsNil predicate on the "opds_last_client" field.
+func OpdsLastClientIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldOpdsLastClient))
+}
+
+// OpdsLastClientNotNil applies the NotNil predicate on the "opds_last_client" field.
+func OpdsLastClientNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldOpdsLastClient))
+}
+
+// OpdsLastClientEqualFold applies the EqualFold predicate on the "opds_last_client" field.
+func OpdsLastClientEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldOpdsLastClient, v))
+}
+
+// OpdsLastClientContainsFold applies the ContainsFold predicate on the "opds_last_client" field.
+func OpdsLastClientContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldOpdsLastClient, v))
 }
 
 // FailedLoginCountEQ applies the EQ predicate on the "failed_login_count" field.

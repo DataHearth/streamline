@@ -42,6 +42,12 @@ type ImportScanAlbum struct {
 	ExistingAlbumID *uint32 `json:"existing_album_id,omitempty"`
 	// FileCount holds the value of the "file_count" field.
 	FileCount uint16 `json:"file_count,omitempty"`
+	// TaggedYear holds the value of the "tagged_year" field.
+	TaggedYear uint16 `json:"tagged_year,omitempty"`
+	// Format holds the value of the "format" field.
+	Format string `json:"format,omitempty"`
+	// Size holds the value of the "size" field.
+	Size int64 `json:"size,omitempty"`
 	// Decision holds the value of the "decision" field.
 	Decision importscanalbum.Decision `json:"decision,omitempty"`
 	// DecisionReleaseGroupMbid holds the value of the "decision_release_group_mbid" field.
@@ -86,9 +92,9 @@ func (*ImportScanAlbum) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanalbum.FieldCandidates:
 			values[i] = new([]byte)
-		case importscanalbum.FieldID, importscanalbum.FieldExistingAlbumID, importscanalbum.FieldFileCount, importscanalbum.FieldCreatedAlbumID:
+		case importscanalbum.FieldID, importscanalbum.FieldExistingAlbumID, importscanalbum.FieldFileCount, importscanalbum.FieldTaggedYear, importscanalbum.FieldSize, importscanalbum.FieldCreatedAlbumID:
 			values[i] = new(sql.NullInt64)
-		case importscanalbum.FieldFolderPath, importscanalbum.FieldTaggedArtist, importscanalbum.FieldTaggedAlbum, importscanalbum.FieldClassification, importscanalbum.FieldReleaseGroupMbid, importscanalbum.FieldArtistMbid, importscanalbum.FieldDecision, importscanalbum.FieldDecisionReleaseGroupMbid, importscanalbum.FieldOutcome, importscanalbum.FieldOutcomeMessage:
+		case importscanalbum.FieldFolderPath, importscanalbum.FieldTaggedArtist, importscanalbum.FieldTaggedAlbum, importscanalbum.FieldClassification, importscanalbum.FieldReleaseGroupMbid, importscanalbum.FieldArtistMbid, importscanalbum.FieldFormat, importscanalbum.FieldDecision, importscanalbum.FieldDecisionReleaseGroupMbid, importscanalbum.FieldOutcome, importscanalbum.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
 		case importscanalbum.FieldCreateTime, importscanalbum.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -183,6 +189,24 @@ func (_m *ImportScanAlbum) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field file_count", values[i])
 			} else if value.Valid {
 				_m.FileCount = uint16(value.Int64)
+			}
+		case importscanalbum.FieldTaggedYear:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field tagged_year", values[i])
+			} else if value.Valid {
+				_m.TaggedYear = uint16(value.Int64)
+			}
+		case importscanalbum.FieldFormat:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field format", values[i])
+			} else if value.Valid {
+				_m.Format = value.String
+			}
+		case importscanalbum.FieldSize:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field size", values[i])
+			} else if value.Valid {
+				_m.Size = value.Int64
 			}
 		case importscanalbum.FieldDecision:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -297,6 +321,15 @@ func (_m *ImportScanAlbum) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("file_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.FileCount))
+	builder.WriteString(", ")
+	builder.WriteString("tagged_year=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TaggedYear))
+	builder.WriteString(", ")
+	builder.WriteString("format=")
+	builder.WriteString(_m.Format)
+	builder.WriteString(", ")
+	builder.WriteString("size=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Size))
 	builder.WriteString(", ")
 	builder.WriteString("decision=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Decision))

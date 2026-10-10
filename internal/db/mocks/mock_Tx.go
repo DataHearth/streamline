@@ -402,6 +402,74 @@ func (_c *MockTx_AlbumHasLiveRecord_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// AlbumIDsByMBID provides a mock function for the type MockTx
+func (_mock *MockTx) AlbumIDsByMBID(ctx context.Context, mbids []string) (map[string]uint32, error) {
+	ret := _mock.Called(ctx, mbids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumIDsByMBID")
+	}
+
+	var r0 map[string]uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) (map[string]uint32, error)); ok {
+		return returnFunc(ctx, mbids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string) map[string]uint32); ok {
+		r0 = returnFunc(ctx, mbids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]uint32)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = returnFunc(ctx, mbids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_AlbumIDsByMBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumIDsByMBID'
+type MockTx_AlbumIDsByMBID_Call struct {
+	*mock.Call
+}
+
+// AlbumIDsByMBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbids []string
+func (_e *MockTx_Expecter) AlbumIDsByMBID(ctx any, mbids any) *MockTx_AlbumIDsByMBID_Call {
+	return &MockTx_AlbumIDsByMBID_Call{Call: _e.mock.On("AlbumIDsByMBID", ctx, mbids)}
+}
+
+func (_c *MockTx_AlbumIDsByMBID_Call) Run(run func(ctx context.Context, mbids []string)) *MockTx_AlbumIDsByMBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_AlbumIDsByMBID_Call) Return(stringToUint32 map[string]uint32, err error) *MockTx_AlbumIDsByMBID_Call {
+	_c.Call.Return(stringToUint32, err)
+	return _c
+}
+
+func (_c *MockTx_AlbumIDsByMBID_Call) RunAndReturn(run func(ctx context.Context, mbids []string) (map[string]uint32, error)) *MockTx_AlbumIDsByMBID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AlbumMBIDIndex provides a mock function for the type MockTx
 func (_mock *MockTx) AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error) {
 	ret := _mock.Called(ctx)
@@ -716,6 +784,81 @@ func (_c *MockTx_ApplySeriesMetadata_Call) Return(err error) *MockTx_ApplySeries
 }
 
 func (_c *MockTx_ApplySeriesMetadata_Call) RunAndReturn(run func(ctx context.Context, id uint32, m db.SeriesMetadata) error) *MockTx_ApplySeriesMetadata_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ApproveAlbumRequest provides a mock function for the type MockTx
+func (_mock *MockTx) ApproveAlbumRequest(ctx context.Context, id uint32, adminID uint32, artistMBID string, artistName string) error {
+	ret := _mock.Called(ctx, id, adminID, artistMBID, artistName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApproveAlbumRequest")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, string, string) error); ok {
+		r0 = returnFunc(ctx, id, adminID, artistMBID, artistName)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_ApproveAlbumRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApproveAlbumRequest'
+type MockTx_ApproveAlbumRequest_Call struct {
+	*mock.Call
+}
+
+// ApproveAlbumRequest is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - adminID uint32
+//   - artistMBID string
+//   - artistName string
+func (_e *MockTx_Expecter) ApproveAlbumRequest(ctx any, id any, adminID any, artistMBID any, artistName any) *MockTx_ApproveAlbumRequest_Call {
+	return &MockTx_ApproveAlbumRequest_Call{Call: _e.mock.On("ApproveAlbumRequest", ctx, id, adminID, artistMBID, artistName)}
+}
+
+func (_c *MockTx_ApproveAlbumRequest_Call) Run(run func(ctx context.Context, id uint32, adminID uint32, artistMBID string, artistName string)) *MockTx_ApproveAlbumRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ApproveAlbumRequest_Call) Return(err error) *MockTx_ApproveAlbumRequest_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_ApproveAlbumRequest_Call) RunAndReturn(run func(ctx context.Context, id uint32, adminID uint32, artistMBID string, artistName string) error) *MockTx_ApproveAlbumRequest_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -10011,6 +10154,72 @@ func (_c *MockTx_IncrementMovieGrabFailures_Call) Return(err error) *MockTx_Incr
 }
 
 func (_c *MockTx_IncrementMovieGrabFailures_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockTx_IncrementMovieGrabFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsAlbumMonitoredByMBID provides a mock function for the type MockTx
+func (_mock *MockTx) IsAlbumMonitoredByMBID(ctx context.Context, mbid string) (bool, error) {
+	ret := _mock.Called(ctx, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsAlbumMonitoredByMBID")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = returnFunc(ctx, mbid)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_IsAlbumMonitoredByMBID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsAlbumMonitoredByMBID'
+type MockTx_IsAlbumMonitoredByMBID_Call struct {
+	*mock.Call
+}
+
+// IsAlbumMonitoredByMBID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - mbid string
+func (_e *MockTx_Expecter) IsAlbumMonitoredByMBID(ctx any, mbid any) *MockTx_IsAlbumMonitoredByMBID_Call {
+	return &MockTx_IsAlbumMonitoredByMBID_Call{Call: _e.mock.On("IsAlbumMonitoredByMBID", ctx, mbid)}
+}
+
+func (_c *MockTx_IsAlbumMonitoredByMBID_Call) Run(run func(ctx context.Context, mbid string)) *MockTx_IsAlbumMonitoredByMBID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_IsAlbumMonitoredByMBID_Call) Return(b bool, err error) *MockTx_IsAlbumMonitoredByMBID_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockTx_IsAlbumMonitoredByMBID_Call) RunAndReturn(run func(ctx context.Context, mbid string) (bool, error)) *MockTx_IsAlbumMonitoredByMBID_Call {
 	_c.Call.Return(run)
 	return _c
 }

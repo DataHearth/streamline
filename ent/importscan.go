@@ -41,6 +41,8 @@ type ImportScan struct {
 	CommitFailedCount uint32 `json:"commit_failed_count,omitempty"`
 	// FailureReason holds the value of the "failure_reason" field.
 	FailureReason string `json:"failure_reason,omitempty"`
+	// FailureCode holds the value of the "failure_code" field.
+	FailureCode string `json:"failure_code,omitempty"`
 	// ScannedAt holds the value of the "scanned_at" field.
 	ScannedAt *time.Time `json:"scanned_at,omitempty"`
 	// CommittedAt holds the value of the "committed_at" field.
@@ -109,7 +111,7 @@ func (*ImportScan) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscan.FieldID, importscan.FieldTotalCount, importscan.FieldProcessedCount, importscan.FieldCommitSuccessCount, importscan.FieldCommitFailedCount:
 			values[i] = new(sql.NullInt64)
-		case importscan.FieldSourcePath, importscan.FieldKind, importscan.FieldMode, importscan.FieldImportMode, importscan.FieldStatus, importscan.FieldFailureReason:
+		case importscan.FieldSourcePath, importscan.FieldKind, importscan.FieldMode, importscan.FieldImportMode, importscan.FieldStatus, importscan.FieldFailureReason, importscan.FieldFailureCode:
 			values[i] = new(sql.NullString)
 		case importscan.FieldCreateTime, importscan.FieldUpdateTime, importscan.FieldScannedAt, importscan.FieldCommittedAt:
 			values[i] = new(sql.NullTime)
@@ -205,6 +207,12 @@ func (_m *ImportScan) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field failure_reason", values[i])
 			} else if value.Valid {
 				_m.FailureReason = value.String
+			}
+		case importscan.FieldFailureCode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field failure_code", values[i])
+			} else if value.Valid {
+				_m.FailureCode = value.String
 			}
 		case importscan.FieldScannedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -311,6 +319,9 @@ func (_m *ImportScan) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("failure_reason=")
 	builder.WriteString(_m.FailureReason)
+	builder.WriteString(", ")
+	builder.WriteString("failure_code=")
+	builder.WriteString(_m.FailureCode)
 	builder.WriteString(", ")
 	if v := _m.ScannedAt; v != nil {
 		builder.WriteString("scanned_at=")

@@ -1173,6 +1173,74 @@ func (_c *MockManager_SearchArtists_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// SearchReleaseGroups provides a mock function for the type MockManager
+func (_mock *MockManager) SearchReleaseGroups(ctx context.Context, query string) ([]music.ReleaseHit, error) {
+	ret := _mock.Called(ctx, query)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchReleaseGroups")
+	}
+
+	var r0 []music.ReleaseHit
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]music.ReleaseHit, error)); ok {
+		return returnFunc(ctx, query)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []music.ReleaseHit); ok {
+		r0 = returnFunc(ctx, query)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]music.ReleaseHit)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, query)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SearchReleaseGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchReleaseGroups'
+type MockManager_SearchReleaseGroups_Call struct {
+	*mock.Call
+}
+
+// SearchReleaseGroups is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+func (_e *MockManager_Expecter) SearchReleaseGroups(ctx any, query any) *MockManager_SearchReleaseGroups_Call {
+	return &MockManager_SearchReleaseGroups_Call{Call: _e.mock.On("SearchReleaseGroups", ctx, query)}
+}
+
+func (_c *MockManager_SearchReleaseGroups_Call) Run(run func(ctx context.Context, query string)) *MockManager_SearchReleaseGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SearchReleaseGroups_Call) Return(releaseHits []music.ReleaseHit, err error) *MockManager_SearchReleaseGroups_Call {
+	_c.Call.Return(releaseHits, err)
+	return _c
+}
+
+func (_c *MockManager_SearchReleaseGroups_Call) RunAndReturn(run func(ctx context.Context, query string) ([]music.ReleaseHit, error)) *MockManager_SearchReleaseGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SearchTrackNow provides a mock function for the type MockManager
 func (_mock *MockManager) SearchTrackNow(ctx context.Context, trackID uint32) error {
 	ret := _mock.Called(ctx, trackID)

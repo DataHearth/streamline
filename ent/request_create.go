@@ -83,6 +83,48 @@ func (_c *RequestCreate) SetNillableMediaMbid(v *string) *RequestCreate {
 	return _c
 }
 
+// SetArtistMbid sets the "artist_mbid" field.
+func (_c *RequestCreate) SetArtistMbid(v string) *RequestCreate {
+	_c.mutation.SetArtistMbid(v)
+	return _c
+}
+
+// SetNillableArtistMbid sets the "artist_mbid" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableArtistMbid(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetArtistMbid(*v)
+	}
+	return _c
+}
+
+// SetArtistName sets the "artist_name" field.
+func (_c *RequestCreate) SetArtistName(v string) *RequestCreate {
+	_c.mutation.SetArtistName(v)
+	return _c
+}
+
+// SetNillableArtistName sets the "artist_name" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableArtistName(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetArtistName(*v)
+	}
+	return _c
+}
+
+// SetRequestedAs sets the "requested_as" field.
+func (_c *RequestCreate) SetRequestedAs(v string) *RequestCreate {
+	_c.mutation.SetRequestedAs(v)
+	return _c
+}
+
+// SetNillableRequestedAs sets the "requested_as" field if the given value is not nil.
+func (_c *RequestCreate) SetNillableRequestedAs(v *string) *RequestCreate {
+	if v != nil {
+		_c.SetRequestedAs(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *RequestCreate) SetTitle(v string) *RequestCreate {
 	_c.mutation.SetTitle(v)
@@ -306,6 +348,18 @@ func (_c *RequestCreate) createSpec() (*Request, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MediaMbid(); ok {
 		_spec.SetField(request.FieldMediaMbid, field.TypeString, value)
 		_node.MediaMbid = value
+	}
+	if value, ok := _c.mutation.ArtistMbid(); ok {
+		_spec.SetField(request.FieldArtistMbid, field.TypeString, value)
+		_node.ArtistMbid = value
+	}
+	if value, ok := _c.mutation.ArtistName(); ok {
+		_spec.SetField(request.FieldArtistName, field.TypeString, value)
+		_node.ArtistName = value
+	}
+	if value, ok := _c.mutation.RequestedAs(); ok {
+		_spec.SetField(request.FieldRequestedAs, field.TypeString, value)
+		_node.RequestedAs = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(request.FieldTitle, field.TypeString, value)

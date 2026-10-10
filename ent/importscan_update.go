@@ -219,6 +219,26 @@ func (_u *ImportScanUpdate) ClearFailureReason() *ImportScanUpdate {
 	return _u
 }
 
+// SetFailureCode sets the "failure_code" field.
+func (_u *ImportScanUpdate) SetFailureCode(v string) *ImportScanUpdate {
+	_u.mutation.SetFailureCode(v)
+	return _u
+}
+
+// SetNillableFailureCode sets the "failure_code" field if the given value is not nil.
+func (_u *ImportScanUpdate) SetNillableFailureCode(v *string) *ImportScanUpdate {
+	if v != nil {
+		_u.SetFailureCode(*v)
+	}
+	return _u
+}
+
+// ClearFailureCode clears the value of the "failure_code" field.
+func (_u *ImportScanUpdate) ClearFailureCode() *ImportScanUpdate {
+	_u.mutation.ClearFailureCode()
+	return _u
+}
+
 // SetScannedAt sets the "scanned_at" field.
 func (_u *ImportScanUpdate) SetScannedAt(v time.Time) *ImportScanUpdate {
 	_u.mutation.SetScannedAt(v)
@@ -542,6 +562,12 @@ func (_u *ImportScanUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.FailureReasonCleared() {
 		_spec.ClearField(importscan.FieldFailureReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.FailureCode(); ok {
+		_spec.SetField(importscan.FieldFailureCode, field.TypeString, value)
+	}
+	if _u.mutation.FailureCodeCleared() {
+		_spec.ClearField(importscan.FieldFailureCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.ScannedAt(); ok {
 		_spec.SetField(importscan.FieldScannedAt, field.TypeTime, value)
@@ -943,6 +969,26 @@ func (_u *ImportScanUpdateOne) ClearFailureReason() *ImportScanUpdateOne {
 	return _u
 }
 
+// SetFailureCode sets the "failure_code" field.
+func (_u *ImportScanUpdateOne) SetFailureCode(v string) *ImportScanUpdateOne {
+	_u.mutation.SetFailureCode(v)
+	return _u
+}
+
+// SetNillableFailureCode sets the "failure_code" field if the given value is not nil.
+func (_u *ImportScanUpdateOne) SetNillableFailureCode(v *string) *ImportScanUpdateOne {
+	if v != nil {
+		_u.SetFailureCode(*v)
+	}
+	return _u
+}
+
+// ClearFailureCode clears the value of the "failure_code" field.
+func (_u *ImportScanUpdateOne) ClearFailureCode() *ImportScanUpdateOne {
+	_u.mutation.ClearFailureCode()
+	return _u
+}
+
 // SetScannedAt sets the "scanned_at" field.
 func (_u *ImportScanUpdateOne) SetScannedAt(v time.Time) *ImportScanUpdateOne {
 	_u.mutation.SetScannedAt(v)
@@ -1296,6 +1342,12 @@ func (_u *ImportScanUpdateOne) sqlSave(ctx context.Context) (_node *ImportScan, 
 	}
 	if _u.mutation.FailureReasonCleared() {
 		_spec.ClearField(importscan.FieldFailureReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.FailureCode(); ok {
+		_spec.SetField(importscan.FieldFailureCode, field.TypeString, value)
+	}
+	if _u.mutation.FailureCodeCleared() {
+		_spec.ClearField(importscan.FieldFailureCode, field.TypeString)
 	}
 	if value, ok := _u.mutation.ScannedAt(); ok {
 		_spec.SetField(importscan.FieldScannedAt, field.TypeTime, value)

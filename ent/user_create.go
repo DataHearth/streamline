@@ -128,6 +128,48 @@ func (_c *UserCreate) SetNillableSubsonicPassword(v *string) *UserCreate {
 	return _c
 }
 
+// SetSubsonicCreatedAt sets the "subsonic_created_at" field.
+func (_c *UserCreate) SetSubsonicCreatedAt(v time.Time) *UserCreate {
+	_c.mutation.SetSubsonicCreatedAt(v)
+	return _c
+}
+
+// SetNillableSubsonicCreatedAt sets the "subsonic_created_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCreatedAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCreatedAt(*v)
+	}
+	return _c
+}
+
+// SetSubsonicLastUsedAt sets the "subsonic_last_used_at" field.
+func (_c *UserCreate) SetSubsonicLastUsedAt(v time.Time) *UserCreate {
+	_c.mutation.SetSubsonicLastUsedAt(v)
+	return _c
+}
+
+// SetNillableSubsonicLastUsedAt sets the "subsonic_last_used_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicLastUsedAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicLastUsedAt(*v)
+	}
+	return _c
+}
+
+// SetSubsonicLastClient sets the "subsonic_last_client" field.
+func (_c *UserCreate) SetSubsonicLastClient(v string) *UserCreate {
+	_c.mutation.SetSubsonicLastClient(v)
+	return _c
+}
+
+// SetNillableSubsonicLastClient sets the "subsonic_last_client" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicLastClient(v *string) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicLastClient(*v)
+	}
+	return _c
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_c *UserCreate) SetOpdsToken(v string) *UserCreate {
 	_c.mutation.SetOpdsToken(v)
@@ -138,6 +180,48 @@ func (_c *UserCreate) SetOpdsToken(v string) *UserCreate {
 func (_c *UserCreate) SetNillableOpdsToken(v *string) *UserCreate {
 	if v != nil {
 		_c.SetOpdsToken(*v)
+	}
+	return _c
+}
+
+// SetOpdsCreatedAt sets the "opds_created_at" field.
+func (_c *UserCreate) SetOpdsCreatedAt(v time.Time) *UserCreate {
+	_c.mutation.SetOpdsCreatedAt(v)
+	return _c
+}
+
+// SetNillableOpdsCreatedAt sets the "opds_created_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableOpdsCreatedAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetOpdsCreatedAt(*v)
+	}
+	return _c
+}
+
+// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
+func (_c *UserCreate) SetOpdsLastUsedAt(v time.Time) *UserCreate {
+	_c.mutation.SetOpdsLastUsedAt(v)
+	return _c
+}
+
+// SetNillableOpdsLastUsedAt sets the "opds_last_used_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableOpdsLastUsedAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetOpdsLastUsedAt(*v)
+	}
+	return _c
+}
+
+// SetOpdsLastClient sets the "opds_last_client" field.
+func (_c *UserCreate) SetOpdsLastClient(v string) *UserCreate {
+	_c.mutation.SetOpdsLastClient(v)
+	return _c
+}
+
+// SetNillableOpdsLastClient sets the "opds_last_client" field if the given value is not nil.
+func (_c *UserCreate) SetNillableOpdsLastClient(v *string) *UserCreate {
+	if v != nil {
+		_c.SetOpdsLastClient(*v)
 	}
 	return _c
 }
@@ -339,6 +423,16 @@ func (_c *UserCreate) check() error {
 			return &ValidationError{Name: "auth_method", err: fmt.Errorf(`ent: validator failed for field "User.auth_method": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.SubsonicLastClient(); ok {
+		if err := user.SubsonicLastClientValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.OpdsLastClient(); ok {
+		if err := user.OpdsLastClientValidator(v); err != nil {
+			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.FailedLoginCount(); !ok {
 		return &ValidationError{Name: "failed_login_count", err: errors.New(`ent: missing required field "User.failed_login_count"`)}
 	}
@@ -406,9 +500,33 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)
 		_node.SubsonicPassword = value
 	}
+	if value, ok := _c.mutation.SubsonicCreatedAt(); ok {
+		_spec.SetField(user.FieldSubsonicCreatedAt, field.TypeTime, value)
+		_node.SubsonicCreatedAt = &value
+	}
+	if value, ok := _c.mutation.SubsonicLastUsedAt(); ok {
+		_spec.SetField(user.FieldSubsonicLastUsedAt, field.TypeTime, value)
+		_node.SubsonicLastUsedAt = &value
+	}
+	if value, ok := _c.mutation.SubsonicLastClient(); ok {
+		_spec.SetField(user.FieldSubsonicLastClient, field.TypeString, value)
+		_node.SubsonicLastClient = value
+	}
 	if value, ok := _c.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
 		_node.OpdsToken = value
+	}
+	if value, ok := _c.mutation.OpdsCreatedAt(); ok {
+		_spec.SetField(user.FieldOpdsCreatedAt, field.TypeTime, value)
+		_node.OpdsCreatedAt = &value
+	}
+	if value, ok := _c.mutation.OpdsLastUsedAt(); ok {
+		_spec.SetField(user.FieldOpdsLastUsedAt, field.TypeTime, value)
+		_node.OpdsLastUsedAt = &value
+	}
+	if value, ok := _c.mutation.OpdsLastClient(); ok {
+		_spec.SetField(user.FieldOpdsLastClient, field.TypeString, value)
+		_node.OpdsLastClient = value
 	}
 	if value, ok := _c.mutation.FailedLoginCount(); ok {
 		_spec.SetField(user.FieldFailedLoginCount, field.TypeUint8, value)

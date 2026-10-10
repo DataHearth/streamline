@@ -29,6 +29,10 @@ const (
 	FieldParsedAuthor = "parsed_author"
 	// FieldParsedIsbn holds the string denoting the parsed_isbn field in the database.
 	FieldParsedIsbn = "parsed_isbn"
+	// FieldParsedYear holds the string denoting the parsed_year field in the database.
+	FieldParsedYear = "parsed_year"
+	// FieldSize holds the string denoting the size field in the database.
+	FieldSize = "size"
 	// FieldClassification holds the string denoting the classification field in the database.
 	FieldClassification = "classification"
 	// FieldBookHardcoverID holds the string denoting the book_hardcover_id field in the database.
@@ -70,6 +74,8 @@ var Columns = []string{
 	FieldParsedTitle,
 	FieldParsedAuthor,
 	FieldParsedIsbn,
+	FieldParsedYear,
+	FieldSize,
 	FieldClassification,
 	FieldBookHardcoverID,
 	FieldCandidates,
@@ -109,6 +115,8 @@ var (
 	DefaultUpdateTime func() time.Time
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
+	// DefaultSize holds the default value on creation for the "size" field.
+	DefaultSize int64
 )
 
 // Slot defines the type for the "slot" enum field.
@@ -197,9 +205,10 @@ const DefaultOutcome = OutcomePending
 
 // Outcome values.
 const (
-	OutcomePending Outcome = "pending"
-	OutcomeCreated Outcome = "created"
-	OutcomeFailed  Outcome = "failed"
+	OutcomePending  Outcome = "pending"
+	OutcomeCreated  Outcome = "created"
+	OutcomeAttached Outcome = "attached"
+	OutcomeFailed   Outcome = "failed"
 )
 
 func (o Outcome) String() string {
@@ -209,7 +218,7 @@ func (o Outcome) String() string {
 // OutcomeValidator is a validator for the "outcome" field enum values. It is called by the builders before save.
 func OutcomeValidator(o Outcome) error {
 	switch o {
-	case OutcomePending, OutcomeCreated, OutcomeFailed:
+	case OutcomePending, OutcomeCreated, OutcomeAttached, OutcomeFailed:
 		return nil
 	default:
 		return fmt.Errorf("importscanbook: invalid enum value for outcome field: %q", o)
@@ -252,6 +261,16 @@ func ByParsedAuthor(opts ...sql.OrderTermOption) OrderOption {
 // ByParsedIsbn orders the results by the parsed_isbn field.
 func ByParsedIsbn(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldParsedIsbn, opts...).ToFunc()
+}
+
+// ByParsedYear orders the results by the parsed_year field.
+func ByParsedYear(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParsedYear, opts...).ToFunc()
+}
+
+// BySize orders the results by the size field.
+func BySize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSize, opts...).ToFunc()
 }
 
 // ByClassification orders the results by the classification field.

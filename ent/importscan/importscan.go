@@ -39,6 +39,8 @@ const (
 	FieldCommitFailedCount = "commit_failed_count"
 	// FieldFailureReason holds the string denoting the failure_reason field in the database.
 	FieldFailureReason = "failure_reason"
+	// FieldFailureCode holds the string denoting the failure_code field in the database.
+	FieldFailureCode = "failure_code"
 	// FieldScannedAt holds the string denoting the scanned_at field in the database.
 	FieldScannedAt = "scanned_at"
 	// FieldCommittedAt holds the string denoting the committed_at field in the database.
@@ -98,6 +100,7 @@ var Columns = []string{
 	FieldCommitSuccessCount,
 	FieldCommitFailedCount,
 	FieldFailureReason,
+	FieldFailureCode,
 	FieldScannedAt,
 	FieldCommittedAt,
 }
@@ -302,6 +305,11 @@ func ByCommitFailedCount(opts ...sql.OrderTermOption) OrderOption {
 // ByFailureReason orders the results by the failure_reason field.
 func ByFailureReason(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFailureReason, opts...).ToFunc()
+}
+
+// ByFailureCode orders the results by the failure_code field.
+func ByFailureCode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFailureCode, opts...).ToFunc()
 }
 
 // ByScannedAt orders the results by the scanned_at field.

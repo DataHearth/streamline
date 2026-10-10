@@ -998,14 +998,17 @@ func (e ImportScanAlbumDecision) Valid() bool {
 
 // Defines values for ImportScanAlbumOutcome.
 const (
-	ImportScanAlbumOutcomeCreated ImportScanAlbumOutcome = "created"
-	ImportScanAlbumOutcomeFailed  ImportScanAlbumOutcome = "failed"
-	ImportScanAlbumOutcomePending ImportScanAlbumOutcome = "pending"
+	ImportScanAlbumOutcomeAttached ImportScanAlbumOutcome = "attached"
+	ImportScanAlbumOutcomeCreated  ImportScanAlbumOutcome = "created"
+	ImportScanAlbumOutcomeFailed   ImportScanAlbumOutcome = "failed"
+	ImportScanAlbumOutcomePending  ImportScanAlbumOutcome = "pending"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanAlbumOutcome enum.
 func (e ImportScanAlbumOutcome) Valid() bool {
 	switch e {
+	case ImportScanAlbumOutcomeAttached:
+		return true
 	case ImportScanAlbumOutcomeCreated:
 		return true
 	case ImportScanAlbumOutcomeFailed:
@@ -1085,14 +1088,17 @@ func (e ImportScanBookDecision) Valid() bool {
 
 // Defines values for ImportScanBookOutcome.
 const (
-	ImportScanBookOutcomeCreated ImportScanBookOutcome = "created"
-	ImportScanBookOutcomeFailed  ImportScanBookOutcome = "failed"
-	ImportScanBookOutcomePending ImportScanBookOutcome = "pending"
+	ImportScanBookOutcomeAttached ImportScanBookOutcome = "attached"
+	ImportScanBookOutcomeCreated  ImportScanBookOutcome = "created"
+	ImportScanBookOutcomeFailed   ImportScanBookOutcome = "failed"
+	ImportScanBookOutcomePending  ImportScanBookOutcome = "pending"
 )
 
 // Valid indicates whether the value is a known member of the ImportScanBookOutcome enum.
 func (e ImportScanBookOutcome) Valid() bool {
 	switch e {
+	case ImportScanBookOutcomeAttached:
+		return true
 	case ImportScanBookOutcomeCreated:
 		return true
 	case ImportScanBookOutcomeFailed:
@@ -2174,6 +2180,7 @@ func (e RequestStatus) Valid() bool {
 
 // Defines values for RequestMediaType.
 const (
+	RequestMediaTypeAlbum      RequestMediaType = "album"
 	RequestMediaTypeArtist     RequestMediaType = "artist"
 	RequestMediaTypeBook       RequestMediaType = "book"
 	RequestMediaTypeBookSeries RequestMediaType = "book_series"
@@ -2184,6 +2191,8 @@ const (
 // Valid indicates whether the value is a known member of the RequestMediaType enum.
 func (e RequestMediaType) Valid() bool {
 	switch e {
+	case RequestMediaTypeAlbum:
+		return true
 	case RequestMediaTypeArtist:
 		return true
 	case RequestMediaTypeBook:
@@ -2685,6 +2694,60 @@ func (e TranscodingConfigViewHwStatus) Valid() bool {
 	case TranscodingConfigViewHwStatusReady:
 		return true
 	case TranscodingConfigViewHwStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpcomingAlbumStatus.
+const (
+	UpcomingAlbumStatusAvailable   UpcomingAlbumStatus = "available"
+	UpcomingAlbumStatusDownloading UpcomingAlbumStatus = "downloading"
+	UpcomingAlbumStatusPaused      UpcomingAlbumStatus = "paused"
+	UpcomingAlbumStatusSkipped     UpcomingAlbumStatus = "skipped"
+	UpcomingAlbumStatusWanted      UpcomingAlbumStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the UpcomingAlbumStatus enum.
+func (e UpcomingAlbumStatus) Valid() bool {
+	switch e {
+	case UpcomingAlbumStatusAvailable:
+		return true
+	case UpcomingAlbumStatusDownloading:
+		return true
+	case UpcomingAlbumStatusPaused:
+		return true
+	case UpcomingAlbumStatusSkipped:
+		return true
+	case UpcomingAlbumStatusWanted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpcomingBookStatus.
+const (
+	UpcomingBookStatusAvailable   UpcomingBookStatus = "available"
+	UpcomingBookStatusDownloading UpcomingBookStatus = "downloading"
+	UpcomingBookStatusPaused      UpcomingBookStatus = "paused"
+	UpcomingBookStatusSkipped     UpcomingBookStatus = "skipped"
+	UpcomingBookStatusWanted      UpcomingBookStatus = "wanted"
+)
+
+// Valid indicates whether the value is a known member of the UpcomingBookStatus enum.
+func (e UpcomingBookStatus) Valid() bool {
+	switch e {
+	case UpcomingBookStatusAvailable:
+		return true
+	case UpcomingBookStatusDownloading:
+		return true
+	case UpcomingBookStatusPaused:
+		return true
+	case UpcomingBookStatusSkipped:
+		return true
+	case UpcomingBookStatusWanted:
 		return true
 	default:
 		return false
@@ -3742,6 +3805,41 @@ type ApiKeyCreated struct {
 	RawToken   string     `json:"raw_token"`
 }
 
+// AppAccess One Subsonic or OPDS credential of the caller. Never carries the secret.
+type AppAccess struct {
+	// CreatedAt Set when the secret is generated or rotated.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Enabled   bool       `json:"enabled"`
+
+	// LastClient Client-supplied: the Subsonic `c` parameter, or the first product token of the OPDS User-Agent. Display as text only.
+	LastClient *string `json:"last_client,omitempty"`
+
+	// LastUsedAt Recorded after a successful authentication, at most once every five minutes.
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+
+	// Username The account email, which is what a player or reader types as its user name.
+	Username string `json:"username"`
+}
+
+// AppAccessCreated defines model for AppAccessCreated.
+type AppAccessCreated struct {
+	// CreatedAt Set when the secret is generated or rotated.
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Enabled   bool       `json:"enabled"`
+
+	// LastClient Client-supplied: the Subsonic `c` parameter, or the first product token of the OPDS User-Agent. Display as text only.
+	LastClient *string `json:"last_client,omitempty"`
+
+	// LastUsedAt Recorded after a successful authentication, at most once every five minutes.
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+
+	// Secret The Subsonic password or the OPDS token, in plaintext. This response only.
+	Secret string `json:"secret"`
+
+	// Username The account email, which is what a player or reader types as its user name.
+	Username string `json:"username"`
+}
+
 // AppLogConfig defines model for AppLogConfig.
 type AppLogConfig struct {
 	Enabled *bool               `json:"enabled,omitempty"`
@@ -4272,10 +4370,17 @@ type CreateInviteRequestRole string
 
 // CreateRequestRequest defines model for CreateRequestRequest.
 type CreateRequestRequest struct {
-	// MediaId Required for movie, tvshow, book and book_series; rejected for artist.
+	// ArtistMbid Album only; the artist's MBID (UUID). Rejected for every other type.
+	ArtistMbid *string `json:"artist_mbid,omitempty"`
+
+	// ArtistName Album only; 1 to 200 characters. Rejected for every other type.
+	ArtistName *string `json:"artist_name,omitempty"`
+
+	// MediaId Required for movie, tvshow, book and book_series; rejected for artist and album.
 	MediaId *uint32 `json:"media_id,omitempty"`
 
-	// MediaMbid Artist MBID; required for artist and rejected for every other type.
+	// MediaMbid Artist MBID for an artist, release-group MBID for an album;
+	// required for both and rejected for every other type.
 	MediaMbid *string          `json:"media_mbid,omitempty"`
 	MediaType RequestMediaType `json:"media_type"`
 
@@ -4606,7 +4711,8 @@ type EpisodeStatus string
 type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
-	// invalid_condition, grab_rejected, rate_limited, worker_unavailable). Present for domain errors
+	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
+	// hardcover_not_configured, hardcover_key_rejected). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
@@ -4743,8 +4849,15 @@ type ImportScan struct {
 	CommitSuccessCount uint32     `json:"commit_success_count"`
 	CommittedAt        *time.Time `json:"committed_at,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
-	FailureReason      *string    `json:"failure_reason,omitempty"`
-	Id                 uint32     `json:"id"`
+
+	// FailureCode Machine-readable cause of a `failed` scan, present only when it
+	// has one: `hardcover_key_rejected` (Hardcover refused the key
+	// mid-scan) or `hardcover_not_configured` (the key vanished between
+	// start and run). Every other failure carries `failure_reason`
+	// alone.
+	FailureCode   *string `json:"failure_code,omitempty"`
+	FailureReason *string `json:"failure_reason,omitempty"`
+	Id            uint32  `json:"id"`
 
 	// ImportMode Per-scan transfer-mode override (rename mode only). Empty when using the global default.
 	ImportMode *ImportScanImportMode `json:"import_mode,omitempty"`
@@ -4776,6 +4889,9 @@ type ImportScanStatus string
 
 // ImportScanAlbum defines model for ImportScanAlbum.
 type ImportScanAlbum struct {
+	// ArtistId Library id of the artist behind `artist_mbid`, read live; absent
+	// when the library lacks it, in which case a commit adds the artist.
+	ArtistId                 *uint32                       `json:"artist_id,omitempty"`
 	ArtistMbid               *string                       `json:"artist_mbid,omitempty"`
 	Candidates               *[]ImportScanAlbumCandidate   `json:"candidates,omitempty"`
 	Classification           ImportScanAlbumClassification `json:"classification"`
@@ -4786,13 +4902,27 @@ type ImportScanAlbum struct {
 	ExistingAlbumId          *uint32                       `json:"existing_album_id,omitempty"`
 	FileCount                uint16                        `json:"file_count"`
 	FolderPath               string                        `json:"folder_path"`
-	Id                       uint32                        `json:"id"`
-	Outcome                  ImportScanAlbumOutcome        `json:"outcome"`
-	OutcomeMessage           *string                       `json:"outcome_message,omitempty"`
-	ReleaseGroupMbid         *string                       `json:"release_group_mbid,omitempty"`
-	TaggedAlbum              *string                       `json:"tagged_album,omitempty"`
-	TaggedArtist             *string                       `json:"tagged_artist,omitempty"`
-	UpdatedAt                *time.Time                    `json:"updated_at,omitempty"`
+
+	// Format Quality label of the folder's first audio file: `FLAC 24/96`,
+	// `MP3 320`, `MP3 V0` when ffprobe is enabled, else the extension
+	// upper-cased.
+	Format *string `json:"format,omitempty"`
+	Id     uint32  `json:"id"`
+
+	// Outcome `attached` is an `existing` row whose files joined the library's
+	// album instead of creating one.
+	Outcome          ImportScanAlbumOutcome `json:"outcome"`
+	OutcomeMessage   *string                `json:"outcome_message,omitempty"`
+	ReleaseGroupMbid *string                `json:"release_group_mbid,omitempty"`
+
+	// Size Bytes of the folder's audio files.
+	Size         int64   `json:"size"`
+	TaggedAlbum  *string `json:"tagged_album,omitempty"`
+	TaggedArtist *string `json:"tagged_artist,omitempty"`
+
+	// TaggedYear Most common year tag of the folder's files.
+	TaggedYear *uint16    `json:"tagged_year,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanAlbumClassification defines model for ImportScanAlbum.Classification.
@@ -4801,16 +4931,18 @@ type ImportScanAlbumClassification string
 // ImportScanAlbumDecision defines model for ImportScanAlbum.Decision.
 type ImportScanAlbumDecision string
 
-// ImportScanAlbumOutcome defines model for ImportScanAlbum.Outcome.
+// ImportScanAlbumOutcome `attached` is an `existing` row whose files joined the library's
+// album instead of creating one.
 type ImportScanAlbumOutcome string
 
 // ImportScanAlbumCandidate defines model for ImportScanAlbumCandidate.
 type ImportScanAlbumCandidate struct {
-	Artist           *string `json:"artist,omitempty"`
-	ArtistMbid       *string `json:"artist_mbid,omitempty"`
-	ReleaseGroupMbid string  `json:"release_group_mbid"`
-	Title            string  `json:"title"`
-	Year             *uint16 `json:"year,omitempty"`
+	Artist           *string         `json:"artist,omitempty"`
+	ArtistMbid       *string         `json:"artist_mbid,omitempty"`
+	ReleaseGroupMbid string          `json:"release_group_mbid"`
+	Title            string          `json:"title"`
+	Type             *MusicAlbumType `json:"type,omitempty"`
+	Year             *uint16         `json:"year,omitempty"`
 }
 
 // ImportScanAlbumDecisionRequest defines model for ImportScanAlbumDecisionRequest.
@@ -4838,15 +4970,30 @@ type ImportScanBook struct {
 	Decision                ImportScanBookDecision       `json:"decision"`
 	DecisionBookHardcoverId *uint32                      `json:"decision_book_hardcover_id,omitempty"`
 	ExistingBookId          *uint32                      `json:"existing_book_id,omitempty"`
+	FileCount               uint16                       `json:"file_count"`
 	FilePaths               []string                     `json:"file_paths"`
-	Id                      uint32                       `json:"id"`
-	Outcome                 ImportScanBookOutcome        `json:"outcome"`
-	OutcomeMessage          *string                      `json:"outcome_message,omitempty"`
-	ParsedAuthor            *string                      `json:"parsed_author,omitempty"`
-	ParsedIsbn              *string                      `json:"parsed_isbn,omitempty"`
-	ParsedTitle             *string                      `json:"parsed_title,omitempty"`
-	Slot                    ImportScanBookSlot           `json:"slot"`
-	UpdatedAt               *time.Time                   `json:"updated_at,omitempty"`
+
+	// Format Upper-case format of the item: the best ebook format by the ebook
+	// ladder, or the dominant audio extension of an audiobook.
+	Format string `json:"format"`
+	Id     uint32 `json:"id"`
+
+	// Outcome `attached` is an `existing` row whose files joined the library's
+	// book instead of creating one.
+	Outcome        ImportScanBookOutcome `json:"outcome"`
+	OutcomeMessage *string               `json:"outcome_message,omitempty"`
+	ParsedAuthor   *string               `json:"parsed_author,omitempty"`
+	ParsedIsbn     *string               `json:"parsed_isbn,omitempty"`
+	ParsedTitle    *string               `json:"parsed_title,omitempty"`
+	ParsedYear     *uint16               `json:"parsed_year,omitempty"`
+
+	// Size Bytes of the item's files.
+	Size int64              `json:"size"`
+	Slot ImportScanBookSlot `json:"slot"`
+
+	// SourcePath The audiobook's folder, or the ebook's best-format file.
+	SourcePath string     `json:"source_path"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 }
 
 // ImportScanBookClassification defines model for ImportScanBook.Classification.
@@ -4855,7 +5002,8 @@ type ImportScanBookClassification string
 // ImportScanBookDecision defines model for ImportScanBook.Decision.
 type ImportScanBookDecision string
 
-// ImportScanBookOutcome defines model for ImportScanBook.Outcome.
+// ImportScanBookOutcome `attached` is an `existing` row whose files joined the library's
+// book instead of creating one.
 type ImportScanBookOutcome string
 
 // ImportScanBookSlot defines model for ImportScanBook.Slot.
@@ -4901,7 +5049,7 @@ type ImportScanCreateRequest struct {
 	// `series` matches each top-level folder against TVDB; `music`
 	// scans album folders against MusicBrainz; `book` scans ebook and
 	// audiobook items against Hardcover. `mode=rename` is rejected for
-	// `music`.
+	// `music` and `book`, which adopt in place only.
 	Kind       *ImportScanCreateRequestKind `json:"kind,omitempty"`
 	Mode       ImportScanCreateRequestMode  `json:"mode"`
 	SourcePath string                       `json:"source_path"`
@@ -4915,7 +5063,7 @@ type ImportScanCreateRequestImportMode string
 // `series` matches each top-level folder against TVDB; `music`
 // scans album folders against MusicBrainz; `book` scans ebook and
 // audiobook items against Hardcover. `mode=rename` is rejected for
-// `music`.
+// `music` and `book`, which adopt in place only.
 type ImportScanCreateRequestKind string
 
 // ImportScanCreateRequestMode defines model for ImportScanCreateRequest.Mode.
@@ -5390,14 +5538,19 @@ type MediaServerUpdateServerType string
 
 // MetadataConfigPatch Only provided fields are applied. A blank api key preserves the stored one — the current value is never echoed, so blank means "unchanged".
 type MetadataConfigPatch struct {
-	Language   *string `json:"language,omitempty"`
-	TmdbApiKey *string `json:"tmdb_api_key,omitempty"`
-	TmdbRegion *string `json:"tmdb_region,omitempty"`
-	TvdbApiKey *string `json:"tvdb_api_key,omitempty"`
+	HardcoverApiKey *string `json:"hardcover_api_key,omitempty"`
+	Language        *string `json:"language,omitempty"`
+	TmdbApiKey      *string `json:"tmdb_api_key,omitempty"`
+	TmdbRegion      *string `json:"tmdb_region,omitempty"`
+	TvdbApiKey      *string `json:"tvdb_api_key,omitempty"`
 }
 
 // MetadataConfigView defines model for MetadataConfigView.
 type MetadataConfigView struct {
+	// HardcoverApiKeyFileManaged True when the key comes from metadata.hardcover_api_key_file.
+	HardcoverApiKeyFileManaged *bool `json:"hardcover_api_key_file_managed,omitempty"`
+	HardcoverApiKeySet         bool  `json:"hardcover_api_key_set"`
+
 	// Language BCP-47 tag. The language TMDB and TVDB answer in — so also the titles the library stores and matches releases against.
 	Language string `json:"language"`
 
@@ -6015,6 +6168,24 @@ type MusicQualityProfileCreate struct {
 	UpgradeAllowed bool        `json:"upgrade_allowed"`
 }
 
+// MusicReleaseSearchResult defines model for MusicReleaseSearchResult.
+type MusicReleaseSearchResult struct {
+	AlreadyAdded bool   `json:"already_added"`
+	Artist       string `json:"artist"`
+	ArtistMbid   string `json:"artist_mbid"`
+
+	// Mbid Release-group MBID.
+	Mbid  string          `json:"mbid"`
+	Title string          `json:"title"`
+	Type  *MusicAlbumType `json:"type,omitempty"`
+	Year  *uint16         `json:"year,omitempty"`
+}
+
+// MusicReleaseSearchResultList defines model for MusicReleaseSearchResultList.
+type MusicReleaseSearchResultList struct {
+	Items []MusicReleaseSearchResult `json:"items"`
+}
+
 // MusicRenamePlan defines model for MusicRenamePlan.
 type MusicRenamePlan struct {
 	ArtistId   uint32            `json:"artist_id"`
@@ -6077,14 +6248,6 @@ type OIDCProviderView struct {
 	ClientSecretSet bool   `json:"client_secret_set"`
 	Issuer          string `json:"issuer"`
 	Name            string `json:"name"`
-}
-
-// OpdsToken defines model for OpdsToken.
-type OpdsToken struct {
-	Enabled bool `json:"enabled"`
-
-	// Token Empty or absent when disabled.
-	Token *string `json:"token,omitempty"`
 }
 
 // PaginatedMovies defines model for PaginatedMovies.
@@ -6716,27 +6879,42 @@ type ReplacePendingRequest struct {
 // Request defines model for Request.
 type Request struct {
 	ApprovedBy *RequestUser `json:"approved_by,omitempty"`
-	CreatedAt  time.Time    `json:"created_at"`
-	Id         uint32       `json:"id"`
+
+	// ArtistMbid Album requests only. The requester's hint until the request is
+	// approved, the artist MusicBrainz names for the release group
+	// after. Display data, never trusted.
+	ArtistMbid *string `json:"artist_mbid,omitempty"`
+
+	// ArtistName Album requests only; the display companion of `artist_mbid`.
+	ArtistName *string   `json:"artist_name,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	Id         uint32    `json:"id"`
 
 	// MediaId TMDB id for movies, TVDB id for shows, Hardcover book id for
 	// books, Hardcover series id for book series (a separate id space,
 	// which is why `media_type` is part of the uniqueness key); 0 for
-	// artists.
+	// artists and albums.
 	MediaId uint32 `json:"media_id"`
 
-	// MediaMbid MusicBrainz id of an artist request; absent for every other type.
+	// MediaMbid MusicBrainz id: the artist of an artist request, the release
+	// group of an album request; absent for every other type.
 	MediaMbid *string          `json:"media_mbid,omitempty"`
 	MediaType RequestMediaType `json:"media_type"`
 
 	// QualityProfile Profile the requester asked for; absent means no preference. The
 	// reviewer's approve form starts here and can override it.
-	QualityProfile *string       `json:"quality_profile,omitempty"`
-	Reason         *string       `json:"reason,omitempty"`
-	Requester      RequestUser   `json:"requester"`
-	Status         RequestStatus `json:"status"`
-	Title          string        `json:"title"`
-	UpdatedAt      time.Time     `json:"updated_at"`
+	QualityProfile *string `json:"quality_profile,omitempty"`
+	Reason         *string `json:"reason,omitempty"`
+
+	// RequestedAs Album requests only. The artist wording the requester typed,
+	// verbatim and untrusted; it stays after approval replaces
+	// `artist_name` with the verified artist, so a client can caption
+	// "requested as ..." when the two differ.
+	RequestedAs *string       `json:"requested_as,omitempty"`
+	Requester   RequestUser   `json:"requester"`
+	Status      RequestStatus `json:"status"`
+	Title       string        `json:"title"`
+	UpdatedAt   time.Time     `json:"updated_at"`
 }
 
 // RequestStatus defines model for Request.Status.
@@ -6780,7 +6958,7 @@ type RequestMediaType string
 
 // RequestMetadata Response of `GET /requests/{id}/metadata`. No discriminator: the
 // caller branches on the request's `media_type`. A movie or tvshow
-// request answers `RequestMediaDetails`, an artist request
+// request answers `RequestMediaDetails`, an artist or album request
 // `MusicArtistLookupDetail` (the hit fields and the detail), and a book
 // or book_series request `BookLookupDetail` (`type: series` for
 // `book_series`).
@@ -7069,14 +7247,6 @@ type SpecialsMonitoredResult struct {
 
 	// SeasonsUpdated Specials seasons the setting was applied to.
 	SeasonsUpdated int `json:"seasons_updated"`
-}
-
-// SubsonicPassword defines model for SubsonicPassword.
-type SubsonicPassword struct {
-	Enabled bool `json:"enabled"`
-
-	// Password Empty or absent when disabled.
-	Password *string `json:"password,omitempty"`
 }
 
 // SystemConfigPatch Only provided fields are applied, nested objects included.
@@ -7736,21 +7906,36 @@ type TranscodingConfigViewHwStatus string
 
 // UpcomingAlbum defines model for UpcomingAlbum.
 type UpcomingAlbum struct {
-	ArtistId    uint32    `json:"artist_id"`
-	ArtistName  string    `json:"artist_name"`
-	Id          uint32    `json:"id"`
-	ReleaseDate time.Time `json:"release_date"`
-	Title       string    `json:"title"`
+	ArtistId    uint32             `json:"artist_id"`
+	ArtistName  string             `json:"artist_name"`
+	Id          uint32             `json:"id"`
+	ReleaseDate openapi_types.Date `json:"release_date"`
+
+	// Status The stored album status; never `upcoming`.
+	Status UpcomingAlbumStatus `json:"status"`
+	Title  string              `json:"title"`
+	Type   MusicAlbumType      `json:"type"`
 }
+
+// UpcomingAlbumStatus The stored album status; never `upcoming`.
+type UpcomingAlbumStatus string
 
 // UpcomingBook defines model for UpcomingBook.
 type UpcomingBook struct {
-	AuthorId    uint32    `json:"author_id"`
-	AuthorName  string    `json:"author_name"`
-	Id          uint32    `json:"id"`
-	ReleaseDate time.Time `json:"release_date"`
-	Title       string    `json:"title"`
+	Author      string             `json:"author"`
+	Id          uint32             `json:"id"`
+	Position    *float64           `json:"position,omitempty"`
+	ReleaseDate openapi_types.Date `json:"release_date"`
+	SeriesId    *uint32            `json:"series_id,omitempty"`
+	SeriesTitle *string            `json:"series_title,omitempty"`
+
+	// Status Over the monitored slots only, ignoring the unaired rule. Skipped slots are set aside; of the rest the first match wins: downloading, wanted, paused, available. A book with no monitored non-skipped slot is `skipped`.
+	Status UpcomingBookStatus `json:"status"`
+	Title  string             `json:"title"`
 }
+
+// UpcomingBookStatus Over the monitored slots only, ignoring the unaired rule. Skipped slots are set aside; of the rest the first match wins: downloading, wanted, paused, available. A book with no monitored non-skipped slot is `skipped`.
+type UpcomingBookStatus string
 
 // UpcomingEpisode defines model for UpcomingEpisode.
 type UpcomingEpisode struct {
@@ -8000,6 +8185,12 @@ type MusicArtistSortParam string
 // `available` (including an artist with nothing monitored).
 type MusicArtistStatusParam = MusicArtistStatus
 
+// MusicReleaseSearchLimit defines model for MusicReleaseSearchLimit.
+type MusicReleaseSearchLimit = int
+
+// MusicReleaseSearchQuery defines model for MusicReleaseSearchQuery.
+type MusicReleaseSearchQuery = string
+
 // MusicSearchQuery defines model for MusicSearchQuery.
 type MusicSearchQuery = string
 
@@ -8223,6 +8414,9 @@ type MusicArtistLookupDetailResponse = MusicArtistLookupDetail
 // MusicQualityProfileResponse defines model for MusicQualityProfileResponse.
 type MusicQualityProfileResponse = MusicQualityProfile
 
+// MusicReleaseSearchResults defines model for MusicReleaseSearchResults.
+type MusicReleaseSearchResults = MusicReleaseSearchResultList
+
 // MusicRenamePlanResponse defines model for MusicRenamePlanResponse.
 type MusicRenamePlanResponse = MusicRenamePlan
 
@@ -8258,7 +8452,7 @@ type RequestDetail = Request
 
 // RequestMetadataResponse Response of `GET /requests/{id}/metadata`. No discriminator: the
 // caller branches on the request's `media_type`. A movie or tvshow
-// request answers `RequestMediaDetails`, an artist request
+// request answers `RequestMediaDetails`, an artist or album request
 // `MusicArtistLookupDetail` (the hit fields and the detail), and a book
 // or book_series request `BookLookupDetail` (`type: series` for
 // `book_series`).
@@ -8844,6 +9038,15 @@ type SearchMusicArtistsParams struct {
 	Query MusicSearchQuery `form:"query" json:"query"`
 }
 
+// SearchMusicReleasesParams defines parameters for SearchMusicReleases.
+type SearchMusicReleasesParams struct {
+	// Query Release-group search text, 2 to 200 characters.
+	Query MusicReleaseSearchQuery `form:"query" json:"query"`
+
+	// Limit Most hits to return, 1 to 20.
+	Limit *MusicReleaseSearchLimit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetMusicArtistLookupParams defines parameters for GetMusicArtistLookup.
 type GetMusicArtistLookupParams struct {
 	// Lang SPA locale whose Wikipedia overview to return. Falls back to `en` when that language has no article.
@@ -9331,19 +9534,19 @@ func (t *RequestMetadata) UnmarshalJSON(b []byte) error {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// DisableOpdsToken Disable OPDS access by clearing the token
+	// DisableOpdsToken Disable access by clearing the OPDS token
 	// (DELETE /account/opds-token)
 	DisableOpdsToken(w http.ResponseWriter, r *http.Request)
-	// GetOpdsToken Whether an OPDS token is set, and its value
+	// GetOpdsToken Whether a OPDS token is set, and when it was last used
 	// (GET /account/opds-token)
 	GetOpdsToken(w http.ResponseWriter, r *http.Request)
 	// RotateOpdsToken Generate or rotate the OPDS token
 	// (POST /account/opds-token)
 	RotateOpdsToken(w http.ResponseWriter, r *http.Request)
-	// DisableSubsonicPassword Disable Subsonic access by clearing the password
+	// DisableSubsonicPassword Disable access by clearing the Subsonic password
 	// (DELETE /account/subsonic-password)
 	DisableSubsonicPassword(w http.ResponseWriter, r *http.Request)
-	// GetSubsonicPassword Whether a Subsonic password is set, and its value
+	// GetSubsonicPassword Whether a Subsonic password is set, and when it was last used
 	// (GET /account/subsonic-password)
 	GetSubsonicPassword(w http.ResponseWriter, r *http.Request)
 	// RotateSubsonicPassword Generate or rotate the Subsonic password
@@ -9820,6 +10023,9 @@ type ServerInterface interface {
 	// SearchMusicArtists Search MusicBrainz for artists to add
 	// (GET /music/search)
 	SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams)
+	// SearchMusicReleases Search MusicBrainz for release groups
+	// (GET /music/search/releases)
+	SearchMusicReleases(w http.ResponseWriter, r *http.Request, params SearchMusicReleasesParams)
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams)
@@ -10039,13 +10245,13 @@ type ServerInterface interface {
 
 type Unimplemented struct{}
 
-// DisableOpdsToken Disable OPDS access by clearing the token
+// DisableOpdsToken Disable access by clearing the OPDS token
 // (DELETE /account/opds-token)
 func (_ Unimplemented) DisableOpdsToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// GetOpdsToken Whether an OPDS token is set, and its value
+// GetOpdsToken Whether a OPDS token is set, and when it was last used
 // (GET /account/opds-token)
 func (_ Unimplemented) GetOpdsToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -10057,13 +10263,13 @@ func (_ Unimplemented) RotateOpdsToken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// DisableSubsonicPassword Disable Subsonic access by clearing the password
+// DisableSubsonicPassword Disable access by clearing the Subsonic password
 // (DELETE /account/subsonic-password)
 func (_ Unimplemented) DisableSubsonicPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// GetSubsonicPassword Whether a Subsonic password is set, and its value
+// GetSubsonicPassword Whether a Subsonic password is set, and when it was last used
 // (GET /account/subsonic-password)
 func (_ Unimplemented) GetSubsonicPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -11000,6 +11206,12 @@ func (_ Unimplemented) SetDefaultMusicQualityProfile(w http.ResponseWriter, r *h
 // SearchMusicArtists Search MusicBrainz for artists to add
 // (GET /music/search)
 func (_ Unimplemented) SearchMusicArtists(w http.ResponseWriter, r *http.Request, params SearchMusicArtistsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SearchMusicReleases Search MusicBrainz for release groups
+// (GET /music/search/releases)
+func (_ Unimplemented) SearchMusicReleases(w http.ResponseWriter, r *http.Request, params SearchMusicReleasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16100,6 +16312,52 @@ func (siw *ServerInterfaceWrapper) SearchMusicArtists(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// SearchMusicReleases operation middleware
+func (siw *ServerInterfaceWrapper) SearchMusicReleases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchMusicReleasesParams
+
+	// ------------- Required query parameter "query" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "query", r.URL.Query(), &params.Query, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "query"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "query", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SearchMusicReleases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMusicArtistLookup operation middleware
 func (siw *ServerInterfaceWrapper) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request) {
 
@@ -18501,6 +18759,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/music/search", wrapper.SearchMusicArtists)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/search/releases", wrapper.SearchMusicReleases)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/search/{mbid}", wrapper.GetMusicArtistLookup)
 	})
 	r.Group(func(r chi.Router) {
@@ -19223,6 +19484,8 @@ type MusicQualityProfileDeletedResponse struct {
 
 type MusicQualityProfileResponseJSONResponse MusicQualityProfile
 
+type MusicReleaseSearchResultsJSONResponse MusicReleaseSearchResultList
+
 type MusicRenamePlanResponseJSONResponse MusicRenamePlan
 
 type MusicSearchResultsJSONResponse MusicArtistSearchResultList
@@ -19419,7 +19682,7 @@ type GetOpdsTokenResponseObject interface {
 	VisitGetOpdsTokenResponse(w http.ResponseWriter) error
 }
 
-type GetOpdsToken200JSONResponse OpdsToken
+type GetOpdsToken200JSONResponse AppAccess
 
 func (response GetOpdsToken200JSONResponse) VisitGetOpdsTokenResponse(w http.ResponseWriter) error {
 
@@ -19454,7 +19717,7 @@ type RotateOpdsTokenResponseObject interface {
 	VisitRotateOpdsTokenResponse(w http.ResponseWriter) error
 }
 
-type RotateOpdsToken200JSONResponse OpdsToken
+type RotateOpdsToken200JSONResponse AppAccessCreated
 
 func (response RotateOpdsToken200JSONResponse) VisitRotateOpdsTokenResponse(w http.ResponseWriter) error {
 
@@ -19518,7 +19781,7 @@ type GetSubsonicPasswordResponseObject interface {
 	VisitGetSubsonicPasswordResponse(w http.ResponseWriter) error
 }
 
-type GetSubsonicPassword200JSONResponse SubsonicPassword
+type GetSubsonicPassword200JSONResponse AppAccess
 
 func (response GetSubsonicPassword200JSONResponse) VisitGetSubsonicPasswordResponse(w http.ResponseWriter) error {
 
@@ -19553,7 +19816,7 @@ type RotateSubsonicPasswordResponseObject interface {
 	VisitRotateSubsonicPasswordResponse(w http.ResponseWriter) error
 }
 
-type RotateSubsonicPassword200JSONResponse SubsonicPassword
+type RotateSubsonicPassword200JSONResponse AppAccessCreated
 
 func (response RotateSubsonicPassword200JSONResponse) VisitRotateSubsonicPasswordResponse(w http.ResponseWriter) error {
 
@@ -30087,6 +30350,75 @@ func (response SearchMusicArtists500JSONResponse) VisitSearchMusicArtistsRespons
 	return err
 }
 
+type SearchMusicReleasesRequestObject struct {
+	Params SearchMusicReleasesParams
+}
+
+type SearchMusicReleasesResponseObject interface {
+	VisitSearchMusicReleasesResponse(w http.ResponseWriter) error
+}
+
+type SearchMusicReleases200JSONResponse struct {
+	MusicReleaseSearchResultsJSONResponse
+}
+
+func (response SearchMusicReleases200JSONResponse) VisitSearchMusicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicReleases400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchMusicReleases400JSONResponse) VisitSearchMusicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicReleases429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response SearchMusicReleases429JSONResponse) VisitSearchMusicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchMusicReleases500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SearchMusicReleases500JSONResponse) VisitSearchMusicReleasesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetMusicArtistLookupRequestObject struct {
 	Mbid   MBIDParam `json:"mbid"`
 	Params GetMusicArtistLookupParams
@@ -34672,19 +35004,19 @@ func (response UnlockUser404JSONResponse) VisitUnlockUserResponse(w http.Respons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// DisableOpdsToken Disable OPDS access by clearing the token
+	// DisableOpdsToken Disable access by clearing the OPDS token
 	// (DELETE /account/opds-token)
 	DisableOpdsToken(ctx context.Context, request DisableOpdsTokenRequestObject) (DisableOpdsTokenResponseObject, error)
-	// GetOpdsToken Whether an OPDS token is set, and its value
+	// GetOpdsToken Whether a OPDS token is set, and when it was last used
 	// (GET /account/opds-token)
 	GetOpdsToken(ctx context.Context, request GetOpdsTokenRequestObject) (GetOpdsTokenResponseObject, error)
 	// RotateOpdsToken Generate or rotate the OPDS token
 	// (POST /account/opds-token)
 	RotateOpdsToken(ctx context.Context, request RotateOpdsTokenRequestObject) (RotateOpdsTokenResponseObject, error)
-	// DisableSubsonicPassword Disable Subsonic access by clearing the password
+	// DisableSubsonicPassword Disable access by clearing the Subsonic password
 	// (DELETE /account/subsonic-password)
 	DisableSubsonicPassword(ctx context.Context, request DisableSubsonicPasswordRequestObject) (DisableSubsonicPasswordResponseObject, error)
-	// GetSubsonicPassword Whether a Subsonic password is set, and its value
+	// GetSubsonicPassword Whether a Subsonic password is set, and when it was last used
 	// (GET /account/subsonic-password)
 	GetSubsonicPassword(ctx context.Context, request GetSubsonicPasswordRequestObject) (GetSubsonicPasswordResponseObject, error)
 	// RotateSubsonicPassword Generate or rotate the Subsonic password
@@ -35161,6 +35493,9 @@ type StrictServerInterface interface {
 	// SearchMusicArtists Search MusicBrainz for artists to add
 	// (GET /music/search)
 	SearchMusicArtists(ctx context.Context, request SearchMusicArtistsRequestObject) (SearchMusicArtistsResponseObject, error)
+	// SearchMusicReleases Search MusicBrainz for release groups
+	// (GET /music/search/releases)
+	SearchMusicReleases(ctx context.Context, request SearchMusicReleasesRequestObject) (SearchMusicReleasesResponseObject, error)
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(ctx context.Context, request GetMusicArtistLookupRequestObject) (GetMusicArtistLookupResponseObject, error)
@@ -39971,6 +40306,32 @@ func (sh *strictHandler) SearchMusicArtists(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicArtistsResponseObject); ok {
 		if err := validResponse.VisitSearchMusicArtistsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchMusicReleases operation middleware
+func (sh *strictHandler) SearchMusicReleases(w http.ResponseWriter, r *http.Request, params SearchMusicReleasesParams) {
+	var request SearchMusicReleasesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchMusicReleases(ctx, request.(SearchMusicReleasesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchMusicReleases")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchMusicReleasesResponseObject); ok {
+		if err := validResponse.VisitSearchMusicReleasesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

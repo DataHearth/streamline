@@ -104,6 +104,34 @@ func (_c *ImportScanBookCreate) SetNillableParsedIsbn(v *string) *ImportScanBook
 	return _c
 }
 
+// SetParsedYear sets the "parsed_year" field.
+func (_c *ImportScanBookCreate) SetParsedYear(v uint16) *ImportScanBookCreate {
+	_c.mutation.SetParsedYear(v)
+	return _c
+}
+
+// SetNillableParsedYear sets the "parsed_year" field if the given value is not nil.
+func (_c *ImportScanBookCreate) SetNillableParsedYear(v *uint16) *ImportScanBookCreate {
+	if v != nil {
+		_c.SetParsedYear(*v)
+	}
+	return _c
+}
+
+// SetSize sets the "size" field.
+func (_c *ImportScanBookCreate) SetSize(v int64) *ImportScanBookCreate {
+	_c.mutation.SetSize(v)
+	return _c
+}
+
+// SetNillableSize sets the "size" field if the given value is not nil.
+func (_c *ImportScanBookCreate) SetNillableSize(v *int64) *ImportScanBookCreate {
+	if v != nil {
+		_c.SetSize(*v)
+	}
+	return _c
+}
+
 // SetClassification sets the "classification" field.
 func (_c *ImportScanBookCreate) SetClassification(v importscanbook.Classification) *ImportScanBookCreate {
 	_c.mutation.SetClassification(v)
@@ -282,6 +310,10 @@ func (_c *ImportScanBookCreate) defaults() {
 		v := importscanbook.DefaultUpdateTime()
 		_c.mutation.SetUpdateTime(v)
 	}
+	if _, ok := _c.mutation.Size(); !ok {
+		v := importscanbook.DefaultSize
+		_c.mutation.SetSize(v)
+	}
 	if _, ok := _c.mutation.Classification(); !ok {
 		v := importscanbook.DefaultClassification
 		_c.mutation.SetClassification(v)
@@ -314,6 +346,9 @@ func (_c *ImportScanBookCreate) check() error {
 		if err := importscanbook.SlotValidator(v); err != nil {
 			return &ValidationError{Name: "slot", err: fmt.Errorf(`ent: validator failed for field "ImportScanBook.slot": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Size(); !ok {
+		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "ImportScanBook.size"`)}
 	}
 	if _, ok := _c.mutation.Classification(); !ok {
 		return &ValidationError{Name: "classification", err: errors.New(`ent: missing required field "ImportScanBook.classification"`)}
@@ -401,6 +436,14 @@ func (_c *ImportScanBookCreate) createSpec() (*ImportScanBook, *sqlgraph.CreateS
 	if value, ok := _c.mutation.ParsedIsbn(); ok {
 		_spec.SetField(importscanbook.FieldParsedIsbn, field.TypeString, value)
 		_node.ParsedIsbn = value
+	}
+	if value, ok := _c.mutation.ParsedYear(); ok {
+		_spec.SetField(importscanbook.FieldParsedYear, field.TypeUint16, value)
+		_node.ParsedYear = value
+	}
+	if value, ok := _c.mutation.Size(); ok {
+		_spec.SetField(importscanbook.FieldSize, field.TypeInt64, value)
+		_node.Size = value
 	}
 	if value, ok := _c.mutation.Classification(); ok {
 		_spec.SetField(importscanbook.FieldClassification, field.TypeEnum, value)

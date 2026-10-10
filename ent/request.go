@@ -24,10 +24,16 @@ type Request struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// MediaType holds the value of the "media_type" field.
 	MediaType request.MediaType `json:"media_type,omitempty"`
-	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists.
+	// TMDB ID for movies, TVDB ID for TV shows, Hardcover ID for books and book series (separate id spaces, which is why media_type is in the uniqueness key). Zero for artists and albums.
 	MediaID uint32 `json:"media_id,omitempty"`
-	// Artist MBID, for artist requests only.
+	// Artist MBID for artist requests, release-group MBID for album requests.
 	MediaMbid string `json:"media_mbid,omitempty"`
+	// Album requests only: the requester's hint until approval, the verified artist after.
+	ArtistMbid string `json:"artist_mbid,omitempty"`
+	// Album requests only: display companion of artist_mbid.
+	ArtistName string `json:"artist_name,omitempty"`
+	// Album requests only: the artist wording the requester typed, kept after approval overwrites artist_name.
+	RequestedAs string `json:"requested_as,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Status holds the value of the "status" field.
@@ -84,7 +90,7 @@ func (*Request) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case request.FieldID, request.FieldMediaID:
 			values[i] = new(sql.NullInt64)
-		case request.FieldMediaType, request.FieldMediaMbid, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
+		case request.FieldMediaType, request.FieldMediaMbid, request.FieldArtistMbid, request.FieldArtistName, request.FieldRequestedAs, request.FieldTitle, request.FieldStatus, request.FieldReason, request.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case request.FieldCreateTime, request.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -142,6 +148,24 @@ func (_m *Request) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field media_mbid", values[i])
 			} else if value.Valid {
 				_m.MediaMbid = value.String
+			}
+		case request.FieldArtistMbid:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_mbid", values[i])
+			} else if value.Valid {
+				_m.ArtistMbid = value.String
+			}
+		case request.FieldArtistName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field artist_name", values[i])
+			} else if value.Valid {
+				_m.ArtistName = value.String
+			}
+		case request.FieldRequestedAs:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field requested_as", values[i])
+			} else if value.Valid {
+				_m.RequestedAs = value.String
 			}
 		case request.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -241,6 +265,15 @@ func (_m *Request) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("media_mbid=")
 	builder.WriteString(_m.MediaMbid)
+	builder.WriteString(", ")
+	builder.WriteString("artist_mbid=")
+	builder.WriteString(_m.ArtistMbid)
+	builder.WriteString(", ")
+	builder.WriteString("artist_name=")
+	builder.WriteString(_m.ArtistName)
+	builder.WriteString(", ")
+	builder.WriteString("requested_as=")
+	builder.WriteString(_m.RequestedAs)
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

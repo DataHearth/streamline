@@ -34,6 +34,10 @@ type ImportScanBook struct {
 	ParsedAuthor string `json:"parsed_author,omitempty"`
 	// ParsedIsbn holds the value of the "parsed_isbn" field.
 	ParsedIsbn string `json:"parsed_isbn,omitempty"`
+	// ParsedYear holds the value of the "parsed_year" field.
+	ParsedYear uint16 `json:"parsed_year,omitempty"`
+	// Size holds the value of the "size" field.
+	Size int64 `json:"size,omitempty"`
 	// Classification holds the value of the "classification" field.
 	Classification importscanbook.Classification `json:"classification,omitempty"`
 	// BookHardcoverID holds the value of the "book_hardcover_id" field.
@@ -86,7 +90,7 @@ func (*ImportScanBook) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case importscanbook.FieldFilePaths, importscanbook.FieldCandidates:
 			values[i] = new([]byte)
-		case importscanbook.FieldID, importscanbook.FieldBookHardcoverID, importscanbook.FieldExistingBookID, importscanbook.FieldDecisionBookHardcoverID, importscanbook.FieldCreatedBookID:
+		case importscanbook.FieldID, importscanbook.FieldParsedYear, importscanbook.FieldSize, importscanbook.FieldBookHardcoverID, importscanbook.FieldExistingBookID, importscanbook.FieldDecisionBookHardcoverID, importscanbook.FieldCreatedBookID:
 			values[i] = new(sql.NullInt64)
 		case importscanbook.FieldSlot, importscanbook.FieldParsedTitle, importscanbook.FieldParsedAuthor, importscanbook.FieldParsedIsbn, importscanbook.FieldClassification, importscanbook.FieldDecision, importscanbook.FieldOutcome, importscanbook.FieldOutcomeMessage:
 			values[i] = new(sql.NullString)
@@ -158,6 +162,18 @@ func (_m *ImportScanBook) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field parsed_isbn", values[i])
 			} else if value.Valid {
 				_m.ParsedIsbn = value.String
+			}
+		case importscanbook.FieldParsedYear:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field parsed_year", values[i])
+			} else if value.Valid {
+				_m.ParsedYear = uint16(value.Int64)
+			}
+		case importscanbook.FieldSize:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field size", values[i])
+			} else if value.Valid {
+				_m.Size = value.Int64
 			}
 		case importscanbook.FieldClassification:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -285,6 +301,12 @@ func (_m *ImportScanBook) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("parsed_isbn=")
 	builder.WriteString(_m.ParsedIsbn)
+	builder.WriteString(", ")
+	builder.WriteString("parsed_year=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ParsedYear))
+	builder.WriteString(", ")
+	builder.WriteString("size=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Size))
 	builder.WriteString(", ")
 	builder.WriteString("classification=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Classification))

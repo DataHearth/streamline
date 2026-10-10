@@ -80,6 +80,16 @@ func ParsedIsbn(v string) predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldEQ(FieldParsedIsbn, v))
 }
 
+// ParsedYear applies equality check predicate on the "parsed_year" field. It's identical to ParsedYearEQ.
+func ParsedYear(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldEQ(FieldParsedYear, v))
+}
+
+// Size applies equality check predicate on the "size" field. It's identical to SizeEQ.
+func Size(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldEQ(FieldSize, v))
+}
+
 // BookHardcoverID applies equality check predicate on the "book_hardcover_id" field. It's identical to BookHardcoverIDEQ.
 func BookHardcoverID(v uint32) predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldEQ(FieldBookHardcoverID, v))
@@ -428,6 +438,96 @@ func ParsedIsbnEqualFold(v string) predicate.ImportScanBook {
 // ParsedIsbnContainsFold applies the ContainsFold predicate on the "parsed_isbn" field.
 func ParsedIsbnContainsFold(v string) predicate.ImportScanBook {
 	return predicate.ImportScanBook(sql.FieldContainsFold(FieldParsedIsbn, v))
+}
+
+// ParsedYearEQ applies the EQ predicate on the "parsed_year" field.
+func ParsedYearEQ(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldEQ(FieldParsedYear, v))
+}
+
+// ParsedYearNEQ applies the NEQ predicate on the "parsed_year" field.
+func ParsedYearNEQ(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldNEQ(FieldParsedYear, v))
+}
+
+// ParsedYearIn applies the In predicate on the "parsed_year" field.
+func ParsedYearIn(vs ...uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldIn(FieldParsedYear, vs...))
+}
+
+// ParsedYearNotIn applies the NotIn predicate on the "parsed_year" field.
+func ParsedYearNotIn(vs ...uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldNotIn(FieldParsedYear, vs...))
+}
+
+// ParsedYearGT applies the GT predicate on the "parsed_year" field.
+func ParsedYearGT(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldGT(FieldParsedYear, v))
+}
+
+// ParsedYearGTE applies the GTE predicate on the "parsed_year" field.
+func ParsedYearGTE(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldGTE(FieldParsedYear, v))
+}
+
+// ParsedYearLT applies the LT predicate on the "parsed_year" field.
+func ParsedYearLT(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldLT(FieldParsedYear, v))
+}
+
+// ParsedYearLTE applies the LTE predicate on the "parsed_year" field.
+func ParsedYearLTE(v uint16) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldLTE(FieldParsedYear, v))
+}
+
+// ParsedYearIsNil applies the IsNil predicate on the "parsed_year" field.
+func ParsedYearIsNil() predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldIsNull(FieldParsedYear))
+}
+
+// ParsedYearNotNil applies the NotNil predicate on the "parsed_year" field.
+func ParsedYearNotNil() predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldNotNull(FieldParsedYear))
+}
+
+// SizeEQ applies the EQ predicate on the "size" field.
+func SizeEQ(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldEQ(FieldSize, v))
+}
+
+// SizeNEQ applies the NEQ predicate on the "size" field.
+func SizeNEQ(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldNEQ(FieldSize, v))
+}
+
+// SizeIn applies the In predicate on the "size" field.
+func SizeIn(vs ...int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldIn(FieldSize, vs...))
+}
+
+// SizeNotIn applies the NotIn predicate on the "size" field.
+func SizeNotIn(vs ...int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldNotIn(FieldSize, vs...))
+}
+
+// SizeGT applies the GT predicate on the "size" field.
+func SizeGT(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldGT(FieldSize, v))
+}
+
+// SizeGTE applies the GTE predicate on the "size" field.
+func SizeGTE(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldGTE(FieldSize, v))
+}
+
+// SizeLT applies the LT predicate on the "size" field.
+func SizeLT(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldLT(FieldSize, v))
+}
+
+// SizeLTE applies the LTE predicate on the "size" field.
+func SizeLTE(v int64) predicate.ImportScanBook {
+	return predicate.ImportScanBook(sql.FieldLTE(FieldSize, v))
 }
 
 // ClassificationEQ applies the EQ predicate on the "classification" field.

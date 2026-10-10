@@ -95,6 +95,11 @@ func FailureReason(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldEQ(FieldFailureReason, v))
 }
 
+// FailureCode applies equality check predicate on the "failure_code" field. It's identical to FailureCodeEQ.
+func FailureCode(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEQ(FieldFailureCode, v))
+}
+
 // ScannedAt applies equality check predicate on the "scanned_at" field. It's identical to ScannedAtEQ.
 func ScannedAt(v time.Time) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldEQ(FieldScannedAt, v))
@@ -573,6 +578,81 @@ func FailureReasonEqualFold(v string) predicate.ImportScan {
 // FailureReasonContainsFold applies the ContainsFold predicate on the "failure_reason" field.
 func FailureReasonContainsFold(v string) predicate.ImportScan {
 	return predicate.ImportScan(sql.FieldContainsFold(FieldFailureReason, v))
+}
+
+// FailureCodeEQ applies the EQ predicate on the "failure_code" field.
+func FailureCodeEQ(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEQ(FieldFailureCode, v))
+}
+
+// FailureCodeNEQ applies the NEQ predicate on the "failure_code" field.
+func FailureCodeNEQ(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNEQ(FieldFailureCode, v))
+}
+
+// FailureCodeIn applies the In predicate on the "failure_code" field.
+func FailureCodeIn(vs ...string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIn(FieldFailureCode, vs...))
+}
+
+// FailureCodeNotIn applies the NotIn predicate on the "failure_code" field.
+func FailureCodeNotIn(vs ...string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotIn(FieldFailureCode, vs...))
+}
+
+// FailureCodeGT applies the GT predicate on the "failure_code" field.
+func FailureCodeGT(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldGT(FieldFailureCode, v))
+}
+
+// FailureCodeGTE applies the GTE predicate on the "failure_code" field.
+func FailureCodeGTE(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldGTE(FieldFailureCode, v))
+}
+
+// FailureCodeLT applies the LT predicate on the "failure_code" field.
+func FailureCodeLT(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldLT(FieldFailureCode, v))
+}
+
+// FailureCodeLTE applies the LTE predicate on the "failure_code" field.
+func FailureCodeLTE(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldLTE(FieldFailureCode, v))
+}
+
+// FailureCodeContains applies the Contains predicate on the "failure_code" field.
+func FailureCodeContains(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldContains(FieldFailureCode, v))
+}
+
+// FailureCodeHasPrefix applies the HasPrefix predicate on the "failure_code" field.
+func FailureCodeHasPrefix(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldHasPrefix(FieldFailureCode, v))
+}
+
+// FailureCodeHasSuffix applies the HasSuffix predicate on the "failure_code" field.
+func FailureCodeHasSuffix(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldHasSuffix(FieldFailureCode, v))
+}
+
+// FailureCodeIsNil applies the IsNil predicate on the "failure_code" field.
+func FailureCodeIsNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldIsNull(FieldFailureCode))
+}
+
+// FailureCodeNotNil applies the NotNil predicate on the "failure_code" field.
+func FailureCodeNotNil() predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldNotNull(FieldFailureCode))
+}
+
+// FailureCodeEqualFold applies the EqualFold predicate on the "failure_code" field.
+func FailureCodeEqualFold(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldEqualFold(FieldFailureCode, v))
+}
+
+// FailureCodeContainsFold applies the ContainsFold predicate on the "failure_code" field.
+func FailureCodeContainsFold(v string) predicate.ImportScan {
+	return predicate.ImportScan(sql.FieldContainsFold(FieldFailureCode, v))
 }
 
 // ScannedAtEQ applies the EQ predicate on the "scanned_at" field.

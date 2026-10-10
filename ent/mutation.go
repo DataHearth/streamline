@@ -17617,6 +17617,7 @@ type ImportScanMutation struct {
 	commit_failed_count     *uint32
 	addcommit_failed_count  *int32
 	failure_reason          *string
+	failure_code            *string
 	scanned_at              *time.Time
 	committed_at            *time.Time
 	clearedFields           map[string]struct{}
@@ -18279,6 +18280,55 @@ func (m *ImportScanMutation) ResetFailureReason() {
 	delete(m.clearedFields, importscan.FieldFailureReason)
 }
 
+// SetFailureCode sets the "failure_code" field.
+func (m *ImportScanMutation) SetFailureCode(s string) {
+	m.failure_code = &s
+}
+
+// FailureCode returns the value of the "failure_code" field in the mutation.
+func (m *ImportScanMutation) FailureCode() (r string, exists bool) {
+	v := m.failure_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFailureCode returns the old "failure_code" field's value of the ImportScan entity.
+// If the ImportScan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanMutation) OldFailureCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFailureCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFailureCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFailureCode: %w", err)
+	}
+	return oldValue.FailureCode, nil
+}
+
+// ClearFailureCode clears the value of the "failure_code" field.
+func (m *ImportScanMutation) ClearFailureCode() {
+	m.failure_code = nil
+	m.clearedFields[importscan.FieldFailureCode] = struct{}{}
+}
+
+// FailureCodeCleared returns if the "failure_code" field was cleared in this mutation.
+func (m *ImportScanMutation) FailureCodeCleared() bool {
+	_, ok := m.clearedFields[importscan.FieldFailureCode]
+	return ok
+}
+
+// ResetFailureCode resets all changes to the "failure_code" field.
+func (m *ImportScanMutation) ResetFailureCode() {
+	m.failure_code = nil
+	delete(m.clearedFields, importscan.FieldFailureCode)
+}
+
 // SetScannedAt sets the "scanned_at" field.
 func (m *ImportScanMutation) SetScannedAt(t time.Time) {
 	m.scanned_at = &t
@@ -18627,7 +18677,7 @@ func (m *ImportScanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
 	if m.create_time != nil {
 		fields = append(fields, importscan.FieldCreateTime)
 	}
@@ -18663,6 +18713,9 @@ func (m *ImportScanMutation) Fields() []string {
 	}
 	if m.failure_reason != nil {
 		fields = append(fields, importscan.FieldFailureReason)
+	}
+	if m.failure_code != nil {
+		fields = append(fields, importscan.FieldFailureCode)
 	}
 	if m.scanned_at != nil {
 		fields = append(fields, importscan.FieldScannedAt)
@@ -18702,6 +18755,8 @@ func (m *ImportScanMutation) Field(name string) (ent.Value, bool) {
 		return m.CommitFailedCount()
 	case importscan.FieldFailureReason:
 		return m.FailureReason()
+	case importscan.FieldFailureCode:
+		return m.FailureCode()
 	case importscan.FieldScannedAt:
 		return m.ScannedAt()
 	case importscan.FieldCommittedAt:
@@ -18739,6 +18794,8 @@ func (m *ImportScanMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldCommitFailedCount(ctx)
 	case importscan.FieldFailureReason:
 		return m.OldFailureReason(ctx)
+	case importscan.FieldFailureCode:
+		return m.OldFailureCode(ctx)
 	case importscan.FieldScannedAt:
 		return m.OldScannedAt(ctx)
 	case importscan.FieldCommittedAt:
@@ -18835,6 +18892,13 @@ func (m *ImportScanMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFailureReason(v)
+		return nil
+	case importscan.FieldFailureCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFailureCode(v)
 		return nil
 	case importscan.FieldScannedAt:
 		v, ok := value.(time.Time)
@@ -18937,6 +19001,9 @@ func (m *ImportScanMutation) ClearedFields() []string {
 	if m.FieldCleared(importscan.FieldFailureReason) {
 		fields = append(fields, importscan.FieldFailureReason)
 	}
+	if m.FieldCleared(importscan.FieldFailureCode) {
+		fields = append(fields, importscan.FieldFailureCode)
+	}
 	if m.FieldCleared(importscan.FieldScannedAt) {
 		fields = append(fields, importscan.FieldScannedAt)
 	}
@@ -18962,6 +19029,9 @@ func (m *ImportScanMutation) ClearField(name string) error {
 		return nil
 	case importscan.FieldFailureReason:
 		m.ClearFailureReason()
+		return nil
+	case importscan.FieldFailureCode:
+		m.ClearFailureCode()
 		return nil
 	case importscan.FieldScannedAt:
 		m.ClearScannedAt()
@@ -19012,6 +19082,9 @@ func (m *ImportScanMutation) ResetField(name string) error {
 		return nil
 	case importscan.FieldFailureReason:
 		m.ResetFailureReason()
+		return nil
+	case importscan.FieldFailureCode:
+		m.ResetFailureCode()
 		return nil
 	case importscan.FieldScannedAt:
 		m.ResetScannedAt()
@@ -19205,6 +19278,11 @@ type ImportScanAlbumMutation struct {
 	addexisting_album_id        *int32
 	file_count                  *uint16
 	addfile_count               *int16
+	tagged_year                 *uint16
+	addtagged_year              *int16
+	format                      *string
+	size                        *int64
+	addsize                     *int64
 	decision                    *importscanalbum.Decision
 	decision_release_group_mbid *string
 	outcome                     *importscanalbum.Outcome
@@ -19854,6 +19932,181 @@ func (m *ImportScanAlbumMutation) ResetFileCount() {
 	m.addfile_count = nil
 }
 
+// SetTaggedYear sets the "tagged_year" field.
+func (m *ImportScanAlbumMutation) SetTaggedYear(u uint16) {
+	m.tagged_year = &u
+	m.addtagged_year = nil
+}
+
+// TaggedYear returns the value of the "tagged_year" field in the mutation.
+func (m *ImportScanAlbumMutation) TaggedYear() (r uint16, exists bool) {
+	v := m.tagged_year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaggedYear returns the old "tagged_year" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldTaggedYear(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaggedYear is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaggedYear requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaggedYear: %w", err)
+	}
+	return oldValue.TaggedYear, nil
+}
+
+// AddTaggedYear adds u to the "tagged_year" field.
+func (m *ImportScanAlbumMutation) AddTaggedYear(u int16) {
+	if m.addtagged_year != nil {
+		*m.addtagged_year += u
+	} else {
+		m.addtagged_year = &u
+	}
+}
+
+// AddedTaggedYear returns the value that was added to the "tagged_year" field in this mutation.
+func (m *ImportScanAlbumMutation) AddedTaggedYear() (r int16, exists bool) {
+	v := m.addtagged_year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTaggedYear clears the value of the "tagged_year" field.
+func (m *ImportScanAlbumMutation) ClearTaggedYear() {
+	m.tagged_year = nil
+	m.addtagged_year = nil
+	m.clearedFields[importscanalbum.FieldTaggedYear] = struct{}{}
+}
+
+// TaggedYearCleared returns if the "tagged_year" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) TaggedYearCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldTaggedYear]
+	return ok
+}
+
+// ResetTaggedYear resets all changes to the "tagged_year" field.
+func (m *ImportScanAlbumMutation) ResetTaggedYear() {
+	m.tagged_year = nil
+	m.addtagged_year = nil
+	delete(m.clearedFields, importscanalbum.FieldTaggedYear)
+}
+
+// SetFormat sets the "format" field.
+func (m *ImportScanAlbumMutation) SetFormat(s string) {
+	m.format = &s
+}
+
+// Format returns the value of the "format" field in the mutation.
+func (m *ImportScanAlbumMutation) Format() (r string, exists bool) {
+	v := m.format
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFormat returns the old "format" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldFormat(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFormat is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFormat requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFormat: %w", err)
+	}
+	return oldValue.Format, nil
+}
+
+// ClearFormat clears the value of the "format" field.
+func (m *ImportScanAlbumMutation) ClearFormat() {
+	m.format = nil
+	m.clearedFields[importscanalbum.FieldFormat] = struct{}{}
+}
+
+// FormatCleared returns if the "format" field was cleared in this mutation.
+func (m *ImportScanAlbumMutation) FormatCleared() bool {
+	_, ok := m.clearedFields[importscanalbum.FieldFormat]
+	return ok
+}
+
+// ResetFormat resets all changes to the "format" field.
+func (m *ImportScanAlbumMutation) ResetFormat() {
+	m.format = nil
+	delete(m.clearedFields, importscanalbum.FieldFormat)
+}
+
+// SetSize sets the "size" field.
+func (m *ImportScanAlbumMutation) SetSize(i int64) {
+	m.size = &i
+	m.addsize = nil
+}
+
+// Size returns the value of the "size" field in the mutation.
+func (m *ImportScanAlbumMutation) Size() (r int64, exists bool) {
+	v := m.size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSize returns the old "size" field's value of the ImportScanAlbum entity.
+// If the ImportScanAlbum object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanAlbumMutation) OldSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSize: %w", err)
+	}
+	return oldValue.Size, nil
+}
+
+// AddSize adds i to the "size" field.
+func (m *ImportScanAlbumMutation) AddSize(i int64) {
+	if m.addsize != nil {
+		*m.addsize += i
+	} else {
+		m.addsize = &i
+	}
+}
+
+// AddedSize returns the value that was added to the "size" field in this mutation.
+func (m *ImportScanAlbumMutation) AddedSize() (r int64, exists bool) {
+	v := m.addsize
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSize resets all changes to the "size" field.
+func (m *ImportScanAlbumMutation) ResetSize() {
+	m.size = nil
+	m.addsize = nil
+}
+
 // SetDecision sets the "decision" field.
 func (m *ImportScanAlbumMutation) SetDecision(i importscanalbum.Decision) {
 	m.decision = &i
@@ -20167,7 +20420,7 @@ func (m *ImportScanAlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanAlbumMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, importscanalbum.FieldCreateTime)
 	}
@@ -20200,6 +20453,15 @@ func (m *ImportScanAlbumMutation) Fields() []string {
 	}
 	if m.file_count != nil {
 		fields = append(fields, importscanalbum.FieldFileCount)
+	}
+	if m.tagged_year != nil {
+		fields = append(fields, importscanalbum.FieldTaggedYear)
+	}
+	if m.format != nil {
+		fields = append(fields, importscanalbum.FieldFormat)
+	}
+	if m.size != nil {
+		fields = append(fields, importscanalbum.FieldSize)
 	}
 	if m.decision != nil {
 		fields = append(fields, importscanalbum.FieldDecision)
@@ -20246,6 +20508,12 @@ func (m *ImportScanAlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.ExistingAlbumID()
 	case importscanalbum.FieldFileCount:
 		return m.FileCount()
+	case importscanalbum.FieldTaggedYear:
+		return m.TaggedYear()
+	case importscanalbum.FieldFormat:
+		return m.Format()
+	case importscanalbum.FieldSize:
+		return m.Size()
 	case importscanalbum.FieldDecision:
 		return m.Decision()
 	case importscanalbum.FieldDecisionReleaseGroupMbid:
@@ -20287,6 +20555,12 @@ func (m *ImportScanAlbumMutation) OldField(ctx context.Context, name string) (en
 		return m.OldExistingAlbumID(ctx)
 	case importscanalbum.FieldFileCount:
 		return m.OldFileCount(ctx)
+	case importscanalbum.FieldTaggedYear:
+		return m.OldTaggedYear(ctx)
+	case importscanalbum.FieldFormat:
+		return m.OldFormat(ctx)
+	case importscanalbum.FieldSize:
+		return m.OldSize(ctx)
 	case importscanalbum.FieldDecision:
 		return m.OldDecision(ctx)
 	case importscanalbum.FieldDecisionReleaseGroupMbid:
@@ -20383,6 +20657,27 @@ func (m *ImportScanAlbumMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetFileCount(v)
 		return nil
+	case importscanalbum.FieldTaggedYear:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaggedYear(v)
+		return nil
+	case importscanalbum.FieldFormat:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFormat(v)
+		return nil
+	case importscanalbum.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSize(v)
+		return nil
 	case importscanalbum.FieldDecision:
 		v, ok := value.(importscanalbum.Decision)
 		if !ok {
@@ -20432,6 +20727,12 @@ func (m *ImportScanAlbumMutation) AddedFields() []string {
 	if m.addfile_count != nil {
 		fields = append(fields, importscanalbum.FieldFileCount)
 	}
+	if m.addtagged_year != nil {
+		fields = append(fields, importscanalbum.FieldTaggedYear)
+	}
+	if m.addsize != nil {
+		fields = append(fields, importscanalbum.FieldSize)
+	}
 	if m.addcreated_album_id != nil {
 		fields = append(fields, importscanalbum.FieldCreatedAlbumID)
 	}
@@ -20447,6 +20748,10 @@ func (m *ImportScanAlbumMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedExistingAlbumID()
 	case importscanalbum.FieldFileCount:
 		return m.AddedFileCount()
+	case importscanalbum.FieldTaggedYear:
+		return m.AddedTaggedYear()
+	case importscanalbum.FieldSize:
+		return m.AddedSize()
 	case importscanalbum.FieldCreatedAlbumID:
 		return m.AddedCreatedAlbumID()
 	}
@@ -20471,6 +20776,20 @@ func (m *ImportScanAlbumMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFileCount(v)
+		return nil
+	case importscanalbum.FieldTaggedYear:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTaggedYear(v)
+		return nil
+	case importscanalbum.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSize(v)
 		return nil
 	case importscanalbum.FieldCreatedAlbumID:
 		v, ok := value.(int32)
@@ -20504,6 +20823,12 @@ func (m *ImportScanAlbumMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(importscanalbum.FieldExistingAlbumID) {
 		fields = append(fields, importscanalbum.FieldExistingAlbumID)
+	}
+	if m.FieldCleared(importscanalbum.FieldTaggedYear) {
+		fields = append(fields, importscanalbum.FieldTaggedYear)
+	}
+	if m.FieldCleared(importscanalbum.FieldFormat) {
+		fields = append(fields, importscanalbum.FieldFormat)
 	}
 	if m.FieldCleared(importscanalbum.FieldDecisionReleaseGroupMbid) {
 		fields = append(fields, importscanalbum.FieldDecisionReleaseGroupMbid)
@@ -20545,6 +20870,12 @@ func (m *ImportScanAlbumMutation) ClearField(name string) error {
 		return nil
 	case importscanalbum.FieldExistingAlbumID:
 		m.ClearExistingAlbumID()
+		return nil
+	case importscanalbum.FieldTaggedYear:
+		m.ClearTaggedYear()
+		return nil
+	case importscanalbum.FieldFormat:
+		m.ClearFormat()
 		return nil
 	case importscanalbum.FieldDecisionReleaseGroupMbid:
 		m.ClearDecisionReleaseGroupMbid()
@@ -20595,6 +20926,15 @@ func (m *ImportScanAlbumMutation) ResetField(name string) error {
 		return nil
 	case importscanalbum.FieldFileCount:
 		m.ResetFileCount()
+		return nil
+	case importscanalbum.FieldTaggedYear:
+		m.ResetTaggedYear()
+		return nil
+	case importscanalbum.FieldFormat:
+		m.ResetFormat()
+		return nil
+	case importscanalbum.FieldSize:
+		m.ResetSize()
 		return nil
 	case importscanalbum.FieldDecision:
 		m.ResetDecision()
@@ -20703,6 +21043,10 @@ type ImportScanBookMutation struct {
 	parsed_title                  *string
 	parsed_author                 *string
 	parsed_isbn                   *string
+	parsed_year                   *uint16
+	addparsed_year                *int16
+	size                          *int64
+	addsize                       *int64
 	classification                *importscanbook.Classification
 	book_hardcover_id             *uint32
 	addbook_hardcover_id          *int32
@@ -21133,6 +21477,132 @@ func (m *ImportScanBookMutation) ParsedIsbnCleared() bool {
 func (m *ImportScanBookMutation) ResetParsedIsbn() {
 	m.parsed_isbn = nil
 	delete(m.clearedFields, importscanbook.FieldParsedIsbn)
+}
+
+// SetParsedYear sets the "parsed_year" field.
+func (m *ImportScanBookMutation) SetParsedYear(u uint16) {
+	m.parsed_year = &u
+	m.addparsed_year = nil
+}
+
+// ParsedYear returns the value of the "parsed_year" field in the mutation.
+func (m *ImportScanBookMutation) ParsedYear() (r uint16, exists bool) {
+	v := m.parsed_year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParsedYear returns the old "parsed_year" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldParsedYear(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParsedYear is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParsedYear requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParsedYear: %w", err)
+	}
+	return oldValue.ParsedYear, nil
+}
+
+// AddParsedYear adds u to the "parsed_year" field.
+func (m *ImportScanBookMutation) AddParsedYear(u int16) {
+	if m.addparsed_year != nil {
+		*m.addparsed_year += u
+	} else {
+		m.addparsed_year = &u
+	}
+}
+
+// AddedParsedYear returns the value that was added to the "parsed_year" field in this mutation.
+func (m *ImportScanBookMutation) AddedParsedYear() (r int16, exists bool) {
+	v := m.addparsed_year
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearParsedYear clears the value of the "parsed_year" field.
+func (m *ImportScanBookMutation) ClearParsedYear() {
+	m.parsed_year = nil
+	m.addparsed_year = nil
+	m.clearedFields[importscanbook.FieldParsedYear] = struct{}{}
+}
+
+// ParsedYearCleared returns if the "parsed_year" field was cleared in this mutation.
+func (m *ImportScanBookMutation) ParsedYearCleared() bool {
+	_, ok := m.clearedFields[importscanbook.FieldParsedYear]
+	return ok
+}
+
+// ResetParsedYear resets all changes to the "parsed_year" field.
+func (m *ImportScanBookMutation) ResetParsedYear() {
+	m.parsed_year = nil
+	m.addparsed_year = nil
+	delete(m.clearedFields, importscanbook.FieldParsedYear)
+}
+
+// SetSize sets the "size" field.
+func (m *ImportScanBookMutation) SetSize(i int64) {
+	m.size = &i
+	m.addsize = nil
+}
+
+// Size returns the value of the "size" field in the mutation.
+func (m *ImportScanBookMutation) Size() (r int64, exists bool) {
+	v := m.size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSize returns the old "size" field's value of the ImportScanBook entity.
+// If the ImportScanBook object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ImportScanBookMutation) OldSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSize: %w", err)
+	}
+	return oldValue.Size, nil
+}
+
+// AddSize adds i to the "size" field.
+func (m *ImportScanBookMutation) AddSize(i int64) {
+	if m.addsize != nil {
+		*m.addsize += i
+	} else {
+		m.addsize = &i
+	}
+}
+
+// AddedSize returns the value that was added to the "size" field in this mutation.
+func (m *ImportScanBookMutation) AddedSize() (r int64, exists bool) {
+	v := m.addsize
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSize resets all changes to the "size" field.
+func (m *ImportScanBookMutation) ResetSize() {
+	m.size = nil
+	m.addsize = nil
 }
 
 // SetClassification sets the "classification" field.
@@ -21710,7 +22180,7 @@ func (m *ImportScanBookMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ImportScanBookMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 18)
 	if m.create_time != nil {
 		fields = append(fields, importscanbook.FieldCreateTime)
 	}
@@ -21731,6 +22201,12 @@ func (m *ImportScanBookMutation) Fields() []string {
 	}
 	if m.parsed_isbn != nil {
 		fields = append(fields, importscanbook.FieldParsedIsbn)
+	}
+	if m.parsed_year != nil {
+		fields = append(fields, importscanbook.FieldParsedYear)
+	}
+	if m.size != nil {
+		fields = append(fields, importscanbook.FieldSize)
 	}
 	if m.classification != nil {
 		fields = append(fields, importscanbook.FieldClassification)
@@ -21781,6 +22257,10 @@ func (m *ImportScanBookMutation) Field(name string) (ent.Value, bool) {
 		return m.ParsedAuthor()
 	case importscanbook.FieldParsedIsbn:
 		return m.ParsedIsbn()
+	case importscanbook.FieldParsedYear:
+		return m.ParsedYear()
+	case importscanbook.FieldSize:
+		return m.Size()
 	case importscanbook.FieldClassification:
 		return m.Classification()
 	case importscanbook.FieldBookHardcoverID:
@@ -21822,6 +22302,10 @@ func (m *ImportScanBookMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldParsedAuthor(ctx)
 	case importscanbook.FieldParsedIsbn:
 		return m.OldParsedIsbn(ctx)
+	case importscanbook.FieldParsedYear:
+		return m.OldParsedYear(ctx)
+	case importscanbook.FieldSize:
+		return m.OldSize(ctx)
 	case importscanbook.FieldClassification:
 		return m.OldClassification(ctx)
 	case importscanbook.FieldBookHardcoverID:
@@ -21898,6 +22382,20 @@ func (m *ImportScanBookMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetParsedIsbn(v)
 		return nil
+	case importscanbook.FieldParsedYear:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParsedYear(v)
+		return nil
+	case importscanbook.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSize(v)
+		return nil
 	case importscanbook.FieldClassification:
 		v, ok := value.(importscanbook.Classification)
 		if !ok {
@@ -21969,6 +22467,12 @@ func (m *ImportScanBookMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *ImportScanBookMutation) AddedFields() []string {
 	var fields []string
+	if m.addparsed_year != nil {
+		fields = append(fields, importscanbook.FieldParsedYear)
+	}
+	if m.addsize != nil {
+		fields = append(fields, importscanbook.FieldSize)
+	}
 	if m.addbook_hardcover_id != nil {
 		fields = append(fields, importscanbook.FieldBookHardcoverID)
 	}
@@ -21989,6 +22493,10 @@ func (m *ImportScanBookMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *ImportScanBookMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case importscanbook.FieldParsedYear:
+		return m.AddedParsedYear()
+	case importscanbook.FieldSize:
+		return m.AddedSize()
 	case importscanbook.FieldBookHardcoverID:
 		return m.AddedBookHardcoverID()
 	case importscanbook.FieldExistingBookID:
@@ -22006,6 +22514,20 @@ func (m *ImportScanBookMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ImportScanBookMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case importscanbook.FieldParsedYear:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddParsedYear(v)
+		return nil
+	case importscanbook.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSize(v)
+		return nil
 	case importscanbook.FieldBookHardcoverID:
 		v, ok := value.(int32)
 		if !ok {
@@ -22051,6 +22573,9 @@ func (m *ImportScanBookMutation) ClearedFields() []string {
 	if m.FieldCleared(importscanbook.FieldParsedIsbn) {
 		fields = append(fields, importscanbook.FieldParsedIsbn)
 	}
+	if m.FieldCleared(importscanbook.FieldParsedYear) {
+		fields = append(fields, importscanbook.FieldParsedYear)
+	}
 	if m.FieldCleared(importscanbook.FieldBookHardcoverID) {
 		fields = append(fields, importscanbook.FieldBookHardcoverID)
 	}
@@ -22091,6 +22616,9 @@ func (m *ImportScanBookMutation) ClearField(name string) error {
 		return nil
 	case importscanbook.FieldParsedIsbn:
 		m.ClearParsedIsbn()
+		return nil
+	case importscanbook.FieldParsedYear:
+		m.ClearParsedYear()
 		return nil
 	case importscanbook.FieldBookHardcoverID:
 		m.ClearBookHardcoverID()
@@ -22138,6 +22666,12 @@ func (m *ImportScanBookMutation) ResetField(name string) error {
 		return nil
 	case importscanbook.FieldParsedIsbn:
 		m.ResetParsedIsbn()
+		return nil
+	case importscanbook.FieldParsedYear:
+		m.ResetParsedYear()
+		return nil
+	case importscanbook.FieldSize:
+		m.ResetSize()
 		return nil
 	case importscanbook.FieldClassification:
 		m.ResetClassification()
@@ -35047,6 +35581,9 @@ type RequestMutation struct {
 	media_id           *uint32
 	addmedia_id        *int32
 	media_mbid         *string
+	artist_mbid        *string
+	artist_name        *string
+	requested_as       *string
 	title              *string
 	status             *request.Status
 	reason             *string
@@ -35392,6 +35929,153 @@ func (m *RequestMutation) ResetMediaMbid() {
 	delete(m.clearedFields, request.FieldMediaMbid)
 }
 
+// SetArtistMbid sets the "artist_mbid" field.
+func (m *RequestMutation) SetArtistMbid(s string) {
+	m.artist_mbid = &s
+}
+
+// ArtistMbid returns the value of the "artist_mbid" field in the mutation.
+func (m *RequestMutation) ArtistMbid() (r string, exists bool) {
+	v := m.artist_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistMbid returns the old "artist_mbid" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldArtistMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistMbid: %w", err)
+	}
+	return oldValue.ArtistMbid, nil
+}
+
+// ClearArtistMbid clears the value of the "artist_mbid" field.
+func (m *RequestMutation) ClearArtistMbid() {
+	m.artist_mbid = nil
+	m.clearedFields[request.FieldArtistMbid] = struct{}{}
+}
+
+// ArtistMbidCleared returns if the "artist_mbid" field was cleared in this mutation.
+func (m *RequestMutation) ArtistMbidCleared() bool {
+	_, ok := m.clearedFields[request.FieldArtistMbid]
+	return ok
+}
+
+// ResetArtistMbid resets all changes to the "artist_mbid" field.
+func (m *RequestMutation) ResetArtistMbid() {
+	m.artist_mbid = nil
+	delete(m.clearedFields, request.FieldArtistMbid)
+}
+
+// SetArtistName sets the "artist_name" field.
+func (m *RequestMutation) SetArtistName(s string) {
+	m.artist_name = &s
+}
+
+// ArtistName returns the value of the "artist_name" field in the mutation.
+func (m *RequestMutation) ArtistName() (r string, exists bool) {
+	v := m.artist_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtistName returns the old "artist_name" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldArtistName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtistName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtistName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtistName: %w", err)
+	}
+	return oldValue.ArtistName, nil
+}
+
+// ClearArtistName clears the value of the "artist_name" field.
+func (m *RequestMutation) ClearArtistName() {
+	m.artist_name = nil
+	m.clearedFields[request.FieldArtistName] = struct{}{}
+}
+
+// ArtistNameCleared returns if the "artist_name" field was cleared in this mutation.
+func (m *RequestMutation) ArtistNameCleared() bool {
+	_, ok := m.clearedFields[request.FieldArtistName]
+	return ok
+}
+
+// ResetArtistName resets all changes to the "artist_name" field.
+func (m *RequestMutation) ResetArtistName() {
+	m.artist_name = nil
+	delete(m.clearedFields, request.FieldArtistName)
+}
+
+// SetRequestedAs sets the "requested_as" field.
+func (m *RequestMutation) SetRequestedAs(s string) {
+	m.requested_as = &s
+}
+
+// RequestedAs returns the value of the "requested_as" field in the mutation.
+func (m *RequestMutation) RequestedAs() (r string, exists bool) {
+	v := m.requested_as
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequestedAs returns the old "requested_as" field's value of the Request entity.
+// If the Request object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestMutation) OldRequestedAs(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequestedAs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequestedAs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequestedAs: %w", err)
+	}
+	return oldValue.RequestedAs, nil
+}
+
+// ClearRequestedAs clears the value of the "requested_as" field.
+func (m *RequestMutation) ClearRequestedAs() {
+	m.requested_as = nil
+	m.clearedFields[request.FieldRequestedAs] = struct{}{}
+}
+
+// RequestedAsCleared returns if the "requested_as" field was cleared in this mutation.
+func (m *RequestMutation) RequestedAsCleared() bool {
+	_, ok := m.clearedFields[request.FieldRequestedAs]
+	return ok
+}
+
+// ResetRequestedAs resets all changes to the "requested_as" field.
+func (m *RequestMutation) ResetRequestedAs() {
+	m.requested_as = nil
+	delete(m.clearedFields, request.FieldRequestedAs)
+}
+
 // SetTitle sets the "title" field.
 func (m *RequestMutation) SetTitle(s string) {
 	m.title = &s
@@ -35674,7 +36358,7 @@ func (m *RequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 12)
 	if m.create_time != nil {
 		fields = append(fields, request.FieldCreateTime)
 	}
@@ -35689,6 +36373,15 @@ func (m *RequestMutation) Fields() []string {
 	}
 	if m.media_mbid != nil {
 		fields = append(fields, request.FieldMediaMbid)
+	}
+	if m.artist_mbid != nil {
+		fields = append(fields, request.FieldArtistMbid)
+	}
+	if m.artist_name != nil {
+		fields = append(fields, request.FieldArtistName)
+	}
+	if m.requested_as != nil {
+		fields = append(fields, request.FieldRequestedAs)
 	}
 	if m.title != nil {
 		fields = append(fields, request.FieldTitle)
@@ -35720,6 +36413,12 @@ func (m *RequestMutation) Field(name string) (ent.Value, bool) {
 		return m.MediaID()
 	case request.FieldMediaMbid:
 		return m.MediaMbid()
+	case request.FieldArtistMbid:
+		return m.ArtistMbid()
+	case request.FieldArtistName:
+		return m.ArtistName()
+	case request.FieldRequestedAs:
+		return m.RequestedAs()
 	case request.FieldTitle:
 		return m.Title()
 	case request.FieldStatus:
@@ -35747,6 +36446,12 @@ func (m *RequestMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldMediaID(ctx)
 	case request.FieldMediaMbid:
 		return m.OldMediaMbid(ctx)
+	case request.FieldArtistMbid:
+		return m.OldArtistMbid(ctx)
+	case request.FieldArtistName:
+		return m.OldArtistName(ctx)
+	case request.FieldRequestedAs:
+		return m.OldRequestedAs(ctx)
 	case request.FieldTitle:
 		return m.OldTitle(ctx)
 	case request.FieldStatus:
@@ -35798,6 +36503,27 @@ func (m *RequestMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMediaMbid(v)
+		return nil
+	case request.FieldArtistMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistMbid(v)
+		return nil
+	case request.FieldArtistName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtistName(v)
+		return nil
+	case request.FieldRequestedAs:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequestedAs(v)
 		return nil
 	case request.FieldTitle:
 		v, ok := value.(string)
@@ -35878,6 +36604,15 @@ func (m *RequestMutation) ClearedFields() []string {
 	if m.FieldCleared(request.FieldMediaMbid) {
 		fields = append(fields, request.FieldMediaMbid)
 	}
+	if m.FieldCleared(request.FieldArtistMbid) {
+		fields = append(fields, request.FieldArtistMbid)
+	}
+	if m.FieldCleared(request.FieldArtistName) {
+		fields = append(fields, request.FieldArtistName)
+	}
+	if m.FieldCleared(request.FieldRequestedAs) {
+		fields = append(fields, request.FieldRequestedAs)
+	}
 	if m.FieldCleared(request.FieldReason) {
 		fields = append(fields, request.FieldReason)
 	}
@@ -35903,6 +36638,15 @@ func (m *RequestMutation) ClearField(name string) error {
 		return nil
 	case request.FieldMediaMbid:
 		m.ClearMediaMbid()
+		return nil
+	case request.FieldArtistMbid:
+		m.ClearArtistMbid()
+		return nil
+	case request.FieldArtistName:
+		m.ClearArtistName()
+		return nil
+	case request.FieldRequestedAs:
+		m.ClearRequestedAs()
 		return nil
 	case request.FieldReason:
 		m.ClearReason()
@@ -35932,6 +36676,15 @@ func (m *RequestMutation) ResetField(name string) error {
 		return nil
 	case request.FieldMediaMbid:
 		m.ResetMediaMbid()
+		return nil
+	case request.FieldArtistMbid:
+		m.ResetArtistMbid()
+		return nil
+	case request.FieldArtistName:
+		m.ResetArtistName()
+		return nil
+	case request.FieldRequestedAs:
+		m.ResetRequestedAs()
 		return nil
 	case request.FieldTitle:
 		m.ResetTitle()
@@ -43693,7 +44446,13 @@ type UserMutation struct {
 	auth_method            *user.AuthMethod
 	display_name           *string
 	subsonic_password      *string
+	subsonic_created_at    *time.Time
+	subsonic_last_used_at  *time.Time
+	subsonic_last_client   *string
 	opds_token             *string
+	opds_created_at        *time.Time
+	opds_last_used_at      *time.Time
+	opds_last_client       *string
 	failed_login_count     *uint8
 	addfailed_login_count  *int8
 	last_failed_login_at   *time.Time
@@ -44147,6 +44906,153 @@ func (m *UserMutation) ResetSubsonicPassword() {
 	delete(m.clearedFields, user.FieldSubsonicPassword)
 }
 
+// SetSubsonicCreatedAt sets the "subsonic_created_at" field.
+func (m *UserMutation) SetSubsonicCreatedAt(t time.Time) {
+	m.subsonic_created_at = &t
+}
+
+// SubsonicCreatedAt returns the value of the "subsonic_created_at" field in the mutation.
+func (m *UserMutation) SubsonicCreatedAt() (r time.Time, exists bool) {
+	v := m.subsonic_created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCreatedAt returns the old "subsonic_created_at" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCreatedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCreatedAt: %w", err)
+	}
+	return oldValue.SubsonicCreatedAt, nil
+}
+
+// ClearSubsonicCreatedAt clears the value of the "subsonic_created_at" field.
+func (m *UserMutation) ClearSubsonicCreatedAt() {
+	m.subsonic_created_at = nil
+	m.clearedFields[user.FieldSubsonicCreatedAt] = struct{}{}
+}
+
+// SubsonicCreatedAtCleared returns if the "subsonic_created_at" field was cleared in this mutation.
+func (m *UserMutation) SubsonicCreatedAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldSubsonicCreatedAt]
+	return ok
+}
+
+// ResetSubsonicCreatedAt resets all changes to the "subsonic_created_at" field.
+func (m *UserMutation) ResetSubsonicCreatedAt() {
+	m.subsonic_created_at = nil
+	delete(m.clearedFields, user.FieldSubsonicCreatedAt)
+}
+
+// SetSubsonicLastUsedAt sets the "subsonic_last_used_at" field.
+func (m *UserMutation) SetSubsonicLastUsedAt(t time.Time) {
+	m.subsonic_last_used_at = &t
+}
+
+// SubsonicLastUsedAt returns the value of the "subsonic_last_used_at" field in the mutation.
+func (m *UserMutation) SubsonicLastUsedAt() (r time.Time, exists bool) {
+	v := m.subsonic_last_used_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicLastUsedAt returns the old "subsonic_last_used_at" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicLastUsedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicLastUsedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicLastUsedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicLastUsedAt: %w", err)
+	}
+	return oldValue.SubsonicLastUsedAt, nil
+}
+
+// ClearSubsonicLastUsedAt clears the value of the "subsonic_last_used_at" field.
+func (m *UserMutation) ClearSubsonicLastUsedAt() {
+	m.subsonic_last_used_at = nil
+	m.clearedFields[user.FieldSubsonicLastUsedAt] = struct{}{}
+}
+
+// SubsonicLastUsedAtCleared returns if the "subsonic_last_used_at" field was cleared in this mutation.
+func (m *UserMutation) SubsonicLastUsedAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldSubsonicLastUsedAt]
+	return ok
+}
+
+// ResetSubsonicLastUsedAt resets all changes to the "subsonic_last_used_at" field.
+func (m *UserMutation) ResetSubsonicLastUsedAt() {
+	m.subsonic_last_used_at = nil
+	delete(m.clearedFields, user.FieldSubsonicLastUsedAt)
+}
+
+// SetSubsonicLastClient sets the "subsonic_last_client" field.
+func (m *UserMutation) SetSubsonicLastClient(s string) {
+	m.subsonic_last_client = &s
+}
+
+// SubsonicLastClient returns the value of the "subsonic_last_client" field in the mutation.
+func (m *UserMutation) SubsonicLastClient() (r string, exists bool) {
+	v := m.subsonic_last_client
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicLastClient returns the old "subsonic_last_client" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicLastClient(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicLastClient is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicLastClient requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicLastClient: %w", err)
+	}
+	return oldValue.SubsonicLastClient, nil
+}
+
+// ClearSubsonicLastClient clears the value of the "subsonic_last_client" field.
+func (m *UserMutation) ClearSubsonicLastClient() {
+	m.subsonic_last_client = nil
+	m.clearedFields[user.FieldSubsonicLastClient] = struct{}{}
+}
+
+// SubsonicLastClientCleared returns if the "subsonic_last_client" field was cleared in this mutation.
+func (m *UserMutation) SubsonicLastClientCleared() bool {
+	_, ok := m.clearedFields[user.FieldSubsonicLastClient]
+	return ok
+}
+
+// ResetSubsonicLastClient resets all changes to the "subsonic_last_client" field.
+func (m *UserMutation) ResetSubsonicLastClient() {
+	m.subsonic_last_client = nil
+	delete(m.clearedFields, user.FieldSubsonicLastClient)
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (m *UserMutation) SetOpdsToken(s string) {
 	m.opds_token = &s
@@ -44194,6 +45100,153 @@ func (m *UserMutation) OpdsTokenCleared() bool {
 func (m *UserMutation) ResetOpdsToken() {
 	m.opds_token = nil
 	delete(m.clearedFields, user.FieldOpdsToken)
+}
+
+// SetOpdsCreatedAt sets the "opds_created_at" field.
+func (m *UserMutation) SetOpdsCreatedAt(t time.Time) {
+	m.opds_created_at = &t
+}
+
+// OpdsCreatedAt returns the value of the "opds_created_at" field in the mutation.
+func (m *UserMutation) OpdsCreatedAt() (r time.Time, exists bool) {
+	v := m.opds_created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOpdsCreatedAt returns the old "opds_created_at" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldOpdsCreatedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOpdsCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOpdsCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOpdsCreatedAt: %w", err)
+	}
+	return oldValue.OpdsCreatedAt, nil
+}
+
+// ClearOpdsCreatedAt clears the value of the "opds_created_at" field.
+func (m *UserMutation) ClearOpdsCreatedAt() {
+	m.opds_created_at = nil
+	m.clearedFields[user.FieldOpdsCreatedAt] = struct{}{}
+}
+
+// OpdsCreatedAtCleared returns if the "opds_created_at" field was cleared in this mutation.
+func (m *UserMutation) OpdsCreatedAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldOpdsCreatedAt]
+	return ok
+}
+
+// ResetOpdsCreatedAt resets all changes to the "opds_created_at" field.
+func (m *UserMutation) ResetOpdsCreatedAt() {
+	m.opds_created_at = nil
+	delete(m.clearedFields, user.FieldOpdsCreatedAt)
+}
+
+// SetOpdsLastUsedAt sets the "opds_last_used_at" field.
+func (m *UserMutation) SetOpdsLastUsedAt(t time.Time) {
+	m.opds_last_used_at = &t
+}
+
+// OpdsLastUsedAt returns the value of the "opds_last_used_at" field in the mutation.
+func (m *UserMutation) OpdsLastUsedAt() (r time.Time, exists bool) {
+	v := m.opds_last_used_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOpdsLastUsedAt returns the old "opds_last_used_at" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldOpdsLastUsedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOpdsLastUsedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOpdsLastUsedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOpdsLastUsedAt: %w", err)
+	}
+	return oldValue.OpdsLastUsedAt, nil
+}
+
+// ClearOpdsLastUsedAt clears the value of the "opds_last_used_at" field.
+func (m *UserMutation) ClearOpdsLastUsedAt() {
+	m.opds_last_used_at = nil
+	m.clearedFields[user.FieldOpdsLastUsedAt] = struct{}{}
+}
+
+// OpdsLastUsedAtCleared returns if the "opds_last_used_at" field was cleared in this mutation.
+func (m *UserMutation) OpdsLastUsedAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldOpdsLastUsedAt]
+	return ok
+}
+
+// ResetOpdsLastUsedAt resets all changes to the "opds_last_used_at" field.
+func (m *UserMutation) ResetOpdsLastUsedAt() {
+	m.opds_last_used_at = nil
+	delete(m.clearedFields, user.FieldOpdsLastUsedAt)
+}
+
+// SetOpdsLastClient sets the "opds_last_client" field.
+func (m *UserMutation) SetOpdsLastClient(s string) {
+	m.opds_last_client = &s
+}
+
+// OpdsLastClient returns the value of the "opds_last_client" field in the mutation.
+func (m *UserMutation) OpdsLastClient() (r string, exists bool) {
+	v := m.opds_last_client
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOpdsLastClient returns the old "opds_last_client" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldOpdsLastClient(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOpdsLastClient is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOpdsLastClient requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOpdsLastClient: %w", err)
+	}
+	return oldValue.OpdsLastClient, nil
+}
+
+// ClearOpdsLastClient clears the value of the "opds_last_client" field.
+func (m *UserMutation) ClearOpdsLastClient() {
+	m.opds_last_client = nil
+	m.clearedFields[user.FieldOpdsLastClient] = struct{}{}
+}
+
+// OpdsLastClientCleared returns if the "opds_last_client" field was cleared in this mutation.
+func (m *UserMutation) OpdsLastClientCleared() bool {
+	_, ok := m.clearedFields[user.FieldOpdsLastClient]
+	return ok
+}
+
+// ResetOpdsLastClient resets all changes to the "opds_last_client" field.
+func (m *UserMutation) ResetOpdsLastClient() {
+	m.opds_last_client = nil
+	delete(m.clearedFields, user.FieldOpdsLastClient)
 }
 
 // SetFailedLoginCount sets the "failed_login_count" field.
@@ -44600,7 +45653,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 18)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -44625,8 +45678,26 @@ func (m *UserMutation) Fields() []string {
 	if m.subsonic_password != nil {
 		fields = append(fields, user.FieldSubsonicPassword)
 	}
+	if m.subsonic_created_at != nil {
+		fields = append(fields, user.FieldSubsonicCreatedAt)
+	}
+	if m.subsonic_last_used_at != nil {
+		fields = append(fields, user.FieldSubsonicLastUsedAt)
+	}
+	if m.subsonic_last_client != nil {
+		fields = append(fields, user.FieldSubsonicLastClient)
+	}
 	if m.opds_token != nil {
 		fields = append(fields, user.FieldOpdsToken)
+	}
+	if m.opds_created_at != nil {
+		fields = append(fields, user.FieldOpdsCreatedAt)
+	}
+	if m.opds_last_used_at != nil {
+		fields = append(fields, user.FieldOpdsLastUsedAt)
+	}
+	if m.opds_last_client != nil {
+		fields = append(fields, user.FieldOpdsLastClient)
 	}
 	if m.failed_login_count != nil {
 		fields = append(fields, user.FieldFailedLoginCount)
@@ -44661,8 +45732,20 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.DisplayName()
 	case user.FieldSubsonicPassword:
 		return m.SubsonicPassword()
+	case user.FieldSubsonicCreatedAt:
+		return m.SubsonicCreatedAt()
+	case user.FieldSubsonicLastUsedAt:
+		return m.SubsonicLastUsedAt()
+	case user.FieldSubsonicLastClient:
+		return m.SubsonicLastClient()
 	case user.FieldOpdsToken:
 		return m.OpdsToken()
+	case user.FieldOpdsCreatedAt:
+		return m.OpdsCreatedAt()
+	case user.FieldOpdsLastUsedAt:
+		return m.OpdsLastUsedAt()
+	case user.FieldOpdsLastClient:
+		return m.OpdsLastClient()
 	case user.FieldFailedLoginCount:
 		return m.FailedLoginCount()
 	case user.FieldLastFailedLoginAt:
@@ -44694,8 +45777,20 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldDisplayName(ctx)
 	case user.FieldSubsonicPassword:
 		return m.OldSubsonicPassword(ctx)
+	case user.FieldSubsonicCreatedAt:
+		return m.OldSubsonicCreatedAt(ctx)
+	case user.FieldSubsonicLastUsedAt:
+		return m.OldSubsonicLastUsedAt(ctx)
+	case user.FieldSubsonicLastClient:
+		return m.OldSubsonicLastClient(ctx)
 	case user.FieldOpdsToken:
 		return m.OldOpdsToken(ctx)
+	case user.FieldOpdsCreatedAt:
+		return m.OldOpdsCreatedAt(ctx)
+	case user.FieldOpdsLastUsedAt:
+		return m.OldOpdsLastUsedAt(ctx)
+	case user.FieldOpdsLastClient:
+		return m.OldOpdsLastClient(ctx)
 	case user.FieldFailedLoginCount:
 		return m.OldFailedLoginCount(ctx)
 	case user.FieldLastFailedLoginAt:
@@ -44767,12 +45862,54 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSubsonicPassword(v)
 		return nil
+	case user.FieldSubsonicCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCreatedAt(v)
+		return nil
+	case user.FieldSubsonicLastUsedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicLastUsedAt(v)
+		return nil
+	case user.FieldSubsonicLastClient:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicLastClient(v)
+		return nil
 	case user.FieldOpdsToken:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOpdsToken(v)
+		return nil
+	case user.FieldOpdsCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOpdsCreatedAt(v)
+		return nil
+	case user.FieldOpdsLastUsedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOpdsLastUsedAt(v)
+		return nil
+	case user.FieldOpdsLastClient:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOpdsLastClient(v)
 		return nil
 	case user.FieldFailedLoginCount:
 		v, ok := value.(uint8)
@@ -44849,8 +45986,26 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldSubsonicPassword) {
 		fields = append(fields, user.FieldSubsonicPassword)
 	}
+	if m.FieldCleared(user.FieldSubsonicCreatedAt) {
+		fields = append(fields, user.FieldSubsonicCreatedAt)
+	}
+	if m.FieldCleared(user.FieldSubsonicLastUsedAt) {
+		fields = append(fields, user.FieldSubsonicLastUsedAt)
+	}
+	if m.FieldCleared(user.FieldSubsonicLastClient) {
+		fields = append(fields, user.FieldSubsonicLastClient)
+	}
 	if m.FieldCleared(user.FieldOpdsToken) {
 		fields = append(fields, user.FieldOpdsToken)
+	}
+	if m.FieldCleared(user.FieldOpdsCreatedAt) {
+		fields = append(fields, user.FieldOpdsCreatedAt)
+	}
+	if m.FieldCleared(user.FieldOpdsLastUsedAt) {
+		fields = append(fields, user.FieldOpdsLastUsedAt)
+	}
+	if m.FieldCleared(user.FieldOpdsLastClient) {
+		fields = append(fields, user.FieldOpdsLastClient)
 	}
 	if m.FieldCleared(user.FieldLastFailedLoginAt) {
 		fields = append(fields, user.FieldLastFailedLoginAt)
@@ -44881,8 +46036,26 @@ func (m *UserMutation) ClearField(name string) error {
 	case user.FieldSubsonicPassword:
 		m.ClearSubsonicPassword()
 		return nil
+	case user.FieldSubsonicCreatedAt:
+		m.ClearSubsonicCreatedAt()
+		return nil
+	case user.FieldSubsonicLastUsedAt:
+		m.ClearSubsonicLastUsedAt()
+		return nil
+	case user.FieldSubsonicLastClient:
+		m.ClearSubsonicLastClient()
+		return nil
 	case user.FieldOpdsToken:
 		m.ClearOpdsToken()
+		return nil
+	case user.FieldOpdsCreatedAt:
+		m.ClearOpdsCreatedAt()
+		return nil
+	case user.FieldOpdsLastUsedAt:
+		m.ClearOpdsLastUsedAt()
+		return nil
+	case user.FieldOpdsLastClient:
+		m.ClearOpdsLastClient()
 		return nil
 	case user.FieldLastFailedLoginAt:
 		m.ClearLastFailedLoginAt()
@@ -44922,8 +46095,26 @@ func (m *UserMutation) ResetField(name string) error {
 	case user.FieldSubsonicPassword:
 		m.ResetSubsonicPassword()
 		return nil
+	case user.FieldSubsonicCreatedAt:
+		m.ResetSubsonicCreatedAt()
+		return nil
+	case user.FieldSubsonicLastUsedAt:
+		m.ResetSubsonicLastUsedAt()
+		return nil
+	case user.FieldSubsonicLastClient:
+		m.ResetSubsonicLastClient()
+		return nil
 	case user.FieldOpdsToken:
 		m.ResetOpdsToken()
+		return nil
+	case user.FieldOpdsCreatedAt:
+		m.ResetOpdsCreatedAt()
+		return nil
+	case user.FieldOpdsLastUsedAt:
+		m.ResetOpdsLastUsedAt()
+		return nil
+	case user.FieldOpdsLastClient:
+		m.ResetOpdsLastClient()
 		return nil
 	case user.FieldFailedLoginCount:
 		m.ResetFailedLoginCount()
