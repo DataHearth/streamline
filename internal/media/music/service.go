@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
@@ -109,6 +110,7 @@ type Service struct {
 	download  download.Downloader
 	overviews metadata.OverviewProvider
 	photos    metadata.ArtistPhotoProvider
+	ms        mediaserver.Refresher
 
 	details         *memo[*metadata.ArtistDetails]
 	lookups         *memo[*lookupBody]
@@ -127,10 +129,11 @@ func NewService(
 	dl download.Downloader,
 	overviews metadata.OverviewProvider,
 	photos metadata.ArtistPhotoProvider,
+	ms mediaserver.Refresher,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, covers: covers,
-		indexer: idx, download: dl, overviews: overviews, photos: photos,
+		indexer: idx, download: dl, overviews: overviews, photos: photos, ms: ms,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
 		lookups: newMemo[*lookupBody](detailsTTL, detailsCacheLimit),
 		releaseSearches: newMemo[[]metadata.ReleaseGroupSearchResult](
@@ -395,6 +398,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 	}
 	if deleteFiles {
 		root := config.Get().Library.MusicPath
+		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 		for _, a := range row.Edges.Albums {
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {

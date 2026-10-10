@@ -1,17 +1,20 @@
 package book
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/download"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -74,6 +77,25 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 				Expect(f.posters.removals()).To(HaveLen(2))
 			},
 		)
+
+		It("asks the media servers to rescan once its files are gone", func() {
+			ms := msmocks.NewMockRefresher(GinkgoT())
+			f.svc.ms = ms
+			done := make(chan struct{}, 2)
+			ms.EXPECT().RefreshAll(mock.Anything, "book", mock.Anything).
+				RunAndReturn(func(context.Context, string, string) error {
+					done <- struct{}{}
+					return nil
+				}).Times(2)
+			b := f.addBook(1, "Elantris", "")
+			attach(b, mediafile.BookKindEbook,
+				write(filepath.Join(f.dir, "ebooks", "x.epub")))
+
+			Expect(f.svc.DeleteBook(f.ctx, b.ID, true)).To(Succeed())
+
+			Eventually(done).Should(Receive())
+			Eventually(done).Should(Receive())
+		})
 
 		It("keeps the files unless asked", func() {
 			b := f.addBook(1, "Elantris", "")

@@ -18,9 +18,11 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -95,6 +97,12 @@ func (s *Service) runCommitBooks(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count", failed)
 	countCommit(ctx, "book", "success", int64(success))
 	countCommit(ctx, "book", "failed", int64(failed))
+	if success > 0 {
+		lib := config.Get().Library
+		for _, root := range []string{lib.EbookPath, lib.AudiobookPath} {
+			mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindBook, root)
+		}
+	}
 }
 
 // prefetchBooks reads the Hardcover books a batch will add in one request. The

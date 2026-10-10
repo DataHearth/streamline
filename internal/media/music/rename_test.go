@@ -1,16 +1,19 @@
 package music
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/library"
+	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 )
 
 var _ = Describe("Renamer", Label("unit", "integration", "music"), func() {
@@ -31,7 +34,7 @@ var _ = Describe("Renamer", Label("unit", "integration", "music"), func() {
 
 	BeforeEach(func() {
 		e = newEnv(false)
-		r = NewRenamer(e.store)
+		r = NewRenamer(e.store, nil)
 		artist, albums = e.seedArtist("Nirvana", albumSeed{
 			mbid: "rg-1", title: "Nevermind", monitored: true,
 			date:   new(time.Date(1991, 9, 24, 0, 0, 0, 0, time.UTC)),
@@ -86,6 +89,25 @@ var _ = Describe("Renamer", Label("unit", "integration", "music"), func() {
 		plan, err := r.Preview(e.ctx, artist.ID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(plan.Operations[0].To).To(Equal(target("01 - Drain You.mp3")))
+	})
+
+	It("asks the media servers to rescan the music root after a move", func() {
+		ms := msmocks.NewMockRefresher(GinkgoT())
+		r = NewRenamer(e.store, ms)
+		done := make(chan struct{})
+		ms.EXPECT().RefreshAll(mock.Anything, "music", root()).
+			RunAndReturn(func(context.Context, string, string) error {
+				close(done)
+				return nil
+			}).Once()
+		tracks := albums[0].QueryTracks().AllX(e.ctx)
+		from := filepath.Join(root(), "dump", "a.flac")
+		write(from)
+		e.addFile(tracks[0], from, "lossless")
+
+		_, err := r.Apply(e.ctx, artist.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(done).Should(BeClosed())
 	})
 
 	It("moves the files, updates their rows and prunes what it empties", func() {

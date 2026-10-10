@@ -58,8 +58,17 @@ var _ = Describe(
 				Fetch(mock.Anything, "albums", mock.Anything, mock.Anything).
 				Return(nil).Maybe()
 			svc = NewService(
-				store, nil, nil, nil, nil, nil, nil, root, root,
-				mb, music.NewService(store, mb, covers, nil, nil, nil, nil, nil),
+				store,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				root,
+				root,
+				mb,
+				music.NewService(store, mb, covers, nil, nil, nil, nil, nil, nil),
 				nil,
 				nil,
 			)

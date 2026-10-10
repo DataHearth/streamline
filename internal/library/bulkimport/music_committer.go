@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 )
@@ -89,6 +90,11 @@ func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
 		"commit.failed_count", failed)
 	countCommit(ctx, "music", "success", int64(success))
 	countCommit(ctx, "music", "failed", int64(failed))
+	if success > 0 {
+		mediaserver.RefreshInBackground(
+			ctx, s.ms, mediaserver.KindMusic, config.Get().Library.MusicPath,
+		)
+	}
 }
 
 // commitAlbum adopts one album folder. A failure here is that album's alone.

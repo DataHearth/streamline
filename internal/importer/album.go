@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -96,7 +97,7 @@ func (w *Worker) importAlbumRecord(
 	// the source untouched, so a configured "move" must not delete it.
 	libCfg.ImportMode = albumImportMode(libCfg)
 	w.cleanupTorrent(ctx, rec, libCfg)
-	w.refreshMediaServers(ctx, "music", libCfg.MusicPath)
+	w.refreshMediaServers(ctx, mediaserver.KindMusic, libCfg.MusicPath)
 	return nil
 }
 

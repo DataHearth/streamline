@@ -91,7 +91,7 @@ Users can request an artist (its whole discography), a single album, a single bo
 ## Known gaps
 
 - A big bulk import hydrates in the background at one album every four seconds, so an artist's tracks can take a while to fill in.
-- Adopting music or books does not trigger a media-server library refresh.
+- Plex has no book library type, so book imports refresh Jellyfin and Emby only. Music refreshes Plex's music (artist) libraries.
 - Multi-disc albums split into `CD1`, `CD2` folders are adopted as separate candidates.
 - OPDS covers need a web session, so readers show no thumbnails.
 - Volume packs and "intégrale" releases are treated as collections and never grabbed.

@@ -120,6 +120,9 @@ func (s *Service) applyRenames(
 	ops []library.RenameOperation,
 ) error {
 	lib := config.Get().Library
+	if len(ops) > 0 {
+		defer s.refreshLibraries(ctx)
+	}
 	for _, op := range ops {
 		if err := library.MkdirLibraryDir(filepath.Dir(op.To)); err != nil {
 			return fmt.Errorf("mkdir %s: %w", filepath.Dir(op.To), err)

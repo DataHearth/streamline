@@ -142,6 +142,135 @@ var _ = Describe("Dispatcher", Label("unit", "mediaserver"), func() {
 		Expect(refreshedKey).To(Equal("4"))
 	})
 
+	Describe("music and book kinds", func() {
+		var refreshed []string
+		var plex *httptest.Server
+
+		BeforeEach(func() {
+			refreshed = nil
+			mux := http.NewServeMux()
+			mux.HandleFunc(
+				"/library/sections",
+				func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					Expect(json.NewEncoder(w).Encode(map[string]any{
+						"MediaContainer": map[string]any{
+							"Directory": []map[string]any{
+								{
+									"key":  "1",
+									"type": "movie",
+									"Location": []map[string]any{
+										{"path": "/plex/movies"},
+									},
+								},
+								{
+									"key":  "7",
+									"type": "artist",
+									"Location": []map[string]any{
+										{"path": "/plex/music"},
+									},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+			)
+			mux.HandleFunc(
+				"/library/sections/",
+				func(w http.ResponseWriter, r *http.Request) {
+					refreshed = append(refreshed, r.URL.Path)
+					w.WriteHeader(http.StatusOK)
+				},
+			)
+			plex = httptest.NewServer(mux)
+			DeferCleanup(plex.Close)
+		})
+
+		It("rescans only the artist section for music, never the movie one", func() {
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "plex", "server_type": "plex",
+				"host": plex.URL, "api_key": "tok", "enabled": true,
+				"library_section": "1",
+			}))
+
+			Expect(
+				d.RefreshAll(context.Background(), KindMusic, "/data/music"),
+			).To(Succeed())
+			Expect(refreshed).To(ConsistOf("/library/sections/7/refresh"))
+		})
+
+		It("reaches Plex for nothing on a book import", func() {
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "plex", "server_type": "plex",
+				"host": plex.URL, "api_key": "tok", "enabled": true,
+			}))
+
+			Expect(
+				d.RefreshAll(context.Background(), KindBook, "/data/books"),
+			).To(Succeed())
+			Expect(refreshed).To(BeEmpty())
+		})
+
+		It("refreshes Jellyfin and Emby for music and books", func() {
+			var hits int
+			jf := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/Library/Refresh"))
+					hits++
+					w.WriteHeader(http.StatusNoContent)
+				}),
+			)
+			DeferCleanup(jf.Close)
+			configtest.Setup(mediaServerConfig(
+				map[string]any{
+					"name": "jf", "server_type": "jellyfin",
+					"host": jf.URL, "api_key": "tok", "enabled": true,
+				},
+				map[string]any{
+					"name": "emby", "server_type": "emby",
+					"host": jf.URL, "api_key": "tok", "enabled": true,
+				},
+			))
+
+			Expect(
+				d.RefreshAll(context.Background(), KindMusic, "/data/music"),
+			).To(Succeed())
+			Expect(
+				d.RefreshAll(context.Background(), KindBook, "/data/books"),
+			).To(Succeed())
+			Expect(hits).To(Equal(4))
+		})
+
+		It("fails a music refresh when Plex holds no artist section", func() {
+			empty := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					Expect(json.NewEncoder(w).Encode(map[string]any{
+						"MediaContainer": map[string]any{
+							"Directory": []map[string]any{
+								{
+									"key":  "1",
+									"type": "movie",
+									"Location": []map[string]any{
+										{"path": "/plex/movies"},
+									},
+								},
+							},
+						},
+					})).To(Succeed())
+				}),
+			)
+			DeferCleanup(empty.Close)
+			configtest.Setup(mediaServerConfig(map[string]any{
+				"name": "plex", "server_type": "plex",
+				"host": empty.URL, "api_key": "tok", "enabled": true,
+			}))
+
+			Expect(d.RefreshAll(context.Background(), KindMusic, "/data/music")).
+				To(MatchError(ContainSubstring("no artist library section")))
+		})
+	})
+
 	It("aggregates errors when all servers fail", func() {
 		jf1 := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

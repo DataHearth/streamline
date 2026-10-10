@@ -46,9 +46,26 @@ func countRefresh(ctx context.Context, ms config.MediaServerEntry, outcome strin
 // rewrites, moves or deletes a file under one holds it: until the rescan, Plex
 // and Jellyfin keep listing what was there before.
 type Refresher interface {
-	// kind is "movie" or "series" — Plex scopes its rescan to one section and
-	// keys them separately, so the path alone does not say which to poke.
+	// kind is "movie", "series", KindMusic or KindBook — Plex scopes its rescan
+	// to one section and keys them separately, so the path alone does not say
+	// which to poke.
 	RefreshAll(ctx context.Context, kind, libraryPath string) error
+}
+
+// KindMusic and KindBook join "movie" and "series" as RefreshAll kinds. Plex
+// holds music in "artist" sections and has no book library type at all, so a
+// book refresh reaches Jellyfin and Emby only.
+const (
+	KindMusic = "music"
+	KindBook  = "book"
+
+	plexMusicSectionType = "artist"
+)
+
+// plexTypedRefresher is what a Plex client offers beyond Server: a rescan
+// scoped to the sections of one type when no section key is configured.
+type plexTypedRefresher interface {
+	RefreshLibraryOfType(ctx context.Context, libraryPath, sectionType string) error
 }
 
 // Dispatcher fans RefreshLibrary across all enabled media servers, read live
@@ -83,9 +100,10 @@ func RefreshInBackground(
 	}()
 }
 
-// RefreshAll fans a rescan across every enabled media server. kind is "movie"
-// or "series": Plex rescans one section at a time and the two are configured
-// separately, so an episode import must not poke the movie section.
+// RefreshAll fans a rescan across every enabled media server. kind is "movie",
+// "series", KindMusic or KindBook: Plex rescans one section at a time and they
+// are configured separately, so an episode import must not poke the movie
+// section.
 func (d *Dispatcher) RefreshAll(
 	ctx context.Context,
 	kind, libraryPath string,
@@ -100,6 +118,10 @@ func (d *Dispatcher) RefreshAll(
 	servers := config.EnabledMediaServers()
 	var errs []error
 	for _, ms := range servers {
+		if kind == KindBook && ms.ServerType == "plex" {
+			countRefresh(ctx, ms, "skipped")
+			continue
+		}
 		client, err := BuildServer(ms)
 		if err != nil {
 			slog.WarnContext(
@@ -114,15 +136,7 @@ func (d *Dispatcher) RefreshAll(
 			countRefresh(ctx, ms, "client_error")
 			continue
 		}
-		section := ms.LibrarySection
-		if kind == "series" {
-			section = ms.LibrarySectionTV
-		}
-		var sectionKey string
-		if section != nil {
-			sectionKey = *section
-		}
-		if err := client.RefreshLibrary(ctx, libraryPath, sectionKey); err != nil {
+		if err := refreshOne(ctx, client, ms, kind, libraryPath); err != nil {
 			slog.WarnContext(
 				ctx,
 				"media server refresh failed",
@@ -138,6 +152,32 @@ func (d *Dispatcher) RefreshAll(
 		countRefresh(ctx, ms, "ok")
 	}
 	return errors.Join(errs...)
+}
+
+func refreshOne(
+	ctx context.Context,
+	client Server,
+	ms config.MediaServerEntry,
+	kind, libraryPath string,
+) error {
+	switch kind {
+	case KindMusic:
+		if typed, ok := client.(plexTypedRefresher); ok {
+			return typed.RefreshLibraryOfType(ctx, libraryPath, plexMusicSectionType)
+		}
+		return client.RefreshLibrary(ctx, libraryPath, "")
+	case KindBook:
+		return client.RefreshLibrary(ctx, libraryPath, "")
+	}
+	section := ms.LibrarySection
+	if kind == "series" {
+		section = ms.LibrarySectionTV
+	}
+	var sectionKey string
+	if section != nil {
+		sectionKey = *section
+	}
+	return client.RefreshLibrary(ctx, libraryPath, sectionKey)
 }
 
 func BuildServer(ms config.MediaServerEntry) (Server, error) {

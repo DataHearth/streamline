@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -146,5 +147,7 @@ func (w *Worker) importBookRecord(
 		w.markRequestsAvailable(ctx, "book_series", series.HardcoverID)
 	}
 	w.cleanupTorrent(ctx, rec, libCfg)
+	w.refreshMediaServers(ctx, mediaserver.KindBook,
+		library.BookRoot(libCfg, string(rec.BookKind)))
 	return nil
 }
