@@ -274,6 +274,9 @@ query ($ids: [Int!]!, $lang: String!) {
     digital: editions(
       where: {reading_format_id: {_in: [2, 4]}}
       order_by: {users_count: desc_nulls_last}, limit: 40) { ...ed }
+    physical: editions(
+      where: {_or: [{reading_format_id: {_eq: 1}}, {reading_format_id: {_is_null: true}}]}
+      order_by: {users_count: desc_nulls_last}, limit: 20) { ...ed }
     localDigital: editions(
       where: {reading_format_id: {_in: [2, 4]}, language: {code2: {_eq: $lang}}}
       order_by: {users_count: desc_nulls_last}, limit: 10) { ...ed }
@@ -281,9 +284,6 @@ query ($ids: [Int!]!, $lang: String!) {
       where: {_or: [{reading_format_id: {_eq: 1}}, {reading_format_id: {_is_null: true}}],
               language: {code2: {_eq: $lang}}}
       order_by: {users_count: desc_nulls_last}, limit: 10) { ...ed }
-    physical: editions(
-      where: {_or: [{reading_format_id: {_eq: 1}}, {reading_format_id: {_is_null: true}}]}
-      order_by: {users_count: desc_nulls_last}, limit: 20) { ...ed }
     earliest: editions(order_by: {release_date: asc_nulls_last}, limit: 1) { ...ed }
   }
 }
@@ -472,11 +472,11 @@ type hcBookRow struct {
 			Name string `json:"name"`
 		} `json:"series"`
 	} `json:"book_series"`
-	Digital []hcEditionRow `json:"digital"`
+	Digital  []hcEditionRow `json:"digital"`
+	Physical []hcEditionRow `json:"physical"`
 	// LocalDigital and LocalPhysical are the two pools in the book language.
 	LocalDigital  []hcEditionRow `json:"localDigital"`
 	LocalPhysical []hcEditionRow `json:"localPhysical"`
-	Physical      []hcEditionRow `json:"physical"`
 	Earliest      []hcEditionRow `json:"earliest"`
 }
 
