@@ -162,8 +162,12 @@
 
 	const qc = useQueryClient();
 	async function searchMissing(a: Artist) {
-		await api(`/music/artists/${a.id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: a.name }));
+		try {
+			await api(`/music/artists/${a.id}/search-now`, { method: "POST" });
+			toast.ok(i18n.music_search_started({ title: a.name }));
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_search_failed()));
+		}
 	}
 	async function toggleMonitor(a: Artist) {
 		try {

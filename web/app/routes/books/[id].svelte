@@ -75,8 +75,14 @@
 
 	const qc = useQueryClient();
 	const invalidate = () => qc.invalidateQueries({ queryKey: ["books"] });
+	// A refused or failed PATCH has to say so: these controls have no other
+	// feedback, so an unhandled rejection read as a dead button.
 	async function setMonitor(v: string) {
-		await api(`/books/${id}`, { method: "PATCH", body: { monitor: v } });
+		try {
+			await api(`/books/${id}`, { method: "PATCH", body: { monitor: v } });
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_update_failed()));
+		}
 		invalidate();
 	}
 	let lastMonitor: BookMonitor = "both";
@@ -96,15 +102,23 @@
 	}
 	async function search(f: BookFormat) {
 		if (!book) return;
-		await api(`/books/${id}/search-now?kind=${f}`, { method: "POST" });
-		toast.ok(i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() }));
+		try {
+			await api(`/books/${id}/search-now?kind=${f}`, { method: "POST" });
+			toast.ok(i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() }));
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_search_failed()));
+		}
 	}
 	// Every monitored format at once: the book's counterpart to a movie's
 	// automatic search.
 	async function searchAll() {
 		if (!book) return;
-		await api(`/books/${id}/search-now`, { method: "POST" });
-		toast.ok(i18n.books_search_all_started({ title: book.title }));
+		try {
+			await api(`/books/${id}/search-now`, { method: "POST" });
+			toast.ok(i18n.books_search_all_started({ title: book.title }));
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_search_failed()));
+		}
 	}
 	async function changeEdition(f: BookFormat) {
 		filter = f;
@@ -121,9 +135,13 @@
 		else applyEdition(e);
 	}
 	async function applyEdition(e: Edition) {
-		await api(`/books/${id}`, { method: "PATCH", body: { format: e.format, edition_id: e.id } });
+		try {
+			await api(`/books/${id}`, { method: "PATCH", body: { format: e.format, edition_id: e.id } });
+			toast.ok(i18n.books_edition_changed({ format: formatLabel(e.format) }));
+		} catch (err) {
+			toast.err(errorText(err, i18n.common_update_failed()));
+		}
 		invalidate();
-		toast.ok(i18n.books_edition_changed({ format: formatLabel(e.format) }));
 	}
 
 	let meta = $derived(

@@ -134,19 +134,19 @@
 		}
 		invalidate();
 	}
-	async function searchMissing() {
-		if (!artist) return;
-		await api(`/music/artists/${id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: artist.name }));
+	async function searchNow(path: string, title: string) {
+		try {
+			await api(path, { method: "POST" });
+			toast.ok(i18n.music_search_started({ title }));
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_search_failed()));
+		}
 	}
-	async function searchRelease(r: Release) {
-		await api(`/music/albums/${r.id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: r.title }));
+	function searchMissing() {
+		if (artist) searchNow(`/music/artists/${id}/search-now`, artist.name);
 	}
-	async function searchTrack(t: Track) {
-		await api(`/music/tracks/${t.id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: t.title }));
-	}
+	const searchRelease = (r: Release) => searchNow(`/music/albums/${r.id}/search-now`, r.title);
+	const searchTrack = (t: Track) => searchNow(`/music/tracks/${t.id}/search-now`, t.title);
 	let deletingTrack = $state<Track | null>(null);
 	let deletingPending = $state(false);
 	async function deleteTrack() {

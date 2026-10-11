@@ -60,8 +60,14 @@
 
 	const qc = useQueryClient();
 	const invalidate = () => qc.invalidateQueries({ queryKey: ["books"] });
+	// A refused or failed PATCH has to say so: these controls have no other
+	// feedback, so an unhandled rejection read as a dead button.
 	async function patch(body: Record<string, string>) {
-		await api(`/books/series/${id}`, { method: "PATCH", body });
+		try {
+			await api(`/books/series/${id}`, { method: "PATCH", body });
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_update_failed()));
+		}
 		invalidate();
 	}
 	let lastMonitor: SeriesMonitor = "all";
@@ -75,8 +81,12 @@
 	}
 	async function searchMissing() {
 		if (!s) return;
-		await api(`/books/series/${id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: s.title }));
+		try {
+			await api(`/books/series/${id}/search-now`, { method: "POST" });
+			toast.ok(i18n.music_search_started({ title: s.title }));
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_search_failed()));
+		}
 	}
 
 	let meta = $derived.by(() => {
