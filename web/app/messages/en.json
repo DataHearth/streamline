@@ -2318,7 +2318,7 @@
 	"books_series_delete_files_label": "Also delete every downloaded volume from disk",
 	"books_series_delete_files_body": "Every volume with a file goes back to wanted. Monitored volumes are searched for again.",
 	"music_track_on_disk": "On disk",
-	"music_track_search_for": "Search for {title}",
+	"music_track_manual_search_for": "Manual search for {title}",
 	"music_track_delete_for": "Delete the file for {title}",
 	"music_delete_track_title": "Delete the file for “{title}”?",
 	"music_delete_track_body": "The track goes back to missing and its release to wanted. A monitored release is searched for again.",

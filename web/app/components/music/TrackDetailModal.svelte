@@ -74,20 +74,15 @@
 		</dl>
 	{/if}
 	{#snippet footer()}
-		<button
-			type="button"
-			onclick={onClose}
-			class="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-sm font-medium text-fg hover:border-border-strong"
-		>
-			{i18n.common_close()}
-		</button>
+		<!-- The episode details modal's footer: no Close (the header's ✕ is
+		     it), the file delete muted until hovered, the search the accent. -->
 		{#if canEdit && track?.has_file && onDeleteFile}
 			<button
 				type="button"
 				onclick={() => act(onDeleteFile)}
-				class="inline-flex items-center gap-1.5 rounded-md border border-status-failed/40 px-3 py-1.5 text-sm font-medium text-status-failed hover:bg-status-failed/10"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 			>
-				<Trash2 size={14} aria-hidden="true" />
+				<Trash2 size={15} aria-hidden="true" />
 				{i18n.action_delete_file()}
 			</button>
 		{/if}
@@ -95,9 +90,9 @@
 			<button
 				type="button"
 				onclick={() => act(onManualSearch)}
-				class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover"
+				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
 			>
-				<Search size={14} aria-hidden="true" />
+				<Search size={15} aria-hidden="true" />
 				{i18n.action_manual_search()}
 			</button>
 		{/if}

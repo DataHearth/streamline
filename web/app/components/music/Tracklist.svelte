@@ -38,7 +38,7 @@
 	const canDelete = (t: Track) => canEdit && !!onDeleteFile && t.has_file;
 	const items = (t: Track): KebabItem[] => [
 		{ key: "info", label: i18n.common_details(), icon: Info, onSelect: () => (detail = t) },
-		...(canSearch ? [{ key: "search", label: i18n.action_manual_search(), icon: Search, onSelect: () => onManualSearch?.(t) } satisfies KebabItem] : []),
+		...(canSearch ? [{ key: "search", label: i18n.action_manual_search_ellipsis(), icon: Search, onSelect: () => onManualSearch?.(t) } satisfies KebabItem] : []),
 		...(canDelete(t)
 			? [{ key: "delete", label: i18n.action_delete_file(), icon: Trash2, danger: true, dividerBefore: true, onSelect: () => onDeleteFile?.(t) } satisfies KebabItem]
 			: []),
@@ -106,7 +106,7 @@
 						<button
 							type="button"
 							onclick={() => onManualSearch?.(t)}
-							aria-label={i18n.music_track_search_for({ title: t.title })}
+							aria-label={i18n.music_track_manual_search_for({ title: t.title })}
 							title={i18n.action_manual_search()}
 							class={iconBtn}
 						>

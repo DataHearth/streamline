@@ -2318,7 +2318,7 @@
 	"books_series_delete_files_label": "Supprimer aussi tous les tomes téléchargés du disque",
 	"books_series_delete_files_body": "Chaque tome avec un fichier repasse en recherché. Les tomes surveillés sont recherchés à nouveau.",
 	"music_track_on_disk": "Sur le disque",
-	"music_track_search_for": "Rechercher {title}",
+	"music_track_manual_search_for": "Recherche manuelle pour {title}",
 	"music_track_delete_for": "Supprimer le fichier de {title}",
 	"music_delete_track_title": "Supprimer le fichier de « {title} » ?",
 	"music_delete_track_body": "Le morceau repasse en manquant et sa sortie en recherchée. Une sortie surveillée est recherchée à nouveau.",
