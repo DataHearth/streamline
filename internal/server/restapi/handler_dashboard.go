@@ -2,11 +2,13 @@ package restapi
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 func (s *Server) ListActivity(
@@ -133,4 +135,65 @@ func (s *Server) ListUpcomingReleases(
 	return ListUpcomingReleases200JSONResponse{
 		UpcomingListJSONResponse: UpcomingListJSONResponse(out),
 	}, nil
+}
+
+func (s *Server) ListLibraryArrivals(
+	ctx context.Context,
+	req ListLibraryArrivalsRequestObject,
+) (ListLibraryArrivalsResponseObject, error) {
+	limit, ok := limitOr(req.Params.Limit, 24, arrivalsMaxLimit)
+	if !ok {
+		return ListLibraryArrivals400JSONResponse{
+			BadRequestJSONResponse: errBadRequest(limitRangeMsg(arrivalsMaxLimit)),
+		}, nil
+	}
+	arrivals, err := s.store.RecentArrivals(ctx, int(limit))
+	if err != nil {
+		return nil, err
+	}
+	out := LibraryArrivals{Items: make([]LibraryArrival, 0, len(arrivals))}
+	for _, a := range arrivals {
+		out.Items = append(out.Items, toLibraryArrival(a))
+	}
+	return ListLibraryArrivals200JSONResponse{
+		LibraryArrivalsJSONResponse: LibraryArrivalsJSONResponse(out),
+	}, nil
+}
+
+func toLibraryArrival(a db.Arrival) LibraryArrival {
+	out := LibraryArrival{
+		Kind:  LibraryArrivalKind(a.Kind),
+		At:    a.At,
+		Id:    a.ID,
+		Title: a.Title,
+	}
+	if a.Year != 0 {
+		out.Year = &a.Year
+	}
+	switch a.Kind {
+	case db.ArrivalMovie:
+		out.Resolution = optString(library.Parse(filepath.Base(a.Path)).Resolution)
+	case db.ArrivalSeries:
+		out.Addition = seriesAdditionToAPI(a.Addition)
+	case db.ArrivalAlbum:
+		if a.ArtistID != 0 {
+			out.ArtistId = &a.ArtistID
+		}
+		out.ArtistName = optString(a.ArtistName)
+		rt := LibraryArrivalReleaseType(a.ReleaseType)
+		out.ReleaseType = &rt
+	case db.ArrivalBook:
+		out.Author = optString(a.Author)
+		bk := LibraryArrivalBookKind(a.BookKind)
+		out.BookKind = &bk
+		if a.Format != "" {
+			f := LibraryArrivalFormat(a.Format)
+			out.Format = &f
+		}
+		if a.SeriesID != 0 {
+			out.SeriesId = &a.SeriesID
+			out.Volume = a.Volume
+		}
+	}
+	return out
 }

@@ -1102,20 +1102,25 @@ func tvShowListToAPI(s *ent.TVShow, c db.EpisodeCounts, progress *float32) TVSho
 			out.DownloadingEpisode = &number
 		}
 	}
-	if a := c.LastAdded; a != nil {
-		add := SeriesAddition{At: a.At, Seasons: a.Seasons, Count: a.Count}
-		if len(a.Episodes) > 0 {
-			add.Episodes = &a.Episodes
-		}
-		if a.EpisodeTitle != "" {
-			add.EpisodeTitle = &a.EpisodeTitle
-		}
-		if a.WholeSeason {
-			add.WholeSeason = &a.WholeSeason
-		}
-		out.LastAdded = &add
-	}
+	out.LastAdded = seriesAdditionToAPI(c.LastAdded)
 	return out
+}
+
+func seriesAdditionToAPI(a *db.Addition) *SeriesAddition {
+	if a == nil {
+		return nil
+	}
+	add := SeriesAddition{At: a.At, Seasons: a.Seasons, Count: a.Count}
+	if len(a.Episodes) > 0 {
+		add.Episodes = &a.Episodes
+	}
+	if a.EpisodeTitle != "" {
+		add.EpisodeTitle = &a.EpisodeTitle
+	}
+	if a.WholeSeason {
+		add.WholeSeason = &a.WholeSeason
+	}
+	return &add
 }
 
 func seasonToAPI(

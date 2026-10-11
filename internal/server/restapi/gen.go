@@ -1506,6 +1506,102 @@ func (e InviteCreatedRole) Valid() bool {
 	}
 }
 
+// Defines values for LibraryArrivalBookKind.
+const (
+	LibraryArrivalBookKindBd    LibraryArrivalBookKind = "bd"
+	LibraryArrivalBookKindComic LibraryArrivalBookKind = "comic"
+	LibraryArrivalBookKindManga LibraryArrivalBookKind = "manga"
+	LibraryArrivalBookKindNovel LibraryArrivalBookKind = "novel"
+)
+
+// Valid indicates whether the value is a known member of the LibraryArrivalBookKind enum.
+func (e LibraryArrivalBookKind) Valid() bool {
+	switch e {
+	case LibraryArrivalBookKindBd:
+		return true
+	case LibraryArrivalBookKindComic:
+		return true
+	case LibraryArrivalBookKindManga:
+		return true
+	case LibraryArrivalBookKindNovel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LibraryArrivalFormat.
+const (
+	LibraryArrivalFormatAudiobook LibraryArrivalFormat = "audiobook"
+	LibraryArrivalFormatEbook     LibraryArrivalFormat = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the LibraryArrivalFormat enum.
+func (e LibraryArrivalFormat) Valid() bool {
+	switch e {
+	case LibraryArrivalFormatAudiobook:
+		return true
+	case LibraryArrivalFormatEbook:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LibraryArrivalKind.
+const (
+	LibraryArrivalKindAlbum  LibraryArrivalKind = "album"
+	LibraryArrivalKindBook   LibraryArrivalKind = "book"
+	LibraryArrivalKindMovie  LibraryArrivalKind = "movie"
+	LibraryArrivalKindSeries LibraryArrivalKind = "series"
+)
+
+// Valid indicates whether the value is a known member of the LibraryArrivalKind enum.
+func (e LibraryArrivalKind) Valid() bool {
+	switch e {
+	case LibraryArrivalKindAlbum:
+		return true
+	case LibraryArrivalKindBook:
+		return true
+	case LibraryArrivalKindMovie:
+		return true
+	case LibraryArrivalKindSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LibraryArrivalReleaseType.
+const (
+	LibraryArrivalReleaseTypeAlbum       LibraryArrivalReleaseType = "album"
+	LibraryArrivalReleaseTypeCompilation LibraryArrivalReleaseType = "compilation"
+	LibraryArrivalReleaseTypeEp          LibraryArrivalReleaseType = "ep"
+	LibraryArrivalReleaseTypeLive        LibraryArrivalReleaseType = "live"
+	LibraryArrivalReleaseTypeOther       LibraryArrivalReleaseType = "other"
+	LibraryArrivalReleaseTypeSingle      LibraryArrivalReleaseType = "single"
+)
+
+// Valid indicates whether the value is a known member of the LibraryArrivalReleaseType enum.
+func (e LibraryArrivalReleaseType) Valid() bool {
+	switch e {
+	case LibraryArrivalReleaseTypeAlbum:
+		return true
+	case LibraryArrivalReleaseTypeCompilation:
+		return true
+	case LibraryArrivalReleaseTypeEp:
+		return true
+	case LibraryArrivalReleaseTypeLive:
+		return true
+	case LibraryArrivalReleaseTypeOther:
+		return true
+	case LibraryArrivalReleaseTypeSingle:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LibraryConfigPatchImportMode.
 const (
 	LibraryConfigPatchImportModeCopy     LibraryConfigPatchImportMode = "copy"
@@ -5336,6 +5432,57 @@ type JWTRotated struct {
 	Token *string `json:"token,omitempty"`
 }
 
+// LibraryArrival One import. `id` is the title whose art the card shows: the movie, the
+// show, the album, or the book (a volume's own book id). The fields after
+// `year` belong to one kind each.
+type LibraryArrival struct {
+	// Addition The show's most recent import, summarised for a list row. `added_at`
+	// is when the show record was created, which says nothing about when
+	// files arrived: a show followed since March can take an episode this
+	// morning. Absent until one has. A batch is every file that landed
+	// within an hour of the newest one.
+	Addition   *SeriesAddition         `json:"addition,omitempty"`
+	ArtistId   *uint32                 `json:"artist_id,omitempty"`
+	ArtistName *string                 `json:"artist_name,omitempty"`
+	At         time.Time               `json:"at"`
+	Author     *string                 `json:"author,omitempty"`
+	BookKind   *LibraryArrivalBookKind `json:"book_kind,omitempty"`
+
+	// Format The book slot the import filled.
+	Format      *LibraryArrivalFormat      `json:"format,omitempty"`
+	Id          uint32                     `json:"id"`
+	Kind        LibraryArrivalKind         `json:"kind"`
+	ReleaseType *LibraryArrivalReleaseType `json:"release_type,omitempty"`
+
+	// Resolution Movie only — parsed off the import's largest file name.
+	Resolution *string `json:"resolution,omitempty"`
+
+	// SeriesId Set when the book is a volume of a series.
+	SeriesId *uint32 `json:"series_id,omitempty"`
+	Title    string  `json:"title"`
+
+	// Volume The volume's position in its series; may be fractional.
+	Volume *float64 `json:"volume,omitempty"`
+	Year   *uint16  `json:"year,omitempty"`
+}
+
+// LibraryArrivalBookKind defines model for LibraryArrival.BookKind.
+type LibraryArrivalBookKind string
+
+// LibraryArrivalFormat The book slot the import filled.
+type LibraryArrivalFormat string
+
+// LibraryArrivalKind defines model for LibraryArrival.Kind.
+type LibraryArrivalKind string
+
+// LibraryArrivalReleaseType defines model for LibraryArrival.ReleaseType.
+type LibraryArrivalReleaseType string
+
+// LibraryArrivals defines model for LibraryArrivals.
+type LibraryArrivals struct {
+	Items []LibraryArrival `json:"items"`
+}
+
 // LibraryConfigPatch Only provided fields are applied. The three roots are absent by design — see LibraryConfigView.movie_path.
 type LibraryConfigPatch struct {
 	AllowedDownloadRoots *[]string                     `json:"allowed_download_roots,omitempty"`
@@ -9004,6 +9151,12 @@ type ListImportShowsParams struct {
 // ListImportShowsParamsClassification defines parameters for ListImportShows.
 type ListImportShowsParamsClassification string
 
+// ListLibraryArrivalsParams defines parameters for ListLibraryArrivals.
+type ListLibraryArrivalsParams struct {
+	// Limit Imports to return (1..100).
+	Limit *uint16 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListMoviesParams defines parameters for ListMovies.
 type ListMoviesParams struct {
 	Page  *uint16 `form:"page,omitempty" json:"page,omitempty"`
@@ -9995,6 +10148,9 @@ type ServerInterface interface {
 	// GetPathMigrationRoots Configured library roots and how much is stored under each.
 	// (GET /library/path-migration/roots)
 	GetPathMigrationRoots(w http.ResponseWriter, r *http.Request)
+	// ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
+	// (GET /library/recent)
+	ListLibraryArrivals(w http.ResponseWriter, r *http.Request, params ListLibraryArrivalsParams)
 	// ListMediaServers List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(w http.ResponseWriter, r *http.Request)
@@ -11043,6 +11199,12 @@ func (_ Unimplemented) PreviewPathMigration(w http.ResponseWriter, r *http.Reque
 // GetPathMigrationRoots Configured library roots and how much is stored under each.
 // (GET /library/path-migration/roots)
 func (_ Unimplemented) GetPathMigrationRoots(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
+// (GET /library/recent)
+func (_ Unimplemented) ListLibraryArrivals(w http.ResponseWriter, r *http.Request, params ListLibraryArrivalsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -14945,6 +15107,39 @@ func (siw *ServerInterfaceWrapper) GetPathMigrationRoots(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPathMigrationRoots(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLibraryArrivals operation middleware
+func (siw *ServerInterfaceWrapper) ListLibraryArrivals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLibraryArrivalsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLibraryArrivals(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19324,6 +19519,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/schedules/{name}/run", wrapper.RunSchedule)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/library/recent", wrapper.ListLibraryArrivals)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/library/imports", wrapper.ListImports)
 	})
 	r.Group(func(r chi.Router) {
@@ -19567,6 +19765,8 @@ type ImportScanShowListJSONResponse ImportScanShowList
 type InternalErrorJSONResponse Error
 
 type JWTRotatedJSONResponse JWTRotated
+
+type LibraryArrivalsJSONResponse LibraryArrivals
 
 type LibraryConfigJSONResponse LibraryConfigView
 
@@ -27266,6 +27466,42 @@ func (response GetPathMigrationRoots403JSONResponse) VisitGetPathMigrationRootsR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLibraryArrivalsRequestObject struct {
+	Params ListLibraryArrivalsParams
+}
+
+type ListLibraryArrivalsResponseObject interface {
+	VisitListLibraryArrivalsResponse(w http.ResponseWriter) error
+}
+
+type ListLibraryArrivals200JSONResponse struct{ LibraryArrivalsJSONResponse }
+
+func (response ListLibraryArrivals200JSONResponse) VisitListLibraryArrivalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLibraryArrivals400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListLibraryArrivals400JSONResponse) VisitListLibraryArrivalsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -35540,6 +35776,9 @@ type StrictServerInterface interface {
 	// GetPathMigrationRoots Configured library roots and how much is stored under each.
 	// (GET /library/path-migration/roots)
 	GetPathMigrationRoots(ctx context.Context, request GetPathMigrationRootsRequestObject) (GetPathMigrationRootsResponseObject, error)
+	// ListLibraryArrivals What landed in the library, newest first, across movies, series, music and books.
+	// (GET /library/recent)
+	ListLibraryArrivals(ctx context.Context, request ListLibraryArrivalsRequestObject) (ListLibraryArrivalsResponseObject, error)
 	// ListMediaServers List configured media servers
 	// (GET /media-servers)
 	ListMediaServers(ctx context.Context, request ListMediaServersRequestObject) (ListMediaServersResponseObject, error)
@@ -39191,6 +39430,32 @@ func (sh *strictHandler) GetPathMigrationRoots(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetPathMigrationRootsResponseObject); ok {
 		if err := validResponse.VisitGetPathMigrationRootsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListLibraryArrivals operation middleware
+func (sh *strictHandler) ListLibraryArrivals(w http.ResponseWriter, r *http.Request, params ListLibraryArrivalsParams) {
+	var request ListLibraryArrivalsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListLibraryArrivals(ctx, request.(ListLibraryArrivalsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListLibraryArrivals")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListLibraryArrivalsResponseObject); ok {
+		if err := validResponse.VisitListLibraryArrivalsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

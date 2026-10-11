@@ -103,6 +103,45 @@ type Addition struct {
 // imports an hour apart ever need telling apart.
 const additionWindow = time.Hour
 
+type episodeArrival struct {
+	season, number uint16
+	title          string
+	at             time.Time
+}
+
+// newAddition summarises one non-empty batch of a show's arrivals. seasonSize
+// is the show's episode count per season, which tells a filled season from a
+// run of episodes in it.
+func newAddition(batch []episodeArrival, seasonSize map[uint16]int) *Addition {
+	slices.SortFunc(batch, func(a, b episodeArrival) int {
+		return cmp.Or(
+			cmp.Compare(a.season, b.season),
+			cmp.Compare(a.number, b.number),
+		)
+	})
+	add := &Addition{Count: numeric.SaturateU32(len(batch))}
+	for _, a := range batch {
+		if a.at.After(add.At) {
+			add.At = a.at
+		}
+		if n := len(add.Seasons); n == 0 || add.Seasons[n-1] != a.season {
+			add.Seasons = append(add.Seasons, a.season)
+		}
+		if a.season == batch[0].season {
+			add.Episodes = append(add.Episodes, a.number)
+		}
+	}
+	if len(add.Seasons) > 1 {
+		add.Episodes = nil
+	} else {
+		add.WholeSeason = len(batch) == seasonSize[batch[0].season]
+	}
+	if add.Count == 1 {
+		add.EpisodeTitle = batch[0].title
+	}
+	return add
+}
+
 // In-flight scopes, mirroring the API's SeriesDownloadScope.
 const (
 	scopeEpisode = "episode"
@@ -599,63 +638,35 @@ func (db *DB) episodeCounts(
 	if err != nil {
 		return nil, fmt.Errorf("file arrival times: %w", err)
 	}
-	type arrival struct {
-		season, number uint16
-		title          string
-		at             time.Time
-	}
 	byEpisode := make(map[uint32]int, len(rows))
-	seasonSize := make(map[uint32]map[uint16]uint32, len(showIDs))
+	seasonSize := make(map[uint32]map[uint16]int, len(showIDs))
 	for i, r := range rows {
 		byEpisode[r.EpisodeID] = i
 		if seasonSize[r.ShowID] == nil {
-			seasonSize[r.ShowID] = make(map[uint16]uint32)
+			seasonSize[r.ShowID] = make(map[uint16]int)
 		}
 		seasonSize[r.ShowID][r.Season]++
 	}
-	arrivals := make(map[uint32][]arrival, len(showIDs))
+	arrivals := make(map[uint32][]episodeArrival, len(showIDs))
 	for _, f := range fileRows {
 		i, ok := byEpisode[f.EpisodeID]
 		if !ok {
 			continue
 		}
 		r := rows[i]
-		arrivals[r.ShowID] = append(arrivals[r.ShowID], arrival{
+		arrivals[r.ShowID] = append(arrivals[r.ShowID], episodeArrival{
 			season: r.Season, number: r.Number, title: r.Title, at: f.AddedAt,
 		})
 	}
 	for showID, all := range arrivals {
-		newest := slices.MaxFunc(all, func(a, b arrival) int {
+		newest := slices.MaxFunc(all, func(a, b episodeArrival) int {
 			return a.at.Compare(b.at)
 		})
-		batch := slices.DeleteFunc(all, func(a arrival) bool {
+		batch := slices.DeleteFunc(all, func(a episodeArrival) bool {
 			return newest.at.Sub(a.at) > additionWindow
 		})
-		slices.SortFunc(batch, func(a, b arrival) int {
-			return cmp.Or(
-				cmp.Compare(a.season, b.season),
-				cmp.Compare(a.number, b.number),
-			)
-		})
-		add := &Addition{At: newest.at, Count: numeric.SaturateU32(len(batch))}
-		for _, a := range batch {
-			if n := len(add.Seasons); n == 0 || add.Seasons[n-1] != a.season {
-				add.Seasons = append(add.Seasons, a.season)
-			}
-			if a.season == batch[0].season {
-				add.Episodes = append(add.Episodes, a.number)
-			}
-		}
-		if len(add.Seasons) > 1 {
-			add.Episodes = nil
-		} else {
-			add.WholeSeason = add.Count == seasonSize[showID][batch[0].season]
-		}
-		if add.Count == 1 {
-			add.EpisodeTitle = batch[0].title
-		}
 		c := out[showID]
-		c.LastAdded = add
+		c.LastAdded = newAddition(batch, seasonSize[showID])
 		out[showID] = c
 	}
 	return out, nil

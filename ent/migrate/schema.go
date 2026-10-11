@@ -1083,6 +1083,11 @@ var (
 					Where: "probed_at IS NULL",
 				},
 			},
+			{
+				Name:    "mediafile_create_time",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[1]},
+			},
 		},
 	}
 	// MoviesColumns holds the columns for the "movies" table.

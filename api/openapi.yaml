@@ -4200,6 +4200,29 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /library/recent:
+    get:
+      operationId: listLibraryArrivals
+      summary: What landed in the library, newest first, across movies, series, music and books.
+      description: |
+        One entry per import: a movie, a show with the episodes the import
+        added, an album, or one format of a book. An import is every file of
+        one title (one format, for a book) that landed within an hour of the
+        newest of them — files carry no import id, so the window is what tells
+        a season pack from a lone episode, the same rule as a show's
+        `last_added`. `at` is that newest file's import time, never the title's
+        `added_at`. A bulk-import adoption counts as an import.
+      parameters:
+        - in: query
+          name: limit
+          description: Imports to return (1..100).
+          schema: { type: integer, default: 24, minimum: 1, maximum: 100, x-go-type: uint16 }
+      responses:
+        "200":
+          $ref: "#/components/responses/LibraryArrivals"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /library/imports:
     get:
       operationId: ListImports
@@ -7207,6 +7230,13 @@ components:
           schema:
             $ref: "#/components/schemas/UpcomingList"
 
+    LibraryArrivals:
+      description: The newest imports, newest first.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LibraryArrivals"
+
     SystemInfo:
       description: Read-only environment summary.
       content:
@@ -8094,6 +8124,68 @@ components:
           type: integer
           description: Episodes imported across every season the batch touched.
           x-go-type: uint32
+
+    LibraryArrivals:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LibraryArrival"
+
+    LibraryArrival:
+      type: object
+      required: [kind, at, id, title]
+      description: |
+        One import. `id` is the title whose art the card shows: the movie, the
+        show, the album, or the book (a volume's own book id). The fields after
+        `year` belong to one kind each.
+      properties:
+        kind:
+          type: string
+          enum: [movie, series, album, book]
+        at:
+          type: string
+          format: date-time
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+        resolution:
+          type: string
+          description: Movie only — parsed off the import's largest file name.
+        addition:
+          $ref: "#/components/schemas/SeriesAddition"
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        artist_name:
+          type: string
+        release_type:
+          type: string
+          enum: [album, ep, single, compilation, live, other]
+        author:
+          type: string
+        book_kind:
+          type: string
+          enum: [novel, bd, comic, manga]
+        format:
+          type: string
+          enum: [ebook, audiobook]
+          description: The book slot the import filled.
+        series_id:
+          type: integer
+          x-go-type: uint32
+          description: Set when the book is a volume of a series.
+        volume:
+          type: number
+          format: double
+          description: The volume's position in its series; may be fractional.
 
     Season:
       type: object

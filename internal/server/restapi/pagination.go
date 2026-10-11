@@ -17,6 +17,7 @@ const (
 	pendingMaxLimit  = 100
 	musicMaxLimit    = 100
 	bookMaxLimit     = 100
+	arrivalsMaxLimit = 100
 )
 
 const msgZeroPage = "page must be >= 1"

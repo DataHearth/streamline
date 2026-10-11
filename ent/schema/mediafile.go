@@ -103,5 +103,8 @@ func (MediaFile) Indexes() []ent.Index {
 		// the 15-minute job stops scanning the whole table forever.
 		index.Fields("probed_at").
 			Annotations(entsql.IndexWhere("probed_at IS NULL")),
+		// The dashboard's arrivals walk files newest first. SQLite appends the
+		// rowid to every index, so this one also serves the id tie-break.
+		index.Fields("create_time"),
 	}
 }

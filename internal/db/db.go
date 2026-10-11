@@ -548,6 +548,10 @@ type Store interface {
 	IncrementMovieGrabFailures(ctx context.Context, id uint32) error
 	ResetMovieGrabFailures(ctx context.Context, id uint32) error
 
+	// RecentArrivals lists the newest limit imports across movies, series,
+	// albums and books, newest first.
+	RecentArrivals(ctx context.Context, limit int) ([]Arrival, error)
+
 	// movie events
 	RecentActivity(
 		ctx context.Context,

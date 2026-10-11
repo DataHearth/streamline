@@ -66,6 +66,7 @@ var minRole = map[string]string{
 	"DisableOpdsToken":        roleRequestOnly,
 
 	"ListUpcomingReleases": roleRequestOnly,
+	"ListLibraryArrivals":  roleRequestOnly,
 
 	"GetConfigAuth":           roleAdmin,
 	"UpdateConfigAuth":        roleAdmin,

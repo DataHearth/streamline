@@ -13,8 +13,11 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	entalbum "github.com/datahearth/streamline/ent/album"
+	entbook "github.com/datahearth/streamline/ent/book"
 	entepisode "github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
 )
@@ -344,6 +347,94 @@ var _ = Describe(
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 			})
+		})
+
+		Describe("GET /api/v1/library/recent", func() {
+			It("renders each kind's own fields and asks for 24 by default", func() {
+				at := time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC)
+				vol := 3.5
+				app.store.EXPECT().
+					RecentArrivals(mock.Anything, 24).
+					Return([]db.Arrival{
+						{
+							Kind:  db.ArrivalMovie,
+							At:    at,
+							ID:    1,
+							Title: "Northern Halo",
+							Year:  2024,
+							Path:  "/m/Northern.Halo.2024.2160p.BluRay.x265-GRP.mkv",
+						},
+						{
+							Kind:  db.ArrivalSeries,
+							At:    at,
+							ID:    2,
+							Title: "The Long Field",
+							Addition: &db.Addition{
+								At:       at,
+								Seasons:  []uint16{1},
+								Episodes: []uint16{4},
+								Count:    1,
+							},
+						},
+						{
+							Kind:        db.ArrivalAlbum,
+							At:          at,
+							ID:          3,
+							Title:       "The Long Quiet",
+							ArtistID:    9,
+							ArtistName:  "Northbound Static",
+							ReleaseType: entalbum.TypeEp,
+						},
+						{
+							Kind:     db.ArrivalBook,
+							At:       at,
+							ID:       4,
+							Title:    "Les Archives du sel",
+							Author:   "Iris Calder",
+							BookKind: entbook.KindBd,
+							Format:   entmediafile.BookKindEbook,
+							SeriesID: 8,
+							Volume:   &vol,
+						},
+					}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL + "/api/v1/library/recent")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body LibraryArrivals
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Items).To(HaveLen(4))
+				movie, show, release, vol3 := body.Items[0], body.Items[1], body.Items[2], body.Items[3]
+				Expect(movie.Resolution).To(HaveValue(Equal("2160p")))
+				Expect(movie.Year).To(HaveValue(Equal(uint16(2024))))
+				Expect(show.Addition).NotTo(BeNil())
+				Expect(show.Addition.Episodes).To(HaveValue(Equal([]uint16{4})))
+				Expect(show.Year).To(BeNil())
+				Expect(release.ArtistName).To(HaveValue(Equal("Northbound Static")))
+				Expect(
+					release.ReleaseType,
+				).To(HaveValue(Equal(LibraryArrivalReleaseTypeEp)))
+				Expect(vol3.Format).To(HaveValue(Equal(LibraryArrivalFormatEbook)))
+				Expect(vol3.SeriesId).To(HaveValue(Equal(uint32(8))))
+				Expect(vol3.Volume).To(HaveValue(Equal(3.5)))
+				Expect(vol3.Resolution).To(BeNil())
+			})
+
+			DescribeTable("rejects a limit outside [1, 100]",
+				func(limit string) {
+					resp, err := http.Get(
+						app.srv.URL + "/api/v1/library/recent?limit=" + limit,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				},
+				Entry("zero", "0"),
+				Entry("above the ceiling", "101"),
+			)
 		})
 	},
 )
