@@ -287,6 +287,47 @@ var _ = Describe(
 			})
 		})
 
+		Describe("a cardigann indexer", func() {
+			BeforeEach(func() {
+				configtest.SetupFile(indexerOverride(map[string]any{
+					"name": "YTS", "protocol": "cardigann", "enabled": true,
+					"cardigann": map[string]any{"definition": "yts"},
+				}))
+			})
+
+			It("lists with its definition and the tracker's site", func() {
+				resp, err := http.Get(app.srv.URL + "/api/v1/indexers")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				var items []Indexer
+				Expect(json.NewDecoder(resp.Body).Decode(&items)).To(Succeed())
+				Expect(items).To(HaveLen(1))
+				Expect(items[0].Protocol).To(Equal(IndexerProtocolCardigann))
+				Expect(items[0].Definition).To(HaveValue(Equal("yts")))
+				Expect(items[0].Host).To(Equal("yts.gg"))
+				Expect(items[0].Port).To(Equal(uint16(443)))
+				Expect(items[0].UseSsl).To(HaveValue(BeTrue()))
+				Expect(items[0].ApiKeySet).To(BeFalse())
+			})
+
+			It("refuses an update: it lives in the config file", func() {
+				req := app.req(
+					http.MethodPut,
+					"/api/v1/indexers/YTS",
+					"",
+					strings.NewReader(
+						`{"name": "YTS", "host": "h", "port": 1, "api_key": "k"}`,
+					),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				got, _ := config.FindIndexer("YTS")
+				Expect(got.Host).To(BeEmpty())
+			})
+		})
+
 		Describe("UpdateIndexer", func() {
 			It("updates fields and returns 200", func() {
 				configtest.SetupFile(indexerOverride(map[string]any{

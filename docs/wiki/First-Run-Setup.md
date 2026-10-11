@@ -184,7 +184,7 @@ Torrents are never paused or resumed by this check, and it cannot see space take
 
 **Settings → Indexers → Add.**
 
-Indexers are where Streamline searches for releases. Two protocols are supported:
+Indexers are where Streamline searches for releases. Two protocols can be added here:
 
 **Prowlarr** (recommended). Run Prowlarr, configure your trackers once there, and point Streamline at it. One entry covers every tracker Prowlarr knows about.
 
@@ -206,6 +206,8 @@ Port:     9117
 Path:     /api/v2.0/indexers/<tracker>/results/torznab
 API key:  from Jackett
 ```
+
+**Built-in.** Streamline can also run a public tracker itself from the definitions Prowlarr and Jackett use, with neither installed. These are set up in the config file, not here — see [Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann). Trackers that need a login still go through Prowlarr or Jackett for now.
 
 **Test** each one. Priority works like the download clients: lower number is tried first.
 

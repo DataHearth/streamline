@@ -9,12 +9,12 @@
 	import { readOnlyLock } from "@lib/config.svelte";
 	import { hostDestination } from "@lib/destination";
 	import type { AppForm } from "@lib/form";
-	import type { IndexerProtocol } from "@lib/types";
+	import type { EditableIndexerProtocol } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
-		protocol: IndexerProtocol;
+		protocol: EditableIndexerProtocol;
 		host: string;
 		port: number;
 		path: string;
@@ -40,7 +40,7 @@
 	type Preset = {
 		slug: string;
 		label: string;
-		protocol: IndexerProtocol;
+		protocol: EditableIndexerProtocol;
 		name?: string;
 		host?: string;
 		port?: number;
@@ -101,7 +101,7 @@
 	const moved = $derived(isEdit && destination.current !== savedDestination);
 
 	const PROTOCOL_META: Record<
-		IndexerProtocol,
+		EditableIndexerProtocol,
 		{ label: string; desc: string; logo?: string }
 	> = {
 		prowlarr: {
