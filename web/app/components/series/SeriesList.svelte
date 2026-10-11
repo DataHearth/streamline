@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { Bookmark, Tv } from "@lucide/svelte";
+	import { Tv } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
 	import { tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
@@ -29,18 +29,11 @@
 	let pageSelected = $derived(series.filter((s) => selected.has(s.id)).length);
 	let allSelected = $derived(series.length > 0 && pageSelected === series.length);
 
-	const qc = useQueryClient();
-	const monitor = createMutation<TVShow, Error, TVShow>(() => ({
-		mutationFn: (s) =>
-			api<TVShow>(`/series/${s.id}`, {
-				method: "PATCH",
-				body: { monitored: !s.monitored },
-			}),
-		onSuccess: (_d, s) => {
-			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(s.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+	const monitor = createAction<TVShow>(() => ({
+		run: (s) => api<TVShow>(`/series/${s.id}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => monitorToast(!s.monitored),
 	}));
 
 	function availability(
@@ -219,25 +212,13 @@
 					<td class="px-3 py-2.5">
 						<div class="flex items-center justify-end gap-1">
 							{#if auth.canAddDirectly}
-								<button
-									type="button"
-									onclick={() => monitor.mutate(show)}
-									aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-									aria-pressed={show.monitored}
-									title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-									class={cn(
-										"grid h-11 w-11 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-8 lg:w-8",
-										show.monitored
-											? "text-accent-text"
-											: "text-fg-muted hover:text-fg",
-									)}
-								>
-									<Bookmark
-										size={15}
-										fill={show.monitored ? "currentColor" : "none"}
-										aria-hidden="true"
-									/>
-								</button>
+								<MonitorToggle
+									monitored={show.monitored ?? false}
+									onToggle={() => monitor.mutate(show)}
+									pending={monitor.isPending && monitor.variables?.id === show.id}
+									variant="ghost"
+									size="row"
+								/>
 								<SeriesActionsMenu {show} variant="toolbar" />
 							{/if}
 						</div>

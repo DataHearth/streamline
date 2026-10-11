@@ -1,11 +1,7 @@
 <script lang="ts">
-	import {
-		createQuery,
-		createMutation,
-		useQueryClient,
-	} from "@tanstack/svelte-query";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { api } from "@lib/api";
+	import { createAction, deleteFailed, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
 	import type { TVShow, QualityProfile, SeriesType } from "@lib/types";
 	import SeriesKebabMenu, { type SeriesAction } from "./SeriesKebabMenu.svelte";
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
@@ -26,8 +22,6 @@
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
 
-	const qc = useQueryClient();
-
 	// Fetched once the quality dialog opens; the ["quality-profiles"] cache is
 	// shared across every card so it resolves to a single request.
 	const profilesQuery = createQuery<QualityProfile[]>(() => ({
@@ -36,60 +30,42 @@
 		enabled: qpOpen,
 	}));
 
-	const saveProfile = createMutation<TVShow, Error, string>(() => ({
-		mutationFn: (profile) =>
-			api<TVShow>(`/series/${show.id}`, {
-				method: "PATCH",
-				body: { quality_profile: profile },
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["series", show.id] });
-			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(i18n.series_quality_updated());
-			qpOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	const saveProfile = createAction<string>(() => ({
+		run: (profile) => api<TVShow>(`/series/${show.id}`, { method: "PATCH", body: { quality_profile: profile } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.series_quality_updated(),
+		then: () => (qpOpen = false),
 	}));
 
-	const saveType = createMutation<TVShow, Error, SeriesType>(() => ({
-		mutationFn: (t) =>
-			api<TVShow>(`/series/${show.id}`, { method: "PATCH", body: { type: t } }),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["series", show.id] });
-			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(i18n.series_type_updated());
-			typeOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	const saveType = createAction<SeriesType>(() => ({
+		run: (type) => api<TVShow>(`/series/${show.id}`, { method: "PATCH", body: { type } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.series_type_updated(),
+		then: () => (typeOpen = false),
 	}));
 
-	const searchNow = createMutation(() => ({
-		mutationFn: () => api(`/series/${show.id}/search`, { method: "POST" }),
-		onSuccess: () => toast.ok(i18n.series_search_dispatched_wanted()),
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
+	const searchNow = createAction(() => ({
+		run: () => api(`/series/${show.id}/search`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => i18n.series_search_dispatched_wanted(),
 	}));
 
-	const refresh = createMutation(() => ({
-		mutationFn: () =>
-			api(`/series/${show.id}/refresh-metadata`, { method: "POST" }),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["series", show.id] });
-			toast.ok(i18n.series_refresh_requested());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
+	const refresh = createAction(() => ({
+		run: () => api(`/series/${show.id}/refresh-metadata`, { method: "POST" }),
+		refresh: SERIES,
+		failed: refreshFailed,
+		succeeded: () => i18n.series_refresh_requested(),
 	}));
 
-	const del = createMutation<unknown, Error, boolean>(() => ({
-		mutationFn: (withFiles) =>
-			api(`/series/${show.id}?delete_files=${withFiles}`, {
-				method: "DELETE",
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["series"] });
-			deleteOpen = false;
-			toast.ok(i18n.series_deleted());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
+	const del = createAction<boolean>(() => ({
+		run: (withFiles) => api(`/series/${show.id}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: SERIES,
+		failed: deleteFailed,
+		succeeded: () => i18n.series_deleted(),
+		then: () => (deleteOpen = false),
 	}));
 
 	// Exhaustive by construction — SeriesKebabMenu owns the item list, so an

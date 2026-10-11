@@ -11,6 +11,7 @@
 	} from "@tanstack/svelte-query";
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
+	import { entryHeading } from "@lib/activity-touch";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
@@ -347,9 +348,7 @@
 			const q = fold(search);
 			out = out.filter(
 				(i) =>
-					fold(i.title).includes(q) ||
-					fold(i.movie.title).includes(q) ||
-					fold(i.episode?.show_title ?? "").includes(q),
+					fold(i.title).includes(q) || fold(entryHeading(i)).includes(q),
 			);
 		}
 		return out;

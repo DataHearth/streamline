@@ -25,8 +25,13 @@ const pct = (v: number | undefined | null) =>
 // its linked episode is just the season's first — label it as the season rather
 // than a misleading SxxE01.
 export function entryHeading(item: QueueEntry | HistoryEntry): string {
+	if (item.album) return joinDot([item.album.artist_name, item.album.title]);
+	if (item.artist) return joinDot([item.artist.name, i18n.music_discography()]);
+	if (item.book) return joinDot([item.book.author, item.book.title]);
 	const ep = item.episode;
-	if (!ep) return item.movie.title;
+	// A movie record names its movie. Anything else the API does not describe
+	// still has its release name, which beats a blank heading.
+	if (!ep) return item.movie.title || item.title;
 	if (episodeTokenRe.test(item.title)) {
 		return `${ep.show_title} · S${pad2(ep.season)}E${pad2(ep.episode)}`;
 	}

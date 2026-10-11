@@ -9,6 +9,9 @@ export class ApiError extends Error {
 	body: ApiErrorBody;
 	// Seconds to wait, from a 429's Retry-After. Absent when the header is.
 	retryAfter?: number;
+	// The response had no body at all. Streamline never answers an error that
+	// way, so this one came from something in front of it.
+	bare = false;
 	constructor(status: number, message: string, body: ApiErrorBody, retryAfter?: number) {
 		super(message);
 		this.status = status;
@@ -112,6 +115,11 @@ export function errorText(err: unknown, fallback?: string): string {
 		// A 429 that says how long to wait: the sentence says it too (a login,
 		// a Hardcover add or approve).
 		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter);
+		// Every 403 streamline writes carries a body. A bare one is a reverse
+		// proxy or WAF refusing the request before it arrived — typically a
+		// method allow-list without PATCH or DELETE — and "you don't have
+		// permission" sent an admin looking at their role instead.
+		if (err.status === 403 && err.bare) return i18n.err_forbidden_upstream();
 		if (code && BY_CODE[code]) return BY_CODE[code]();
 		return byStatus(err.status);
 	}
@@ -141,7 +149,9 @@ function errorFrom(res: Response, parsed: unknown, text: string): ApiError {
 		parsed && typeof parsed === "object" ? (parsed as ApiErrorBody) : null;
 	const message =
 		body?.message || (text ? text.trim().slice(0, 300) : "") || res.statusText;
-	return new ApiError(res.status, message, body, res.status === 429 ? retryAfterOf(res) : undefined);
+	const err = new ApiError(res.status, message, body, res.status === 429 ? retryAfterOf(res) : undefined);
+	err.bare = !text;
+	return err;
 }
 
 export async function api<T = unknown>(

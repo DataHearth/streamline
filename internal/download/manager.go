@@ -421,10 +421,12 @@ type QueueEntry struct {
 	Quality      string
 	ReleaseGroup string
 	Movie        *ent.Movie
-	// Album is set for an album record, Artist for a discography pack; both
-	// let the activity page title the row.
+	// Album is set for an album record (its artist eager-loaded), Artist for a
+	// discography pack, Book for a book slot; each lets the activity page
+	// title the row.
 	Album  *ent.Album
 	Artist *ent.Artist
+	Book   *ent.Book
 	// PackAlbumIDs are the albums a discography pack is expected to cover.
 	PackAlbumIDs []uint32
 	// Episode is set for TV download records (with season + show eager-loaded);
@@ -536,6 +538,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		Movie:          rec.Edges.Movie,
 		Album:          rec.Edges.Album,
 		Artist:         rec.Edges.Artist,
+		Book:           rec.Edges.Book,
 		Episode:        rec.Edges.AnchorEpisode,
 		Size:           rec.Size,
 		FailureReason:  rec.FailureReason,

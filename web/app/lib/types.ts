@@ -655,6 +655,12 @@ export type HoldReason = {
 	actual?: string;
 };
 
+// The title a music or book download is for — the activity rows' heading, as
+// EpisodeRef is a TV record's. At most one is set, and none on a movie record.
+export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };
+export type ActivityArtistRef = { id: number; name: string };
+export type ActivityBookRef = { id: number; title: string; author: string };
+
 export type QueueEntry = {
 	id: number;
 	// "held": the download finished and failed verification, so it is waiting on
@@ -666,6 +672,9 @@ export type QueueEntry = {
 	release_group?: string;
 	movie: Movie;
 	episode?: EpisodeRef;
+	album?: ActivityAlbumRef;
+	artist?: ActivityArtistRef;
+	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
 	size: number;
@@ -725,6 +734,9 @@ export type HistoryEntry = {
 	release_group?: string;
 	movie: Movie;
 	episode?: EpisodeRef;
+	album?: ActivityAlbumRef;
+	artist?: ActivityArtistRef;
+	book?: ActivityBookRef;
 	indexer?: string;
 	download_client?: string;
 	size: number;

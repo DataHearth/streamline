@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { Film, Search, Bookmark } from "@lucide/svelte";
+	import { Film, Search } from "@lucide/svelte";
+	import MonitorToggle from "./MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
 	import { posterUrl } from "@lib/posters";
 	import Poster from "./Poster.svelte";
@@ -35,6 +36,7 @@
 		href,
 		posterSrc,
 		onMonitor,
+		monitorPending = false,
 		onSearch,
 		selected = false,
 		selectionActive = false,
@@ -53,6 +55,8 @@
 		href?: string;
 		posterSrc?: string;
 		onMonitor?: () => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
 		onSearch?: () => void;
 		// Selection is opt-in: pass onSelect to make the card selectable. The
 		// checkbox hides behind hover until something is selected, so ordinary
@@ -271,23 +275,13 @@
 	{/if}
 
 	{#if onMonitor && !selectionActive}
-		<button
-			type="button"
-			onclick={stop(onMonitor)}
-			aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-			aria-pressed={movie.monitored ?? false}
-			title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-			class={cn(
-				"absolute right-2 top-2 z-10 grid h-10 w-10 lg:h-7 lg:w-7 place-items-center rounded-full border border-white/10 bg-bg-deep transition hover:bg-bg-elevated focus:outline-none focus:ring-2 focus:ring-accent-ring",
-				movie.monitored ? "text-accent-text" : "text-fg-subtle hover:text-fg",
-			)}
-		>
-			<Bookmark
-				size={14}
-				fill={movie.monitored ? "currentColor" : "none"}
-				aria-hidden="true"
-			/>
-		</button>
+		<MonitorToggle
+			monitored={movie.monitored ?? false}
+			onToggle={stop(onMonitor)}
+			pending={monitorPending}
+			variant="overlay"
+			class="absolute right-2 top-2 z-10"
+		/>
 	{/if}
 
 	<div

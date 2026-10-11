@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { goto } from "@roxi/routify";
 	import { FileEdit, Gauge, Radar, RefreshCw, Trash2 } from "@lucide/svelte";
-	import { api, errorText } from "@lib/api";
+	import { api } from "@lib/api";
+	import { createAction, deleteFailed, refreshFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
 	import { hardcoverFix, hardcoverIssue } from "@lib/music-books-lookup";
 	import type { QualityProfile } from "@lib/types";
 	import { profilesPath } from "@lib/music-books";
@@ -56,50 +56,52 @@
 	let qpOpen = $state(false);
 	let renameOpen = $state(false);
 	let deleteOpen = $state(false);
-	let pending = $state(false);
 
-	const qc = useQueryClient();
-	const invalidate = () => qc.invalidateQueries({ queryKey: [queryKey] });
 	const profiles = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles", media],
 		queryFn: () => api<QualityProfile[]>(profilesPath(media)),
 		enabled: qpOpen,
 	}));
 
-	async function run(fn: () => Promise<void>, fail: string) {
-		pending = true;
-		try {
-			await fn();
-		} catch (e) {
-			// A book or a series Hardcover would not refresh: the reason, then who
-			// fixes the key and where.
-			const issue = hardcoverIssue(e);
-			toast.err(errorText(e, fail), issue ? { description: hardcoverFix(issue, auth.user?.role === "admin") } : undefined);
-		} finally {
-			pending = false;
-		}
-	}
-	const saveProfile = (p: string) =>
-		run(async () => {
-			await api(base, { method: "PATCH", body: { quality_profile: p } });
-			invalidate();
-			toast.ok(i18n.quality_updated());
-			qpOpen = false;
-		}, i18n.common_update_failed());
-	const refresh = () =>
-		run(async () => {
-			await api(`${base}/refresh-metadata`, { method: "POST" });
-			invalidate();
-			toast.ok(i18n.series_refresh_requested());
-		}, i18n.common_refresh_failed());
-	const remove = (withFiles: boolean) =>
-		run(async () => {
-			await api(`${base}?delete_files=${withFiles}`, { method: "DELETE" });
+	const refreshKey = () => [[queryKey]];
+	// A book or a series Hardcover would not refresh: the reason, then who
+	// fixes the key and where.
+	const hardcover = (e: Error) => {
+		const issue = hardcoverIssue(e);
+		return issue ? hardcoverFix(issue, auth.user?.role === "admin") : undefined;
+	};
+	const profileAction = createAction<string>(() => ({
+		run: (p) => api(base, { method: "PATCH", body: { quality_profile: p } }),
+		refresh: refreshKey(),
+		failed: updateFailed,
+		detail: hardcover,
+		succeeded: () => i18n.quality_updated(),
+		then: () => (qpOpen = false),
+	}));
+	const refreshAction = createAction(() => ({
+		run: () => api(`${base}/refresh-metadata`, { method: "POST" }),
+		refresh: refreshKey(),
+		failed: refreshFailed,
+		detail: hardcover,
+		succeeded: () => i18n.series_refresh_requested(),
+	}));
+	// Navigates before the re-read, so the removed title's own page is never
+	// fetched again.
+	const removeAction = createAction<boolean>(() => ({
+		run: (withFiles) => api(`${base}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: refreshKey(),
+		failed: deleteFailed,
+		detail: hardcover,
+		succeeded: () => i18n.library_removed({ title }),
+		then: () => {
 			deleteOpen = false;
-			toast.ok(i18n.library_removed({ title }));
 			navigate(backHref);
-			invalidate();
-		}, i18n.common_delete_failed());
+		},
+	}));
+	const saveProfile = (p: string) => profileAction.mutate(p);
+	const refresh = () => refreshAction.mutate();
+	const remove = (withFiles: boolean) => removeAction.mutate(withFiles);
+	let pending = $derived(profileAction.isPending || refreshAction.isPending || removeAction.isPending);
 
 	let items = $derived<KebabItem[]>([
 		...(onSearch && searchLabel ? [{ key: "search", label: searchLabel, icon: Radar, onSelect: onSearch } satisfies KebabItem] : []),

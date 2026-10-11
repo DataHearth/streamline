@@ -3705,6 +3705,28 @@ func (e ListUsersParamsOrder) Valid() bool {
 	}
 }
 
+// ActivityAlbumRef The album an album download is for (queue/history rows render
+// "<artist> · <album>" from it). Absent on every other record.
+type ActivityAlbumRef struct {
+	ArtistId   uint32 `json:"artist_id"`
+	ArtistName string `json:"artist_name"`
+	Id         uint32 `json:"id"`
+	Title      string `json:"title"`
+}
+
+// ActivityArtistRef The artist a discography pack is for. Absent on every other record.
+type ActivityArtistRef struct {
+	Id   uint32 `json:"id"`
+	Name string `json:"name"`
+}
+
+// ActivityBookRef The book a book download is for. Absent on every other record.
+type ActivityBookRef struct {
+	Author string `json:"author"`
+	Id     uint32 `json:"id"`
+	Title  string `json:"title"`
+}
+
 // ActivityEvent Exactly one of movie / episode / series is set, naming what the event
 // happened to. `series` carries what belongs to no single episode — a
 // search issued at series or season scope, and the show-level actions
@@ -4785,8 +4807,17 @@ type HTTPLogConfigFormat string
 
 // HistoryEntry defines model for HistoryEntry.
 type HistoryEntry struct {
-	CreatedAt      time.Time `json:"created_at"`
-	DownloadClient *string   `json:"download_client,omitempty"`
+	// Album The album an album download is for (queue/history rows render
+	// "<artist> · <album>" from it). Absent on every other record.
+	Album *ActivityAlbumRef `json:"album,omitempty"`
+
+	// Artist The artist a discography pack is for. Absent on every other record.
+	Artist *ActivityArtistRef `json:"artist,omitempty"`
+
+	// Book The book a book download is for. Absent on every other record.
+	Book           *ActivityBookRef `json:"book,omitempty"`
+	CreatedAt      time.Time        `json:"created_at"`
+	DownloadClient *string          `json:"download_client,omitempty"`
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
@@ -6817,9 +6848,18 @@ type QualityProfileFormatScore struct {
 
 // QueueEntry defines model for QueueEntry.
 type QueueEntry struct {
-	CreatedAt      time.Time `json:"created_at"`
-	DownloadClient *string   `json:"download_client,omitempty"`
-	DownloadSpeed  *int64    `json:"download_speed,omitempty"`
+	// Album The album an album download is for (queue/history rows render
+	// "<artist> · <album>" from it). Absent on every other record.
+	Album *ActivityAlbumRef `json:"album,omitempty"`
+
+	// Artist The artist a discography pack is for. Absent on every other record.
+	Artist *ActivityArtistRef `json:"artist,omitempty"`
+
+	// Book The book a book download is for. Absent on every other record.
+	Book           *ActivityBookRef `json:"book,omitempty"`
+	CreatedAt      time.Time        `json:"created_at"`
+	DownloadClient *string          `json:"download_client,omitempty"`
+	DownloadSpeed  *int64           `json:"download_speed,omitempty"`
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.

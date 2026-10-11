@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
-	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
-	import { Bookmark, LoaderCircle, Radar, Search } from "@lucide/svelte";
+	import { LoaderCircle, Radar, Search } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
@@ -15,6 +15,7 @@
 	import ReleasesTable from "@components/shared/ReleasesTable.svelte";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
 	import BookCover from "@components/books/BookCover.svelte";
@@ -73,39 +74,42 @@
 		{ key: "none", label: i18n.books_monitor_none() },
 	];
 
-	const qc = useQueryClient();
-	const invalidate = () => qc.invalidateQueries({ queryKey: ["books"] });
-	async function setMonitor(v: string) {
-		await api(`/books/${id}`, { method: "PATCH", body: { monitor: v } });
-		invalidate();
-	}
+	const setMonitor = createAction<string>(() => ({
+		run: (monitor) => api(`/books/${id}`, { method: "PATCH", body: { monitor } }),
+		refresh: BOOKS,
+		failed: updateFailed,
+		succeeded: (monitor) => monitorToast(monitor !== "none"),
+	}));
 	let lastMonitor: BookMonitor = "both";
 	function toggleMonitor() {
 		if (!book) return;
-		if (book.monitor === "none") setMonitor(lastMonitor);
+		if (book.monitor === "none") setMonitor.mutate(lastMonitor);
 		else {
 			lastMonitor = book.monitor;
-			setMonitor("none");
+			setMonitor.mutate("none");
 		}
 	}
 	function monitorFormat(f: BookFormat) {
 		if (!book) return;
 		const other = book.formats.find((s) => s.format !== f);
 		const otherOn = !!other && other.state !== "unmonitored";
-		setMonitor(otherOn ? "both" : f);
+		setMonitor.mutate(otherOn ? "both" : f);
 	}
-	async function search(f: BookFormat) {
-		if (!book) return;
-		await api(`/books/${id}/search-now?kind=${f}`, { method: "POST" });
-		toast.ok(i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() }));
-	}
-	// Every monitored format at once: the book's counterpart to a movie's
-	// automatic search.
-	async function searchAll() {
-		if (!book) return;
-		await api(`/books/${id}/search-now`, { method: "POST" });
-		toast.ok(i18n.books_search_all_started({ title: book.title }));
-	}
+	// One format, or every monitored one at once: the book's counterpart to a
+	// movie's automatic search.
+	const searchNow = createAction<BookFormat | undefined>(() => ({
+		run: (f) => api(`/books/${id}/search-now${f ? `?kind=${f}` : ""}`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: (f) =>
+			!book
+				? undefined
+				: f
+					? i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() })
+					: i18n.books_search_all_started({ title: book.title }),
+	}));
+	const search = (f: BookFormat) => searchNow.mutate(f);
+	const searchAll = () => searchNow.mutate(undefined);
 	async function changeEdition(f: BookFormat) {
 		filter = f;
 		await tick();
@@ -120,11 +124,13 @@
 		if (slot?.file && slot.edition_id !== e.id) pending = e;
 		else applyEdition(e);
 	}
-	async function applyEdition(e: Edition) {
-		await api(`/books/${id}`, { method: "PATCH", body: { format: e.format, edition_id: e.id } });
-		invalidate();
-		toast.ok(i18n.books_edition_changed({ format: formatLabel(e.format) }));
-	}
+	const edition = createAction<Edition>(() => ({
+		run: (e) => api(`/books/${id}`, { method: "PATCH", body: { format: e.format, edition_id: e.id } }),
+		refresh: BOOKS,
+		failed: updateFailed,
+		succeeded: (e) => i18n.books_edition_changed({ format: formatLabel(e.format) }),
+	}));
+	const applyEdition = (e: Edition) => edition.mutate(e);
 
 	let meta = $derived(
 		book
@@ -239,20 +245,8 @@
 				     chip: the status pill above the title already says it. -->
 				<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
 					<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
-					<MonitorSelect value={book.monitor} options={MONITOR} onChange={setMonitor} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
-					<button
-						type="button"
-						onclick={toggleMonitor}
-						aria-pressed={book.monitor !== "none"}
-						aria-label={book.monitor !== "none" ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						title={book.monitor !== "none" ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						class={cn(
-							"grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated/80 transition hover:border-border-strong",
-							book.monitor !== "none" ? "text-accent-text" : "text-fg-subtle",
-						)}
-					>
-						<Bookmark size={16} fill={book.monitor !== "none" ? "currentColor" : "none"} aria-hidden="true" />
-					</button>
+					<MonitorSelect value={book.monitor} options={MONITOR} onChange={(v) => setMonitor.mutate(v)} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
+					<MonitorToggle monitored={book.monitor !== "none"} onToggle={toggleMonitor} pending={setMonitor.isPending} />
 					<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
 					<button
 						type="button"

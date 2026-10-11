@@ -12763,6 +12763,37 @@ components:
           type: string
           nullable: true
 
+    ActivityAlbumRef:
+      type: object
+      required: [id, title, artist_id, artist_name]
+      description: |
+        The album an album download is for (queue/history rows render
+        "<artist> · <album>" from it). Absent on every other record.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title: { type: string }
+        artist_id: { type: integer, x-go-type: uint32 }
+        artist_name: { type: string }
+
+    ActivityArtistRef:
+      type: object
+      required: [id, name]
+      description: |
+        The artist a discography pack is for. Absent on every other record.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        name: { type: string }
+
+    ActivityBookRef:
+      type: object
+      required: [id, title, author]
+      description: |
+        The book a book download is for. Absent on every other record.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        title: { type: string }
+        author: { type: string }
+
     EpisodeRef:
       type: object
       required: [show_title, season, episode]
@@ -12792,8 +12823,16 @@ components:
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }
-        movie: { $ref: "#/components/schemas/Movie" }
+        movie:
+          $ref: "#/components/schemas/Movie"
+          description: |
+            The movie a movie download is for. Always present for compatibility;
+            on any other record it is an empty placeholder (id 0), and the row
+            is titled from episode, album, artist or book instead.
         episode: { $ref: "#/components/schemas/EpisodeRef" }
+        album: { $ref: "#/components/schemas/ActivityAlbumRef" }
+        artist: { $ref: "#/components/schemas/ActivityArtistRef" }
+        book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
         size: { type: integer, format: int64 }
@@ -12874,8 +12913,16 @@ components:
         title: { type: string }
         quality: { type: string }
         release_group: { type: string }
-        movie: { $ref: "#/components/schemas/Movie" }
+        movie:
+          $ref: "#/components/schemas/Movie"
+          description: |
+            The movie a movie download is for. Always present for compatibility;
+            on any other record it is an empty placeholder (id 0), and the row
+            is titled from episode, album, artist or book instead.
         episode: { $ref: "#/components/schemas/EpisodeRef" }
+        album: { $ref: "#/components/schemas/ActivityAlbumRef" }
+        artist: { $ref: "#/components/schemas/ActivityArtistRef" }
+        book: { $ref: "#/components/schemas/ActivityBookRef" }
         indexer: { type: string }
         download_client: { type: string }
         size: { type: integer, format: int64 }

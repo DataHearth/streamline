@@ -1314,8 +1314,9 @@ func (db *DB) ListDownloadRecordsByPathPrefix(
 	return rows, nil
 }
 
-// ListActiveDownloadRecords returns records still in flight (downloading or
-// importing) with movie / download_client / indexer edges eager-loaded.
+// ListActiveDownloadRecords returns records still in flight (downloading,
+// importing or held) with the title they are for eager-loaded — movie, anchor
+// episode, album (with its artist), discography-pack artist or book.
 // Powers the live queue snapshot.
 func (db *DB) ListActiveDownloadRecords(
 	ctx context.Context,
@@ -1332,8 +1333,9 @@ func (db *DB) ListActiveDownloadRecords(
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
-		WithAlbum().
+		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
 		WithArtist().
+		WithBook().
 		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
 		All(ctx)
 }
@@ -1583,7 +1585,10 @@ func (db *DB) ListDownloadHistory(
 		WithMovie().
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
-		})
+		}).
+		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
+		WithArtist().
+		WithBook()
 
 	if cursor != "" {
 		ts, id, err := decodeActivityCursor(cursor)

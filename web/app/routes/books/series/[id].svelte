@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
-	import { Bookmark, Search } from "@lucide/svelte";
+	import { Search } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
+	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { cn } from "@lib/cn";
 	import { formatDate, formatDateShort, formatRelative } from "@lib/dates";
 	import { bookPosterUrl } from "@lib/posters";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
@@ -58,12 +59,13 @@
 		{ key: "none", label: i18n.books_monitor_none() },
 	];
 
-	const qc = useQueryClient();
-	const invalidate = () => qc.invalidateQueries({ queryKey: ["books"] });
-	async function patch(body: Record<string, string>) {
-		await api(`/books/series/${id}`, { method: "PATCH", body });
-		invalidate();
-	}
+	const update = createAction<Record<string, string>>(() => ({
+		run: (body) => api(`/books/series/${id}`, { method: "PATCH", body }),
+		refresh: BOOKS,
+		failed: updateFailed,
+		succeeded: (body) => (body.monitor ? monitorToast(body.monitor !== "none") : undefined),
+	}));
+	const patch = (body: Record<string, string>) => update.mutate(body);
 	let lastMonitor: SeriesMonitor = "all";
 	function toggleMonitor() {
 		if (!s) return;
@@ -73,11 +75,13 @@
 			patch({ monitor: "none" });
 		}
 	}
-	async function searchMissing() {
-		if (!s) return;
-		await api(`/books/series/${id}/search-now`, { method: "POST" });
-		toast.ok(i18n.music_search_started({ title: s.title }));
-	}
+	const searchNow = createAction(() => ({
+		run: () => api(`/books/series/${id}/search-now`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => (s ? i18n.music_search_started({ title: s.title }) : undefined),
+	}));
+	const searchMissing = () => searchNow.mutate();
 
 	let meta = $derived.by(() => {
 		if (!s) return [];
@@ -198,18 +202,7 @@
 					<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
 						<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
 						<MonitorSelect value={s.monitor} options={MONITOR} onChange={(v) => patch({ monitor: v })} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
-						<button
-							type="button"
-							onclick={toggleMonitor}
-							aria-pressed={s.monitor !== "none"}
-							aria-label={s.monitor !== "none" ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class={cn(
-								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated/80 transition hover:border-border-strong",
-								s.monitor !== "none" ? "text-accent-text" : "text-fg-subtle",
-							)}
-						>
-							<Bookmark size={16} fill={s.monitor !== "none" ? "currentColor" : "none"} aria-hidden="true" />
-						</button>
+						<MonitorToggle monitored={s.monitor !== "none"} onToggle={toggleMonitor} pending={update.isPending} />
 						{#if wanted > 0}
 							<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
 							<button

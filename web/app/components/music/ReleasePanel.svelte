@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Bookmark, Radar, Search } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { Radar, Search } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import Tracklist from "./Tracklist.svelte";
@@ -19,7 +19,8 @@
 		onSearch,
 		onManualSearch,
 		onMonitor,
-		onSearchTrack,
+		monitorPending = false,
+		onManualSearchTrack,
 		onDeleteTrack,
 	}: {
 		release: Release;
@@ -27,7 +28,11 @@
 		onSearch: () => void;
 		onManualSearch: () => void;
 		onMonitor: () => void;
-		onSearchTrack?: (t: Track) => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
+		// A track is never grabbed on its own: its manual search lists the
+		// releases of its album.
+		onManualSearchTrack?: () => void;
 		onDeleteTrack?: (t: Track) => void;
 	} = $props();
 
@@ -89,19 +94,7 @@
 							<span class="hidden @md:inline">{i18n.action_manual_search()}</span>
 						</button>
 					{/if}
-					<button
-						type="button"
-						onclick={onMonitor}
-						aria-pressed={r.monitored}
-						aria-label={r.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						title={r.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						class={cn(
-							"grid h-11 w-11 place-items-center rounded-lg border border-border bg-bg-elevated/80 transition hover:border-border-strong lg:h-9 lg:w-9",
-							r.monitored ? "text-accent-text" : "text-fg-subtle",
-						)}
-					>
-						<Bookmark size={15} fill={r.monitored ? "currentColor" : "none"} aria-hidden="true" />
-					</button>
+					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
 					{#if up}
 						<span class="text-[13px] text-fg-muted">
 							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}
@@ -120,7 +113,7 @@
 				qualityNote={qualityNote(r)}
 				markMissing={r.status === "wanted" && r.tracks_have > 0}
 				{canEdit}
-				onSearch={onSearchTrack}
+				onManualSearch={onManualSearchTrack ? () => onManualSearchTrack() : undefined}
 				onDeleteFile={onDeleteTrack}
 			/>
 		{:else if r.tracks_pending}

@@ -68,20 +68,27 @@
 	{/if}
 	{#snippet footer()}
 		{#if inline}
-			<!-- One row. Modal's footer stacks below sm and forces every button to
-			     w-full; inside this wrapper they share the row instead. From sm the
-			     wrapper dissolves, so the grow has to be scoped too — with
-			     display:contents the buttons become the footer's own flex children
-			     and an unscoped flex-1 would stretch them across it. -->
+			<!-- One row, the two buttons sharing it below sm. From sm the wrapper
+			     dissolves, so the grow has to be scoped too — with display:contents
+			     the buttons become the footer's own flex children and an unscoped
+			     flex-1 would stretch them across it. -->
 			<div class="flex w-full items-center gap-2 max-sm:[&_button]:flex-1 sm:contents">
 				{#each actions as a (a.label)}
 					{@render action(a)}
 				{/each}
 			</div>
 		{:else}
-			{#each actions as a (a.label)}
-				{@render action(a)}
-			{/each}
+			<!-- Three or more: one full-width button per line below sm, the
+			     decisive one on top and Cancel nearest the thumb. A single row
+			     of three never fits a phone once the labels are translated —
+			     "Supprimer et rechercher à nouveau" pushed "Importer quand même"
+			     off the left edge. From sm the wrapper dissolves into the
+			     footer's row. -->
+			<div class="flex w-full flex-col-reverse gap-2 sm:contents">
+				{#each actions as a (a.label)}
+					{@render action(a)}
+				{/each}
+			</div>
 		{/if}
 	{/snippet}
 </Modal>

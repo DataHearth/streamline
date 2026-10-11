@@ -1,6 +1,7 @@
 <script lang="ts">
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { auth } from "@lib/auth.svelte";
-	import { Bookmark, Info, Search, Trash2 } from "@lucide/svelte";
+	import { Info, Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { episodeStatus } from "@lib/status";
@@ -18,6 +19,7 @@
 		seriesType,
 		seasonMonitored,
 		onMonitorEpisode,
+		pendingEpisode = null,
 		onManualSearch,
 		onDeleteFile,
 		showMonitored = true,
@@ -27,6 +29,8 @@
 		seriesType: SeriesType;
 		seasonMonitored: boolean;
 		onMonitorEpisode: (ep: Episode) => void;
+		// The episode id whose monitor write is in flight.
+		pendingEpisode?: number | null;
 		onManualSearch: (ep: Episode) => void;
 		onDeleteFile: (ep: Episode) => void;
 		showMonitored?: boolean;
@@ -91,26 +95,16 @@
 					)}
 				>
 					<td class="px-2 py-2.5">
-						<button
-							type="button"
+						<MonitorToggle
+							monitored={ep.monitored}
+							onToggle={() => onMonitorEpisode(ep)}
+							pending={pendingEpisode === ep.id}
 							disabled={monitorDisabled || !auth.canAddDirectly}
-							onclick={() => onMonitorEpisode(ep)}
-							aria-pressed={ep.monitored}
-							aria-label={ep.monitored ? i18n.action_stop_monitoring_episode() : i18n.action_monitor_episode()}
-							title={ep.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class={cn(
-								"grid h-11 w-11 place-items-center rounded-md transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-40 lg:h-7 lg:w-7",
-								ep.monitored
-									? "text-accent-text"
-									: "text-fg-subtle hover:text-fg",
-							)}
-						>
-							<Bookmark
-								size={14}
-								fill={ep.monitored ? "currentColor" : "none"}
-								aria-hidden="true"
-							/>
-						</button>
+							variant="ghost"
+							size="xs"
+							startLabel={i18n.action_monitor_episode()}
+							stopLabel={i18n.action_stop_monitoring_episode()}
+						/>
 					</td>
 					<td class="px-3 py-2.5 font-mono text-xs tabular text-fg-muted">
 						{epCode(ep)}

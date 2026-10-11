@@ -10,22 +10,20 @@
 	import { auth } from "@lib/auth.svelte";
 	import {
 		createQuery,
-		useQueryClient,
-		createMutation,
 	} from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
 	import { onMount } from "svelte";
 	import {
 		Tv,
 		ArrowLeft,
-		Bookmark,
 		Eye,
 		Search,
 		ExternalLink,
 		Trash2,
 	} from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
 	import { missingEpisodes } from "@lib/status";
 	import { tvPosterUrl } from "@lib/posters";
@@ -284,137 +282,89 @@
 		return show ? `${show.title} · ${scope}` : scope;
 	});
 
-	const qc = useQueryClient();
-	function invalidate() {
-		qc.invalidateQueries({ queryKey: ["series"] });
-	}
+	const monitor = createAction<boolean>(() => ({
+		run: (next) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { monitored: next } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (next) => monitorToast(next),
+	}));
 
-	const monitor = createMutation<TVShow, Error, boolean>(() => ({
-		mutationFn: (next) =>
-			api<TVShow>(`/series/${seriesId}`, {
-				method: "PATCH",
-				body: { monitored: next },
-			}),
-		onSuccess: (_d, next) => {
-			invalidate();
-			toast.ok(next ? i18n.monitor_now_monitoring() : i18n.monitor_stopped());
+	const applyPreset = createAction<MonitoringPreset>(() => ({
+		run: (preset) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { preset } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (p) => i18n.monitor_set_to({ mode: (presetOptions.find((o) => o.value === p)?.label ?? p).toLowerCase() }),
+	}));
+
+	const saveProfile = createAction<string>(() => ({
+		run: (profile) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { quality_profile: profile } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.quality_updated(),
+		then: () => (qpOpen = false),
+	}));
+
+	const saveType = createAction<SeriesType>(() => ({
+		run: (type) => api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { type } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: () => i18n.series_type_updated(),
+		then: () => (typeOpen = false),
+	}));
+
+	const refresh = createAction(() => ({
+		run: () => api<TVShow>(`/series/${seriesId}/refresh-metadata`, { method: "POST" }),
+		refresh: SERIES,
+		failed: refreshFailed,
+		succeeded: () => i18n.series_refresh_requested(),
+	}));
+
+	const searchSeries = createAction(() => ({
+		run: () => api(`/series/${seriesId}/search`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => i18n.series_search_dispatched_wanted(),
+	}));
+
+	const del = createAction<boolean>(() => ({
+		run: (withFiles) => api(`/series/${seriesId}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: SERIES,
+		failed: deleteFailed,
+		succeeded: () => i18n.series_deleted(),
+		then: () => navigate("/series"),
+	}));
+
+	const monitorSeason = createAction<Season>(() => ({
+		run: (s) => api(`/series/${seriesId}/seasons/${s.number}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => (s.monitored ? i18n.monitor_season_unmonitored() : i18n.monitor_season_monitored()),
+	}));
+
+	// No toast: episodes are toggled in runs, and the bookmark says it.
+	const monitorEpisode = createAction<Episode>(() => ({
+		run: (ep) => api(`/series/${seriesId}/episodes/${ep.id}`, { method: "PATCH", body: { monitored: !ep.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+	}));
+
+	const delFiles = createAction<{ episodes: Episode[]; remove: boolean }>(() => ({
+		// ponytail: sequential per-episode DELETEs (no bulk endpoint). Fine for a
+		// season; add DELETE /series/{id}/files if a whole downloaded series is
+		// too slow.
+		run: async ({ episodes, remove }) => {
+			for (const ep of episodes) {
+				await api(`/series/${seriesId}/episodes/${ep.id}/file`, {
+					method: "DELETE",
+					body: { remove_torrent: remove },
+				});
+			}
 		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+		refresh: SERIES,
+		failed: deleteFailed,
+		succeeded: ({ episodes }) => (episodes.length > 1 ? i18n.files_deleted() : i18n.file_deleted()),
+		then: () => (deleteFiles = null),
 	}));
-
-	const applyPreset = createMutation<TVShow, Error, MonitoringPreset>(() => ({
-		mutationFn: (p) =>
-			api<TVShow>(`/series/${seriesId}`, {
-				method: "PATCH",
-				body: { preset: p },
-			}),
-		onSuccess: (_d, p) => {
-			invalidate();
-			const label =
-				presetOptions.find((o) => o.value === p)?.label ?? p;
-			toast.ok(i18n.monitor_set_to({ mode: label.toLowerCase() }));
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
-	}));
-
-	const saveProfile = createMutation<TVShow, Error, string>(() => ({
-		mutationFn: (profile) =>
-			api<TVShow>(`/series/${seriesId}`, {
-				method: "PATCH",
-				body: { quality_profile: profile },
-			}),
-		onSuccess: () => {
-			invalidate();
-			toast.ok(i18n.quality_updated());
-			qpOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
-	}));
-
-	const saveType = createMutation<TVShow, Error, SeriesType>(() => ({
-		mutationFn: (t) =>
-			api<TVShow>(`/series/${seriesId}`, { method: "PATCH", body: { type: t } }),
-		onSuccess: () => {
-			invalidate();
-			toast.ok(i18n.series_type_updated());
-			typeOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
-	}));
-
-	const refresh = createMutation(() => ({
-		mutationFn: () =>
-			api<TVShow>(`/series/${seriesId}/refresh-metadata`, { method: "POST" }),
-		onSuccess: () => {
-			invalidate();
-			toast.ok(i18n.series_refresh_requested());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
-	}));
-
-	const searchSeries = createMutation(() => ({
-		mutationFn: () => api(`/series/${seriesId}/search`, { method: "POST" }),
-		onSuccess: () => toast.ok(i18n.series_search_dispatched_wanted()),
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
-	}));
-
-	const del = createMutation<unknown, Error, boolean>(() => ({
-		mutationFn: (withFiles) =>
-			api(`/series/${seriesId}?delete_files=${withFiles}`, {
-				method: "DELETE",
-			}),
-		onSuccess: () => {
-			invalidate();
-			toast.ok(i18n.series_deleted());
-			navigate("/series");
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
-	}));
-
-	const monitorSeason = createMutation<unknown, Error, Season>(() => ({
-		mutationFn: (s) =>
-			api(`/series/${seriesId}/seasons/${s.number}`, {
-				method: "PATCH",
-				body: { monitored: !s.monitored },
-			}),
-		onSuccess: (_d, s) => {
-			invalidate();
-			toast.ok(s.monitored ? i18n.monitor_season_unmonitored() : i18n.monitor_season_monitored());
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
-	}));
-
-	const monitorEpisode = createMutation<unknown, Error, Episode>(() => ({
-		mutationFn: (ep) =>
-			api(`/series/${seriesId}/episodes/${ep.id}`, {
-				method: "PATCH",
-				body: { monitored: !ep.monitored },
-			}),
-		onSuccess: () => invalidate(),
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
-	}));
-
-	const delFiles = createMutation<unknown, Error, { episodes: Episode[]; remove: boolean }>(
-		() => ({
-			// ponytail: sequential per-episode DELETEs (no bulk endpoint). Fine for a
-			// season; add DELETE /series/{id}/files if a whole downloaded series is
-			// too slow.
-			mutationFn: async ({ episodes, remove }) => {
-				for (const ep of episodes) {
-					await api(`/series/${seriesId}/episodes/${ep.id}/file`, {
-						method: "DELETE",
-						body: { remove_torrent: remove },
-					});
-				}
-			},
-			onSuccess: (_d, { episodes }) => {
-				invalidate();
-				toast.ok(episodes.length > 1 ? i18n.files_deleted() : i18n.file_deleted());
-				deleteFiles = null;
-			},
-			onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
-		}),
-	);
 
 	// A switch with a `never` default, not an if-chain: the menu owns the item
 	// list, so a new SeriesAction that nothing here handles renders as a menu
@@ -659,25 +609,7 @@
 								disabled={!hasFiles}
 								disabledTitle={i18n.series_available_after_import()}
 							/>
-							<button
-								type="button"
-								onclick={() => monitor.mutate(!(show.monitored ?? false))}
-								disabled={monitor.isPending}
-								aria-pressed={show.monitored ?? false}
-								aria-label={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-								class={cn(
-									"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
-									show.monitored
-										? "border-accent-line bg-accent-soft text-accent-text"
-										: "border-border-strong bg-white/[0.08] text-fg",
-								)}
-							>
-								<Bookmark
-									size={17}
-									fill={show.monitored ? "currentColor" : "none"}
-									aria-hidden="true"
-								/>
-							</button>
+							<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} backdrop />
 							<SeriesKebabMenu
 								onPick={onKebabPick}
 								disabledActions={hasFiles ? [] : ["rename"]}
@@ -733,23 +665,7 @@
 							</div>
 						</div>
 
-						<button
-								type="button"
-								onclick={() => monitor.mutate(!(show.monitored ?? false))}
-								disabled={monitor.isPending}
-								aria-pressed={show.monitored ?? false}
-								title={show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-								class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-							>
-								<Bookmark
-									size={16}
-									fill={show.monitored ? "currentColor" : "none"}
-									aria-hidden="true"
-								/>
-								<span class="sr-only">
-									{show.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-								</span>
-							</button>
+						<MonitorToggle monitored={show.monitored ?? false} onToggle={() => monitor.mutate(!(show.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
 
 						<span class="h-0 basis-full" aria-hidden="true"></span>
 
@@ -912,6 +828,8 @@
 						seriesType={show.type}
 						onMonitorSeason={(s) => monitorSeason.mutate(s)}
 						onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
+						pendingSeason={monitorSeason.isPending ? monitorSeason.variables?.number : null}
+						pendingEpisode={monitorEpisode.isPending ? monitorEpisode.variables?.id : null}
 						onManualSearch={openManualSearch}
 						onSearchSeason={(s) => openPackSearch(String(s.number))}
 						onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
@@ -942,32 +860,14 @@
 						<div class="flex flex-wrap items-center justify-between gap-3">
 							<div class="flex items-center gap-3">
 								{#if auth.canAddDirectly}
-									<button
-										type="button"
-										onclick={() =>
-											currentSeason && monitorSeason.mutate(currentSeason)}
-										aria-pressed={currentSeason?.monitored}
-										title={currentSeason?.monitored
-											? i18n.action_stop_monitoring_season()
-											: i18n.action_monitor_season()}
-										class={cn(
-											"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border border-border bg-bg-elevated transition hover:border-border-strong",
-											currentSeason.monitored
-												? "text-accent-text"
-												: "text-fg-subtle hover:text-fg",
-										)}
-									>
-										<Bookmark
-											size={15}
-											fill={currentSeason.monitored ? "currentColor" : "none"}
-											aria-hidden="true"
-										/>
-										<span class="sr-only">
-											{currentSeason.monitored
-												? i18n.action_stop_monitoring_season()
-												: i18n.action_monitor_season()}
-										</span>
-									</button>
+									<MonitorToggle
+										monitored={currentSeason.monitored}
+										onToggle={() => monitorSeason.mutate(currentSeason)}
+										pending={monitorSeason.isPending}
+										size="sm"
+										startLabel={i18n.action_monitor_season()}
+										stopLabel={i18n.action_stop_monitoring_season()}
+									/>
 								{/if}
 								<div>
 									<h2 class="text-lg font-semibold text-fg">
@@ -1037,6 +937,7 @@
 							seriesType={show.type}
 							seasonMonitored={currentSeason.monitored}
 							onMonitorEpisode={(ep) => monitorEpisode.mutate(ep)}
+							pendingEpisode={monitorEpisode.isPending ? monitorEpisode.variables?.id : null}
 							onManualSearch={openManualSearch}
 							onDeleteFile={(ep) => openDeleteFiles(episodeCode(ep), [ep])}
 						/>

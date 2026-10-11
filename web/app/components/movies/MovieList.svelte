@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { auth } from "@lib/auth.svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { Film, ChevronUp, ChevronDown, Bookmark } from "@lucide/svelte";
+	import { Film, ChevronUp, ChevronDown } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
 	import { dragScroll } from "@lib/drag-scroll";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, MOVIES, updateFailed } from "@lib/actions";
 	import { formatBytes } from "@lib/format";
 	import { movieStatus } from "@lib/status";
 	import Poster from "@components/shared/Poster.svelte";
@@ -39,18 +39,11 @@
 	let pageSelected = $derived(movies.filter((m) => selected.has(m.id)).length);
 	let allSelected = $derived(movies.length > 0 && pageSelected === movies.length);
 
-	const qc = useQueryClient();
-	const monitor = createMutation<Movie, Error, Movie>(() => ({
-		mutationFn: (m) =>
-			api<Movie>(`/movies/${m.id}`, {
-				method: "PATCH",
-				body: { monitored: !m.monitored },
-			}),
-		onSuccess: (_d, m) => {
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(m.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+	const monitor = createAction<Movie>(() => ({
+		run: (m) => api<Movie>(`/movies/${m.id}`, { method: "PATCH", body: { monitored: !m.monitored } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: (m) => monitorToast(!m.monitored),
 	}));
 
 	// Both columns read the list response's file rollup, not media_files —
@@ -240,25 +233,13 @@
 					<td class="px-3 py-2">
 						<div class="flex items-center justify-end gap-1">
 							{#if auth.canAddDirectly}
-								<button
-									type="button"
-									onclick={() => monitor.mutate(movie)}
-									aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-									aria-pressed={movie.monitored}
-									title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-									class={cn(
-										"grid h-11 w-11 lg:h-8 lg:w-8 place-items-center rounded-md transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
-										movie.monitored
-											? "text-accent-text"
-											: "text-fg-muted hover:text-fg",
-									)}
-								>
-									<Bookmark
-										size={15}
-										fill={movie.monitored ? "currentColor" : "none"}
-										aria-hidden="true"
-									/>
-								</button>
+								<MonitorToggle
+									monitored={movie.monitored ?? false}
+									onToggle={() => monitor.mutate(movie)}
+									pending={monitor.isPending && monitor.variables?.id === movie.id}
+									variant="ghost"
+									size="row"
+								/>
 								<MovieActionsMenu {movie} variant="toolbar" />
 							{/if}
 						</div>

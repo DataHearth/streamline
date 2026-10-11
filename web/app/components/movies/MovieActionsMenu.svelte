@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { NOUN_FILE } from "@lib/nouns";
-	import {
-		createQuery,
-		createMutation,
-		useQueryClient,
-	} from "@tanstack/svelte-query";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { api } from "@lib/api";
+	import { createAction, deleteFailed, MOVIES, refreshFailed, searchFailed, updateFailed } from "@lib/actions";
 	import type { Movie, QualityProfile } from "@lib/types";
 	import MovieKebabMenu from "./MovieKebabMenu.svelte";
 	import QualityProfileModal from "@components/shared/QualityProfileModal.svelte";
@@ -31,8 +27,6 @@
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
 
-	const qc = useQueryClient();
-
 	// Only fetched once the quality dialog is opened; the ["quality-profiles"]
 	// cache is shared across every card so it resolves to a single request.
 	const profilesQuery = createQuery<QualityProfile[]>(() => ({
@@ -41,49 +35,34 @@
 		enabled: qpOpen,
 	}));
 
-	const searchNow = createMutation(() => ({
-		mutationFn: () => api(`/movies/${movie.id}/search-now`, { method: "POST" }),
-		onSuccess: () => toast.ok(i18n.movie_search_dispatched()),
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
+	const searchNow = createAction(() => ({
+		run: () => api(`/movies/${movie.id}/search-now`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => i18n.movie_search_dispatched(),
 	}));
 
-	const saveProfile = createMutation<Movie, Error, string>(() => ({
-		mutationFn: (profile) =>
-			api<Movie>(`/movies/${movie.id}`, {
-				method: "PATCH",
-				body: { quality_profile: profile },
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movie", movie.id] });
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(i18n.movie_quality_updated());
-			qpOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	const saveProfile = createAction<string>(() => ({
+		run: (profile) => api<Movie>(`/movies/${movie.id}`, { method: "PATCH", body: { quality_profile: profile } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: () => i18n.movie_quality_updated(),
+		then: () => (qpOpen = false),
 	}));
 
-	const refresh = createMutation(() => ({
-		mutationFn: () =>
-			api<Movie>(`/movies/${movie.id}/refresh-metadata`, { method: "POST" }),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movie", movie.id] });
-			toast.ok(i18n.movie_refresh_requested());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
+	const refresh = createAction(() => ({
+		run: () => api<Movie>(`/movies/${movie.id}/refresh-metadata`, { method: "POST" }),
+		refresh: MOVIES,
+		failed: refreshFailed,
+		succeeded: () => i18n.movie_refresh_requested(),
 	}));
 
-	const del = createMutation<unknown, Error, boolean>(() => ({
-		mutationFn: (withFiles) =>
-			api(`/movies/${movie.id}?delete_files=${withFiles}`, {
-				method: "DELETE",
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			qc.invalidateQueries({ queryKey: ["movies", "counts"] });
-			deleteOpen = false;
-			toast.ok(i18n.movie_deleted());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
+	const del = createAction<boolean>(() => ({
+		run: (withFiles) => api(`/movies/${movie.id}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: [["movies"]],
+		failed: deleteFailed,
+		succeeded: () => i18n.movie_deleted(),
+		then: () => (deleteOpen = false),
 	}));
 
 	function onPick(a: string) {

@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Nothing pushes from the server, and only the queue polls. A grab flips the
-	// movie to downloading and an import flips it to available minutes later —
-	// both server-side, both invisible to a tab that stays focused, because the
+	// title (a movie, an episode, an album, a book slot) to downloading and an
+	// import flips it to available minutes later — both server-side, both
+	// invisible to a tab that stays focused, because the
 	// default staleTime only reloads on focus. The queue is the one view that
 	// already sees those transitions, so when its (id, status) signature moves,
 	// re-read everything downstream of it.
@@ -44,6 +45,8 @@
 			["movies"],
 			["movie"],
 			["series"],
+			["music"],
+			["books"],
 			["activity"],
 			["calendar"],
 		]) {
