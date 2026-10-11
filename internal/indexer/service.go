@@ -1126,7 +1126,10 @@ func (i *indexer) Test(ctx context.Context, p TestParams) error {
 		if p.Cardigann != nil {
 			ix.Name = "draft:" + p.Cardigann.Definition
 		}
-		if err := config.CheckCardigann(ix); err != nil {
+		if err := config.CheckCardigann(
+			config.Get().CardigannDir(),
+			ix,
+		); err != nil {
 			return err
 		}
 		site, err := CardigannSite(ix)

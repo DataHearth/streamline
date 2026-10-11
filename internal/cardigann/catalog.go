@@ -23,6 +23,9 @@ type Catalog struct {
 	Upstream    Upstream  `json:"upstream"`
 	Definitions []Summary `json:"definitions"`
 	Skipped     []Skipped `json:"skipped,omitempty"`
+	// Held names the definitions a runtime update kept at their previous
+	// revision while an administrator decides on the change.
+	Held []string `json:"held,omitempty"`
 }
 
 type Upstream struct {
@@ -58,6 +61,9 @@ type Summary struct {
 	MovieSearch []string `json:"movie_search,omitempty"`
 	TVSearch    []string `json:"tv_search,omitempty"`
 	RegexNET    bool     `json:"regex_net,omitempty"`
+	// Custom marks a definition read from the data directory's custom/
+	// folder, which overrides the snapshot's file of that name.
+	Custom bool `json:"custom,omitempty"`
 }
 
 type Skipped struct {

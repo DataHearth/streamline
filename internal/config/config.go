@@ -75,6 +75,13 @@ type Config struct {
 	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
 }
 
+// CardigannDir is where built-in indexer definitions beyond the embedded
+// snapshot live: the runtime update's, those held for approval, and the
+// operator's own (internal/cardigann/definitions).
+func (c Config) CardigannDir() string {
+	return filepath.Join(c.DataDir, "cardigann")
+}
+
 // DatabasePath is the SQLite database location, derived from DataDir.
 func (c Config) DatabasePath() string {
 	return filepath.Join(c.DataDir, "streamline.db")
@@ -318,6 +325,8 @@ type ScheduleConfig struct {
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
+	// CardigannUpdate fetches upstream's built-in indexer definitions.
+	CardigannUpdate string `koanf:"cardigann_update" validate:"required"`
 }
 
 // CardigannConfig is what every built-in indexer shares.
@@ -912,6 +921,7 @@ func defaults() map[string]any {
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
 		"schedules.file_selection":         "30s",
+		"schedules.cardigann_update":       "24h",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
@@ -1547,7 +1557,7 @@ func (c *Config) checkIndexers() []error {
 			}
 			continue
 		}
-		if err := CheckCardigann(ix); err != nil {
+		if err := CheckCardigann(c.CardigannDir(), ix); err != nil {
 			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
 		}
 		if p := ix.Cardigann; p != nil && p.Proxy != "" {
@@ -1568,12 +1578,12 @@ func (c *Config) checkIndexers() []error {
 }
 
 // CheckCardigann reports whether a cardigann entry names a definition the
-// engine can run with its settings.
-func CheckCardigann(ix IndexerEntry) error {
+// engine can run with its settings, among those in force under dir.
+func CheckCardigann(dir string, ix IndexerEntry) error {
 	if ix.Cardigann == nil || ix.Cardigann.Definition == "" {
 		return errors.New("cardigann.definition is required")
 	}
-	def, err := definitions.Load(ix.Cardigann.Definition)
+	def, err := definitions.Load(dir, ix.Cardigann.Definition)
 	if err != nil {
 		return err
 	}

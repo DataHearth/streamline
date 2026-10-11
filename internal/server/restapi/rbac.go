@@ -110,6 +110,10 @@ var minRole = map[string]string{
 	"GetIndexerCaptcha": roleAdmin,
 	"LoginIndexer":      roleAdmin,
 
+	"ListCardigannUpdates":   roleAdmin,
+	"ApproveCardigannUpdate": roleAdmin,
+	"RejectCardigannUpdate":  roleAdmin,
+
 	"ListImports":               roleAdmin,
 	"StartImport":               roleAdmin,
 	"GetImport":                 roleAdmin,

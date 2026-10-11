@@ -1232,6 +1232,20 @@ export type IndexerSession = {
 
 export type IndexerCaptcha = { token: string; image: string };
 
+export type CardigannUpdate = {
+	file: string;
+	name: string;
+	reasons: string[];
+	removed: boolean;
+	indexers: string[];
+	diff: string;
+};
+
+export type CardigannUpdates = {
+	upstream: { commit: string; date: string };
+	pending: CardigannUpdate[];
+};
+
 export type DownloadClientType =
 	| "qbittorrent"
 	| "transmission"

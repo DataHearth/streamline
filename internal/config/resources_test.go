@@ -1018,7 +1018,9 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		c := configtest.Setup()
 		Expect(c.Cardigann.SolverTimeout).To(Equal("60s"))
 		c.Cardigann.SolverTimeout = "0s"
-		Expect(c.Validate()).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
+		Expect(
+			c.Validate(),
+		).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
 	})
 
 	It("rejects a definition the snapshot does not hold", func() {

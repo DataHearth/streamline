@@ -2775,6 +2775,64 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /cardigann/updates:
+    get:
+      operationId: listCardigannUpdates
+      summary: List held definition updates
+      description: >-
+        Upstream changes to the definition a configured built-in indexer runs
+        that would move it to other domains or change its login. They are held
+        — the indexer keeps running the version in force — until approved.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The snapshot in force and the updates held
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardigannUpdates"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/updates/{file}/approve:
+    parameters:
+      - $ref: "#/components/parameters/DefinitionFile"
+    post:
+      operationId: approveCardigannUpdate
+      summary: Put a held definition update in force
+      tags: [indexers]
+      responses:
+        "204":
+          description: Approved
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/updates/{file}/reject:
+    parameters:
+      - $ref: "#/components/parameters/DefinitionFile"
+    post:
+      operationId: rejectCardigannUpdate
+      summary: Turn a held definition update down
+      description: >-
+        Keeps the version in force. The refused upstream version is not
+        proposed again; a later change to the definition is.
+      tags: [indexers]
+      responses:
+        "204":
+          description: Rejected
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Download Clients ────────────────────────────────────
   /download-clients:
     get:
@@ -5405,6 +5463,13 @@ components:
         endpoints are unaffected.
 
   parameters:
+    DefinitionFile:
+      name: file
+      in: path
+      required: true
+      description: A Cardigann definition's file name, without .yml.
+      schema:
+        type: string
     ResourceID:
       name: id
       in: path
@@ -10559,6 +10624,52 @@ components:
           type: string
         answer:
           type: string
+
+    CardigannUpdates:
+      type: object
+      required: [upstream, pending]
+      properties:
+        upstream:
+          $ref: "#/components/schemas/CardigannUpstream"
+        pending:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardigannUpdate"
+
+    CardigannUpstream:
+      type: object
+      description: The Prowlarr/Indexers revision the definitions in force come from.
+      required: [commit, date]
+      properties:
+        commit:
+          type: string
+        date:
+          type: string
+
+    CardigannUpdate:
+      type: object
+      required: [file, name, reasons, removed, indexers, diff]
+      properties:
+        file:
+          type: string
+        name:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+          description: What the change does to where the definition sends things or how it logs in.
+        removed:
+          type: boolean
+          description: Upstream deleted the definition; approving removes it.
+        indexers:
+          type: array
+          items:
+            type: string
+          description: The configured indexers running the definition.
+        diff:
+          type: string
+          description: Unified diff from the version in force to the held one.
 
     IndexerCreate:
       type: object

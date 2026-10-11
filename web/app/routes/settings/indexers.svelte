@@ -17,6 +17,7 @@
 	import IndexerForm from "@components/settings/forms/IndexerForm.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import IndexerLoginDialog from "@components/settings/IndexerLoginDialog.svelte";
+	import CardigannUpdates from "@components/settings/CardigannUpdates.svelte";
 	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -202,6 +203,8 @@
 			{i18n.indexer_add()}
 		</button>
 	</header>
+
+	<CardigannUpdates />
 
 	<div class="mt-6 grid gap-3 sm:grid-cols-2">
 		{#if list.isPending}

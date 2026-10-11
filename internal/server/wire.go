@@ -466,6 +466,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			func(time.Duration) scheduler.JobFunc { return jobs.MediaProbe(hygieneSvc) },
 		},
 		{
+			"cardigann-update",
+			cfg.Schedule.CardigannUpdate,
+			func(time.Duration) scheduler.JobFunc { return jobs.CardigannUpdate() },
+		},
+		{
 			"file-selection",
 			cfg.Schedule.FileSelection,
 			func(time.Duration) scheduler.JobFunc {

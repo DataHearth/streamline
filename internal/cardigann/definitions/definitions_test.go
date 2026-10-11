@@ -23,7 +23,7 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 
 	BeforeEach(func() {
 		var err error
-		cat, err = definitions.Catalog()
+		cat, err = definitions.Catalog("")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -42,7 +42,7 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 
 	It("round-trips every definition byte for byte, and Check accepts it", func() {
 		for _, s := range cat.Definitions {
-			d, err := definitions.Load(s.File)
+			d, err := definitions.Load("", s.File)
 			Expect(err).NotTo(HaveOccurred(), s.File)
 			Expect(cardigann.Summarize(s.File, d)).To(Equal(s), s.File)
 			Expect(d.Source.Path).To(HaveSuffix("/"+s.File+".yml"), s.File)
@@ -60,7 +60,7 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 	})
 
 	It("loads by upstream file name, which is not always the id", func() {
-		d, err := definitions.Load("bluebird")
+		d, err := definitions.Load("", "bluebird")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(d.ID).To(Equal("bluebirdhd"))
 	})
@@ -71,7 +71,7 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 			"x",
 		)
 		cat.Definitions = cat.Definitions[:1]
-		again, err := definitions.Catalog()
+		again, err := definitions.Catalog("")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(again.Definitions)).To(BeNumerically(">", 1))
 		Expect(again.Definitions[0].Categories).NotTo(ContainElement("x"))
@@ -79,7 +79,7 @@ var _ = Describe("embedded snapshot", Label("unit", "cardigann"), func() {
 
 	It("refuses a name that is not a plain file name", func() {
 		for _, id := range []string{"", "../index", "a/b", `a\b`, "nope"} {
-			_, err := definitions.Load(id)
+			_, err := definitions.Load("", id)
 			Expect(err).To(MatchError(definitions.ErrNotFound), id)
 		}
 	})

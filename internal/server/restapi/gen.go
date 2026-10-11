@@ -4493,6 +4493,37 @@ type BookVolume struct {
 // monitored.
 type BookVolumeStatus string
 
+// CardigannUpdate defines model for CardigannUpdate.
+type CardigannUpdate struct {
+	// Diff Unified diff from the version in force to the held one.
+	Diff string `json:"diff"`
+	File string `json:"file"`
+
+	// Indexers The configured indexers running the definition.
+	Indexers []string `json:"indexers"`
+	Name     string   `json:"name"`
+
+	// Reasons What the change does to where the definition sends things or how it logs in.
+	Reasons []string `json:"reasons"`
+
+	// Removed Upstream deleted the definition; approving removes it.
+	Removed bool `json:"removed"`
+}
+
+// CardigannUpdates defines model for CardigannUpdates.
+type CardigannUpdates struct {
+	Pending []CardigannUpdate `json:"pending"`
+
+	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	Upstream CardigannUpstream `json:"upstream"`
+}
+
+// CardigannUpstream The Prowlarr/Indexers revision the definitions in force come from.
+type CardigannUpstream struct {
+	Commit string `json:"commit"`
+	Date   string `json:"date"`
+}
+
 // CastMember defines model for CastMember.
 type CastMember struct {
 	Character *string `json:"character,omitempty"`
@@ -8418,6 +8449,9 @@ type CalendarFrom = time.Time
 // CalendarTo defines model for CalendarTo.
 type CalendarTo = time.Time
 
+// DefinitionFile defines model for DefinitionFile.
+type DefinitionFile = string
+
 // DeleteFiles defines model for DeleteFiles.
 type DeleteFiles = bool
 
@@ -10036,6 +10070,15 @@ type ServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
+	// ListCardigannUpdates List held definition updates
+	// (GET /cardigann/updates)
+	ListCardigannUpdates(w http.ResponseWriter, r *http.Request)
+	// ApproveCardigannUpdate Put a held definition update in force
+	// (POST /cardigann/updates/{file}/approve)
+	ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile)
+	// RejectCardigannUpdate Turn a held definition update down
+	// (POST /cardigann/updates/{file}/reject)
+	RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile)
 	// GetConfigAuth Get auth configuration (admin)
 	// (GET /config/auth)
 	GetConfigAuth(w http.ResponseWriter, r *http.Request)
@@ -10936,6 +10979,24 @@ func (_ Unimplemented) SearchBookNow(w http.ResponseWriter, r *http.Request, id 
 // ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 // (GET /calendar/upcoming)
 func (_ Unimplemented) ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListCardigannUpdates List held definition updates
+// (GET /cardigann/updates)
+func (_ Unimplemented) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveCardigannUpdate Put a held definition update in force
+// (POST /cardigann/updates/{file}/approve)
+func (_ Unimplemented) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RejectCardigannUpdate Turn a held definition update down
+// (POST /cardigann/updates/{file}/reject)
+func (_ Unimplemented) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -13786,6 +13847,72 @@ func (siw *ServerInterfaceWrapper) ListUpcomingReleases(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListUpcomingReleases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCardigannUpdates operation middleware
+func (siw *ServerInterfaceWrapper) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCardigannUpdates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveCardigannUpdate operation middleware
+func (siw *ServerInterfaceWrapper) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveCardigannUpdate(w, r, file)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectCardigannUpdate operation middleware
+func (siw *ServerInterfaceWrapper) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectCardigannUpdate(w, r, file)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19426,6 +19553,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/indexers/test", wrapper.TestDraftIndexer)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/updates", wrapper.ListCardigannUpdates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/cardigann/updates/{file}/approve", wrapper.ApproveCardigannUpdate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/cardigann/updates/{file}/reject", wrapper.RejectCardigannUpdate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/download-clients", wrapper.ListDownloadClients)
 	})
 	r.Group(func(r chi.Router) {
@@ -24002,6 +24138,171 @@ func (response ListUpcomingReleases400JSONResponse) VisitListUpcomingReleasesRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdatesRequestObject struct {
+}
+
+type ListCardigannUpdatesResponseObject interface {
+	VisitListCardigannUpdatesResponse(w http.ResponseWriter) error
+}
+
+type ListCardigannUpdates200JSONResponse CardigannUpdates
+
+func (response ListCardigannUpdates200JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdates403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCardigannUpdates403JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCardigannUpdates500JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdateRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type ApproveCardigannUpdateResponseObject interface {
+	VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error
+}
+
+type ApproveCardigannUpdate204Response struct {
+}
+
+func (response ApproveCardigannUpdate204Response) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ApproveCardigannUpdate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApproveCardigannUpdate403JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApproveCardigannUpdate404JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApproveCardigannUpdate500JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdateRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type RejectCardigannUpdateResponseObject interface {
+	VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error
+}
+
+type RejectCardigannUpdate204Response struct {
+}
+
+func (response RejectCardigannUpdate204Response) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RejectCardigannUpdate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RejectCardigannUpdate403JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RejectCardigannUpdate404JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RejectCardigannUpdate500JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -35954,6 +36255,15 @@ type StrictServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
+	// ListCardigannUpdates List held definition updates
+	// (GET /cardigann/updates)
+	ListCardigannUpdates(ctx context.Context, request ListCardigannUpdatesRequestObject) (ListCardigannUpdatesResponseObject, error)
+	// ApproveCardigannUpdate Put a held definition update in force
+	// (POST /cardigann/updates/{file}/approve)
+	ApproveCardigannUpdate(ctx context.Context, request ApproveCardigannUpdateRequestObject) (ApproveCardigannUpdateResponseObject, error)
+	// RejectCardigannUpdate Turn a held definition update down
+	// (POST /cardigann/updates/{file}/reject)
+	RejectCardigannUpdate(ctx context.Context, request RejectCardigannUpdateRequestObject) (RejectCardigannUpdateResponseObject, error)
 	// GetConfigAuth Get auth configuration (admin)
 	// (GET /config/auth)
 	GetConfigAuth(ctx context.Context, request GetConfigAuthRequestObject) (GetConfigAuthResponseObject, error)
@@ -38166,6 +38476,82 @@ func (sh *strictHandler) ListUpcomingReleases(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListUpcomingReleasesResponseObject); ok {
 		if err := validResponse.VisitListUpcomingReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCardigannUpdates operation middleware
+func (sh *strictHandler) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+	var request ListCardigannUpdatesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCardigannUpdates(ctx, request.(ListCardigannUpdatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCardigannUpdates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCardigannUpdatesResponseObject); ok {
+		if err := validResponse.VisitListCardigannUpdatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveCardigannUpdate operation middleware
+func (sh *strictHandler) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request ApproveCardigannUpdateRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveCardigannUpdate(ctx, request.(ApproveCardigannUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveCardigannUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveCardigannUpdateResponseObject); ok {
+		if err := validResponse.VisitApproveCardigannUpdateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectCardigannUpdate operation middleware
+func (sh *strictHandler) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request RejectCardigannUpdateRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectCardigannUpdate(ctx, request.(RejectCardigannUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectCardigannUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectCardigannUpdateResponseObject); ok {
+		if err := validResponse.VisitRejectCardigannUpdateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

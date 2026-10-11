@@ -316,6 +316,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.music_metadata_refresh` | duration | `24h` | |
 | `schedules.book_metadata_refresh` | duration | `24h` | |
 | `schedules.file_selection` | duration | `30s` | |
+| `schedules.cardigann_update` | duration | `24h` | Built-in indexer definition update |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 
@@ -535,6 +536,10 @@ Private trackers work too: give the definition's settings — usually `username`
 | --- | --- | --- |
 | `solver_url` | empty | FlareSolverr-compatible service, e.g. `http://trawl:8191`. Empty: a challenged search fails and says so |
 | `solver_timeout` | `60s` | How long one solve may take |
+
+**Definition updates.** The definitions ship with Streamline, and the `cardigann-update` [scheduled job](Scheduled-Jobs) also fetches Prowlarr's latest ones every day into `<data_dir>/cardigann/current`, so a tracker that moved to a new domain keeps working between releases. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again.
+
+**Your own definitions.** Drop a Cardigann YAML file into `<data_dir>/cardigann/custom/` — `mytracker.yml` — and use `definition: mytracker`. A file there with the same name as a shipped definition replaces it. It is read in the same format as Prowlarr's `definitions/v11` and checked the same way: an indexer using a file Streamline cannot read is refused, with the reason.
 
 ### quality_profiles
 
