@@ -11,7 +11,7 @@
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { indexerForm } from "@lib/schemas";
-	import type { Indexer, IndexerProtocol } from "@lib/types";
+	import type { EditableIndexerProtocol, Indexer } from "@lib/types";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import IndexerForm from "@components/settings/forms/IndexerForm.svelte";
@@ -22,7 +22,7 @@
 
 	type Values = {
 		name: string;
-		protocol: IndexerProtocol;
+		protocol: EditableIndexerProtocol;
 		host: string;
 		port: number;
 		path: string;
@@ -35,19 +35,32 @@
 		private: boolean;
 	};
 
-	// Prowlarr aggregates via its native API; everything else is a Torznab feed
-	// (a single tracker, or a Jackett /all aggregate). Drives the card badge.
-	const PROVIDERS: Record<
-		IndexerProtocol,
-		{ label: string; hint: string; logo?: string }
-	> = {
-		prowlarr: {
-			label: "Prowlarr",
-			hint: i18n.indexer_hint_all(),
-			logo: "prowlarr",
-		},
-		torznab: { label: "Torznab", hint: i18n.indexer_hint_single() },
-	};
+	// Prowlarr aggregates via its native API, a built-in indexer runs an
+	// embedded definition, everything else is a Torznab feed (a single
+	// tracker, or a Jackett /all aggregate). Drives the card badge.
+	function provider(i: Indexer): { label: string; hint: string; logo?: string } {
+		switch (i.protocol) {
+			case "prowlarr":
+				return {
+					label: "Prowlarr",
+					hint: i18n.indexer_hint_all(),
+					logo: "prowlarr",
+				};
+			case "cardigann":
+				return {
+					label: i18n.indexer_builtin(),
+					hint: i18n.indexer_hint_definition({
+						definition: i.definition ?? "",
+					}),
+				};
+			default:
+				return { label: "Torznab", hint: i18n.indexer_hint_single() };
+		}
+	}
+
+	// A built-in indexer is configured in the config file: the API answers
+	// its edit with 422, so the form is never opened for one.
+	const fileOnly = (i: Indexer) => i.protocol === "cardigann";
 
 	const qc = useQueryClient();
 
@@ -115,6 +128,7 @@
 	}
 
 	function openEdit(i: Indexer) {
+		if (i.protocol === "cardigann") return;
 		editing = i;
 		form.reset({
 			name: i.name,
@@ -187,7 +201,8 @@
 					<button
 						type="button"
 						onclick={() => openEdit(i)}
-						class="flex items-start gap-3 text-left"
+						disabled={fileOnly(i)}
+						class="flex items-start gap-3 text-left disabled:cursor-default"
 						aria-label={config.readOnly
 							? i18n.common_view_name({ name: i.name })
 							: i18n.common_edit_name({ name: i.name })}
@@ -195,11 +210,11 @@
 						<div
 							class="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"
 						>
-							{#if PROVIDERS[i.protocol].logo}
+							{#if provider(i).logo}
 								<BrandLogo
-									name={PROVIDERS[i.protocol].logo!}
+									name={provider(i).logo!}
 									size={26}
-									ariaLabel={PROVIDERS[i.protocol].label}
+									ariaLabel={provider(i).label}
 								/>
 							{:else}
 								<Search size={24} aria-hidden="true" />
@@ -230,7 +245,13 @@
 										{i18n.releases_private()}
 									</span>
 								{/if}
-								{#if i.api_key_set}
+								{#if fileOnly(i)}
+									<span
+										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
+									>
+										{i18n.indexer_in_config_file()}
+									</span>
+								{:else if i.api_key_set}
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
@@ -251,10 +272,8 @@
 									""}
 							</div>
 							<div class="mt-0.5 text-[11px] text-fg-subtle">
-								{PROVIDERS[i.protocol].label}
-								<span class="text-fg-faint"
-									>· {PROVIDERS[i.protocol].hint}</span
-								>
+								{provider(i).label}
+								<span class="text-fg-faint">· {provider(i).hint}</span>
 							</div>
 						</div>
 					</button>
@@ -265,23 +284,27 @@
 						{#snippet trailing()}
 							<div class="flex shrink-0 items-center gap-1">
 								{#if config.readOnly}
-									<button
-										type="button"
-										onclick={() => openEdit(i)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
-										aria-label={i18n.indexer_view()}
-									>
-										<Eye size={16} aria-hidden="true" />
-									</button>
+									{#if !fileOnly(i)}
+										<button
+											type="button"
+											onclick={() => openEdit(i)}
+											class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+											aria-label={i18n.indexer_view()}
+										>
+											<Eye size={16} aria-hidden="true" />
+										</button>
+									{/if}
 								{:else}
-									<button
-										type="button"
-										onclick={() => openEdit(i)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
-										aria-label={i18n.indexer_edit()}
-									>
-										<Pencil size={16} aria-hidden="true" />
-									</button>
+									{#if !fileOnly(i)}
+										<button
+											type="button"
+											onclick={() => openEdit(i)}
+											class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+											aria-label={i18n.indexer_edit()}
+										>
+											<Pencil size={16} aria-hidden="true" />
+										</button>
+									{/if}
 									<button
 										type="button"
 										onclick={() => onDelete(i)}

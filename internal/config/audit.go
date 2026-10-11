@@ -11,7 +11,13 @@ import (
 // Matched as substrings, so this deliberately catches `session_secret_file`
 // too: a path is not a secret, but the cost of redacting one is a line that
 // says "changed" instead of naming a file.
-var secretKeyParts = []string{"password", "secret", "api_key", "token"}
+//
+// A cardigann entry's settings are redacted wholesale: their names are the
+// definition's own (passkey, cookie, rsskey…), and which of them is a secret
+// is a call the converter makes per definition, not one a key name settles.
+var secretKeyParts = []string{
+	"password", "secret", "api_key", "token", ".cardigann.settings",
+}
 
 func isSecretKey(key string) bool {
 	lower := strings.ToLower(key)
@@ -83,6 +89,10 @@ func addLeaves(out map[string]any, key string, v any) {
 			addLeaves(out, key+"."+strconv.Itoa(i), e)
 		}
 	case map[string]any:
+		for k, e := range t {
+			addLeaves(out, key+"."+k, e)
+		}
+	case map[string]string:
 		for k, e := range t {
 			addLeaves(out, key+"."+k, e)
 		}

@@ -1197,7 +1197,10 @@ export type CustomFormatTestResult = {
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
 // aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
 // search API, the only way to query all of Prowlarr's indexers at once.
-export type IndexerProtocol = "torznab" | "prowlarr";
+// "cardigann" is a tracker streamline runs itself from an embedded
+// definition; it lives in the config file and the API does not edit it.
+export type IndexerProtocol = "torznab" | "prowlarr" | "cardigann";
+export type EditableIndexerProtocol = Exclude<IndexerProtocol, "cardigann">;
 
 export type Indexer = {
 	name: string;
@@ -1207,6 +1210,8 @@ export type Indexer = {
 	use_ssl?: boolean;
 	api_key_set: boolean;
 	protocol: IndexerProtocol;
+	// The embedded definition a "cardigann" indexer runs.
+	definition?: string;
 	priority?: number;
 	enabled: boolean;
 	// The operator's word for it: Torznab carries no privacy flag. Feeds

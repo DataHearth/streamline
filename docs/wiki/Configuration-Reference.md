@@ -492,14 +492,43 @@ The built-in engine treats what a release names as untrusted:
 | Field | Required | Notes |
 | --- | --- | --- |
 | `name` | ✅ | |
-| `host`, `port` | ✅ | |
-| `protocol` | ✅ | `torznab` \| `prowlarr` |
+| `protocol` | ✅ | `torznab` \| `prowlarr` \| `cardigann` |
+| `host`, `port` | ✅ for `torznab` and `prowlarr` | |
 | `path` | | Torznab endpoint path |
-| `api_key` / `api_key_file` | | |
+| `api_key` / `api_key_file` | ✅ for `torznab` and `prowlarr` | |
 | `use_ssl` | | |
 | `priority` | | 0–255, lower first |
 | `enabled` | | |
 | `private` | | Default `false`. Marks the tracker as private (invite-only, ratio-tracked); manual search shows it on every release from this indexer. A Torznab feed carries no such flag, so this is your word for it. On a Prowlarr entry it applies to every tracker behind it |
+| `cardigann` | ✅ for `cardigann` | See below |
+
+#### Built-in indexers (`protocol: cardigann`)
+
+Streamline ships the tracker definitions Prowlarr and Jackett use and can run them itself, without Prowlarr or Jackett. Such an indexer is configured **in this file only**: Settings → Indexers lists it (as *Built-in*) and can test or delete it, but not edit it.
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions/v11) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
+| `site` | | One of the definition's own links, when the first one is blocked or slow for you |
+| `settings` | | The definition's settings by name. One you leave out takes its default; a checkbox is `"true"` or `"false"`, a select one of its option keys |
+
+```yaml
+indexers:
+  - name: YTS
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: yts
+  - name: Nyaa
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: nyaasi
+      settings:
+        filter-id: "2"     # trusted uploads only
+```
+
+For now only **definitions that need no login** run — public trackers such as `yts`, `nyaasi`, `thepiratebay`, `limetorrents`, `torrentdownloads`, `animetosho-xyz`. Streamline refuses to start with a definition that logs in, and names it; private trackers keep going through Prowlarr or Jackett until login support lands. A site behind a browser challenge (Cloudflare and the like) may refuse searches until challenge solving lands too.
 
 ### quality_profiles
 

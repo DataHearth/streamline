@@ -2,9 +2,10 @@
 
 `internal/cardigann` is streamline's own reader for the Cardigann YAML definitions
 Prowlarr and Jackett describe trackers in, so a stack can drop Prowlarr/Jackett. **What
-exists today is the converter and the embedded snapshot** — the engine that runs a
-definition, the `protocol: cardigann` indexer entry, the runtime definition update and the
-catalog UI are not built yet. Nothing outside `internal/cardigann` imports it.
+exists today is the converter, the embedded snapshot and the engine**: a `protocol:
+cardigann` indexer entry, configured in the config file only, runs a definition **that
+needs no login** (83 of 579 at `8df0764`). Login flows, the browser-challenge solver, the
+runtime definition update and the catalog UI are not built yet.
 
 | Path | What it is |
 |---|---|
@@ -12,6 +13,8 @@ catalog UI are not built yet. Nothing outside `internal/cardigann` imports it.
 | `internal/cardigann/convert/` | `Convert(path, yaml)` — the .NET-to-Go rewrites — and `Check(def)`, which validates a converted definition as stored. Pure; no I/O |
 | `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream, `Convert` each file, write the snapshot |
 | `internal/cardigann/definitions/` | `//go:embed`s the snapshot; `Catalog()` (a fresh copy per call), `Load(file)`, `Notice()`. Only `definitions.go` (and its tests) is hand-written |
+| `internal/cardigann/engine/` | Runs a converted definition: renders its search requests, parses the responses (HTML, XML, JSON) into releases, resolves a release's download block. The port of Prowlarr's `CardigannRequestGenerator`/`CardigannParser`/`CardigannBase` |
+| `internal/indexer/cardigann.go` | The `indexer.Client` over an engine, `CardigannSite`, and `ResolveDownload` for the grab path |
 
 ## The snapshot is generated
 
@@ -283,6 +286,86 @@ Prowlarr does. Each rule names the definitions that depend on it.
 - **Dates**: `cardigann.ParseDate` (trims, tries the layouts, fills a missing year or date
   from now). A failed `dateparse` is not fatal — the value passes through — and the `date`
   field always goes through format guessing afterwards.
+
+## The engine
+
+Configured in the YAML only — the REST API lists a `cardigann` entry (its host and port are
+the tracker site's, plus `definition`) and answers an update with 422:
+
+```yaml
+indexers:
+  - name: YTS
+    protocol: cardigann
+    enabled: true
+    cardigann:
+      definition: yts            # file name in the snapshot, not the display name
+      site: https://yts.gg/      # optional; must be one of the definition's links
+      settings: {}               # by setting name; omitted ones take the default
+```
+
+- **`config.CheckCardigann` is the gate**, run by `checkInvariants`: the definition loads,
+  has no `login` block (`engine.ErrLoginUnsupported`), the site is one of its `links`, and
+  `engine.Config` accepts the settings — an undeclared name, a select value outside its
+  option keys, or a checkbox that is not a boolean is refused. Two upstream selects default
+  to a key their own options lack (`DESC` beside `desc`; `t` beside nt/ts/sz/i), which
+  Prowlarr indexes as -1 and throws on; `selectDefault` takes a case-insensitive match, else
+  the first option. A Torznab/Prowlarr entry's API-key requirement moved from the struct tag
+  into `checkIndexers`, since a tag cannot say "unless protocol is cardigann".
+- **Settings resolve as `GetBaseTemplateVariables` does**: a ticked checkbox is the string
+  `".True"` and an unticked one `""`, a select its option key, text and password as given;
+  `sitelink` is always set. The audit log redacts every key under `.cardigann.settings`
+  wholesale — which setting is a secret is the converter's per-definition call, and a map
+  of strings used to print whole because `addLeaves` did not expand it.
+- **Ids follow the definition's mode, as Prowlarr's caps do.** `queryVars` sets
+  `.Query.IMDBID`/`IMDBIDShort`/`TMDBID`/`TVDBID` only when the mode for the search's kind
+  lists the id, and **an id search leaves `.Query.Q` empty**, as the *arr clients leave the
+  term out of one; season and episode fill `.Query.Episode` (`S01E02`) only when the mode
+  lists them. A kind whose mode the definition lacks falls back to its `search` mode with
+  the term alone. `indexer.fallbacks` skips the IMDb rung for cardigann (the engine already
+  sent every id the definition takes) and keeps the bare-title rung.
+- **Requests**: a path is rendered with `urlEncoded` (each substituted value
+  `WebUtility.UrlEncode`d, then `+` → `%20`), `$raw` the same then split into pairs, other
+  inputs plain and dropped when empty (unless `allowEmptyInputs`); the query string encodes
+  values (in the definition's encoding) and never keys, as `GetQueryString` does. A path
+  that already carries a `?` gets `&` — Prowlarr would append a second `?`. Duplicate GET
+  URLs are skipped. A search path follows no redirect unless it says so, and an unfollowed
+  one fails the search (`ErrStatus`) — upstream's "session expired" cue. Requests to one
+  indexer are paced at `max(2s, requestDelay)` by a pacer keyed on the entry's name, so a
+  config reload does not reset it. A cookie jar lives per engine; the UA is a desktop
+  browser's, as Jackett sends.
+- **Rows**: HTML through goquery; XML through `encoding/xml` (`RawToken`, so prefixes stay)
+  into the same node tree — the HTML parser would empty every RSS `<link>`, a void element
+  there. `after` merges the next **selected** rows, not the DOM siblings. A field selector
+  tries the row itself first, `:root` restarts from the document, `remove` mutates the row
+  as AngleSharp's does. JSON rows support the path subset the definitions use (`a.b`, `[n]`,
+  `['k']`, a leading `$`) and the `:has/:not/:contains` filters through regexp2, since
+  `_jsonSelectorRegex` needs a lookahead; `attribute` + `multiple` expand a row into its
+  children, and a `..field` selector reads the unexpanded parent. A failing required field
+  skips the field on an HTML row and fails the whole response on a JSON one, as upstream.
+  Links resolve against the URL that was **asked for**, not wherever a redirect landed.
+- **Release fields** are normalised as `ParseFields` does (seeders/leechers over 5,000,000
+  read as 0, ids take the first run of digits, sizes in binary units, `category`/
+  `categorydesc` through the caps). A non-private release with an info hash and no magnet
+  gets one built with the public tracker list. `andmatch` drops releases missing a word of
+  the term (`and`, `the`, `an` aside); an id search keeps everything.
+- **Dates**: `fromUnknown` is `DateTimeUtil.FromUnknown` — Rfc1123Z, a unix timestamp,
+  "now", "… ago", today/yesterday/tomorrow, "<weekday> at", a missing year filled — but its
+  last resort, the DateTimeRoutines fuzzy parser, is **a layout list here** (`fuzzyLayouts`,
+  month-first as its USDate default). A shape neither knows fails the field.
+- **Downloads**: a release link on an enabled cardigann entry's site is resolved at grab
+  time (`indexer.ResolveDownload`, called from `download.resolveTorrentSource`): the
+  `before` request, then the `infohash` block or the first `selectors` entry whose link is
+  a magnet or a bencoded body (`testlinktorrent`), with the download (else search) headers.
+  `checkReleaseSource` admits the tracker's site host and port for a cardigann entry, and
+  every hop is still held to it. No v11 download selector sets `usebeforeresponse`, so the
+  model has no such field there and each selector re-reads the release page.
+- **Test** runs the feed query (no term) and passes on a readable answer, results or not.
+  **Feed** is the same query.
+
+What the engine does **not** do yet: log in (phase 4), solve browser challenges — a
+definition carrying an `info_flaresolverr` setting (eztv, for one) may be refused by its
+site until the solver lands —, pick a tracker's own category for a search beyond the
+newznab root of the kind, or page past the first response.
 
 ## Secrets
 

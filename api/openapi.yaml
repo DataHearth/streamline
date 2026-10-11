@@ -2634,6 +2634,9 @@ paths:
     put:
       operationId: updateIndexer
       summary: Update an indexer
+      description: >-
+        Updates a Torznab or Prowlarr indexer. A `cardigann` indexer is
+        configured in the config file only and answers 422.
       tags: [indexers]
       requestBody:
         $ref: "#/components/requestBodies/CreateIndexer"
@@ -10419,7 +10422,16 @@ components:
           description: True when an API key is stored. The key itself is never returned.
         protocol:
           type: string
-          enum: [torznab, prowlarr]
+          enum: [torznab, prowlarr, cardigann]
+          description: >-
+            `cardigann` is a tracker streamline runs itself from an embedded
+            Prowlarr/Jackett definition; its host and port are the tracker
+            site's, and it is configured in the config file only.
+        definition:
+          type: string
+          description: >-
+            The Cardigann definition a `cardigann` indexer runs (its file name
+            in the embedded snapshot). Absent for the other protocols.
         priority:
           type: integer
           x-go-type: uint8

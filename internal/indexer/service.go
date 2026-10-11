@@ -45,6 +45,29 @@ func newClient(protocol, baseURL, apiKey string) Client {
 	}
 }
 
+// clientFor builds the client a configured entry searches through, and the
+// URL its spans name: a cardigann entry runs its definition against the
+// tracker's own site.
+func clientFor(ix config.IndexerEntry) (Client, string, error) {
+	if ix.Protocol == "cardigann" {
+		site, err := CardigannSite(ix)
+		if err != nil {
+			return nil, "", err
+		}
+		c, err := newCardigann(ix)
+		if err != nil {
+			return nil, site, err
+		}
+		return c, site, nil
+	}
+	baseURL := buildBaseURL(ix.Host, ix.Port, ix.Path, ix.UseSSL)
+	return newClient(
+		ix.Protocol,
+		baseURL,
+		config.SecretValue(ix.APIKey, ix.APIKeyFile),
+	), baseURL, nil
+}
+
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/indexer")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/indexer")
@@ -859,12 +882,16 @@ func (i *indexer) searchAll(
 
 	for _, idx := range indexers {
 		wg.Go(func() {
-			baseURL := buildBaseURL(idx.Host, idx.Port, idx.Path, idx.UseSSL)
-			client := newClient(
-				idx.Protocol,
-				baseURL,
-				config.SecretValue(idx.APIKey, idx.APIKeyFile),
-			)
+			client, baseURL, err := clientFor(idx)
+			if err != nil {
+				indexerQueries.Add(ctx, 1, metric.WithAttributes(
+					attribute.String("indexer.name", idx.Name),
+					attribute.String("outcome", "misconfigured"),
+				))
+				slog.WarnContext(ctx, "indexer unusable", "indexer", idx.Name,
+					"error", err)
+				return
+			}
 			for _, title := range titles {
 				queryCtx, childSpan := tracer.Start(ctx, "indexer.query",
 					trace.WithAttributes(
@@ -1020,12 +1047,12 @@ func (i *indexer) Feed(
 		return nil, otelx.RecordSpanError(span, config.ErrIndexerNotFound)
 	}
 
-	baseURL := buildBaseURL(row.Host, row.Port, row.Path, row.UseSSL)
-	results, err := newClient(
-		row.Protocol,
-		baseURL,
-		config.SecretValue(row.APIKey, row.APIKeyFile),
-	).Feed(ctx)
+	client, _, err := clientFor(row)
+	if err != nil {
+		countFeed("misconfigured")
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	results, err := client.Feed(ctx)
 	if errors.Is(err, ErrFeedUnsupported) {
 		// Not a failure and not a result: the protocol has no feed. Reported
 		// as an empty scan so callers stay unchanged, at debug so an install
@@ -1097,6 +1124,20 @@ func (i *indexer) TestByName(ctx context.Context, name string) error {
 	idx, ok := config.FindIndexer(name)
 	if !ok {
 		return otelx.RecordSpanError(span, config.ErrIndexerNotFound)
+	}
+	if idx.Protocol == "cardigann" {
+		client, _, err := clientFor(idx)
+		if err == nil {
+			err = client.TestConnection(ctx)
+		}
+		outcome := "success"
+		if err != nil {
+			outcome = "error"
+		}
+		indexerTests.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("outcome", outcome),
+		))
+		return otelx.RecordSpanError(span, err)
 	}
 	return i.Test(ctx, TestParams{
 		Protocol: idx.Protocol,

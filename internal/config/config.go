@@ -23,6 +23,8 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/quality"
 )
 
@@ -628,6 +630,7 @@ func (c *Config) checkInvariants() error {
 		}
 	}
 	errs = append(errs, c.checkMusicBookProfiles()...)
+	errs = append(errs, c.checkIndexers()...)
 	builtin := 0
 	for _, dc := range c.DownloadClients {
 		if dc.ClientType == "builtin" {
@@ -1499,4 +1502,55 @@ func Load(cfgFile string) (*Config, error) {
 	}
 	store(cfg, cfgFile, k, layer)
 	return cfg, nil
+}
+
+// checkIndexers holds each indexer to what its protocol needs: an API key for
+// a Torznab or Prowlarr endpoint, and for a cardigann entry a definition the
+// engine can run with the settings it was given.
+func (c *Config) checkIndexers() []error {
+	var errs []error
+	for _, ix := range c.Indexers {
+		if ix.Protocol != "cardigann" {
+			if ix.APIKey == "" && ix.APIKeyFile == "" {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: api_key or api_key_file is required", ix.Name,
+				))
+			}
+			if ix.Cardigann != nil {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: a cardigann block needs protocol cardigann",
+					ix.Name,
+				))
+			}
+			continue
+		}
+		if err := CheckCardigann(ix); err != nil {
+			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
+		}
+	}
+	return errs
+}
+
+// CheckCardigann reports whether a cardigann entry names a definition the
+// engine can run with its settings.
+func CheckCardigann(ix IndexerEntry) error {
+	if ix.Cardigann == nil || ix.Cardigann.Definition == "" {
+		return errors.New("cardigann.definition is required")
+	}
+	def, err := definitions.Load(ix.Cardigann.Definition)
+	if err != nil {
+		return err
+	}
+	if def.Login != nil {
+		return fmt.Errorf(
+			"%s: %w",
+			ix.Cardigann.Definition,
+			engine.ErrLoginUnsupported,
+		)
+	}
+	if _, err := engine.Site(def, ix.Cardigann.Site); err != nil {
+		return err
+	}
+	_, err = engine.Config(def, ix.Cardigann.Settings)
+	return err
 }

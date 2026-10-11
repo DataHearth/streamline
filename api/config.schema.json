@@ -85,7 +85,7 @@
     "indexerEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "host", "port", "protocol"],
+      "required": ["name", "protocol"],
       "properties": {
         "name": { "type": "string" },
         "host": { "type": "string" },
@@ -96,12 +96,36 @@
         "api_key_file": { "type": "string" },
         "protocol": {
           "type": "string",
-          "enum": ["torznab", "prowlarr"]
+          "enum": ["torznab", "prowlarr", "cardigann"],
+          "description": "cardigann runs the tracker from an embedded Prowlarr/Jackett definition, configured under cardigann; definitions with a login block are not supported yet."
         },
         "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
         "enabled": { "type": "boolean" },
-        "private": { "type": "boolean" }
-      }
+        "private": { "type": "boolean" },
+        "cardigann": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["definition"],
+          "properties": {
+            "definition": {
+              "type": "string",
+              "description": "The definition's file name in the embedded snapshot, without .yml."
+            },
+            "site": {
+              "type": "string",
+              "description": "One of the definition's links; empty is its first."
+            },
+            "settings": {
+              "type": "object",
+              "description": "The definition's settings by name: a checkbox is \"true\" or \"false\", a select one of its option keys. A setting left out takes the definition's default.",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        }
+      },
+      "if": { "properties": { "protocol": { "const": "cardigann" } } },
+      "then": { "required": ["cardigann"] },
+      "else": { "required": ["host", "port"] }
     },
     "musicQualityProfileEntry": {
       "type": "object",

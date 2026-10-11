@@ -55,20 +55,40 @@ type DownloadClientEntry struct {
 }
 
 type IndexerEntry struct {
-	Name       string `koanf:"name"         validate:"required"`
-	Host       string `koanf:"host"         validate:"required"`
-	Port       uint16 `koanf:"port"         validate:"required,port"`
+	Name string `koanf:"name" validate:"required"`
+	// Host, Port and the API key address a Torznab or Prowlarr endpoint; a
+	// cardigann entry reaches its tracker through the definition instead.
+	Host       string `koanf:"host"         validate:"required_unless=Protocol cardigann"`
+	Port       uint16 `koanf:"port"         validate:"required_unless=Protocol cardigann,omitempty,port"`
 	Path       string `koanf:"path"`
 	UseSSL     bool   `koanf:"use_ssl"`
-	APIKey     string `koanf:"api_key"      validate:"required_without=APIKeyFile,excluded_with=APIKeyFile"`
+	APIKey     string `koanf:"api_key"      validate:"excluded_with=APIKeyFile"`
 	APIKeyFile string `koanf:"api_key_file" validate:"omitempty,excluded_with=APIKey,filepath"`
-	Protocol   string `koanf:"protocol"     validate:"required,oneof=torznab prowlarr"`
+	Protocol   string `koanf:"protocol"     validate:"required,oneof=torznab prowlarr cardigann"`
 	Priority   uint8  `koanf:"priority"`
 	Enabled    bool   `koanf:"enabled"`
 	// Private is the operator's word for it: a Torznab feed carries no
 	// privacy flag, and a Prowlarr entry's applies to every sub-tracker
 	// behind it.
 	Private bool `koanf:"private"`
+	// Cardigann is set exactly when Protocol is "cardigann": which embedded
+	// definition runs the tracker, and the operator's values for its
+	// settings. File-only — the REST API neither shows nor writes it.
+	Cardigann *CardigannIndexer `koanf:"cardigann"`
+}
+
+// CardigannIndexer configures a tracker run from an embedded Cardigann
+// definition (internal/cardigann/definitions).
+type CardigannIndexer struct {
+	// Definition is the definition's file name in the snapshot, without
+	// .yml — "eztv", not its display name.
+	Definition string `koanf:"definition"`
+	// Site picks one of the definition's links; empty is the first.
+	Site string `koanf:"site"`
+	// Settings are the definition's settings by name. One left out takes
+	// the definition's default; a checkbox is "true" or "false", a select
+	// one of its option keys.
+	Settings map[string]string `koanf:"settings"`
 }
 
 type QualityProfileEntry struct {

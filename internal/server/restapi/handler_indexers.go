@@ -80,6 +80,13 @@ func (s *Server) UpdateIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return UpdateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
+	if e, ok := config.FindIndexer(request.Name); ok && e.Protocol == "cardigann" {
+		return UpdateIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				"a cardigann indexer is configured in the config file",
+			),
+		}, nil
+	}
 	patch := config.IndexerPatch{
 		Host:     &request.Body.Host,
 		Port:     &request.Body.Port,

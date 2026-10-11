@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -501,6 +502,24 @@ func indexerToAPI(e config.IndexerEntry) Indexer {
 	if e.Path != "" {
 		path := e.Path
 		i.Path = &path
+	}
+	if e.Cardigann != nil {
+		def := e.Cardigann.Definition
+		i.Definition = &def
+		if site, err := indexer.CardigannSite(e); err == nil {
+			if u, err := url.Parse(site); err == nil {
+				i.Host = u.Hostname()
+				useSSL = u.Scheme == "https"
+				port := uint16(80)
+				if useSSL {
+					port = 443
+				}
+				if p, err := strconv.ParseUint(u.Port(), 10, 16); err == nil {
+					port = uint16(p)
+				}
+				i.Port = port
+			}
+		}
 	}
 	return i
 }

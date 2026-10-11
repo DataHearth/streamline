@@ -33,6 +33,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -213,6 +214,53 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			// succeed, but it is no longer ErrUntrustedSource.
 			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
+		})
+
+		Context("with a native cardigann indexer", func() {
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name":      "YTS",
+						"protocol":  "cardigann",
+						"enabled":   true,
+						"cardigann": map[string]any{"definition": "yts"},
+					}},
+				})
+			})
+
+			It("trusts links on the tracker's own site and fetches them", func() {
+				srv := httptest.NewServer(http.HandlerFunc(
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, _ = w.Write([]byte("d8:announce0:e"))
+					}))
+				DeferCleanup(srv.Close)
+				target, err := url.Parse(srv.URL)
+				Expect(err).NotTo(HaveOccurred())
+				orig := otelx.HTTPClient.Transport
+				otelx.HTTPClient.Transport = roundTripFunc(
+					func(r *http.Request) (*http.Response, error) {
+						Expect(r.URL.Host).To(Equal("yts.gg"))
+						r = r.Clone(r.Context())
+						r.URL.Scheme, r.URL.Host = target.Scheme, target.Host
+						return http.DefaultTransport.RoundTrip(r)
+					})
+				DeferCleanup(func() { otelx.HTTPClient.Transport = orig })
+
+				src, err := resolveTorrentSource(
+					ctx,
+					"https://yts.gg/torrent/download/AAA",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(src.Bytes)).To(Equal("d8:announce0:e"))
+			})
+
+			It("still refuses another host", func() {
+				_, err := resolveTorrentSource(
+					ctx,
+					"https://yts.mx/torrent/download/AAA",
+				)
+				Expect(err).To(MatchError(ErrUntrustedSource))
+			})
 		})
 
 		Context("when the indexer redirects", func() {
@@ -2061,3 +2109,9 @@ var _ = Describe("extractBtihFromMagnet", Label("unit", "downloads"), func() {
 		Entry("no btih", "magnet:?dn=x", ""),
 	)
 })
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}

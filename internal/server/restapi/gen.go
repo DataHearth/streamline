@@ -1436,13 +1436,16 @@ func (e ImportScanShowDecisionRequestDecision) Valid() bool {
 
 // Defines values for IndexerProtocol.
 const (
-	IndexerProtocolProwlarr IndexerProtocol = "prowlarr"
-	IndexerProtocolTorznab  IndexerProtocol = "torznab"
+	IndexerProtocolCardigann IndexerProtocol = "cardigann"
+	IndexerProtocolProwlarr  IndexerProtocol = "prowlarr"
+	IndexerProtocolTorznab   IndexerProtocol = "torznab"
 )
 
 // Valid indicates whether the value is a known member of the IndexerProtocol enum.
 func (e IndexerProtocol) Valid() bool {
 	switch e {
+	case IndexerProtocolCardigann:
+		return true
 	case IndexerProtocolProwlarr:
 		return true
 	case IndexerProtocolTorznab:
@@ -5368,21 +5371,26 @@ type ImportScanShowList struct {
 // Indexer defines model for Indexer.
 type Indexer struct {
 	// ApiKeySet True when an API key is stored. The key itself is never returned.
-	ApiKeySet bool    `json:"api_key_set"`
-	Enabled   bool    `json:"enabled"`
-	Host      string  `json:"host"`
-	Name      string  `json:"name"`
-	Path      *string `json:"path,omitempty"`
-	Port      uint16  `json:"port"`
-	Priority  *uint8  `json:"priority,omitempty"`
+	ApiKeySet bool `json:"api_key_set"`
+
+	// Definition The Cardigann definition a `cardigann` indexer runs (its file name in the embedded snapshot). Absent for the other protocols.
+	Definition *string `json:"definition,omitempty"`
+	Enabled    bool    `json:"enabled"`
+	Host       string  `json:"host"`
+	Name       string  `json:"name"`
+	Path       *string `json:"path,omitempty"`
+	Port       uint16  `json:"port"`
+	Priority   *uint8  `json:"priority,omitempty"`
 
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
-	Private  bool            `json:"private"`
+	Private bool `json:"private"`
+
+	// Protocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
 	Protocol IndexerProtocol `json:"protocol"`
 	UseSsl   *bool           `json:"use_ssl,omitempty"`
 }
 
-// IndexerProtocol defines model for Indexer.Protocol.
+// IndexerProtocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
 type IndexerProtocol string
 
 // IndexerCreate defines model for IndexerCreate.

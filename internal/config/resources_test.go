@@ -975,3 +975,73 @@ var _ = Describe("stock music profile", Label("unit", "config"), func() {
 		Expect(p.Tiers).To(Equal([]string{"lossless", "high"}))
 	})
 })
+
+var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		configtest.SetupFile()
+	})
+
+	cardigann := func(def string, settings map[string]string) config.IndexerEntry {
+		return config.IndexerEntry{
+			Name: def, Protocol: "cardigann", Enabled: true,
+			Cardigann: &config.CardigannIndexer{Definition: def, Settings: settings},
+		}
+	}
+
+	It(
+		"accepts a definition that needs no login, with no host, port or key",
+		func() {
+			Expect(config.AddIndexer(ctx, cardigann("yts", nil))).To(Succeed())
+		},
+	)
+
+	It("rejects a definition that logs in", func() {
+		Expect(config.AddIndexer(ctx, cardigann("0dayfiles-api", nil))).
+			To(MatchError(ContainSubstring("not supported yet")))
+	})
+
+	It("rejects a definition the snapshot does not hold", func() {
+		Expect(config.AddIndexer(ctx, cardigann("no-such-tracker", nil))).
+			To(MatchError(ContainSubstring("not found")))
+	})
+
+	It("rejects a setting the definition does not declare", func() {
+		Expect(
+			config.AddIndexer(ctx, cardigann("yts", map[string]string{"nope": "1"})),
+		).
+			To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+	})
+
+	It("rejects a site that is not one of the definition's links", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Site = "https://elsewhere.example/"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("not one of the definition's links")))
+	})
+
+	It(
+		"rejects protocol cardigann without its block, and the block elsewhere",
+		func() {
+			Expect(
+				config.AddIndexer(
+					ctx,
+					config.IndexerEntry{Name: "x", Protocol: "cardigann"},
+				),
+			).
+				To(MatchError(ContainSubstring("cardigann.definition is required")))
+			e := cardigann("yts", nil)
+			e.Protocol, e.Host, e.Port, e.APIKey = "torznab", "h", 1, "k"
+			Expect(config.AddIndexer(ctx, e)).
+				To(MatchError(ContainSubstring("needs protocol cardigann")))
+		},
+	)
+
+	It("still requires an API key of a Torznab entry", func() {
+		Expect(config.AddIndexer(ctx, config.IndexerEntry{
+			Name: "t", Protocol: "torznab", Host: "h", Port: 9117,
+		})).To(MatchError(ContainSubstring("api_key or api_key_file is required")))
+	})
+})
