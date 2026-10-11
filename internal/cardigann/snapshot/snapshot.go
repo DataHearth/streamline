@@ -26,15 +26,18 @@ import (
 // plain path segment under data/.
 var ValidName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.yml$`)
 
-// File is one upstream definition: its name under definitions/v<N>/ and
-// its YAML.
+// File is one upstream definition: the schema version whose directory it
+// was read from, its name under definitions/v<Version>/, and its YAML.
 type File struct {
-	Name string
-	Data []byte
+	Version int
+	Name    string
+	Data    []byte
 }
 
 // Build converts every file into the snapshot's catalog and its encoded
-// definitions, keyed by file name without .yml. A file the converter
+// definitions, keyed by file name without .yml. Where a name is read from
+// more than one schema version, the newest wins — upstream's per-file
+// fallback (cardigann.SchemaVersion). A file the converter
 // refuses — or whose name a snapshot cannot carry — is skipped with the
 // reason, never fatal: one broken upstream file must not block every other
 // tracker's update.
@@ -49,15 +52,24 @@ func Build(
 		Upstream:  up,
 		Skipped:   slices.Clone(skipped),
 	}
+	files = slices.Clone(files)
+	slices.SortStableFunc(files, func(a, b File) int {
+		return cmp.Compare(b.Version, a.Version)
+	})
+	seen := map[string]bool{}
 	defs := make(map[string][]byte, len(files))
 	for _, f := range files {
+		if seen[f.Name] {
+			continue
+		}
+		seen[f.Name] = true
 		if !ValidName.MatchString(f.Name) {
 			cat.Skipped = append(cat.Skipped, cardigann.Skipped{
 				File: f.Name, Reason: "file name cannot be embedded",
 			})
 			continue
 		}
-		rel := fmt.Sprintf("definitions/v%d/%s", cardigann.SchemaVersion, f.Name)
+		rel := fmt.Sprintf("definitions/v%d/%s", f.Version, f.Name)
 		// Keyed by file name, not id: that is what Prowlarr stores an indexer
 		// under and fetches an update by, and a handful of files upstream are
 		// named apart from the id inside them (bluebird.yml holds
@@ -129,6 +141,15 @@ func writeFile(path string, b []byte) error {
 	return os.WriteFile(path, b, 0o644)
 }
 
+// Prefixes are the upstream directories a snapshot reads, newest first.
+func Prefixes() []string {
+	var out []string
+	for v := cardigann.SchemaVersion; v >= cardigann.OldestSchemaVersion; v-- {
+		out = append(out, fmt.Sprintf("definitions/v%d/", v))
+	}
+	return out
+}
+
 // Notice is the attribution and licence notice a snapshot ships with.
 func Notice(cat cardigann.Catalog) string {
 	up := cat.Upstream
@@ -145,7 +166,7 @@ approval: %s.
 The files under data/ are converted from the Cardigann YAML indexer
 definitions maintained by the Prowlarr project:
 
-    %s (definitions/v%d)
+    %s (definitions/v%d, falling back to v%d per file)
     revision %s, committed %s
 %s
 Most of those definitions are synced from Jackett
@@ -164,7 +185,8 @@ Each file records, under "source", the upstream path and the sha256 of the
 file it was converted from. The converter is internal/cardigann/convert; the
 sync that wrote this directory is internal/cardigann/cmd/cardigann-sync
 (task cardigann:sync). Do not edit these files by hand — re-run the sync.
-`, up.Repository, cardigann.SchemaVersion, up.Commit, up.Date, held, convert.Modified)
+`, up.Repository, cardigann.SchemaVersion, cardigann.OldestSchemaVersion,
+		up.Commit, up.Date, held, convert.Modified)
 }
 
 // CheckVersions reads upstream's VERSIONS file. A schema below MIN_VERSION

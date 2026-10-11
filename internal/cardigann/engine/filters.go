@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/base64"
 	"fmt"
 	"html"
 	"net/url"
@@ -170,6 +171,17 @@ func (e *Engine) applyFilter(
 			parts[i] = tokenString(it)
 		}
 		return strings.Join(parts, arg(f, 1)), nil
+	case "base64decode":
+		// WebEncoders.Base64UrlDecode: the URL alphabet, padding optional;
+		// the standard alphabet reads too, as .NET's decoder accepts it.
+		b, err := base64.RawStdEncoding.DecodeString(strings.TrimRight(
+			strings.NewReplacer("-", "+", "_", "/").Replace(value), "="))
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	case "base64encode":
+		return base64.RawURLEncoding.EncodeToString([]byte(value)), nil
 	case "hexdump", "strdump":
 		// Upstream's debugging aids: they log the value and pass it on.
 		return value, nil

@@ -31,7 +31,7 @@ import (
 // Version is the converter's output version, recorded in the catalog. Bump
 // it whenever a change here alters what Convert produces for the same input,
 // so a snapshot converted by an older converter is recognisably stale.
-const Version = 5
+const Version = 6
 
 // Modified is the change notice each converted definition carries in its
 // source block (the GPL asks a modified file to say it was changed).
@@ -46,7 +46,7 @@ var knownFilters = []string{
 	"replace", "trim", "prepend", "append", "tolower", "toupper", "urldecode",
 	"urlencode", "htmldecode", "htmlencode", "timeago", "reltime", "fuzzytime",
 	"validfilename", "diacritics", "jsonjoinarray", "hexdump", "strdump",
-	"validate", "andmatch",
+	"validate", "andmatch", "base64decode", "base64encode",
 }
 
 // secretHints flag a text-typed setting as a secret by name. Upstream types
