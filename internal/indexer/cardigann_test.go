@@ -6,10 +6,16 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/stretchr/testify/mock"
+
+	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/internal/db"
+	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
@@ -71,7 +77,7 @@ var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 			_, _ = w.Write([]byte(ytsBody))
 		})
 
-		results, err := New().SearchMovie(context.Background(),
+		results, err := New(nil).SearchMovie(context.Background(),
 			[]string{"Dune"}, nil, 438631, "tt1160419")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(results).To(HaveLen(1))
@@ -93,19 +99,19 @@ var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 		routeAll(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte(ytsBody))
 		})
-		Expect(New().TestByName(context.Background(), "YTS")).To(Succeed())
+		Expect(New(nil).TestByName(context.Background(), "YTS")).To(Succeed())
 	})
 
 	It("files a response it cannot read under ErrBadResponse", func() {
 		routeAll(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte(`not json`))
 		})
-		Expect(New().TestByName(context.Background(), "YTS")).
+		Expect(New(nil).TestByName(context.Background(), "YTS")).
 			To(MatchError(ErrBadResponse))
 	})
 
 	It("reports a link on its site as its own, resolved as it is", func() {
-		target, ok, err := ResolveDownload(context.Background(),
+		target, ok, err := ResolveDownload(context.Background(), nil,
 			"https://yts.gg/torrent/download/AAA")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ok).To(BeTrue())
@@ -113,9 +119,128 @@ var _ = Describe("a cardigann indexer", Label("unit", "indexers"), func() {
 
 		_, ok, err = ResolveDownload(
 			context.Background(),
+			nil,
 			"https://elsewhere.example/x",
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ok).To(BeFalse())
 	})
 })
+
+// memSessions backs a store mock's session methods with a map, so a spec
+// reads what the indexer left behind the way the next call would.
+func memSessions(store *dbmocks.MockStore) map[string]db.IndexerSessionParams {
+	rows := map[string]db.IndexerSessionParams{}
+	var mu sync.Mutex
+	store.EXPECT().IndexerSession(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, name string) (*ent.IndexerSession, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			p, ok := rows[name]
+			if !ok {
+				return nil, nil
+			}
+			return &ent.IndexerSession{
+				Name: name, Cookies: p.Cookies, UserAgent: p.UserAgent,
+				ExpiresAt: p.ExpiresAt, LoginFailures: p.LoginFailures,
+				RetryAt: p.RetryAt, LastError: p.LastError,
+			}, nil
+		},
+	).Maybe()
+	store.EXPECT().PutIndexerSession(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, name string, p db.IndexerSessionParams) error {
+			mu.Lock()
+			defer mu.Unlock()
+			rows[name] = p
+			return nil
+		}).
+		Maybe()
+	return rows
+}
+
+var _ = Describe(
+	"a cardigann indexer that logs in",
+	Label("unit", "indexers"),
+	func() {
+		var (
+			store *dbmocks.MockStore
+			rows  map[string]db.IndexerSessionParams
+			name  string
+		)
+
+		BeforeEach(func() {
+			// The pacer is keyed by name: one per spec keeps them from waiting
+			// on each other.
+			name = "city-" + CurrentSpecReport().LeafNodeText
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     name,
+					"protocol": "cardigann",
+					"enabled":  true,
+					"cardigann": map[string]any{
+						"definition": "13city",
+						"settings":   map[string]any{"cookie": "uid=1; pass=abc"},
+					},
+				}},
+			})
+			store = dbmocks.NewMockStore(GinkgoT())
+			rows = memSessions(store)
+		})
+
+		It("logs in with its cookie and keeps the session", func() {
+			routeAll(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.Header.Get("Cookie")).To(ContainSubstring("pass=abc"))
+				_, _ = w.Write([]byte(`<a href="logout.php">out</a>`))
+			})
+			Expect(New(store).TestByName(context.Background(), name)).To(Succeed())
+			Expect(rows[name].Cookies).To(Equal(map[string]string{
+				"uid": "1", "pass": "abc",
+			}))
+			Expect(*rows[name].ExpiresAt).To(BeTemporally("~",
+				time.Now().Add(30*24*time.Hour), time.Minute))
+		})
+
+		It(
+			"backs off after a login that does not take, until a person retries",
+			func() {
+				seen := routeAll(func(w http.ResponseWriter, r *http.Request) {
+					http.Redirect(w, r, "/login.php", http.StatusFound)
+				})
+				svc := New(store)
+				Expect(svc.TestByName(context.Background(), name)).
+					To(MatchError(ErrLoginFailed))
+				Expect(rows[name].LoginFailures).To(Equal(uint8(1)))
+				Expect(*rows[name].RetryAt).To(BeTemporally("~",
+					time.Now().Add(time.Minute), 5*time.Second))
+				Expect(rows[name].Cookies).To(BeEmpty())
+				asked := len(seen())
+
+				// Held back: no request leaves.
+				Expect(svc.TestByName(context.Background(), name)).
+					To(MatchError(ErrLoginBackoff))
+				Expect(seen()).To(HaveLen(asked))
+
+				// A person logging in is not held back.
+				Expect(svc.Login(context.Background(), name, "", "")).To(Succeed())
+				Expect(rows[name].LoginFailures).To(BeZero())
+				Expect(rows[name].Cookies).To(HaveKeyWithValue("pass", "abc"))
+			},
+		)
+
+		It("sends the session with a download it resolves", func() {
+			exp := time.Now().Add(time.Hour)
+			rows[name] = db.IndexerSessionParams{
+				Cookies: map[string]string{
+					"uid":  "1",
+					"pass": "abc",
+				},
+				ExpiresAt: &exp,
+			}
+			target, ok, err := ResolveDownload(context.Background(), store,
+				"https://13city.org/download.php?id=7")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+			Expect(target.Header.Get("Cookie")).To(Equal("pass=abc; uid=1"))
+		})
+	},
+)

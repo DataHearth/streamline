@@ -7,9 +7,6 @@
 // The definition reaches here already rewritten for Go (internal/cardigann/
 // convert); what the converter could not bake in is the engine contract in
 // docs/agents/cardigann.md, and this package is where it is honoured.
-//
-// Login flows are not implemented yet: New refuses a definition with a login
-// block.
 package engine
 
 import (
@@ -37,9 +34,6 @@ import (
 )
 
 var (
-	// ErrLoginUnsupported is a definition that needs a login flow, which the
-	// engine does not run yet.
-	ErrLoginUnsupported = errors.New("definitions that log in are not supported yet")
 	// ErrStatus is a response the engine cannot read as results: an
 	// unexpected status, or a redirect a search path does not follow —
 	// Prowlarr's cue that a session expired.
@@ -78,6 +72,16 @@ type Options struct {
 	Client *http.Client
 	// Now is the clock dates are read against; nil is time.Now.
 	Now func() time.Time
+	// Session is what an earlier login left: the cookies to send and the
+	// user agent a challenge was solved under.
+	Session Session
+}
+
+// Session is the state a tracker's login leaves behind, by cookie name — what
+// Prowlarr keeps per indexer and replays on every request.
+type Session struct {
+	Cookies   map[string]string
+	UserAgent string
 }
 
 // Engine is one configured indexer.
@@ -90,13 +94,11 @@ type Engine struct {
 	encoding encoding.Encoding
 	pace     *pacer
 	clock    func() time.Time
+	ua       string
 }
 
 // New checks a definition and the operator's settings for it.
 func New(def *cardigann.Definition, o Options) (*Engine, error) {
-	if def.Login != nil {
-		return nil, fmt.Errorf("%s: %w", def.ID, ErrLoginUnsupported)
-	}
 	site, err := Site(def, o.Site)
 	if err != nil {
 		return nil, err
@@ -115,16 +117,11 @@ func New(def *cardigann.Definition, o Options) (*Engine, error) {
 		enc = nil
 	}
 
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
-	}
 	base := o.Client
 	if base == nil {
 		base = http.DefaultClient
 	}
 	client := *base
-	client.Jar = jar
 
 	gap := minRequestGap
 	if d := time.Duration(def.RequestDelay * float64(time.Second)); d > gap {
@@ -134,7 +131,7 @@ func New(def *cardigann.Definition, o Options) (*Engine, error) {
 	if clock == nil {
 		clock = time.Now
 	}
-	return &Engine{
+	e := &Engine{
 		def:      def,
 		site:     site,
 		config:   config,
@@ -143,7 +140,35 @@ func New(def *cardigann.Definition, o Options) (*Engine, error) {
 		encoding: enc,
 		pace:     pacerFor(o.Name, gap),
 		clock:    clock,
-	}, nil
+		ua:       o.Session.UserAgent,
+	}
+	e.resetCookies(o.Session.Cookies)
+	return e, nil
+}
+
+// Session reports the cookies the site would be sent now and the user agent
+// requests go out under, for the caller to keep until the next request.
+func (e *Engine) Session() Session {
+	s := Session{Cookies: map[string]string{}, UserAgent: e.ua}
+	for _, c := range e.client.Jar.Cookies(e.site) {
+		s.Cookies[c.Name] = c.Value
+	}
+	return s
+}
+
+// resetCookies replaces the jar with one holding just these cookies, set on
+// the site. A login starts from the definition's own cookies, never from the
+// session it is replacing.
+func (e *Engine) resetCookies(cookies map[string]string) {
+	// cookiejar.New only fails on a PublicSuffixList it is not given.
+	jar, _ := cookiejar.New(nil)
+	list := make([]*http.Cookie, 0, len(cookies))
+	for name, value := range cookies {
+		//nolint:gosec // G124: a client-side jar entry; Secure would withhold it from an http tracker
+		list = append(list, &http.Cookie{Name: name, Value: value, Path: "/"})
+	}
+	jar.SetCookies(e.site, list)
+	e.client.Jar = jar
 }
 
 func (e *Engine) now() time.Time { return e.clock() }
@@ -294,20 +319,23 @@ func (p *pacer) wait(ctx context.Context) error {
 	return nil
 }
 
-// request is one HTTP request the engine sends.
+// request is one HTTP request the engine sends. contentType overrides the
+// form encoding of a POST body.
 type request struct {
-	method   string
-	url      string
-	form     string
-	headers  map[string]string
-	referer  string
-	redirect bool
+	method      string
+	url         string
+	form        string
+	contentType string
+	headers     map[string]string
+	referer     string
+	redirect    bool
 }
 
 type response struct {
 	status   int
 	location string
 	header   http.Header
+	raw      []byte
 	body     string
 	url      *url.URL
 }
@@ -324,9 +352,17 @@ func (e *Engine) do(ctx context.Context, r request) (*response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	ua := userAgent
+	if e.ua != "" {
+		ua = e.ua
+	}
+	req.Header.Set("User-Agent", ua)
 	if r.method == http.MethodPost {
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		ct := r.contentType
+		if ct == "" {
+			ct = "application/x-www-form-urlencoded"
+		}
+		req.Header.Set("Content-Type", ct)
 	}
 	for k, v := range r.headers {
 		req.Header.Set(k, v)
@@ -359,6 +395,7 @@ func (e *Engine) do(ctx context.Context, r request) (*response, error) {
 		status:   resp.StatusCode,
 		location: resp.Header.Get("Location"),
 		header:   resp.Header,
+		raw:      raw,
 		body:     text,
 		url:      req.URL,
 	}, nil

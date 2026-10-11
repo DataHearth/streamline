@@ -998,9 +998,10 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		},
 	)
 
-	It("rejects a definition that logs in", func() {
-		Expect(config.AddIndexer(ctx, cardigann("0dayfiles-api", nil))).
-			To(MatchError(ContainSubstring("not supported yet")))
+	It("accepts a definition that logs in", func() {
+		Expect(config.AddIndexer(ctx, cardigann("0dayfiles-api", map[string]string{
+			"apikey": "k",
+		}))).To(Succeed())
 	})
 
 	It("rejects a definition the snapshot does not hold", func() {

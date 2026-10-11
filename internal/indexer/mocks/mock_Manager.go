@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/indexer"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -46,6 +47,80 @@ type MockManager_Expecter struct {
 
 func (_m *MockManager) EXPECT() *MockManager_Expecter {
 	return &MockManager_Expecter{mock: &_m.Mock}
+}
+
+// Captcha provides a mock function for the type MockManager
+func (_mock *MockManager) Captcha(ctx context.Context, name string) (string, *engine.Captcha, error) {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Captcha")
+	}
+
+	var r0 string
+	var r1 *engine.Captcha
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (string, *engine.Captcha, error)); ok {
+		return returnFunc(ctx, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) *engine.Captcha); ok {
+		r1 = returnFunc(ctx, name)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*engine.Captcha)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = returnFunc(ctx, name)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockManager_Captcha_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Captcha'
+type MockManager_Captcha_Call struct {
+	*mock.Call
+}
+
+// Captcha is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockManager_Expecter) Captcha(ctx any, name any) *MockManager_Captcha_Call {
+	return &MockManager_Captcha_Call{Call: _e.mock.On("Captcha", ctx, name)}
+}
+
+func (_c *MockManager_Captcha_Call) Run(run func(ctx context.Context, name string)) *MockManager_Captcha_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Captcha_Call) Return(s string, captcha *engine.Captcha, err error) *MockManager_Captcha_Call {
+	_c.Call.Return(s, captcha, err)
+	return _c
+}
+
+func (_c *MockManager_Captcha_Call) RunAndReturn(run func(ctx context.Context, name string) (string, *engine.Captcha, error)) *MockManager_Captcha_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Feed provides a mock function for the type MockManager
@@ -112,6 +187,132 @@ func (_c *MockManager_Feed_Call) Return(searchResults []indexer.SearchResult, er
 }
 
 func (_c *MockManager_Feed_Call) RunAndReturn(run func(ctx context.Context, indexerName string) ([]indexer.SearchResult, error)) *MockManager_Feed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Forget provides a mock function for the type MockManager
+func (_mock *MockManager) Forget(ctx context.Context, name string) error {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Forget")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_Forget_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Forget'
+type MockManager_Forget_Call struct {
+	*mock.Call
+}
+
+// Forget is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockManager_Expecter) Forget(ctx any, name any) *MockManager_Forget_Call {
+	return &MockManager_Forget_Call{Call: _e.mock.On("Forget", ctx, name)}
+}
+
+func (_c *MockManager_Forget_Call) Run(run func(ctx context.Context, name string)) *MockManager_Forget_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Forget_Call) Return(err error) *MockManager_Forget_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_Forget_Call) RunAndReturn(run func(ctx context.Context, name string) error) *MockManager_Forget_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Login provides a mock function for the type MockManager
+func (_mock *MockManager) Login(ctx context.Context, name string, token string, answer string) error {
+	ret := _mock.Called(ctx, name, token, answer)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Login")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+		r0 = returnFunc(ctx, name, token, answer)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_Login_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Login'
+type MockManager_Login_Call struct {
+	*mock.Call
+}
+
+// Login is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+//   - token string
+//   - answer string
+func (_e *MockManager_Expecter) Login(ctx any, name any, token any, answer any) *MockManager_Login_Call {
+	return &MockManager_Login_Call{Call: _e.mock.On("Login", ctx, name, token, answer)}
+}
+
+func (_c *MockManager_Login_Call) Run(run func(ctx context.Context, name string, token string, answer string)) *MockManager_Login_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Login_Call) Return(err error) *MockManager_Login_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_Login_Call) RunAndReturn(run func(ctx context.Context, name string, token string, answer string) error) *MockManager_Login_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -714,6 +915,72 @@ func (_c *MockManager_SearchSeries_Call) Return(searchResults []indexer.SearchRe
 }
 
 func (_c *MockManager_SearchSeries_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string) ([]indexer.SearchResult, error)) *MockManager_SearchSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Session provides a mock function for the type MockManager
+func (_mock *MockManager) Session(ctx context.Context, name string) (indexer.SessionState, error) {
+	ret := _mock.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Session")
+	}
+
+	var r0 indexer.SessionState
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (indexer.SessionState, error)); ok {
+		return returnFunc(ctx, name)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) indexer.SessionState); ok {
+		r0 = returnFunc(ctx, name)
+	} else {
+		r0 = ret.Get(0).(indexer.SessionState)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_Session_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Session'
+type MockManager_Session_Call struct {
+	*mock.Call
+}
+
+// Session is a helper method to define mock.On call
+//   - ctx context.Context
+//   - name string
+func (_e *MockManager_Expecter) Session(ctx any, name any) *MockManager_Session_Call {
+	return &MockManager_Session_Call{Call: _e.mock.On("Session", ctx, name)}
+}
+
+func (_c *MockManager_Session_Call) Run(run func(ctx context.Context, name string)) *MockManager_Session_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Session_Call) Return(sessionState indexer.SessionState, err error) *MockManager_Session_Call {
+	_c.Call.Return(sessionState, err)
+	return _c
+}
+
+func (_c *MockManager_Session_Call) RunAndReturn(run func(ctx context.Context, name string) (indexer.SessionState, error)) *MockManager_Session_Call {
 	_c.Call.Return(run)
 	return _c
 }
