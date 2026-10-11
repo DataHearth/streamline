@@ -3,9 +3,10 @@
 `internal/cardigann` is streamline's own reader for the Cardigann YAML definitions
 Prowlarr and Jackett describe trackers in, so a stack can drop Prowlarr/Jackett. **What
 exists today is the converter, the embedded snapshot and the engine**: a `protocol:
-cardigann` indexer entry, configured in the config file only, runs a definition **that
-needs no login** (83 of 579 at `8df0764`). Login flows, the browser-challenge solver, the
-runtime definition update and the catalog UI are not built yet.
+cardigann` indexer entry, configured in the config file only, runs any definition in the
+snapshot, logging in to its tracker when the definition says to (`## Logins`). The
+browser-challenge solver, the runtime definition update and the catalog UI are not built
+yet.
 
 | Path | What it is |
 |---|---|
@@ -304,7 +305,7 @@ indexers:
 ```
 
 - **`config.CheckCardigann` is the gate**, run by `checkInvariants`: the definition loads,
-  has no `login` block (`engine.ErrLoginUnsupported`), the site is one of its `links`, and
+  the site is one of its `links`, and
   `engine.Config` accepts the settings — an undeclared name, a select value outside its
   option keys, or a checkbox that is not a boolean is refused. Two upstream selects default
   to a key their own options lack (`DESC` beside `desc`; `t` beside nt/ts/sz/i), which
@@ -362,10 +363,59 @@ indexers:
 - **Test** runs the feed query (no term) and passes on a readable answer, results or not.
   **Feed** is the same query.
 
-What the engine does **not** do yet: log in (phase 4), solve browser challenges — a
-definition carrying an `info_flaresolverr` setting (eztv, for one) may be refused by its
-site until the solver lands —, pick a tracker's own category for a search beyond the
-newznab root of the kind, or page past the first response.
+What the engine does **not** do yet: solve browser challenges — a definition carrying an
+`info_flaresolverr` setting (eztv, for one) may be refused by its site until the solver
+lands —, pick a tracker's own category for a search beyond the newznab root of the kind, or
+page past the first response.
+
+## Logins
+
+A port of `CardigannRequestGenerator.DoLogin`/`CheckIfLoginIsNeeded` and the login half of
+`HttpIndexerBase.FetchIndexerResponse`. The engine runs one login; **when to log in, and when
+not to, is `internal/indexer`'s** (`Cardigann.run`).
+
+- **Methods** (`engine.Login`): `post` (inputs as a form to `login.path`, redirects
+  followed), `form` (fetch the landing page — following redirects only when the definition's
+  `followredirect` says so — read the form `login.form` names, keep every named, enabled
+  `input` that is not an unticked checkbox or radio, then overlay `inputs`, `selectorinputs`
+  and the captcha answer; `getselectorinputs` go on the submit URL; `submitpath` overrides
+  the form's action; multipart when the form says so), `get` (`path?inputs`, always a `?`),
+  `oneurl` (`path` + the `oneurl` input), `cookie` (the `cookie` setting parsed as a Cookie
+  header, no request). `post` and `form` start from the definition's `login.cookies`, `get`
+  and `oneurl` from none. A page with `script[src*="simpleCaptcha"]` is answered from
+  `simpleCaptcha.php` itself. `login.selectors` makes every input key a CSS selector whose
+  `name` is the field.
+- **Failure** is a 401 or the first `error` block whose selector matches the response (its
+  `message` selector, else the element's text) — `ErrLoginFailed` carrying **the tracker's
+  message and never a URL** (a `oneurl` path is a secret), which is why the REST layer may
+  echo it while it echoes no other probe error. `login.test.path` is unused, as in
+  Prowlarr; only `test.selector` matters.
+- **A lapsed session** is `CheckIfLoginIsNeeded`: a search response that redirects, is
+  ≥ 400, or is HTML (or untyped) without `login.test.selector` → `ErrLoginRequired`. The
+  indexer logs in and repeats the call **once**; still asked → a failed login.
+- **Sessions** are the jar's cookies for the site URL plus the user agent
+  (`engine.Session`), kept in the `IndexerSession` row under the indexer's config name,
+  live for `engine.SessionLifetime` (30 days, Prowlarr's) and extended by every call that
+  works — written only when they changed or a day of lifetime was used, so an RSS tick does
+  not write a row per indexer. With no live session a login runs **before** the first
+  request (Prowlarr spends a request to find out). An edit to, or the removal of, the
+  indexer drops the row (`Manager.Forget`).
+- **Backoff**: an automatic login that fails stores `login_failures` and a `retry_at` from
+  Prowlarr's escalation (1 min, 5, 10, 15, 30, 1 h, 3, 6, 12, 24 h) and drops the cookies;
+  until then a call that needs a login fails with `ErrLoginBackoff` and **sends nothing** —
+  a wrong password retried every RSS tick is how an account gets banned. A person's login
+  (`POST /indexers/{name}/login`, the draft test) ignores it. Logins of one indexer are
+  serialised by a per-name mutex.
+- **Captchas**: an automatic `form` login whose landing page shows the `captcha` image
+  stops with `ErrCaptchaRequired` (a definition whose page shows none this time logs in).
+  `POST /indexers/{name}/captcha` fetches the page and image, holds the landing page (body +
+  cookies) in memory for ten minutes under a random token, and returns the image as a
+  `data:` URL **whose type is sniffed, never the tracker's header**; `POST
+  /indexers/{name}/login {token, answer}` submits that page. A draft has nowhere to hold
+  one, so a captcha tracker is saved first, then logged in.
+- **Downloads** go out with the session: `ResolveDownload` runs the download block inside
+  the same login handling and adds the session's `Cookie` and user agent to the target's
+  headers, which `download.resolveTorrentSource` sends.
 
 ## Secrets
 

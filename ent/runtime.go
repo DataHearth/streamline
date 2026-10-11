@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/indexersession"
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -484,6 +485,29 @@ func init() {
 	importscanshowDescFileCount := importscanshowFields[7].Descriptor()
 	// importscanshow.DefaultFileCount holds the default value on creation for the file_count field.
 	importscanshow.DefaultFileCount = importscanshowDescFileCount.Default.(uint16)
+	indexersessionMixin := schema.IndexerSession{}.Mixin()
+	indexersessionMixinFields1 := indexersessionMixin[1].Fields()
+	_ = indexersessionMixinFields1
+	indexersessionFields := schema.IndexerSession{}.Fields()
+	_ = indexersessionFields
+	// indexersessionDescCreateTime is the schema descriptor for create_time field.
+	indexersessionDescCreateTime := indexersessionMixinFields1[0].Descriptor()
+	// indexersession.DefaultCreateTime holds the default value on creation for the create_time field.
+	indexersession.DefaultCreateTime = indexersessionDescCreateTime.Default.(func() time.Time)
+	// indexersessionDescUpdateTime is the schema descriptor for update_time field.
+	indexersessionDescUpdateTime := indexersessionMixinFields1[1].Descriptor()
+	// indexersession.DefaultUpdateTime holds the default value on creation for the update_time field.
+	indexersession.DefaultUpdateTime = indexersessionDescUpdateTime.Default.(func() time.Time)
+	// indexersession.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	indexersession.UpdateDefaultUpdateTime = indexersessionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// indexersessionDescName is the schema descriptor for name field.
+	indexersessionDescName := indexersessionFields[0].Descriptor()
+	// indexersession.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	indexersession.NameValidator = indexersessionDescName.Validators[0].(func(string) error)
+	// indexersessionDescLoginFailures is the schema descriptor for login_failures field.
+	indexersessionDescLoginFailures := indexersessionFields[4].Descriptor()
+	// indexersession.DefaultLoginFailures holds the default value on creation for the login_failures field.
+	indexersession.DefaultLoginFailures = indexersessionDescLoginFailures.Default.(uint8)
 	inviteMixin := schema.Invite{}.Mixin()
 	inviteMixinFields1 := inviteMixin[1].Fields()
 	_ = inviteMixinFields1

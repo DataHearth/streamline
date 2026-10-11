@@ -28,6 +28,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/indexersession"
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -74,6 +75,7 @@ const (
 	TypeImportScanBook   = "ImportScanBook"
 	TypeImportScanFile   = "ImportScanFile"
 	TypeImportScanShow   = "ImportScanShow"
+	TypeIndexerSession   = "IndexerSession"
 	TypeInvite           = "Invite"
 	TypeMediaEvent       = "MediaEvent"
 	TypeMediaFile        = "MediaFile"
@@ -26096,6 +26098,904 @@ func (m *ImportScanShowMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ImportScanShow edge %s", name)
+}
+
+// IndexerSessionMutation represents an operation that mutates the IndexerSession nodes in the graph.
+type IndexerSessionMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *uint32
+	create_time       *time.Time
+	update_time       *time.Time
+	name              *string
+	cookies           *map[string]string
+	user_agent        *string
+	expires_at        *time.Time
+	login_failures    *uint8
+	addlogin_failures *int8
+	retry_at          *time.Time
+	last_error        *string
+	clearedFields     map[string]struct{}
+	done              bool
+	oldValue          func(context.Context) (*IndexerSession, error)
+	predicates        []predicate.IndexerSession
+}
+
+var _ ent.Mutation = (*IndexerSessionMutation)(nil)
+
+// indexersessionOption allows management of the mutation configuration using functional options.
+type indexersessionOption func(*IndexerSessionMutation)
+
+// newIndexerSessionMutation creates new mutation for the IndexerSession entity.
+func newIndexerSessionMutation(c config, op Op, opts ...indexersessionOption) *IndexerSessionMutation {
+	m := &IndexerSessionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeIndexerSession,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withIndexerSessionID sets the ID field of the mutation.
+func withIndexerSessionID(id uint32) indexersessionOption {
+	return func(m *IndexerSessionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *IndexerSession
+		)
+		m.oldValue = func(ctx context.Context) (*IndexerSession, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().IndexerSession.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withIndexerSession sets the old IndexerSession of the mutation.
+func withIndexerSession(node *IndexerSession) indexersessionOption {
+	return func(m *IndexerSessionMutation) {
+		m.oldValue = func(context.Context) (*IndexerSession, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m IndexerSessionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m IndexerSessionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of IndexerSession entities.
+func (m *IndexerSessionMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *IndexerSessionMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IndexerSessionMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IndexerSession.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *IndexerSessionMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *IndexerSessionMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *IndexerSessionMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *IndexerSessionMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *IndexerSessionMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *IndexerSessionMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetName sets the "name" field.
+func (m *IndexerSessionMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *IndexerSessionMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *IndexerSessionMutation) ResetName() {
+	m.name = nil
+}
+
+// SetCookies sets the "cookies" field.
+func (m *IndexerSessionMutation) SetCookies(value map[string]string) {
+	m.cookies = &value
+}
+
+// Cookies returns the value of the "cookies" field in the mutation.
+func (m *IndexerSessionMutation) Cookies() (r map[string]string, exists bool) {
+	v := m.cookies
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCookies returns the old "cookies" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldCookies(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCookies is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCookies requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCookies: %w", err)
+	}
+	return oldValue.Cookies, nil
+}
+
+// ClearCookies clears the value of the "cookies" field.
+func (m *IndexerSessionMutation) ClearCookies() {
+	m.cookies = nil
+	m.clearedFields[indexersession.FieldCookies] = struct{}{}
+}
+
+// CookiesCleared returns if the "cookies" field was cleared in this mutation.
+func (m *IndexerSessionMutation) CookiesCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldCookies]
+	return ok
+}
+
+// ResetCookies resets all changes to the "cookies" field.
+func (m *IndexerSessionMutation) ResetCookies() {
+	m.cookies = nil
+	delete(m.clearedFields, indexersession.FieldCookies)
+}
+
+// SetUserAgent sets the "user_agent" field.
+func (m *IndexerSessionMutation) SetUserAgent(s string) {
+	m.user_agent = &s
+}
+
+// UserAgent returns the value of the "user_agent" field in the mutation.
+func (m *IndexerSessionMutation) UserAgent() (r string, exists bool) {
+	v := m.user_agent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserAgent returns the old "user_agent" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldUserAgent(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserAgent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserAgent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserAgent: %w", err)
+	}
+	return oldValue.UserAgent, nil
+}
+
+// ClearUserAgent clears the value of the "user_agent" field.
+func (m *IndexerSessionMutation) ClearUserAgent() {
+	m.user_agent = nil
+	m.clearedFields[indexersession.FieldUserAgent] = struct{}{}
+}
+
+// UserAgentCleared returns if the "user_agent" field was cleared in this mutation.
+func (m *IndexerSessionMutation) UserAgentCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldUserAgent]
+	return ok
+}
+
+// ResetUserAgent resets all changes to the "user_agent" field.
+func (m *IndexerSessionMutation) ResetUserAgent() {
+	m.user_agent = nil
+	delete(m.clearedFields, indexersession.FieldUserAgent)
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *IndexerSessionMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *IndexerSessionMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ClearExpiresAt clears the value of the "expires_at" field.
+func (m *IndexerSessionMutation) ClearExpiresAt() {
+	m.expires_at = nil
+	m.clearedFields[indexersession.FieldExpiresAt] = struct{}{}
+}
+
+// ExpiresAtCleared returns if the "expires_at" field was cleared in this mutation.
+func (m *IndexerSessionMutation) ExpiresAtCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldExpiresAt]
+	return ok
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *IndexerSessionMutation) ResetExpiresAt() {
+	m.expires_at = nil
+	delete(m.clearedFields, indexersession.FieldExpiresAt)
+}
+
+// SetLoginFailures sets the "login_failures" field.
+func (m *IndexerSessionMutation) SetLoginFailures(u uint8) {
+	m.login_failures = &u
+	m.addlogin_failures = nil
+}
+
+// LoginFailures returns the value of the "login_failures" field in the mutation.
+func (m *IndexerSessionMutation) LoginFailures() (r uint8, exists bool) {
+	v := m.login_failures
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLoginFailures returns the old "login_failures" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldLoginFailures(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLoginFailures is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLoginFailures requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLoginFailures: %w", err)
+	}
+	return oldValue.LoginFailures, nil
+}
+
+// AddLoginFailures adds u to the "login_failures" field.
+func (m *IndexerSessionMutation) AddLoginFailures(u int8) {
+	if m.addlogin_failures != nil {
+		*m.addlogin_failures += u
+	} else {
+		m.addlogin_failures = &u
+	}
+}
+
+// AddedLoginFailures returns the value that was added to the "login_failures" field in this mutation.
+func (m *IndexerSessionMutation) AddedLoginFailures() (r int8, exists bool) {
+	v := m.addlogin_failures
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLoginFailures resets all changes to the "login_failures" field.
+func (m *IndexerSessionMutation) ResetLoginFailures() {
+	m.login_failures = nil
+	m.addlogin_failures = nil
+}
+
+// SetRetryAt sets the "retry_at" field.
+func (m *IndexerSessionMutation) SetRetryAt(t time.Time) {
+	m.retry_at = &t
+}
+
+// RetryAt returns the value of the "retry_at" field in the mutation.
+func (m *IndexerSessionMutation) RetryAt() (r time.Time, exists bool) {
+	v := m.retry_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRetryAt returns the old "retry_at" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldRetryAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRetryAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRetryAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRetryAt: %w", err)
+	}
+	return oldValue.RetryAt, nil
+}
+
+// ClearRetryAt clears the value of the "retry_at" field.
+func (m *IndexerSessionMutation) ClearRetryAt() {
+	m.retry_at = nil
+	m.clearedFields[indexersession.FieldRetryAt] = struct{}{}
+}
+
+// RetryAtCleared returns if the "retry_at" field was cleared in this mutation.
+func (m *IndexerSessionMutation) RetryAtCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldRetryAt]
+	return ok
+}
+
+// ResetRetryAt resets all changes to the "retry_at" field.
+func (m *IndexerSessionMutation) ResetRetryAt() {
+	m.retry_at = nil
+	delete(m.clearedFields, indexersession.FieldRetryAt)
+}
+
+// SetLastError sets the "last_error" field.
+func (m *IndexerSessionMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *IndexerSessionMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the IndexerSession entity.
+// If the IndexerSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IndexerSessionMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (m *IndexerSessionMutation) ClearLastError() {
+	m.last_error = nil
+	m.clearedFields[indexersession.FieldLastError] = struct{}{}
+}
+
+// LastErrorCleared returns if the "last_error" field was cleared in this mutation.
+func (m *IndexerSessionMutation) LastErrorCleared() bool {
+	_, ok := m.clearedFields[indexersession.FieldLastError]
+	return ok
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *IndexerSessionMutation) ResetLastError() {
+	m.last_error = nil
+	delete(m.clearedFields, indexersession.FieldLastError)
+}
+
+// Where appends a list predicates to the IndexerSessionMutation builder.
+func (m *IndexerSessionMutation) Where(ps ...predicate.IndexerSession) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the IndexerSessionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IndexerSessionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IndexerSession, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *IndexerSessionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IndexerSessionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (IndexerSession).
+func (m *IndexerSessionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *IndexerSessionMutation) Fields() []string {
+	fields := make([]string, 0, 9)
+	if m.create_time != nil {
+		fields = append(fields, indexersession.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, indexersession.FieldUpdateTime)
+	}
+	if m.name != nil {
+		fields = append(fields, indexersession.FieldName)
+	}
+	if m.cookies != nil {
+		fields = append(fields, indexersession.FieldCookies)
+	}
+	if m.user_agent != nil {
+		fields = append(fields, indexersession.FieldUserAgent)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, indexersession.FieldExpiresAt)
+	}
+	if m.login_failures != nil {
+		fields = append(fields, indexersession.FieldLoginFailures)
+	}
+	if m.retry_at != nil {
+		fields = append(fields, indexersession.FieldRetryAt)
+	}
+	if m.last_error != nil {
+		fields = append(fields, indexersession.FieldLastError)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *IndexerSessionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case indexersession.FieldCreateTime:
+		return m.CreateTime()
+	case indexersession.FieldUpdateTime:
+		return m.UpdateTime()
+	case indexersession.FieldName:
+		return m.Name()
+	case indexersession.FieldCookies:
+		return m.Cookies()
+	case indexersession.FieldUserAgent:
+		return m.UserAgent()
+	case indexersession.FieldExpiresAt:
+		return m.ExpiresAt()
+	case indexersession.FieldLoginFailures:
+		return m.LoginFailures()
+	case indexersession.FieldRetryAt:
+		return m.RetryAt()
+	case indexersession.FieldLastError:
+		return m.LastError()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *IndexerSessionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case indexersession.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case indexersession.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case indexersession.FieldName:
+		return m.OldName(ctx)
+	case indexersession.FieldCookies:
+		return m.OldCookies(ctx)
+	case indexersession.FieldUserAgent:
+		return m.OldUserAgent(ctx)
+	case indexersession.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	case indexersession.FieldLoginFailures:
+		return m.OldLoginFailures(ctx)
+	case indexersession.FieldRetryAt:
+		return m.OldRetryAt(ctx)
+	case indexersession.FieldLastError:
+		return m.OldLastError(ctx)
+	}
+	return nil, fmt.Errorf("unknown IndexerSession field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IndexerSessionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case indexersession.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case indexersession.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case indexersession.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case indexersession.FieldCookies:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCookies(v)
+		return nil
+	case indexersession.FieldUserAgent:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserAgent(v)
+		return nil
+	case indexersession.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
+	case indexersession.FieldLoginFailures:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLoginFailures(v)
+		return nil
+	case indexersession.FieldRetryAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRetryAt(v)
+		return nil
+	case indexersession.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IndexerSession field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *IndexerSessionMutation) AddedFields() []string {
+	var fields []string
+	if m.addlogin_failures != nil {
+		fields = append(fields, indexersession.FieldLoginFailures)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *IndexerSessionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case indexersession.FieldLoginFailures:
+		return m.AddedLoginFailures()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IndexerSessionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case indexersession.FieldLoginFailures:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLoginFailures(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IndexerSession numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *IndexerSessionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(indexersession.FieldCookies) {
+		fields = append(fields, indexersession.FieldCookies)
+	}
+	if m.FieldCleared(indexersession.FieldUserAgent) {
+		fields = append(fields, indexersession.FieldUserAgent)
+	}
+	if m.FieldCleared(indexersession.FieldExpiresAt) {
+		fields = append(fields, indexersession.FieldExpiresAt)
+	}
+	if m.FieldCleared(indexersession.FieldRetryAt) {
+		fields = append(fields, indexersession.FieldRetryAt)
+	}
+	if m.FieldCleared(indexersession.FieldLastError) {
+		fields = append(fields, indexersession.FieldLastError)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *IndexerSessionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *IndexerSessionMutation) ClearField(name string) error {
+	switch name {
+	case indexersession.FieldCookies:
+		m.ClearCookies()
+		return nil
+	case indexersession.FieldUserAgent:
+		m.ClearUserAgent()
+		return nil
+	case indexersession.FieldExpiresAt:
+		m.ClearExpiresAt()
+		return nil
+	case indexersession.FieldRetryAt:
+		m.ClearRetryAt()
+		return nil
+	case indexersession.FieldLastError:
+		m.ClearLastError()
+		return nil
+	}
+	return fmt.Errorf("unknown IndexerSession nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *IndexerSessionMutation) ResetField(name string) error {
+	switch name {
+	case indexersession.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case indexersession.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case indexersession.FieldName:
+		m.ResetName()
+		return nil
+	case indexersession.FieldCookies:
+		m.ResetCookies()
+		return nil
+	case indexersession.FieldUserAgent:
+		m.ResetUserAgent()
+		return nil
+	case indexersession.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	case indexersession.FieldLoginFailures:
+		m.ResetLoginFailures()
+		return nil
+	case indexersession.FieldRetryAt:
+		m.ResetRetryAt()
+		return nil
+	case indexersession.FieldLastError:
+		m.ResetLastError()
+		return nil
+	}
+	return fmt.Errorf("unknown IndexerSession field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *IndexerSessionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *IndexerSessionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *IndexerSessionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *IndexerSessionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *IndexerSessionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *IndexerSessionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *IndexerSessionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown IndexerSession unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *IndexerSessionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown IndexerSession edge %s", name)
 }
 
 // InviteMutation represents an operation that mutates the Invite nodes in the graph.

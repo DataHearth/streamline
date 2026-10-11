@@ -1541,13 +1541,6 @@ func CheckCardigann(ix IndexerEntry) error {
 	if err != nil {
 		return err
 	}
-	if def.Login != nil {
-		return fmt.Errorf(
-			"%s: %w",
-			ix.Cardigann.Definition,
-			engine.ErrLoginUnsupported,
-		)
-	}
 	if _, err := engine.Site(def, ix.Cardigann.Site); err != nil {
 		return err
 	}

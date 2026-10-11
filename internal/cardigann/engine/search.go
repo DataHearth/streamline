@@ -204,6 +204,9 @@ func (e *Engine) Search(ctx context.Context, q Query) ([]Release, error) {
 		if err != nil {
 			return nil, err
 		}
+		if e.needsLogin(resp) {
+			return nil, ErrLoginRequired
+		}
 		releases, err := e.parse(ctx, resp, path, pv)
 		if err != nil {
 			return nil, fmt.Errorf("search path %d: %w", i, err)

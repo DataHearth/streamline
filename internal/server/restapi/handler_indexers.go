@@ -2,7 +2,11 @@ package restapi
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"log/slog"
+	"net/http"
+	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -18,7 +22,7 @@ func (s *Server) ListIndexers(
 	c := config.Get()
 	items := make([]Indexer, 0, len(c.Indexers))
 	for _, e := range c.Indexers {
-		items = append(items, indexerToAPI(e))
+		items = append(items, s.indexerWithSession(ctx, e))
 	}
 	return ListIndexers200JSONResponse(items), nil
 }
@@ -127,6 +131,7 @@ func (s *Server) DeleteIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return DeleteIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
+	e, found := config.FindIndexer(request.Name)
 	switch err := config.DeleteIndexer(ctx, request.Name); {
 	case errors.Is(err, config.ErrIndexerNotFound):
 		return DeleteIndexer404JSONResponse{
@@ -140,6 +145,12 @@ func (s *Server) DeleteIndexer(
 		return DeleteIndexer500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
+	}
+	if found && e.Protocol == "cardigann" {
+		if err := s.indexers.Forget(ctx, e.Name); err != nil {
+			slog.WarnContext(ctx, "could not drop a deleted indexer's session",
+				"indexer.name", e.Name, "error", err)
+		}
 	}
 	return DeleteIndexer204Response{}, nil
 }
@@ -221,8 +232,20 @@ func (s *Server) TestDraftIndexer(
 // indexerProbeFailure reports the typed connection-test failure by its own
 // sentinel text. The probe error itself is never echoed to the caller: torznab
 // authenticates through an `apikey` query parameter, so a wrapped *url.Error
-// would hand the indexer's key to anyone who can reach the endpoint.
+// would hand the indexer's key to anyone who can reach the endpoint. A
+// built-in indexer's login failures are the exception: their text is the
+// tracker's own message, which carries no URL.
 func indexerProbeFailure(err error) (string, bool) {
+	for _, sentinel := range []error{
+		indexer.ErrLoginFailed,
+		indexer.ErrCaptchaRequired,
+		indexer.ErrLoginBackoff,
+		indexer.ErrCaptchaExpired,
+	} {
+		if errors.Is(err, sentinel) {
+			return err.Error(), true
+		}
+	}
 	for _, sentinel := range []error{
 		indexer.ErrUnreachable,
 		indexer.ErrUnauthorized,
@@ -234,4 +257,121 @@ func indexerProbeFailure(err error) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// indexerWithSession is indexerToAPI plus a built-in indexer's login state.
+func (s *Server) indexerWithSession(
+	ctx context.Context,
+	e config.IndexerEntry,
+) Indexer {
+	i := indexerToAPI(e)
+	if e.Protocol != "cardigann" {
+		return i
+	}
+	st, err := s.indexers.Session(ctx, e.Name)
+	if err != nil {
+		slog.WarnContext(ctx, "could not read an indexer's session",
+			"indexer.name", e.Name, "error", err)
+		return i
+	}
+	i.Session = &IndexerSession{
+		LoginRequired: st.LoginRequired,
+		Captcha:       st.Captcha,
+		LoggedIn:      st.LoggedIn,
+		ExpiresAt:     st.ExpiresAt,
+		RetryAt:       st.RetryAt,
+	}
+	if st.LastError != "" {
+		i.Session.LastError = &st.LastError
+	}
+	return i
+}
+
+func (s *Server) GetIndexerCaptcha(
+	ctx context.Context,
+	request GetIndexerCaptchaRequestObject,
+) (GetIndexerCaptchaResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return GetIndexerCaptcha403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	token, img, err := s.indexers.Captcha(ctx, request.Name)
+	if msg, ok := indexerProbeFailure(err); ok {
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
+		}, nil
+	}
+	switch {
+	case errors.Is(err, config.ErrIndexerNotFound):
+		return GetIndexerCaptcha404JSONResponse{
+			NotFoundJSONResponse: errNotFound("indexer not found"),
+		}, nil
+	case errors.Is(err, indexer.ErrNotBuiltin):
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
+		return GetIndexerCaptcha500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	case img == nil:
+		return GetIndexerCaptcha204Response{}, nil
+	}
+	// The page is the tracker's: the type it claims is not trusted into a
+	// data: URL the SPA renders.
+	ct := http.DetectContentType(img.Data)
+	if !strings.HasPrefix(ct, "image/") {
+		return GetIndexerCaptcha422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(
+				"the tracker's captcha is not an image",
+			),
+		}, nil
+	}
+	return GetIndexerCaptcha200JSONResponse{
+		Token: token,
+		Image: "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(
+			img.Data,
+		),
+	}, nil
+}
+
+func (s *Server) LoginIndexer(
+	ctx context.Context,
+	request LoginIndexerRequestObject,
+) (LoginIndexerResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return LoginIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
+	}
+	var token, answer string
+	if b := request.Body; b != nil {
+		if b.Token != nil {
+			token = *b.Token
+		}
+		if b.Answer != nil {
+			answer = *b.Answer
+		}
+	}
+	err := s.indexers.Login(ctx, request.Name, token, answer)
+	if msg, ok := indexerProbeFailure(err); ok {
+		return LoginIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errConnectionFailed(msg),
+		}, nil
+	}
+	switch {
+	case errors.Is(err, config.ErrIndexerNotFound):
+		return LoginIndexer404JSONResponse{
+			NotFoundJSONResponse: errNotFound("indexer not found"),
+		}, nil
+	case errors.Is(err, indexer.ErrNotBuiltin):
+		return LoginIndexer422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+		}, nil
+	case err != nil:
+		return LoginIndexer500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	e, _ := config.FindIndexer(request.Name)
+	return LoginIndexer200JSONResponse(s.indexerWithSession(ctx, e)), nil
 }

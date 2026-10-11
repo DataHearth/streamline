@@ -862,7 +862,7 @@ func (d *download) grabWith(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	src, err := resolveTorrentSource(ctx, result.Download)
+	src, err := resolveTorrentSource(ctx, d.db, result.Download)
 	if err != nil {
 		outcome = "fetch_torrent_failed"
 		return nil, otelx.RecordSpanError(
@@ -2031,7 +2031,11 @@ func isRedirect(code int) bool {
 // Client.AddTorrent expects. magnet: links pass through; http(s) URLs are
 // fetched in-process so download clients that can't reach the indexer
 // (Docker/VPN sandboxes) still get the .torrent bytes.
-func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error) {
+func resolveTorrentSource(
+	ctx context.Context,
+	store db.Store,
+	dl string,
+) (TorrentSource, error) {
 	if dl == "" {
 		return TorrentSource{}, fmt.Errorf("empty download URL")
 	}
@@ -2044,7 +2048,7 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	// A native tracker's link may be a release page its definition reads the
 	// real link off, with the headers it sends.
 	method, header := http.MethodGet, http.Header(nil)
-	target, native, err := indexer.ResolveDownload(ctx, dl)
+	target, native, err := indexer.ResolveDownload(ctx, store, dl)
 	if err != nil {
 		return TorrentSource{}, fmt.Errorf("resolve download: %w", err)
 	}

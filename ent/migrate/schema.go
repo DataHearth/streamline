@@ -878,6 +878,25 @@ var (
 			},
 		},
 	}
+	// IndexerSessionsColumns holds the columns for the "indexer_sessions" table.
+	IndexerSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "cookies", Type: field.TypeJSON, Nullable: true},
+		{Name: "user_agent", Type: field.TypeString, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "login_failures", Type: field.TypeUint8, Default: 0},
+		{Name: "retry_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Nullable: true},
+	}
+	// IndexerSessionsTable holds the schema information for the "indexer_sessions" table.
+	IndexerSessionsTable = &schema.Table{
+		Name:       "indexer_sessions",
+		Columns:    IndexerSessionsColumns,
+		PrimaryKey: []*schema.Column{IndexerSessionsColumns[0]},
+	}
 	// InvitesColumns holds the columns for the "invites" table.
 	InvitesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1654,6 +1673,7 @@ var (
 		ImportScanBooksTable,
 		ImportScanFilesTable,
 		ImportScanShowsTable,
+		IndexerSessionsTable,
 		InvitesTable,
 		MediaEventsTable,
 		MediaFilesTable,

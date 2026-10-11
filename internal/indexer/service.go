@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/otelx"
 	"go.opentelemetry.io/otel"
@@ -48,13 +50,16 @@ func newClient(protocol, baseURL, apiKey string) Client {
 // clientFor builds the client a configured entry searches through, and the
 // URL its spans name: a cardigann entry runs its definition against the
 // tracker's own site.
-func clientFor(ix config.IndexerEntry) (Client, string, error) {
+func (i *indexer) clientFor(
+	ctx context.Context,
+	ix config.IndexerEntry,
+) (Client, string, error) {
 	if ix.Protocol == "cardigann" {
 		site, err := CardigannSite(ix)
 		if err != nil {
 			return nil, "", err
 		}
-		c, err := newCardigann(ix)
+		c, err := newCardigann(ctx, ix, i.store)
 		if err != nil {
 			return nil, site, err
 		}
@@ -200,25 +205,42 @@ type Manager interface {
 		kind mediafile.BookKind,
 	) ([]SearchResult, error)
 	Feed(ctx context.Context, indexerName string) ([]SearchResult, error)
+
+	// Session reports a built-in indexer's tracker login.
+	Session(ctx context.Context, name string) (SessionState, error)
+	// Captcha fetches a built-in indexer's login page for a person to read
+	// its captcha off: the token names the page Login answers, and image is
+	// nil when the page shows none.
+	Captcha(ctx context.Context, name string) (string, *engine.Captcha, error)
+	// Login logs a built-in indexer in now, ignoring any failure backoff;
+	// token and answer carry a captcha's answer, both empty otherwise.
+	Login(ctx context.Context, name, token, answer string) error
+	// Forget drops a built-in indexer's tracker session.
+	Forget(ctx context.Context, name string) error
 }
 
 // TestParams describes ad-hoc credentials for a connection test that has not
-// yet been persisted as an Indexer row.
+// yet been persisted as an Indexer row. A cardigann draft names its
+// definition and settings instead of an endpoint.
 type TestParams struct {
-	Protocol string
-	Host     string
-	Port     uint16
-	Path     string
-	UseSSL   bool
-	APIKey   string
+	Protocol  string
+	Host      string
+	Port      uint16
+	Path      string
+	UseSSL    bool
+	APIKey    string
+	Cardigann *config.CardigannIndexer
 }
 
 // indexer searches across all enabled indexers in parallel. The configured
-// indexer set is read live from config.Get() per operation.
-type indexer struct{}
+// indexer set is read live from config.Get() per operation; built-in
+// indexers keep their tracker sessions in store.
+type indexer struct {
+	store db.Store
+}
 
-func New() Manager {
-	return &indexer{}
+func New(store db.Store) Manager {
+	return &indexer{store: store}
 }
 
 // dedupTitles strips empty entries and collapses duplicates while
@@ -882,7 +904,7 @@ func (i *indexer) searchAll(
 
 	for _, idx := range indexers {
 		wg.Go(func() {
-			client, baseURL, err := clientFor(idx)
+			client, baseURL, err := i.clientFor(ctx, idx)
 			if err != nil {
 				indexerQueries.Add(ctx, 1, metric.WithAttributes(
 					attribute.String("indexer.name", idx.Name),
@@ -1047,7 +1069,7 @@ func (i *indexer) Feed(
 		return nil, otelx.RecordSpanError(span, config.ErrIndexerNotFound)
 	}
 
-	client, _, err := clientFor(row)
+	client, _, err := i.clientFor(ctx, row)
 	if err != nil {
 		countFeed("misconfigured")
 		return nil, otelx.RecordSpanError(span, err)
@@ -1090,17 +1112,35 @@ func (i *indexer) Feed(
 // ErrUnexpectedStatus, ErrBadResponse) on failure so callers can map them
 // to user-facing messages.
 func (i *indexer) Test(ctx context.Context, p TestParams) error {
+	var client Client
 	baseURL := buildBaseURL(p.Host, p.Port, p.Path, p.UseSSL)
+	if p.Protocol == "cardigann" {
+		// A draft keeps no session: it logs in, searches, and forgets.
+		ix := config.IndexerEntry{Protocol: p.Protocol, Cardigann: p.Cardigann}
+		if p.Cardigann != nil {
+			ix.Name = "draft:" + p.Cardigann.Definition
+		}
+		if err := config.CheckCardigann(ix); err != nil {
+			return err
+		}
+		site, err := CardigannSite(ix)
+		if err != nil {
+			return err
+		}
+		c, err := newCardigann(ctx, ix, nil)
+		if err != nil {
+			return err
+		}
+		client, baseURL = c, site
+	} else {
+		client = newClient(p.Protocol, baseURL, p.APIKey)
+	}
 	ctx, span := tracer.Start(ctx, "indexer.test",
 		trace.WithAttributes(attribute.String("indexer.url", redactURL(baseURL))),
 	)
 	defer span.End()
 
-	if err := newClient(
-		p.Protocol,
-		baseURL,
-		p.APIKey,
-	).TestConnection(ctx); err != nil {
+	if err := client.TestConnection(ctx); err != nil {
 		indexerTests.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("outcome", "error"),
 		))
@@ -1126,7 +1166,7 @@ func (i *indexer) TestByName(ctx context.Context, name string) error {
 		return otelx.RecordSpanError(span, config.ErrIndexerNotFound)
 	}
 	if idx.Protocol == "cardigann" {
-		client, _, err := clientFor(idx)
+		client, _, err := i.clientFor(ctx, idx)
 		if err == nil {
 			err = client.TestConnection(ctx)
 		}

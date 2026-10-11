@@ -6,7 +6,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Search, Pencil, Eye } from "@lucide/svelte";
+	import { Plus, Trash2, Search, Pencil, Eye, KeyRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
@@ -16,6 +16,7 @@
 	import Dialog from "@components/modals/Dialog.svelte";
 	import IndexerForm from "@components/settings/forms/IndexerForm.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import IndexerLoginDialog from "@components/settings/IndexerLoginDialog.svelte";
 	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -145,6 +146,36 @@
 		modalOpen = true;
 	}
 
+	// A tracker that may show a captcha logs in through the dialog; the rest
+	// log in straight from the card.
+	let captchaFor = $state<Indexer | null>(null);
+	const login = createMutation<Indexer, Error, string>(() => ({
+		mutationFn: (name) =>
+			api<Indexer>(`/indexers/${encodeURIComponent(name)}/login`, {
+				method: "POST",
+				body: {},
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["indexers"] });
+			toast.ok(i18n.indexer_logged_in());
+		},
+		onError: (err) => {
+			qc.invalidateQueries({ queryKey: ["indexers"] });
+			toast.err(errorText(err));
+		},
+	}));
+	function onLogin(i: Indexer) {
+		if (i.session?.captcha) captchaFor = i;
+		else login.mutate(i.name);
+	}
+	function sessionHint(i: Indexer): string | null {
+		const s = i.session;
+		if (!s?.last_error) return null;
+		return s.retry_at
+			? `${s.last_error} ${i18n.indexer_session_retry({ at: new Date(s.retry_at).toLocaleString() })}`
+			: s.last_error;
+	}
+
 	let deleting = $state<Indexer | null>(null);
 	function onDelete(i: Indexer) {
 		deleting = i;
@@ -251,6 +282,28 @@
 									>
 										{i18n.indexer_in_config_file()}
 									</span>
+									{#if i.session?.login_required}
+										{#if i.session.logged_in}
+											<span
+												class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
+											>
+												{i18n.indexer_session_ok()}
+											</span>
+										{:else if i.session.last_error}
+											<span
+												title={sessionHint(i)}
+												class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
+											>
+												{i18n.indexer_session_failed()}
+											</span>
+										{:else}
+											<span
+												class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
+											>
+												{i18n.indexer_session_none()}
+											</span>
+										{/if}
+									{/if}
 								{:else if i.api_key_set}
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
@@ -283,6 +336,18 @@
 					>
 						{#snippet trailing()}
 							<div class="flex shrink-0 items-center gap-1">
+								{#if i.session?.login_required}
+									<button
+										type="button"
+										onclick={() => onLogin(i)}
+										disabled={login.isPending}
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg disabled:opacity-60"
+										aria-label={i18n.indexer_login()}
+										title={i18n.indexer_login()}
+									>
+										<KeyRound size={16} aria-hidden="true" />
+									</button>
+								{/if}
 								{#if config.readOnly}
 									{#if !fileOnly(i)}
 										<button
@@ -369,6 +434,8 @@
 		{/if}
 	{/snippet}
 </ConfigFormShell>
+
+<IndexerLoginDialog indexer={captchaFor} onClose={() => (captchaFor = null)} />
 
 <Dialog
 	open={deleting !== null}

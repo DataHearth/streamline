@@ -180,7 +180,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		dbClient.Close()
 		return nil, fmt.Errorf("create posters service: %w", err)
 	}
-	indexerSvc := indexer.New()
+	indexerSvc := indexer.New(store)
 	var torrentEngine *bittorrent.Engine
 	var builtinClient download.Client
 	if _, ok := config.BuiltinDownloadClient(); ok {

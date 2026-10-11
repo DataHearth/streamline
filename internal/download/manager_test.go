@@ -186,14 +186,14 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 
 		It("passes magnet links through without a fetch", func() {
-			src, err := resolveTorrentSource(ctx, "magnet:?xt=urn:btih:abc")
+			src, err := resolveTorrentSource(ctx, nil, "magnet:?xt=urn:btih:abc")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(src.Magnet).To(Equal("magnet:?xt=urn:btih:abc"))
 		})
 
 		DescribeTable("rejects URLs outside the configured indexers",
 			func(dl string) {
-				_, err := resolveTorrentSource(ctx, dl)
+				_, err := resolveTorrentSource(ctx, nil, dl)
 				Expect(err).To(MatchError(ErrUntrustedSource))
 			},
 			Entry("cloud metadata", "http://169.254.169.254/latest/meta-data/"),
@@ -212,7 +212,11 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			// Reaching the transport (and failing there) proves the guard let
 			// the URL through — resolution of a non-existent host cannot
 			// succeed, but it is no longer ErrUntrustedSource.
-			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
+			_, err := resolveTorrentSource(
+				ctx,
+				nil,
+				"https://tracker.example/dl?id=1",
+			)
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
 		})
 
@@ -248,6 +252,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 
 				src, err := resolveTorrentSource(
 					ctx,
+					nil,
 					"https://yts.gg/torrent/download/AAA",
 				)
 				Expect(err).NotTo(HaveOccurred())
@@ -257,6 +262,7 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			It("still refuses another host", func() {
 				_, err := resolveTorrentSource(
 					ctx,
+					nil,
 					"https://yts.mx/torrent/download/AAA",
 				)
 				Expect(err).To(MatchError(ErrUntrustedSource))
@@ -292,13 +298,17 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				dl := indexerRedirectingTo(
 					"http://169.254.169.254/latest/meta-data/",
 				)
-				_, err := resolveTorrentSource(ctx, dl)
+				_, err := resolveTorrentSource(ctx, nil, dl)
 				Expect(err).To(MatchError(ErrUntrustedSource))
 			})
 
 			It("takes a redirect to a magnet as the magnet", func() {
 				const magnet = "magnet:?xt=urn:btih:abc"
-				src, err := resolveTorrentSource(ctx, indexerRedirectingTo(magnet))
+				src, err := resolveTorrentSource(
+					ctx,
+					nil,
+					indexerRedirectingTo(magnet),
+				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(src.Magnet).To(Equal(magnet))
 			})

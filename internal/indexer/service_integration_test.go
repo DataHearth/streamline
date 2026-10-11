@@ -90,7 +90,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 		DescribeTable("queries the slot's categories with and without the year",
 			func(kind mediafile.BookKind, wantCat string) {
 				rec := recordingIndexer()
-				results, err := New().SearchBook(
+				results, err := New(nil).SearchBook(
 					context.Background(),
 					"Brandon Sanderson", "Elantris", 2005, kind)
 				Expect(err).NotTo(HaveOccurred())
@@ -107,7 +107,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 	Describe("SearchAlbum", func() {
 		It("queries the music category with and without the year", func() {
 			rec := recordingIndexer()
-			results, err := New().SearchAlbum(
+			results, err := New(nil).SearchAlbum(
 				context.Background(), "Nirvana", "Nevermind", 1991)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rec.queries()).To(ConsistOf(
@@ -119,7 +119,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 		It("issues only the bare query without a year", func() {
 			rec := recordingIndexer()
-			_, err := New().SearchAlbum(
+			_, err := New(nil).SearchAlbum(
 				context.Background(), "Nirvana", "Nevermind", 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rec.queries()).To(Equal([]string{"Nirvana Nevermind"}))
@@ -131,7 +131,9 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			"asks each indexer once, by the bare name, in the music category",
 			func() {
 				rec := recordingIndexer()
-				results, err := New().SearchArtist(context.Background(), "  Nirvana ")
+				results, err := New(
+					nil,
+				).SearchArtist(context.Background(), "  Nirvana ")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rec.queries()).To(Equal([]string{"Nirvana"}))
 				Expect(rec.categories()).To(HaveEach("3000"))
@@ -234,7 +236,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					},
 				})
 
-				svc := New()
+				svc := New(nil)
 				results, err := svc.SearchMovie(
 					ctx,
 					[]string{"Interstellar"},
@@ -273,7 +275,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					}},
 				})
 
-				results, err := New().SearchMovie(
+				results, err := New(nil).SearchMovie(
 					context.Background(), []string{"Interstellar"}, nil, 157336, "",
 				)
 				Expect(err).NotTo(HaveOccurred())
@@ -333,7 +335,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				},
 			})
 
-			results, err := New().SearchMovie(
+			results, err := New(nil).SearchMovie(
 				ctx,
 				[]string{"Demon Slayer La Forteresse Infinie"},
 				[]string{"Demon Slayer Infinity Castle"},
@@ -409,7 +411,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					},
 				})
 
-				results, err := New().SearchMovie(
+				results, err := New(nil).SearchMovie(
 					ctx,
 					[]string{"Comme un chef"},
 					nil,
@@ -437,7 +439,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			results, _, err := New().
+			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
 					nil, 111, "", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
@@ -465,7 +467,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
 				nil, 0, "")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -488,7 +490,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			results, _, err := New().
+			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
 					nil, 111, "", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
@@ -528,7 +530,7 @@ var _ = Describe("the Torznab id ladder", Label("integration", "indexers"),
 				}},
 			})
 
-			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
 				nil, 438631, "tt1160419")
 			Expect(err).NotTo(HaveOccurred())
 

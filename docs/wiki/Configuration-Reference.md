@@ -528,7 +528,7 @@ indexers:
         filter-id: "2"     # trusted uploads only
 ```
 
-For now only **definitions that need no login** run — public trackers such as `yts`, `nyaasi`, `thepiratebay`, `limetorrents`, `torrentdownloads`, `animetosho-xyz`. Streamline refuses to start with a definition that logs in, and names it; private trackers keep going through Prowlarr or Jackett until login support lands. A site behind a browser challenge (Cloudflare and the like) may refuse searches until challenge solving lands too.
+Private trackers work too: give the definition's settings — usually `username` and `password`, sometimes a `cookie`, an API key or a passkey — and Streamline logs in when it needs to, keeps the session for 30 days and logs in again when the tracker says it expired. A login the tracker refuses is retried with a growing delay (one minute, then five, up to a day), so a wrong password cannot get your account banned; fix the settings and use **Log in** on the indexer's card to try at once. A tracker whose login form shows an image captcha is logged in from that card too: Streamline shows the captcha and you type it. A site behind a browser challenge (Cloudflare and the like) may refuse searches until challenge solving lands.
 
 ### quality_profiles
 

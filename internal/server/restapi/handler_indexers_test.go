@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -296,6 +297,8 @@ var _ = Describe(
 			})
 
 			It("lists with its definition and the tracker's site", func() {
+				app.indexers.EXPECT().Session(mock.Anything, "YTS").
+					Return(indexer.SessionState{LoginRequired: true, LastError: "nope"}, nil)
 				resp, err := http.Get(app.srv.URL + "/api/v1/indexers")
 				Expect(err).NotTo(HaveOccurred())
 				defer resp.Body.Close()
@@ -308,6 +311,93 @@ var _ = Describe(
 				Expect(items[0].Port).To(Equal(uint16(443)))
 				Expect(items[0].UseSsl).To(HaveValue(BeTrue()))
 				Expect(items[0].ApiKeySet).To(BeFalse())
+				Expect(items[0].Session).NotTo(BeNil())
+				Expect(items[0].Session.LoginRequired).To(BeTrue())
+				Expect(items[0].Session.LastError).To(HaveValue(Equal("nope")))
+			})
+
+			It("hands out the login captcha as a data URL", func() {
+				png := []byte("\x89PNG\r\n\x1a\n0000")
+				app.indexers.EXPECT().Captcha(mock.Anything, "YTS").
+					Return("tok", &engine.Captcha{ContentType: "text/html", Data: png}, nil)
+				resp := app.do(
+					app.req(
+						http.MethodPost,
+						"/api/v1/indexers/YTS/captcha",
+						"",
+						nil,
+					),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var got IndexerCaptcha
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(got.Token).To(Equal("tok"))
+				// The type is sniffed, not taken from the tracker.
+				Expect(got.Image).To(HavePrefix("data:image/png;base64,"))
+			})
+
+			It("answers 204 when the page shows no captcha", func() {
+				app.indexers.EXPECT().
+					Captcha(mock.Anything, "YTS").
+					Return("", nil, nil)
+				resp := app.do(
+					app.req(
+						http.MethodPost,
+						"/api/v1/indexers/YTS/captcha",
+						"",
+						nil,
+					),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			})
+
+			It(
+				"logs in with a captcha answer and shows the tracker's refusal",
+				func() {
+					app.indexers.EXPECT().Login(mock.Anything, "YTS", "tok", "abc").
+						Return(fmt.Errorf("%w: Wrong captcha", indexer.ErrLoginFailed)).
+						Once()
+					req := app.req(http.MethodPost, "/api/v1/indexers/YTS/login", "",
+						strings.NewReader(`{"token":"tok","answer":"abc"}`))
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					body, _ := io.ReadAll(resp.Body)
+					Expect(string(body)).To(ContainSubstring("Wrong captcha"))
+					Expect(string(body)).To(ContainSubstring("connection_failed"))
+
+					app.indexers.EXPECT().
+						Login(mock.Anything, "YTS", "", "").
+						Return(nil).
+						Once()
+					app.indexers.EXPECT().Session(mock.Anything, "YTS").
+						Return(indexer.SessionState{LoginRequired: true, LoggedIn: true}, nil)
+					resp = app.do(
+						app.req(
+							http.MethodPost,
+							"/api/v1/indexers/YTS/login",
+							"",
+							nil,
+						),
+					)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					var got Indexer
+					Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+					Expect(got.Session.LoggedIn).To(BeTrue())
+				},
+			)
+
+			It("drops its tracker session when deleted", func() {
+				app.indexers.EXPECT().Forget(mock.Anything, "YTS").Return(nil)
+				resp := app.do(
+					app.req(http.MethodDelete, "/api/v1/indexers/YTS", "", nil),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})
 
 			It("refuses an update: it lives in the config file", func() {

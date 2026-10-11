@@ -19,7 +19,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		svc = New()
+		svc = New(nil)
 	})
 
 	Describe("SearchMovie", func() {

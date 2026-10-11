@@ -2,6 +2,7 @@ package engine
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -106,20 +107,38 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 		},
 	)
 
-	It("build an engine for every definition that needs no login", func() {
+	It("build an engine for every definition and render its login", func() {
 		cat, err := definitions.Catalog()
 		Expect(err).NotTo(HaveOccurred())
-		n := 0
+		var failures []string
 		for _, s := range cat.Definitions {
-			if s.Login != "none" {
-				continue
-			}
 			def, err := definitions.Load(s.File)
 			Expect(err).NotTo(HaveOccurred())
-			_, err = New(def, Options{Name: "build-" + s.File})
+			e, err := New(def, Options{Name: "build-" + s.File})
 			Expect(err).NotTo(HaveOccurred(), s.File)
-			n++
+			login := def.Login
+			if login == nil {
+				continue
+			}
+			if !slices.Contains(
+				[]string{"form", "post", "get", "oneurl", "cookie"},
+				login.Method,
+			) {
+				failures = append(failures, s.File+": method "+login.Method)
+			}
+			v := e.baseVars()
+			if _, err := e.loginURL(v); err != nil {
+				failures = append(failures, s.File+": path: "+err.Error())
+			}
+			for _, in := range login.Inputs {
+				if _, err := render(string(in.Value), v, plainText); err != nil {
+					failures = append(failures, s.File+": input: "+err.Error())
+				}
+			}
+			if _, err := e.headers(login.Headers, v); err != nil {
+				failures = append(failures, s.File+": headers: "+err.Error())
+			}
 		}
-		Expect(n).To(BeNumerically(">", 70))
+		Expect(failures).To(BeEmpty())
 	})
 })

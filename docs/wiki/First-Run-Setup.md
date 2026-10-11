@@ -188,7 +188,7 @@ Path:     /api/v2.0/indexers/<tracker>/results/torznab
 API key:  from Jackett
 ```
 
-**Built-in.** Streamline can also run a public tracker itself from the definitions Prowlarr and Jackett use, with neither installed. These are set up in the config file, not here — see [Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann). Trackers that need a login still go through Prowlarr or Jackett for now.
+**Built-in.** Streamline can also run a tracker itself, public or private, from the definitions Prowlarr and Jackett use, with neither installed. These are set up in the config file, not here — see [Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann).
 
 **Test** each one. Priority works like the download clients: lower number is tried first.
 

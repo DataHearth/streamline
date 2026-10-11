@@ -5387,11 +5387,21 @@ type Indexer struct {
 
 	// Protocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
 	Protocol IndexerProtocol `json:"protocol"`
-	UseSsl   *bool           `json:"use_ssl,omitempty"`
+
+	// Session A `cardigann` indexer's tracker login. Absent for the other protocols.
+	Session *IndexerSession `json:"session,omitempty"`
+	UseSsl  *bool           `json:"use_ssl,omitempty"`
 }
 
 // IndexerProtocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
 type IndexerProtocol string
+
+// IndexerCaptcha defines model for IndexerCaptcha.
+type IndexerCaptcha struct {
+	// Image The captcha image as a `data:` URL.
+	Image string `json:"image"`
+	Token string `json:"token"`
+}
 
 // IndexerCreate defines model for IndexerCreate.
 type IndexerCreate struct {
@@ -5411,6 +5421,27 @@ type IndexerCreate struct {
 
 // IndexerCreateProtocol defines model for IndexerCreate.Protocol.
 type IndexerCreateProtocol string
+
+// IndexerLogin defines model for IndexerLogin.
+type IndexerLogin struct {
+	Answer *string `json:"answer,omitempty"`
+	Token  *string `json:"token,omitempty"`
+}
+
+// IndexerSession A `cardigann` indexer's tracker login. Absent for the other protocols.
+type IndexerSession struct {
+	// Captcha The tracker's login form may show an image captcha, which only a person can answer (`captcha`, then `login`).
+	Captcha   bool       `json:"captcha"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	LastError *string    `json:"last_error,omitempty"`
+	LoggedIn  bool       `json:"logged_in"`
+
+	// LoginRequired The definition logs in to its tracker.
+	LoginRequired bool `json:"login_required"`
+
+	// RetryAt After a failed login, when the next automatic attempt may run.
+	RetryAt *time.Time `json:"retry_at,omitempty"`
+}
 
 // Invite defines model for Invite.
 type Invite struct {
@@ -9597,6 +9628,9 @@ type TestDraftIndexerJSONRequestBody = IndexerCreate
 // UpdateIndexerJSONRequestBody defines body for UpdateIndexer for application/json ContentType.
 type UpdateIndexerJSONRequestBody = IndexerCreate
 
+// LoginIndexerJSONRequestBody defines body for LoginIndexer for application/json ContentType.
+type LoginIndexerJSONRequestBody = IndexerLogin
+
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
 
@@ -10113,6 +10147,12 @@ type ServerInterface interface {
 	// UpdateIndexer Update an indexer
 	// (PUT /indexers/{name})
 	UpdateIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// GetIndexerCaptcha Load a built-in indexer's login captcha
+	// (POST /indexers/{name}/captcha)
+	GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// LoginIndexer Log a built-in indexer in
+	// (POST /indexers/{name}/login)
+	LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// TestIndexer Test indexer connection
 	// (POST /indexers/{name}/test)
 	TestIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
@@ -11118,6 +11158,18 @@ func (_ Unimplemented) DeleteIndexer(w http.ResponseWriter, r *http.Request, nam
 // UpdateIndexer Update an indexer
 // (PUT /indexers/{name})
 func (_ Unimplemented) UpdateIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetIndexerCaptcha Load a built-in indexer's login captcha
+// (POST /indexers/{name}/captcha)
+func (_ Unimplemented) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// LoginIndexer Log a built-in indexer in
+// (POST /indexers/{name}/login)
+func (_ Unimplemented) LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -14396,6 +14448,58 @@ func (siw *ServerInterfaceWrapper) UpdateIndexer(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIndexer(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIndexerCaptcha operation middleware
+func (siw *ServerInterfaceWrapper) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIndexerCaptcha(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LoginIndexer operation middleware
+func (siw *ServerInterfaceWrapper) LoginIndexer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LoginIndexer(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19311,6 +19415,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/indexers/{name}/test", wrapper.TestIndexer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/indexers/{name}/captcha", wrapper.GetIndexerCaptcha)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/indexers/{name}/login", wrapper.LoginIndexer)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/indexers/test", wrapper.TestDraftIndexer)
@@ -26221,6 +26331,189 @@ func (response UpdateIndexer422JSONResponse) VisitUpdateIndexerResponse(w http.R
 type UpdateIndexer500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateIndexer500JSONResponse) VisitUpdateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptchaRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type GetIndexerCaptchaResponseObject interface {
+	VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error
+}
+
+type GetIndexerCaptcha200JSONResponse IndexerCaptcha
+
+func (response GetIndexerCaptcha200JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha204Response struct {
+}
+
+func (response GetIndexerCaptcha204Response) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type GetIndexerCaptcha403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetIndexerCaptcha403JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetIndexerCaptcha404JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetIndexerCaptcha422JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetIndexerCaptcha500JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexerRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *LoginIndexerJSONRequestBody
+}
+
+type LoginIndexerResponseObject interface {
+	VisitLoginIndexerResponse(w http.ResponseWriter) error
+}
+
+type LoginIndexer200JSONResponse Indexer
+
+func (response LoginIndexer200JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response LoginIndexer403JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response LoginIndexer404JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response LoginIndexer413JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response LoginIndexer422JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response LoginIndexer500JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -35772,6 +36065,12 @@ type StrictServerInterface interface {
 	// UpdateIndexer Update an indexer
 	// (PUT /indexers/{name})
 	UpdateIndexer(ctx context.Context, request UpdateIndexerRequestObject) (UpdateIndexerResponseObject, error)
+	// GetIndexerCaptcha Load a built-in indexer's login captcha
+	// (POST /indexers/{name}/captcha)
+	GetIndexerCaptcha(ctx context.Context, request GetIndexerCaptchaRequestObject) (GetIndexerCaptchaResponseObject, error)
+	// LoginIndexer Log a built-in indexer in
+	// (POST /indexers/{name}/login)
+	LoginIndexer(ctx context.Context, request LoginIndexerRequestObject) (LoginIndexerResponseObject, error)
 	// TestIndexer Test indexer connection
 	// (POST /indexers/{name}/test)
 	TestIndexer(ctx context.Context, request TestIndexerRequestObject) (TestIndexerResponseObject, error)
@@ -38912,6 +39211,68 @@ func (sh *strictHandler) UpdateIndexer(w http.ResponseWriter, r *http.Request, n
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIndexerResponseObject); ok {
 		if err := validResponse.VisitUpdateIndexerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIndexerCaptcha operation middleware
+func (sh *strictHandler) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request GetIndexerCaptchaRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIndexerCaptcha(ctx, request.(GetIndexerCaptchaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIndexerCaptcha")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIndexerCaptchaResponseObject); ok {
+		if err := validResponse.VisitGetIndexerCaptchaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LoginIndexer operation middleware
+func (sh *strictHandler) LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request LoginIndexerRequestObject
+
+	request.Name = name
+
+	var body LoginIndexerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LoginIndexer(ctx, request.(LoginIndexerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LoginIndexer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoginIndexerResponseObject); ok {
+		if err := validResponse.VisitLoginIndexerResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

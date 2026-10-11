@@ -2691,6 +2691,68 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /indexers/{name}/captcha:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: getIndexerCaptcha
+      summary: Load a built-in indexer's login captcha
+      description: >-
+        Fetches a `cardigann` indexer's login page and the image captcha on it,
+        for a person to read. The page is held for ten minutes under the
+        returned token, which `login` answers it with. 204 when the page shows
+        no captcha this time.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The captcha to read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexerCaptcha"
+        "204":
+          description: The login page shows no captcha
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /indexers/{name}/login:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: loginIndexer
+      summary: Log a built-in indexer in
+      description: >-
+        Runs a `cardigann` indexer's tracker login now, whatever backoff a
+        failed login left. A captcha answer carries the token `captcha`
+        returned. A refused login answers 422 with `code: connection_failed`
+        and the tracker's message.
+      tags: [indexers]
+      requestBody:
+        $ref: "#/components/requestBodies/IndexerLogin"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /indexers/test:
     post:
       operationId: testDraftIndexer
@@ -6185,6 +6247,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/IndexerCreate"
+
+    IndexerLogin:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IndexerLogin"
 
     CreateDownloadClient:
       required: true
@@ -10443,6 +10512,53 @@ components:
             Whether the tracker is private (invite-only, ratio-tracked). A
             Torznab feed carries no such flag, so this is the operator's
             setting; a Prowlarr entry's applies to every tracker behind it.
+        session:
+          $ref: "#/components/schemas/IndexerSession"
+
+    IndexerSession:
+      type: object
+      description: >-
+        A `cardigann` indexer's tracker login. Absent for the other protocols.
+      required: [login_required, captcha, logged_in]
+      properties:
+        login_required:
+          type: boolean
+          description: The definition logs in to its tracker.
+        captcha:
+          type: boolean
+          description: >-
+            The tracker's login form may show an image captcha, which only a
+            person can answer (`captcha`, then `login`).
+        logged_in:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+        retry_at:
+          type: string
+          format: date-time
+          description: >-
+            After a failed login, when the next automatic attempt may run.
+        last_error:
+          type: string
+
+    IndexerCaptcha:
+      type: object
+      required: [token, image]
+      properties:
+        token:
+          type: string
+        image:
+          type: string
+          description: The captcha image as a `data:` URL.
+
+    IndexerLogin:
+      type: object
+      properties:
+        token:
+          type: string
+        answer:
+          type: string
 
     IndexerCreate:
       type: object

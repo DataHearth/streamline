@@ -1217,7 +1217,20 @@ export type Indexer = {
 	// The operator's word for it: Torznab carries no privacy flag. Feeds
 	// SearchResult.indexer_private.
 	private?: boolean;
+	// A built-in indexer's tracker login.
+	session?: IndexerSession;
 };
+
+export type IndexerSession = {
+	login_required: boolean;
+	captcha: boolean;
+	logged_in: boolean;
+	expires_at?: string;
+	retry_at?: string;
+	last_error?: string;
+};
+
+export type IndexerCaptcha = { token: string; image: string };
 
 export type DownloadClientType =
 	| "qbittorrent"
