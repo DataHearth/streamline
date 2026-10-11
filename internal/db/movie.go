@@ -61,6 +61,9 @@ func (db *DB) CreateMovie(
 	if len(p.Genres) != 0 {
 		b.SetGenres(p.Genres)
 	}
+	if len(p.Aliases) != 0 {
+		b.SetAliases(p.Aliases)
+	}
 	m, err := b.Save(ctx)
 	if err != nil {
 		tx.Rollback()
