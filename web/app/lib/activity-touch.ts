@@ -11,6 +11,8 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { formatBytes, formatEta, formatRatio, formatSpeed } from "./format";
 import { formatRelative } from "./dates";
+import { volumeLabel } from "./music-books";
+import { NOUN_ALBUM } from "./nouns";
 import type { HistoryEntry, HoldReason, QueueEntry, Torrent } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
 
@@ -26,8 +28,17 @@ const pct = (v: number | undefined | null) =>
 // than a misleading SxxE01.
 export function entryHeading(item: QueueEntry | HistoryEntry): string {
 	if (item.album) return joinDot([item.album.artist_name, item.album.title]);
-	if (item.artist) return joinDot([item.artist.name, i18n.music_discography()]);
-	if (item.book) return joinDot([item.book.author, item.book.title]);
+	if (item.artist) {
+		const { name, album_count } = item.artist;
+		return joinDot([name, i18n.music_discography(), album_count ? NOUN_ALBUM.count(album_count) : ""]);
+	}
+	if (item.book) {
+		// A volume's own title is often just "Tome 3"; the series and its number
+		// are what identify it.
+		const { series, author, title } = item.book;
+		if (series) return joinDot([series.title, volumeLabel(series.number)]);
+		return joinDot([author, title]);
+	}
 	const ep = item.episode;
 	// A movie record names its movie. Anything else the API does not describe
 	// still has its release name, which beats a blank heading.

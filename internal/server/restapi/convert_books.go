@@ -217,14 +217,22 @@ func toAPIBook(b *ent.Book, progress map[string]float64) Book {
 		},
 		Editions: toBookEditions(b),
 	}
-	if s := b.Edges.Series; s != nil {
-		ref := BookSeriesRef{Id: s.ID, Title: s.Title}
-		if b.SeriesPosition != nil {
-			ref.Number = float32(*b.SeriesPosition)
-		}
-		out.Series = &ref
-	}
+	out.Series = bookSeriesRef(b)
 	return out
+}
+
+// bookSeriesRef is the series a volume belongs to, nil for a standalone book
+// or one whose series edge was not loaded.
+func bookSeriesRef(b *ent.Book) *BookSeriesRef {
+	s := b.Edges.Series
+	if s == nil {
+		return nil
+	}
+	ref := BookSeriesRef{Id: s.ID, Title: s.Title}
+	if b.SeriesPosition != nil {
+		ref.Number = float32(*b.SeriesPosition)
+	}
+	return &ref
 }
 
 func toAPIVolume(v *ent.Book, now time.Time) BookVolume {

@@ -427,6 +427,8 @@ type QueueEntry struct {
 	Album  *ent.Album
 	Artist *ent.Artist
 	Book   *ent.Book
+	// BookKind is the slot a book record fills: ebook or audiobook.
+	BookKind string
 	// PackAlbumIDs are the albums a discography pack is expected to cover.
 	PackAlbumIDs []uint32
 	// Episode is set for TV download records (with season + show eager-loaded);
@@ -539,6 +541,7 @@ func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
 		Album:          rec.Edges.Album,
 		Artist:         rec.Edges.Artist,
 		Book:           rec.Edges.Book,
+		BookKind:       string(rec.BookKind),
 		Episode:        rec.Edges.AnchorEpisode,
 		Size:           rec.Size,
 		FailureReason:  rec.FailureReason,

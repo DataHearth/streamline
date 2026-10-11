@@ -47,16 +47,23 @@ var _ = Describe("Handler: Activity queue/history",
 		It("names the album, the pack's artist and the book a row is for", func() {
 			album := &ent.Album{ID: 24, Title: "L'Enfant sauvage"}
 			album.Edges.Artist = &ent.Artist{ID: 1, Name: "Gojira"}
+			pos := 3.0
+			volume := &ent.Book{
+				ID: 8, Title: "Tome 3", AuthorName: "Goscinny",
+				SeriesPosition: &pos,
+			}
+			volume.Edges.Series = &ent.BookSeries{ID: 2, Title: "Astérix"}
 			app.downloads.EXPECT().Queue(mock.Anything).Return(
 				download.QueueSnapshot{
 					RefreshedAt: time.Now(),
 					Items: []download.QueueEntry{
 						{RecordID: 1, Status: "held", Title: "a", Album: album},
 						{
-							RecordID: 2,
-							Status:   "downloading",
-							Title:    "b",
-							Artist:   &ent.Artist{ID: 1, Name: "Gojira"},
+							RecordID:     2,
+							Status:       "downloading",
+							Title:        "b",
+							Artist:       &ent.Artist{ID: 1, Name: "Gojira"},
+							PackAlbumIDs: []uint32{14, 35, 8},
 						},
 						{
 							RecordID: 3,
@@ -68,6 +75,13 @@ var _ = Describe("Handler: Activity queue/history",
 								AuthorName: "Ted Chiang",
 							},
 						},
+						{
+							RecordID: 4,
+							Status:   "downloading",
+							Title:    "d",
+							Book:     volume,
+							BookKind: "audiobook",
+						},
 					},
 				}, nil).Once()
 
@@ -77,19 +91,24 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			var body DownloadQueue
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
-			Expect(body.Items).To(HaveLen(3))
+			Expect(body.Items).To(HaveLen(4))
 			Expect(
 				body.Items[0].Album,
 			).To(Equal(&ActivityAlbumRef{Id: 24, Title: "L'Enfant sauvage", ArtistId: 1, ArtistName: "Gojira"}))
 			Expect(body.Items[0].Artist).To(BeNil())
 			Expect(
 				body.Items[1].Artist,
-			).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira"}))
+			).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira", AlbumCount: 3}))
 			Expect(body.Items[1].Album).To(BeNil())
 			Expect(
 				body.Items[2].Book,
 			).To(Equal(&ActivityBookRef{Id: 7, Title: "Exhalation", Author: "Ted Chiang"}))
 			Expect(body.Items[2].Movie.Id).To(BeZero())
+			slot := ActivityBookRefSlotAudiobook
+			Expect(body.Items[3].Book).To(Equal(&ActivityBookRef{
+				Id: 8, Title: "Tome 3", Author: "Goscinny", Slot: &slot,
+				Series: &BookSeriesRef{Id: 2, Title: "Astérix", Number: 3},
+			}))
 		})
 
 		It("carries selection fields for an applied selection", func() {
@@ -238,6 +257,30 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items).To(HaveLen(1))
 			Expect(body.Items[0].Status).To(
 				Equal(HistoryEntryStatus("completed")))
+		})
+
+		It("GET /activity/history counts a pack's albums", func() {
+			rec := &ent.DownloadRecord{
+				ID: 1, Title: "pack", Status: "completed",
+				Size: 10, CreateTime: time.Now(), UpdateTime: time.Now(),
+			}
+			rec.Edges.Artist = &ent.Artist{ID: 1, Name: "Gojira"}
+			rec.Edges.Albums = []*ent.Album{{ID: 14}, {ID: 35}}
+			app.store.EXPECT().ListDownloadHistory(
+				mock.Anything, mock.AnythingOfType("int"),
+				mock.AnythingOfType("string")).
+				Return(&db.DownloadHistoryResult{
+					Records: []*ent.DownloadRecord{rec},
+				}, nil).Once()
+			resp, err := http.Get(
+				app.srv.URL + "/api/v1/activity/history?limit=20")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			var body DownloadHistory
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(1))
+			Expect(body.Items[0].Artist).To(Equal(
+				&ActivityArtistRef{Id: 1, Name: "Gojira", AlbumCount: 2}))
 		})
 
 		It("rejects a limit above the documented maximum", func() {

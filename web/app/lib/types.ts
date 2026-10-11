@@ -658,8 +658,16 @@ export type HoldReason = {
 // The title a music or book download is for — the activity rows' heading, as
 // EpisodeRef is a TV record's. At most one is set, and none on a movie record.
 export type ActivityAlbumRef = { id: number; title: string; artist_id: number; artist_name: string };
-export type ActivityArtistRef = { id: number; name: string };
-export type ActivityBookRef = { id: number; title: string; author: string };
+// album_count is how many albums a discography pack is expected to cover. A
+// book names the slot it fills and, for a volume, its series.
+export type ActivityArtistRef = { id: number; name: string; album_count: number };
+export type ActivityBookRef = {
+	id: number;
+	title: string;
+	author: string;
+	slot?: "ebook" | "audiobook";
+	series?: { id: number; title: string; number: number };
+};
 
 export type QueueEntry = {
 	id: number;

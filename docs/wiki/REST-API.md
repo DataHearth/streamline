@@ -313,7 +313,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` | `/activity` | Event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) | Authenticated |
-| `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record). Each entry names what it is for: `movie`, `episode` (show + season/episode), `album` (with its artist), `artist` (a discography pack) or `book`; `movie` is always present and is an empty placeholder on every non-movie record | Authenticated |
+| `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record). Each entry names what it is for: `movie`, `episode` (show + season/episode), `album` (with its artist), `artist` (a discography pack, with the number of albums it covers) or `book` (with the slot it fills and, for a volume, its series); `movie` is always present and is an empty placeholder on every non-movie record | Authenticated |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | 🔒 Admin |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | 🔒 Admin |
 | `GET` | `/activity/pending` | List adoption proposals (`page`, `limit` 1–100, default 50; `total` counts them all) | Authenticated |

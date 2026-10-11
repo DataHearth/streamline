@@ -1335,7 +1335,7 @@ func (db *DB) ListActiveDownloadRecords(
 		}).
 		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
 		WithArtist().
-		WithBook().
+		WithBook(func(q *ent.BookQuery) { q.WithSeries() }).
 		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
 		All(ctx)
 }
@@ -1588,7 +1588,8 @@ func (db *DB) ListDownloadHistory(
 		}).
 		WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
 		WithArtist().
-		WithBook()
+		WithAlbums(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithBook(func(q *ent.BookQuery) { q.WithSeries() })
 
 	if cursor != "" {
 		ts, id, err := decodeActivityCursor(cursor)

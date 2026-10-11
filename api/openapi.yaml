@@ -12777,12 +12777,15 @@ components:
 
     ActivityArtistRef:
       type: object
-      required: [id, name]
+      required: [id, name, album_count]
       description: |
         The artist a discography pack is for. Absent on every other record.
       properties:
         id: { type: integer, x-go-type: uint32 }
         name: { type: string }
+        album_count:
+          type: integer
+          description: Albums the pack is expected to cover.
 
     ActivityBookRef:
       type: object
@@ -12793,6 +12796,14 @@ components:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
         author: { type: string }
+        slot:
+          type: string
+          description: Which of the book's two slots the download fills.
+          enum: [ebook, audiobook]
+        series:
+          # Set when the book is a volume of a series; rows then read
+          # "<series> · Vol. n".
+          $ref: "#/components/schemas/BookSeriesRef"
 
     EpisodeRef:
       type: object

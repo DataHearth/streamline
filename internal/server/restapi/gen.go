@@ -18,6 +18,24 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for ActivityBookRefSlot.
+const (
+	ActivityBookRefSlotAudiobook ActivityBookRefSlot = "audiobook"
+	ActivityBookRefSlotEbook     ActivityBookRefSlot = "ebook"
+)
+
+// Valid indicates whether the value is a known member of the ActivityBookRefSlot enum.
+func (e ActivityBookRefSlot) Valid() bool {
+	switch e {
+	case ActivityBookRefSlotAudiobook:
+		return true
+	case ActivityBookRefSlotEbook:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEventType.
 const (
 	ActivityEventTypeAdded               ActivityEventType = "added"
@@ -3716,16 +3734,25 @@ type ActivityAlbumRef struct {
 
 // ActivityArtistRef The artist a discography pack is for. Absent on every other record.
 type ActivityArtistRef struct {
-	Id   uint32 `json:"id"`
-	Name string `json:"name"`
+	// AlbumCount Albums the pack is expected to cover.
+	AlbumCount int    `json:"album_count"`
+	Id         uint32 `json:"id"`
+	Name       string `json:"name"`
 }
 
 // ActivityBookRef The book a book download is for. Absent on every other record.
 type ActivityBookRef struct {
-	Author string `json:"author"`
-	Id     uint32 `json:"id"`
-	Title  string `json:"title"`
+	Author string         `json:"author"`
+	Id     uint32         `json:"id"`
+	Series *BookSeriesRef `json:"series,omitempty"`
+
+	// Slot Which of the book's two slots the download fills.
+	Slot  *ActivityBookRefSlot `json:"slot,omitempty"`
+	Title string               `json:"title"`
 }
+
+// ActivityBookRefSlot Which of the book's two slots the download fills.
+type ActivityBookRefSlot string
 
 // ActivityEvent Exactly one of movie / episode / series is set, naming what the event
 // happened to. `series` carries what belongs to no single episode — a
