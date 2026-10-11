@@ -52,8 +52,22 @@ var _ = Describe("Handler: Activity queue/history",
 					RefreshedAt: time.Now(),
 					Items: []download.QueueEntry{
 						{RecordID: 1, Status: "held", Title: "a", Album: album},
-						{RecordID: 2, Status: "downloading", Title: "b", Artist: &ent.Artist{ID: 1, Name: "Gojira"}},
-						{RecordID: 3, Status: "downloading", Title: "c", Book: &ent.Book{ID: 7, Title: "Exhalation", AuthorName: "Ted Chiang"}},
+						{
+							RecordID: 2,
+							Status:   "downloading",
+							Title:    "b",
+							Artist:   &ent.Artist{ID: 1, Name: "Gojira"},
+						},
+						{
+							RecordID: 3,
+							Status:   "downloading",
+							Title:    "c",
+							Book: &ent.Book{
+								ID:         7,
+								Title:      "Exhalation",
+								AuthorName: "Ted Chiang",
+							},
+						},
 					},
 				}, nil).Once()
 
@@ -64,11 +78,17 @@ var _ = Describe("Handler: Activity queue/history",
 			var body DownloadQueue
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Items).To(HaveLen(3))
-			Expect(body.Items[0].Album).To(Equal(&ActivityAlbumRef{Id: 24, Title: "L'Enfant sauvage", ArtistId: 1, ArtistName: "Gojira"}))
+			Expect(
+				body.Items[0].Album,
+			).To(Equal(&ActivityAlbumRef{Id: 24, Title: "L'Enfant sauvage", ArtistId: 1, ArtistName: "Gojira"}))
 			Expect(body.Items[0].Artist).To(BeNil())
-			Expect(body.Items[1].Artist).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira"}))
+			Expect(
+				body.Items[1].Artist,
+			).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira"}))
 			Expect(body.Items[1].Album).To(BeNil())
-			Expect(body.Items[2].Book).To(Equal(&ActivityBookRef{Id: 7, Title: "Exhalation", Author: "Ted Chiang"}))
+			Expect(
+				body.Items[2].Book,
+			).To(Equal(&ActivityBookRef{Id: 7, Title: "Exhalation", Author: "Ted Chiang"}))
 			Expect(body.Items[2].Movie.Id).To(BeZero())
 		})
 
