@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
+	import { slide } from "svelte/transition";
+	import { ChevronDown, Mail } from "@lucide/svelte";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
 	import * as v from "valibot";
@@ -40,13 +42,48 @@
 		}
 	};
 
+	// The browser remembers that its last sign-in went through the password
+	// form, so a local/break-glass account isn't one extra click every time.
+	// Per-viewer convenience only: storage can be blocked, so every access is
+	// guarded and the page works the same without it.
+	const LOCAL_LOGIN_KEY = "streamline.login.local";
+	const rememberLocal = () => {
+		try {
+			localStorage.setItem(LOCAL_LOGIN_KEY, "1");
+		} catch {}
+	};
+	const rememberedLocal = () => {
+		try {
+			return localStorage.getItem(LOCAL_LOGIN_KEY) === "1";
+		} catch {
+			return false;
+		}
+	};
+
+	let formOpen = $state(false);
+	let reduceMotion = $state(false);
+	let formEl: HTMLFormElement | undefined = $state();
+
+	const toggleForm = async () => {
+		formOpen = !formOpen;
+		if (formOpen) {
+			await tick();
+			formEl?.querySelector<HTMLInputElement>("input")?.focus();
+		}
+	};
+
 	onMount(() => {
+		reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		formOpen = rememberedLocal();
 		const q = new URLSearchParams(window.location.search);
 		const next = q.get("next");
 		if (next && isSafeNext(next)) {
 			nextParam = next;
 		}
-		oidcError = oidcErrorMessage(q.get("error"));
+		const err = q.get("error");
+		oidcError = oidcErrorMessage(err);
+		// That error tells the user to sign in with their password instead.
+		if (err === "oidc_link_not_allowed") formOpen = true;
 	});
 
 	const cfg = createQuery<AuthConfig>(() => ({
@@ -60,10 +97,12 @@
 	const login = createMutation<null, Error, LoginInput>(() => ({
 		mutationFn: postLogin,
 		onSuccess: () => {
+			rememberLocal();
 			window.location.assign(nextParam);
 		},
 		onError: (err) => {
 			errorMsg = errorText(err, i18n.auth_login_failed());
+			formOpen = true;
 		},
 	}));
 
@@ -82,31 +121,18 @@
 	}));
 
 	let providers = $derived(cfg.data?.providers ?? []);
+	// With SSO configured the provider buttons lead and the password form folds
+	// behind a disclosure; without it the form is the only way in.
+	let hasSSO = $derived(providers.length > 0);
 	let title = i18n.auth_login_title();
 	let subtitle = i18n.auth_login_subtitle();
 </script>
 
 <svelte:head><title>{i18n.auth_login_page_title()}</title></svelte:head>
 
-<AuthCard {title} {subtitle} eyebrow="Streamline">
-	{#if oidcError}
-		<p
-			role="alert"
-			class="mb-4 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
-		>
-			{oidcError}
-		</p>
-	{/if}
-	{#if errorMsg}
-		<p
-			role="alert"
-			class="mb-4 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
-		>
-			{errorMsg}
-		</p>
-	{/if}
-
+{#snippet loginForm()}
 	<form
+		bind:this={formEl}
 		class="space-y-4"
 		onsubmit={(e) => {
 			e.preventDefault();
@@ -141,8 +167,45 @@
 			{login.isPending ? i18n.auth_signing_in() : i18n.auth_sign_in()}
 		</button>
 	</form>
+{/snippet}
 
-	{#if providers.length > 0}
+<AuthCard {title} {subtitle} eyebrow="Streamline">
+	{#if oidcError}
+		<p
+			role="alert"
+			class="mb-4 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
+		>
+			{oidcError}
+		</p>
+	{/if}
+	{#if errorMsg}
+		<p
+			role="alert"
+			class="mb-4 rounded-md border border-status-failed/40 bg-status-failed/10 px-3 py-2 text-sm text-status-failed"
+		>
+			{errorMsg}
+		</p>
+	{/if}
+
+	{#if hasSSO}
+		<div class="grid gap-2">
+			{#each providers as p, i}
+				<a
+					href={oidcStartURL(p.name, nextParam)}
+					target="_self"
+					class={[
+						"inline-flex h-11 w-full items-center justify-center gap-3 rounded-md px-4 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+						i === 0
+							? "bg-accent font-semibold text-fg-on-accent hover:bg-accent-hover"
+							: "border border-border-strong bg-surface font-medium text-fg hover:border-accent hover:bg-surface-2",
+					]}
+				>
+					<BrandLogo name={p.name} size={20} />
+					{i18n.auth_continue_with_provider({ provider: p.name })}
+				</a>
+			{/each}
+		</div>
+
 		<div class="relative my-5">
 			<div class="absolute inset-0 flex items-center" aria-hidden="true">
 				<div class="w-full border-t border-border"></div>
@@ -150,22 +213,39 @@
 			<div class="relative flex justify-center text-xs uppercase">
 				<span
 					class="bg-bg-elevated px-2 font-mono tracking-wider text-fg-faint"
-					>{i18n.auth_or_continue_with()}</span
+					>{i18n.auth_or()}</span
 				>
 			</div>
 		</div>
-		<div class="grid gap-2">
-			{#each providers as p}
-				<a
-					href={oidcStartURL(p.name, nextParam)}
-					target="_self"
-					class="inline-flex h-11 w-full items-center justify-center gap-3 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-				>
-					<BrandLogo name={p.name} size={20} />
-					{i18n.auth_continue_with_provider({ provider: p.name })}
-				</a>
-			{/each}
-		</div>
+
+		<button
+			type="button"
+			aria-expanded={formOpen}
+			aria-controls="local-login"
+			onclick={toggleForm}
+			class="inline-flex h-11 w-full items-center justify-between gap-3 rounded-md border border-border px-4 text-sm font-medium text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+		>
+			<span class="inline-flex items-center gap-3">
+				<Mail size={18} aria-hidden="true" />
+				{i18n.auth_sign_in_with_email()}
+			</span>
+			<ChevronDown
+				size={18}
+				aria-hidden="true"
+				class={["transition-transform", formOpen && "rotate-180"]}
+			/>
+		</button>
+		{#if formOpen}
+			<div
+				id="local-login"
+				class="pt-4"
+				transition:slide={{ duration: reduceMotion ? 0 : 180 }}
+			>
+				{@render loginForm()}
+			</div>
+		{/if}
+	{:else}
+		{@render loginForm()}
 	{/if}
 
 	{#snippet footer()}
