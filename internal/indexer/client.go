@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,6 +38,9 @@ type SearchResult struct {
 	// distinction.
 	TMDBID uint32
 	TVDBID uint32
+	// IMDbID is the numeric part of the tracker's IMDb id, under the same
+	// zero-means-silent reading.
+	IMDbID uint32
 
 	// TitleMismatch marks a result preferTitleMatches kept only because
 	// nothing in the set named the show at all. Browsing wants those — a show
@@ -67,10 +72,12 @@ const (
 )
 
 type SearchParams struct {
-	Query   string
-	Kind    MediaKind
-	TMDBID  uint32
-	TVDBID  uint32
+	Query  string
+	Kind   MediaKind
+	TMDBID uint32
+	TVDBID uint32
+	// IMDbID is the full "tt" form.
+	IMDbID  string
 	Season  uint16
 	Episode uint16
 }
@@ -79,7 +86,23 @@ type SearchParams struct {
 // It is what makes the empty-result retry worth issuing: a query that named
 // nothing else has no narrower form to fall back from.
 func (p SearchParams) narrowed() bool {
-	return p.TMDBID > 0 || p.TVDBID > 0 || p.Season > 0 || p.Episode > 0
+	return p.TMDBID > 0 || p.TVDBID > 0 || p.IMDbID != "" || p.Season > 0 ||
+		p.Episode > 0
+}
+
+// imdbNumber reads the number out of an IMDb id, with or without its "tt"
+// prefix; zero for anything that is not one. Trackers publish both spellings,
+// and some drop the leading zeros, so ids are compared by value.
+func imdbNumber(id string) uint32 {
+	n, err := strconv.ParseUint(
+		strings.TrimPrefix(strings.TrimSpace(id), "tt"),
+		10,
+		32,
+	)
+	if err != nil {
+		return 0
+	}
+	return uint32(n)
 }
 
 type Client interface {

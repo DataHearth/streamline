@@ -130,17 +130,20 @@ type Manager interface {
 		ctx context.Context,
 		titles, aliases []string,
 		tmdbID uint32,
+		imdbID string,
 	) ([]SearchResult, error)
 	SearchSeason(
 		ctx context.Context,
 		titles, aliases []string,
 		tvdbID uint32,
+		imdbID string,
 		season uint16,
 	) ([]SearchResult, error)
 	SearchSeries(
 		ctx context.Context,
 		titles, aliases []string,
 		tvdbID uint32,
+		imdbID string,
 	) ([]SearchResult, error)
 	// SearchEpisode also reports how many season/whole-series packs covering
 	// the episode were filtered out, so a caller can say why an empty list is
@@ -149,6 +152,7 @@ type Manager interface {
 		ctx context.Context,
 		titles, aliases []string,
 		tvdbID uint32,
+		imdbID string,
 		season, episode uint16,
 	) ([]SearchResult, int, error)
 	// SearchAlbum queries every enabled indexer for an album release. The
@@ -271,6 +275,7 @@ func (i *indexer) SearchMovie(
 	ctx context.Context,
 	titles, aliases []string,
 	tmdbID uint32,
+	imdbID string,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
@@ -284,6 +289,7 @@ func (i *indexer) SearchMovie(
 			// refresh may already have rewritten.
 			attribute.Int("movie.aliases.count", len(aliases)),
 			attribute.Int64("movie.tmdb_id", int64(tmdbID)),
+			attribute.String("movie.imdb_id", imdbID),
 		),
 	)
 	defer span.End()
@@ -304,7 +310,7 @@ func (i *indexer) SearchMovie(
 		ctx,
 		span,
 		titles,
-		SearchParams{Kind: KindMovie, TMDBID: tmdbID},
+		SearchParams{Kind: KindMovie, TMDBID: tmdbID, IMDbID: imdbID},
 	)
 	// Same keyword-search noise the TV scopes filter: an indexer ignoring the
 	// tmdbid answers with every film it holds, and a profile cannot tell one
@@ -324,6 +330,7 @@ func (i *indexer) SearchSeason(
 	ctx context.Context,
 	titles, aliases []string,
 	tvdbID uint32,
+	imdbID string,
 	season uint16,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
@@ -333,6 +340,7 @@ func (i *indexer) SearchSeason(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.imdb_id", imdbID),
 			attribute.Int("series.season", int(season)),
 		),
 	)
@@ -356,7 +364,12 @@ func (i *indexer) SearchSeason(
 		ctx,
 		span,
 		titles,
-		SearchParams{Kind: KindTV, TVDBID: tvdbID, Season: season},
+		SearchParams{
+			Kind:   KindTV,
+			TVDBID: tvdbID,
+			IMDbID: imdbID,
+			Season: season,
+		},
 	)
 	filtered := preferTitleMatches(filterToSeason(results, season), match)
 	span.SetAttributes(
@@ -533,7 +546,8 @@ var absoluteTailRe = regexp.MustCompile(`\s*-\s*\d{1,4}\s*$`)
 // search would place in it, so a mis-tagged upload is filtered out. That is
 // the intended reading of a wrong id, not a regression.
 func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult {
-	if base.TMDBID == 0 && base.TVDBID == 0 {
+	imdb := imdbNumber(base.IMDbID)
+	if base.TMDBID == 0 && base.TVDBID == 0 && imdb == 0 {
 		return results
 	}
 	out := make([]SearchResult, 0, len(results))
@@ -542,6 +556,9 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 			continue
 		}
 		if base.TMDBID > 0 && r.TMDBID > 0 && r.TMDBID != base.TMDBID {
+			continue
+		}
+		if imdb > 0 && r.IMDbID > 0 && r.IMDbID != imdb {
 			continue
 		}
 		out = append(out, r)
@@ -639,6 +656,7 @@ func (i *indexer) SearchSeries(
 	ctx context.Context,
 	titles, aliases []string,
 	tvdbID uint32,
+	imdbID string,
 ) ([]SearchResult, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
@@ -647,6 +665,7 @@ func (i *indexer) SearchSeries(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.imdb_id", imdbID),
 		),
 	)
 	defer span.End()
@@ -667,7 +686,7 @@ func (i *indexer) SearchSeries(
 		ctx,
 		span,
 		titles,
-		SearchParams{Kind: KindTV, TVDBID: tvdbID},
+		SearchParams{Kind: KindTV, TVDBID: tvdbID, IMDbID: imdbID},
 	)
 	packs := make([]SearchResult, 0, len(results))
 	for _, r := range results {
@@ -693,6 +712,7 @@ func (i *indexer) SearchEpisode(
 	ctx context.Context,
 	titles, aliases []string,
 	tvdbID uint32,
+	imdbID string,
 	season, episode uint16,
 ) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
@@ -702,6 +722,7 @@ func (i *indexer) SearchEpisode(
 			attribute.Int("series.titles.count", len(titles)),
 			attribute.Int("series.aliases.count", len(aliases)),
 			attribute.Int64("series.tvdb_id", int64(tvdbID)),
+			attribute.String("series.imdb_id", imdbID),
 			attribute.Int("series.season", int(season)),
 			attribute.Int("series.episode", int(episode)),
 		),
@@ -728,6 +749,7 @@ func (i *indexer) SearchEpisode(
 		SearchParams{
 			Kind:    KindTV,
 			TVDBID:  tvdbID,
+			IMDbID:  imdbID,
 			Season:  season,
 			Episode: episode,
 		},
@@ -786,13 +808,40 @@ func filterToEpisode(
 	return out, hiddenPacks
 }
 
+// fallbacks lists the wider queries to try, in order, while an indexer keeps
+// answering params with nothing.
+//
+// Most private trackers don't index by TMDB/TVDB id and silently return
+// nothing when one is set. A Torznab endpoint gets the IMDb id on its own
+// first, since Torznab only sends it without the other ids (see
+// Torznab.Search) and many trackers search by it alone. The last rung is the
+// bare title, keeping only the media kind so the category root — and with it
+// Prowlarr's own indexer filtering — still applies.
+//
+// Season and episode are dropped from the bare rung, not preserved: they
+// narrow at the tracker, so keeping them would re-issue the query that just
+// came back empty. This is also the path that saves absolute-numbered anime,
+// where the show genuinely has no SxxExx release and the title alone is the
+// only query that can match.
+func fallbacks(protocol string, params SearchParams) []SearchParams {
+	var out []SearchParams
+	if protocol == "torznab" && params.IMDbID != "" &&
+		(params.TMDBID > 0 || params.TVDBID > 0) {
+		imdb := params
+		imdb.TMDBID, imdb.TVDBID = 0, 0
+		out = append(out, imdb)
+	}
+	if params.narrowed() {
+		out = append(out, SearchParams{Query: params.Query, Kind: params.Kind})
+	}
+	return out
+}
+
 // searchAll fans out one query per (indexer, title) across every enabled
 // indexer, merging results deduped by release identity and sorted by seeders
 // descending. base carries the id/season/episode params shared by every
 // query; Query is filled per title. Per-indexer errors are logged, never
-// returned. When a query keyed by a database id (tmdbid/tvdbid) comes back
-// empty, it is retried once on the bare title (keeping season/episode) since
-// many private trackers don't index by id.
+// returned. A query that comes back empty is retried through fallbacks.
 func (i *indexer) searchAll(
 	ctx context.Context,
 	span trace.Span,
@@ -842,29 +891,17 @@ func (i *indexer) searchAll(
 					childSpan.End()
 					continue
 				}
-				// Most private trackers don't index by TMDB/TVDB ID and
-				// silently return 0 when one is set. Retry once on the bare
-				// title, keeping only the media kind so the category root —
-				// and with it Prowlarr's own indexer filtering — still
-				// applies.
-				//
-				// Season and episode are dropped too, not preserved. They
-				// used to be, harmlessly, because nothing forwarded them to
-				// Prowlarr; now that they narrow at the tracker, keeping them
-				// would make the retry re-issue the query that just came back
-				// empty. This is also the path that saves absolute-numbered
-				// anime, where the show genuinely has no SxxExx release and
-				// the title alone is the only query that can match.
-				if len(res) == 0 && base.narrowed() {
+				for _, fallback := range fallbacks(idx.Protocol, params) {
+					if len(res) > 0 {
+						break
+					}
 					slog.DebugContext(queryCtx,
-						"indexer search empty, retrying on the bare title",
+						"indexer search empty, retrying a wider query",
 						"indexer", idx.Name,
 						"title", title,
+						"imdb_id", fallback.IMDbID,
 					)
-					retry, retryErr := client.Search(queryCtx, SearchParams{
-						Query: title,
-						Kind:  base.Kind,
-					})
+					retry, retryErr := client.Search(queryCtx, fallback)
 					if retryErr == nil {
 						res = retry
 					} else {
@@ -880,7 +917,7 @@ func (i *indexer) searchAll(
 							),
 						))
 						slog.DebugContext(queryCtx,
-							"indexer bare-title retry failed",
+							"indexer retry failed",
 							"indexer", idx.Name,
 							"title", title,
 							"error", retryErr,

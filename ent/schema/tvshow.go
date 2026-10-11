@@ -37,6 +37,8 @@ func (TVShow) Fields() []ent.Field {
 			Default("standard"),
 		field.Bool("monitored").Default(true),
 		field.Uint32("tvdb_id").Unique(),
+		// The IMDb id TVDB links the series to; see Movie.imdb_id.
+		field.String("imdb_id").Optional(),
 		field.String("poster_path").Optional(),
 		field.String("network").Optional(),
 		field.String("creator").Optional(),

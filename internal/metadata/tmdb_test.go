@@ -355,6 +355,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write(jsonBytes(map[string]any{
 						"id":           157336,
+						"imdb_id":      "tt0816692",
 						"title":        "Interstellar",
 						"release_date": "2014-11-05",
 						"overview":     "A team of explorers travel through a wormhole.",
@@ -392,6 +393,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(details.Genres).To(ConsistOf("Adventure", "Drama"))
 			Expect(details.Runtime).To(Equal(uint16(169)))
 			Expect(details.Rating).To(BeNumerically("~", 8.4, 0.001))
+			Expect(details.IMDbID).To(Equal("tt0816692"))
 		})
 
 		It("populates TMDBID on cast entries, leaving TVDBID zero", func() {

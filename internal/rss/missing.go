@@ -294,6 +294,7 @@ func (s *MissingSearcher) SearchOne(ctx context.Context, m *ent.Movie) error {
 		[]string{m.Title, m.OriginalTitle},
 		m.Aliases,
 		m.TmdbID,
+		m.ImdbID,
 	)
 	if err != nil {
 		movieOutcome = "search_failed"

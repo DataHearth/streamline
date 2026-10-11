@@ -40,6 +40,8 @@ type TVShow struct {
 	Monitored bool `json:"monitored,omitempty"`
 	// TvdbID holds the value of the "tvdb_id" field.
 	TvdbID uint32 `json:"tvdb_id,omitempty"`
+	// ImdbID holds the value of the "imdb_id" field.
+	ImdbID string `json:"imdb_id,omitempty"`
 	// PosterPath holds the value of the "poster_path" field.
 	PosterPath string `json:"poster_path,omitempty"`
 	// Network holds the value of the "network" field.
@@ -117,7 +119,7 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime:
 			values[i] = new(sql.NullInt64)
-		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
+		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldImdbID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldFirstAired, tvshow.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -208,6 +210,12 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field tvdb_id", values[i])
 			} else if value.Valid {
 				_m.TvdbID = uint32(value.Int64)
+			}
+		case tvshow.FieldImdbID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field imdb_id", values[i])
+			} else if value.Valid {
+				_m.ImdbID = value.String
 			}
 		case tvshow.FieldPosterPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -353,6 +361,9 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tvdb_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TvdbID))
+	builder.WriteString(", ")
+	builder.WriteString("imdb_id=")
+	builder.WriteString(_m.ImdbID)
 	builder.WriteString(", ")
 	builder.WriteString("poster_path=")
 	builder.WriteString(_m.PosterPath)

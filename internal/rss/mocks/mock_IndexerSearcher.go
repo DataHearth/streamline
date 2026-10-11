@@ -48,8 +48,8 @@ func (_m *MockIndexerSearcher) EXPECT() *MockIndexerSearcher_Expecter {
 }
 
 // SearchMovie provides a mock function for the type MockIndexerSearcher
-func (_mock *MockIndexerSearcher) SearchMovie(ctx context.Context, titles []string, aliases []string, tmdbID uint32) ([]indexer.SearchResult, error) {
-	ret := _mock.Called(ctx, titles, aliases, tmdbID)
+func (_mock *MockIndexerSearcher) SearchMovie(ctx context.Context, titles []string, aliases []string, tmdbID uint32, imdbID string) ([]indexer.SearchResult, error) {
+	ret := _mock.Called(ctx, titles, aliases, tmdbID, imdbID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SearchMovie")
@@ -57,18 +57,18 @@ func (_mock *MockIndexerSearcher) SearchMovie(ctx context.Context, titles []stri
 
 	var r0 []indexer.SearchResult
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) ([]indexer.SearchResult, error)); ok {
-		return returnFunc(ctx, titles, aliases, tmdbID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string) ([]indexer.SearchResult, error)); ok {
+		return returnFunc(ctx, titles, aliases, tmdbID, imdbID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32) []indexer.SearchResult); ok {
-		r0 = returnFunc(ctx, titles, aliases, tmdbID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string) []indexer.SearchResult); ok {
+		r0 = returnFunc(ctx, titles, aliases, tmdbID, imdbID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32) error); ok {
-		r1 = returnFunc(ctx, titles, aliases, tmdbID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32, string) error); ok {
+		r1 = returnFunc(ctx, titles, aliases, tmdbID, imdbID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -85,11 +85,12 @@ type MockIndexerSearcher_SearchMovie_Call struct {
 //   - titles []string
 //   - aliases []string
 //   - tmdbID uint32
-func (_e *MockIndexerSearcher_Expecter) SearchMovie(ctx any, titles any, aliases any, tmdbID any) *MockIndexerSearcher_SearchMovie_Call {
-	return &MockIndexerSearcher_SearchMovie_Call{Call: _e.mock.On("SearchMovie", ctx, titles, aliases, tmdbID)}
+//   - imdbID string
+func (_e *MockIndexerSearcher_Expecter) SearchMovie(ctx any, titles any, aliases any, tmdbID any, imdbID any) *MockIndexerSearcher_SearchMovie_Call {
+	return &MockIndexerSearcher_SearchMovie_Call{Call: _e.mock.On("SearchMovie", ctx, titles, aliases, tmdbID, imdbID)}
 }
 
-func (_c *MockIndexerSearcher_SearchMovie_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32)) *MockIndexerSearcher_SearchMovie_Call {
+func (_c *MockIndexerSearcher_SearchMovie_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32, imdbID string)) *MockIndexerSearcher_SearchMovie_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -107,11 +108,16 @@ func (_c *MockIndexerSearcher_SearchMovie_Call) Run(run func(ctx context.Context
 		if args[3] != nil {
 			arg3 = args[3].(uint32)
 		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -122,7 +128,7 @@ func (_c *MockIndexerSearcher_SearchMovie_Call) Return(searchResults []indexer.S
 	return _c
 }
 
-func (_c *MockIndexerSearcher_SearchMovie_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32) ([]indexer.SearchResult, error)) *MockIndexerSearcher_SearchMovie_Call {
+func (_c *MockIndexerSearcher_SearchMovie_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tmdbID uint32, imdbID string) ([]indexer.SearchResult, error)) *MockIndexerSearcher_SearchMovie_Call {
 	_c.Call.Return(run)
 	return _c
 }

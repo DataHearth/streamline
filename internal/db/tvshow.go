@@ -47,6 +47,7 @@ type CreateTVShowParams struct {
 	Year           uint16
 	Overview       string
 	TvdbID         uint32
+	IMDbID         string
 	SeriesStatus   string
 	Type           string
 	Network        string
@@ -74,6 +75,7 @@ type UpdateTVShowMetadataParams struct {
 	Title         string
 	OriginalTitle string
 	Year          uint16
+	IMDbID        string
 	Overview      string
 	Network       string
 	Creator       string
@@ -101,6 +103,7 @@ func (db *DB) UpdateTVShowMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
+		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetNetwork(p.Network).
 		SetCreator(p.Creator).
@@ -314,6 +317,7 @@ func (db *DB) CreateTVShow(
 		SetYear(p.Year).
 		SetOverview(p.Overview).
 		SetTvdbID(p.TvdbID).
+		SetImdbID(p.IMDbID).
 		SetSeriesStatus(tvshow.SeriesStatus(orDefault(p.SeriesStatus, "continuing"))).
 		SetType(tvshow.Type(orDefault(p.Type, "standard"))).
 		SetNetwork(p.Network).

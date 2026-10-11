@@ -1,4 +1,4 @@
-h1:Dti4vdwZJD1tzLA6C6sjSM0ChdEMmIfurUYjZXBBARI=
+h1:rd9x57/neam53rdU/GGoIrlZeK89r25oq7Ro4ffMgIs=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -51,4 +51,5 @@ h1:Dti4vdwZJD1tzLA6C6sjSM0ChdEMmIfurUYjZXBBARI=
 20261010113031_app_access_and_import_review.up.sql h1:bWzy7c3svvO1nL/4bPKtHRJL6cTUiiTE+sm4QC9LpR0=
 20261011155718_album_monitor_pinned.up.sql h1:1fUpPrZR695O7z3CVQTBun56Ok9FoO70y9+LnNv8Ax0=
 20261011163117_episode_season_monitor_pinned.up.sql h1:0/LiJRdbUDLY6+ic883D7O+gX4P/3D9QcDbU0nzAWp0=
-20261011202839_media_files_create_time_index.up.sql h1:KH74/FMGjdUe72hQN7gwdQnBT1lGT5OaQnLf54j4WYU=
+20261011171844_add_imdb_ids.up.sql h1:lkgC2mO5mCF4x+7PesEBFe5GngzLkpR9jv0wyxVR3Sk=
+20261011202839_media_files_create_time_index.up.sql h1:23anHwEv3kIbMnOvfTVrXl9aDGBqt5mtjDCw8q9xiUk=

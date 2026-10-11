@@ -404,7 +404,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1)).
+					uint32(81189), "", uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", Seeders: 20},
 				}, nil).Once()
@@ -644,7 +644,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Once()
 			app.indexers.EXPECT().
 				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
-					mock.Anything, uint32(81189)).
+					mock.Anything, uint32(81189), "").
 				Return([]indexer.SearchResult{
 					{Title: "BB Complete 1080p", Download: "magnet:y", Seeders: 42},
 				}, nil).Once()
@@ -680,7 +680,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", ""}, mock.Anything,
-					uint32(81189), uint16(1)).
+					uint32(81189), "", uint16(1)).
 				Return([]indexer.SearchResult{
 					{Title: "BB S01 1080p", Download: "magnet:x", InfoHash: hash},
 					{Title: "BB S01 720p", Download: "magnet:y"},
@@ -785,7 +785,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
 				SearchSeries(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"},
-					mock.Anything, uint32(81189)).
+					mock.Anything, uint32(81189), "").
 				Return(results, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -805,7 +805,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(show, nil).Once()
 			app.indexers.EXPECT().
 				SearchSeason(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1)).
+					uint32(81189), "", uint16(1)).
 				Return(results, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -835,7 +835,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1), uint16(2)).
+					uint32(81189), "", uint16(1), uint16(2)).
 				Return(results, 0, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -862,7 +862,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), uint16(1), uint16(2)).
+					uint32(81189), "", uint16(1), uint16(2)).
 				Return(nil, 4, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,

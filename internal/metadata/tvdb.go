@@ -364,6 +364,10 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 			Aliases []struct {
 				Name string `json:"name"`
 			} `json:"aliases"`
+			RemoteIDs []struct {
+				ID         string `json:"id"`
+				SourceName string `json:"sourceName"`
+			} `json:"remoteIds"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -411,6 +415,12 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	}
 	for _, tr := range ext.Data.Translations.NameTranslations {
 		d.Aliases = append(d.Aliases, tr.Name)
+	}
+	for _, r := range ext.Data.RemoteIDs {
+		if strings.EqualFold(r.SourceName, "imdb") {
+			d.IMDbID = r.ID
+			break
+		}
 	}
 	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
 		d.Type = SeriesAnime
