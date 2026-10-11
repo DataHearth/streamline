@@ -729,6 +729,7 @@
 	"err_conflict": "Cela entre en conflit avec un élément existant.",
 	"err_email_required": "Une adresse e-mail est requise.",
 	"err_forbidden": "Vous n'avez pas la permission d'effectuer cette action.",
+	"err_forbidden_upstream": "Un élément placé devant Streamline (proxy inverse ou pare-feu) a refusé cette requête avant qu'elle n'arrive. Vérifiez qu'il autorise PATCH et DELETE.",
 	"err_generic": "Une erreur est survenue. Veuillez réessayer.",
 	"err_invalid_credentials": "E-mail ou mot de passe incorrect.",
 	"err_invite_invalid": "Cette invitation est invalide ou a expiré.",

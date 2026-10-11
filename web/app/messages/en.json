@@ -729,6 +729,7 @@
 	"err_conflict": "That conflicts with something that already exists.",
 	"err_email_required": "An email address is required.",
 	"err_forbidden": "You don't have permission to do that.",
+	"err_forbidden_upstream": "Something in front of Streamline (a reverse proxy or firewall) refused this request before it arrived. Check that it allows PATCH and DELETE.",
 	"err_generic": "Something went wrong. Please try again.",
 	"err_invalid_credentials": "Incorrect email or password.",
 	"err_invite_invalid": "That invite is invalid or has expired.",
