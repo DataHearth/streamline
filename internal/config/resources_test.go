@@ -1023,6 +1023,23 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
 	})
 
+	It("starts the settings over when an edit changes the definition", func() {
+		e := cardigann(
+			"3dtorrents",
+			map[string]string{"username": "u", "password": "p"},
+		)
+		e.Cardigann.Proxy = "http://vpn:3128"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		def, clear := "yts", ""
+		Expect(config.UpdateIndexer(ctx, e.Name, config.IndexerPatch{
+			Cardigann: &config.CardigannPatch{Definition: &def, Proxy: &clear},
+		})).To(Succeed())
+		got, _ := config.FindIndexer(e.Name)
+		Expect(got.Cardigann.Definition).To(Equal("yts"))
+		Expect(got.Cardigann.Settings).To(BeEmpty())
+		Expect(got.Cardigann.Proxy).To(BeEmpty())
+	})
+
 	It("rejects a definition the snapshot does not hold", func() {
 		Expect(config.AddIndexer(ctx, cardigann("no-such-tracker", nil))).
 			To(MatchError(ContainSubstring("not found")))

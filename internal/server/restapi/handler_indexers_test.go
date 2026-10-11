@@ -400,21 +400,125 @@ var _ = Describe(
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 			})
 
-			It("refuses an update: it lives in the config file", func() {
+			It("is created with its settings, its secrets never shown", func() {
+				app.indexers.EXPECT().Session(mock.Anything, "3D").
+					Return(indexer.SessionState{LoginRequired: true}, nil)
 				req := app.req(
-					http.MethodPut,
-					"/api/v1/indexers/YTS",
+					http.MethodPost,
+					"/api/v1/indexers",
 					"",
 					strings.NewReader(
-						`{"name": "YTS", "host": "h", "port": 1, "api_key": "k"}`,
+						`{"name":"3D","protocol":"cardigann","definition":"3dtorrents",
+					  "enabled":true,"settings":{"username":"u","password":"p"}}`,
 					),
 				)
 				req.Header.Set("Content-Type", "application/json")
 				resp := app.do(req)
 				defer resp.Body.Close()
-				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
-				got, _ := config.FindIndexer("YTS")
-				Expect(got.Host).To(BeEmpty())
+				Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+				var got Indexer
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(got.Settings).To(HaveValue(HaveKeyWithValue("username", "u")))
+				Expect(got.Settings).To(HaveValue(Not(HaveKey("password"))))
+				Expect(got.SecretsSet).To(HaveValue(ConsistOf("password")))
+			})
+
+			It("keeps a secret an edit leaves empty, and drops the session", func() {
+				configtest.SetupFile(indexerOverride(map[string]any{
+					"name": "3D", "protocol": "cardigann", "enabled": true,
+					"cardigann": map[string]any{
+						"definition": "3dtorrents",
+						"settings": map[string]any{
+							"username": "u",
+							"password": "p",
+						},
+					},
+				}))
+				app.indexers.EXPECT().Forget(mock.Anything, "3D").Return(nil)
+				app.indexers.EXPECT().Session(mock.Anything, "3D").
+					Return(indexer.SessionState{}, nil)
+				req := app.req(
+					http.MethodPut,
+					"/api/v1/indexers/3D",
+					"",
+					strings.NewReader(
+						`{"name":"3D","settings":{"username":"u2","password":""}}`),
+				)
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				got, _ := config.FindIndexer("3D")
+				Expect(got.Cardigann.Settings).To(Equal(map[string]string{
+					"username": "u2", "password": "p",
+				}))
+			})
+
+			It(
+				"refuses a draft with a setting its definition does not declare",
+				func() {
+					req := app.req(
+						http.MethodPost,
+						"/api/v1/indexers/test",
+						"",
+						strings.NewReader(
+							`{"name":"x","protocol":"cardigann","definition":"yts","settings":{"nope":"1"}}`,
+						),
+					)
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					body, _ := io.ReadAll(resp.Body)
+					Expect(string(body)).To(ContainSubstring(`unknown setting`))
+				},
+			)
+		})
+
+		Describe("the definition catalog", func() {
+			It("lists every definition in force", func() {
+				resp := app.do(
+					app.req(http.MethodGet, "/api/v1/cardigann/catalog", "", nil),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var got CardigannCatalog
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(len(got.Definitions)).To(BeNumerically(">", 500))
+			})
+
+			It("describes a definition's settings, its info as plain text", func() {
+				resp := app.do(app.req(http.MethodGet,
+					"/api/v1/cardigann/catalog/0dayfiles-api", "", nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var got CardigannDefinition
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				var info, key *CardigannSetting
+				for i := range got.Settings {
+					switch got.Settings[i].Name {
+					case "info_key":
+						info = &got.Settings[i]
+					case "apikey":
+						key = &got.Settings[i]
+					}
+				}
+				Expect(key.Secret).To(BeTrue())
+				Expect(info.Default).To(HaveValue(ContainSubstring("0DayFiles")))
+				Expect(info.Default).To(HaveValue(Not(ContainSubstring("<a"))))
+			})
+
+			It("answers 404 for a definition nobody ships", func() {
+				resp := app.do(
+					app.req(
+						http.MethodGet,
+						"/api/v1/cardigann/catalog/nope",
+						"",
+						nil,
+					),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 			})
 		})
 
