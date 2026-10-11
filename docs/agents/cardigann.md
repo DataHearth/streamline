@@ -60,6 +60,13 @@ definition deleted upstream disappears here too.
   it (`/master/11/bluebird`), and six files upstream are named apart from the id inside
   them (`bluebird.yml` holds `bluebirdhd`). It also means no upstream value decides where
   the sync writes — an id of `../../package` once overwrote `package.json`.
+- **`.github/workflows/cardigann-sync.yaml` runs the sync every Monday** (and on
+  `workflow_dispatch`, with an optional `ref`), runs the cardigann suites over the result,
+  and force-pushes it to the one `cardigann/sync` branch, opening or refreshing a single
+  pull request — an unmerged sync is superseded by the next, which contains it. A pull
+  request opened with the Actions token starts no workflow, so **CI does not run on it
+  until someone pushes to the branch or closes and reopens it**; the body says so. The
+  repository must allow Actions to create pull requests (Settings → Actions → General).
 - A definition the converter refuses — or whose JSON encoding fails — is **skipped,
   recorded in `index.json`'s `skipped` with the reason, and printed**, never a failed sync.
   One broken upstream file must not block every other tracker's update.
