@@ -157,7 +157,7 @@ Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `m
 | `GET` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`) | Authenticated |
 | `POST` | `/series` | Add a series | Member |
 | `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
-| `POST` | `/series/specials/apply` | Apply the specials handling | 🔒 Admin |
+| `POST` | `/series/specials/apply` | Apply `library.monitor_specials` to season 0 of every series, skipping seasons and episodes toggled by hand | 🔒 Admin |
 | `GET` | `/series/{id}` | Fetch a series | Authenticated |
 | `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Member |
 | `POST` | `/series/{id}/browse` · `/grab` | Search for complete/multi-season packs, or grab one | Member |

@@ -92,6 +92,20 @@ func (_u *SeasonUpdate) SetNillableMonitored(v *bool) *SeasonUpdate {
 	return _u
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *SeasonUpdate) SetMonitorPinned(v bool) *SeasonUpdate {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *SeasonUpdate) SetNillableMonitorPinned(v *bool) *SeasonUpdate {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
+	}
+	return _u
+}
+
 // SetTvShowID sets the "tv_show" edge to the TVShow entity by ID.
 func (_u *SeasonUpdate) SetTvShowID(id uint32) *SeasonUpdate {
 	_u.mutation.SetTvShowID(id)
@@ -229,6 +243,9 @@ func (_u *SeasonUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(season.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(season.FieldMonitorPinned, field.TypeBool, value)
 	}
 	if _u.mutation.TvShowCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -383,6 +400,20 @@ func (_u *SeasonUpdateOne) SetMonitored(v bool) *SeasonUpdateOne {
 func (_u *SeasonUpdateOne) SetNillableMonitored(v *bool) *SeasonUpdateOne {
 	if v != nil {
 		_u.SetMonitored(*v)
+	}
+	return _u
+}
+
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *SeasonUpdateOne) SetMonitorPinned(v bool) *SeasonUpdateOne {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *SeasonUpdateOne) SetNillableMonitorPinned(v *bool) *SeasonUpdateOne {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
 	}
 	return _u
 }
@@ -554,6 +585,9 @@ func (_u *SeasonUpdateOne) sqlSave(ctx context.Context) (_node *Season, err erro
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(season.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(season.FieldMonitorPinned, field.TypeBool, value)
 	}
 	if _u.mutation.TvShowCleared() {
 		edge := &sqlgraph.EdgeSpec{

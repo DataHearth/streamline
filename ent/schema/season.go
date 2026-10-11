@@ -24,6 +24,9 @@ func (Season) Fields() []ent.Field {
 		field.Uint16("number"),
 		field.String("name").Optional(),
 		field.Bool("monitored").Default(true),
+		// monitor_pinned marks a flag set by hand, which the specials
+		// catch-up leaves alone; a show toggle or preset clears it.
+		field.Bool("monitor_pinned").Default(false),
 	}
 }
 

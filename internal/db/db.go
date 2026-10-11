@@ -1234,6 +1234,8 @@ type Store interface {
 	FindMediaFileWithOwners(ctx context.Context, id uint32) (*ent.MediaFile, error)
 	SetEpisodesMonitored(ctx context.Context, ids []uint32, monitored bool) error
 	SetSeasonsMonitored(ctx context.Context, ids []uint32, monitored bool) error
+	// SetEpisodeMonitored sets the flag by hand, pinning it against
+	// CascadeSpecialsMonitored until a show toggle or preset clears it.
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
 	CascadeShowMonitored(
 		ctx context.Context,

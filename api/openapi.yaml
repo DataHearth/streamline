@@ -560,7 +560,9 @@ paths:
         catch-up for older series, in both directions.
 
         Turning specials on skips unmonitored series; turning them off applies
-        everywhere.
+        everywhere. Either way it leaves alone a season or episode monitored or
+        unmonitored by hand, until the series' own monitor toggle or preset is
+        next changed.
       tags: [series, admin]
       security:
         - BearerAuth: []

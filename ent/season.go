@@ -28,6 +28,8 @@ type Season struct {
 	Name string `json:"name,omitempty"`
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
+	// MonitorPinned holds the value of the "monitor_pinned" field.
+	MonitorPinned bool `json:"monitor_pinned,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the SeasonQuery when eager-loading is set.
 	Edges           SeasonEdges `json:"edges"`
@@ -71,7 +73,7 @@ func (*Season) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case season.FieldMonitored:
+		case season.FieldMonitored, season.FieldMonitorPinned:
 			values[i] = new(sql.NullBool)
 		case season.FieldID, season.FieldNumber:
 			values[i] = new(sql.NullInt64)
@@ -131,6 +133,12 @@ func (_m *Season) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field monitored", values[i])
 			} else if value.Valid {
 				_m.Monitored = value.Bool
+			}
+		case season.FieldMonitorPinned:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field monitor_pinned", values[i])
+			} else if value.Valid {
+				_m.MonitorPinned = value.Bool
 			}
 		case season.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -199,6 +207,9 @@ func (_m *Season) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
+	builder.WriteString(", ")
+	builder.WriteString("monitor_pinned=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MonitorPinned))
 	builder.WriteByte(')')
 	return builder.String()
 }

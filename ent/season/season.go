@@ -24,6 +24,8 @@ const (
 	FieldName = "name"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
+	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
+	FieldMonitorPinned = "monitor_pinned"
 	// EdgeTvShow holds the string denoting the tv_show edge name in mutations.
 	EdgeTvShow = "tv_show"
 	// EdgeEpisodes holds the string denoting the episodes edge name in mutations.
@@ -54,6 +56,7 @@ var Columns = []string{
 	FieldNumber,
 	FieldName,
 	FieldMonitored,
+	FieldMonitorPinned,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "seasons"
@@ -86,6 +89,8 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// DefaultMonitored holds the default value on creation for the "monitored" field.
 	DefaultMonitored bool
+	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
+	DefaultMonitorPinned bool
 )
 
 // OrderOption defines the ordering options for the Season queries.
@@ -119,6 +124,11 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitored orders the results by the monitored field.
 func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
+}
+
+// ByMonitorPinned orders the results by the monitor_pinned field.
+func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
 }
 
 // ByTvShowField orders the results by tv_show field.

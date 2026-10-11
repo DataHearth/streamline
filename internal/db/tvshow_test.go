@@ -505,6 +505,65 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 		},
 	)
 
+	It(
+		"CascadeSpecialsMonitored leaves seasons and episodes set by hand, until the show is toggled",
+		func() {
+			specials := SeasonSeed{
+				Number:      0,
+				Unmonitored: true,
+				Episodes: []EpisodeSeed{
+					{Number: 1, Title: "Recap"}, {Number: 2, Title: "Gag reel"},
+				},
+			}
+			create := func(title string, tvdbID uint32) *ent.TVShow {
+				GinkgoHelper()
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: title, Year: 2020, TvdbID: tvdbID,
+					Seasons: []SeasonSeed{specials},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				got, err := store.FindTVShowByID(ctx, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				return got
+			}
+			flags := func(id uint32) []bool {
+				GinkgoHelper()
+				got, err := store.FindTVShowByID(ctx, id)
+				Expect(err).NotTo(HaveOccurred())
+				se := got.Edges.Seasons[0]
+				return []bool{
+					se.Monitored,
+					se.Edges.Episodes[0].Monitored,
+					se.Edges.Episodes[1].Monitored,
+				}
+			}
+			byEpisode := create("Episode pinned", 94)
+			bySeason := create("Season pinned", 95)
+			plain := create("Plain", 96)
+
+			Expect(store.SetEpisodeMonitored(
+				ctx, byEpisode.Edges.Seasons[0].Edges.Episodes[0].ID, false,
+			)).To(Succeed())
+			_, err := store.CascadeSeasonMonitored(
+				ctx, bySeason.Edges.Seasons[0].ID, false,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			n, err := store.CascadeSpecialsMonitored(ctx, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+			Expect(flags(byEpisode.ID)).To(Equal([]bool{true, false, true}))
+			Expect(flags(bySeason.ID)).To(Equal([]bool{false, false, false}))
+			Expect(flags(plain.ID)).To(Equal([]bool{true, true, true}))
+
+			_, err = store.CascadeShowMonitored(ctx, byEpisode.ID, true)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.CascadeSpecialsMonitored(ctx, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(flags(byEpisode.ID)).To(Equal([]bool{false, false, false}))
+		},
+	)
+
 	It("counts wanted monitored episodes", func() {
 		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
 			Title:  "X",

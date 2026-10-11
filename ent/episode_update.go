@@ -134,6 +134,20 @@ func (_u *EpisodeUpdate) SetNillableMonitored(v *bool) *EpisodeUpdate {
 	return _u
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *EpisodeUpdate) SetMonitorPinned(v bool) *EpisodeUpdate {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *EpisodeUpdate) SetNillableMonitorPinned(v *bool) *EpisodeUpdate {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
+	}
+	return _u
+}
+
 // SetAbsoluteNumber sets the "absolute_number" field.
 func (_u *EpisodeUpdate) SetAbsoluteNumber(v uint16) *EpisodeUpdate {
 	_u.mutation.ResetAbsoluteNumber()
@@ -478,6 +492,9 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(episode.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(episode.FieldMonitorPinned, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.AbsoluteNumber(); ok {
 		_spec.SetField(episode.FieldAbsoluteNumber, field.TypeUint16, value)
@@ -831,6 +848,20 @@ func (_u *EpisodeUpdateOne) SetMonitored(v bool) *EpisodeUpdateOne {
 func (_u *EpisodeUpdateOne) SetNillableMonitored(v *bool) *EpisodeUpdateOne {
 	if v != nil {
 		_u.SetMonitored(*v)
+	}
+	return _u
+}
+
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *EpisodeUpdateOne) SetMonitorPinned(v bool) *EpisodeUpdateOne {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *EpisodeUpdateOne) SetNillableMonitorPinned(v *bool) *EpisodeUpdateOne {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
 	}
 	return _u
 }
@@ -1209,6 +1240,9 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(episode.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(episode.FieldMonitorPinned, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.AbsoluteNumber(); ok {
 		_spec.SetField(episode.FieldAbsoluteNumber, field.TypeUint16, value)
