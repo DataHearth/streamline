@@ -29,6 +29,8 @@ const (
 	FieldAirDate = "air_date"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
+	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
+	FieldMonitorPinned = "monitor_pinned"
 	// FieldAbsoluteNumber holds the string denoting the absolute_number field in the database.
 	FieldAbsoluteNumber = "absolute_number"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
@@ -94,6 +96,7 @@ var Columns = []string{
 	FieldOverview,
 	FieldAirDate,
 	FieldMonitored,
+	FieldMonitorPinned,
 	FieldAbsoluteNumber,
 	FieldGrabFailures,
 	FieldLastSearchAt,
@@ -136,6 +139,8 @@ var (
 	UpdateDefaultUpdateTime func() time.Time
 	// DefaultMonitored holds the default value on creation for the "monitored" field.
 	DefaultMonitored bool
+	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
+	DefaultMonitorPinned bool
 	// DefaultAbsoluteNumber holds the default value on creation for the "absolute_number" field.
 	DefaultAbsoluteNumber uint16
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
@@ -213,6 +218,11 @@ func ByAirDate(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitored orders the results by the monitored field.
 func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
+}
+
+// ByMonitorPinned orders the results by the monitor_pinned field.
+func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
 }
 
 // ByAbsoluteNumber orders the results by the absolute_number field.

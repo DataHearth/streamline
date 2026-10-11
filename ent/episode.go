@@ -32,6 +32,8 @@ type Episode struct {
 	AirDate time.Time `json:"air_date,omitempty"`
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
+	// MonitorPinned holds the value of the "monitor_pinned" field.
+	MonitorPinned bool `json:"monitor_pinned,omitempty"`
 	// AbsoluteNumber holds the value of the "absolute_number" field.
 	AbsoluteNumber uint16 `json:"absolute_number,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
@@ -116,7 +118,7 @@ func (*Episode) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case episode.FieldMonitored:
+		case episode.FieldMonitored, episode.FieldMonitorPinned:
 			values[i] = new(sql.NullBool)
 		case episode.FieldID, episode.FieldNumber, episode.FieldAbsoluteNumber, episode.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
@@ -188,6 +190,12 @@ func (_m *Episode) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field monitored", values[i])
 			} else if value.Valid {
 				_m.Monitored = value.Bool
+			}
+		case episode.FieldMonitorPinned:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field monitor_pinned", values[i])
+			} else if value.Valid {
+				_m.MonitorPinned = value.Bool
 			}
 		case episode.FieldAbsoluteNumber:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -302,6 +310,9 @@ func (_m *Episode) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
+	builder.WriteString(", ")
+	builder.WriteString("monitor_pinned=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MonitorPinned))
 	builder.WriteString(", ")
 	builder.WriteString("absolute_number=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AbsoluteNumber))

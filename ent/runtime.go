@@ -349,12 +349,16 @@ func init() {
 	episodeDescMonitored := episodeFields[4].Descriptor()
 	// episode.DefaultMonitored holds the default value on creation for the monitored field.
 	episode.DefaultMonitored = episodeDescMonitored.Default.(bool)
+	// episodeDescMonitorPinned is the schema descriptor for monitor_pinned field.
+	episodeDescMonitorPinned := episodeFields[5].Descriptor()
+	// episode.DefaultMonitorPinned holds the default value on creation for the monitor_pinned field.
+	episode.DefaultMonitorPinned = episodeDescMonitorPinned.Default.(bool)
 	// episodeDescAbsoluteNumber is the schema descriptor for absolute_number field.
-	episodeDescAbsoluteNumber := episodeFields[5].Descriptor()
+	episodeDescAbsoluteNumber := episodeFields[6].Descriptor()
 	// episode.DefaultAbsoluteNumber holds the default value on creation for the absolute_number field.
 	episode.DefaultAbsoluteNumber = episodeDescAbsoluteNumber.Default.(uint16)
 	// episodeDescGrabFailures is the schema descriptor for grab_failures field.
-	episodeDescGrabFailures := episodeFields[6].Descriptor()
+	episodeDescGrabFailures := episodeFields[7].Descriptor()
 	// episode.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	episode.DefaultGrabFailures = episodeDescGrabFailures.Default.(uint8)
 	importscanMixin := schema.ImportScan{}.Mixin()
@@ -705,6 +709,10 @@ func init() {
 	seasonDescMonitored := seasonFields[2].Descriptor()
 	// season.DefaultMonitored holds the default value on creation for the monitored field.
 	season.DefaultMonitored = seasonDescMonitored.Default.(bool)
+	// seasonDescMonitorPinned is the schema descriptor for monitor_pinned field.
+	seasonDescMonitorPinned := seasonFields[3].Descriptor()
+	// season.DefaultMonitorPinned holds the default value on creation for the monitor_pinned field.
+	season.DefaultMonitorPinned = seasonDescMonitorPinned.Default.(bool)
 	sessionMixin := schema.Session{}.Mixin()
 	sessionMixinFields1 := sessionMixin[1].Fields()
 	_ = sessionMixinFields1

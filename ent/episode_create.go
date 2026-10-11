@@ -114,6 +114,20 @@ func (_c *EpisodeCreate) SetNillableMonitored(v *bool) *EpisodeCreate {
 	return _c
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_c *EpisodeCreate) SetMonitorPinned(v bool) *EpisodeCreate {
+	_c.mutation.SetMonitorPinned(v)
+	return _c
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_c *EpisodeCreate) SetNillableMonitorPinned(v *bool) *EpisodeCreate {
+	if v != nil {
+		_c.SetMonitorPinned(*v)
+	}
+	return _c
+}
+
 // SetAbsoluteNumber sets the "absolute_number" field.
 func (_c *EpisodeCreate) SetAbsoluteNumber(v uint16) *EpisodeCreate {
 	_c.mutation.SetAbsoluteNumber(v)
@@ -294,6 +308,10 @@ func (_c *EpisodeCreate) defaults() {
 		v := episode.DefaultMonitored
 		_c.mutation.SetMonitored(v)
 	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		v := episode.DefaultMonitorPinned
+		_c.mutation.SetMonitorPinned(v)
+	}
 	if _, ok := _c.mutation.AbsoluteNumber(); !ok {
 		v := episode.DefaultAbsoluteNumber
 		_c.mutation.SetAbsoluteNumber(v)
@@ -321,6 +339,9 @@ func (_c *EpisodeCreate) check() error {
 	}
 	if _, ok := _c.mutation.Monitored(); !ok {
 		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "Episode.monitored"`)}
+	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		return &ValidationError{Name: "monitor_pinned", err: errors.New(`ent: missing required field "Episode.monitor_pinned"`)}
 	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		return &ValidationError{Name: "grab_failures", err: errors.New(`ent: missing required field "Episode.grab_failures"`)}
@@ -395,6 +416,10 @@ func (_c *EpisodeCreate) createSpec() (*Episode, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(episode.FieldMonitored, field.TypeBool, value)
 		_node.Monitored = value
+	}
+	if value, ok := _c.mutation.MonitorPinned(); ok {
+		_spec.SetField(episode.FieldMonitorPinned, field.TypeBool, value)
+		_node.MonitorPinned = value
 	}
 	if value, ok := _c.mutation.AbsoluteNumber(); ok {
 		_spec.SetField(episode.FieldAbsoluteNumber, field.TypeUint16, value)

@@ -84,6 +84,20 @@ func (_c *SeasonCreate) SetNillableMonitored(v *bool) *SeasonCreate {
 	return _c
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_c *SeasonCreate) SetMonitorPinned(v bool) *SeasonCreate {
+	_c.mutation.SetMonitorPinned(v)
+	return _c
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_c *SeasonCreate) SetNillableMonitorPinned(v *bool) *SeasonCreate {
+	if v != nil {
+		_c.SetMonitorPinned(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *SeasonCreate) SetID(v uint32) *SeasonCreate {
 	_c.mutation.SetID(v)
@@ -163,6 +177,10 @@ func (_c *SeasonCreate) defaults() {
 		v := season.DefaultMonitored
 		_c.mutation.SetMonitored(v)
 	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		v := season.DefaultMonitorPinned
+		_c.mutation.SetMonitorPinned(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -178,6 +196,9 @@ func (_c *SeasonCreate) check() error {
 	}
 	if _, ok := _c.mutation.Monitored(); !ok {
 		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "Season.monitored"`)}
+	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		return &ValidationError{Name: "monitor_pinned", err: errors.New(`ent: missing required field "Season.monitor_pinned"`)}
 	}
 	if len(_c.mutation.TvShowIDs()) == 0 {
 		return &ValidationError{Name: "tv_show", err: errors.New(`ent: missing required edge "Season.tv_show"`)}
@@ -233,6 +254,10 @@ func (_c *SeasonCreate) createSpec() (*Season, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(season.FieldMonitored, field.TypeBool, value)
 		_node.Monitored = value
+	}
+	if value, ok := _c.mutation.MonitorPinned(); ok {
+		_spec.SetField(season.FieldMonitorPinned, field.TypeBool, value)
+		_node.MonitorPinned = value
 	}
 	if nodes := _c.mutation.TvShowIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

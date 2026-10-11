@@ -80,6 +80,11 @@ func Monitored(v bool) predicate.Season {
 	return predicate.Season(sql.FieldEQ(FieldMonitored, v))
 }
 
+// MonitorPinned applies equality check predicate on the "monitor_pinned" field. It's identical to MonitorPinnedEQ.
+func MonitorPinned(v bool) predicate.Season {
+	return predicate.Season(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Season {
 	return predicate.Season(sql.FieldEQ(FieldCreateTime, v))
@@ -283,6 +288,16 @@ func MonitoredEQ(v bool) predicate.Season {
 // MonitoredNEQ applies the NEQ predicate on the "monitored" field.
 func MonitoredNEQ(v bool) predicate.Season {
 	return predicate.Season(sql.FieldNEQ(FieldMonitored, v))
+}
+
+// MonitorPinnedEQ applies the EQ predicate on the "monitor_pinned" field.
+func MonitorPinnedEQ(v bool) predicate.Season {
+	return predicate.Season(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
+// MonitorPinnedNEQ applies the NEQ predicate on the "monitor_pinned" field.
+func MonitorPinnedNEQ(v bool) predicate.Season {
+	return predicate.Season(sql.FieldNEQ(FieldMonitorPinned, v))
 }
 
 // HasTvShow applies the HasEdge predicate on the "tv_show" edge.

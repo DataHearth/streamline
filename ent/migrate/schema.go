@@ -580,6 +580,7 @@ var (
 		{Name: "overview", Type: field.TypeString, Nullable: true, Size: 2147483647},
 		{Name: "air_date", Type: field.TypeTime, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "absolute_number", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
@@ -594,7 +595,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "episodes_seasons_episodes",
-				Columns:    []*schema.Column{EpisodesColumns[12]},
+				Columns:    []*schema.Column{EpisodesColumns[13]},
 				RefColumns: []*schema.Column{SeasonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -603,12 +604,12 @@ var (
 			{
 				Name:    "episode_season_episodes",
 				Unique:  false,
-				Columns: []*schema.Column{EpisodesColumns[12]},
+				Columns: []*schema.Column{EpisodesColumns[13]},
 			},
 			{
 				Name:    "episode_status",
 				Unique:  false,
-				Columns: []*schema.Column{EpisodesColumns[11]},
+				Columns: []*schema.Column{EpisodesColumns[12]},
 			},
 		},
 	}
@@ -1351,6 +1352,7 @@ var (
 		{Name: "number", Type: field.TypeUint16},
 		{Name: "name", Type: field.TypeString, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "tv_show_seasons", Type: field.TypeUint32},
 	}
 	// SeasonsTable holds the schema information for the "seasons" table.
@@ -1361,7 +1363,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "seasons_tv_shows_seasons",
-				Columns:    []*schema.Column{SeasonsColumns[6]},
+				Columns:    []*schema.Column{SeasonsColumns[7]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1370,7 +1372,7 @@ var (
 			{
 				Name:    "season_tv_show_seasons",
 				Unique:  false,
-				Columns: []*schema.Column{SeasonsColumns[6]},
+				Columns: []*schema.Column{SeasonsColumns[7]},
 			},
 		},
 	}

@@ -16189,6 +16189,7 @@ type EpisodeMutation struct {
 	overview                         *string
 	air_date                         *time.Time
 	monitored                        *bool
+	monitor_pinned                   *bool
 	absolute_number                  *uint16
 	addabsolute_number               *int16
 	grab_failures                    *uint8
@@ -16628,6 +16629,42 @@ func (m *EpisodeMutation) OldMonitored(ctx context.Context) (v bool, err error) 
 // ResetMonitored resets all changes to the "monitored" field.
 func (m *EpisodeMutation) ResetMonitored() {
 	m.monitored = nil
+}
+
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (m *EpisodeMutation) SetMonitorPinned(b bool) {
+	m.monitor_pinned = &b
+}
+
+// MonitorPinned returns the value of the "monitor_pinned" field in the mutation.
+func (m *EpisodeMutation) MonitorPinned() (r bool, exists bool) {
+	v := m.monitor_pinned
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitorPinned returns the old "monitor_pinned" field's value of the Episode entity.
+// If the Episode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EpisodeMutation) OldMonitorPinned(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitorPinned is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitorPinned requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitorPinned: %w", err)
+	}
+	return oldValue.MonitorPinned, nil
+}
+
+// ResetMonitorPinned resets all changes to the "monitor_pinned" field.
+func (m *EpisodeMutation) ResetMonitorPinned() {
+	m.monitor_pinned = nil
 }
 
 // SetAbsoluteNumber sets the "absolute_number" field.
@@ -17130,7 +17167,7 @@ func (m *EpisodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EpisodeMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.create_time != nil {
 		fields = append(fields, episode.FieldCreateTime)
 	}
@@ -17151,6 +17188,9 @@ func (m *EpisodeMutation) Fields() []string {
 	}
 	if m.monitored != nil {
 		fields = append(fields, episode.FieldMonitored)
+	}
+	if m.monitor_pinned != nil {
+		fields = append(fields, episode.FieldMonitorPinned)
 	}
 	if m.absolute_number != nil {
 		fields = append(fields, episode.FieldAbsoluteNumber)
@@ -17186,6 +17226,8 @@ func (m *EpisodeMutation) Field(name string) (ent.Value, bool) {
 		return m.AirDate()
 	case episode.FieldMonitored:
 		return m.Monitored()
+	case episode.FieldMonitorPinned:
+		return m.MonitorPinned()
 	case episode.FieldAbsoluteNumber:
 		return m.AbsoluteNumber()
 	case episode.FieldGrabFailures:
@@ -17217,6 +17259,8 @@ func (m *EpisodeMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldAirDate(ctx)
 	case episode.FieldMonitored:
 		return m.OldMonitored(ctx)
+	case episode.FieldMonitorPinned:
+		return m.OldMonitorPinned(ctx)
 	case episode.FieldAbsoluteNumber:
 		return m.OldAbsoluteNumber(ctx)
 	case episode.FieldGrabFailures:
@@ -17282,6 +17326,13 @@ func (m *EpisodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMonitored(v)
+		return nil
+	case episode.FieldMonitorPinned:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitorPinned(v)
 		return nil
 	case episode.FieldAbsoluteNumber:
 		v, ok := value.(uint16)
@@ -17452,6 +17503,9 @@ func (m *EpisodeMutation) ResetField(name string) error {
 		return nil
 	case episode.FieldMonitored:
 		m.ResetMonitored()
+		return nil
+	case episode.FieldMonitorPinned:
+		m.ResetMonitorPinned()
 		return nil
 	case episode.FieldAbsoluteNumber:
 		m.ResetAbsoluteNumber()
@@ -37539,6 +37593,7 @@ type SeasonMutation struct {
 	addnumber       *int16
 	name            *string
 	monitored       *bool
+	monitor_pinned  *bool
 	clearedFields   map[string]struct{}
 	tv_show         *uint32
 	clearedtv_show  bool
@@ -37867,6 +37922,42 @@ func (m *SeasonMutation) ResetMonitored() {
 	m.monitored = nil
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (m *SeasonMutation) SetMonitorPinned(b bool) {
+	m.monitor_pinned = &b
+}
+
+// MonitorPinned returns the value of the "monitor_pinned" field in the mutation.
+func (m *SeasonMutation) MonitorPinned() (r bool, exists bool) {
+	v := m.monitor_pinned
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitorPinned returns the old "monitor_pinned" field's value of the Season entity.
+// If the Season object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SeasonMutation) OldMonitorPinned(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitorPinned is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitorPinned requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitorPinned: %w", err)
+	}
+	return oldValue.MonitorPinned, nil
+}
+
+// ResetMonitorPinned resets all changes to the "monitor_pinned" field.
+func (m *SeasonMutation) ResetMonitorPinned() {
+	m.monitor_pinned = nil
+}
+
 // SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
 func (m *SeasonMutation) SetTvShowID(id uint32) {
 	m.tv_show = &id
@@ -37994,7 +38085,7 @@ func (m *SeasonMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SeasonMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.create_time != nil {
 		fields = append(fields, season.FieldCreateTime)
 	}
@@ -38009,6 +38100,9 @@ func (m *SeasonMutation) Fields() []string {
 	}
 	if m.monitored != nil {
 		fields = append(fields, season.FieldMonitored)
+	}
+	if m.monitor_pinned != nil {
+		fields = append(fields, season.FieldMonitorPinned)
 	}
 	return fields
 }
@@ -38028,6 +38122,8 @@ func (m *SeasonMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case season.FieldMonitored:
 		return m.Monitored()
+	case season.FieldMonitorPinned:
+		return m.MonitorPinned()
 	}
 	return nil, false
 }
@@ -38047,6 +38143,8 @@ func (m *SeasonMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldName(ctx)
 	case season.FieldMonitored:
 		return m.OldMonitored(ctx)
+	case season.FieldMonitorPinned:
+		return m.OldMonitorPinned(ctx)
 	}
 	return nil, fmt.Errorf("unknown Season field %s", name)
 }
@@ -38090,6 +38188,13 @@ func (m *SeasonMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMonitored(v)
+		return nil
+	case season.FieldMonitorPinned:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitorPinned(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Season field %s", name)
@@ -38178,6 +38283,9 @@ func (m *SeasonMutation) ResetField(name string) error {
 		return nil
 	case season.FieldMonitored:
 		m.ResetMonitored()
+		return nil
+	case season.FieldMonitorPinned:
+		m.ResetMonitorPinned()
 		return nil
 	}
 	return fmt.Errorf("unknown Season field %s", name)

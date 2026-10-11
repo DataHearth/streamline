@@ -225,7 +225,7 @@ func (db *DB) ReconcileEpisodes(
 				u, changed = u.SetAirDate(*e.AirDate), true
 			}
 			if er.Title == "" && er.AirDate.IsZero() &&
-				!e.tba() && sr.Monitored && !er.Monitored {
+				!e.tba() && sr.Monitored && !er.Monitored && !er.MonitorPinned {
 				u, changed = u.SetMonitored(true), true
 			}
 			if changed {
@@ -553,7 +553,10 @@ func (db *DB) SetEpisodeMonitored(
 	id uint32,
 	monitored bool,
 ) error {
-	return db.client.Episode.UpdateOneID(id).SetMonitored(monitored).Exec(ctx)
+	return db.client.Episode.UpdateOneID(id).
+		SetMonitored(monitored).
+		SetMonitorPinned(true).
+		Exec(ctx)
 }
 
 // TVShowTVDBIndex maps every tracked tvdb id to its show row id — the series
@@ -584,7 +587,8 @@ func (db *DB) TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error) {
 // SetEpisodesMonitored sets the flag on many episodes in one statement. The
 // monitoring presets used to walk the tree one UpdateOneID at a time, each its
 // own autocommit — ~270 of them for a 250-episode show, all serialized through
-// the single SQLite connection while the request held it.
+// the single SQLite connection while the request held it. A preset is starting
+// over, so it clears monitor_pinned on every episode it sets.
 func (db *DB) SetEpisodesMonitored(
 	ctx context.Context,
 	ids []uint32,
@@ -596,6 +600,7 @@ func (db *DB) SetEpisodesMonitored(
 	_, err := db.client.Episode.Update().
 		Where(episode.IDIn(ids...)).
 		SetMonitored(monitored).
+		SetMonitorPinned(false).
 		Save(ctx)
 	return err
 }
@@ -612,6 +617,7 @@ func (db *DB) SetSeasonsMonitored(
 	_, err := db.client.Season.Update().
 		Where(season.IDIn(ids...)).
 		SetMonitored(monitored).
+		SetMonitorPinned(false).
 		Save(ctx)
 	return err
 }
@@ -619,7 +625,8 @@ func (db *DB) SetSeasonsMonitored(
 // CascadeShowMonitored sets every season and episode of a show to monitored,
 // so toggling a series' monitor flag flows down to its whole tree (an
 // unmonitored show must not leave monitored episodes for the fetcher to grab).
-// Both bulk updates run in one transaction.
+// Both bulk updates run in one transaction, and both clear monitor_pinned: a
+// show toggle is starting over.
 // CascadeShowMonitored returns the number of episodes it touched, which is what
 // the activity feed reports: a show-wide toggle is one action, and recording it
 // per episode would write a row per episode in the series.
@@ -634,13 +641,13 @@ func (db *DB) CascadeShowMonitored(
 	}
 	if _, err := tx.Season.Update().
 		Where(season.HasTvShowWith(tvshow.ID(showID))).
-		SetMonitored(monitored).Save(ctx); err != nil {
+		SetMonitored(monitored).SetMonitorPinned(false).Save(ctx); err != nil {
 		tx.Rollback()
 		return 0, fmt.Errorf("cascade seasons monitored: %w", err)
 	}
 	episodes, err := tx.Episode.Update().
 		Where(episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID)))).
-		SetMonitored(monitored).Save(ctx)
+		SetMonitored(monitored).SetMonitorPinned(false).Save(ctx)
 	if err != nil {
 		tx.Rollback()
 		return 0, fmt.Errorf("cascade episodes monitored: %w", err)
@@ -659,6 +666,9 @@ func (db *DB) CascadeShowMonitored(
 // unmonitored show would hand the fetcher work its owner explicitly turned
 // off. Switching OFF has no such hazard and applies everywhere, so a season 0
 // left monitored under an unmonitored show still gets cleaned up.
+//
+// Either way it skips a season or episode whose flag was set by hand
+// (monitor_pinned), and every episode of a pinned season.
 func (db *DB) CascadeSpecialsMonitored(
 	ctx context.Context,
 	monitored bool,
@@ -670,6 +680,7 @@ func (db *DB) CascadeSpecialsMonitored(
 			season.HasTvShowWith(tvshow.MonitoredEQ(true)),
 		)
 	}
+	target = append(target, season.MonitorPinned(false))
 	inLibrary := season.And(target...)
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
@@ -683,7 +694,7 @@ func (db *DB) CascadeSpecialsMonitored(
 		return 0, fmt.Errorf("set specials monitored: %w", err)
 	}
 	if _, err := tx.Episode.Update().
-		Where(episode.HasSeasonWith(inLibrary)).
+		Where(episode.HasSeasonWith(inLibrary), episode.MonitorPinned(false)).
 		SetMonitored(monitored).Save(ctx); err != nil {
 		tx.Rollback()
 		return 0, fmt.Errorf("cascade specials episodes monitored: %w", err)
@@ -692,7 +703,8 @@ func (db *DB) CascadeSpecialsMonitored(
 }
 
 // CascadeSeasonMonitored sets a season and all its episodes to monitored in one
-// transaction, so a season toggle flows down to its episodes.
+// transaction, so a season toggle flows down to its episodes. It is a hand
+// toggle: the season is pinned and its episodes' own pins give way to it.
 // SeasonCascade reports what a season monitor toggle touched. The owning show
 // and season number come back with it because a season has no event scope of
 // its own: the activity row hangs off the series, and the number is what makes
@@ -722,13 +734,13 @@ func (db *DB) CascadeSeasonMonitored(
 		return SeasonCascade{}, fmt.Errorf("find season %d: %w", seasonID, err)
 	}
 	if err := tx.Season.UpdateOneID(seasonID).
-		SetMonitored(monitored).Exec(ctx); err != nil {
+		SetMonitored(monitored).SetMonitorPinned(true).Exec(ctx); err != nil {
 		tx.Rollback()
 		return SeasonCascade{}, fmt.Errorf("set season monitored: %w", err)
 	}
 	episodes, err := tx.Episode.Update().
 		Where(episode.HasSeasonWith(season.ID(seasonID))).
-		SetMonitored(monitored).Save(ctx)
+		SetMonitored(monitored).SetMonitorPinned(false).Save(ctx)
 	if err != nil {
 		tx.Rollback()
 		return SeasonCascade{}, fmt.Errorf(

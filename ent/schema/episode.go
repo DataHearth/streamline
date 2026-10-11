@@ -26,6 +26,9 @@ func (Episode) Fields() []ent.Field {
 		field.Text("overview").Optional(),
 		field.Time("air_date").Optional(),
 		field.Bool("monitored").Default(true),
+		// monitor_pinned marks a flag set by hand, which the specials
+		// catch-up leaves alone; a show toggle or preset clears it.
+		field.Bool("monitor_pinned").Default(false),
 		field.Uint16("absolute_number").Optional().Default(0),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),

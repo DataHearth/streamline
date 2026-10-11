@@ -52,7 +52,7 @@ Shows have one extra decision, and it's the one worth reading carefully — **wh
 > [!NOTE]
 > Specials (season 0) are not monitored by default. Most people don't want them, and they're the most poorly-named releases on any tracker. Turn them on globally at Settings → Series (`library.monitor_specials`), or per show from the show's page.
 
-The Settings → Series page also holds the defaults applied to *new* shows and to seasons discovered later. Changing it doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that.
+The Settings → Series page also holds the defaults applied to *new* shows and to seasons discovered later. Changing it doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that. It leaves alone any special season or episode you monitored or unmonitored by hand; switching a show's monitoring off and on, or picking a monitoring preset for it, starts that show over.
 
 Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air:
 

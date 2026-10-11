@@ -90,6 +90,11 @@ func Monitored(v bool) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldMonitored, v))
 }
 
+// MonitorPinned applies equality check predicate on the "monitor_pinned" field. It's identical to MonitorPinnedEQ.
+func MonitorPinned(v bool) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
 // AbsoluteNumber applies equality check predicate on the "absolute_number" field. It's identical to AbsoluteNumberEQ.
 func AbsoluteNumber(v uint16) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldAbsoluteNumber, v))
@@ -433,6 +438,16 @@ func MonitoredEQ(v bool) predicate.Episode {
 // MonitoredNEQ applies the NEQ predicate on the "monitored" field.
 func MonitoredNEQ(v bool) predicate.Episode {
 	return predicate.Episode(sql.FieldNEQ(FieldMonitored, v))
+}
+
+// MonitorPinnedEQ applies the EQ predicate on the "monitor_pinned" field.
+func MonitorPinnedEQ(v bool) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
+// MonitorPinnedNEQ applies the NEQ predicate on the "monitor_pinned" field.
+func MonitorPinnedNEQ(v bool) predicate.Episode {
+	return predicate.Episode(sql.FieldNEQ(FieldMonitorPinned, v))
 }
 
 // AbsoluteNumberEQ applies the EQ predicate on the "absolute_number" field.
