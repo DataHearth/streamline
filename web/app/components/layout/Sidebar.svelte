@@ -274,7 +274,7 @@
 					streamline
 				</div>
 				<div class="mt-px font-mono text-[10px] uppercase tracking-[0.14em] text-fg-faint">
-					cinematic ops
+					media ops
 				</div>
 			</div>
 		</a>

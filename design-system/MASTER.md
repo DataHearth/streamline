@@ -1,6 +1,6 @@
 # Streamline Design System — MASTER
 
-**Codename:** Cinematic Ops
+**Codename:** Media Ops
 **Scope:** global source of truth for all web UI. Page-specific overrides live under `design-system/pages/<page>.md`. When building a page, first check for a page file; if absent, use this document exclusively.
 
 **Product surfaces covered (now + planned):**
@@ -10,7 +10,7 @@ Movies, TV, Music, Books, Transcoding jobs, Video/Audio player, Requests, Activi
 
 ## 1. Identity
 
-Hybrid: cinematic dark (content: posters, backdrops, playback) + real-time monitoring (ops: queue, grabs, RSS, quality, transcodes).
+Hybrid: cinematic dark (content: posters, covers, backdrops, playback) + real-time monitoring (ops: queue, grabs, RSS, quality, transcodes).
 
 Tokens drive both. No per-domain re-skin. Only card aspect + column content change across domains.
 
