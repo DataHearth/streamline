@@ -46,8 +46,7 @@
 	// The browser remembers that its last sign-in went through the password
 	// form, so a local/break-glass account isn't one extra click every time.
 	const LOCAL_LOGIN_PREF = "streamline:login:local";
-
-	let formOpen = $state(false);
+	let formOpen = $state(loadPref(LOCAL_LOGIN_PREF) === "1");
 	let reduceMotion = $state(false);
 	let formEl: HTMLFormElement | undefined = $state();
 
@@ -61,7 +60,6 @@
 
 	onMount(() => {
 		reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		formOpen = loadPref(LOCAL_LOGIN_PREF) === "1";
 		const q = new URLSearchParams(window.location.search);
 		const next = q.get("next");
 		if (next && isSafeNext(next)) {
