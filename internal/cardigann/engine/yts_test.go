@@ -95,7 +95,7 @@ var _ = Describe(
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(ytsBody))
 			})
-			def, err := definitions.Load("yts")
+			def, err := definitions.Load("", "yts")
 			Expect(err).NotTo(HaveOccurred())
 			eng, err = New(def, Options{
 				Name:   "yts-" + CurrentSpecReport().LeafNodeText,

@@ -10,20 +10,16 @@ package main
 
 import (
 	"bytes"
-	"cmp"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/datahearth/streamline/internal/cardigann"
-	"github.com/datahearth/streamline/internal/cardigann/convert"
+	"github.com/datahearth/streamline/internal/cardigann/snapshot"
 )
 
 const upstreamRepo = "https://github.com/Prowlarr/Indexers"
@@ -71,52 +67,20 @@ func run(src, ref, out string) error {
 	if err != nil {
 		return err
 	}
-	if err := checkVersions(versions); err != nil {
+	warning, err := snapshot.CheckVersions(versions)
+	if err != nil {
 		return err
 	}
-
-	cat := cardigann.Catalog{
-		Schema:    cardigann.SchemaVersion,
-		Converter: convert.Version,
-		Upstream:  up,
+	if warning != "" {
+		fmt.Fprintln(os.Stderr, "cardigann-sync: warning:", warning)
 	}
+
 	files, skipped, err := definitionBlobs(src)
 	if err != nil {
 		return err
 	}
-	cat.Skipped = skipped
-	defs := make(map[string][]byte, len(files))
-	for _, f := range files {
-		name, raw := f.name, f.data
-		rel := fmt.Sprintf("definitions/v%d/%s", cardigann.SchemaVersion, name)
-		// Keyed by file name, not id: that is what Prowlarr stores an indexer
-		// under and fetches an update by, and a handful of files upstream
-		// are named apart from the id inside them (bluebird.yml holds
-		// bluebirdhd). It also keeps every write inside data/, whatever an
-		// upstream id says.
-		file := strings.TrimSuffix(name, ".yml")
-		d, err := convert.Convert(rel, raw)
-		var b []byte
-		if err == nil {
-			b, err = cardigann.EncodeJSON(d)
-		}
-		if err != nil {
-			cat.Skipped = append(cat.Skipped, cardigann.Skipped{
-				File: name, Reason: err.Error(),
-			})
-			continue
-		}
-		defs[file] = b
-		cat.Definitions = append(cat.Definitions, cardigann.Summarize(file, d))
-	}
-	slices.SortFunc(cat.Definitions, func(a, b cardigann.Summary) int {
-		return cmp.Compare(a.File, b.File)
-	})
-	slices.SortFunc(cat.Skipped, func(a, b cardigann.Skipped) int {
-		return cmp.Compare(a.File, b.File)
-	})
-
-	if err := write(out, cat, defs); err != nil {
+	cat, defs := snapshot.Build(files, up, skipped)
+	if err := snapshot.Write(out, cat, defs); err != nil {
 		return err
 	}
 	fmt.Printf("cardigann-sync: %s@%s — %d converted, %d skipped\n",
@@ -192,16 +156,6 @@ func upstream(dir string) (cardigann.Upstream, error) {
 	}, nil
 }
 
-// definitionName is the shape of a file name this snapshot can carry: one
-// //go:embed accepts (no leading . or _, no :), and one that is only ever a
-// plain path segment under data/.
-var definitionName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.yml$`)
-
-type definitionBlob struct {
-	name string
-	data []byte
-}
-
 // definitionBlobs reads the schema directory's .yml files out of HEAD's tree
 // rather than the work tree. What is converted is then exactly the commit the
 // NOTICE names — nothing git status cannot see (an assume-unchanged or
@@ -209,7 +163,7 @@ type definitionBlob struct {
 // a committed symlink is a symlink, never the file outside the checkout it
 // points at. Anything but a plain file with an embeddable name is skipped
 // with a reason, not fatal.
-func definitionBlobs(dir string) ([]definitionBlob, []cardigann.Skipped, error) {
+func definitionBlobs(dir string) ([]snapshot.File, []cardigann.Skipped, error) {
 	prefix := fmt.Sprintf("definitions/v%d/", cardigann.SchemaVersion)
 	list, err := git(dir, "ls-tree", "-z", "HEAD", "--", prefix)
 	if err != nil {
@@ -235,7 +189,7 @@ func definitionBlobs(dir string) ([]definitionBlob, []cardigann.Skipped, error) 
 				File:   name,
 				Reason: fmt.Sprintf("not a plain file (mode %s)", fields[0]),
 			})
-		case !definitionName.MatchString(name):
+		case !snapshot.ValidName.MatchString(name):
 			skipped = append(skipped, cardigann.Skipped{
 				File: name, Reason: "file name cannot be embedded",
 			})
@@ -251,9 +205,9 @@ func definitionBlobs(dir string) ([]definitionBlob, []cardigann.Skipped, error) 
 	if err != nil {
 		return nil, nil, err
 	}
-	out := make([]definitionBlob, len(names))
+	out := make([]snapshot.File, len(names))
 	for i := range names {
-		out[i] = definitionBlob{name: names[i], data: blobs[i]}
+		out[i] = snapshot.File{Name: names[i], Data: blobs[i]}
 	}
 	return out, skipped, nil
 }
@@ -318,97 +272,4 @@ func git(dir string, args ...string) (string, error) {
 			strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return string(b), nil
-}
-
-// checkVersions reads upstream's VERSIONS file. A schema below MIN_VERSION
-// is frozen upstream — still readable, never updated again — so syncing it
-// would ship a snapshot that looks fresh and is not.
-func checkVersions(content string) error {
-	vals := map[string]int{}
-	for line := range strings.Lines(content) {
-		k, v, ok := strings.Cut(strings.TrimSpace(line), "=")
-		if !ok || strings.HasPrefix(k, "#") {
-			continue
-		}
-		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
-			vals[strings.TrimSpace(k)] = n
-		}
-	}
-	lo, okLo := vals["MIN_VERSION"]
-	hi, okHi := vals["MAX_VERSION"]
-	if !okLo || !okHi {
-		return errors.New("VERSIONS: MIN_VERSION or MAX_VERSION missing")
-	}
-	if v := cardigann.SchemaVersion; v < lo || v > hi {
-		return fmt.Errorf(
-			"upstream supports schema v%d..v%d, streamline reads v%d: "+
-				"port internal/cardigann to the new schema", lo, hi, v,
-		)
-	}
-	if cur := vals["CURRENT_VERSION"]; cur > cardigann.SchemaVersion {
-		fmt.Fprintf(os.Stderr,
-			"cardigann-sync: warning: upstream's current schema is v%d; "+
-				"v%d still syncs but will be frozen once it drops below "+
-				"MIN_VERSION\n", cur, cardigann.SchemaVersion)
-	}
-	return nil
-}
-
-// write replaces the snapshot wholesale, so a definition upstream deleted
-// disappears here too instead of lingering as a stale file.
-func write(out string, cat cardigann.Catalog, defs map[string][]byte) error {
-	data := filepath.Join(out, "data")
-	if err := os.RemoveAll(data); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(data, 0o750); err != nil {
-		return err
-	}
-	for file, b := range defs {
-		if err := writeFile(filepath.Join(data, file+".json"), b); err != nil {
-			return err
-		}
-	}
-	idx, err := cardigann.EncodeJSON(cat)
-	if err != nil {
-		return err
-	}
-	if err := writeFile(filepath.Join(out, "index.json"), idx); err != nil {
-		return err
-	}
-	return writeFile(filepath.Join(out, "NOTICE"), []byte(notice(cat.Upstream)))
-}
-
-func writeFile(path string, b []byte) error {
-	//nolint:gosec // G306: committed source, world-readable like the rest of the tree
-	return os.WriteFile(path, b, 0o644)
-}
-
-func notice(up cardigann.Upstream) string {
-	return fmt.Sprintf(`Cardigann indexer definitions
-=============================
-
-The files under data/ are converted from the Cardigann YAML indexer
-definitions maintained by the Prowlarr project:
-
-    %s (definitions/v%d)
-    revision %s, committed %s
-
-Most of those definitions are synced from Jackett
-(https://github.com/Jackett/Jackett). All credit for them belongs to the
-Prowlarr and Jackett contributors.
-
-Licence: Jackett is distributed under the GNU General Public License without
-specifying a version; section 9 of the GPL version 2 lets a recipient choose
-any version published by the Free Software Foundation in that case. The
-Prowlarr/Indexers repository carries no licence file of its own. Streamline
-distributes these files, as modified, under the GNU General Public License
-version 3, like the rest of streamline (LICENSE at the repository root).
-
-Modification notice: %s.
-Each file records, under "source", the upstream path and the sha256 of the
-file it was converted from. The converter is internal/cardigann/convert; the
-sync that wrote this directory is internal/cardigann/cmd/cardigann-sync
-(task cardigann:sync). Do not edit these files by hand — re-run the sync.
-`, up.Repository, cardigann.SchemaVersion, up.Commit, up.Date, convert.Modified)
 }

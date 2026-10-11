@@ -102,7 +102,10 @@ func newCardigann(
 	if ix.Cardigann == nil {
 		return nil, fmt.Errorf("indexer %q has no cardigann block", ix.Name)
 	}
-	def, err := definitions.Load(ix.Cardigann.Definition)
+	def, err := definitions.Load(
+		config.Get().CardigannDir(),
+		ix.Cardigann.Definition,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +437,10 @@ func CardigannSite(ix config.IndexerEntry) (string, error) {
 	if ix.Cardigann == nil {
 		return "", fmt.Errorf("indexer %q has no cardigann block", ix.Name)
 	}
-	def, err := definitions.Load(ix.Cardigann.Definition)
+	def, err := definitions.Load(
+		config.Get().CardigannDir(),
+		ix.Cardigann.Definition,
+	)
 	if err != nil {
 		return "", err
 	}

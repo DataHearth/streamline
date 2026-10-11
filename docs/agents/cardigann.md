@@ -6,14 +6,18 @@ exists today is the converter, the embedded snapshot and the engine**: a `protoc
 cardigann` indexer entry, configured in the config file only, runs any definition in the
 snapshot, logging in to its tracker when the definition says to (`## Logins`) and getting
 past a browser challenge through a FlareSolverr-compatible solver (`## Browser
-challenges`). The runtime definition update and the catalog UI are not built yet.
+challenges`). A daily job keeps the definitions current with upstream, holding any change
+that re-points a configured tracker for an administrator (`## Runtime updates`). The
+catalog UI is not built yet.
 
 | Path | What it is |
 |---|---|
 | `internal/cardigann/` | The model (`Definition` and friends, upstream v11 schema key for key), the strict `Decode`, `Catalog`/`Summarize`, `EncodeJSON` |
 | `internal/cardigann/convert/` | `Convert(path, yaml)` — the .NET-to-Go rewrites — and `Check(def)`, which validates a converted definition as stored. Pure; no I/O |
-| `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream, `Convert` each file, write the snapshot |
-| `internal/cardigann/definitions/` | `//go:embed`s the snapshot; `Catalog()` (a fresh copy per call), `Load(file)`, `Notice()`. Only `definitions.go` (and its tests) is hand-written |
+| `internal/cardigann/snapshot/` | `Build` (convert a file set into catalog + encoded definitions), `Write`/`WriteIndex` (data/, index.json, NOTICE), `Notice`, `CheckVersions` — the one code path both the sync and the runtime update write through |
+| `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream with git, read `HEAD`'s blobs, hand them to `snapshot` |
+| `internal/cardigann/definitions/` | `//go:embed`s the snapshot and resolves what is in force under a data directory: `Load(dir, file)`, `Catalog(dir)` (custom folded in), `Snapshot(dir)`, `Raw(dir, file)`, `Notice()`. `dir` empty = the embedded copy alone. Only `definitions.go` (and its tests) is hand-written |
+| `internal/cardigann/update/` | The runtime update: `Run` (GitHub commit → tarball → `snapshot` → `<dir>/current`, holding trust changes in `<dir>/pending`), `List`, `Diff`, `Approve`, `Reject` |
 | `internal/cardigann/engine/` | Runs a converted definition: renders its search requests, parses the responses (HTML, XML, JSON) into releases, resolves a release's download block. The port of Prowlarr's `CardigannRequestGenerator`/`CardigannParser`/`CardigannBase` |
 | `internal/indexer/cardigann.go` | The `indexer.Client` over an engine, `CardigannSite`, and `ResolveDownload` for the grab path |
 
@@ -79,6 +83,45 @@ At `8df0764` (2026-10-09): 580 v11 files, 579 converted, 1 skipped — `1337x.ym
 unbalanced `)` in a search-path template that Jackett's regex-driven template engine
 tolerates and Go's parser does not. The fix belongs upstream; do not teach the converter to
 guess at unbalanced parentheses.
+
+## Runtime updates
+
+Prowlarr refreshes its definitions at boot and on a schedule; a release-pinned snapshot
+alone would leave a tracker that moved domains broken until the next streamline release.
+`jobs.CardigannUpdate` (`cardigann-update`, `schedules.cardigann_update`, 24h) runs
+`update.Run` against `config.CardigannDir()` (`<data_dir>/cardigann`):
+
+- **What is fetched**: the commit `api.github.com/repos/Prowlarr/Indexers/commits/master`
+  names, then `codeload.github.com/…/tar.gz/<sha>` (≈750 KB; the whole repository, every
+  schema version) — so the NOTICE names an exact commit, as the sync's does, without git
+  on the host. Only regular `definitions/v11/*.yml` entries and `VERSIONS` are read; inflated
+  size is capped. Nothing is fetched past the API call when the commit is the one in force.
+- **One code path with the sync**: `snapshot.Build` converts, `snapshot.Write` writes
+  `data/`, `index.json` and the NOTICE — the provenance the licence rests on is written the
+  same way at runtime. `current/` is replaced **wholesale and atomically** (written beside,
+  renamed into place) so a reader sees the old set or the new one.
+- **What is in force** (`definitions.Load`/`Catalog`): `custom/<file>.yml` (the operator's
+  own YAML, converted on every load, marked `custom` in the catalog) over the runtime
+  `current/` snapshot over the embedded one. `current/` counts **only while its upstream
+  commit is newer than the embedded one and it was written by this converter version and
+  schema** — an upgraded binary falls back to its own newer embedded copy, and a converter
+  change forces the next run to rewrite. Its index is cached per directory;
+  `definitions.Invalidate` follows every write.
+- **The trust hold**: a changed definition that a configured indexer runs (enabled or not)
+  is compared on the **hosts it names** — links, legacy links and every absolute
+  `http(s)://` URL anywhere in its JSON — and its **login block**. Either changing keeps the
+  old version in `current/` (listed in the catalog's `held` and the NOTICE) and puts the new
+  one in `pending/` with its reasons. A definition deleted upstream that is in use is held
+  the same way (`removed`). Everything else applies at once. `Approve` moves the pending
+  file into `current/` and rewrites the index and NOTICE; `Reject` keeps the old version and
+  records the refused upstream `sha256` in `pending/index.json`, so the same version is
+  never proposed again while a later one is. A pending index written against another
+  snapshot than the one in force is ignored (`List` returns nothing).
+- **REST**: `GET /cardigann/updates` (the snapshot in force + each held update with its
+  unified diff, from `hexops/gotextdiff`, and the indexers running it),
+  `POST /cardigann/updates/{file}/approve|reject`, admin-only. They live under
+  `/cardigann`, not `/indexers`, so no indexer name can collide with them. Settings →
+  Indexers shows the held updates above the list.
 
 ## Strict decoding
 

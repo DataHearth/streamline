@@ -19,7 +19,7 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 	It(
 		"render every search request for a keyword, movie and episode search",
 		func() {
-			cat, err := definitions.Catalog()
+			cat, err := definitions.Catalog("")
 			Expect(err).NotTo(HaveOccurred())
 			queries := []Query{
 				{Kind: KindSearch, Term: "Dune"},
@@ -49,7 +49,7 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 			}
 			var failures []string
 			for _, s := range cat.Definitions {
-				def, err := definitions.Load(s.File)
+				def, err := definitions.Load("", s.File)
 				Expect(err).NotTo(HaveOccurred())
 				site, err := Site(def, "")
 				Expect(err).NotTo(HaveOccurred())
@@ -108,11 +108,11 @@ var _ = Describe("the embedded definitions", Label("unit", "cardigann"), func() 
 	)
 
 	It("build an engine for every definition and render its login", func() {
-		cat, err := definitions.Catalog()
+		cat, err := definitions.Catalog("")
 		Expect(err).NotTo(HaveOccurred())
 		var failures []string
 		for _, s := range cat.Definitions {
-			def, err := definitions.Load(s.File)
+			def, err := definitions.Load("", s.File)
 			Expect(err).NotTo(HaveOccurred())
 			e, err := New(def, Options{Name: "build-" + s.File})
 			Expect(err).NotTo(HaveOccurred(), s.File)

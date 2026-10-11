@@ -684,6 +684,7 @@
         "file_selection": { "$ref": "#/definitions/duration" },
         "music_tag_sync": { "$ref": "#/definitions/duration" },
         "database_backup": { "$ref": "#/definitions/duration" },
+        "cardigann_update": { "$ref": "#/definitions/duration" },
         "rss_sync": {
           "$ref": "#/definitions/duration",
           "description": "Deprecated: renamed to movie_rss_sync. Still honoured, with a warning on boot."
