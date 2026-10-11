@@ -107,8 +107,14 @@
 
 	const qc = useQueryClient();
 	const invalidate = () => qc.invalidateQueries({ queryKey: ["music"] });
+	// A refused or failed PATCH has to say so: these controls have no other
+	// feedback, so an unhandled rejection read as a dead button.
 	async function setMonitor(v: string) {
-		await api(`/music/artists/${id}`, { method: "PATCH", body: { monitor: v } });
+		try {
+			await api(`/music/artists/${id}`, { method: "PATCH", body: { monitor: v } });
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_update_failed()));
+		}
 		invalidate();
 	}
 	let lastMonitor: ArtistMonitor = "all";
@@ -121,7 +127,11 @@
 		}
 	}
 	async function toggleRelease(r: Release) {
-		await api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } });
+		try {
+			await api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } });
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_update_failed()));
+		}
 		invalidate();
 	}
 	async function searchMissing() {

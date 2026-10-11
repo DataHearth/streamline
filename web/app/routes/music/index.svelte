@@ -166,7 +166,11 @@
 		toast.ok(i18n.music_search_started({ title: a.name }));
 	}
 	async function toggleMonitor(a: Artist) {
-		await api(`/music/artists/${a.id}`, { method: "PATCH", body: { monitor: a.monitor === "none" ? "all" : "none" } });
+		try {
+			await api(`/music/artists/${a.id}`, { method: "PATCH", body: { monitor: a.monitor === "none" ? "all" : "none" } });
+		} catch (e) {
+			toast.err(errorText(e, i18n.common_update_failed()));
+		}
 		qc.invalidateQueries({ queryKey: ["music"] });
 	}
 </script>
