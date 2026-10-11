@@ -106,6 +106,37 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			Expect(rec.QueryAlbum().ExistX(ctx)).To(BeFalse())
 			Expect(rec.QueryMovie().ExistX(ctx)).To(BeFalse())
 		})
+
+		It("loads a volume's series in the queue and the history", func() {
+			b, err := store.CreateBook(ctx, BookSeed{
+				HardcoverID: 2, Title: "Tome 3", Kind: "bd",
+				PreferredLanguage: "fr",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			series := client.BookSeries.Create().
+				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+			client.Book.UpdateOneID(b.ID).SetSeries(series).ExecX(ctx)
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "t", Size: 1, TorrentHash: "volume-hash",
+				Status: downloadrecord.StatusHeld, BookID: b.ID,
+				BookKind:           downloadrecord.BookKindEbook,
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			live, err := store.ListActiveDownloadRecords(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(live).To(HaveLen(1))
+			Expect(live[0].Edges.Book.Edges.Series.Title).To(Equal("Astérix"))
+
+			client.DownloadRecord.UpdateOneID(rec.ID).
+				SetStatus(downloadrecord.StatusCompleted).ExecX(ctx)
+			hist, err := store.ListDownloadHistory(ctx, 10, "")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hist.Records).To(HaveLen(1))
+			Expect(hist.Records[0].Edges.Book.Edges.Series.Title).
+				To(Equal("Astérix"))
+		})
 	})
 
 	Describe("CountLiveDownloadRecords", func() {

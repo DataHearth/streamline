@@ -109,6 +109,17 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 			To(Equal("Nirvana"))
 	})
 
+	It("lists a finished pack with its album ids for the history", func() {
+		rec := createPack()
+		client.DownloadRecord.UpdateOneID(rec.ID).
+			SetStatus(downloadrecord.StatusCompleted).ExecX(ctx)
+		hist, err := store.ListDownloadHistory(ctx, 10, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(hist.Records).To(HaveLen(1))
+		Expect(hist.Records[0].Edges.Artist).NotTo(BeNil())
+		Expect(hist.Records[0].Edges.Albums).To(HaveLen(2))
+	})
+
 	It("keeps the record while one album of the pack is recorded", func() {
 		rec := createPack()
 		Expect(store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{

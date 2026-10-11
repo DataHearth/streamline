@@ -795,8 +795,8 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 	}
 	out.Episode = episodeRef(e.Episode)
 	out.Album = activityAlbumRef(e.Album)
-	out.Artist = activityArtistRef(e.Artist)
-	out.Book = activityBookRef(e.Book)
+	out.Artist = activityArtistRef(e.Artist, len(e.PackAlbumIDs))
+	out.Book = activityBookRef(e.Book, e.BookKind)
 	if e.DownloadSpeed != 0 {
 		ds := e.DownloadSpeed
 		out.DownloadSpeed = &ds
@@ -859,8 +859,8 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 	}
 	out.Episode = episodeRef(r.Edges.AnchorEpisode)
 	out.Album = activityAlbumRef(r.Edges.Album)
-	out.Artist = activityArtistRef(r.Edges.Artist)
-	out.Book = activityBookRef(r.Edges.Book)
+	out.Artist = activityArtistRef(r.Edges.Artist, len(r.Edges.Albums))
+	out.Book = activityBookRef(r.Edges.Book, string(r.BookKind))
 	if r.Quality != "" {
 		out.Quality = &r.Quality
 	}
@@ -914,21 +914,32 @@ func activityAlbumRef(a *ent.Album) *ActivityAlbumRef {
 	return ref
 }
 
-// activityArtistRef titles a discography pack's row, or nil for any other
-// record.
-func activityArtistRef(a *ent.Artist) *ActivityArtistRef {
+// activityArtistRef titles a discography pack's row, with the number of
+// albums the pack is expected to cover, or nil for any other record.
+func activityArtistRef(a *ent.Artist, albums int) *ActivityArtistRef {
 	if a == nil {
 		return nil
 	}
-	return &ActivityArtistRef{Id: a.ID, Name: a.Name}
+	return &ActivityArtistRef{Id: a.ID, Name: a.Name, AlbumCount: albums}
 }
 
-// activityBookRef titles a book download's row, or nil for any other record.
-func activityBookRef(b *ent.Book) *ActivityBookRef {
+// activityBookRef titles a book download's row with the slot it fills, or nil
+// for any other record. Expects the book's series eager-loaded for a volume.
+func activityBookRef(b *ent.Book, kind string) *ActivityBookRef {
 	if b == nil {
 		return nil
 	}
-	return &ActivityBookRef{Id: b.ID, Title: b.Title, Author: b.AuthorName}
+	ref := &ActivityBookRef{
+		Id:     b.ID,
+		Title:  b.Title,
+		Author: b.AuthorName,
+		Series: bookSeriesRef(b),
+	}
+	if kind != "" {
+		slot := ActivityBookRefSlot(kind)
+		ref.Slot = &slot
+	}
+	return ref
 }
 
 // toPendingItem maps a pending DownloadRecord (with movie/episode edges
