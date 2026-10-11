@@ -80,6 +80,32 @@ var _ = Describe("Music searches", Label("unit", "integration", "music"), func()
 			).To(Equal("quality is not stated in the release name"))
 		})
 
+		It("sets aside a release named for another album or artist", func() {
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(1991)).
+				Return([]indexer.SearchResult{
+					{Title: "Nirvana - Bleach (1989) [FLAC]", Seeders: 90},
+					{Title: "Nirvana.Nevermind.1991.FLAC-GRP", Seeders: 5},
+					{Title: "Mudhoney - Nevermind (1991) [FLAC]", Seeders: 80},
+					{Title: "Nirvana - Nevermind (1991) [FLAC]", Seeders: 10},
+				}, nil).
+				Once()
+
+			got, err := e.svc.SearchAlbumReleases(e.ctx, al.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(got)).To(Equal([]string{
+				"Nirvana - Nevermind (1991) [FLAC]",
+				"Nirvana.Nevermind.1991.FLAC-GRP",
+				"Nirvana - Bleach (1989) [FLAC]",
+				"Mudhoney - Nevermind (1991) [FLAC]",
+			}))
+			Expect(got[1].Rejected()).To(BeFalse())
+			for _, r := range got[2:] {
+				Expect(r.Rejected()).To(BeTrue())
+				Expect(r.Reason).To(Equal("names a different album or artist"))
+			}
+		})
+
 		It("searches with year 0 when the album has no release date", func() {
 			e.client.Album.UpdateOneID(al.ID).ClearReleaseDate().ExecX(e.ctx)
 			e.idx.EXPECT().

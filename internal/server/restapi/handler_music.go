@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
@@ -305,6 +306,39 @@ func (s *Server) GetMusicArtist(
 			toMusicArtistDetail(view),
 		),
 	}, nil
+}
+
+// ApplyMusicMonitoredTypes re-applies the all and future artists' policies
+// under the current library.music_monitored_types. Admin only — it is a
+// library-wide bulk mutation driven from the settings page.
+func (s *Server) ApplyMusicMonitoredTypes(
+	ctx context.Context,
+	_ ApplyMusicMonitoredTypesRequestObject,
+) (ApplyMusicMonitoredTypesResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return ApplyMusicMonitoredTypes403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	on, off, err := s.music.ApplyMonitoredTypes(ctx)
+	if err != nil {
+		return ApplyMusicMonitoredTypes500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return ApplyMusicMonitoredTypes200JSONResponse{
+		Monitored:   on,
+		Unmonitored: off,
+		Types:       musicAlbumTypes(config.Get().Library.MusicMonitoredTypes),
+	}, nil
+}
+
+func musicAlbumTypes(types []string) []MusicAlbumType {
+	out := make([]MusicAlbumType, len(types))
+	for i, t := range types {
+		out[i] = MusicAlbumType(t)
+	}
+	return out
 }
 
 func (s *Server) PatchMusicArtist(

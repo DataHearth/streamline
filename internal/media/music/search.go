@@ -35,13 +35,18 @@ type AlbumRelease struct {
 
 func (r AlbumRelease) Rejected() bool { return r.Score < 0 }
 
+// otherAlbumReason sets aside an album search result named for something else.
+const otherAlbumReason = "names a different album or artist"
+
 // judge scores every result, dropping what the scope never lists and keeping
-// the rest, best first with the rejected ones after.
+// the rest, best first with the rejected ones after. other, when set, names
+// the reason a release is set aside whatever its quality; empty keeps it.
 func judge(
 	results []indexer.SearchResult,
 	profile config.MusicQualityProfileEntry,
 	scope library.MusicScope,
 	keep func(library.ParsedMusicRelease) bool,
+	other func(indexer.SearchResult) string,
 ) []AlbumRelease {
 	releases := make([]AlbumRelease, 0, len(results))
 	for _, r := range results {
@@ -50,6 +55,11 @@ func judge(
 			continue
 		}
 		score, reason := library.JudgeMusicRelease(parsed, profile, scope)
+		if other != nil {
+			if why := other(r); why != "" {
+				score, reason = -1, why
+			}
+		}
 		releases = append(releases, AlbumRelease{
 			Result: r, Parsed: parsed, Score: score, Reason: reason,
 		})
@@ -95,7 +105,10 @@ func firstAccepted(releases []AlbumRelease) *AlbumRelease {
 
 // SearchAlbumReleases queries the indexers for the album and judges every
 // result against the artist's profile. A discography never appears: it is
-// rejected by scope, not listed.
+// rejected by scope, not listed. A release whose name reads as another album
+// or another artist stays listed but rejected: an indexer answers with
+// whatever loosely matches the query, and a lossless "Artist - Other Album"
+// would otherwise score like the album itself.
 func (s *Service) SearchAlbumReleases(
 	ctx context.Context,
 	albumID uint32,
@@ -127,7 +140,13 @@ func (s *Service) SearchAlbumReleases(
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("search album: %w", err))
 	}
 	releases := judge(results, profile, library.MusicScopeAlbum,
-		func(p library.ParsedMusicRelease) bool { return !p.Discography })
+		func(p library.ParsedMusicRelease) bool { return !p.Discography },
+		func(r indexer.SearchResult) string {
+			if library.ReleaseNamesOtherWork(r.Title, artist.Name, a.Title) {
+				return otherAlbumReason
+			}
+			return ""
+		})
 	span.SetAttributes(attribute.Int("releases", len(releases)))
 	return releases, nil
 }
@@ -163,7 +182,7 @@ func (s *Service) BrowseArtistReleases(
 		}
 	}
 	releases := judge(byArtist, profile, library.MusicScopeArtist,
-		func(p library.ParsedMusicRelease) bool { return p.Discography })
+		func(p library.ParsedMusicRelease) bool { return p.Discography }, nil)
 	span.SetAttributes(attribute.Int("releases", len(releases)))
 	return releases, nil
 }

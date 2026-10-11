@@ -53,3 +53,58 @@ var _ = Describe("SplitCreatorTitle", Label("unit", "library"), func() {
 		Expect(t).To(Equal("Web Code"))
 	})
 })
+
+var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
+	DescribeTable(
+		"reads the creator and title off the release name",
+		func(name string, other bool) {
+			Expect(
+				ReleaseNamesOtherWork(name, "Gojira", "From Mars to Sirius"),
+			).To(Equal(other))
+		},
+		Entry(
+			"the album",
+			"Gojira - From Mars to Sirius (2005 Metal) [Flac 16-44]",
+			false,
+		),
+		Entry(
+			"the album, scene-named",
+			"Gojira.From.Mars.to.Sirius.2005.FLAC.[16bit.44.1kHz]-RmKv",
+			false,
+		),
+		Entry(
+			"the album, remastered",
+			"Gojira - From Mars to Sirius Remastered FLAC",
+			false,
+		),
+		Entry(
+			"another album of the artist",
+			"Gojira - The Link 2003 CD FLAC 16 Bit 44 1 Hz - Kefren",
+			true,
+		),
+		Entry("another album, scene-named", "Gojira.The.Link.2003.FLAC-GRP", true),
+		Entry("another artist", "Mastodon - From Mars to Sirius [FLAC]", true),
+		Entry(
+			"a scene name not led by the artist",
+			"From.Mars.to.Sirius.FLAC-GRP",
+			false,
+		),
+		Entry("a bare artist name", "Gojira FLAC", false),
+	)
+
+	It("answers false when the artist normalizes to nothing", func() {
+		Expect(ReleaseNamesOtherWork("ゴジラ - The Link [FLAC]", "ゴジラ", "Magma")).
+			To(BeFalse())
+	})
+
+	It(
+		"keeps a release named for the shorter title the library holds in full",
+		func() {
+			Expect(ReleaseNamesOtherWork(
+				"Gojira - Live at Hellfest [FLAC]",
+				"Gojira",
+				"Live at Hellfest 2016",
+			)).To(BeFalse())
+		},
+	)
+})

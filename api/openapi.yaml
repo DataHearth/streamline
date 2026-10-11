@@ -1452,7 +1452,9 @@ paths:
          `SearchResult` with the canonical display `source` and `audio_tier`. Releases the
          album's music quality profile rejects stay in the list with `rejected` and
          `reject_reason` ("tier not in the profile", or "quality is not stated in the release
-         name" when no tier can be read from the name). A discography never appears on an album
+         name" when no tier can be read from the name, or "names a different album or artist"
+         when the release name reads as another album or artist — indexers answer a query
+         loosely). A discography never appears on an album
          search. POST the chosen item back unchanged to `.../grab`, handle included. A 422 with
          `code: no_quality_profile` means the album has no usable quality profile.
       tags: [music]
@@ -1561,6 +1563,36 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/monitored-types/apply:
+    post:
+      operationId: applyMusicMonitoredTypes
+      summary: Apply the monitored release types to existing artists (admin)
+      description: |
+        Re-applies the monitor policy of every artist set to `all` or `future`
+        to its albums under the current `library.music_monitored_types`: an
+        album of a listed type is monitored the way the policy says, an album
+        of any other type is unmonitored. The setting itself only reaches
+        albums a policy is applied to later (an add, a refresh finding a new
+        release, a monitor change); this is the catch-up for the library, in
+        both directions. Like changing an artist's monitor, it overrides
+        albums toggled by hand on those artists. `manual` and `none` artists
+        are left alone, and album status is never touched.
+      tags: [music, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: How many albums the setting changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicMonitoredTypesApplied"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -11006,10 +11038,27 @@ components:
           type: boolean
           description: The value applied — the current library.monitor_specials.
 
+    MusicMonitoredTypesApplied:
+      type: object
+      required: [monitored, unmonitored, types]
+      properties:
+        monitored:
+          type: integer
+          description: Albums turned monitored.
+        unmonitored:
+          type: integer
+          description: Albums turned unmonitored.
+        types:
+          type: array
+          description: The types applied — the current library.music_monitored_types.
+          items:
+            $ref: "#/components/schemas/MusicAlbumType"
+
     LibraryConfigView:
       type: object
       required:
         - monitor_specials
+        - music_monitored_types
         - book_language
         - movie_naming
         - series_naming
@@ -11028,6 +11077,17 @@ components:
           description: |
             Monitor season 0 (specials) when a series is added or a refresh
             discovers the season. Applies to newly seeded seasons only.
+        music_monitored_types:
+          type: array
+          uniqueItems: true
+          description: |
+            Release types an artist's `all` and `future` monitor policies
+            monitor; releases of the other types are added unmonitored.
+            Defaults to `album` and `ep`. Applies when a policy is applied
+            (add, refresh, monitor change); `POST /music/monitored-types/apply`
+            catches existing artists up.
+          items:
+            $ref: "#/components/schemas/MusicAlbumType"
         book_language:
           type: string
           minLength: 2
@@ -11087,6 +11147,11 @@ components:
       properties:
         monitor_specials:
           type: boolean
+        music_monitored_types:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/MusicAlbumType"
         book_language:
           type: string
           minLength: 2

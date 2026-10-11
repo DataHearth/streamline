@@ -842,6 +842,8 @@ export type LockoutConfig = {
 // lives without a second request.
 export type LibraryConfig = {
 	monitor_specials: boolean;
+	// Release types an artist's all and future policies monitor.
+	music_monitored_types: ("album" | "ep" | "single" | "compilation" | "live" | "other")[];
 	movie_naming: string;
 	series_naming: string;
 	import_mode: ImportTransferMode;

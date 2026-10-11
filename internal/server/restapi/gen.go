@@ -5347,6 +5347,7 @@ type LibraryConfigPatch struct {
 	MaxGrabFailures      *int                          `json:"max_grab_failures,omitempty"`
 	MonitorSpecials      *bool                         `json:"monitor_specials,omitempty"`
 	MovieNaming          *string                       `json:"movie_naming,omitempty"`
+	MusicMonitoredTypes  *[]MusicAlbumType             `json:"music_monitored_types,omitempty"`
 
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown *string `json:"no_match_cooldown,omitempty"`
@@ -5380,6 +5381,13 @@ type LibraryConfigView struct {
 
 	// MoviePath Read-only here. A root only moves through POST /library/path-migration, which rewrites every stored path before it repoints the config — a plain edit would strand them.
 	MoviePath *string `json:"movie_path,omitempty"`
+
+	// MusicMonitoredTypes Release types an artist's `all` and `future` monitor policies
+	// monitor; releases of the other types are added unmonitored.
+	// Defaults to `album` and `ep`. Applies when a policy is applied
+	// (add, refresh, monitor change); `POST /music/monitored-types/apply`
+	// catches existing artists up.
+	MusicMonitoredTypes []MusicAlbumType `json:"music_monitored_types"`
 
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown string `json:"no_match_cooldown"`
@@ -6203,6 +6211,18 @@ type MusicMember struct {
 // nothing. `Album.monitored` stays the only flag searches, RSS and
 // imports read.
 type MusicMonitor string
+
+// MusicMonitoredTypesApplied defines model for MusicMonitoredTypesApplied.
+type MusicMonitoredTypesApplied struct {
+	// Monitored Albums turned monitored.
+	Monitored int `json:"monitored"`
+
+	// Types The types applied — the current library.music_monitored_types.
+	Types []MusicAlbumType `json:"types"`
+
+	// Unmonitored Albums turned unmonitored.
+	Unmonitored int `json:"unmonitored"`
+}
 
 // MusicPerformer defines model for MusicPerformer.
 type MusicPerformer struct {
@@ -10095,6 +10115,9 @@ type ServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ApplyMusicMonitoredTypes Apply the monitored release types to existing artists (admin)
+	// (POST /music/monitored-types/apply)
+	ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request)
 	// ListMusicQualityProfiles List music quality profiles
 	// (GET /music/quality-profiles)
 	ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request)
@@ -11260,6 +11283,12 @@ func (_ Unimplemented) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Req
 // SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 // (POST /music/artists/{id}/search-now)
 func (_ Unimplemented) SearchMusicArtistNow(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApplyMusicMonitoredTypes Apply the monitored release types to existing artists (admin)
+// (POST /music/monitored-types/apply)
+func (_ Unimplemented) ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16263,6 +16292,20 @@ func (siw *ServerInterfaceWrapper) SearchMusicArtistNow(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ApplyMusicMonitoredTypes operation middleware
+func (siw *ServerInterfaceWrapper) ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyMusicMonitoredTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMusicQualityProfiles operation middleware
 func (siw *ServerInterfaceWrapper) ListMusicQualityProfiles(w http.ResponseWriter, r *http.Request) {
 
@@ -18907,6 +18950,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/music/tracks/{id}/file", wrapper.DeleteMusicTrackFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/monitored-types/apply", wrapper.ApplyMusicMonitoredTypes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/music/quality-profiles", wrapper.ListMusicQualityProfiles)
@@ -30031,6 +30077,55 @@ func (response SearchMusicArtistNow500JSONResponse) VisitSearchMusicArtistNowRes
 	return err
 }
 
+type ApplyMusicMonitoredTypesRequestObject struct {
+}
+
+type ApplyMusicMonitoredTypesResponseObject interface {
+	VisitApplyMusicMonitoredTypesResponse(w http.ResponseWriter) error
+}
+
+type ApplyMusicMonitoredTypes200JSONResponse MusicMonitoredTypesApplied
+
+func (response ApplyMusicMonitoredTypes200JSONResponse) VisitApplyMusicMonitoredTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicMonitoredTypes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplyMusicMonitoredTypes403JSONResponse) VisitApplyMusicMonitoredTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicMonitoredTypes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApplyMusicMonitoredTypes500JSONResponse) VisitApplyMusicMonitoredTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMusicQualityProfilesRequestObject struct {
 }
 
@@ -35565,6 +35660,9 @@ type StrictServerInterface interface {
 	// SearchMusicArtistNow Dispatch an indexer search for an artist's wanted albums
 	// (POST /music/artists/{id}/search-now)
 	SearchMusicArtistNow(ctx context.Context, request SearchMusicArtistNowRequestObject) (SearchMusicArtistNowResponseObject, error)
+	// ApplyMusicMonitoredTypes Apply the monitored release types to existing artists (admin)
+	// (POST /music/monitored-types/apply)
+	ApplyMusicMonitoredTypes(ctx context.Context, request ApplyMusicMonitoredTypesRequestObject) (ApplyMusicMonitoredTypesResponseObject, error)
 	// ListMusicQualityProfiles List music quality profiles
 	// (GET /music/quality-profiles)
 	ListMusicQualityProfiles(ctx context.Context, request ListMusicQualityProfilesRequestObject) (ListMusicQualityProfilesResponseObject, error)
@@ -40230,6 +40328,30 @@ func (sh *strictHandler) SearchMusicArtistNow(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchMusicArtistNowResponseObject); ok {
 		if err := validResponse.VisitSearchMusicArtistNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplyMusicMonitoredTypes operation middleware
+func (sh *strictHandler) ApplyMusicMonitoredTypes(w http.ResponseWriter, r *http.Request) {
+	var request ApplyMusicMonitoredTypesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplyMusicMonitoredTypes(ctx, request.(ApplyMusicMonitoredTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplyMusicMonitoredTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplyMusicMonitoredTypesResponseObject); ok {
+		if err := validResponse.VisitApplyMusicMonitoredTypesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

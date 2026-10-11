@@ -774,13 +774,13 @@ func (db *DB) SetArtistDetails(
 }
 
 // SetArtistMonitor stores the policy and applies it to the artist's existing
-// albums in one transaction: all and none set every album, future monitors the
-// undated and the not yet released, manual leaves the flags alone. It never
-// touches album status.
+// albums in one transaction (applyMonitorPolicy). It never touches album
+// status.
 func (db *DB) SetArtistMonitor(
 	ctx context.Context,
 	id uint32,
 	monitor artist.Monitor,
+	types []string,
 	now time.Time,
 ) error {
 	tx, err := db.client.Tx(ctx)
@@ -792,26 +792,102 @@ func (db *DB) SetArtistMonitor(
 		return err
 	}
 	owned := album.HasArtistWith(artist.IDEQ(id))
-	switch monitor {
-	case artist.MonitorAll:
-		err = tx.Album.Update().Where(owned).SetMonitored(true).Exec(ctx)
-	case artist.MonitorNone:
-		err = tx.Album.Update().Where(owned).SetMonitored(false).Exec(ctx)
-	case artist.MonitorFuture:
-		err = tx.Album.Update().
-			Where(owned, album.Or(album.ReleaseDateIsNil(), album.ReleaseDateGT(now))).
-			SetMonitored(true).Exec(ctx)
-		if err == nil {
-			err = tx.Album.Update().
-				Where(owned, album.ReleaseDateNotNil(), album.ReleaseDateLTE(now)).
-				SetMonitored(false).Exec(ctx)
-		}
-	}
-	if err != nil {
+	if _, _, err := applyMonitorPolicy(
+		ctx,
+		tx.Client(),
+		owned,
+		monitor,
+		types,
+		now,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}
 	return tx.Commit()
+}
+
+// ReapplyMonitorPolicies applies every artist's own all or future policy to
+// its albums again, in one transaction — the catch-up after
+// library.music_monitored_types changes, which on its own only reaches
+// albums a policy is applied to later. Manual and none artists are left
+// alone. It returns how many albums it monitored and unmonitored.
+func (db *DB) ReapplyMonitorPolicies(
+	ctx context.Context,
+	types []string,
+	now time.Time,
+) (int, int, error) {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	var on, off int
+	for _, policy := range []artist.Monitor{artist.MonitorAll, artist.MonitorFuture} {
+		owned := album.HasArtistWith(artist.MonitorEQ(policy))
+		n, f, err := applyMonitorPolicy(ctx, tx.Client(), owned, policy, types, now)
+		if err != nil {
+			tx.Rollback()
+			return 0, 0, err
+		}
+		on, off = on+n, off+f
+	}
+	return on, off, tx.Commit()
+}
+
+// applyMonitorPolicy sets the monitored flag of the owned albums from the
+// policy: all monitors the albums of the listed types, future those of them
+// that are undated or not yet released, none nothing, and manual leaves the
+// flags alone. It returns how many flags it turned on and off; an album
+// already in the wanted state is not counted.
+func applyMonitorPolicy(
+	ctx context.Context,
+	c *ent.Client,
+	owned predicate.Album,
+	policy artist.Monitor,
+	types []string,
+	now time.Time,
+) (int, int, error) {
+	var want predicate.Album
+	switch policy {
+	case artist.MonitorManual:
+		return 0, 0, nil
+	case artist.MonitorNone:
+		n, err := c.Album.Update().
+			Where(owned, album.Monitored(true)).
+			SetMonitored(false).Save(ctx)
+		return 0, n, err
+	case artist.MonitorAll:
+		want = albumTypeIn(types)
+	case artist.MonitorFuture:
+		want = album.And(
+			albumTypeIn(types),
+			album.Or(album.ReleaseDateIsNil(), album.ReleaseDateGT(now)),
+		)
+	default:
+		return 0, 0, fmt.Errorf("unknown monitor policy %q", policy)
+	}
+	on, err := c.Album.Update().
+		Where(owned, want, album.Monitored(false)).
+		SetMonitored(true).Save(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	off, err := c.Album.Update().
+		Where(owned, album.Not(want), album.Monitored(true)).
+		SetMonitored(false).Save(ctx)
+	return on, off, err
+}
+
+// albumTypeIn matches the albums of the listed release types; an empty list
+// matches none.
+func albumTypeIn(types []string) predicate.Album {
+	if len(types) == 0 {
+		return album.IDLT(0)
+	}
+	ts := make([]album.Type, len(types))
+	for i, t := range types {
+		ts[i] = album.Type(t)
+	}
+	return album.TypeIn(ts...)
 }
 
 func (db *DB) SetArtistQualityProfile(

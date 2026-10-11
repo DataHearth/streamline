@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 var _ = Describe("Views", Label("unit", "music"), func() {
@@ -219,9 +220,13 @@ var _ = Describe("Views", Label("unit", "music"), func() {
 	})
 
 	Describe("monitoredFor", func() {
+		types := []string{"album", "ep"}
 		DescribeTable("by policy",
 			func(policy artist.Monitor, date *time.Time, want bool) {
-				Expect(monitoredFor(policy, date, now)).To(Equal(want))
+				Expect(
+					monitoredFor(policy, metadata.AlbumTypeAlbum, date, now, types),
+				).
+					To(Equal(want))
 			},
 			Entry("all, past", artist.MonitorAll, &past, true),
 			Entry("future, past", artist.MonitorFuture, &past, false),
@@ -230,6 +235,52 @@ var _ = Describe("Views", Label("unit", "music"), func() {
 			Entry("manual", artist.MonitorManual, &future, false),
 			Entry("none", artist.MonitorNone, &future, false),
 		)
+
+		DescribeTable(
+			"by release type",
+			func(policy artist.Monitor, typ metadata.AlbumType, want bool) {
+				Expect(
+					monitoredFor(policy, typ, &future, now, types),
+				).To(Equal(want))
+			},
+			Entry(
+				"all, a listed type",
+				artist.MonitorAll,
+				metadata.AlbumTypeEP,
+				true,
+			),
+			Entry(
+				"all, a single",
+				artist.MonitorAll,
+				metadata.AlbumTypeSingle,
+				false,
+			),
+			Entry(
+				"all, a live album",
+				artist.MonitorAll,
+				metadata.AlbumTypeLive,
+				false,
+			),
+			Entry(
+				"future, a single ahead",
+				artist.MonitorFuture,
+				metadata.AlbumTypeSingle,
+				false,
+			),
+		)
+
+		It("monitors nothing when no type is listed", func() {
+			Expect(
+				monitoredFor(
+					artist.MonitorAll,
+					metadata.AlbumTypeAlbum,
+					nil,
+					now,
+					nil,
+				),
+			).
+				To(BeFalse())
+		})
 	})
 
 	Describe("parseMonitor", func() {

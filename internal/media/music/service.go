@@ -62,6 +62,7 @@ type Manager interface {
 	Detail(ctx context.Context, id uint32, lang string) (*ArtistView, error)
 	AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error)
 	SetArtistMonitor(ctx context.Context, id uint32, monitor string) error
+	ApplyMonitoredTypes(ctx context.Context) (int, int, error)
 	SetArtistQualityProfile(ctx context.Context, id uint32, profile string) error
 	SetAlbumMonitored(ctx context.Context, id uint32, m bool) error
 	Delete(ctx context.Context, id uint32, deleteFiles bool) error
@@ -170,9 +171,19 @@ func parseMonitor(m string) (artist.Monitor, error) {
 }
 
 // monitoredFor says whether a release group new to an artist is monitored
-// under the policy: all monitors everything, future the undated and the not
-// yet released, manual and none nothing.
-func monitoredFor(policy artist.Monitor, date *time.Time, now time.Time) bool {
+// under the policy: all monitors every release of a listed type
+// (library.music_monitored_types), future those of them that are undated or
+// not yet released, manual and none nothing.
+func monitoredFor(
+	policy artist.Monitor,
+	typ metadata.AlbumType,
+	date *time.Time,
+	now time.Time,
+	types []string,
+) bool {
+	if !slices.Contains(types, string(typ)) {
+		return false
+	}
 	switch policy {
 	case artist.MonitorAll:
 		return true
@@ -187,6 +198,7 @@ func albumSeeds(
 	policy artist.Monitor,
 	now time.Time,
 ) []db.AlbumSeed {
+	types := config.Get().Library.MusicMonitoredTypes
 	seeds := make([]db.AlbumSeed, len(groups))
 	for i, rg := range groups {
 		seeds[i] = db.AlbumSeed{
@@ -194,7 +206,7 @@ func albumSeeds(
 			Title:       rg.Title,
 			Type:        string(rg.Type),
 			ReleaseDate: rg.ReleaseDate,
-			Monitored:   monitoredFor(policy, rg.ReleaseDate, now),
+			Monitored:   monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
 		}
 	}
 	return seeds
@@ -363,8 +375,33 @@ func (s *Service) SetArtistMonitor(
 	}
 	return otelx.RecordSpanError(
 		span,
-		notFound(s.db.SetArtistMonitor(ctx, id, policy, time.Now())),
+		notFound(s.db.SetArtistMonitor(
+			ctx, id, policy, config.Get().Library.MusicMonitoredTypes, time.Now(),
+		)),
 	)
+}
+
+// ApplyMonitoredTypes applies the current library.music_monitored_types to
+// the albums of every artist whose policy is all or future, the way changing
+// the artist's monitor would — hand-set flags on those artists included.
+// Manual and none artists are left alone. It returns how many albums it
+// monitored and unmonitored.
+func (s *Service) ApplyMonitoredTypes(ctx context.Context) (int, int, error) {
+	types := config.Get().Library.MusicMonitoredTypes
+	ctx, span := tracer.Start(ctx, "music.apply_monitored_types",
+		trace.WithAttributes(attribute.StringSlice("types", types)))
+	defer span.End()
+	on, off, err := s.db.ReapplyMonitorPolicies(ctx, types, time.Now())
+	if err != nil {
+		return 0, 0, otelx.RecordSpanError(span, err)
+	}
+	span.SetAttributes(
+		attribute.Int("albums.monitored", on),
+		attribute.Int("albums.unmonitored", off),
+	)
+	slog.InfoContext(ctx, "music monitored types applied",
+		"types", types, "albums.monitored", on, "albums.unmonitored", off)
+	return on, off, nil
 }
 
 func (s *Service) SetAlbumMonitored(ctx context.Context, id uint32, m bool) error {

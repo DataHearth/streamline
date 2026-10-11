@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { Check } from "@lucide/svelte";
 	import { formatDateShort } from "@lib/dates";
-	import type { Release } from "@lib/music-books";
+	import { releaseIdle, type Release } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The short state at the end of a release row: a check when it is all
 	// there, what is missing when it is not, how far a download has got, or the
-	// day an upcoming one comes out.
+	// day an upcoming one comes out. A release nobody follows and nothing is
+	// held of shows nothing: it is not wanted, nothing will be searched for it.
 	let { release: r }: { release: Release } = $props();
 </script>
 
@@ -18,6 +19,8 @@
 	<span class="shrink-0 font-mono text-[10.5px] text-status-downloading">{Math.round(r.progress ?? 0)}%</span>
 {:else if r.status === "skipped"}
 	<span class="shrink-0 font-mono text-[10.5px] text-status-skipped">{i18n.status_skipped()}</span>
+{:else if releaseIdle(r)}
+	<!-- Unmonitored and empty: no state to show. -->
 {:else if r.status === "wanted"}
 	<span class="shrink-0 font-mono text-[10.5px] text-status-wanted">
 		{r.tracks_have > 0 ? `${r.tracks_have}/${r.track_count}` : i18n.status_wanted()}

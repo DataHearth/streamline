@@ -677,6 +677,37 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		})
 	})
 
+	Describe("ApplyMusicMonitoredTypes", func() {
+		It("re-applies the policies and answers the counts and the types", func() {
+			app.music.EXPECT().ApplyMonitoredTypes(mock.Anything).
+				Return(2, 5, nil).Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/monitored-types/apply",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var got MusicMonitoredTypesApplied
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Monitored).To(Equal(2))
+			Expect(got.Unmonitored).To(Equal(5))
+			Expect(got.Types).To(Equal([]MusicAlbumType{"album", "ep"}))
+		})
+
+		It("refuses a member", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/monitored-types/apply",
+				app.memberKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
 	Describe("PatchMusicArtist", func() {
 		patch := func(body string) *http.Response {
 			GinkgoHelper()

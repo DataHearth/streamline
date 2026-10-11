@@ -50,24 +50,14 @@
 {/snippet}
 
 <nav aria-label={i18n.music_discography()} class="flex flex-col">
-	{#if groups.albums.length > 0}
-		<p class="px-2.5 pb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">
-			{i18n.music_group_albums()} · {groups.albums.length}
+	{#each groups as g, i (g.key)}
+		<p class={cn("px-2.5 pb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint", i > 0 && "pt-4")}>
+			{g.label} · {g.releases.length}
 		</p>
 		<ul class="flex flex-col gap-0.5">
-			{#each groups.albums as r (r.id)}
+			{#each g.releases as r (r.id)}
 				{@render item(r)}
 			{/each}
 		</ul>
-	{/if}
-	{#if groups.others.length > 0}
-		<p class="px-2.5 pb-1 pt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">
-			{i18n.music_group_others()} · {groups.others.length}
-		</p>
-		<ul class="flex flex-col gap-0.5">
-			{#each groups.others as r (r.id)}
-				{@render item(r)}
-			{/each}
-		</ul>
-	{/if}
+	{/each}
 </nav>

@@ -93,13 +93,22 @@ type Store interface {
 		at time.Time,
 	) error
 	// SetArtistMonitor stores the policy and applies it to the existing
-	// albums; it never touches album status.
+	// albums, all and future only to the listed release types; it never
+	// touches album status.
 	SetArtistMonitor(
 		ctx context.Context,
 		id uint32,
 		monitor artist.Monitor,
+		types []string,
 		now time.Time,
 	) error
+	// ReapplyMonitorPolicies applies every all and future artist's policy to
+	// its albums again, returning how many it monitored and unmonitored.
+	ReapplyMonitorPolicies(
+		ctx context.Context,
+		types []string,
+		now time.Time,
+	) (int, int, error)
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetAlbumStatus(
 		ctx context.Context,
