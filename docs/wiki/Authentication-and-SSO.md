@@ -214,6 +214,8 @@ streamline auth unlock user@example.com
 
 Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is skipped silently** — check the boot logs if one doesn't appear on the login page.
 
+With at least one provider available, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, after an `oidc_link_not_allowed` error, and in a browser whose last sign-in used it. Local accounts keep working exactly as before; with no provider, the form is all the page shows.
+
 ```yaml
 auth:
   oidc:
