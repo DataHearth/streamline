@@ -238,14 +238,19 @@
   "download": {
     "selectors": [
       {
-        "selector": "a[href^=\"magnet:?xt=\"]",
-        "attribute": "href"
+        "selector": "button#magnet-button",
+        "attribute": "data-link",
+        "filters": [
+          {
+            "name": "base64decode"
+          }
+        ]
       }
     ]
   },
   "source": {
-    "path": "definitions/v11/blueroms.yml",
-    "sha256": "5386ca48295391dd2ceae8f25dfa966e3df7fbb1228c226a2037ec1b5d668bc9",
+    "path": "definitions/v12/blueroms.yml",
+    "sha256": "762a2883dbb1a2a1fe7e6980f29f210281f2b55f11f4deb54ee5e64ea70034c6",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

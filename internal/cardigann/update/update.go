@@ -278,7 +278,7 @@ func latest(ctx context.Context, client *http.Client) (cardigann.Upstream, error
 	}, nil
 }
 
-// archive reads the schema directory's definitions and VERSIONS out of the
+// archive reads every schema directory's definitions and VERSIONS out of the
 // commit's tarball. Anything but a regular file is left out.
 func archive(
 	ctx context.Context,
@@ -304,7 +304,6 @@ func archive(
 	}
 	defer gz.Close()
 	tr := tar.NewReader(io.LimitReader(gz, maxArchive))
-	prefix := fmt.Sprintf("definitions/v%d/", cardigann.SchemaVersion)
 	var (
 		files    []snapshot.File
 		versions string
@@ -322,8 +321,16 @@ func archive(
 		if !ok || h.Typeflag != tar.TypeReg {
 			continue
 		}
-		name, inSchema := strings.CutPrefix(rel, prefix)
-		if rel != "VERSIONS" && (!inSchema || strings.Contains(name, "/") ||
+		version, name := 0, ""
+		for v := cardigann.SchemaVersion; v >= cardigann.OldestSchemaVersion; v-- {
+			if n, ok := strings.CutPrefix(
+				rel,
+				fmt.Sprintf("definitions/v%d/", v),
+			); ok {
+				version, name = v, n
+			}
+		}
+		if rel != "VERSIONS" && (version == 0 || strings.Contains(name, "/") ||
 			!strings.HasSuffix(name, ".yml")) {
 			continue
 		}
@@ -335,10 +342,12 @@ func archive(
 			versions = string(b)
 			continue
 		}
-		files = append(files, snapshot.File{Name: name, Data: b})
+		files = append(files, snapshot.File{Version: version, Name: name, Data: b})
 	}
 	if versions == "" || len(files) == 0 {
-		return nil, "", fmt.Errorf("upstream archive: no %s or VERSIONS", prefix)
+		return nil, "", fmt.Errorf(
+			"upstream archive: no %v or VERSIONS", snapshot.Prefixes(),
+		)
 	}
 	return files, versions, nil
 }

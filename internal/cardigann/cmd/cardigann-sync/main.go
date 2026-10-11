@@ -92,15 +92,20 @@ func run(src, ref, out string) error {
 }
 
 // fetch makes a sparse, shallow, blob-filtered checkout of just the schema
-// version we read: a full clone carries every frozen version since v1.
+// versions we read: a full clone carries every frozen version since v1.
 // Fetching by ref rather than cloning by branch is what lets -ref name a
 // commit as well as a branch or tag.
 func fetch(dir, ref string) error {
-	version := fmt.Sprintf("/definitions/v%d/", cardigann.SchemaVersion)
+	prefixes := snapshot.Prefixes()
+	sparse := make([]string, 0, 3+len(prefixes))
+	sparse = append(sparse, "set", "--no-cone", "/VERSIONS")
+	for _, p := range prefixes {
+		sparse = append(sparse, "/"+p)
+	}
 	steps := [][]string{
 		{"init", "-q"},
 		{"remote", "add", "origin", upstreamRepo + ".git"},
-		{"sparse-checkout", "set", "--no-cone", version, "/VERSIONS"},
+		append([]string{"sparse-checkout"}, sparse...),
 		{"fetch", "-q", "--depth", "1", "--filter=blob:none", "origin", ref},
 		{"checkout", "-q", "FETCH_HEAD"},
 	}
@@ -164,52 +169,66 @@ func upstream(dir string) (cardigann.Upstream, error) {
 // points at. Anything but a plain file with an embeddable name is skipped
 // with a reason, not fatal.
 func definitionBlobs(dir string) ([]snapshot.File, []cardigann.Skipped, error) {
-	prefix := fmt.Sprintf("definitions/v%d/", cardigann.SchemaVersion)
-	list, err := git(dir, "ls-tree", "-z", "HEAD", "--", prefix)
-	if err != nil {
-		return nil, nil, err
-	}
 	var (
-		names, shas []string
-		skipped     []cardigann.Skipped
+		files   []snapshot.File
+		skipped []cardigann.Skipped
 	)
-	for entry := range strings.SplitSeq(strings.TrimSuffix(list, "\x00"), "\x00") {
-		meta, path, ok := strings.Cut(entry, "\t")
-		fields := strings.Fields(meta)
-		if !ok || len(fields) != 3 {
+	for _, prefix := range snapshot.Prefixes() {
+		list, err := git(dir, "ls-tree", "-z", "HEAD", "--", prefix)
+		if err != nil {
+			return nil, nil, err
+		}
+		version, err := strconv.Atoi(strings.TrimSuffix(
+			strings.TrimPrefix(prefix, "definitions/v"), "/"))
+		if err != nil {
+			return nil, nil, err
+		}
+		var names, shas []string
+		for entry := range strings.SplitSeq(strings.TrimSuffix(list, "\x00"), "\x00") {
+			meta, path, ok := strings.Cut(entry, "\t")
+			fields := strings.Fields(meta)
+			if !ok || len(fields) != 3 {
+				continue
+			}
+			name := strings.TrimPrefix(path, prefix)
+			if !strings.HasSuffix(name, ".yml") {
+				continue
+			}
+			switch {
+			case fields[0] != "100644" || fields[1] != "blob":
+				skipped = append(skipped, cardigann.Skipped{
+					File:   name,
+					Reason: fmt.Sprintf("not a plain file (mode %s)", fields[0]),
+				})
+			case !snapshot.ValidName.MatchString(name):
+				skipped = append(skipped, cardigann.Skipped{
+					File: name, Reason: "file name cannot be embedded",
+				})
+			default:
+				names = append(names, name)
+				shas = append(shas, fields[2])
+			}
+		}
+		if len(names) == 0 {
 			continue
 		}
-		name := strings.TrimPrefix(path, prefix)
-		if !strings.HasSuffix(name, ".yml") {
-			continue
+		blobs, err := catBlobs(dir, shas)
+		if err != nil {
+			return nil, nil, err
 		}
-		switch {
-		case fields[0] != "100644" || fields[1] != "blob":
-			skipped = append(skipped, cardigann.Skipped{
-				File:   name,
-				Reason: fmt.Sprintf("not a plain file (mode %s)", fields[0]),
+		for i := range names {
+			files = append(files, snapshot.File{
+				Version: version, Name: names[i], Data: blobs[i],
 			})
-		case !snapshot.ValidName.MatchString(name):
-			skipped = append(skipped, cardigann.Skipped{
-				File: name, Reason: "file name cannot be embedded",
-			})
-		default:
-			names = append(names, name)
-			shas = append(shas, fields[2])
 		}
 	}
-	if len(names) == 0 {
-		return nil, nil, fmt.Errorf("no definitions under %s at HEAD", prefix)
+	if len(files) == 0 {
+		return nil, nil, fmt.Errorf(
+			"no definitions under %v at HEAD",
+			snapshot.Prefixes(),
+		)
 	}
-	blobs, err := catBlobs(dir, shas)
-	if err != nil {
-		return nil, nil, err
-	}
-	out := make([]snapshot.File, len(names))
-	for i := range names {
-		out[i] = snapshot.File{Name: names[i], Data: blobs[i]}
-	}
-	return out, skipped, nil
+	return files, skipped, nil
 }
 
 // catBlobs reads many objects through one git cat-file --batch.

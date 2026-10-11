@@ -509,7 +509,7 @@ Streamline ships the tracker definitions Prowlarr and Jackett use and can run th
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions/v11) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
+| `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions) (`v12`, else `v11`) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
 | `site` | | One of the definition's own links, when the first one is blocked or slow for you |
 | `settings` | | The definition's settings by name. One you leave out takes its default; a checkbox is `"true"` or `"false"`, a select one of its option keys |
 | `proxy` | | An `http://`, `https://` or `socks5://` proxy the tracker's requests go through — and the challenge solver's browser too (see below). A proxy that decrypts HTTPS sees your tracker credentials |
@@ -539,7 +539,7 @@ Private trackers work too: give the definition's settings — usually `username`
 
 **Definition updates.** The definitions ship with Streamline, and the `cardigann-update` [scheduled job](Scheduled-Jobs) also fetches Prowlarr's latest ones every day into `<data_dir>/cardigann/current`, so a tracker that moved to a new domain keeps working between releases. An update that would send one of your configured trackers to other domains, or change how it logs in, is not applied by itself: Settings → Indexers shows it with the exact change, and you approve it or keep the version you have. A version you turn down is not offered again.
 
-**Your own definitions.** Drop a Cardigann YAML file into `<data_dir>/cardigann/custom/` — `mytracker.yml` — and use `definition: mytracker`. A file there with the same name as a shipped definition replaces it. It is read in the same format as Prowlarr's `definitions/v11` and checked the same way: an indexer using a file Streamline cannot read is refused, with the reason.
+**Your own definitions.** Drop a Cardigann YAML file into `<data_dir>/cardigann/custom/` — `mytracker.yml` — and use `definition: mytracker`. A file there with the same name as a shipped definition replaces it. It is read in the same format as Prowlarr's `definitions/v12` and checked the same way: an indexer using a file Streamline cannot read is refused, with the reason.
 
 ### quality_profiles
 

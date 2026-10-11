@@ -60,6 +60,8 @@ search:
 type commit struct {
 	sha, date string
 	files     map[string]string
+	// v12 holds the files upstream also carries under definitions/v12.
+	v12 map[string]string
 }
 
 func tarball(c commit) []byte {
@@ -78,6 +80,9 @@ func tarball(c commit) []byte {
 	add("VERSIONS", versions)
 	for name, body := range c.files {
 		add("definitions/v11/"+name+".yml", body)
+	}
+	for name, body := range c.v12 {
+		add("definitions/v12/"+name+".yml", body)
 	}
 	Expect(tw.Close()).To(Succeed())
 	Expect(gz.Close()).To(Succeed())
@@ -139,10 +144,16 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 	It(
 		"replaces the snapshot, holds a configured tracker's domain change for approval",
 		func() {
-			res := run(commit{sha(1), "2030-01-01T00:00:00Z", map[string]string{
-				"alpha": definition("alpha", "https://alpha.example/"),
-				"beta":  definition("beta", "https://beta.example/"),
-			}})
+			res := run(
+				commit{
+					sha:  sha(1),
+					date: "2030-01-01T00:00:00Z",
+					files: map[string]string{
+						"alpha": definition("alpha", "https://alpha.example/"),
+						"beta":  definition("beta", "https://beta.example/"),
+					},
+				},
+			)
 			Expect(res.Added).To(ConsistOf("alpha", "beta"))
 			cat, err := definitions.Catalog(dir)
 			Expect(err).NotTo(HaveOccurred())
@@ -153,10 +164,16 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 			Expect(run(head).Current).To(BeTrue())
 			Expect(archives).To(Equal(1))
 
-			res = run(commit{sha(2), "2030-01-02T00:00:00Z", map[string]string{
-				"alpha": definition("alpha", "https://alpha.evil/"),
-				"beta":  definition("beta", "https://beta.moved/"),
-			}})
+			res = run(
+				commit{
+					sha:  sha(2),
+					date: "2030-01-02T00:00:00Z",
+					files: map[string]string{
+						"alpha": definition("alpha", "https://alpha.evil/"),
+						"beta":  definition("beta", "https://beta.moved/"),
+					},
+				},
+			)
 			Expect(res.Held).To(ConsistOf("alpha"))
 			Expect(res.Changed).To(ConsistOf("beta"))
 
@@ -196,24 +213,69 @@ var _ = Describe("the definition update", Label("unit", "cardigann"), func() {
 	)
 
 	It("does not propose a version that was turned down again", func() {
-		run(commit{sha(1), "2030-01-01T00:00:00Z", map[string]string{
-			"alpha": definition("alpha", "https://alpha.example/"),
-		}})
+		run(
+			commit{
+				sha:  sha(1),
+				date: "2030-01-01T00:00:00Z",
+				files: map[string]string{
+					"alpha": definition("alpha", "https://alpha.example/"),
+				},
+			},
+		)
 		evil := definition("alpha", "https://alpha.evil/")
-		run(commit{sha(2), "2030-01-02T00:00:00Z", map[string]string{"alpha": evil}})
+		run(
+			commit{
+				sha:   sha(2),
+				date:  "2030-01-02T00:00:00Z",
+				files: map[string]string{"alpha": evil},
+			},
+		)
 		Expect(update.Reject(dir, "alpha")).To(Succeed())
 		Expect(update.List(dir)).To(BeEmpty())
 
 		res := run(
-			commit{sha(3), "2030-01-03T00:00:00Z", map[string]string{"alpha": evil}},
+			commit{
+				sha:   sha(3),
+				date:  "2030-01-03T00:00:00Z",
+				files: map[string]string{"alpha": evil},
+			},
 		)
 		Expect(res.Held).To(ConsistOf("alpha"))
 		Expect(update.List(dir)).To(BeEmpty())
 
-		run(commit{sha(4), "2030-01-04T00:00:00Z", map[string]string{
-			"alpha": definition("alpha", "https://alpha.other/"),
-		}})
+		run(
+			commit{
+				sha:  sha(4),
+				date: "2030-01-04T00:00:00Z",
+				files: map[string]string{
+					"alpha": definition("alpha", "https://alpha.other/"),
+				},
+			},
+		)
 		Expect(update.List(dir)).To(HaveLen(1))
+	})
+
+	It("takes a definition's v12 copy over its v11 one", func() {
+		run(
+			commit{
+				sha:  sha(1),
+				date: "2030-01-01T00:00:00Z",
+				files: map[string]string{
+					"alpha": definition("alpha", "https://alpha.example/"),
+					"beta":  definition("beta", "https://beta.example/"),
+				},
+				v12: map[string]string{
+					"alpha": definition("alpha", "https://alpha.v12.example/"),
+				},
+			},
+		)
+		a, err := definitions.Load(dir, "alpha")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(a.Links).To(Equal([]string{"https://alpha.v12.example/"}))
+		Expect(a.Source.Path).To(Equal("definitions/v12/alpha.yml"))
+		b, err := definitions.Load(dir, "beta")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(b.Source.Path).To(Equal("definitions/v11/beta.yml"))
 	})
 
 	It("lets a custom definition override the snapshot's", func() {

@@ -13,7 +13,7 @@ catalog and the API`).
 
 | Path | What it is |
 |---|---|
-| `internal/cardigann/` | The model (`Definition` and friends, upstream v11 schema key for key), the strict `Decode`, `Catalog`/`Summarize`, `EncodeJSON` |
+| `internal/cardigann/` | The model (`Definition` and friends, upstream v12 schema key for key), the strict `Decode`, `Catalog`/`Summarize`, `EncodeJSON` |
 | `internal/cardigann/convert/` | `Convert(path, yaml)` — the .NET-to-Go rewrites — and `Check(def)`, which validates a converted definition as stored. Pure; no I/O |
 | `internal/cardigann/snapshot/` | `Build` (convert a file set into catalog + encoded definitions), `Write`/`WriteIndex` (data/, index.json, NOTICE), `Notice`, `CheckVersions` — the one code path both the sync and the runtime update write through |
 | `internal/cardigann/cmd/cardigann-sync/` | The sync: fetch upstream with git, read `HEAD`'s blobs, hand them to `snapshot` |
@@ -26,7 +26,7 @@ catalog and the API`).
 
 `task cardigann:sync` (optionally `REF=<branch|tag|commit>` or `SRC=<checkout>`) makes a
 sparse, shallow, blob-filtered git fetch of `Prowlarr/Indexers` — only
-`definitions/v11/` and `VERSIONS` — converts every file, and rewrites
+`definitions/v12/`, `definitions/v11/` and `VERSIONS` — converts every file, and rewrites
 `internal/cardigann/definitions/{data/<file>.json,index.json,NOTICE}` **wholesale**, so a
 definition deleted upstream disappears here too.
 
@@ -59,11 +59,18 @@ definition deleted upstream disappears here too.
   `VERSIONS` — tracked, untracked or ignored, flags set explicitly so no git config can hide
   one — is refused: the NOTICE would name a revision the files are not. `-ref` and `-src`
   together are refused too, since `-ref` would be silently ignored.
-- `cardigann.SchemaVersion` (11) pins the upstream directory read. The sync fails when
-  upstream's `VERSIONS` puts it below `MIN_VERSION` — a frozen version still reads fine and
-  is never updated again, so syncing it would ship a snapshot that looks fresh and is not —
-  and warns when `CURRENT_VERSION` has moved past it. Moving to a new schema is a port of
-  the model, not a flag.
+- **Two schema directories, newest per file.** `cardigann.SchemaVersion` (12) is the newest
+  schema read and `OldestSchemaVersion` (11) the oldest. v12 is v11 plus the `base64decode`
+  and `base64encode` filters (Prowlarr's `WebEncoders.Base64Url*`: URL alphabet, no
+  padding; the decoder takes the standard alphabet and padding too), and upstream puts a
+  file in `v12/` only when it needs them — at `8df0764` that is `blueroms` alone — while
+  Prowlarr falls back to `v11/` file by file. `snapshot.Build` does the same: every
+  directory in `snapshot.Prefixes()` is read and the newest copy of a name wins, its
+  `source.path` naming the directory it came from. The sync fails when upstream's
+  `VERSIONS` puts `SchemaVersion` outside `MIN_VERSION`..`MAX_VERSION` — a frozen version
+  still reads fine and is never updated again, so syncing it would ship a snapshot that
+  looks fresh and is not — and warns when `CURRENT_VERSION` has moved past it. Moving to a
+  new schema is a port of the model (new keys, new filters), then a bump of the constant.
 - Definitions are keyed by their **upstream file name** (`Summary.File`, `Load(file)`), not
   their `id`: Prowlarr stores an indexer under its definition file and fetches updates by
   it (`/master/11/bluebird`), and six files upstream are named apart from the id inside
@@ -80,7 +87,7 @@ definition deleted upstream disappears here too.
   recorded in `index.json`'s `skipped` with the reason, and printed**, never a failed sync.
   One broken upstream file must not block every other tracker's update.
 
-At `8df0764` (2026-10-09): 580 v11 files, 579 converted, 1 skipped — `1337x.yml`, an
+At `8df0764` (2026-10-09): 580 definitions (one of them from v12), 579 converted, 1 skipped — `1337x.yml`, an
 unbalanced `)` in a search-path template that Jackett's regex-driven template engine
 tolerates and Go's parser does not. The fix belongs upstream; do not teach the converter to
 guess at unbalanced parentheses.
@@ -95,7 +102,8 @@ alone would leave a tracker that moved domains broken until the next streamline 
 - **What is fetched**: the commit `api.github.com/repos/Prowlarr/Indexers/commits/master`
   names, then `codeload.github.com/…/tar.gz/<sha>` (≈750 KB; the whole repository, every
   schema version) — so the NOTICE names an exact commit, as the sync's does, without git
-  on the host. Only regular `definitions/v11/*.yml` entries and `VERSIONS` are read; inflated
+  on the host. Only regular `definitions/v12/*.yml`, `definitions/v11/*.yml` and `VERSIONS`
+  entries are read; inflated
   size is capped. Nothing is fetched past the API call when the commit is the one in force.
 - **One code path with the sync**: `snapshot.Build` converts, `snapshot.Write` writes
   `data/`, `index.json` and the NOTICE — the provenance the licence rests on is written the

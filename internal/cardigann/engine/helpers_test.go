@@ -162,6 +162,24 @@ var _ = Describe("filters", Label("unit", "cardigann"), func() {
 			"a_b",
 		),
 		Entry(
+			"base64decode, URL alphabet without padding",
+			"aGk_Pw",
+			cardigann.Filter{Name: "base64decode"},
+			"hi??",
+		),
+		Entry(
+			"base64decode, standard alphabet padded",
+			"aGk/Pw==",
+			cardigann.Filter{Name: "base64decode"},
+			"hi??",
+		),
+		Entry(
+			"base64encode, URL alphabet without padding",
+			"hi??",
+			cardigann.Filter{Name: "base64encode"},
+			"aGk_Pw",
+		),
+		Entry(
 			"replace",
 			"a:b",
 			cardigann.Filter{Name: "replace", Args: []string{":", "-"}},

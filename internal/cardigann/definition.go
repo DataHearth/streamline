@@ -2,7 +2,7 @@
 // Jackett and Prowlarr describe a tracker in — after streamline's converter
 // has rewritten it for Go (see internal/cardigann/convert).
 //
-// The types mirror the upstream v11 schema key for key, YAML and JSON alike,
+// The types mirror the upstream v12 schema key for key, YAML and JSON alike,
 // so a definition reads the same in Prowlarr/Indexers and in our embedded
 // copy. Everything that is ordered upstream stays ordered here: fields are
 // evaluated in declaration order (a later field reads an earlier one through
@@ -10,11 +10,19 @@
 // OrderedMap rather than a Go map.
 package cardigann
 
-// SchemaVersion is the Prowlarr/Indexers definition version this package
-// models. Upstream keeps one directory per version (definitions/v11/...) and
-// freezes a version once it falls below MIN_VERSION, so a sync that finds 11
-// retired must be ported to the new schema rather than reading stale files.
-const SchemaVersion = 11
+// SchemaVersion is the newest Prowlarr/Indexers definition version this
+// package models; OldestSchemaVersion the oldest it still reads. Upstream
+// keeps one directory per version (definitions/v12/...) and adds a file to a
+// newer one only when that definition needs what the version added — v12 is
+// v11 plus the base64decode and base64encode filters — so Prowlarr falls back
+// to the older directory file by file, and a snapshot does the same: the
+// newest copy of each file wins. A version frozen below upstream's
+// MIN_VERSION still reads fine and is never updated again; a sync that finds
+// SchemaVersion retired must port this package to the new schema.
+const (
+	SchemaVersion       = 12
+	OldestSchemaVersion = 11
+)
 
 // Definition fields whose upstream default is not Go's zero value are
 // pointers, so "absent" survives into the JSON: TestLinkTorrent defaults to
