@@ -241,6 +241,7 @@ func indexerProbeFailure(err error) (string, bool) {
 		indexer.ErrCaptchaRequired,
 		indexer.ErrLoginBackoff,
 		indexer.ErrCaptchaExpired,
+		indexer.ErrChallenge,
 	} {
 		if errors.Is(err, sentinel) {
 			return err.Error(), true

@@ -511,6 +511,7 @@ Streamline ships the tracker definitions Prowlarr and Jackett use and can run th
 | `definition` | ✅ | The definition's file name in [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers/tree/master/definitions/v11) without `.yml` — `yts`, `nyaasi`, `thepiratebay` |
 | `site` | | One of the definition's own links, when the first one is blocked or slow for you |
 | `settings` | | The definition's settings by name. One you leave out takes its default; a checkbox is `"true"` or `"false"`, a select one of its option keys |
+| `proxy` | | An `http://`, `https://` or `socks5://` proxy the tracker's requests go through — and the challenge solver's browser too (see below). A proxy that decrypts HTTPS sees your tracker credentials |
 
 ```yaml
 indexers:
@@ -528,7 +529,12 @@ indexers:
         filter-id: "2"     # trusted uploads only
 ```
 
-Private trackers work too: give the definition's settings — usually `username` and `password`, sometimes a `cookie`, an API key or a passkey — and Streamline logs in when it needs to, keeps the session for 30 days and logs in again when the tracker says it expired. A login the tracker refuses is retried with a growing delay (one minute, then five, up to a day), so a wrong password cannot get your account banned; fix the settings and use **Log in** on the indexer's card to try at once. A tracker whose login form shows an image captcha is logged in from that card too: Streamline shows the captcha and you type it. A site behind a browser challenge (Cloudflare and the like) may refuse searches until challenge solving lands.
+Private trackers work too: give the definition's settings — usually `username` and `password`, sometimes a `cookie`, an API key or a passkey — and Streamline logs in when it needs to, keeps the session for 30 days and logs in again when the tracker says it expired. A login the tracker refuses is retried with a growing delay (one minute, then five, up to a day), so a wrong password cannot get your account banned; fix the settings and use **Log in** on the indexer's card to try at once. A tracker whose login form shows an image captcha is logged in from that card too: Streamline shows the captcha and you type it. A site behind a browser challenge (Cloudflare, DDoS-Guard) needs a challenge solver: run [trawl](https://github.com/germondai/trawl), [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) or Byparr and point `cardigann.solver_url` at it. When a tracker answers with a challenge page, Streamline has the solver open it in a real browser and reuses the cookies and browser identity it got through with until they expire. A clearance is only good for the address that earned it, so the solver must reach the internet from the same address as Streamline; if Streamline's tracker traffic leaves through a VPN, give the indexer that VPN's proxy as `proxy` — the solver is told to use it too.
+
+| `cardigann.*` | Default | Notes |
+| --- | --- | --- |
+| `solver_url` | empty | FlareSolverr-compatible service, e.g. `http://trawl:8191`. Empty: a challenged search fails and says so |
+| `solver_timeout` | `60s` | How long one solve may take |
 
 ### quality_profiles
 

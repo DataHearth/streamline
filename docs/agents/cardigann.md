@@ -4,9 +4,9 @@
 Prowlarr and Jackett describe trackers in, so a stack can drop Prowlarr/Jackett. **What
 exists today is the converter, the embedded snapshot and the engine**: a `protocol:
 cardigann` indexer entry, configured in the config file only, runs any definition in the
-snapshot, logging in to its tracker when the definition says to (`## Logins`). The
-browser-challenge solver, the runtime definition update and the catalog UI are not built
-yet.
+snapshot, logging in to its tracker when the definition says to (`## Logins`) and getting
+past a browser challenge through a FlareSolverr-compatible solver (`## Browser
+challenges`). The runtime definition update and the catalog UI are not built yet.
 
 | Path | What it is |
 |---|---|
@@ -363,10 +363,8 @@ indexers:
 - **Test** runs the feed query (no term) and passes on a readable answer, results or not.
   **Feed** is the same query.
 
-What the engine does **not** do yet: solve browser challenges — a definition carrying an
-`info_flaresolverr` setting (eztv, for one) may be refused by its site until the solver
-lands —, pick a tracker's own category for a search beyond the newznab root of the kind, or
-page past the first response.
+What the engine does **not** do yet: pick a tracker's own category for a search beyond the
+newznab root of the kind, or page past the first response.
 
 ## Logins
 
@@ -416,6 +414,42 @@ not to, is `internal/indexer`'s** (`Cardigann.run`).
 - **Downloads** go out with the session: `ResolveDownload` runs the download block inside
   the same login handling and adds the session's `Cookie` and user agent to the target's
   headers, which `download.resolveTorrentSource` sends.
+
+## Browser challenges
+
+A port of Prowlarr's `FlareSolverr` indexer proxy and `CloudFlareDetectionService`, applied
+in `Engine.do` — the one choke point every request goes through (search, login, captcha,
+download block), so all of them are covered.
+
+- **Detection** (`isChallenge`) is Prowlarr's, exactly: the `Server` header must be
+  `cloudflare`, `cloudflare-nginx` or `ddos-guard`, and then either a 503/403 whose body is
+  one of the known challenge pages (`Just a moment...`, `Access denied`, `Attention
+  Required! | Cloudflare`, `error code: 1020`, `DDOS-GUARD`), or the Dutch trackers' custom
+  page (`Vary: Accept-Encoding,User-Agent`, no `Content-Encoding`, "ddos" in the body). Go's
+  transport drops `Content-Encoding` after inflating, as .NET's automatic decompression
+  does, so the last rule reads the same.
+- **Solving**: `POST {cardigann.solver_url}/v1` with `request.get` (or `request.post` and
+  `postData` for a urlencoded form — a multipart one is refused, as upstream), `maxTimeout`
+  from `cardigann.solver_timeout` (60s). A 200 or 500 answer is read; no cookies is a
+  failure carrying the solver's `message`. The cookies go into the jar for the request's
+  host (and the site's), the solution's user agent becomes the engine's, and the request is
+  sent **once more**; still challenged → `ErrChallenge`. With no solver configured the
+  request fails with `ErrChallenge` naming `cardigann.solver_url`. The solver call has its
+  own timeout (`solver_timeout` + 10s), not `otelx.HTTPClient`'s 30s.
+- **The clearance persists** through the ordinary session: `Engine.Session` carries the
+  user agent, `IndexerSession.user_agent` stores it, and a definition that logs in nowhere
+  still gets a session row once a solve leaves cookies or a user agent behind. A
+  `cf_clearance` is bound to the client address and user agent, which is why both travel
+  together and why the download target gets the user agent too.
+- **`cardigann.proxy`** (per indexer; http, https, socks5) builds the engine's client with
+  `otelx.ProxiedHTTPClient` and is passed to the solver as `proxy` (credentials split into
+  `username`/`password`), so the browser earns its clearance from the address the engine's
+  requests leave from. The final `.torrent` fetch in `download.resolveTorrentSource` does
+  **not** go through it — a tracker that challenges the download URL itself, from a
+  different address, still fails there. The audit log redacts `.cardigann.proxy`.
+- Errors: `indexer.ErrChallenge` (outcome `challenge`), echoed in connection tests — the
+  engine's messages carry no tracker URL, and a transport error reaching the solver is
+  redacted.
 
 ## Secrets
 

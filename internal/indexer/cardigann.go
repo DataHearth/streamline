@@ -10,6 +10,7 @@ import (
 	"maps"
 	"math"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -37,6 +38,9 @@ var (
 	ErrLoginBackoff = errors.New("tracker login failed recently")
 	// ErrCaptchaExpired is a captcha answer whose page is no longer held.
 	ErrCaptchaExpired = errors.New("the captcha expired; load a new one")
+	// ErrChallenge is a tracker behind a browser challenge no solver got
+	// past; the text says why, naming the setting when none is configured.
+	ErrChallenge = errors.New("tracker challenge not solved")
 	// ErrNotBuiltin is a login asked of an indexer streamline does not run
 	// itself.
 	ErrNotBuiltin = errors.New("not a built-in indexer")
@@ -126,12 +130,34 @@ func newCardigann(
 			}
 		}
 	}
+	client := otelx.HTTPClient
+	var proxy *url.URL
+	if p := ix.Cardigann.Proxy; p != "" {
+		if proxy, err = url.Parse(p); err != nil {
+			return nil, fmt.Errorf("indexer %q: cardigann.proxy: %w", ix.Name, err)
+		}
+		client = otelx.ProxiedHTTPClient(proxy)
+	}
+	var solver *engine.Solver
+	if cc := config.Get().Cardigann; cc.SolverURL != "" {
+		timeout, err := time.ParseDuration(cc.SolverTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("cardigann.solver_timeout: %w", err)
+		}
+		solver = &engine.Solver{
+			URL:     cc.SolverURL,
+			Timeout: timeout,
+			Client:  otelx.HTTPClient,
+			Proxy:   proxy,
+		}
+	}
 	c.engine, err = engine.New(def, engine.Options{
 		Name:     ix.Name,
 		Site:     ix.Cardigann.Site,
 		Settings: ix.Cardigann.Settings,
-		Client:   otelx.HTTPClient,
+		Client:   client,
 		Session:  session,
+		Solver:   solver,
 	})
 	if err != nil {
 		return nil, err
@@ -333,6 +359,8 @@ func cardigannError(err error) error {
 		return err
 	case errors.Is(err, engine.ErrCaptchaRequired):
 		return ErrCaptchaRequired
+	case errors.Is(err, engine.ErrChallenge):
+		return fmt.Errorf("%w: %w", ErrChallenge, err)
 	case errors.Is(err, engine.ErrLoginFailed):
 		msg := strings.TrimPrefix(err.Error(), engine.ErrLoginFailed.Error())
 		return fmt.Errorf("%w%s", ErrLoginFailed, msg)

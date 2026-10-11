@@ -89,6 +89,10 @@ type CardigannIndexer struct {
 	// the definition's default; a checkbox is "true" or "false", a select
 	// one of its option keys.
 	Settings map[string]string `koanf:"settings"`
+	// Proxy sends the tracker's requests through an http, https or socks5
+	// proxy — the solver's browser is told to use it too, since a challenge
+	// clearance is only good for the address that earned it.
+	Proxy string `koanf:"proxy"`
 }
 
 type QualityProfileEntry struct {
