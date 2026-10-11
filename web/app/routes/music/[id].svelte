@@ -138,7 +138,6 @@
 		if (artist) searchNow.mutate({ path: `/music/artists/${id}/search-now`, title: artist.name });
 	}
 	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
-	const searchTrack = (t: Track) => searchNow.mutate({ path: `/music/tracks/${t.id}/search-now`, title: t.title });
 	let deletingTrack = $state<Track | null>(null);
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
@@ -388,7 +387,7 @@
 					onManualSearch={(r) => openManual(String(r.id))}
 					onMonitor={toggleRelease}
 					monitorPending={monitorRelease.isPending}
-					onSearchTrack={searchTrack}
+					onManualSearchTrack={(r) => openManual(String(r.id))}
 					onDeleteTrack={(t) => (deletingTrack = t)}
 				/>
 			</div>
@@ -405,7 +404,7 @@
 						onManualSearch={() => openManual(String(selected.id))}
 						onMonitor={() => toggleRelease(selected)}
 						monitorPending={monitorRelease.isPending}
-						onSearchTrack={searchTrack}
+						onManualSearchTrack={() => openManual(String(selected.id))}
 						onDeleteTrack={(t) => (deletingTrack = t)}
 					/>
 				{/if}

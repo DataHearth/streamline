@@ -27,7 +27,7 @@
 		onManualSearch,
 		onMonitor,
 		monitorPending = false,
-		onSearchTrack,
+		onManualSearchTrack,
 		onDeleteTrack,
 	}: {
 		releases: Release[];
@@ -39,7 +39,9 @@
 		onMonitor: (r: Release) => void;
 		// The monitor write is in flight.
 		monitorPending?: boolean;
-		onSearchTrack?: (t: Track) => void;
+		// A track is never grabbed on its own: its manual search lists the
+		// releases of its album.
+		onManualSearchTrack?: (r: Release) => void;
 		onDeleteTrack?: (t: Track) => void;
 	} = $props();
 
@@ -120,7 +122,7 @@
 							compact
 							markMissing={r.status === "wanted" && r.tracks_have > 0}
 							{canEdit}
-							onSearch={onSearchTrack}
+							onManualSearch={onManualSearchTrack ? () => onManualSearchTrack(r) : undefined}
 							onDeleteFile={onDeleteTrack}
 						/>
 					{:else if r.tracks_pending}

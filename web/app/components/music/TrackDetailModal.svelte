@@ -12,7 +12,7 @@
 		release,
 		qualityNote = "",
 		canEdit = false,
-		onSearch,
+		onManualSearch,
 		onDeleteFile,
 		onClose,
 	}: {
@@ -20,7 +20,7 @@
 		release?: Release;
 		qualityNote?: string;
 		canEdit?: boolean;
-		onSearch?: (t: Track) => void;
+		onManualSearch?: (t: Track) => void;
 		onDeleteFile?: (t: Track) => void;
 		onClose: () => void;
 	} = $props();
@@ -91,10 +91,10 @@
 				{i18n.action_delete_file()}
 			</button>
 		{/if}
-		{#if canEdit && onSearch}
+		{#if canEdit && onManualSearch}
 			<button
 				type="button"
-				onclick={() => act(onSearch)}
+				onclick={() => act(onManualSearch)}
 				class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover"
 			>
 				<Search size={14} aria-hidden="true" />

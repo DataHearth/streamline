@@ -19,7 +19,7 @@
 		markMissing = false,
 		compact = false,
 		canEdit = false,
-		onSearch,
+		onManualSearch,
 		onDeleteFile,
 	}: {
 		tracks: Track[];
@@ -28,17 +28,17 @@
 		markMissing?: boolean;
 		compact?: boolean;
 		canEdit?: boolean;
-		onSearch?: (t: Track) => void;
+		onManualSearch?: (t: Track) => void;
 		onDeleteFile?: (t: Track) => void;
 	} = $props();
 
 	let detail = $state<Track | null>(null);
 	let multiDisc = $derived(new Set(tracks.map((t) => t.disc)).size > 1);
-	let canSearch = $derived(canEdit && !!onSearch);
+	let canSearch = $derived(canEdit && !!onManualSearch);
 	const canDelete = (t: Track) => canEdit && !!onDeleteFile && t.has_file;
 	const items = (t: Track): KebabItem[] => [
 		{ key: "info", label: i18n.common_details(), icon: Info, onSelect: () => (detail = t) },
-		...(canSearch ? [{ key: "search", label: i18n.action_manual_search(), icon: Search, onSelect: () => onSearch?.(t) } satisfies KebabItem] : []),
+		...(canSearch ? [{ key: "search", label: i18n.action_manual_search(), icon: Search, onSelect: () => onManualSearch?.(t) } satisfies KebabItem] : []),
 		...(canDelete(t)
 			? [{ key: "delete", label: i18n.action_delete_file(), icon: Trash2, danger: true, dividerBefore: true, onSelect: () => onDeleteFile?.(t) } satisfies KebabItem]
 			: []),
@@ -105,7 +105,7 @@
 					{#if canSearch}
 						<button
 							type="button"
-							onclick={() => onSearch?.(t)}
+							onclick={() => onManualSearch?.(t)}
 							aria-label={i18n.music_track_search_for({ title: t.title })}
 							title={i18n.action_manual_search()}
 							class={iconBtn}
@@ -138,7 +138,7 @@
 	{release}
 	{qualityNote}
 	{canEdit}
-	onSearch={canSearch ? onSearch : undefined}
+	onManualSearch={canSearch ? onManualSearch : undefined}
 	{onDeleteFile}
 	onClose={() => (detail = null)}
 />
