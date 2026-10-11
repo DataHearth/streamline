@@ -85,6 +85,30 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 		Expect(rows[0].Edges.Albums).To(HaveLen(2))
 	})
 
+	It("names an album record's artist in the queue and the history", func() {
+		rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			Title: "Nirvana - Bleach", Size: 1, TorrentHash: "album-hash",
+			Status:  downloadrecord.StatusHeld,
+			AlbumID: albums[0].ID,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		rows, err := store.ListActiveDownloadRecords(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rows).To(HaveLen(1))
+		Expect(rows[0].Edges.Album).NotTo(BeNil())
+		Expect(rows[0].Edges.Album.Edges.Artist).NotTo(BeNil())
+		Expect(rows[0].Edges.Album.Edges.Artist.Name).To(Equal("Nirvana"))
+
+		client.DownloadRecord.UpdateOneID(rec.ID).
+			SetStatus(downloadrecord.StatusFailed).ExecX(ctx)
+		hist, err := store.ListDownloadHistory(ctx, 10, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(hist.Records).To(HaveLen(1))
+		Expect(hist.Records[0].Edges.Album.Edges.Artist.Name).
+			To(Equal("Nirvana"))
+	})
+
 	It("keeps the record while one album of the pack is recorded", func() {
 		rec := createPack()
 		Expect(store.RecordAlbumImportSuccess(ctx, RecordAlbumImportSuccessParams{
