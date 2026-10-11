@@ -22,6 +22,8 @@ const dateFull = new Intl.DateTimeFormat(locale, {
 	year: "numeric",
 });
 const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+const rtfShort = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
+const weekday = new Intl.DateTimeFormat(locale, { weekday: "short" });
 
 export function formatDateTime(iso: string | null | undefined): string {
 	if (!iso) return "";
@@ -90,4 +92,21 @@ export function formatRelative(iso: string | null | undefined): string {
 	// Past a month, a single unit reads as noise ("5,066 days ago"), so build a
 	// two-part span instead of leaning on Intl.RelativeTimeFormat.
 	return diffMs < 0 ? `${span(abs)} ago` : `in ${span(abs)}`;
+}
+
+// When something landed, short enough for a card caption: minutes, then hours
+// while it is still today, "yesterday", the weekday inside the week, the day
+// past it. Counted in calendar days, so last night at 23:00 is yesterday.
+export function formatArrival(iso: string | null | undefined): string {
+	if (!iso) return "";
+	const t = new Date(iso).getTime();
+	if (Number.isNaN(t)) return "";
+	const diff = Math.max(0, Date.now() - t);
+	if (diff < HR) return rtfShort.format(-Math.max(1, Math.round(diff / MIN)), "minute");
+	const midnight = (ms: number) => new Date(ms).setHours(0, 0, 0, 0);
+	const days = Math.round((midnight(Date.now()) - midnight(t)) / DAY);
+	if (days <= 0) return rtfShort.format(-Math.round(diff / HR), "hour");
+	if (days === 1) return rtfShort.format(-1, "day");
+	if (days < 7) return weekday.format(t);
+	return dateShort.format(t);
 }

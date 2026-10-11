@@ -1,4 +1,4 @@
-import type { MusicTier, ReleaseType } from "./music-books";
+import type { BookFormat, BookKind, MusicTier, ReleaseType } from "./music-books";
 
 export type MovieStatus =
 	| "wanted"
@@ -578,6 +578,36 @@ export type UpcomingList = {
 	albums?: UpcomingAlbum[];
 	books?: UpcomingBook[];
 };
+
+// GET /library/recent?limit=: what landed in the library, newest first, across
+// the four media. One entry per import: a movie, a show with the episodes the
+// import added, an album, or one format of a book. A volume of a book series
+// is a book whose `series_id` names the series. `id` is the record whose art
+// the card shows — the movie, the show, the album, the book (a volume's own
+// book id) — and `at` is the import, never the record's added_at.
+export type ArrivalKind = "movie" | "series" | "album" | "book";
+export type LibraryArrival = {
+	kind: ArrivalKind;
+	at: string;
+	id: number;
+	title: string;
+	year?: number;
+	// Movie: the file's resolution.
+	resolution?: string;
+	// Series: what the import put in the show.
+	addition?: SeriesAddition;
+	// Album.
+	artist_id?: number;
+	artist_name?: string;
+	release_type?: ReleaseType;
+	// Book: the slot that arrived, or the volume of a series.
+	author?: string;
+	book_kind?: BookKind;
+	format?: BookFormat;
+	series_id?: number;
+	volume?: number;
+};
+export type LibraryArrivals = { items: LibraryArrival[] };
 
 export type ActivityType =
 	| "grabbed"

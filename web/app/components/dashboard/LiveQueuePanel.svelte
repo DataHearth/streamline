@@ -33,6 +33,14 @@
 	};
 
 	let active = $derived(queue.filter((q) => q.status === "downloading").length);
+	// Bytes/sec across what is actually moving: paused and importing entries
+	// carry a stale rate. The dashboard's only throughput figure since the stat
+	// strip went.
+	let speedText = $derived(
+		formatSpeed(
+			queue.reduce((s, q) => s + (q.status === "downloading" ? (q.download_speed ?? 0) : 0), 0),
+		),
+	);
 	// The dashboard shows the head of the queue; Activity owns the whole list.
 	let rows = $derived(queue.slice(0, 4));
 	let more = $derived(queue.length - rows.length);
@@ -43,21 +51,21 @@
 	aria-label={i18n.dash_live_download_queue()}
 >
 	<header
-		class="flex items-center justify-between border-b border-border px-5 py-4"
+		class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
 	>
-		<div class="flex items-center gap-2.5">
+		<div class="flex min-w-0 items-center gap-2.5">
 			<span
 				aria-hidden="true"
-				class="inline-block h-1.5 w-1.5 rounded-full bg-status-downloading motion-safe:animate-pulse"
+				class="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-status-downloading motion-safe:animate-pulse"
 			></span>
-			<h3 class="text-sm font-semibold text-fg">{i18n.dash_live_queue()}</h3>
-			<span class="font-mono text-[11px] text-fg-subtle">
-				{i18n.dash_active_count({ count: active })}
+			<h3 class="shrink-0 text-sm font-semibold text-fg">{i18n.dash_live_queue()}</h3>
+			<span class="truncate font-mono text-[11px] text-fg-subtle">
+				{i18n.dash_active_count({ count: active })}{#if speedText}<span class="hidden md:inline"><span class="text-fg-faint"> · </span><span class="text-status-downloading">↓ {speedText}</span></span>{/if}
 			</span>
 		</div>
 		<a
 			href="/activity"
-			class="touch-hit text-[11.5px] text-fg-subtle transition hover:text-accent-text"
+			class="touch-hit shrink-0 text-[11.5px] text-fg-subtle transition hover:text-accent-text"
 		>
 			{i18n.dash_open_activity()}
 		</a>

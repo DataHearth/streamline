@@ -3,67 +3,84 @@
 	import { api, apiAllPages, type Paginated } from "@lib/api";
 	import { SILENT } from "@lib/query";
 	import { auth } from "@lib/auth.svelte";
-	import { posterUrl, tvPosterUrl } from "@lib/posters";
-	import { formatBytes } from "@lib/format";
 	import type {
-		ActivityList,
-		DiskUsage,
 		DownloadQueue,
-		MovieCounts,
+		ImportScanList,
+		LibraryArrivals,
+		MediaRequest,
 		Movie,
 		SystemInfo,
 		TVShow,
-		TVShowCounts,
 		UpcomingList as UpcomingResponse,
 	} from "@lib/types";
-	import Hero, { type HeroItem } from "@components/dashboard/Hero.svelte";
-	import StatStrip from "@components/dashboard/StatStrip.svelte";
-	import RecentScroller, {
-		type ScrollerItem,
-	} from "@components/dashboard/RecentScroller.svelte";
-	import type { StatusKind } from "@components/shared/StatusPill.svelte";
+	import type { Artist, ShelfItem } from "@lib/music-books";
+	import ArrivalsShelf from "@components/dashboard/ArrivalsShelf.svelte";
+	import NeedsYou, { type NeedItem } from "@components/dashboard/NeedsYou.svelte";
+	import MyRequests from "@components/dashboard/MyRequests.svelte";
+	import LibraryLedger from "@components/dashboard/LibraryLedger.svelte";
 	import LiveQueuePanel from "@components/dashboard/LiveQueuePanel.svelte";
-	import RecentActivityPanel from "@components/dashboard/RecentActivityPanel.svelte";
-	import WantedScroller from "@components/dashboard/WantedScroller.svelte";
 	import UpcomingList from "@components/shared/UpcomingList.svelte";
 	import { upcomingEvents } from "@lib/calendar";
-	import { additionLabel } from "@lib/additions";
+	import { booksRow, freeSpace, movieRow, musicRow, seriesRow, type LedgerRow } from "@lib/dashboard";
+	import { entryHeading } from "@lib/activity-touch";
+	import { KIND_CHIPS, KIND_MEDIA } from "@lib/requests-touch";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Nothing on the dashboard raises the global loading bar (`meta.silent`):
 	// it is a glance, every panel has its own skeleton, and the queue below
 	// polls on a timer nobody asked for.
+
+	// What landed, across the four media. Polled slowly: an import is not an
+	// event anyone waits on from here.
+	const arrivalsQuery = createQuery<LibraryArrivals>(() => ({
+		queryKey: ["library", "recent"],
+		queryFn: () => api<LibraryArrivals>("/library/recent?limit=24"),
+		refetchInterval: 60000,
+		meta: SILENT,
+	}));
+
+	// The ledger counts each library in its own unit, which the counts
+	// endpoints do not all carry (episodes have/total, releases out), so it
+	// reads the lists. Their keys sit beside the library pages' own and never
+	// collide with them; each prefix is still what an add or a change
+	// invalidates.
 	const moviesQuery = createQuery<Paginated<Movie>>(() => ({
 		queryKey: ["movies"],
 		queryFn: () => apiAllPages<Movie>("/movies"),
 		meta: SILENT,
 	}));
-
 	const seriesQuery = createQuery<Paginated<TVShow>>(() => ({
 		queryKey: ["series"],
 		queryFn: () => apiAllPages<TVShow>("/series"),
 		meta: SILENT,
 	}));
-
-	const countsQuery = createQuery<MovieCounts>(() => ({
-		queryKey: ["movies", "counts"],
-		queryFn: () => api<MovieCounts>("/movies/counts"),
+	const artistsQuery = createQuery<Paginated<Artist>>(() => ({
+		queryKey: ["music", "artists", "all"],
+		queryFn: () => apiAllPages<Artist>("/music/artists"),
+		meta: SILENT,
+	}));
+	const shelfQuery = createQuery<Paginated<ShelfItem>>(() => ({
+		queryKey: ["books", "list", "all"],
+		queryFn: () => apiAllPages<ShelfItem>("/books"),
 		meta: SILENT,
 	}));
 
-	const seriesCountsQuery = createQuery<TVShowCounts>(() => ({
-		queryKey: ["series", "counts"],
-		queryFn: () => api<TVShowCounts>("/series/counts"),
+	// A reviewer reads the pending ones off it; a request_only member gets
+	// only their own, which is what their panel lists.
+	const requestsQuery = createQuery<Paginated<MediaRequest>>(() => ({
+		queryKey: ["requests", "dashboard"],
+		queryFn: () => api<Paginated<MediaRequest>>("/requests?limit=100"),
+		enabled: !!auth.user,
 		meta: SILENT,
 	}));
 
-	// Polled on the queue's cadence below, so the two dashboard panels never
-	// disagree about what just happened — a grab landing in the queue and the
-	// event recording it should appear together.
-	const activityQuery = createQuery<ActivityList>(() => ({
-		queryKey: ["activity", "recent", 6],
-		queryFn: () => api<ActivityList>("/activity?limit=6"),
-		refetchInterval: 10000,
+	// No status filter on the wire: imports have no counts endpoint and the
+	// newest hundred always hold every scan still awaiting review (see
+	// lib/nav-counts).
+	const importsQuery = createQuery<ImportScanList>(() => ({
+		queryKey: ["imports", "dashboard"],
+		queryFn: () => api<ImportScanList>("/library/imports?limit=100"),
+		enabled: auth.isAdmin,
 		meta: SILENT,
 	}));
 
@@ -98,198 +115,135 @@
 		refetchInterval: 10000,
 		meta: SILENT,
 	}));
+
 	let queue = $derived(queueQuery.data?.items ?? []);
-
 	let allMovies = $derived(moviesQuery.data?.items ?? []);
-	let allSeries = $derived(seriesQuery.data?.items ?? []);
-	let monitoredMovies = $derived(allMovies.filter((m) => m.monitored).length);
-	let monitoredSeries = $derived(allSeries.filter((s) => s.monitored).length);
+	let requests = $derived(requestsQuery.data?.items ?? []);
+	let arrivals = $derived(arrivalsQuery.data?.items ?? []);
+	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
 
-	// Falls back to the data dir when neither library path can be probed, so the
-	// tile still reports a real volume on a fresh install.
-	let libraryDisks = $derived.by(() => {
-		const sys = systemQuery.data;
-		if (!sys) return [];
-		const dirs = [
-			{ label: i18n.lc_movies(), path: sys.library_dir, usage: sys.library_usage },
-			{ label: i18n.lc_series(), path: sys.series_dir, usage: sys.series_usage },
-		].filter((d) => d.path && d.usage) as {
-			label: string;
-			path: string;
-			usage: DiskUsage;
-		}[];
-		if (dirs.length > 0) return dirs;
-		return sys.data_usage
-			? [{ label: i18n.lc_data(), path: sys.data_dir, usage: sys.data_usage }]
-			: [];
+	// A medium whose list failed drops out rather than reading as empty.
+	let ledger = $derived<LedgerRow[]>(
+		[
+			moviesQuery.data && movieRow(moviesQuery.data.items),
+			seriesQuery.data && seriesRow(seriesQuery.data.items),
+			artistsQuery.data && musicRow(artistsQuery.data.items),
+			shelfQuery.data && booksRow(shelfQuery.data.items),
+		].filter((r): r is LedgerRow => !!r),
+	);
+	let ledgerLoading = $derived(
+		moviesQuery.isLoading || seriesQuery.isLoading || artistsQuery.isLoading || shelfQuery.isLoading,
+	);
+
+	const word = (count: number, one: () => string, other: () => string) => (count === 1 ? one : other)();
+
+	// What waits on the person looking, in the order it blocks something: a
+	// held download is stuck until someone decides, then the people waiting on
+	// a request, then a scan nobody has reviewed, then grabs that gave up.
+	// Held downloads and imports are an admin's to resolve; any reviewer
+	// answers requests. Absent when it is zero, so a quiet day shows nothing.
+	let needs = $derived.by<NeedItem[]>(() => {
+		if (!auth.canAddDirectly) return [];
+		const out: NeedItem[] = [];
+		if (auth.isAdmin) {
+			const held = queue.filter((q) => q.status === "held");
+			if (held.length)
+				out.push({
+					key: "held",
+					count: held.length,
+					label: word(held.length, i18n.dash_needs_held_one, i18n.dash_needs_held_other),
+					detail: held.map(entryHeading).join(" · "),
+					href: "/activity",
+					token: "held",
+				});
+		}
+		const pending = requests.filter((r) => r.status === "pending");
+		if (pending.length)
+			out.push({
+				key: "requests",
+				count: pending.length,
+				label: word(pending.length, i18n.dash_needs_requests_one, i18n.dash_needs_requests_other),
+				detail: KIND_CHIPS.flatMap(({ key, label }) => {
+					if (key === "all") return [];
+					const n = pending.filter((r) => KIND_MEDIA[key].includes(r.media_type)).length;
+					return n ? [`${label} ${n}`] : [];
+				}).join(" · "),
+				href: "/requests",
+				token: "wanted",
+			});
+		if (auth.isAdmin) {
+			const scans = (importsQuery.data?.items ?? []).filter((s) => s.status === "awaiting_review");
+			if (scans.length)
+				out.push({
+					key: "imports",
+					count: scans.length,
+					label: word(scans.length, i18n.dash_needs_imports_one, i18n.dash_needs_imports_other),
+					detail: scans.map((s) => s.source_path).join(" · "),
+					href: scans.length === 1 && scans[0] ? `/imports/${scans[0].id}` : "/imports",
+					token: "wanted",
+				});
+		}
+		const failed = allMovies.filter((m) => m.status === "failed");
+		if (failed.length)
+			out.push({
+				key: "failed",
+				count: failed.length,
+				label: word(failed.length, i18n.dash_needs_failed_one, i18n.dash_needs_failed_other),
+				detail: failed.map((m) => m.title).join(" · "),
+				href: "/movies?status=failed",
+				token: "failed",
+			});
+		return out;
 	});
 
-	function movieToHero(m: Movie): HeroItem {
-		// List responses carry the file rollup, not the files: the grid needs a
-		// size and a quality, not every media_file row of every movie on a page.
-		const s = m.file_summary;
-		return {
-			title: m.title,
-			year: m.year,
-			releaseDate: m.release_date,
-			overview: m.overview,
-			runtime: m.runtime,
-			rating: m.rating,
-			status: m.status,
-			resolution: s?.resolution,
-			codec: s?.codec,
-			fileMeta: [formatBytes(s?.size_bytes, ""), s?.resolution, s?.codec]
-				.filter(Boolean)
-				.join(" · "),
-			posterSrc: posterUrl(m),
-			href: `/movies/${m.id}`,
-		};
-	}
-	function seriesToHero(s: TVShow): HeroItem {
-		return {
-			title: s.title,
-			year: s.year,
-			releaseDate: s.first_aired,
-			overview: s.overview,
-			runtime: s.runtime,
-			rating: s.rating,
-			status: "available",
-			posterSrc: tvPosterUrl(s.id),
-			href: `/series/${s.id}`,
-		};
-	}
-
-	// Feature an available title only (never a wanted one). Prefer a movie; fall
-	// back to a fully-downloaded series. Keyed on files actually present, not on
-	// a zero wanted count — unmonitoring a series zeroes that count too.
-	let featuredMovie = $derived(allMovies.find((m) => m.status === "available"));
-	let featuredSeries = $derived(
-		allSeries.find(
-			(s) =>
-				(s.total_episodes ?? 0) > 0 &&
-				(s.have_episodes ?? 0) >= (s.total_episodes ?? 0),
-		),
-	);
-	let featured = $derived<HeroItem | undefined>(
-		featuredMovie
-			? movieToHero(featuredMovie)
-			: featuredSeries
-				? seriesToHero(featuredSeries)
-				: undefined,
-	);
-	// Both rows mix movies and series, so they sort on added_at rather than on
-	// each list's own order: /movies and /series are newest-first within their
-	// own kind, which says nothing about how the two interleave.
-	type DatedItem = ScrollerItem & { added: number };
-	const addedAt = (iso?: string) => (iso ? Date.parse(iso) : 0);
-	const byNewest = (a: DatedItem, b: DatedItem) => b.added - a.added;
-
-	function movieItem(m: Movie, status: StatusKind): DatedItem {
-		return {
-			id: m.id,
-			title: m.title,
-			year: m.year,
-			status,
-			added: addedAt(m.file_summary?.imported_at ?? m.added_at),
-		};
-	}
-	function seriesItem(s: TVShow, status: StatusKind): DatedItem {
-		return {
-			id: s.id,
-			title: s.title,
-			year: s.year,
-			status,
-			href: `/series/${s.id}`,
-			posterSrc: tvPosterUrl(s.id),
-			added: addedAt(s.added_at),
-		};
-	}
-
-	// This row lists arrivals, and the arrival is the import, not the record: a
-	// movie wanted since August that downloaded this morning is one of today's
-	// additions (movieItem reads its file's imported_at), and so is a show
-	// followed since March that took an episode — whose card names the episodes
-	// rather than repeating the show. A show whose imports predate the field
-	// keeps its own added_at and says nothing.
-	let recent = $derived(
-		[
-			...allMovies
-				.filter((m) => m.status === "available")
-				.map((m) => movieItem(m, "available")),
-			...allSeries
-				.filter((s) => (s.have_episodes ?? 0) > 0)
-				.map((s) => {
-					const item = seriesItem(s, "available");
-					const add = s.last_added;
-					return add
-						? { ...item, detail: additionLabel(add), added: addedAt(add.at) }
-						: item;
-				}),
-		]
-			.sort(byNewest)
-			.slice(0, 8),
-	);
-	let wanted = $derived(
-		[
-			// Unmonitored titles stay "wanted" server-side even though nothing is
-			// searching for them, so the row would advertise work that never runs.
-			...allMovies
-				.filter((m) => m.status === "wanted" && m.monitored)
-				.map((m) => movieItem(m, "wanted")),
-			...allSeries
-				.filter((s) => s.monitored && (s.wanted_episodes ?? 0) > 0)
-				.map((s) => seriesItem(s, "wanted")),
-		]
-			.sort(byNewest)
-			.slice(0, 6),
-	);
-	let events = $derived(activityQuery.data?.events ?? []);
-	let upcoming = $derived(upcomingEvents(upcomingQuery.data));
+	let isRequester = $derived(!!auth.user && !auth.canAddDirectly);
+	let hasTop = $derived(isRequester ? requests.length > 0 : needs.length > 0);
 </script>
 
-<div class="flex flex-col gap-5 pb-6 pt-5 md:gap-6 md:pt-6">
-	<Hero
-		item={featured}
-		loading={moviesQuery.isLoading || seriesQuery.isLoading}
+{#snippet top()}
+	{#if isRequester}
+		<MyRequests {requests} />
+	{:else}
+		<NeedsYou items={needs} />
+	{/if}
+{/snippet}
+
+<div class="flex flex-col gap-8 pb-8 md:gap-10 md:pb-12">
+	<ArrivalsShelf
+		{arrivals}
+		loading={arrivalsQuery.isLoading}
+		error={arrivalsQuery.isError}
+		top={hasTop ? top : undefined}
 	/>
 
-	<div
-		class="mx-auto flex w-full max-w-7xl flex-col gap-9 px-4 md:px-8"
-	>
-		<StatStrip
-			counts={countsQuery.data}
-			seriesCounts={seriesCountsQuery.data}
-			{monitoredMovies}
-			{monitoredSeries}
-			{queue}
-			disks={auth.isAdmin ? libraryDisks : undefined}
+	<div class="mx-auto w-full max-w-7xl px-4 md:px-8">
+		<LibraryLedger
+			rows={ledger}
+			loading={ledgerLoading && ledger.length === 0}
+			free={auth.isAdmin ? freeSpace(systemQuery.data) || undefined : undefined}
 		/>
+	</div>
 
-		<RecentScroller
-			title={i18n.dash_recently_added()}
-			movies={recent}
-			emptyText={i18n.dash_no_movies_yet()}
-		/>
-
-		<section
-			class="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]"
-			aria-label={i18n.nav_operations()}
-		>
-			<LiveQueuePanel {queue} />
-			<RecentActivityPanel {events} />
-		</section>
-
-		<section
-			class="grid grid-cols-1 gap-7 lg:grid-cols-[1fr_320px] lg:gap-8"
-			aria-label={i18n.dash_wanted_upcoming()}
-		>
-			<WantedScroller movies={wanted} />
+	<div class="mx-auto w-full max-w-7xl px-4 md:px-8">
+		{#if isRequester}
 			<UpcomingList
-				events={upcoming.slice(0, 4)}
+				events={upcoming.slice(0, 5)}
 				title={i18n.series_upcoming()}
 				seeAllHref="/calendar"
-				stretch
 			/>
-		</section>
+		{:else}
+			<section
+				class="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr] lg:gap-4"
+				aria-label={i18n.nav_operations()}
+			>
+				<LiveQueuePanel {queue} />
+				<UpcomingList
+					events={upcoming.slice(0, 4)}
+					title={i18n.series_upcoming()}
+					seeAllHref="/calendar"
+					stretch
+				/>
+			</section>
+		{/if}
 	</div>
 </div>
