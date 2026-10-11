@@ -436,6 +436,8 @@ func isUserConfigurable(name string) bool {
 	case "movie-rss-sync", "tv-rss-sync",
 		"movie-missing-search", "tv-missing-search",
 		"movie-metadata-refresh", "tv-metadata-refresh",
+		"music-missing-search", "music-metadata-refresh",
+		"book-missing-search", "book-metadata-refresh",
 		"download-monitor", "import-scan", "cleanup":
 		return true
 	}
@@ -456,6 +458,14 @@ func assignScheduleField(c *config.Config, name, value string) {
 		c.Schedule.MovieMetadataRefresh = value
 	case "tv-metadata-refresh":
 		c.Schedule.TVMetadataRefresh = value
+	case "music-missing-search":
+		c.Schedule.MusicMissingSearch = value
+	case "music-metadata-refresh":
+		c.Schedule.MusicMetadataRefresh = value
+	case "book-missing-search":
+		c.Schedule.BookMissingSearch = value
+	case "book-metadata-refresh":
+		c.Schedule.BookMetadataRefresh = value
 	case "download-monitor":
 		c.Schedule.DownloadMonitor = value
 	case "import-scan":

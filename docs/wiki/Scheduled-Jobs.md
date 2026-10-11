@@ -16,12 +16,16 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | --- | --- | --- | --- | --- |
 | `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents | UI / API |
 | `import-scan` | `60s` | `schedules.import_scan` | Recovery sweep: re-queues any download record stuck in `importing` state, so work isn't lost across a restart or transient failure | UI / API |
-| `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies | UI / API |
+| `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies, albums and books (one pass over the feeds serves all three) | UI / API |
 | `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes | UI / API |
-| `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie, album and book slot (ebook and audiobook searched separately) | UI / API |
+| `movie-missing-search` | `12h` | `schedules.movie_missing_search` | Actively searches indexers for every still-wanted movie | UI / API |
 | `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
-| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates; also refreshes artists (MusicBrainz, at most 10 per run, oldest first) and books and series (Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached) | UI / API |
+| `music-missing-search` | `12h` | `schedules.music_missing_search` | Same, for wanted albums | UI / API |
+| `book-missing-search` | `12h` | `schedules.book_missing_search` | Same, for wanted book slots (ebook and audiobook searched separately; one query per series) | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates | UI / API |
 | `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes | UI / API |
+| `music-metadata-refresh` | `24h` | `schedules.music_metadata_refresh` | Refreshes artists from MusicBrainz (at most 10 per run, oldest first) and retries missing album credits | UI / API |
+| `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached | UI / API |
 | `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review | UI / API |
 | `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |
 | `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk | UI / API |
@@ -149,8 +153,8 @@ Sensible directions, if the defaults don't suit:
 | Old key | Now |
 | --- | --- |
 | `schedules.rss_sync` | `schedules.movie_rss_sync` |
-| `schedules.missing_search` | Applied to **both** `movie_missing_search` and `tv_missing_search` |
-| `schedules.metadata_refresh` | Applied to **both** `movie_metadata_refresh` and `tv_metadata_refresh` |
+| `schedules.missing_search` | Applied to `movie_missing_search`, `tv_missing_search`, `music_missing_search` and `book_missing_search` |
+| `schedules.metadata_refresh` | Applied to `movie_metadata_refresh`, `tv_metadata_refresh`, `music_metadata_refresh` and `book_metadata_refresh` |
 | `schedules.orphan_scan` | Applied to **both** `movie_orphan_scan` and `tv_orphan_scan` |
 
 Migrate to the split keys — you almost certainly want TV metadata refreshed more often than movie metadata, and the merged keys can't express that.

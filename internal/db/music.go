@@ -774,7 +774,8 @@ func (db *DB) SetArtistDetails(
 }
 
 // SetArtistMonitor stores the policy and applies it to the artist's existing
-// albums in one transaction (applyMonitorPolicy). It never touches album
+// albums in one transaction (applyMonitorPolicy), clearing every album's
+// monitor_pinned: choosing a policy is starting over. It never touches album
 // status.
 func (db *DB) SetArtistMonitor(
 	ctx context.Context,
@@ -792,6 +793,12 @@ func (db *DB) SetArtistMonitor(
 		return err
 	}
 	owned := album.HasArtistWith(artist.IDEQ(id))
+	if err := tx.Album.Update().
+		Where(owned, album.MonitorPinned(true)).
+		SetMonitorPinned(false).Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
 	if _, _, err := applyMonitorPolicy(
 		ctx,
 		tx.Client(),
@@ -810,7 +817,8 @@ func (db *DB) SetArtistMonitor(
 // its albums again, in one transaction — the catch-up after
 // library.music_monitored_types changes, which on its own only reaches
 // albums a policy is applied to later. Manual and none artists are left
-// alone. It returns how many albums it monitored and unmonitored.
+// alone, and so is every album whose flag was set by hand (monitor_pinned).
+// It returns how many albums it monitored and unmonitored.
 func (db *DB) ReapplyMonitorPolicies(
 	ctx context.Context,
 	types []string,
@@ -822,7 +830,10 @@ func (db *DB) ReapplyMonitorPolicies(
 	}
 	var on, off int
 	for _, policy := range []artist.Monitor{artist.MonitorAll, artist.MonitorFuture} {
-		owned := album.HasArtistWith(artist.MonitorEQ(policy))
+		owned := album.And(
+			album.HasArtistWith(artist.MonitorEQ(policy)),
+			album.MonitorPinned(false),
+		)
 		n, f, err := applyMonitorPolicy(ctx, tx.Client(), owned, policy, types, now)
 		if err != nil {
 			tx.Rollback()
@@ -903,7 +914,10 @@ func (db *DB) SetAlbumMonitored(
 	id uint32,
 	monitored bool,
 ) error {
-	return db.client.Album.UpdateOneID(id).SetMonitored(monitored).Exec(ctx)
+	return db.client.Album.UpdateOneID(id).
+		SetMonitored(monitored).
+		SetMonitorPinned(true).
+		Exec(ctx)
 }
 
 // SetAlbumStatus moves the album to `to` only while it is in one of the from

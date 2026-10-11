@@ -109,6 +109,8 @@ type Store interface {
 		types []string,
 		now time.Time,
 	) (int, int, error)
+	// SetAlbumMonitored sets the flag by hand, pinning it against
+	// ReapplyMonitorPolicies until the artist's policy is next changed.
 	SetAlbumMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetAlbumStatus(
 		ctx context.Context,

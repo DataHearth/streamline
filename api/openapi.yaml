@@ -1425,7 +1425,9 @@ paths:
       operationId: patchMusicAlbum
       summary: Patch an album
       description: |
-        Sets the album's monitored flag. Never changes the artist's monitor policy or the album's status.
+        Sets the album's monitored flag by hand: `POST /music/monitored-types/apply` leaves it alone
+        from then on, until the artist's monitor is next changed. Never changes the artist's monitor
+        policy or the album's status.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicAlbum"
@@ -1577,9 +1579,11 @@ paths:
         of any other type is unmonitored. The setting itself only reaches
         albums a policy is applied to later (an add, a refresh finding a new
         release, a monitor change); this is the catch-up for the library, in
-        both directions. Like changing an artist's monitor, it overrides
-        albums toggled by hand on those artists. `manual` and `none` artists
-        are left alone, and album status is never touched.
+        both directions. Unlike changing an artist's monitor, it leaves alone
+        every album whose flag was set by hand (`PATCH /music/albums/{id}`, an
+        approved album request) since the artist's monitor last changed.
+        `manual` and `none` artists are left alone, and album status is never
+        touched.
       tags: [music, admin]
       security:
         - BearerAuth: []

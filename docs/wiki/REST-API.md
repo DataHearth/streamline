@@ -184,7 +184,7 @@ Each of the three search scopes filters the indexer's answer to its own scope â€
 | `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
 | `GET` | `/music/artists/{id}` | Fetch an artist with its full tree: members, and every album with tracks, credits and personnel (`?lang=en\|fr` picks the overview) | Authenticated |
 | `PATCH` | `/music/artists/{id}` | Update `monitor` (`all`, `future`, `manual`, `none`; re-applied to the existing albums, never touching their status; `all` and `future` monitor only the types in `library.music_monitored_types`) and `quality_profile` (`422` for an unknown name; empty clears to the default) | Member |
-| `POST` | `/music/monitored-types/apply` | Re-apply every `all`/`future` artist's monitor policy under the current `library.music_monitored_types`; answers `monitored`, `unmonitored` (albums changed) and `types` | ðŸ”’ Admin |
+| `POST` | `/music/monitored-types/apply` | Re-apply every `all`/`future` artist's monitor policy under the current `library.music_monitored_types`, skipping albums whose flag was set by hand; answers `monitored`, `unmonitored` (albums changed) and `types` | ðŸ”’ Admin |
 | `DELETE` | `/music/artists/{id}` | Remove an artist; `?delete_files=true` also deletes files from disk | Member |
 | `POST` | `/music/artists/{id}/refresh-metadata` | Re-fetch the artist and its discography from MusicBrainz; new release groups follow the monitor policy and are hydrated in the background | Member |
 | `POST` | `/music/artists/{id}/rename` | Rename every track file of the artist to `library.music_naming` from database metadata (`?preview=true` returns the plan without applying it); `{artist_id, operations}` | Member |
@@ -192,7 +192,7 @@ Each of the three search scopes filters the indexer's answer to its own scope â€
 | `POST` | `/music/artists/{id}/browse` | Search the indexers for the artist's discography packs; items are plain search results | Member |
 | `POST` | `/music/artists/{id}/grab` | Grab a discography pack: the item of a browse, unchanged. `202`; `422 grab_rejected` when no album of the artist can take it | Member |
 | `GET` | `/music/albums/{id}` | Fetch an album with its tracks, credits and personnel (the object an artist detail embeds) | Authenticated |
-| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy | Member |
+| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed | Member |
 | `POST` | `/music/albums/{id}/search` | Search the indexers for one album; plain search results, ranked, with the releases the profile rejects, and those whose name reads as another album or artist, kept at the end flagged `rejected` and `reject_reason` | Member |
 | `POST` | `/music/albums/{id}/grab` | Grab a chosen release: an item of a search, unchanged. `202` with no body | Member |
 | `POST` | `/music/albums/{id}/search-now` Â· `/music/tracks/{id}/search-now` | Run one search-and-grab pass for the album (a track searches its album). `202`; a no-op for an album that is available, upcoming or already downloading | Member |

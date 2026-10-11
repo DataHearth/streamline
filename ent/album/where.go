@@ -95,6 +95,11 @@ func Monitored(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitored, v))
 }
 
+// MonitorPinned applies equality check predicate on the "monitor_pinned" field. It's identical to MonitorPinnedEQ.
+func MonitorPinned(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
 // GrabFailures applies equality check predicate on the "grab_failures" field. It's identical to GrabFailuresEQ.
 func GrabFailures(v uint8) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldGrabFailures, v))
@@ -573,6 +578,16 @@ func MonitoredEQ(v bool) predicate.Album {
 // MonitoredNEQ applies the NEQ predicate on the "monitored" field.
 func MonitoredNEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldNEQ(FieldMonitored, v))
+}
+
+// MonitorPinnedEQ applies the EQ predicate on the "monitor_pinned" field.
+func MonitorPinnedEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
+// MonitorPinnedNEQ applies the NEQ predicate on the "monitor_pinned" field.
+func MonitorPinnedNEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldMonitorPinned, v))
 }
 
 // GrabFailuresEQ applies the EQ predicate on the "grab_failures" field.

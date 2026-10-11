@@ -21,6 +21,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "ep", "single", "compilation", "live", "other"}, Default: "album"},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
+		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped"}, Default: "wanted"},
@@ -41,7 +42,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[20]},
+				Columns:    []*schema.Column{AlbumsColumns[21]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -50,17 +51,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[20]},
+				Columns: []*schema.Column{AlbumsColumns[21]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[12]},
+				Columns: []*schema.Column{AlbumsColumns[13]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[18]},
+				Columns: []*schema.Column{AlbumsColumns[19]},
 			},
 		},
 	}
