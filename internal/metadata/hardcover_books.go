@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -253,12 +254,19 @@ func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error)
 }
 
 // hcBooksQuery is the workhorse: one request for up to hcBookBatch books with
-// their editions. The three edition aliases are one GraphQL document, and the
+// their editions. The five edition aliases are one GraphQL document, and the
 // depth stays at 3 (books > editions > language|publisher), which is
 // Hardcover's limit. Book-level contributors come from the cached_contributors
 // jsonb, a scalar, so no contributions join is needed.
+//
+// localDigital and localPhysical are the same two pools restricted to the
+// library's book language: a widely translated book has hundreds of editions,
+// and the most popular ones can all be in other languages (1984's French
+// audiobook and its 21 French paperbacks were in neither pool), which left the
+// preferred language with no ebook or audiobook to pick. They are separate so
+// a language's many paperbacks cannot crowd out its one audiobook.
 const hcBooksQuery = `
-query ($ids: [Int!]!) {
+query ($ids: [Int!]!, $lang: String!) {
   books(where: {id: {_in: $ids}}) {
     id title description release_date release_year rating users_count compilation
     cached_image cached_contributors cached_tags
@@ -266,6 +274,13 @@ query ($ids: [Int!]!) {
     digital: editions(
       where: {reading_format_id: {_in: [2, 4]}}
       order_by: {users_count: desc_nulls_last}, limit: 40) { ...ed }
+    localDigital: editions(
+      where: {reading_format_id: {_in: [2, 4]}, language: {code2: {_eq: $lang}}}
+      order_by: {users_count: desc_nulls_last}, limit: 10) { ...ed }
+    localPhysical: editions(
+      where: {_or: [{reading_format_id: {_eq: 1}}, {reading_format_id: {_is_null: true}}],
+              language: {code2: {_eq: $lang}}}
+      order_by: {users_count: desc_nulls_last}, limit: 10) { ...ed }
     physical: editions(
       where: {_or: [{reading_format_id: {_eq: 1}}, {reading_format_id: {_is_null: true}}]}
       order_by: {users_count: desc_nulls_last}, limit: 20) { ...ed }
@@ -457,9 +472,12 @@ type hcBookRow struct {
 			Name string `json:"name"`
 		} `json:"series"`
 	} `json:"book_series"`
-	Digital  []hcEditionRow `json:"digital"`
-	Physical []hcEditionRow `json:"physical"`
-	Earliest []hcEditionRow `json:"earliest"`
+	Digital []hcEditionRow `json:"digital"`
+	// LocalDigital and LocalPhysical are the two pools in the book language.
+	LocalDigital  []hcEditionRow `json:"localDigital"`
+	LocalPhysical []hcEditionRow `json:"localPhysical"`
+	Physical      []hcEditionRow `json:"physical"`
+	Earliest      []hcEditionRow `json:"earliest"`
 }
 
 func (r hcBookRow) record() *BookRecord {
@@ -503,8 +521,8 @@ func (r hcBookRow) record() *BookRecord {
 	rec.Credits = creditsFrom(decodeContributors(r.CachedContributors))
 	rec.creditsGap = contributorsGap(r.CachedContributors)
 
-	digital := rawEditions(r.Digital)
-	physical := rawEditions(r.Physical)
+	digital := rawEditions(slices.Concat(r.Digital, r.LocalDigital))
+	physical := rawEditions(slices.Concat(r.Physical, r.LocalPhysical))
 	var earliest *RawEdition
 	if len(r.Earliest) > 0 {
 		e := r.Earliest[0].raw()
@@ -579,6 +597,15 @@ func isTimeout(err error) bool {
 	return strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out")
 }
 
+// bookLanguage is the language whose editions every book fetch asks for on
+// top of the most popular ones.
+func bookLanguage() string {
+	if cfg := config.Get(); cfg != nil && cfg.Library.BookLanguage != "" {
+		return cfg.Library.BookLanguage
+	}
+	return "en"
+}
+
 // fetchBooks runs the batch query for ids, halving the batch and retrying
 // when Hardcover times out. Each retry is a request of the day's budget.
 func (h *Hardcover) fetchBooks(
@@ -588,7 +615,12 @@ func (h *Hardcover) fetchBooks(
 	var payload struct {
 		Books []hcBookRow `json:"books"`
 	}
-	err := h.query(ctx, hcBooksQuery, map[string]any{"ids": ids}, &payload)
+	err := h.query(
+		ctx,
+		hcBooksQuery,
+		map[string]any{"ids": ids, "lang": bookLanguage()},
+		&payload,
+	)
 	if err != nil {
 		if len(ids) > 1 && ctx.Err() == nil && isTimeout(err) {
 			mid := len(ids) / 2

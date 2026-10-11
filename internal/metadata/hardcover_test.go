@@ -225,6 +225,44 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(*b.Series[0].Position).To(Equal(1.0))
 		})
 
+		It(
+			"asks for the book language's editions and keeps them beside the most popular ones",
+			func() {
+				hc.client.Transport = srv.transport(wrap(`{
+  "id": 2, "title": "1984", "cached_contributors": [],
+  "digital": [
+    {"id": 201, "title": "1984", "users_count": 900, "reading_format_id": 4,
+     "language": {"code2": "en"}, "publisher": {"name": "Penguin"}}
+  ],
+  "localDigital": [
+    {"id": 202, "title": "1984", "users_count": 0, "reading_format_id": 2,
+     "language": {"code2": "fr"}, "publisher": {"name": "SAGA Egmont"}}
+  ],
+  "localPhysical": [
+    {"id": 203, "title": "1984", "users_count": 11, "reading_format_id": 1,
+     "language": {"code2": "fr"}, "publisher": {"name": "Gallimard"}}
+  ]
+}`))
+
+				recs, err := hc.GetBooks(ctx, []uint32{2})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(srv.queries[0]).To(ContainSubstring("localDigital: editions"))
+				Expect(
+					srv.queries[0],
+				).To(ContainSubstring("localPhysical: editions"))
+				Expect(srv.vars[0]["lang"]).NotTo(BeEmpty())
+				formats := map[uint32]string{}
+				for _, e := range recs[0].Editions {
+					formats[e.HardcoverID] = e.Format
+				}
+				// The French paperback stands in for the ebook French lacks.
+				Expect(formats).To(Equal(map[uint32]string{
+					201: FormatEbook, 202: FormatAudiobook, 203: FormatEbook,
+				}))
+			},
+		)
+
 		It("dates a book by its original edition, not a fragment's year", func() {
 			hc.client.Transport = srv.transport(wrap(`{
   "id": 9, "title": "Exhalation", "release_date": "2014-01-01", "release_year": 2014,
