@@ -15,6 +15,7 @@
 	} from "@lib/auth_api";
 	import { ApiError, errorText } from "@lib/api";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { loadPref, savePref } from "@lib/prefs";
 	import { email as emailSchema } from "@lib/schemas";
 	import TextField from "@components/forms/TextField.svelte";
 	import AuthCard from "@components/auth/AuthCard.svelte";
@@ -44,21 +45,7 @@
 
 	// The browser remembers that its last sign-in went through the password
 	// form, so a local/break-glass account isn't one extra click every time.
-	// Per-viewer convenience only: storage can be blocked, so every access is
-	// guarded and the page works the same without it.
-	const LOCAL_LOGIN_KEY = "streamline.login.local";
-	const rememberLocal = () => {
-		try {
-			localStorage.setItem(LOCAL_LOGIN_KEY, "1");
-		} catch {}
-	};
-	const rememberedLocal = () => {
-		try {
-			return localStorage.getItem(LOCAL_LOGIN_KEY) === "1";
-		} catch {
-			return false;
-		}
-	};
+	const LOCAL_LOGIN_PREF = "streamline:login:local";
 
 	let formOpen = $state(false);
 	let reduceMotion = $state(false);
@@ -74,7 +61,7 @@
 
 	onMount(() => {
 		reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		formOpen = rememberedLocal();
+		formOpen = loadPref(LOCAL_LOGIN_PREF) === "1";
 		const q = new URLSearchParams(window.location.search);
 		const next = q.get("next");
 		if (next && isSafeNext(next)) {
@@ -97,7 +84,7 @@
 	const login = createMutation<null, Error, LoginInput>(() => ({
 		mutationFn: postLogin,
 		onSuccess: () => {
-			rememberLocal();
+			savePref(LOCAL_LOGIN_PREF, "1");
 			window.location.assign(nextParam);
 		},
 		onError: (err) => {
