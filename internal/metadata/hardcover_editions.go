@@ -86,12 +86,17 @@ func SelectEditions(
 	bookYear uint16,
 ) (editions []EditionRecord, originalLanguage string) {
 	pool := make([]RawEdition, 0, len(digital)+len(physical)+1)
+	var unlabelled []RawEdition
 	seen := map[uint32]bool{}
 	add := func(e RawEdition) {
-		if e.Language == "" || seen[e.HardcoverID] {
+		if seen[e.HardcoverID] {
 			return
 		}
 		seen[e.HardcoverID] = true
+		if e.Language == "" {
+			unlabelled = append(unlabelled, e)
+			return
+		}
 		pool = append(pool, e)
 	}
 	for _, e := range digital {
@@ -104,6 +109,7 @@ func SelectEditions(
 		add(*earliest)
 		originalLanguage = earliest.Language
 	}
+	pool = append(pool, adoptUnlabelled(pool, unlabelled, originalLanguage)...)
 
 	ebookLangs := map[string]bool{}
 	for _, e := range pool {
@@ -167,6 +173,51 @@ func SelectEditions(
 		editions = append(editions, rec)
 	}
 	return editions, originalLanguage
+}
+
+// adoptUnlabelled gives the digital editions Hardcover files with no language
+// a language, but only for a reading format that has no labelled edition at
+// all: audiobooks are often listed without one, and dropping them left the
+// book with no audiobook edition, so a requested audiobook slot was
+// unmonitored on add. The language is the original one, else the most
+// popular labelled edition's; with neither they stay dropped.
+func adoptUnlabelled(
+	pool, unlabelled []RawEdition,
+	originalLanguage string,
+) []RawEdition {
+	if len(unlabelled) == 0 {
+		return nil
+	}
+	lang := originalLanguage
+	if lang == "" {
+		var top *RawEdition
+		for i := range pool {
+			if top == nil || pool[i].Popularity > top.Popularity {
+				top = &pool[i]
+			}
+		}
+		if top == nil {
+			return nil
+		}
+		lang = top.Language
+	}
+	labelled := map[int]bool{}
+	for _, e := range pool {
+		labelled[e.ReadingFormatID] = true
+	}
+	var out []RawEdition
+	for _, e := range unlabelled {
+		if e.ReadingFormatID != hcFormatAudiobook &&
+			e.ReadingFormatID != hcFormatEbook {
+			continue
+		}
+		if labelled[e.ReadingFormatID] {
+			continue
+		}
+		e.Language = lang
+		out = append(out, e)
+	}
+	return out
 }
 
 func candidateFormat(e RawEdition, ebookLangs map[string]bool) (string, bool) {
