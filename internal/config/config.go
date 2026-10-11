@@ -293,8 +293,8 @@ type ProbeConfig struct {
 }
 
 // ScheduleConfig carries one interval per registered job. Media-scoped jobs
-// are keyed movie_*/tv_* to match their scheduler names; the rest are shared
-// across both libraries and stay unprefixed.
+// are keyed movie_*/tv_*/music_*/book_* to match their scheduler names; the
+// rest are shared across every library and stay unprefixed.
 type ScheduleConfig struct {
 	MovieRSSSync         string `koanf:"movie_rss_sync"         validate:"required"`
 	TVRSSSync            string `koanf:"tv_rss_sync"            validate:"required"`
@@ -302,6 +302,10 @@ type ScheduleConfig struct {
 	TVMissingSearch      string `koanf:"tv_missing_search"      validate:"required"`
 	MovieMetadataRefresh string `koanf:"movie_metadata_refresh" validate:"required"`
 	TVMetadataRefresh    string `koanf:"tv_metadata_refresh"    validate:"required"`
+	MusicMissingSearch   string `koanf:"music_missing_search"   validate:"required"`
+	MusicMetadataRefresh string `koanf:"music_metadata_refresh" validate:"required"`
+	BookMissingSearch    string `koanf:"book_missing_search"    validate:"required"`
+	BookMetadataRefresh  string `koanf:"book_metadata_refresh"  validate:"required"`
 	MovieOrphanScan      string `koanf:"movie_orphan_scan"      validate:"required"`
 	TVOrphanScan         string `koanf:"tv_orphan_scan"         validate:"required"`
 	DownloadMonitor      string `koanf:"download_monitor"       validate:"required"`
@@ -872,6 +876,10 @@ func defaults() map[string]any {
 		"schedules.tv_missing_search":      "12h",
 		"schedules.movie_metadata_refresh": "24h",
 		"schedules.tv_metadata_refresh":    "24h",
+		"schedules.music_missing_search":   "12h",
+		"schedules.music_metadata_refresh": "24h",
+		"schedules.book_missing_search":    "12h",
+		"schedules.book_metadata_refresh":  "24h",
 		"schedules.movie_orphan_scan":      "6h",
 		"schedules.tv_orphan_scan":         "6h",
 		"schedules.download_monitor":       "30s",
@@ -1021,9 +1029,10 @@ func newDefaultsKoanf() *koanf.Koanf {
 // renamedKeys maps each deprecated config key to the keys that replaced it.
 //
 // The entries are the pre-media-split schedules names: missing_search,
-// metadata_refresh and orphan_scan each drove both the movie and the TV job, so
-// a value set under the old name has to land on both replacements or the
-// operator's cadence silently changes for one library.
+// metadata_refresh and orphan_scan each drove both the movie and the TV job,
+// and the first two music and books as well (they rode the movie job until
+// they had their own), so a value set under the old name has to land on every
+// replacement or the operator's cadence silently changes for one library.
 //
 // quality_default_profile was one default for both media; a v1 file carrying
 // it seeds both new keys.
@@ -1041,10 +1050,14 @@ var renamedKeys = map[string][]string{
 	"schedules.missing_search": {
 		"schedules.movie_missing_search",
 		"schedules.tv_missing_search",
+		"schedules.music_missing_search",
+		"schedules.book_missing_search",
 	},
 	"schedules.metadata_refresh": {
 		"schedules.movie_metadata_refresh",
 		"schedules.tv_metadata_refresh",
+		"schedules.music_metadata_refresh",
+		"schedules.book_metadata_refresh",
 	},
 	"schedules.orphan_scan": {
 		"schedules.movie_orphan_scan",
