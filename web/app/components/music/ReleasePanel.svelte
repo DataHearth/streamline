@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Bookmark, Radar, Search } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { Radar, Search } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import Tracklist from "./Tracklist.svelte";
@@ -19,6 +19,7 @@
 		onSearch,
 		onManualSearch,
 		onMonitor,
+		monitorPending = false,
 		onSearchTrack,
 		onDeleteTrack,
 	}: {
@@ -27,6 +28,8 @@
 		onSearch: () => void;
 		onManualSearch: () => void;
 		onMonitor: () => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
 		onSearchTrack?: (t: Track) => void;
 		onDeleteTrack?: (t: Track) => void;
 	} = $props();
@@ -89,19 +92,7 @@
 							<span class="hidden @md:inline">{i18n.action_manual_search()}</span>
 						</button>
 					{/if}
-					<button
-						type="button"
-						onclick={onMonitor}
-						aria-pressed={r.monitored}
-						aria-label={r.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						title={r.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						class={cn(
-							"grid h-11 w-11 place-items-center rounded-lg border border-border bg-bg-elevated/80 transition hover:border-border-strong lg:h-9 lg:w-9",
-							r.monitored ? "text-accent-text" : "text-fg-subtle",
-						)}
-					>
-						<Bookmark size={15} fill={r.monitored ? "currentColor" : "none"} aria-hidden="true" />
-					</button>
+					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
 					{#if up}
 						<span class="text-[13px] text-fg-muted">
 							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}

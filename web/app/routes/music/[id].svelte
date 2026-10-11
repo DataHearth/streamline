@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
-	import { Bookmark, Radar, Search, UserRound } from "@lucide/svelte";
+	import { Radar, Search, UserRound } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
+	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
 	import { cn } from "@lib/cn";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
 	import { artistPosterUrl } from "@lib/posters";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import Poster from "@components/shared/Poster.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
@@ -105,64 +106,49 @@
 		{ key: "none", label: i18n.music_monitor_none() },
 	];
 
-	const qc = useQueryClient();
-	const invalidate = () => qc.invalidateQueries({ queryKey: ["music"] });
-	// A refused or failed PATCH has to say so: these controls have no other
-	// feedback, so an unhandled rejection read as a dead button.
-	async function setMonitor(v: string) {
-		try {
-			await api(`/music/artists/${id}`, { method: "PATCH", body: { monitor: v } });
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_update_failed()));
-		}
-		invalidate();
-	}
+	const setMonitor = createAction<string>(() => ({
+		run: (monitor) => api(`/music/artists/${id}`, { method: "PATCH", body: { monitor } }),
+		refresh: MUSIC,
+		failed: updateFailed,
+		succeeded: (monitor) => monitorToast(monitor !== "none"),
+	}));
 	let lastMonitor: ArtistMonitor = "all";
 	function toggleMonitor() {
 		if (!artist) return;
-		if (artist.monitor === "none") setMonitor(lastMonitor);
+		if (artist.monitor === "none") setMonitor.mutate(lastMonitor);
 		else {
 			lastMonitor = artist.monitor;
-			setMonitor("none");
+			setMonitor.mutate("none");
 		}
 	}
-	async function toggleRelease(r: Release) {
-		try {
-			await api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } });
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_update_failed()));
-		}
-		invalidate();
-	}
-	async function searchNow(path: string, title: string) {
-		try {
-			await api(path, { method: "POST" });
-			toast.ok(i18n.music_search_started({ title }));
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_search_failed()));
-		}
-	}
+	const monitorRelease = createAction<Release>(() => ({
+		run: (r) => api(`/music/albums/${r.id}`, { method: "PATCH", body: { monitored: !r.monitored } }),
+		refresh: MUSIC,
+		failed: updateFailed,
+		succeeded: (r) => monitorToast(!r.monitored),
+	}));
+	const toggleRelease = (r: Release) => monitorRelease.mutate(r);
+	const searchNow = createAction<{ path: string; title: string }>(() => ({
+		run: ({ path }) => api(path, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: ({ title }) => i18n.music_search_started({ title }),
+	}));
 	function searchMissing() {
-		if (artist) searchNow(`/music/artists/${id}/search-now`, artist.name);
+		if (artist) searchNow.mutate({ path: `/music/artists/${id}/search-now`, title: artist.name });
 	}
-	const searchRelease = (r: Release) => searchNow(`/music/albums/${r.id}/search-now`, r.title);
-	const searchTrack = (t: Track) => searchNow(`/music/tracks/${t.id}/search-now`, t.title);
+	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
+	const searchTrack = (t: Track) => searchNow.mutate({ path: `/music/tracks/${t.id}/search-now`, title: t.title });
 	let deletingTrack = $state<Track | null>(null);
-	let deletingPending = $state(false);
-	async function deleteTrack() {
-		const t = deletingTrack;
-		if (!t) return;
-		deletingPending = true;
-		try {
-			await api(`/music/tracks/${t.id}/file`, { method: "DELETE" });
-			deletingTrack = null;
-			invalidate();
-			toast.ok(i18n.file_deleted());
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_delete_failed()));
-		} finally {
-			deletingPending = false;
-		}
+	const delTrack = createAction<Track>(() => ({
+		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
+		refresh: MUSIC,
+		failed: deleteFailed,
+		succeeded: () => i18n.file_deleted(),
+		then: () => (deletingTrack = null),
+	}));
+	function deleteTrack() {
+		if (deletingTrack) delTrack.mutate(deletingTrack);
 	}
 
 	let meta = $derived.by(() => {
@@ -326,23 +312,11 @@
 						<MonitorSelect
 							value={artist.monitor}
 							options={MONITOR}
-							onChange={setMonitor}
+							onChange={(v) => setMonitor.mutate(v)}
 							label={i18n.action_monitor()}
 							class="flex-1 md:flex-none"
 						/>
-						<button
-							type="button"
-							onclick={toggleMonitor}
-							aria-pressed={artist.monitor !== "none"}
-							aria-label={artist.monitor !== "none" ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							title={artist.monitor !== "none" ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class={cn(
-								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated/80 transition hover:border-border-strong",
-								artist.monitor !== "none" ? "text-accent-text" : "text-fg-subtle",
-							)}
-						>
-							<Bookmark size={16} fill={artist.monitor !== "none" ? "currentColor" : "none"} aria-hidden="true" />
-						</button>
+						<MonitorToggle monitored={artist.monitor !== "none"} onToggle={toggleMonitor} pending={setMonitor.isPending} />
 						<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
 						<!-- Always offered, as the book page's Search now: with nothing
 						     wanted it looks for upgrades to what the profile allows. -->
@@ -413,6 +387,7 @@
 					onSearch={searchRelease}
 					onManualSearch={(r) => openManual(String(r.id))}
 					onMonitor={toggleRelease}
+					monitorPending={monitorRelease.isPending}
 					onSearchTrack={searchTrack}
 					onDeleteTrack={(t) => (deletingTrack = t)}
 				/>
@@ -429,6 +404,7 @@
 						onSearch={() => searchRelease(selected)}
 						onManualSearch={() => openManual(String(selected.id))}
 						onMonitor={() => toggleRelease(selected)}
+						monitorPending={monitorRelease.isPending}
 						onSearchTrack={searchTrack}
 						onDeleteTrack={(t) => (deletingTrack = t)}
 					/>
@@ -514,7 +490,7 @@
 			onClose={() => (deletingTrack = null)}
 			actions={[
 				{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
-				{ label: i18n.action_delete_file(), variant: "danger", dismiss: false, pending: deletingPending, onClick: deleteTrack },
+				{ label: i18n.action_delete_file(), variant: "danger", dismiss: false, pending: delTrack.isPending, onClick: deleteTrack },
 			]}
 		>
 			<p class="text-sm leading-relaxed text-fg-muted [text-wrap:pretty]">{i18n.music_delete_track_body()}</p>

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { auth } from "@lib/auth.svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
 	import { tvPosterUrl } from "@lib/posters";
 	import { seriesStatus } from "@lib/status";
 	import PosterCard from "@components/shared/PosterCard.svelte";
@@ -26,18 +25,11 @@
 
 	let selectionActive = $derived(selectMode || selected.size > 0);
 
-	const qc = useQueryClient();
-	const monitor = createMutation<TVShow, Error, TVShow>(() => ({
-		mutationFn: (s) =>
-			api<TVShow>(`/series/${s.id}`, {
-				method: "PATCH",
-				body: { monitored: !s.monitored },
-			}),
-		onSuccess: (_d, s) => {
-			qc.invalidateQueries({ queryKey: ["series"] });
-			toast.ok(s.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+	const monitor = createAction<TVShow>(() => ({
+		run: (s) => api<TVShow>(`/series/${s.id}`, { method: "PATCH", body: { monitored: !s.monitored } }),
+		refresh: SERIES,
+		failed: updateFailed,
+		succeeded: (s) => monitorToast(!s.monitored),
 	}));
 
 	function episodeText(s: TVShow): string | undefined {
@@ -100,6 +92,7 @@
 			href={`/series/${show.id}`}
 			posterSrc={tvPosterUrl(show.id)}
 			onMonitor={auth.canAddDirectly ? () => monitor.mutate(show) : undefined}
+			monitorPending={monitor.isPending && monitor.variables?.id === show.id}
 			selected={selected.has(show.id)}
 			{selectionActive}
 			onSelect={auth.canAddDirectly ? (v) => onToggle(show.id, v) : undefined}

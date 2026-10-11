@@ -1,7 +1,8 @@
 <script lang="ts">
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { countMissing, countWanted } from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
-	import { Bookmark, ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
+	import { ChevronRight, Info, Search, Trash2 } from "@lucide/svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
@@ -25,6 +26,8 @@
 		seriesType,
 		onMonitorSeason,
 		onMonitorEpisode,
+		pendingSeason = null,
+		pendingEpisode = null,
 		onManualSearch,
 		onSearchSeason,
 		onDeleteFile,
@@ -37,6 +40,9 @@
 		seriesType: SeriesType;
 		onMonitorSeason: (s: Season) => void;
 		onMonitorEpisode: (ep: Episode) => void;
+		// The season number / episode id whose monitor write is in flight.
+		pendingSeason?: number | null;
+		pendingEpisode?: number | null;
 		onManualSearch: (ep: Episode) => void;
 		onSearchSeason: (s: Season) => void;
 		onDeleteFile: (ep: Episode) => void;
@@ -217,26 +223,14 @@
 				</button>
 
 				{#if auth.canAddDirectly}
-					<button
-						type="button"
-						onclick={() => onMonitorSeason(s)}
-						aria-pressed={s.monitored}
-						aria-label={s.monitored
-							? i18n.a11y_stop_monitoring_season({ season: seasonName(s) })
-							: i18n.a11y_monitor_season({ season: seasonName(s) })}
-						class={cn(
-							"grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-lg border transition",
-							s.monitored
-								? "border-accent-line bg-accent-soft text-accent-text"
-								: "border-border bg-bg-elevated text-fg-subtle",
-						)}
-					>
-						<Bookmark
-							size={16}
-							fill={s.monitored ? "currentColor" : "none"}
-							aria-hidden="true"
-						/>
-					</button>
+					<MonitorToggle
+						monitored={s.monitored}
+						onToggle={() => onMonitorSeason(s)}
+						pending={pendingSeason === s.number}
+						size="sm"
+						startLabel={i18n.a11y_monitor_season({ season: seasonName(s) })}
+						stopLabel={i18n.a11y_stop_monitoring_season({ season: seasonName(s) })}
+					/>
 
 					<button
 						type="button"
@@ -285,25 +279,16 @@
 						<li
 							class="flex items-center gap-2.5 border-t border-border bg-bg-deep px-3 py-2.5"
 						>
-							<button
-								type="button"
+							<MonitorToggle
+								monitored={ep.monitored}
+								onToggle={() => onMonitorEpisode(ep)}
+								pending={pendingEpisode === ep.id}
 								disabled={(ep.status === "unaired" && !s.monitored) || !auth.canAddDirectly}
-								onclick={() => onMonitorEpisode(ep)}
-								aria-pressed={ep.monitored}
-								aria-label={ep.monitored
-									? i18n.action_stop_monitoring_episode()
-									: i18n.action_monitor_episode()}
-								class={cn(
-									"grid h-11 w-11 shrink-0 place-items-center rounded-md transition disabled:opacity-40 lg:h-8 lg:w-8",
-									ep.monitored ? "text-accent-text" : "text-fg-faint",
-								)}
-							>
-								<Bookmark
-									size={14}
-									fill={ep.monitored ? "currentColor" : "none"}
-									aria-hidden="true"
-								/>
-							</button>
+								variant="ghost"
+								size="row"
+								startLabel={i18n.action_monitor_episode()}
+								stopLabel={i18n.action_stop_monitoring_episode()}
+							/>
 							<span
 								class="w-9 shrink-0 font-mono text-[11px] font-semibold text-fg-subtle"
 							>

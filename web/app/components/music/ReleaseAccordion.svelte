@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Bookmark, ChevronRight, Radar, Search } from "@lucide/svelte";
+	import { ChevronRight, Radar, Search } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { cn } from "@lib/cn";
@@ -25,6 +26,7 @@
 		onSearch,
 		onManualSearch,
 		onMonitor,
+		monitorPending = false,
 		onSearchTrack,
 		onDeleteTrack,
 	}: {
@@ -35,6 +37,8 @@
 		onSearch: (r: Release) => void;
 		onManualSearch: (r: Release) => void;
 		onMonitor: (r: Release) => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
 		onSearchTrack?: (t: Track) => void;
 		onDeleteTrack?: (t: Track) => void;
 	} = $props();
@@ -99,18 +103,7 @@
 								<Search size={16} aria-hidden="true" />
 							</button>
 						{/if}
-						<button
-							type="button"
-							onclick={() => onMonitor(r)}
-							aria-pressed={r.monitored}
-							aria-label={r.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-							class={cn(
-								"grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-bg-elevated",
-								r.monitored ? "text-accent-text" : "text-fg-subtle",
-							)}
-						>
-							<Bookmark size={16} fill={r.monitored ? "currentColor" : "none"} aria-hidden="true" />
-						</button>
+						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}

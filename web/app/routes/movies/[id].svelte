@@ -1,18 +1,15 @@
 <script lang="ts">
-	import {
-		createQuery,
-		useQueryClient,
-		createMutation,
-	} from "@tanstack/svelte-query";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
-	import { Search, LoaderCircle, Bookmark } from "@lucide/svelte";
+	import { Search, LoaderCircle } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
+	import { createAction, deleteFailed, monitorToast, MOVIES, refreshFailed, searchFailed, updateFailed } from "@lib/actions";
 	import { cn } from "@lib/cn";
 	import type { Movie, QualityProfile } from "@lib/types";
 	import MovieDetailHero from "@components/movies/MovieDetailHero.svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import DetailAbout from "@components/shared/DetailAbout.svelte";
 	import MovieDetailInfo from "@components/movies/MovieDetailInfo.svelte";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
@@ -93,65 +90,43 @@
 	let deleteOpen = $state(false);
 	let reidentifyOpen = $state(false);
 
-	const qc = useQueryClient();
-	const refresh = createMutation(() => ({
-		mutationFn: () =>
-			api<Movie>(`/movies/${movieId}/refresh-metadata`, {
-				method: "POST",
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok(i18n.movie_refresh_requested());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_refresh_failed())),
+	const refresh = createAction(() => ({
+		run: () => api<Movie>(`/movies/${movieId}/refresh-metadata`, { method: "POST" }),
+		refresh: MOVIES,
+		failed: refreshFailed,
+		succeeded: () => i18n.movie_refresh_requested(),
 	}));
 
-	const searchNow = createMutation(() => ({
-		mutationFn: () =>
-			api(`/movies/${movieId}/search-now`, { method: "POST" }),
-		onSuccess: () => toast.ok(i18n.movie_search_dispatched()),
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_search_failed())),
+	const searchNow = createAction(() => ({
+		run: () => api(`/movies/${movieId}/search-now`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: () => i18n.movie_search_dispatched(),
 	}));
 
-	const monitor = createMutation<Movie, Error, boolean>(() => ({
-		mutationFn: (next) =>
-			api<Movie>(`/movies/${movieId}`, {
-				method: "PATCH",
-				body: { monitored: next },
-			}),
-		onSuccess: (_d, next) => {
-			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			toast.ok(next ? i18n.monitor_now_monitoring() : i18n.monitor_stopped());
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	const monitor = createAction<boolean>(() => ({
+		run: (next) => api<Movie>(`/movies/${movieId}`, { method: "PATCH", body: { monitored: next } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: (next) => monitorToast(next),
 	}));
 
-	const saveProfile = createMutation<Movie, Error, string>(() => ({
-		mutationFn: (profile) =>
-			api<Movie>(`/movies/${movieId}`, {
-				method: "PATCH",
-				body: { quality_profile: profile },
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movie", movieId] });
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(i18n.movie_quality_updated());
-			qpOpen = false;
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_update_failed())),
+	const saveProfile = createAction<string>(() => ({
+		run: (profile) => api<Movie>(`/movies/${movieId}`, { method: "PATCH", body: { quality_profile: profile } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: () => i18n.movie_quality_updated(),
+		then: () => (qpOpen = false),
 	}));
 
-	const del = createMutation<unknown, Error, boolean>(() => ({
-		mutationFn: (withFiles) =>
-			api(`/movies/${movieId}?delete_files=${withFiles}`, {
-				method: "DELETE",
-			}),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(i18n.movie_deleted());
-			navigate("/movies");
-		},
-		onError: (e: Error) => toast.err(errorText(e, i18n.common_delete_failed())),
+	// Only the list is re-read: the detail is gone, and re-reading it would
+	// flash a 404 before the navigation lands.
+	const del = createAction<boolean>(() => ({
+		run: (withFiles) => api(`/movies/${movieId}?delete_files=${withFiles}`, { method: "DELETE" }),
+		refresh: [["movies"]],
+		failed: deleteFailed,
+		succeeded: () => i18n.movie_deleted(),
+		then: () => navigate("/movies"),
 	}));
 
 	function onKebabPick(a: string) {
@@ -217,23 +192,7 @@
 					{i18n.action_manual_search()}
 				</button>
 
-				<button
-					type="button"
-					onclick={() => monitor.mutate(!(movie.monitored ?? false))}
-					disabled={monitor.isPending}
-					aria-pressed={movie.monitored ?? false}
-					title={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-					class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60"
-				>
-					<Bookmark
-						size={16}
-						fill={movie.monitored ? "currentColor" : "none"}
-						aria-hidden="true"
-					/>
-					<span class="sr-only">
-						{movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-					</span>
-				</button>
+				<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
 
 				<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 			{/if}
@@ -329,25 +288,7 @@
 				{/if}
 			</button>
 
-			<button
-				type="button"
-				onclick={() => monitor.mutate(!(movie.monitored ?? false))}
-				disabled={monitor.isPending}
-				aria-pressed={movie.monitored ?? false}
-				aria-label={movie.monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-				class={cn(
-					"grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition disabled:opacity-60",
-					movie.monitored
-						? "border-accent-line bg-accent-soft text-accent-text"
-						: "border-border-strong bg-bg-elevated text-fg-muted",
-				)}
-			>
-				<Bookmark
-					size={18}
-					fill={movie.monitored ? "currentColor" : "none"}
-					aria-hidden="true"
-				/>
-			</button>
+			<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} />
 
 			<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 		</div>

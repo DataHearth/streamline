@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Bookmark, ChevronRight, Search, UserRound } from "@lucide/svelte";
+	import { ChevronRight, Search, UserRound } from "@lucide/svelte";
+	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
 	import Poster from "@components/shared/Poster.svelte";
 	import ReleaseTile from "./ReleaseTile.svelte";
@@ -16,11 +17,14 @@
 		canEdit = false,
 		onSearch,
 		onMonitor,
+		monitorPending = false,
 	}: {
 		artist: Artist;
 		canEdit?: boolean;
 		onSearch?: () => void;
 		onMonitor?: () => void;
+		// The monitor write is in flight.
+		monitorPending?: boolean;
 	} = $props();
 
 	let t = $derived(artistTally(a));
@@ -141,19 +145,7 @@
 							<Search size={14} aria-hidden="true" />
 						</button>
 					{/if}
-					<button
-						type="button"
-						onclick={onMonitor}
-						aria-pressed={monitored}
-						aria-label={monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						title={monitored ? i18n.action_stop_monitoring() : i18n.action_monitor()}
-						class={cn(
-							"grid h-11 w-11 place-items-center rounded-md border border-border bg-bg-elevated transition lg:h-7 lg:w-7",
-							monitored ? "text-accent-text" : "text-fg-subtle hover:text-fg",
-						)}
-					>
-						<Bookmark size={14} fill={monitored ? "currentColor" : "none"} aria-hidden="true" />
-					</button>
+					<MonitorToggle monitored={monitored} onToggle={() => onMonitor?.()} pending={monitorPending} size="xs" />
 					{@render actions("tile")}
 				</div>
 			{/if}

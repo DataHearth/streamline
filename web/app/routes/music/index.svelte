@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { createInfiniteQuery, createQuery, keepPreviousData, useQueryClient } from "@tanstack/svelte-query";
+	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { Eye } from "@lucide/svelte";
 	import { api, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { toast } from "@lib/toast";
+	import { createAction, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { formatRelative } from "@lib/dates";
 	import { onRouteQuery } from "@lib/route-query";
 	import LibraryToolbar from "@components/shared/LibraryToolbar.svelte";
@@ -160,23 +160,20 @@
 		query = "";
 	}
 
-	const qc = useQueryClient();
-	async function searchMissing(a: Artist) {
-		try {
-			await api(`/music/artists/${a.id}/search-now`, { method: "POST" });
-			toast.ok(i18n.music_search_started({ title: a.name }));
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_search_failed()));
-		}
-	}
-	async function toggleMonitor(a: Artist) {
-		try {
-			await api(`/music/artists/${a.id}`, { method: "PATCH", body: { monitor: a.monitor === "none" ? "all" : "none" } });
-		} catch (e) {
-			toast.err(errorText(e, i18n.common_update_failed()));
-		}
-		qc.invalidateQueries({ queryKey: ["music"] });
-	}
+	const searchMissing = createAction<Artist>(() => ({
+		run: (a) => api(`/music/artists/${a.id}/search-now`, { method: "POST" }),
+		refresh: [],
+		failed: searchFailed,
+		succeeded: (a) => i18n.music_search_started({ title: a.name }),
+	}));
+	// The list's bookmark is all-or-nothing; the detail page's select picks
+	// the finer policies.
+	const toggleMonitor = createAction<Artist>(() => ({
+		run: (a) => api(`/music/artists/${a.id}`, { method: "PATCH", body: { monitor: a.monitor === "none" ? "all" : "none" } }),
+		refresh: MUSIC,
+		failed: updateFailed,
+		succeeded: (a) => monitorToast(a.monitor === "none"),
+	}));
 </script>
 
 <div class="flex flex-col">
@@ -231,8 +228,9 @@
 				<ArtistRow
 					artist={a}
 					canEdit={auth.canAddDirectly}
-					onSearch={() => searchMissing(a)}
-					onMonitor={() => toggleMonitor(a)}
+					onSearch={() => searchMissing.mutate(a)}
+					onMonitor={() => toggleMonitor.mutate(a)}
+					monitorPending={toggleMonitor.isPending && toggleMonitor.variables?.id === a.id}
 				/>
 			{/each}
 			<div bind:this={pageSentinel} aria-hidden="true"></div>

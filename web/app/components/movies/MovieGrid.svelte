@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { auth } from "@lib/auth.svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { api, errorText } from "@lib/api";
-	import { toast } from "@lib/toast";
+	import { api } from "@lib/api";
+	import { createAction, monitorToast, MOVIES, updateFailed } from "@lib/actions";
 	import { formatBytes } from "@lib/format";
 	import { movieStatus } from "@lib/status";
 	import PosterCard from "@components/shared/PosterCard.svelte";
 	import MovieActionsMenu from "./MovieActionsMenu.svelte";
 	import type { Movie } from "@lib/types";
-	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		movies,
@@ -26,18 +24,11 @@
 
 	let selectionActive = $derived(selectMode || selected.size > 0);
 
-	const qc = useQueryClient();
-	const monitor = createMutation<Movie, Error, Movie>(() => ({
-		mutationFn: (m) =>
-			api<Movie>(`/movies/${m.id}`, {
-				method: "PATCH",
-				body: { monitored: !m.monitored },
-			}),
-		onSuccess: (_d, m) => {
-			qc.invalidateQueries({ queryKey: ["movies"] });
-			toast.ok(m.monitored ? i18n.monitor_stopped() : i18n.monitor_now_monitoring());
-		},
-		onError: (e) => toast.err(errorText(e, i18n.common_update_failed())),
+	const monitor = createAction<Movie>(() => ({
+		run: (m) => api<Movie>(`/movies/${m.id}`, { method: "PATCH", body: { monitored: !m.monitored } }),
+		refresh: MOVIES,
+		failed: updateFailed,
+		succeeded: (m) => monitorToast(!m.monitored),
 	}));
 
 	function enrich(m: Movie) {
@@ -65,6 +56,7 @@
 		<PosterCard
 			movie={enrich(movie)}
 			onMonitor={auth.canAddDirectly ? () => monitor.mutate(movie) : undefined}
+			monitorPending={monitor.isPending && monitor.variables?.id === movie.id}
 			selected={selected.has(movie.id)}
 			{selectionActive}
 			onSelect={auth.canAddDirectly ? (v) => onToggle(movie.id, v) : undefined}

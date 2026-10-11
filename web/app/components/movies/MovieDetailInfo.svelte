@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { around } from "@lib/message-parts";
 	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { auth } from "@lib/auth.svelte";
-	import { api, errorText } from "@lib/api";
+	import { api } from "@lib/api";
+	import { createAction, deleteFailed, MOVIES } from "@lib/actions";
 	import { toast } from "@lib/toast";
 	import { formatBytes } from "@lib/format";
 	import { formatDate, formatRelative } from "@lib/dates";
@@ -124,7 +124,6 @@
 		if (longPressed || holding) e.preventDefault();
 	}
 
-	const qc = useQueryClient();
 	let deleteOpen = $state(false);
 	// The delete confirm highlights the status word inside one whole sentence.
 	const [revertsPre, revertsPost] = around((status) =>
@@ -132,21 +131,14 @@
 	);
 	let removeTorrent = $state(false);
 
-	const del = createMutation<unknown, Error, { fileId: number; remove: boolean }>(
-		() => ({
-			mutationFn: ({ fileId, remove }) =>
-				api(`/movies/${movie.id}/files/${fileId}`, {
-					method: "DELETE",
-					body: { remove_torrent: remove },
-				}),
-			onSuccess: () => {
-				qc.invalidateQueries({ queryKey: ["movie", movie.id] });
-				toast.ok(i18n.file_deleted());
-				deleteOpen = false;
-			},
-			onError: (e) => toast.err(errorText(e, i18n.common_delete_failed())),
-		}),
-	);
+	const del = createAction<{ fileId: number; remove: boolean }>(() => ({
+		run: ({ fileId, remove }) =>
+			api(`/movies/${movie.id}/files/${fileId}`, { method: "DELETE", body: { remove_torrent: remove } }),
+		refresh: MOVIES,
+		failed: deleteFailed,
+		succeeded: () => i18n.file_deleted(),
+		then: () => (deleteOpen = false),
+	}));
 </script>
 
 <aside class="flex flex-col gap-4 md:row-span-2">
