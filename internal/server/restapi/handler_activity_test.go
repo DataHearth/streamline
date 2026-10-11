@@ -44,6 +44,34 @@ var _ = Describe("Handler: Activity queue/history",
 			Expect(body.Items[0].Status).To(Equal(QueueEntryStatus("downloading")))
 		})
 
+		It("names the album, the pack's artist and the book a row is for", func() {
+			album := &ent.Album{ID: 24, Title: "L'Enfant sauvage"}
+			album.Edges.Artist = &ent.Artist{ID: 1, Name: "Gojira"}
+			app.downloads.EXPECT().Queue(mock.Anything).Return(
+				download.QueueSnapshot{
+					RefreshedAt: time.Now(),
+					Items: []download.QueueEntry{
+						{RecordID: 1, Status: "held", Title: "a", Album: album},
+						{RecordID: 2, Status: "downloading", Title: "b", Artist: &ent.Artist{ID: 1, Name: "Gojira"}},
+						{RecordID: 3, Status: "downloading", Title: "c", Book: &ent.Book{ID: 7, Title: "Exhalation", AuthorName: "Ted Chiang"}},
+					},
+				}, nil).Once()
+
+			resp, err := http.Get(app.srv.URL + "/api/v1/activity/queue")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body DownloadQueue
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Items).To(HaveLen(3))
+			Expect(body.Items[0].Album).To(Equal(&ActivityAlbumRef{Id: 24, Title: "L'Enfant sauvage", ArtistId: 1, ArtistName: "Gojira"}))
+			Expect(body.Items[0].Artist).To(BeNil())
+			Expect(body.Items[1].Artist).To(Equal(&ActivityArtistRef{Id: 1, Name: "Gojira"}))
+			Expect(body.Items[1].Album).To(BeNil())
+			Expect(body.Items[2].Book).To(Equal(&ActivityBookRef{Id: 7, Title: "Exhalation", Author: "Ted Chiang"}))
+			Expect(body.Items[2].Movie.Id).To(BeZero())
+		})
+
 		It("carries selection fields for an applied selection", func() {
 			app.downloads.EXPECT().Queue(mock.Anything).Return(
 				download.QueueSnapshot{

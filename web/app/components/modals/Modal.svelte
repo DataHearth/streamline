@@ -131,7 +131,7 @@
 				</div>
 				{#if footer}
 					<footer
-						class="flex items-center justify-end gap-2 border-t border-border px-5 py-3.5 [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap sm:[&_button]:flex-none"
+						class="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3.5 [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap sm:[&_button]:flex-none"
 					>
 						{@render footer()}
 					</footer>

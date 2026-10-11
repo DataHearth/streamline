@@ -794,6 +794,9 @@ func toQueueEntry(e download.QueueEntry) QueueEntry {
 		out.Movie = movieToAPI(e.Movie)
 	}
 	out.Episode = episodeRef(e.Episode)
+	out.Album = activityAlbumRef(e.Album)
+	out.Artist = activityArtistRef(e.Artist)
+	out.Book = activityBookRef(e.Book)
 	if e.DownloadSpeed != 0 {
 		ds := e.DownloadSpeed
 		out.DownloadSpeed = &ds
@@ -855,6 +858,9 @@ func toHistoryEntry(r *ent.DownloadRecord) HistoryEntry {
 		out.Movie = movieToAPI(r.Edges.Movie)
 	}
 	out.Episode = episodeRef(r.Edges.AnchorEpisode)
+	out.Album = activityAlbumRef(r.Edges.Album)
+	out.Artist = activityArtistRef(r.Edges.Artist)
+	out.Book = activityBookRef(r.Edges.Book)
 	if r.Quality != "" {
 		out.Quality = &r.Quality
 	}
@@ -892,6 +898,37 @@ func episodeRef(ep *ent.Episode) *EpisodeRef {
 		}
 	}
 	return ref
+}
+
+// activityAlbumRef titles an album download's queue or history row, or nil
+// for any other record. Expects the album's artist eager-loaded.
+func activityAlbumRef(a *ent.Album) *ActivityAlbumRef {
+	if a == nil {
+		return nil
+	}
+	ref := &ActivityAlbumRef{Id: a.ID, Title: a.Title}
+	if ar := a.Edges.Artist; ar != nil {
+		ref.ArtistId = ar.ID
+		ref.ArtistName = ar.Name
+	}
+	return ref
+}
+
+// activityArtistRef titles a discography pack's row, or nil for any other
+// record.
+func activityArtistRef(a *ent.Artist) *ActivityArtistRef {
+	if a == nil {
+		return nil
+	}
+	return &ActivityArtistRef{Id: a.ID, Name: a.Name}
+}
+
+// activityBookRef titles a book download's row, or nil for any other record.
+func activityBookRef(b *ent.Book) *ActivityBookRef {
+	if b == nil {
+		return nil
+	}
+	return &ActivityBookRef{Id: b.ID, Title: b.Title, Author: b.AuthorName}
 }
 
 // toPendingItem maps a pending DownloadRecord (with movie/episode edges
