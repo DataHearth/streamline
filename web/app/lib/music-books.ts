@@ -4,7 +4,7 @@
 import * as v from "valibot";
 import { m as i18n } from "./paraglide/messages.js";
 import { getLocale } from "./paraglide/runtime.js";
-import { formatDate, formatDateShort } from "./dates";
+import { formatDate } from "./dates";
 import { formatBytes } from "./format";
 import { authorPosterUrl, artistPosterUrl } from "./posters";
 
@@ -294,19 +294,7 @@ export const trackTime = (s: number) =>
 
 // A partial copy counts what is missing rather than saying "Wanted", which
 // reads as if nothing were there.
-// A release reads as unmonitored whenever nothing will be searched for it and
-// nothing is on its way: not monitored, and neither complete nor downloading.
-// A complete release keeps its check and a download its progress, since those
-// say more than the flag does.
-export const releaseUnmonitored = (r: Release) =>
-	!r.monitored && r.status !== "available" && r.status !== "downloading" && r.status !== "paused";
-
-// "Live · 12 Jun 2026": an upcoming release's line, its date included.
-export const upcomingLine = (r: Release) =>
-	[releaseTypeLabel(r.type), formatDateShort(r.release_date)].filter(Boolean).join(" · ");
-
 export function releasePill(r: Release): { token: string; label: string; live?: boolean } {
-	if (releaseUnmonitored(r)) return { token: "skipped", label: i18n.monitor_unmonitored() };
 	if (r.status === "upcoming") return { token: "unaired", label: i18n.music_upcoming() };
 	if (r.status === "paused") return { token: "downloading", label: i18n.status_paused(), live: true };
 	if (r.status === "downloading")
@@ -316,6 +304,8 @@ export function releasePill(r: Release): { token: string; label: string; live?: 
 			live: true,
 		};
 	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
+	if (r.status === "wanted" && !r.monitored && r.tracks_have === 0)
+		return { token: "skipped", label: i18n.monitor_unmonitored() };
 	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
 		if (r.tracks_have > 0)
