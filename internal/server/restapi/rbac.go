@@ -197,6 +197,7 @@ var minRole = map[string]string{
 	"ListMusicQualityProfiles":  roleRequestOnly,
 	"AddMusicArtist":            roleMember,
 	"PatchMusicArtist":          roleMember,
+	"ApplyMusicMonitoredTypes":  roleAdmin,
 	"DeleteMusicArtist":         roleMember,
 	"RefreshMusicArtist":        roleMember,
 	"PatchMusicAlbum":           roleMember,

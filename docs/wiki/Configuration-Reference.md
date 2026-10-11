@@ -135,6 +135,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
 | `library.monitor_specials` | ✅ | Settings → Series |
+| `library.music_monitored_types` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
@@ -257,6 +258,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.series_naming` | template | `{title} ({year})/Season {season}/{title} - S{season:2}E{episode:2} - {episode_title} [{quality}].{ext}` | |
 | `library.import_mode` | enum | `hardlink` | `hardlink` \| `copy` \| `move`. `move` also removes the torrent from its client once the import lands, since it can no longer seed. Music always copies instead of hardlinking, and instead of moving while `keep_torrent_seeding` is on: tags are written into the library copy, which must not be the file the torrent is seeding |
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
+| `library.music_monitored_types` | list | `[album, ep]` | Release types an artist monitored for *all* or *future* releases monitors: any of `album`, `ep`, `single`, `live`, `compilation`, `other`. The rest are added unmonitored. Applies when a policy is applied (add, refresh, monitor change); Settings → Music can re-apply it to existing artists. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |

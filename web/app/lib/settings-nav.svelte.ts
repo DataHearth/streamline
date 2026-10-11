@@ -7,6 +7,7 @@ import {
 	Gauge,
 	Tags,
 	Tv,
+	Music,
 	Film,
 	Replace,
 	FolderTree,
@@ -51,6 +52,7 @@ export const SETTINGS_TITLES: Record<string, () => string> = {
 	"/settings/custom-formats": () => i18n.settings_custom_formats(),
 	"/settings/library": () => i18n.settings_library(),
 	"/settings/series": () => i18n.settings_series(),
+	"/settings/music": () => i18n.settings_music(),
 	"/settings/media-probe": () => i18n.settings_media_probe(),
 	"/settings/transcoding": () => i18n.settings_transcoding(),
 	"/settings/metadata": () => i18n.settings_metadata(),
@@ -179,6 +181,11 @@ export function createSettingsNav(withCounts = true) {
 						path: "/settings/series",
 						Icon: Tv,
 						label: i18n.settings_series(),
+					},
+					{
+						path: "/settings/music",
+						Icon: Music,
+						label: i18n.settings_music(),
 					},
 					// Probing is what happens to files entering the library, so it
 					// belongs here rather than under Connections — there is no host to

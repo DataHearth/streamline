@@ -251,6 +251,12 @@ type LibraryConfig struct {
 	// recaps and OVAs nobody wants grabbed automatically. Only applies at seed
 	// time — flipping it never touches seasons already in the library.
 	MonitorSpecials bool `koanf:"monitor_specials"`
+	// MusicMonitoredTypes are the release types an artist's all and future
+	// policies monitor; the others are added unmonitored. Album and EP by
+	// default: singles mostly repeat an album's tracks, and live releases and
+	// compilations are rarely what a discography is followed for. Applies when
+	// a policy is applied — add, refresh, a monitor change — never on its own.
+	MusicMonitoredTypes []string `koanf:"music_monitored_types" validate:"dive,oneof=album ep single compilation live other"`
 	// DownloadPath is the host-side directory where streamline reads
 	// completed torrents from. qBittorrent (or any other client) decides
 	// its own save location; this only tells the importer where to look,
@@ -854,6 +860,7 @@ func defaults() map[string]any {
 		"library.movie_naming":             "{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{ext}",
 		"library.import_mode":              "hardlink",
 		"library.monitor_specials":         false,
+		"library.music_monitored_types":    []string{"album", "ep"},
 		"library.keep_torrent_seeding":     true,
 		"library.import_max_attempts":      3,
 		"library.allowed_download_roots":   []string{},

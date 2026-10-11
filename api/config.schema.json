@@ -519,6 +519,12 @@
           "type": "boolean",
           "description": "Monitor season 0 (specials) when a series is added or a refresh discovers the season. Off by default."
         },
+        "music_monitored_types": {
+          "type": "array",
+          "items": { "enum": ["album", "ep", "single", "compilation", "live", "other"] },
+          "uniqueItems": true,
+          "description": "Release types an artist's all and future monitor policies monitor; the others are added unmonitored. Defaults to album and ep."
+        },
         "no_match_cooldown": { "$ref": "#/definitions/duration" },
         "max_grab_failures": { "type": "integer", "minimum": 1 },
         "keep_torrent_seeding": { "type": "boolean" },

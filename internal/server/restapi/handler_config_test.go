@@ -124,6 +124,48 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			Expect(got.MonitorSpecials).To(BeTrue())
 		})
 
+		It("round-trips music_monitored_types, dropping repeats", func() {
+			Expect(config.Get().Library.MusicMonitoredTypes).
+				To(Equal([]string{"album", "ep"}))
+			body := strings.NewReader(
+				`{"music_monitored_types":["album","live","album"]}`,
+			)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var got LibraryConfigView
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.MusicMonitoredTypes).
+				To(Equal([]MusicAlbumType{"album", "live"}))
+			Expect(config.Get().Library.MusicMonitoredTypes).
+				To(Equal([]string{"album", "live"}))
+		})
+
+		It("accepts an empty music_monitored_types", func() {
+			body := strings.NewReader(`{"music_monitored_types":[]}`)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(config.Get().Library.MusicMonitoredTypes).To(BeEmpty())
+		})
+
+		It("refuses an unknown release type with 422", func() {
+			body := strings.NewReader(
+				`{"music_monitored_types":["album","bootleg"]}`,
+			)
+			resp := app.do(
+				jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			Expect(config.Get().Library.MusicMonitoredTypes).
+				To(Equal([]string{"album", "ep"}))
+		})
+
 		It("rejects a non-admin with 403", func() {
 			resp := app.do(
 				app.req(

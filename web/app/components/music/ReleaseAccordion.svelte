@@ -143,19 +143,11 @@
 	</div>
 {/snippet}
 
-{#if groups.albums.length > 0}
+{#each groups as g (g.key)}
 	<p class="px-4 pb-2 pt-5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
-		{i18n.music_group_albums()} · {groups.albums.length}
+		{g.label} · {g.releases.length}
 	</p>
-	{#each groups.albums as r (r.id)}
+	{#each g.releases as r (r.id)}
 		{@render row(r)}
 	{/each}
-{/if}
-{#if groups.others.length > 0}
-	<p class="px-4 pb-2 pt-5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-faint">
-		{i18n.music_group_others()} · {groups.others.length}
-	</p>
-	{#each groups.others as r (r.id)}
-		{@render row(r)}
-	{/each}
-{/if}
+{/each}

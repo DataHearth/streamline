@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"regexp"
+	"slices"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -132,7 +133,14 @@ func (s *Server) UpdateConfigLibrary(
 	if l := req.Body.BookLanguage; l != nil && !iso639_1.MatchString(*l) {
 		errLang = errors.New("book_language must be a two-letter ISO 639-1 code")
 	}
-	if err := errors.Join(errGrab, errAttempts, errDrift, errLang); err != nil {
+	musicTypes, errTypes := musicMonitoredTypes(req.Body.MusicMonitoredTypes)
+	if err := errors.Join(
+		errGrab,
+		errAttempts,
+		errDrift,
+		errLang,
+		errTypes,
+	); err != nil {
 		return UpdateConfigLibrary422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
@@ -140,6 +148,7 @@ func (s *Server) UpdateConfigLibrary(
 
 	patch := config.LibraryPatch{
 		MonitorSpecials:      req.Body.MonitorSpecials,
+		MusicMonitoredTypes:  musicTypes,
 		BookLanguage:         req.Body.BookLanguage,
 		MovieNaming:          req.Body.MovieNaming,
 		SeriesNaming:         req.Body.SeriesNaming,
@@ -174,6 +183,7 @@ func (s *Server) UpdateConfigLibrary(
 	}
 	slog.InfoContext(ctx, "library config updated",
 		"monitor_specials", updated.MonitorSpecials,
+		"music_monitored_types", updated.MusicMonitoredTypes,
 	)
 	return UpdateConfigLibrary200JSONResponse{
 		LibraryConfigJSONResponse: libraryConfigView(updated),
@@ -738,6 +748,28 @@ func authConfigView(a config.AuthConfig) AuthConfigJSONResponse {
 	}
 }
 
+// musicMonitoredTypes checks a music_monitored_types patch against the enum
+// and drops repeats, keeping the first. Nothing validates a request body
+// against the spec, and a repeat would be written to the config as given.
+func musicMonitoredTypes(in *[]MusicAlbumType) (*[]string, error) {
+	if in == nil {
+		return nil, nil
+	}
+	out := make([]string, 0, len(*in))
+	for _, t := range *in {
+		if !t.Valid() {
+			return nil, fmt.Errorf(
+				"music_monitored_types: unknown release type %q",
+				t,
+			)
+		}
+		if !slices.Contains(out, string(t)) {
+			out = append(out, string(t))
+		}
+	}
+	return &out, nil
+}
+
 // libraryConfigView maps config.LibraryConfig into the generated view. The
 // three roots ride along read-only: the settings page shows where the library
 // lives, and pathmigrate owns moving it. probe is always populated (never
@@ -753,6 +785,7 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 	moviePath, seriesPath, downloadPath := l.MoviePath, l.SeriesPath, l.DownloadPath
 	return LibraryConfigJSONResponse{
 		MonitorSpecials:      l.MonitorSpecials,
+		MusicMonitoredTypes:  musicAlbumTypes(l.MusicMonitoredTypes),
 		BookLanguage:         l.BookLanguage,
 		MovieNaming:          l.MovieNaming,
 		SeriesNaming:         l.SeriesNaming,

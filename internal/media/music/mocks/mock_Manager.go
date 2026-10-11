@@ -186,6 +186,72 @@ func (_c *MockManager_AlbumDetail_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// ApplyMonitoredTypes provides a mock function for the type MockManager
+func (_mock *MockManager) ApplyMonitoredTypes(ctx context.Context) (int, int, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyMonitoredTypes")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (int, int, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) int); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = returnFunc(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockManager_ApplyMonitoredTypes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyMonitoredTypes'
+type MockManager_ApplyMonitoredTypes_Call struct {
+	*mock.Call
+}
+
+// ApplyMonitoredTypes is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockManager_Expecter) ApplyMonitoredTypes(ctx any) *MockManager_ApplyMonitoredTypes_Call {
+	return &MockManager_ApplyMonitoredTypes_Call{Call: _e.mock.On("ApplyMonitoredTypes", ctx)}
+}
+
+func (_c *MockManager_ApplyMonitoredTypes_Call) Run(run func(ctx context.Context)) *MockManager_ApplyMonitoredTypes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_ApplyMonitoredTypes_Call) Return(n int, n1 int, err error) *MockManager_ApplyMonitoredTypes_Call {
+	_c.Call.Return(n, n1, err)
+	return _c
+}
+
+func (_c *MockManager_ApplyMonitoredTypes_Call) RunAndReturn(run func(ctx context.Context) (int, int, error)) *MockManager_ApplyMonitoredTypes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BrowseArtistReleases provides a mock function for the type MockManager
 func (_mock *MockManager) BrowseArtistReleases(ctx context.Context, artistID uint32) ([]music.AlbumRelease, error) {
 	ret := _mock.Called(ctx, artistID)

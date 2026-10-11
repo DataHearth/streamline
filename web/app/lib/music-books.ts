@@ -304,6 +304,8 @@ export function releasePill(r: Release): { token: string; label: string; live?: 
 			live: true,
 		};
 	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
+	if (r.status === "wanted" && !r.monitored && r.tracks_have === 0)
+		return { token: "skipped", label: i18n.monitor_unmonitored() };
 	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
 		if (r.tracks_have > 0)
@@ -344,17 +346,30 @@ export function artistTally(a: Artist) {
 	return {
 		released: out.length,
 		have: out.filter((r) => r.status === "available").length,
-		wanted: out.filter((r) => r.status === "wanted").length,
+		// What the missing search would look for: an unmonitored release is
+		// never searched, so it is not counted as wanted.
+		wanted: out.filter((r) => r.status === "wanted" && r.monitored).length,
 		downloading: out.filter((r) => r.status === "downloading" || r.status === "paused").length,
 		upcoming: a.albums.length - out.length,
 	};
 }
 
+// The discography's sections, the way seasons are, in this order: albums, then
+// EPs and singles, live releases, and compilations with whatever else
+// MusicBrainz files. Empty sections are left out.
+const RELEASE_SECTIONS: { key: string; label: () => string; types: ReleaseType[] }[] = [
+	{ key: "albums", label: () => i18n.music_group_albums(), types: ["album"] },
+	{ key: "eps", label: () => i18n.music_group_others(), types: ["ep", "single"] },
+	{ key: "live", label: () => i18n.music_group_live(), types: ["live"] },
+	{ key: "compilations", label: () => i18n.music_group_compilations(), types: ["compilation", "other"] },
+];
+
 export function releaseGroups(releases: Release[]) {
-	return {
-		albums: releases.filter((r) => r.type === "album"),
-		others: releases.filter((r) => r.type !== "album"),
-	};
+	return RELEASE_SECTIONS.map((s) => ({
+		key: s.key,
+		label: s.label(),
+		releases: releases.filter((r) => s.types.includes(r.type)),
+	})).filter((g) => g.releases.length > 0);
 }
 
 // The release an artist page opens on: the newest with something missing,

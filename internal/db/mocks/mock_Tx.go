@@ -16349,6 +16349,84 @@ func (_c *MockTx_PurgeExpiredSessions_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// ReapplyMonitorPolicies provides a mock function for the type MockTx
+func (_mock *MockTx) ReapplyMonitorPolicies(ctx context.Context, types []string, now time.Time) (int, int, error) {
+	ret := _mock.Called(ctx, types, now)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReapplyMonitorPolicies")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time) (int, int, error)); ok {
+		return returnFunc(ctx, types, now)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, time.Time) int); ok {
+		r0 = returnFunc(ctx, types, now)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, time.Time) int); ok {
+		r1 = returnFunc(ctx, types, now)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, []string, time.Time) error); ok {
+		r2 = returnFunc(ctx, types, now)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockTx_ReapplyMonitorPolicies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReapplyMonitorPolicies'
+type MockTx_ReapplyMonitorPolicies_Call struct {
+	*mock.Call
+}
+
+// ReapplyMonitorPolicies is a helper method to define mock.On call
+//   - ctx context.Context
+//   - types []string
+//   - now time.Time
+func (_e *MockTx_Expecter) ReapplyMonitorPolicies(ctx any, types any, now any) *MockTx_ReapplyMonitorPolicies_Call {
+	return &MockTx_ReapplyMonitorPolicies_Call{Call: _e.mock.On("ReapplyMonitorPolicies", ctx, types, now)}
+}
+
+func (_c *MockTx_ReapplyMonitorPolicies_Call) Run(run func(ctx context.Context, types []string, now time.Time)) *MockTx_ReapplyMonitorPolicies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ReapplyMonitorPolicies_Call) Return(n int, n1 int, err error) *MockTx_ReapplyMonitorPolicies_Call {
+	_c.Call.Return(n, n1, err)
+	return _c
+}
+
+func (_c *MockTx_ReapplyMonitorPolicies_Call) RunAndReturn(run func(ctx context.Context, types []string, now time.Time) (int, int, error)) *MockTx_ReapplyMonitorPolicies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecentActivity provides a mock function for the type MockTx
 func (_mock *MockTx) RecentActivity(ctx context.Context, f db.ActivityFilter) (*db.ActivityResult, error) {
 	ret := _mock.Called(ctx, f)
@@ -18604,16 +18682,16 @@ func (_c *MockTx_SetArtistDetails_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // SetArtistMonitor provides a mock function for the type MockTx
-func (_mock *MockTx) SetArtistMonitor(ctx context.Context, id uint32, monitor artist.Monitor, now time.Time) error {
-	ret := _mock.Called(ctx, id, monitor, now)
+func (_mock *MockTx) SetArtistMonitor(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) error {
+	ret := _mock.Called(ctx, id, monitor, types, now)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetArtistMonitor")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, artist.Monitor, time.Time) error); ok {
-		r0 = returnFunc(ctx, id, monitor, now)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, artist.Monitor, []string, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, monitor, types, now)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -18629,12 +18707,13 @@ type MockTx_SetArtistMonitor_Call struct {
 //   - ctx context.Context
 //   - id uint32
 //   - monitor artist.Monitor
+//   - types []string
 //   - now time.Time
-func (_e *MockTx_Expecter) SetArtistMonitor(ctx any, id any, monitor any, now any) *MockTx_SetArtistMonitor_Call {
-	return &MockTx_SetArtistMonitor_Call{Call: _e.mock.On("SetArtistMonitor", ctx, id, monitor, now)}
+func (_e *MockTx_Expecter) SetArtistMonitor(ctx any, id any, monitor any, types any, now any) *MockTx_SetArtistMonitor_Call {
+	return &MockTx_SetArtistMonitor_Call{Call: _e.mock.On("SetArtistMonitor", ctx, id, monitor, types, now)}
 }
 
-func (_c *MockTx_SetArtistMonitor_Call) Run(run func(ctx context.Context, id uint32, monitor artist.Monitor, now time.Time)) *MockTx_SetArtistMonitor_Call {
+func (_c *MockTx_SetArtistMonitor_Call) Run(run func(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time)) *MockTx_SetArtistMonitor_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -18648,15 +18727,20 @@ func (_c *MockTx_SetArtistMonitor_Call) Run(run func(ctx context.Context, id uin
 		if args[2] != nil {
 			arg2 = args[2].(artist.Monitor)
 		}
-		var arg3 time.Time
+		var arg3 []string
 		if args[3] != nil {
-			arg3 = args[3].(time.Time)
+			arg3 = args[3].([]string)
+		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
 			arg3,
+			arg4,
 		)
 	})
 	return _c
@@ -18667,7 +18751,7 @@ func (_c *MockTx_SetArtistMonitor_Call) Return(err error) *MockTx_SetArtistMonit
 	return _c
 }
 
-func (_c *MockTx_SetArtistMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor artist.Monitor, now time.Time) error) *MockTx_SetArtistMonitor_Call {
+func (_c *MockTx_SetArtistMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) error) *MockTx_SetArtistMonitor_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -230,10 +230,19 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						Monitored:   false,
 					},
 					{MBID: "undated", Title: "Undated", Monitored: false},
+					{
+						MBID:        "single",
+						Title:       "Single",
+						Type:        "single",
+						ReleaseDate: day(30),
+						Monitored:   true,
+					},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		types := []string{"album", "ep"}
 
 		monitored := func() map[string]bool {
 			out := map[string]bool{}
@@ -245,24 +254,111 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 
 		DescribeTable("applies the policy to the existing albums",
 			func(policy entartist.Monitor, want map[string]bool) {
-				Expect(store.SetArtistMonitor(ctx, a.ID, policy, now)).To(Succeed())
+				Expect(
+					store.SetArtistMonitor(ctx, a.ID, policy, types, now),
+				).To(Succeed())
 				Expect(monitored()).To(Equal(want))
 				Expect(client.Artist.GetX(ctx, a.ID).Monitor).To(Equal(policy))
 			},
-			Entry("all", entartist.MonitorAll,
-				map[string]bool{"past": true, "soon": true, "undated": true}),
-			Entry("none", entartist.MonitorNone,
-				map[string]bool{"past": false, "soon": false, "undated": false}),
-			Entry("future", entartist.MonitorFuture,
-				map[string]bool{"past": false, "soon": true, "undated": true}),
-			Entry("manual leaves the flags alone", entartist.MonitorManual,
-				map[string]bool{"past": true, "soon": false, "undated": false}),
+			Entry(
+				"all, only the listed types",
+				entartist.MonitorAll,
+				map[string]bool{
+					"past":    true,
+					"soon":    true,
+					"undated": true,
+					"single":  false,
+				},
+			),
+			Entry(
+				"none",
+				entartist.MonitorNone,
+				map[string]bool{
+					"past":    false,
+					"soon":    false,
+					"undated": false,
+					"single":  false,
+				},
+			),
+			Entry(
+				"future, only the listed types",
+				entartist.MonitorFuture,
+				map[string]bool{
+					"past":    false,
+					"soon":    true,
+					"undated": true,
+					"single":  false,
+				},
+			),
+			Entry(
+				"manual leaves the flags alone",
+				entartist.MonitorManual,
+				map[string]bool{
+					"past":    true,
+					"soon":    false,
+					"undated": false,
+					"single":  true,
+				},
+			),
+		)
+
+		It("monitors nothing under all when no type is listed", func() {
+			Expect(
+				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorAll, nil, now),
+			).
+				To(Succeed())
+			Expect(monitored()).To(HaveEach(BeFalse()))
+		})
+
+		It(
+			"re-applies every all and future artist's policy, and only theirs",
+			func() {
+				_, err := store.CreateArtist(ctx, CreateArtistParams{
+					MBID: "a-2", Name: "Y", Monitor: entartist.MonitorManual,
+					Albums: []AlbumSeed{
+						{
+							MBID:      "m-single",
+							Title:     "S",
+							Type:      "single",
+							Monitored: true,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(
+					store.SetArtistMonitor(
+						ctx,
+						a.ID,
+						entartist.MonitorAll,
+						types,
+						now,
+					),
+				).
+					To(Succeed())
+
+				on, off, err := store.ReapplyMonitorPolicies(
+					ctx, []string{"album", "single"}, now,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect([]int{on, off}).To(Equal([]int{1, 0}))
+				Expect(monitored()).To(HaveKeyWithValue("single", true))
+
+				on, off, err = store.ReapplyMonitorPolicies(ctx, []string{"ep"}, now)
+				Expect(err).NotTo(HaveOccurred())
+				Expect([]int{on, off}).To(Equal([]int{0, 4}))
+				Expect(monitored()).To(Equal(map[string]bool{
+					"past": false, "soon": false, "undated": false, "single": false,
+					"m-single": true,
+				}))
+			},
 		)
 
 		It("never touches an album's status", func() {
 			client.Album.Update().Where(album.MbidEQ("past")).
 				SetStatus(album.StatusAvailable).ExecX(ctx)
-			Expect(store.SetArtistMonitor(ctx, a.ID, entartist.MonitorNone, now)).
+			Expect(
+				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorNone, types, now),
+			).
 				To(Succeed())
 			Expect(albumByMBID("past").Status).To(Equal(album.StatusAvailable))
 		})
