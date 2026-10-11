@@ -30,6 +30,10 @@
 			i18n.schedule_search_series(),
 		"movie-metadata-refresh": i18n.schedule_refresh_movies(),
 		"tv-metadata-refresh": i18n.schedule_refresh_series(),
+		"music-missing-search": i18n.schedule_search_music(),
+		"music-metadata-refresh": i18n.schedule_refresh_music(),
+		"book-missing-search": i18n.schedule_search_books(),
+		"book-metadata-refresh": i18n.schedule_refresh_books(),
 		"movie-orphan-scan":
 			i18n.schedule_scan_movies(),
 		"tv-orphan-scan":
@@ -117,7 +121,7 @@
 	let userItems = $derived(items.filter((s) => !s.system));
 	let systemItems = $derived(items.filter((s) => s.system));
 
-	// Fourteen jobs sorted by name interleave the two libraries — movie-rss-sync
+	// The jobs sorted by name interleave the libraries — movie-rss-sync
 	// sits between movie-orphan-scan and tv-metadata-refresh, so reading "what
 	// runs for my series" means scanning the whole table. The name prefix is the
 	// grouping the jobs already have; this just shows it.
@@ -132,6 +136,16 @@
 				key: "series",
 				label: i18n.settings_series(),
 				match: (n) => n.startsWith("tv-"),
+			},
+			{
+				key: "music",
+				label: i18n.music_label(),
+				match: (n) => n.startsWith("music-"),
+			},
+			{
+				key: "books",
+				label: i18n.books_label(),
+				match: (n) => n.startsWith("book-"),
 			},
 			{
 				key: "downloads",

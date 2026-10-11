@@ -304,6 +304,8 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.tv_rss_sync` | duration | `15m` | |
 | `schedules.movie_missing_search` | duration | `12h` | |
 | `schedules.tv_missing_search` | duration | `12h` | |
+| `schedules.music_missing_search` | duration | `12h` | |
+| `schedules.book_missing_search` | duration | `12h` | |
 | `schedules.media_probe` | duration | `15m` | |
 | `schedules.movie_orphan_scan` | duration | `6h` | |
 | `schedules.tv_orphan_scan` | duration | `6h` | |
@@ -311,9 +313,11 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.cleanup` | duration | `24h` | |
 | `schedules.movie_metadata_refresh` | duration | `24h` | |
 | `schedules.tv_metadata_refresh` | duration | `24h` | |
+| `schedules.music_metadata_refresh` | duration | `24h` | |
+| `schedules.book_metadata_refresh` | duration | `24h` | |
 | `schedules.file_selection` | duration | `30s` | |
 
-**Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `missing_search`, `metadata_refresh` and `orphan_scan` (each → both the `movie_*` and `tv_*` keys).
+**Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 
 ### metadata
 

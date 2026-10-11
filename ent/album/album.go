@@ -33,6 +33,8 @@ const (
 	FieldReleaseDate = "release_date"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
+	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
+	FieldMonitorPinned = "monitor_pinned"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -112,6 +114,7 @@ var Columns = []string{
 	FieldType,
 	FieldReleaseDate,
 	FieldMonitored,
+	FieldMonitorPinned,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
@@ -164,6 +167,8 @@ var (
 	TitleValidator func(string) error
 	// DefaultMonitored holds the default value on creation for the "monitored" field.
 	DefaultMonitored bool
+	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
+	DefaultMonitorPinned bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
 )
@@ -278,6 +283,11 @@ func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitored orders the results by the monitored field.
 func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
+}
+
+// ByMonitorPinned orders the results by the monitor_pinned field.
+func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
 }
 
 // ByGrabFailures orders the results by the grab_failures field.

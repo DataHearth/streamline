@@ -134,6 +134,20 @@ func (_c *AlbumCreate) SetNillableMonitored(v *bool) *AlbumCreate {
 	return _c
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_c *AlbumCreate) SetMonitorPinned(v bool) *AlbumCreate {
+	_c.mutation.SetMonitorPinned(v)
+	return _c
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableMonitorPinned(v *bool) *AlbumCreate {
+	if v != nil {
+		_c.SetMonitorPinned(*v)
+	}
+	return _c
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_c *AlbumCreate) SetGrabFailures(v uint8) *AlbumCreate {
 	_c.mutation.SetGrabFailures(v)
@@ -402,6 +416,10 @@ func (_c *AlbumCreate) defaults() {
 		v := album.DefaultMonitored
 		_c.mutation.SetMonitored(v)
 	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		v := album.DefaultMonitorPinned
+		_c.mutation.SetMonitorPinned(v)
+	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		v := album.DefaultGrabFailures
 		_c.mutation.SetGrabFailures(v)
@@ -446,6 +464,9 @@ func (_c *AlbumCreate) check() error {
 	}
 	if _, ok := _c.mutation.Monitored(); !ok {
 		return &ValidationError{Name: "monitored", err: errors.New(`ent: missing required field "Album.monitored"`)}
+	}
+	if _, ok := _c.mutation.MonitorPinned(); !ok {
+		return &ValidationError{Name: "monitor_pinned", err: errors.New(`ent: missing required field "Album.monitor_pinned"`)}
 	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		return &ValidationError{Name: "grab_failures", err: errors.New(`ent: missing required field "Album.grab_failures"`)}
@@ -528,6 +549,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 		_node.Monitored = value
+	}
+	if value, ok := _c.mutation.MonitorPinned(); ok {
+		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
+		_node.MonitorPinned = value
 	}
 	if value, ok := _c.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

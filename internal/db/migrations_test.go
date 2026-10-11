@@ -540,3 +540,55 @@ var _ = Describe(
 		})
 	},
 )
+
+// replaceModeVersion turned download_records.replace_existing into the
+// replace_mode enum with a table rebuild, whose generated down step dropped a
+// temp table that no longer existed.
+const replaceModeVersion = 20260825181930
+
+var _ = Describe("replace_mode migration", Label("integration", "db"), func() {
+	It("folds replace_mode back into replace_existing on the way down", func() {
+		sqlDB, err := sql.Open(
+			"sqlite",
+			"file:"+filepath.Join(GinkgoT().TempDir(), "replace.db"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err := migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(replaceModeVersion)).To(Succeed())
+
+		_, err = sqlDB.Exec(
+			"INSERT INTO download_records (id, create_time, update_time, title," +
+				" replace_mode) VALUES" +
+				" (1, datetime('now'), datetime('now'), 'a', 'all')," +
+				" (2, datetime('now'), datetime('now'), 'b', 'upgrades')," +
+				" (3, datetime('now'), datetime('now'), 'c', 'none')",
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		previous, err := src.Prev(replaceModeVersion)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(previous)).To(Succeed())
+
+		rows, err := sqlDB.Query(
+			"SELECT id, replace_existing FROM download_records ORDER BY id",
+		)
+		Expect(err).NotTo(HaveOccurred())
+		defer rows.Close()
+		got := map[int]bool{}
+		for rows.Next() {
+			var id int
+			var replace bool
+			Expect(rows.Scan(&id, &replace)).To(Succeed())
+			got[id] = replace
+		}
+		Expect(rows.Err()).NotTo(HaveOccurred())
+		Expect(got).To(Equal(map[int]bool{1: true, 2: false, 3: false}))
+	})
+})

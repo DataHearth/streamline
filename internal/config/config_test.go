@@ -194,8 +194,12 @@ schedules:
 				Expect(s.MovieRSSSync).To(Equal("5m"))
 				Expect(s.MovieMissingSearch).To(Equal("3h"))
 				Expect(s.TVMissingSearch).To(Equal("3h"))
+				Expect(s.MusicMissingSearch).To(Equal("3h"))
+				Expect(s.BookMissingSearch).To(Equal("3h"))
 				Expect(s.MovieMetadataRefresh).To(Equal("48h"))
 				Expect(s.TVMetadataRefresh).To(Equal("48h"))
+				Expect(s.MusicMetadataRefresh).To(Equal("48h"))
+				Expect(s.BookMetadataRefresh).To(Equal("48h"))
 				Expect(s.MovieOrphanScan).To(Equal("9h"))
 				Expect(s.TVOrphanScan).To(Equal("9h"))
 			})
@@ -912,7 +916,8 @@ var _ = Describe("Load provenance signals", Label("unit", "config"), func() {
 		Expect(LoadReader(strings.NewReader(raw))).To(Succeed())
 
 		Expect(logs.String()).To(ContainSubstring(
-			"schedules.movie_missing_search, schedules.movie_orphan_scan, " +
+			"schedules.book_missing_search, schedules.movie_missing_search, " +
+				"schedules.movie_orphan_scan, schedules.music_missing_search, " +
 				"schedules.tv_missing_search, schedules.tv_orphan_scan",
 		))
 	})

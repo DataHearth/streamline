@@ -561,7 +561,7 @@
     "schedules": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Cron-like job intervals (Go duration strings). One key per registered job; media-scoped jobs are keyed movie_*/tv_*, the rest are shared across both libraries.",
+      "description": "Cron-like job intervals (Go duration strings). One key per registered job; media-scoped jobs are keyed movie_*/tv_*/music_*/book_*, the rest are shared across every library.",
       "properties": {
         "movie_rss_sync": { "$ref": "#/definitions/duration" },
         "tv_rss_sync": { "$ref": "#/definitions/duration" },
@@ -569,6 +569,10 @@
         "tv_missing_search": { "$ref": "#/definitions/duration" },
         "movie_metadata_refresh": { "$ref": "#/definitions/duration" },
         "tv_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "music_missing_search": { "$ref": "#/definitions/duration" },
+        "music_metadata_refresh": { "$ref": "#/definitions/duration" },
+        "book_missing_search": { "$ref": "#/definitions/duration" },
+        "book_metadata_refresh": { "$ref": "#/definitions/duration" },
         "movie_orphan_scan": { "$ref": "#/definitions/duration" },
         "tv_orphan_scan": { "$ref": "#/definitions/duration" },
         "download_monitor": { "$ref": "#/definitions/duration" },
@@ -583,11 +587,11 @@
         },
         "missing_search": {
           "$ref": "#/definitions/duration",
-          "description": "Deprecated: split into movie_missing_search and tv_missing_search. Still honoured for both, with a warning on boot."
+          "description": "Deprecated: split into movie_missing_search, tv_missing_search, music_missing_search and book_missing_search. Still honoured for all four, with a warning on boot."
         },
         "metadata_refresh": {
           "$ref": "#/definitions/duration",
-          "description": "Deprecated: split into movie_metadata_refresh and tv_metadata_refresh. Still honoured for both, with a warning on boot."
+          "description": "Deprecated: split into movie_metadata_refresh, tv_metadata_refresh, music_metadata_refresh and book_metadata_refresh. Still honoured for all four, with a warning on boot."
         },
         "orphan_scan": {
           "$ref": "#/definitions/duration",

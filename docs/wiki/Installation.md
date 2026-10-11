@@ -305,6 +305,14 @@ key is absent: you opted out, so it isn't a warning.
 
 ---
 
+## Upgrading
+
+Install the new version and start it: it updates the database on its own at boot. **[Back up the database](GitOps-and-Kubernetes#backups) first.**
+
+The update only goes forward. An older version will not start on a database a newer one has updated (it logs `no migration found for version …`); nothing is changed, but to go back you restore the backup you took before upgrading, and lose whatever happened since.
+
+---
+
 ## Install as an app
 
 Streamline ships a web-app manifest, so the browser can pin it to a home screen and open it full-screen without browser chrome. Nothing runs offline: it is the same web UI, just without the address bar.

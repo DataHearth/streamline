@@ -32,6 +32,10 @@ func (Album) Fields() []ent.Field {
 			Default("album"),
 		field.Time("release_date").Optional().Nillable(),
 		field.Bool("monitored").Default(true),
+		// monitor_pinned marks a monitored flag set by hand, which the
+		// monitored-types catch-up leaves alone; changing the artist's policy
+		// clears it.
+		field.Bool("monitor_pinned").Default(false),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").

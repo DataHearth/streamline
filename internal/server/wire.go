@@ -394,18 +394,36 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		{
 			"movie-missing-search",
 			cfg.Schedule.MovieMissingSearch,
-			func(time.Duration) scheduler.JobFunc {
-				return jobs.MissingSearch(
-					missingSearcher,
-					jobs.RunnerFunc(musicSvc.SearchMissing),
-					jobs.RunnerFunc(bookSvc.SearchMissing),
-				)
-			},
+			func(time.Duration) scheduler.JobFunc { return jobs.MissingSearch(missingSearcher) },
 		},
 		{
 			"movie-metadata-refresh",
 			cfg.Schedule.MovieMetadataRefresh,
-			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(movieSvc, musicSvc, bookSvc) },
+			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(movieSvc) },
+		},
+		{
+			"music-missing-search",
+			cfg.Schedule.MusicMissingSearch,
+			func(time.Duration) scheduler.JobFunc {
+				return jobs.MissingSearch(jobs.RunnerFunc(musicSvc.SearchMissing))
+			},
+		},
+		{
+			"music-metadata-refresh",
+			cfg.Schedule.MusicMetadataRefresh,
+			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(musicSvc) },
+		},
+		{
+			"book-missing-search",
+			cfg.Schedule.BookMissingSearch,
+			func(time.Duration) scheduler.JobFunc {
+				return jobs.MissingSearch(jobs.RunnerFunc(bookSvc.SearchMissing))
+			},
+		},
+		{
+			"book-metadata-refresh",
+			cfg.Schedule.BookMetadataRefresh,
+			func(time.Duration) scheduler.JobFunc { return jobs.MetadataRefresh(bookSvc) },
 		},
 		{
 			"tv-missing-search",
