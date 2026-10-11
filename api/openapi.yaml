@@ -1452,7 +1452,9 @@ paths:
          `SearchResult` with the canonical display `source` and `audio_tier`. Releases the
          album's music quality profile rejects stay in the list with `rejected` and
          `reject_reason` ("tier not in the profile", or "quality is not stated in the release
-         name" when no tier can be read from the name). A discography never appears on an album
+         name" when no tier can be read from the name, or "names a different album or artist"
+         when the release name reads as another album or artist — indexers answer a query
+         loosely). A discography never appears on an album
          search. POST the chosen item back unchanged to `.../grab`, handle included. A 422 with
          `code: no_quality_profile` means the album has no usable quality profile.
       tags: [music]
