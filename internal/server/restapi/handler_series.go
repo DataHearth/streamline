@@ -588,6 +588,7 @@ func (s *Server) BrowseEpisodeReleases(
 		[]string{show.Title, show.OriginalTitle},
 		show.Aliases,
 		show.TvdbID,
+		show.ImdbID,
 		season,
 		episode,
 	)
@@ -699,6 +700,7 @@ func (s *Server) BrowseSeasonReleases(
 		[]string{show.Title, show.OriginalTitle},
 		show.Aliases,
 		show.TvdbID,
+		show.ImdbID,
 		request.Number,
 	)
 	if err != nil {
@@ -842,6 +844,7 @@ func (s *Server) BrowseSeriesReleases(
 		[]string{show.Title, show.OriginalTitle},
 		show.Aliases,
 		show.TvdbID,
+		show.ImdbID,
 	)
 	if err != nil {
 		return BrowseSeriesReleases500JSONResponse{

@@ -197,6 +197,26 @@ func (_u *TVShowUpdate) AddTvdbID(v int32) *TVShowUpdate {
 	return _u
 }
 
+// SetImdbID sets the "imdb_id" field.
+func (_u *TVShowUpdate) SetImdbID(v string) *TVShowUpdate {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableImdbID(v *string) *TVShowUpdate {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *TVShowUpdate) ClearImdbID() *TVShowUpdate {
+	_u.mutation.ClearImdbID()
+	return _u
+}
+
 // SetPosterPath sets the "poster_path" field.
 func (_u *TVShowUpdate) SetPosterPath(v string) *TVShowUpdate {
 	_u.mutation.SetPosterPath(v)
@@ -619,6 +639,12 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedTvdbID(); ok {
 		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
 	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(tvshow.FieldImdbID, field.TypeString)
+	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)
 	}
@@ -1007,6 +1033,26 @@ func (_u *TVShowUpdateOne) SetNillableTvdbID(v *uint32) *TVShowUpdateOne {
 // AddTvdbID adds value to the "tvdb_id" field.
 func (_u *TVShowUpdateOne) AddTvdbID(v int32) *TVShowUpdateOne {
 	_u.mutation.AddTvdbID(v)
+	return _u
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (_u *TVShowUpdateOne) SetImdbID(v string) *TVShowUpdateOne {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableImdbID(v *string) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *TVShowUpdateOne) ClearImdbID() *TVShowUpdateOne {
+	_u.mutation.ClearImdbID()
 	return _u
 }
 
@@ -1461,6 +1507,12 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if value, ok := _u.mutation.AddedTvdbID(); ok {
 		_spec.AddField(tvshow.FieldTvdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(tvshow.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(tvshow.FieldImdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.PosterPath(); ok {
 		_spec.SetField(tvshow.FieldPosterPath, field.TypeString, value)

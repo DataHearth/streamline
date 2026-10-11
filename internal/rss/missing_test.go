@@ -148,7 +148,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("the indexer search errors", func() {
 			It("skips DB writes and continues", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return(nil, errors.New("indexer down")).Once()
 
 				Expect(syncer.Run(ctx)).To(Succeed())
@@ -158,7 +158,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("no results match the quality bar", func() {
 			It("records last_search_at without grabbing", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return(nil, nil).Once()
 				store.EXPECT().
 					SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
@@ -171,7 +171,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("results match and grab succeeds", func() {
 			It("resets grab_failures after recording last_search_at", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -195,7 +195,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("the downloader rejects the grab", func() {
 			It("increments grab_failures and still records last_search_at", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -219,7 +219,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("SetMovieLastSearchAt fails after a no-match", func() {
 			It("logs and finishes the pass without erroring", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return(nil, nil).Once()
 				store.EXPECT().
 					SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
@@ -232,7 +232,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("ResetMovieGrabFailures fails after a successful grab", func() {
 			It("logs and finishes the pass without erroring", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -256,7 +256,7 @@ var _ = Describe("MissingSearcher.Run", Label("unit", "rss"), func() {
 		When("IncrementMovieGrabFailures fails after a grab error", func() {
 			It("logs and finishes the pass without erroring", func() {
 				indexerM.EXPECT().
-					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -326,7 +326,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 	It("dispatches a grab when an indexer hit passes filters", func() {
 		indexerM.EXPECT().
-			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 			Return([]indexer.SearchResult{
 				{
 					Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -360,8 +360,8 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 			})
 			searchErr := make(chan error, 1)
 			indexerM.EXPECT().
-				SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
-				Run(func(c context.Context, _, _ []string, _ uint32) {
+				SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
+				Run(func(c context.Context, _, _ []string, _ uint32, _ string) {
 					<-release
 					searchErr <- c.Err()
 				}).
@@ -388,7 +388,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 	It("returns ErrNoEligibleRelease when nothing matches filters", func() {
 		indexerM.EXPECT().
-			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 			Return(nil, nil).Once()
 		store.EXPECT().
 			SetMovieLastSearchAt(mock.AnythingOfType(ctxType), uint32(7), mock.AnythingOfType("time.Time")).
@@ -399,7 +399,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 	It("propagates indexer errors and bumps grab_failures on grab failure", func() {
 		indexerM.EXPECT().
-			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 			Return(nil, errors.New("indexer boom")).Once()
 
 		Expect(syncer.SearchOne(ctx, movie)).
@@ -408,7 +408,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 	It("returns the grab error after bumping grab_failures", func() {
 		indexerM.EXPECT().
-			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+			SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 			Return([]indexer.SearchResult{
 				{
 					Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -437,7 +437,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Seeders: 3,
 			}
 			indexerM.EXPECT().
-				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 				Return([]indexer.SearchResult{
 					{
 						Title:   "Fight.Club.1999.1080p.WEB-DL.x264-GROUP",
@@ -464,7 +464,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Seeders: 400,
 			}
 			indexerM.EXPECT().
-				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 				Return([]indexer.SearchResult{
 					{
 						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -491,7 +491,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 
 		It("rejects a release that only clears the default profile", func() {
 			indexerM.EXPECT().
-				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 				Return([]indexer.SearchResult{
 					{
 						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
@@ -511,7 +511,7 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Seeders: 5,
 			}
 			indexerM.EXPECT().
-				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+				SearchMovie(mock.AnythingOfType(ctxType), []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 				Return([]indexer.SearchResult{
 					{
 						Title:   "Fight.Club.1999.1080p.BluRay.x264-GROUP",
