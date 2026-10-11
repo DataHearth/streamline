@@ -59,10 +59,14 @@
 	<SidebarRail />
 	<!-- scrollbar-gutter keeps the content width identical whether or not a route
 	     scrolls; without it a taller tab reclaims the scrollbar's ~15px and
-	     reflows anything sitting on a wrap boundary. -->
+	     reflows anything sitting on a wrap boundary. `relative` makes it the
+	     containing block of every absolute descendant with no positioned
+	     ancestor of its own (an `sr-only` label, mostly): without it those
+	     resolve against <body>, escape this scroller's clip and stretch the
+	     document, which then draws a second scrollbar beside this one. -->
 	<main
 		id="main"
-		class="min-w-0 flex-1 overflow-y-auto pb-20 [scrollbar-gutter:stable] md:pb-0"
+		class="relative min-w-0 flex-1 overflow-y-auto pb-20 [scrollbar-gutter:stable] md:pb-0"
 	>
 		<TopBar />
 		{@render children?.()}
