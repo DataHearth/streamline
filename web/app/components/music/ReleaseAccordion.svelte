@@ -81,7 +81,9 @@
 		{#if open}
 			<div class="px-4 pb-4" transition:slide={{ duration: 200, easing: cubicOut }}>
 				<div class="flex flex-wrap items-center gap-2">
-					<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+					{#if pill}
+						<LabelPill token={pill.token} label={pill.label} variant="translucent" live={pill.live} />
+					{/if}
 					<span class="font-mono text-[11px] text-fg-muted">{releaseFacts(r).join(" · ")}</span>
 				</div>
 				{#if canEdit}

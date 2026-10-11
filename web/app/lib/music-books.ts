@@ -294,7 +294,11 @@ export const trackTime = (s: number) =>
 
 // A partial copy counts what is missing rather than saying "Wanted", which
 // reads as if nothing were there.
-export function releasePill(r: Release): { token: string; label: string; live?: boolean } {
+// An unmonitored release nothing is held of carries no state: it is wanted only
+// in the sense that it is not there, and nothing will be searched for it.
+export const releaseIdle = (r: Release) => r.status === "wanted" && !r.monitored && r.tracks_have === 0;
+
+export function releasePill(r: Release): { token: string; label: string; live?: boolean } | null {
 	if (r.status === "upcoming") return { token: "unaired", label: i18n.music_upcoming() };
 	if (r.status === "paused") return { token: "downloading", label: i18n.status_paused(), live: true };
 	if (r.status === "downloading")
@@ -304,8 +308,7 @@ export function releasePill(r: Release): { token: string; label: string; live?: 
 			live: true,
 		};
 	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
-	if (r.status === "wanted" && !r.monitored && r.tracks_have === 0)
-		return { token: "skipped", label: i18n.monitor_unmonitored() };
+	if (releaseIdle(r)) return null;
 	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
 		if (r.tracks_have > 0)

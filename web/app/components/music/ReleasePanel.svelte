@@ -52,7 +52,9 @@
 		     bookmark onto a line of its own. -->
 		<div class="@container min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
-				<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+				{#if pill}
+					<LabelPill token={pill.token} label={pill.label} size="md" variant="translucent" live={pill.live} />
+				{/if}
 				<span class={caps}>{releaseTypeLabel(r.type)}</span>
 				{#if !up && releaseYear(r)}
 					<span class="text-fg-faint" aria-hidden="true">·</span>
