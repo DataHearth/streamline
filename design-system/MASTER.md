@@ -1,6 +1,6 @@
 # Streamline Design System — MASTER
 
-**Codename:** Media Ops
+**Codename:** Control Room
 **Scope:** global source of truth for all web UI. Page-specific overrides live under `design-system/pages/<page>.md`. When building a page, first check for a page file; if absent, use this document exclusively.
 
 **Product surfaces covered (now + planned):**
