@@ -505,7 +505,7 @@ The built-in engine treats what a release names as untrusted:
 
 #### Built-in indexers (`protocol: cardigann`)
 
-Streamline ships the tracker definitions Prowlarr and Jackett use and can run them itself, without Prowlarr or Jackett. Such an indexer is configured **in this file only**: Settings → Indexers lists it (as *Built-in*) and can test or delete it, but not edit it.
+Streamline ships the tracker definitions Prowlarr and Jackett use and can run them itself, without Prowlarr or Jackett. The easy way to add one is Settings → Indexers → **Add built-in**: search the catalog, pick a tracker, fill in the form generated from its settings. In this file it looks like this:
 
 | Field | Required | Notes |
 | --- | --- | --- |

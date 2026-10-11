@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
+
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	entbook "github.com/datahearth/streamline/ent/book"
@@ -506,6 +508,20 @@ func indexerToAPI(e config.IndexerEntry) Indexer {
 	if e.Cardigann != nil {
 		def := e.Cardigann.Definition
 		i.Definition = &def
+		if e.Cardigann.Site != "" {
+			site := e.Cardigann.Site
+			i.Site = &site
+		}
+		if e.Cardigann.Proxy != "" {
+			proxy := e.Cardigann.Proxy
+			if u, err := url.Parse(proxy); err == nil {
+				u.User = nil
+				proxy = u.String()
+			}
+			i.Proxy = &proxy
+		}
+		settings, set := cardigannSettingsToAPI(e.Cardigann)
+		i.Settings, i.SecretsSet = &settings, &set
 		if site, err := indexer.CardigannSite(e); err == nil {
 			if u, err := url.Parse(site); err == nil {
 				i.Host = u.Hostname()
@@ -1446,4 +1462,31 @@ func toIndexerResult(body *SearchResult) (indexer.SearchResult, error) {
 // already-present file(s) for the covered media.
 func replaceExisting(body *SearchResult) bool {
 	return body != nil && body.ReplaceExisting != nil && *body.ReplaceExisting
+}
+
+// cardigannSettingsToAPI splits a built-in indexer's settings into the ones
+// the API shows and the names of the secret ones that hold a value. A
+// definition that no longer loads shows nothing rather than guessing which
+// of its settings were secret.
+func cardigannSettingsToAPI(
+	c *config.CardigannIndexer,
+) (map[string]string, []string) {
+	shown, set := map[string]string{}, []string{}
+	def, err := definitions.Load(config.Get().CardigannDir(), c.Definition)
+	if err != nil {
+		return shown, set
+	}
+	for _, s := range def.Settings {
+		v, ok := c.Settings[s.Name]
+		switch {
+		case !ok:
+		case s.Secret:
+			if v != "" {
+				set = append(set, s.Name)
+			}
+		default:
+			shown[s.Name] = v
+		}
+	}
+	return shown, set
 }

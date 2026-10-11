@@ -6,7 +6,7 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Search, Pencil, Eye, KeyRound } from "@lucide/svelte";
+	import { Plus, Trash2, Search, Pencil, Eye, KeyRound, Library } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
@@ -18,6 +18,8 @@
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import IndexerLoginDialog from "@components/settings/IndexerLoginDialog.svelte";
 	import CardigannUpdates from "@components/settings/CardigannUpdates.svelte";
+	import CardigannCatalog from "@components/settings/CardigannCatalog.svelte";
+	import CardigannIndexerForm from "@components/settings/CardigannIndexerForm.svelte";
 	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -60,9 +62,11 @@
 		}
 	}
 
-	// A built-in indexer is configured in the config file: the API answers
-	// its edit with 422, so the form is never opened for one.
-	const fileOnly = (i: Indexer) => i.protocol === "cardigann";
+	// A built-in indexer is picked from the catalog and edited in a form
+	// generated from its definition.
+	let catalogOpen = $state(false);
+	let builtinFile = $state<string | null>(null);
+	let builtinEditing = $state<Indexer | null>(null);
 
 	const qc = useQueryClient();
 
@@ -130,7 +134,10 @@
 	}
 
 	function openEdit(i: Indexer) {
-		if (i.protocol === "cardigann") return;
+		if (i.protocol === "cardigann") {
+			builtinEditing = i;
+			return;
+		}
 		editing = i;
 		form.reset({
 			name: i.name,
@@ -192,6 +199,17 @@
 				{i18n.indexer_intro()}
 			</p>
 		</div>
+		<div class="flex flex-wrap gap-2">
+		<button
+			type="button"
+			onclick={() => (catalogOpen = true)}
+			disabled={config.readOnly}
+			title={config.readOnly ? READONLY_HINT : null}
+			class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 py-2 text-sm font-semibold text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+		>
+			<Library size={16} aria-hidden="true" />
+			{i18n.cardigann_add()}
+		</button>
 		<button
 			type="button"
 			onclick={openCreate}
@@ -202,6 +220,7 @@
 			<Plus size={16} aria-hidden="true" />
 			{i18n.indexer_add()}
 		</button>
+		</div>
 	</header>
 
 	<CardigannUpdates />
@@ -235,7 +254,6 @@
 					<button
 						type="button"
 						onclick={() => openEdit(i)}
-						disabled={fileOnly(i)}
 						class="flex items-start gap-3 text-left disabled:cursor-default"
 						aria-label={config.readOnly
 							? i18n.common_view_name({ name: i.name })
@@ -279,12 +297,7 @@
 										{i18n.releases_private()}
 									</span>
 								{/if}
-								{#if fileOnly(i)}
-									<span
-										class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
-									>
-										{i18n.indexer_in_config_file()}
-									</span>
+								{#if i.protocol === "cardigann"}
 									{#if i.session?.login_required}
 										{#if i.session.logged_in}
 											<span
@@ -352,27 +365,23 @@
 									</button>
 								{/if}
 								{#if config.readOnly}
-									{#if !fileOnly(i)}
-										<button
-											type="button"
-											onclick={() => openEdit(i)}
-											class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
-											aria-label={i18n.indexer_view()}
-										>
-											<Eye size={16} aria-hidden="true" />
-										</button>
-									{/if}
+									<button
+										type="button"
+										onclick={() => openEdit(i)}
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.indexer_view()}
+									>
+										<Eye size={16} aria-hidden="true" />
+									</button>
 								{:else}
-									{#if !fileOnly(i)}
-										<button
-											type="button"
-											onclick={() => openEdit(i)}
-											class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
-											aria-label={i18n.indexer_edit()}
-										>
-											<Pencil size={16} aria-hidden="true" />
-										</button>
-									{/if}
+									<button
+										type="button"
+										onclick={() => openEdit(i)}
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+										aria-label={i18n.indexer_edit()}
+									>
+										<Pencil size={16} aria-hidden="true" />
+									</button>
 									<button
 										type="button"
 										onclick={() => onDelete(i)}
@@ -439,6 +448,24 @@
 </ConfigFormShell>
 
 <IndexerLoginDialog indexer={captchaFor} onClose={() => (captchaFor = null)} />
+
+<CardigannCatalog
+	open={catalogOpen}
+	onPick={(file) => {
+		catalogOpen = false;
+		builtinFile = file;
+	}}
+	onClose={() => (catalogOpen = false)}
+/>
+
+<CardigannIndexerForm
+	file={builtinFile}
+	editing={builtinEditing}
+	onClose={() => {
+		builtinFile = null;
+		builtinEditing = null;
+	}}
+/>
 
 <Dialog
 	open={deleting !== null}

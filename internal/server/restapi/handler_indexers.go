@@ -27,6 +27,56 @@ func (s *Server) ListIndexers(
 	return ListIndexers200JSONResponse(items), nil
 }
 
+// indexerFromBody reads a create or draft-test body into a config entry.
+func indexerFromBody(b IndexerCreate) config.IndexerEntry {
+	e := config.IndexerEntry{Name: b.Name, Protocol: "torznab"}
+	if b.Protocol != nil {
+		e.Protocol = string(*b.Protocol)
+	}
+	if e.Protocol == "cardigann" {
+		c := &config.CardigannIndexer{Settings: map[string]string{}}
+		if b.Definition != nil {
+			c.Definition = *b.Definition
+		}
+		if b.Site != nil {
+			c.Site = *b.Site
+		}
+		if b.Settings != nil {
+			c.Settings = *b.Settings
+		}
+		if b.Proxy != nil {
+			c.Proxy = *b.Proxy
+		}
+		e.Cardigann = c
+	} else {
+		if b.Host != nil {
+			e.Host = *b.Host
+		}
+		if b.Port != nil {
+			e.Port = *b.Port
+		}
+		if b.ApiKey != nil {
+			e.APIKey = *b.ApiKey
+		}
+		if b.Path != nil {
+			e.Path = *b.Path
+		}
+		if b.UseSsl != nil {
+			e.UseSSL = *b.UseSsl
+		}
+	}
+	if b.Priority != nil {
+		e.Priority = *b.Priority
+	}
+	if b.Enabled != nil {
+		e.Enabled = *b.Enabled
+	}
+	if b.Private != nil {
+		e.Private = *b.Private
+	}
+	return e
+}
+
 func (s *Server) CreateIndexer(
 	ctx context.Context,
 	request CreateIndexerRequestObject,
@@ -34,32 +84,7 @@ func (s *Server) CreateIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return CreateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	e := config.IndexerEntry{
-		Name:     request.Body.Name,
-		Host:     request.Body.Host,
-		Port:     request.Body.Port,
-		APIKey:   request.Body.ApiKey,
-		Protocol: "torznab",
-	}
-	if request.Body.Path != nil {
-		e.Path = *request.Body.Path
-	}
-	if request.Body.UseSsl != nil {
-		e.UseSSL = *request.Body.UseSsl
-	}
-	if request.Body.Priority != nil {
-		e.Priority = *request.Body.Priority
-	}
-	if request.Body.Enabled != nil {
-		e.Enabled = *request.Body.Enabled
-	}
-	if request.Body.Private != nil {
-		e.Private = *request.Body.Private
-	}
-	if request.Body.Protocol != nil {
-		e.Protocol = string(*request.Body.Protocol)
-	}
-
+	e := indexerFromBody(*request.Body)
 	switch err := config.AddIndexer(ctx, e); {
 	case errors.Is(err, config.ErrIndexerExists):
 		return CreateIndexer409JSONResponse{
@@ -74,7 +99,7 @@ func (s *Server) CreateIndexer(
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
 		}, nil
 	}
-	return CreateIndexer201JSONResponse(indexerToAPI(e)), nil
+	return CreateIndexer201JSONResponse(s.indexerWithSession(ctx, e)), nil
 }
 
 func (s *Server) UpdateIndexer(
@@ -84,26 +109,29 @@ func (s *Server) UpdateIndexer(
 	if err := requireAdmin(ctx); err != nil {
 		return UpdateIndexer403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	if e, ok := config.FindIndexer(request.Name); ok && e.Protocol == "cardigann" {
-		return UpdateIndexer422JSONResponse{
-			UnprocessableEntityJSONResponse: errUnprocessable(
-				"a cardigann indexer is configured in the config file",
-			),
-		}, nil
-	}
+	b := request.Body
 	patch := config.IndexerPatch{
-		Host:     &request.Body.Host,
-		Port:     &request.Body.Port,
-		Path:     request.Body.Path,
-		UseSSL:   request.Body.UseSsl,
-		APIKey:   &request.Body.ApiKey,
-		Priority: request.Body.Priority,
-		Enabled:  request.Body.Enabled,
-		Private:  request.Body.Private,
+		Host:     b.Host,
+		Port:     b.Port,
+		Path:     b.Path,
+		UseSSL:   b.UseSsl,
+		APIKey:   b.ApiKey,
+		Priority: b.Priority,
+		Enabled:  b.Enabled,
+		Private:  b.Private,
 	}
-	if request.Body.Protocol != nil {
-		p := string(*request.Body.Protocol)
+	if b.Protocol != nil {
+		p := string(*b.Protocol)
 		patch.Protocol = &p
+	}
+	if b.Definition != nil || b.Site != nil || b.Settings != nil || b.Proxy != nil {
+		cp := &config.CardigannPatch{
+			Definition: b.Definition, Site: b.Site, Proxy: b.Proxy,
+		}
+		if b.Settings != nil {
+			cp.Settings = *b.Settings
+		}
+		patch.Cardigann = cp
 	}
 
 	switch err := config.UpdateIndexer(ctx, request.Name, patch); {
@@ -121,7 +149,15 @@ func (s *Server) UpdateIndexer(
 		}, nil
 	}
 	e, _ := config.FindIndexer(request.Name)
-	return UpdateIndexer200JSONResponse(indexerToAPI(e)), nil
+	if e.Protocol == "cardigann" {
+		// The credentials may have changed: the next search logs in with
+		// what was just saved, not on the old session.
+		if err := s.indexers.Forget(ctx, e.Name); err != nil {
+			slog.WarnContext(ctx, "could not drop an edited indexer's session",
+				"indexer.name", e.Name, "error", err)
+		}
+	}
+	return UpdateIndexer200JSONResponse(s.indexerWithSession(ctx, e)), nil
 }
 
 func (s *Server) DeleteIndexer(
@@ -191,28 +227,30 @@ func (s *Server) TestDraftIndexer(
 			ForbiddenJSONResponse: notAdminResp,
 		}, nil
 	}
-	b := request.Body
-	if draftTargetRefused(ctx, b.Host) {
+	e := indexerFromBody(*request.Body)
+	p := indexer.TestParams{
+		Protocol:  e.Protocol,
+		Host:      e.Host,
+		Port:      e.Port,
+		Path:      e.Path,
+		UseSSL:    e.UseSSL,
+		APIKey:    e.APIKey,
+		Cardigann: e.Cardigann,
+	}
+	if e.Protocol == "cardigann" {
+		// The target is one of the definition's own links, never one the
+		// caller names; what can be wrong is the definition or a setting.
+		if err := config.CheckCardigann(config.Get().CardigannDir(), e); err != nil {
+			return TestDraftIndexer422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
+			}, nil
+		}
+	} else if draftTargetRefused(ctx, e.Host) {
 		return TestDraftIndexer422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(
 				draftTargetRefusedMessage,
 			),
 		}, nil
-	}
-	p := indexer.TestParams{
-		Protocol: "torznab",
-		Host:     b.Host,
-		Port:     b.Port,
-		APIKey:   b.ApiKey,
-	}
-	if b.Protocol != nil {
-		p.Protocol = string(*b.Protocol)
-	}
-	if b.Path != nil {
-		p.Path = *b.Path
-	}
-	if b.UseSsl != nil {
-		p.UseSSL = *b.UseSsl
 	}
 
 	err := s.indexers.Test(ctx, p)

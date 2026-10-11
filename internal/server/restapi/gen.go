@@ -1457,13 +1457,16 @@ func (e IndexerProtocol) Valid() bool {
 
 // Defines values for IndexerCreateProtocol.
 const (
-	IndexerCreateProtocolProwlarr IndexerCreateProtocol = "prowlarr"
-	IndexerCreateProtocolTorznab  IndexerCreateProtocol = "torznab"
+	IndexerCreateProtocolCardigann IndexerCreateProtocol = "cardigann"
+	IndexerCreateProtocolProwlarr  IndexerCreateProtocol = "prowlarr"
+	IndexerCreateProtocolTorznab   IndexerCreateProtocol = "torznab"
 )
 
 // Valid indicates whether the value is a known member of the IndexerCreateProtocol enum.
 func (e IndexerCreateProtocol) Valid() bool {
 	switch e {
+	case IndexerCreateProtocolCardigann:
+		return true
 	case IndexerCreateProtocolProwlarr:
 		return true
 	case IndexerCreateProtocolTorznab:
@@ -4493,6 +4496,92 @@ type BookVolume struct {
 // monitored.
 type BookVolumeStatus string
 
+// CardigannCatalog defines model for CardigannCatalog.
+type CardigannCatalog struct {
+	Definitions []CardigannSummary `json:"definitions"`
+
+	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	Upstream CardigannUpstream `json:"upstream"`
+}
+
+// CardigannDefinition defines model for CardigannDefinition.
+type CardigannDefinition struct {
+	// Captcha The login form may show an image captcha.
+	Captcha bool `json:"captcha"`
+
+	// Categories Top-level newznab categories (Movies, TV, Audio, Books…).
+	Categories []string `json:"categories"`
+
+	// Challenge The site sits behind a browser challenge that needs a solver.
+	Challenge bool `json:"challenge"`
+
+	// Custom Read from the data directory's custom folder.
+	Custom      bool   `json:"custom"`
+	Description string `json:"description"`
+
+	// File What an indexer's `definition` names.
+	File     string   `json:"file"`
+	Language string   `json:"language"`
+	Links    []string `json:"links"`
+
+	// Login The login method, or `none`.
+	Login    string             `json:"login"`
+	Name     string             `json:"name"`
+	Settings []CardigannSetting `json:"settings"`
+
+	// Type public, private or semi-private.
+	Type string `json:"type"`
+}
+
+// CardigannOption defines model for CardigannOption.
+type CardigannOption struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+}
+
+// CardigannSetting defines model for CardigannSetting.
+type CardigannSetting struct {
+	// Default The default value, or an info setting's text (plain, tags stripped).
+	Default *string            `json:"default,omitempty"`
+	Label   string             `json:"label"`
+	Name    string             `json:"name"`
+	Options *[]CardigannOption `json:"options,omitempty"`
+
+	// Secret Never returned once stored; an edit that leaves it empty keeps it.
+	Secret bool `json:"secret"`
+
+	// Type text, password, checkbox or select take a value; info, info_cookie, info_flaresolverr, info_useragent and info_category_8000 only explain, their text in `default`.
+	Type string `json:"type"`
+}
+
+// CardigannSummary defines model for CardigannSummary.
+type CardigannSummary struct {
+	// Captcha The login form may show an image captcha.
+	Captcha bool `json:"captcha"`
+
+	// Categories Top-level newznab categories (Movies, TV, Audio, Books…).
+	Categories []string `json:"categories"`
+
+	// Challenge The site sits behind a browser challenge that needs a solver.
+	Challenge bool `json:"challenge"`
+
+	// Custom Read from the data directory's custom folder.
+	Custom      bool   `json:"custom"`
+	Description string `json:"description"`
+
+	// File What an indexer's `definition` names.
+	File     string   `json:"file"`
+	Language string   `json:"language"`
+	Links    []string `json:"links"`
+
+	// Login The login method, or `none`.
+	Login string `json:"login"`
+	Name  string `json:"name"`
+
+	// Type public, private or semi-private.
+	Type string `json:"type"`
+}
+
 // CardigannUpdate defines model for CardigannUpdate.
 type CardigannUpdate struct {
 	// Diff Unified diff from the version in force to the held one.
@@ -5404,7 +5493,7 @@ type Indexer struct {
 	// ApiKeySet True when an API key is stored. The key itself is never returned.
 	ApiKeySet bool `json:"api_key_set"`
 
-	// Definition The Cardigann definition a `cardigann` indexer runs (its file name in the embedded snapshot). Absent for the other protocols.
+	// Definition The Cardigann definition a `cardigann` indexer runs (its file name). Absent for the other protocols.
 	Definition *string `json:"definition,omitempty"`
 	Enabled    bool    `json:"enabled"`
 	Host       string  `json:"host"`
@@ -5416,15 +5505,27 @@ type Indexer struct {
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
 	Private bool `json:"private"`
 
-	// Protocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
+	// Protocol `cardigann` is a tracker streamline runs itself from a Prowlarr/Jackett definition; its host and port are the tracker site's.
 	Protocol IndexerProtocol `json:"protocol"`
+
+	// Proxy A `cardigann` indexer's proxy, credentials stripped.
+	Proxy *string `json:"proxy,omitempty"`
+
+	// SecretsSet The secret settings of a `cardigann` indexer that hold a value.
+	SecretsSet *[]string `json:"secrets_set,omitempty"`
 
 	// Session A `cardigann` indexer's tracker login. Absent for the other protocols.
 	Session *IndexerSession `json:"session,omitempty"`
-	UseSsl  *bool           `json:"use_ssl,omitempty"`
+
+	// Settings A `cardigann` indexer's settings, secret ones left out (see `secrets_set`).
+	Settings *map[string]string `json:"settings,omitempty"`
+
+	// Site A `cardigann` indexer's chosen link, when not the definition's first.
+	Site   *string `json:"site,omitempty"`
+	UseSsl *bool   `json:"use_ssl,omitempty"`
 }
 
-// IndexerProtocol `cardigann` is a tracker streamline runs itself from an embedded Prowlarr/Jackett definition; its host and port are the tracker site's, and it is configured in the config file only.
+// IndexerProtocol `cardigann` is a tracker streamline runs itself from a Prowlarr/Jackett definition; its host and port are the tracker site's.
 type IndexerProtocol string
 
 // IndexerCaptcha defines model for IndexerCaptcha.
@@ -5434,20 +5535,28 @@ type IndexerCaptcha struct {
 	Token string `json:"token"`
 }
 
-// IndexerCreate defines model for IndexerCreate.
+// IndexerCreate A Torznab or Prowlarr indexer takes host, port and api_key; a `cardigann` one takes definition and its settings instead.
 type IndexerCreate struct {
-	ApiKey   string  `json:"api_key"`
-	Enabled  *bool   `json:"enabled,omitempty"`
-	Host     string  `json:"host"`
-	Name     string  `json:"name"`
-	Path     *string `json:"path,omitempty"`
-	Port     uint16  `json:"port"`
-	Priority *uint8  `json:"priority,omitempty"`
+	ApiKey     *string `json:"api_key,omitempty"`
+	Definition *string `json:"definition,omitempty"`
+	Enabled    *bool   `json:"enabled,omitempty"`
+	Host       *string `json:"host,omitempty"`
+	Name       string  `json:"name"`
+	Path       *string `json:"path,omitempty"`
+	Port       *uint16 `json:"port,omitempty"`
+	Priority   *uint8  `json:"priority,omitempty"`
 
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
 	Private  *bool                  `json:"private,omitempty"`
 	Protocol *IndexerCreateProtocol `json:"protocol,omitempty"`
-	UseSsl   *bool                  `json:"use_ssl,omitempty"`
+
+	// Proxy On an update, absent keeps the stored proxy and an empty string clears it.
+	Proxy *string `json:"proxy,omitempty"`
+
+	// Settings By setting name. On an update, a secret setting left empty or out keeps its stored value, unless the definition changes.
+	Settings *map[string]string `json:"settings,omitempty"`
+	Site     *string            `json:"site,omitempty"`
+	UseSsl   *bool              `json:"use_ssl,omitempty"`
 }
 
 // IndexerCreateProtocol defines model for IndexerCreate.Protocol.
@@ -8899,7 +9008,7 @@ type CreateCustomFormat = CustomFormatCreate
 // CreateDownloadClient defines model for CreateDownloadClient.
 type CreateDownloadClient = DownloadClientCreate
 
-// CreateIndexer defines model for CreateIndexer.
+// CreateIndexer A Torznab or Prowlarr indexer takes host, port and api_key; a `cardigann` one takes definition and its settings instead.
 type CreateIndexer = IndexerCreate
 
 // CreateInvite defines model for CreateInvite.
@@ -10070,6 +10179,12 @@ type ServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
+	// GetCardigannCatalog List the built-in indexer definitions
+	// (GET /cardigann/catalog)
+	GetCardigannCatalog(w http.ResponseWriter, r *http.Request)
+	// GetCardigannDefinition Describe one built-in indexer definition
+	// (GET /cardigann/catalog/{file})
+	GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile)
 	// ListCardigannUpdates List held definition updates
 	// (GET /cardigann/updates)
 	ListCardigannUpdates(w http.ResponseWriter, r *http.Request)
@@ -10979,6 +11094,18 @@ func (_ Unimplemented) SearchBookNow(w http.ResponseWriter, r *http.Request, id 
 // ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 // (GET /calendar/upcoming)
 func (_ Unimplemented) ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetCardigannCatalog List the built-in indexer definitions
+// (GET /cardigann/catalog)
+func (_ Unimplemented) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetCardigannDefinition Describe one built-in indexer definition
+// (GET /cardigann/catalog/{file})
+func (_ Unimplemented) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -13847,6 +13974,46 @@ func (siw *ServerInterfaceWrapper) ListUpcomingReleases(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListUpcomingReleases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCardigannCatalog operation middleware
+func (siw *ServerInterfaceWrapper) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCardigannCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCardigannDefinition operation middleware
+func (siw *ServerInterfaceWrapper) GetCardigannDefinition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCardigannDefinition(w, r, file)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19553,6 +19720,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/indexers/test", wrapper.TestDraftIndexer)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/catalog", wrapper.GetCardigannCatalog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/catalog/{file}", wrapper.GetCardigannDefinition)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/cardigann/updates", wrapper.ListCardigannUpdates)
 	})
 	r.Group(func(r chi.Router) {
@@ -24138,6 +24311,119 @@ func (response ListUpcomingReleases400JSONResponse) VisitListUpcomingReleasesRes
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannCatalogRequestObject struct {
+}
+
+type GetCardigannCatalogResponseObject interface {
+	VisitGetCardigannCatalogResponse(w http.ResponseWriter) error
+}
+
+type GetCardigannCatalog200JSONResponse CardigannCatalog
+
+func (response GetCardigannCatalog200JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannCatalog403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCardigannCatalog403JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannCatalog500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCardigannCatalog500JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinitionRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type GetCardigannDefinitionResponseObject interface {
+	VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error
+}
+
+type GetCardigannDefinition200JSONResponse CardigannDefinition
+
+func (response GetCardigannDefinition200JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCardigannDefinition403JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCardigannDefinition404JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCardigannDefinition500JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -36255,6 +36541,12 @@ type StrictServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
+	// GetCardigannCatalog List the built-in indexer definitions
+	// (GET /cardigann/catalog)
+	GetCardigannCatalog(ctx context.Context, request GetCardigannCatalogRequestObject) (GetCardigannCatalogResponseObject, error)
+	// GetCardigannDefinition Describe one built-in indexer definition
+	// (GET /cardigann/catalog/{file})
+	GetCardigannDefinition(ctx context.Context, request GetCardigannDefinitionRequestObject) (GetCardigannDefinitionResponseObject, error)
 	// ListCardigannUpdates List held definition updates
 	// (GET /cardigann/updates)
 	ListCardigannUpdates(ctx context.Context, request ListCardigannUpdatesRequestObject) (ListCardigannUpdatesResponseObject, error)
@@ -38476,6 +38768,56 @@ func (sh *strictHandler) ListUpcomingReleases(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListUpcomingReleasesResponseObject); ok {
 		if err := validResponse.VisitListUpcomingReleasesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCardigannCatalog operation middleware
+func (sh *strictHandler) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+	var request GetCardigannCatalogRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCardigannCatalog(ctx, request.(GetCardigannCatalogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCardigannCatalog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCardigannCatalogResponseObject); ok {
+		if err := validResponse.VisitGetCardigannCatalogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCardigannDefinition operation middleware
+func (sh *strictHandler) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request GetCardigannDefinitionRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCardigannDefinition(ctx, request.(GetCardigannDefinitionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCardigannDefinition")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCardigannDefinitionResponseObject); ok {
+		if err := validResponse.VisitGetCardigannDefinitionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

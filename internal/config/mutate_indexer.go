@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"maps"
+
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
 )
 
 var (
@@ -23,6 +26,61 @@ type IndexerPatch struct {
 	Priority *uint8
 	Enabled  *bool
 	Private  *bool
+	// Cardigann edits a built-in indexer's block; nil leaves it alone.
+	Cardigann *CardigannPatch
+}
+
+// CardigannPatch edits a built-in indexer's definition block. Settings
+// replaces the settings — but a secret one sent empty or left out keeps its
+// stored value, since the API never returns one to send back — unless the
+// definition changes, which starts the settings over. Proxy "" clears it.
+type CardigannPatch struct {
+	Definition *string
+	Site       *string
+	Settings   map[string]string
+	Proxy      *string
+}
+
+// apply merges p into the block it edits, under the definitions in force
+// in dir.
+func (p CardigannPatch) apply(
+	dir string,
+	old *CardigannIndexer,
+) (*CardigannIndexer, error) {
+	next := &CardigannIndexer{}
+	if old != nil {
+		*next = *old
+		next.Settings = maps.Clone(old.Settings)
+	}
+	if p.Definition != nil && *p.Definition != next.Definition {
+		next.Definition, next.Settings, next.Site = *p.Definition, nil, ""
+	}
+	if p.Site != nil {
+		next.Site = *p.Site
+	}
+	if p.Proxy != nil {
+		next.Proxy = *p.Proxy
+	}
+	if p.Settings == nil {
+		return next, nil
+	}
+	def, err := definitions.Load(dir, next.Definition)
+	if err != nil {
+		return nil, err
+	}
+	merged := maps.Clone(p.Settings)
+	for _, s := range def.Settings {
+		if !s.Secret || merged[s.Name] != "" {
+			continue
+		}
+		if v, ok := next.Settings[s.Name]; ok {
+			merged[s.Name] = v
+		} else {
+			delete(merged, s.Name)
+		}
+	}
+	next.Settings = merged
+	return next, nil
 }
 
 func AddIndexer(ctx context.Context, e IndexerEntry) error {
@@ -71,6 +129,9 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 		}
 		if p.Protocol != nil {
 			e.Protocol = *p.Protocol
+			if e.Protocol != "cardigann" {
+				e.Cardigann = nil
+			}
 		}
 		if p.Priority != nil {
 			e.Priority = *p.Priority
@@ -80,6 +141,13 @@ func UpdateIndexer(ctx context.Context, name string, p IndexerPatch) error {
 		}
 		if p.Private != nil {
 			e.Private = *p.Private
+		}
+		if p.Cardigann != nil {
+			next, err := p.Cardigann.apply(c.CardigannDir(), e.Cardigann)
+			if err != nil {
+				return err
+			}
+			e.Cardigann = next
 		}
 		c.Indexers[idx] = e
 		slog.InfoContext(ctx, "indexer updated", "name", name)

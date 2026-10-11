@@ -3,12 +3,13 @@
 `internal/cardigann` is streamline's own reader for the Cardigann YAML definitions
 Prowlarr and Jackett describe trackers in, so a stack can drop Prowlarr/Jackett. **What
 exists today is the converter, the embedded snapshot and the engine**: a `protocol:
-cardigann` indexer entry, configured in the config file only, runs any definition in the
+cardigann` indexer entry, created from the catalog in the SPA or in the config file, runs any definition in the
 snapshot, logging in to its tracker when the definition says to (`## Logins`) and getting
 past a browser challenge through a FlareSolverr-compatible solver (`## Browser
 challenges`). A daily job keeps the definitions current with upstream, holding any change
-that re-points a configured tracker for an administrator (`## Runtime updates`). The
-catalog UI is not built yet.
+that re-points a configured tracker for an administrator (`## Runtime updates`). Settings →
+Indexers browses the catalog and generates the form from a definition's settings (`## The
+catalog and the API`).
 
 | Path | What it is |
 |---|---|
@@ -333,8 +334,8 @@ Prowlarr does. Each rule names the definitions that depend on it.
 
 ## The engine
 
-Configured in the YAML only — the REST API lists a `cardigann` entry (its host and port are
-the tracker site's, plus `definition`) and answers an update with 422:
+In the YAML (or through the API, `## The catalog and the API`) — the REST API lists a
+`cardigann` entry with its host and port as the tracker site's:
 
 ```yaml
 indexers:
@@ -408,6 +409,31 @@ indexers:
 
 What the engine does **not** do yet: pick a tracker's own category for a search beyond the
 newznab root of the kind, or page past the first response.
+
+## The catalog and the API
+
+- `GET /cardigann/catalog` is `definitions.Catalog(dir)` (custom included) as summaries;
+  the SPA filters it client-side (language, privacy, top category, login burden).
+  `GET /cardigann/catalog/{file}` adds the settings. **An `info*` setting's text is
+  upstream HTML and goes out as plain text** (goquery `Text()`), never as markup for the
+  SPA to trust.
+- `POST /indexers` with `protocol: cardigann` takes `definition`, `site`, `settings`,
+  `proxy`; host, port and api_key are required by `checkIndexers` for the other protocols
+  only, so `IndexerCreate` requires nothing but `name`. A draft test runs
+  `config.CheckCardigann` first (an undeclared setting is a plain 422) and needs no
+  `draftTargetRefused` — the target is a definition link, never a caller-named host.
+- **Secrets never leave**: `Indexer.settings` carries the non-secret values, `secrets_set`
+  names the secret ones holding a value, `proxy` comes back without userinfo. On `PUT`,
+  `config.CardigannPatch` keeps a secret sent empty or left out — unless the definition
+  changes, which starts the settings (and site) over; `proxy` absent keeps, `""` clears, and
+  the SPA sends it only when the field changed, since the redacted form sent back would
+  drop the credentials. Switching an entry's protocol away from `cardigann` drops the
+  block. Any edit `Forget`s the session.
+- The SPA's form is a TanStack form over `{name, site, enabled, priority, private, proxy,
+  settings}` with one field per valued setting (`settings.<name>`): text/password
+  (`secret` → password input, "stored, leave blank" help), checkbox (`"true"`/`"false"`),
+  select (option keys). A definition with a captcha says to save first and log in from the
+  card; one with a challenge names `cardigann.solver_url`.
 
 ## Logins
 

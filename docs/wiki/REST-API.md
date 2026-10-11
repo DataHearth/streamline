@@ -348,6 +348,12 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `POST` | `/media-servers/discover` | List libraries/sections for a draft (body carries the token) | 🔒 Admin |
 | `POST` | `/media-servers/{name}/discover` | Same, for a saved server, using its stored token | 🔒 Admin |
 | `POST` | `/quality-profiles/{name}/default` | Make this the default profile. `?media=movie\|series` picks which; absent sets both | 🔒 Admin |
+| `GET` | `/cardigann/catalog` · `/cardigann/catalog/{file}` | The built-in tracker definitions in force, and one definition with the settings an indexer running it takes | 🔒 Admin |
+| `POST` | `/indexers/{name}/captcha` · `/indexers/{name}/login` | Load a built-in indexer's login captcha (`204` when none is shown), then log it in with `{token, answer}` — or log in straight away with no body | 🔒 Admin |
+| `GET` | `/cardigann/updates` | Definition updates held for approval, each with its diff | 🔒 Admin |
+| `POST` | `/cardigann/updates/{file}/approve` · `/reject` | Put a held update in force, or keep the version you have | 🔒 Admin |
+
+A built-in indexer (`protocol: cardigann`) is created with `definition` and `settings` instead of host, port and API key. Its secret settings never come back: the response lists their names under `secrets_set`, and an update that leaves one empty keeps it. Editing one drops its tracker session, so the next search logs in with what was saved.
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 

@@ -1219,6 +1219,13 @@ export type Indexer = {
 	private?: boolean;
 	// A built-in indexer's tracker login.
 	session?: IndexerSession;
+	// A built-in indexer's chosen link, its settings without the secret ones
+	// (secrets_set names those holding a value), and its proxy without
+	// credentials.
+	site?: string;
+	settings?: Record<string, string>;
+	secrets_set?: string[];
+	proxy?: string;
 };
 
 export type IndexerSession = {
@@ -1231,6 +1238,38 @@ export type IndexerSession = {
 };
 
 export type IndexerCaptcha = { token: string; image: string };
+
+export type CardigannSummary = {
+	file: string;
+	name: string;
+	description: string;
+	language: string;
+	type: string;
+	links: string[];
+	login: string;
+	captcha: boolean;
+	challenge: boolean;
+	categories: string[];
+	custom: boolean;
+};
+
+export type CardigannCatalog = {
+	upstream: { commit: string; date: string };
+	definitions: CardigannSummary[];
+};
+
+export type CardigannSetting = {
+	name: string;
+	label: string;
+	type: string;
+	default?: string;
+	options?: { key: string; label: string }[];
+	secret: boolean;
+};
+
+export type CardigannDefinition = CardigannSummary & {
+	settings: CardigannSetting[];
+};
 
 export type CardigannUpdate = {
 	file: string;
