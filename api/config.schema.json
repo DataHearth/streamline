@@ -122,7 +122,7 @@
         "protocol": {
           "type": "string",
           "enum": ["torznab", "prowlarr", "cardigann"],
-          "description": "cardigann runs the tracker from an embedded Prowlarr/Jackett definition, configured under cardigann; definitions with a login block are not supported yet."
+          "description": "cardigann runs the tracker from an embedded Prowlarr/Jackett definition, configured under cardigann."
         },
         "priority": { "type": "integer", "minimum": 0, "maximum": 255 },
         "enabled": { "type": "boolean" },
@@ -144,6 +144,10 @@
               "type": "object",
               "description": "The definition's settings by name: a checkbox is \"true\" or \"false\", a select one of its option keys. A setting left out takes the definition's default.",
               "additionalProperties": { "type": "string" }
+            },
+            "proxy": {
+              "type": "string",
+              "description": "An http, https or socks5 proxy URL the tracker's requests (and the challenge solver's browser) go through. An HTTPS-intercepting proxy sees the tracker credentials."
             }
           }
         }
@@ -725,6 +729,18 @@
           "$ref": "#/definitions/duration",
           "description": "Least time between two MusicBrainz calls (default 1s, what musicbrainz.org allows). Background work keeps twice this between its own calls. \"0s\" removes the limit, for a self-hosted mirror only. Restart required."
         }
+      }
+    },
+    "cardigann": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Shared by every built-in (protocol: cardigann) indexer.",
+      "properties": {
+        "solver_url": {
+          "type": "string",
+          "description": "A FlareSolverr-compatible service (FlareSolverr, trawl, Byparr) used to get past a browser challenge such as Cloudflare's. Empty fails a challenged request."
+        },
+        "solver_timeout": { "$ref": "#/definitions/duration" }
       }
     },
     "events": {

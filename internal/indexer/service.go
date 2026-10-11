@@ -95,6 +95,12 @@ func queryOutcome(err error) string {
 		return "success"
 	case errors.Is(err, ErrUnauthorized):
 		return "unauthorized"
+	case errors.Is(err, ErrLoginFailed),
+		errors.Is(err, ErrCaptchaRequired),
+		errors.Is(err, ErrLoginBackoff):
+		return "login_failed"
+	case errors.Is(err, ErrChallenge):
+		return "challenge"
 	case errors.Is(err, ErrUnreachable):
 		return "unreachable"
 	case errors.Is(err, ErrBadResponse):

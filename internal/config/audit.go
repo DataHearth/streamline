@@ -15,8 +15,10 @@ import (
 // A cardigann entry's settings are redacted wholesale: their names are the
 // definition's own (passkey, cookie, rsskey…), and which of them is a secret
 // is a call the converter makes per definition, not one a key name settles.
+// Its proxy URL may carry credentials.
 var secretKeyParts = []string{
 	"password", "secret", "api_key", "token", ".cardigann.settings",
+	".cardigann.proxy",
 }
 
 func isSecretKey(key string) bool {

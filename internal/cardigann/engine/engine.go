@@ -75,6 +75,9 @@ type Options struct {
 	// Session is what an earlier login left: the cookies to send and the
 	// user agent a challenge was solved under.
 	Session Session
+	// Solver gets the engine past a browser challenge; nil fails the request
+	// with ErrChallenge instead.
+	Solver *Solver
 }
 
 // Session is the state a tracker's login leaves behind, by cookie name — what
@@ -95,6 +98,7 @@ type Engine struct {
 	pace     *pacer
 	clock    func() time.Time
 	ua       string
+	solver   *Solver
 }
 
 // New checks a definition and the operator's settings for it.
@@ -141,6 +145,7 @@ func New(def *cardigann.Definition, o Options) (*Engine, error) {
 		pace:     pacerFor(o.Name, gap),
 		clock:    clock,
 		ua:       o.Session.UserAgent,
+		solver:   o.Solver,
 	}
 	e.resetCookies(o.Session.Cookies)
 	return e, nil
@@ -340,7 +345,23 @@ type response struct {
 	url      *url.URL
 }
 
+// do sends r, and when the answer is a browser challenge, has the solver
+// get through it and sends r once more under the clearance it earned.
 func (e *Engine) do(ctx context.Context, r request) (*response, error) {
+	resp, err := e.send(ctx, r)
+	if err != nil || !isChallenge(resp) {
+		return resp, err
+	}
+	if err := e.solve(ctx, r); err != nil {
+		return nil, err
+	}
+	if resp, err = e.send(ctx, r); err == nil && isChallenge(resp) {
+		return nil, fmt.Errorf("%w: still challenged after solving", ErrChallenge)
+	}
+	return resp, err
+}
+
+func (e *Engine) send(ctx context.Context, r request) (*response, error) {
 	if err := e.pace.wait(ctx); err != nil {
 		return nil, err
 	}

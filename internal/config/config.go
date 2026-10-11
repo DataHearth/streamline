@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/mail"
 	"net/netip"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -52,6 +53,7 @@ type Config struct {
 	Transcoding TranscodingConfig `koanf:"transcoding"`
 	SMTP        SMTPConfig        `koanf:"smtp"`
 	Backup      BackupConfig      `koanf:"backup"`
+	Cardigann   CardigannConfig   `koanf:"cardigann"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -394,6 +396,16 @@ type ScheduleConfig struct {
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
 	MusicTagSync         string `koanf:"music_tag_sync"         validate:"required"`
 	DatabaseBackup       string `koanf:"database_backup"        validate:"required"`
+}
+
+// CardigannConfig is what every built-in indexer shares.
+type CardigannConfig struct {
+	// SolverURL is a FlareSolverr-compatible service (FlareSolverr, trawl,
+	// Byparr) a built-in indexer asks to get past a browser challenge. Empty
+	// fails a challenged request instead.
+	SolverURL string `koanf:"solver_url" validate:"omitempty,http_url"`
+	// SolverTimeout bounds one solve.
+	SolverTimeout string `koanf:"solver_timeout" validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -772,6 +784,15 @@ func (c *Config) checkInvariants() error {
 	}
 	errs = append(errs, c.checkMusicBookProfiles()...)
 	errs = append(errs, c.checkIndexers()...)
+	if d, err := time.ParseDuration(
+		c.Cardigann.SolverTimeout,
+	); err != nil ||
+		d <= 0 {
+		errs = append(errs, fmt.Errorf(
+			"cardigann.solver_timeout %q: want a positive duration",
+			c.Cardigann.SolverTimeout,
+		))
+	}
 	builtin := 0
 	for _, dc := range c.DownloadClients {
 		if dc.ClientType == "builtin" {
@@ -1136,6 +1157,8 @@ func defaults() map[string]any {
 		"backup.retention.scheduled":          7,
 		"backup.retention.pre_migration":      5,
 		"backup.retention.manual":             10,
+		"cardigann.solver_url":                "",
+		"cardigann.solver_timeout":            "60s",
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,
@@ -1736,6 +1759,19 @@ func (c *Config) checkIndexers() []error {
 		}
 		if err := CheckCardigann(ix); err != nil {
 			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
+		}
+		if p := ix.Cardigann; p != nil && p.Proxy != "" {
+			u, err := url.Parse(p.Proxy)
+			if err != nil || u.Host == "" ||
+				!slices.Contains(
+					[]string{"http", "https", "socks5", "socks5h"},
+					u.Scheme,
+				) {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: cardigann.proxy wants an http, https or socks5 URL",
+					ix.Name,
+				))
+			}
 		}
 	}
 	return errs

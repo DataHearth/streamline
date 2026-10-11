@@ -1004,6 +1004,23 @@ var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
 		}))).To(Succeed())
 	})
 
+	It("takes an http or socks5 proxy and refuses anything else", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Proxy = "socks5://u:p@vpn:1080"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		e = cardigann("nyaasi", nil)
+		e.Cardigann.Proxy = "ftp://vpn:21"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("cardigann.proxy")))
+	})
+
+	It("defaults the solver timeout and refuses one that is not positive", func() {
+		c := configtest.Setup()
+		Expect(c.Cardigann.SolverTimeout).To(Equal("60s"))
+		c.Cardigann.SolverTimeout = "0s"
+		Expect(c.Validate()).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
+	})
+
 	It("rejects a definition the snapshot does not hold", func() {
 		Expect(config.AddIndexer(ctx, cardigann("no-such-tracker", nil))).
 			To(MatchError(ContainSubstring("not found")))

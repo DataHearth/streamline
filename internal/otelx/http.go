@@ -35,6 +35,19 @@ var HTTPClient = &http.Client{
 	Timeout:   30 * time.Second,
 }
 
+// ProxiedHTTPClient is HTTPClient with every request sent through proxy
+// (http, https or socks5), for a caller whose remote must see another egress
+// address.
+func ProxiedHTTPClient(proxy *url.URL) *http.Client {
+	//nolint:forcetypeassert // net/http documents DefaultTransport as *Transport
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.Proxy = http.ProxyURL(proxy)
+	return &http.Client{
+		Transport: otelhttp.NewTransport(spanURLRedactor{base: t}),
+		Timeout:   HTTPClient.Timeout,
+	}
+}
+
 // spanURLRedactor rewrites the client span's url.full attribute so the request
 // query string never leaves the process.
 //
