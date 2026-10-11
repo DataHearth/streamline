@@ -31,6 +31,10 @@
 	let href = $derived(`/music/${a.id}`);
 	const releaseHref = (id: number) => `/music/${a.id}?release=${id}`;
 	let monitored = $derived(a.monitor !== "none");
+	let releases = $derived([
+		...a.albums.filter((r) => r.status === "available"),
+		...a.albums.filter((r) => r.monitored && r.status !== "available"),
+	]);
 
 	let stripW = $state(0);
 	// Measured with a guarded observer rather than bind:clientWidth: the strip's
@@ -57,8 +61,8 @@
 	let tileW = $derived(wide ? 104 : 96);
 	let gap = $derived(wide ? 12 : 10);
 	let slots = $derived(Math.max(1, Math.floor((stripW + gap) / (tileW + gap))));
-	let shown = $derived(a.albums.length > slots ? a.albums.slice(0, slots - 1) : a.albums);
-	let hidden = $derived(a.albums.length - shown.length);
+	let shown = $derived(releases.length > slots ? releases.slice(0, slots - 1) : releases);
+	let hidden = $derived(releases.length - shown.length);
 
 	let pctHave = $derived(t.released ? (t.have / t.released) * 100 : 0);
 	let pctDl = $derived(t.released ? (t.downloading / t.released) * 100 : 0);
@@ -112,7 +116,7 @@
 		<div
 			class="mt-3 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 		>
-			{#each a.albums as r (r.id)}
+			{#each releases as r (r.id)}
 				<ReleaseTile release={r} href={releaseHref(r.id)} width={92} />
 			{/each}
 		</div>
