@@ -223,14 +223,12 @@
 			aria-expanded={formOpen}
 			aria-controls="local-login"
 			onclick={toggleForm}
-			class="inline-flex h-11 w-full items-center justify-between gap-3 rounded-md border border-border px-4 text-sm font-medium text-fg-muted transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
-			<span class="inline-flex items-center gap-3">
-				<Mail size={18} aria-hidden="true" />
-				{i18n.auth_sign_in_with_email()}
-			</span>
+			<Mail size={16} aria-hidden="true" />
+			{i18n.auth_sign_in_with_email()}
 			<ChevronDown
-				size={18}
+				size={16}
 				aria-hidden="true"
 				class={["transition-transform", formOpen && "rotate-180"]}
 			/>
