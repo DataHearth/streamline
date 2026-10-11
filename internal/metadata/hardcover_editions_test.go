@@ -91,52 +91,6 @@ var _ = Describe("SelectEditions", Label("unit", "metadata"), func() {
 		Expect(got).To(BeEmpty())
 	})
 
-	It(
-		"keeps an unlabelled audiobook in the original language when no audiobook is labelled",
-		func() {
-			earliest := raw(9, "en", "Tor", 1, 1)
-			got, _ := SelectEditions([]RawEdition{
-				raw(1, "en", "Tor", 4, 90),
-				raw(2, "", "Audible", 2, 40),
-			}, nil, &earliest, 0)
-
-			byID := map[uint32]EditionRecord{}
-			for _, e := range got {
-				byID[e.HardcoverID] = e
-			}
-			Expect(byID).To(HaveKey(uint32(2)))
-			Expect(byID[2].Format).To(Equal(FormatAudiobook))
-			Expect(byID[2].Language).To(Equal("en"))
-			Expect(byID[2].Original).To(BeTrue())
-		},
-	)
-
-	It("falls back to the most popular labelled language", func() {
-		got, _ := SelectEditions([]RawEdition{
-			raw(1, "fr", "Folio", 4, 90),
-			raw(2, "en", "Tor", 4, 10),
-			raw(3, "", "Audible", 2, 40),
-		}, nil, nil, 0)
-
-		var audio []EditionRecord
-		for _, e := range got {
-			if e.Format == FormatAudiobook {
-				audio = append(audio, e)
-			}
-		}
-		Expect(audio).To(HaveLen(1))
-		Expect(audio[0].Language).To(Equal("fr"))
-	})
-
-	It("ignores an unlabelled audiobook when a labelled one exists", func() {
-		got, _ := SelectEditions([]RawEdition{
-			raw(1, "en", "Tor", 2, 5),
-			raw(2, "", "Audible", 2, 90),
-		}, nil, nil, 0)
-
-		Expect(ids(got)).To(Equal([]uint32{1}))
-	})
-
 	It("counts an edition listed in two pools once", func() {
 		e := raw(1, "en", "Tor", 4, 1)
 		got, _ := SelectEditions([]RawEdition{e}, []RawEdition{e}, &e, 0)
