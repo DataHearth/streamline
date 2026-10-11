@@ -155,6 +155,20 @@ func (_u *AlbumUpdate) SetNillableMonitored(v *bool) *AlbumUpdate {
 	return _u
 }
 
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *AlbumUpdate) SetMonitorPinned(v bool) *AlbumUpdate {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableMonitorPinned(v *bool) *AlbumUpdate {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
+	}
+	return _u
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_u *AlbumUpdate) SetGrabFailures(v uint8) *AlbumUpdate {
 	_u.mutation.ResetGrabFailures()
@@ -631,6 +645,9 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
 	}
@@ -1037,6 +1054,20 @@ func (_u *AlbumUpdateOne) SetMonitored(v bool) *AlbumUpdateOne {
 func (_u *AlbumUpdateOne) SetNillableMonitored(v *bool) *AlbumUpdateOne {
 	if v != nil {
 		_u.SetMonitored(*v)
+	}
+	return _u
+}
+
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (_u *AlbumUpdateOne) SetMonitorPinned(v bool) *AlbumUpdateOne {
+	_u.mutation.SetMonitorPinned(v)
+	return _u
+}
+
+// SetNillableMonitorPinned sets the "monitor_pinned" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableMonitorPinned(v *bool) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetMonitorPinned(*v)
 	}
 	return _u
 }
@@ -1546,6 +1577,9 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.MonitorPinned(); ok {
+		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

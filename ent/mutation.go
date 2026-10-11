@@ -107,6 +107,7 @@ type AlbumMutation struct {
 	_type                   *album.Type
 	release_date            *time.Time
 	monitored               *bool
+	monitor_pinned          *bool
 	grab_failures           *uint8
 	addgrab_failures        *int8
 	last_search_at          *time.Time
@@ -603,6 +604,42 @@ func (m *AlbumMutation) OldMonitored(ctx context.Context) (v bool, err error) {
 // ResetMonitored resets all changes to the "monitored" field.
 func (m *AlbumMutation) ResetMonitored() {
 	m.monitored = nil
+}
+
+// SetMonitorPinned sets the "monitor_pinned" field.
+func (m *AlbumMutation) SetMonitorPinned(b bool) {
+	m.monitor_pinned = &b
+}
+
+// MonitorPinned returns the value of the "monitor_pinned" field in the mutation.
+func (m *AlbumMutation) MonitorPinned() (r bool, exists bool) {
+	v := m.monitor_pinned
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMonitorPinned returns the old "monitor_pinned" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldMonitorPinned(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitorPinned is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitorPinned requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitorPinned: %w", err)
+	}
+	return oldValue.MonitorPinned, nil
+}
+
+// ResetMonitorPinned resets all changes to the "monitor_pinned" field.
+func (m *AlbumMutation) ResetMonitorPinned() {
+	m.monitor_pinned = nil
 }
 
 // SetGrabFailures sets the "grab_failures" field.
@@ -1378,7 +1415,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1405,6 +1442,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.monitored != nil {
 		fields = append(fields, album.FieldMonitored)
+	}
+	if m.monitor_pinned != nil {
+		fields = append(fields, album.FieldMonitorPinned)
 	}
 	if m.grab_failures != nil {
 		fields = append(fields, album.FieldGrabFailures)
@@ -1462,6 +1502,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.ReleaseDate()
 	case album.FieldMonitored:
 		return m.Monitored()
+	case album.FieldMonitorPinned:
+		return m.MonitorPinned()
 	case album.FieldGrabFailures:
 		return m.GrabFailures()
 	case album.FieldLastSearchAt:
@@ -1509,6 +1551,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldReleaseDate(ctx)
 	case album.FieldMonitored:
 		return m.OldMonitored(ctx)
+	case album.FieldMonitorPinned:
+		return m.OldMonitorPinned(ctx)
 	case album.FieldGrabFailures:
 		return m.OldGrabFailures(ctx)
 	case album.FieldLastSearchAt:
@@ -1600,6 +1644,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMonitored(v)
+		return nil
+	case album.FieldMonitorPinned:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMonitorPinned(v)
 		return nil
 	case album.FieldGrabFailures:
 		v, ok := value.(uint8)
@@ -1830,6 +1881,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldMonitored:
 		m.ResetMonitored()
+		return nil
+	case album.FieldMonitorPinned:
+		m.ResetMonitorPinned()
 		return nil
 	case album.FieldGrabFailures:
 		m.ResetGrabFailures()

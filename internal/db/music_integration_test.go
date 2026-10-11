@@ -353,6 +353,51 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			},
 		)
 
+		It(
+			"leaves an album set by hand to the catch-up, until the policy changes",
+			func() {
+				Expect(
+					store.SetArtistMonitor(
+						ctx,
+						a.ID,
+						entartist.MonitorAll,
+						types,
+						now,
+					),
+				).To(Succeed())
+				Expect(store.SetAlbumMonitored(ctx, albumByMBID("past").ID, false)).
+					To(Succeed())
+				Expect(store.SetAlbumMonitored(ctx, albumByMBID("single").ID, true)).
+					To(Succeed())
+
+				on, off, err := store.ReapplyMonitorPolicies(ctx, types, now)
+				Expect(err).NotTo(HaveOccurred())
+				Expect([]int{on, off}).To(Equal([]int{0, 0}))
+				Expect(monitored()).To(Equal(map[string]bool{
+					"past": false, "soon": true, "undated": true, "single": true,
+				}))
+
+				Expect(
+					store.SetArtistMonitor(
+						ctx,
+						a.ID,
+						entartist.MonitorAll,
+						types,
+						now,
+					),
+				).To(Succeed())
+				Expect(monitored()).To(Equal(map[string]bool{
+					"past": true, "soon": true, "undated": true, "single": false,
+				}))
+				Expect(
+					client.Album.Query().
+						Where(album.MonitorPinned(true)).
+						CountX(ctx),
+				).
+					To(BeZero())
+			},
+		)
+
 		It("never touches an album's status", func() {
 			client.Album.Update().Where(album.MbidEQ("past")).
 				SetStatus(album.StatusAvailable).ExecX(ctx)
