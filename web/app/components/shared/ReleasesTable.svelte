@@ -109,9 +109,18 @@
 	// abort server-side. Dropping the query is what "stop waiting" means here,
 	// and it leaves a state that says so rather than an empty table.
 	let canceled = $state(false);
+	// When the current view asked for its results. Opening the dialog or
+	// switching its scope is a fresh search: a cached answer from an earlier
+	// view is refetched, and shown as searching until the new one lands rather
+	// than passed off as this search's result.
+	let askedAt = $state(0);
 	$effect(() => {
+		JSON.stringify(queryKey);
 		// Reopening the dialog is a fresh search, never a cancelled one.
-		if (enabled) canceled = false;
+		if (enabled) {
+			canceled = false;
+			askedAt = Date.now();
+		}
 	});
 
 	type Results = { items: SearchResult[]; hiddenPacks: number };
@@ -128,8 +137,14 @@
 			return { items: raw.items ?? [], hiddenPacks: raw.hidden_packs ?? 0 };
 		},
 		enabled: enabled && !canceled,
-		staleTime: 30_000,
+		// Every view refetches (see askedAt); a refocus must not re-query
+		// every indexer behind the operator's back.
+		staleTime: 0,
+		refetchOnWindowFocus: false,
 	}));
+	let searching = $derived(
+		q.isLoading || (q.isFetching && q.dataUpdatedAt < askedAt),
+	);
 
 	// Only to name the scope of the wait: "Searching 6 indexers". Admin-only
 	// endpoint, so a non-admin gets the countless phrasing rather than a number
@@ -138,7 +153,7 @@
 		queryKey: ["indexers"],
 		queryFn: () => api<Indexer[]>("/indexers"),
 		enabled:
-			enabled && !canceled && q.isLoading && auth.user?.role === "admin",
+			enabled && !canceled && searching && auth.user?.role === "admin",
 		staleTime: 300_000,
 		meta: { silent: true },
 	}));
@@ -564,7 +579,7 @@
 			{i18n.common_retry()}
 		</button>
 	</div>
-{:else if q.isLoading}
+{:else if searching}
 	<SearchNarration
 		{indexerCount}
 		scopePending={indexersQuery.isPending && auth.user?.role === "admin"}
