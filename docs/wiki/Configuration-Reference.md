@@ -403,6 +403,21 @@ The OTel SDK defaults to HTTPS. Set `otel.insecure: true` for a plaintext collec
 
 `log.app.enabled: false` turns off the stderr log sink only. Traces, metrics and OTLP-exported logs keep flowing as long as `otel.endpoint` is set.
 
+### smtp
+
+File-only and read at startup: it is not reachable through the settings API, and changing it needs a restart. It powers [Send to Kindle](Send-to-Kindle); with `smtp.host` empty the feature is off.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `smtp.host` | string | `""` | Mail server. Empty turns sending off |
+| `smtp.port` | int | `587` | Use `465` with `tls: implicit` |
+| `smtp.tls` | string | `starttls` | `starttls`, `implicit` or `none`. `none` is accepted only for a loopback host, so credentials never cross a network in clear. `starttls` fails if the server does not offer it |
+| `smtp.username` | string | `""` | Login, when the server requires one |
+| `smtp.password` | string | `""` | Excluded with `password_file` |
+| `smtp.password_file` | string | `""` | Path to a file holding the password. Excluded with `password` |
+| `smtp.from` | string | `""` | Sender address. Required when `host` is set; it is the address you approve on Amazon's side |
+| `smtp.max_message_size_mb` | int | `25` | Raw attachment bytes per email, before base64 (1-65535) |
+
 ### events
 
 | Key | Type | Default | Notes |

@@ -99,3 +99,5 @@ Users can request an artist (its whole discography), a single album, a single bo
 - Hardcover has no CBZ or CBR concept, so a comic or manga volume listed there only as paperback has that paperback shown as its ebook edition.
 - A series volume cannot be deleted on its own; it would come back at the next refresh. Delete the series.
 - Whether a book is a BD or a comic rests on its original language, so check the kind of anything unusual.
+
+Ebooks can also be emailed straight to an e-reader such as a Kindle or PocketBook; see [Send to Kindle](Send-to-Kindle).

@@ -12,6 +12,8 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | TV shows | ✅ Shipped |
 | Music | ✅ Shipped — library management with background hydration of tracks and credits, Wikipedia overviews and artist photos, monitor policies, adoption of existing files, a Subsonic server, searching and grabbing albums and discography packs with tag writing, RSS and scheduled searches, and requests |
 | Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
+| Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
+| CBZ → PDF for send to e-reader | 📋 Planned |
 
 Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books).
 
