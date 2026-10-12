@@ -131,21 +131,10 @@ type BookLookupHit struct {
 	ImageURL    string
 	// Slug is a series hit's hardcover.app/series path segment.
 	Slug string
-	// AlternativeTitles, SeriesIDs and FeaturedSeries are a book hit's
-	// translations and series membership, as the search document carries them.
+	// AlternativeTitles and SeriesIDs are a book hit's translations and series
+	// membership, as the search document carries them.
 	AlternativeTitles []string
 	SeriesIDs         []uint32
-	FeaturedSeries    *LookupSeriesRef
-}
-
-// LookupSeriesRef is the series a book search document features.
-type LookupSeriesRef struct {
-	ID           uint32
-	Name         string
-	Slug         string
-	Position     float64
-	PrimaryBooks uint32
-	Books        uint32
 }
 
 // SeriesLookupVolume is one numbered entry of a series in the batched lookup,
@@ -167,6 +156,7 @@ type SeriesLookupRecord struct {
 	PrimaryBooks uint32
 	Books        uint32
 	AuthorName   string
+	Ongoing      *bool
 	Volumes      []SeriesLookupVolume
 }
 

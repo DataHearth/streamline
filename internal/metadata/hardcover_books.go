@@ -76,16 +76,6 @@ type hcBookDoc struct {
 
 	AlternativeTitles []string `json:"alternative_titles"`
 	SeriesIDs         []hcID   `json:"series_ids"`
-	FeaturedSeries    *struct {
-		Position float64 `json:"position"`
-		Series   struct {
-			ID                hcID   `json:"id"`
-			Name              string `json:"name"`
-			Slug              string `json:"slug"`
-			PrimaryBooksCount uint32 `json:"primary_books_count"`
-			BooksCount        uint32 `json:"books_count"`
-		} `json:"series"`
-	} `json:"featured_series"`
 }
 
 type hcSeriesDoc struct {
@@ -181,16 +171,6 @@ func (h *Hardcover) LookupBooks(
 		for _, id := range d.SeriesIDs {
 			if id != 0 {
 				hit.SeriesIDs = append(hit.SeriesIDs, uint32(id))
-			}
-		}
-		if fs := d.FeaturedSeries; fs != nil && fs.Series.ID != 0 {
-			hit.FeaturedSeries = &LookupSeriesRef{
-				ID:           uint32(fs.Series.ID),
-				Name:         fs.Series.Name,
-				Slug:         fs.Series.Slug,
-				Position:     fs.Position,
-				PrimaryBooks: fs.Series.PrimaryBooksCount,
-				Books:        fs.Series.BooksCount,
 			}
 		}
 		if len(d.AuthorNames) > 0 {
@@ -885,13 +865,14 @@ func derefU32(p *uint32) uint32 {
 
 // hcSeriesLookupQuery reads the volumes' cached_image, not image: image is a
 // relation, one level past the depth limit under series > book_series > book.
-// The limit leaves room for the same position to hold many translations.
+// A position can hold dozens of translations; ordering each position by
+// readers keeps the book the add path would pick inside the limit.
 const hcSeriesLookupQuery = `
 query ($ids: [Int!]!) {
   series(where: {id: {_in: $ids}}) {
-    id name slug primary_books_count books_count
+    id name slug is_completed primary_books_count books_count
     author { id name }
-    book_series(where: {position: {_is_null: false}}, order_by: {position: asc}, limit: 50) {
+    book_series(where: {position: {_is_null: false}}, order_by: [{position: asc}, {book: {users_count: desc}}], limit: 50) {
       position
       book { id users_count compilation cached_image }
     }
@@ -927,6 +908,7 @@ func (h *Hardcover) GetSeriesLookup(
 			ID                hcID    `json:"id"`
 			Name              string  `json:"name"`
 			Slug              string  `json:"slug"`
+			IsCompleted       *bool   `json:"is_completed"`
 			PrimaryBooksCount *uint32 `json:"primary_books_count"`
 			BooksCount        *uint32 `json:"books_count"`
 			Author            *struct {
@@ -962,6 +944,9 @@ func (h *Hardcover) GetSeriesLookup(
 		}
 		if row.Author != nil {
 			rec.AuthorName = strings.TrimSpace(row.Author.Name)
+		}
+		if row.IsCompleted != nil {
+			rec.Ongoing = new(!*row.IsCompleted)
 		}
 		for _, v := range row.BookSeries {
 			if v.Position == nil || v.Book == nil || v.Book.ID == 0 {

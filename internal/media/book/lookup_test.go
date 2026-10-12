@@ -219,11 +219,19 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 						Return([]metadata.BookLookupHit{seriesHit(39538, "Fondation")}, nil).
 						Once()
 					empty := seriesRec(39538, "Fondation", 0)
+					done := seriesRec(5450, "Foundation", 7)
+					done.Ongoing = new(false)
+					running := seriesRec(
+						10331,
+						"Foundation (Chronological Order)",
+						7,
+					)
+					running.Ongoing = new(true)
 					f.meta.EXPECT().
 						GetSeriesLookup(anyCtx, ids(5450, 10331, 39538, 60563)).
 						Return([]metadata.SeriesLookupRecord{
-							seriesRec(5450, "Foundation", 7),
-							seriesRec(10331, "Foundation (Chronological Order)", 7),
+							done,
+							running,
 							empty,
 							seriesRec(60563, "Greater Foundation Universe", 15),
 						}, nil).Once()
@@ -239,6 +247,8 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 					Expect(hits[0].Volumes).To(Equal(uint32(7)))
 					Expect(hits[0].Slug).To(Equal("slug-5450"))
 					Expect(hits[0].MatchedTitle).To(Equal("Fondation"))
+					Expect(hits[0].Ongoing).To(Equal(new(false)))
+					Expect(hits[1].Ongoing).To(Equal(new(true)))
 					Expect(hits[2].Volumes).To(Equal(uint32(15)))
 					Expect(hits[2].MatchedTitle).To(Equal("Fondation"))
 					Expect(hits[3].MatchedTitle).To(BeEmpty())
@@ -283,6 +293,33 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(hitIDs(hits)).To(Equal([]string{"book:7"}))
 			})
+
+			It(
+				"lists a series reached only by the query's words after the books",
+				func() {
+					heir := bookHit(1, "Star Wars: Heir to the Empire")
+					heir.SeriesIDs = []uint32{300}
+					f.meta.EXPECT().LookupBooks(anyCtx, "star wars").
+						Return([]metadata.BookLookupHit{heir, bookHit(2, "Star Wars")}, nil).
+						Once()
+					f.meta.EXPECT().LookupSeries(anyCtx, "star wars").
+						Return(nil, nil).Once()
+					f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(300)).
+						Return([]metadata.SeriesLookupRecord{
+							seriesRec(300, "The Thrawn Trilogy", 3),
+						}, nil).Once()
+
+					hits, err := f.svc.Lookup(f.ctx, "star wars", lookupAll)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hitIDs(hits)).To(Equal([]string{
+						"book:1", "book:2", "series:300",
+					}))
+					Expect(
+						hits[2].MatchedTitle,
+					).To(Equal("Star Wars: Heir to the Empire"))
+				},
+			)
 
 			It("keeps the series ahead of the books when the cap cuts", func() {
 				books := make([]metadata.BookLookupHit, 0, 31)

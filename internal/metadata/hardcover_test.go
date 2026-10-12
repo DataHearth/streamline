@@ -176,32 +176,30 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 	})
 
 	Describe("LookupBooks series derivation fields", func() {
-		It("reads alternative titles, series ids and the featured series", func() {
-			hc.client.Transport = srv.transport(
-				`{"data":{"search":{"results":{"hits":[
+		It(
+			"reads alternative titles and series ids, whatever featured_series holds",
+			func() {
+				hc.client.Transport = srv.transport(
+					`{"data":{"search":{"results":{"hits":[
 			  {"document":{"id":"188628","title":"Foundation","author_names":["Isaac Asimov"],
 			   "alternative_titles":["Fondation","Fundação"],
 			   "series_ids":[5450,"10331",60563],
-			   "featured_series":{"position":1,"series":{"id":5450,"name":"Foundation","slug":"foundation","primary_books_count":7,"books_count":9}}}},
+			   "featured_series":[{"position":"one","series":{"id":-1}}]}},
 			  {"document":{"id":"5","title":"Standalone"}}]}}}}`,
-			)
+				)
 
-			hits, err := hc.LookupBooks(ctx, "Fondation")
+				hits, err := hc.LookupBooks(ctx, "Fondation")
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(hits).To(HaveLen(2))
-			Expect(
-				hits[0].AlternativeTitles,
-			).To(Equal([]string{"Fondation", "Fundação"}))
-			Expect(hits[0].SeriesIDs).To(Equal([]uint32{5450, 10331, 60563}))
-			Expect(hits[0].FeaturedSeries).To(Equal(&LookupSeriesRef{
-				ID: 5450, Name: "Foundation", Slug: "foundation",
-				Position: 1, PrimaryBooks: 7, Books: 9,
-			}))
-			Expect(hits[1].AlternativeTitles).To(BeEmpty())
-			Expect(hits[1].SeriesIDs).To(BeEmpty())
-			Expect(hits[1].FeaturedSeries).To(BeNil())
-		})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hits).To(HaveLen(2))
+				Expect(
+					hits[0].AlternativeTitles,
+				).To(Equal([]string{"Fondation", "Fundação"}))
+				Expect(hits[0].SeriesIDs).To(Equal([]uint32{5450, 10331, 60563}))
+				Expect(hits[1].AlternativeTitles).To(BeEmpty())
+				Expect(hits[1].SeriesIDs).To(BeEmpty())
+			},
+		)
 	})
 
 	Describe("LookupSeries", func() {
@@ -577,7 +575,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		   "primary_books_count": 15, "books_count": 20,
 		   "author": {"id": 9, "name": "Isaac Asimov"},
 		   "book_series": [{"position": 1, "book": {"id": 11, "users_count": 50, "compilation": false, "cached_image": {"url": "https://img/11.jpg"}}}]},
-		  {"id": 5450, "name": "Foundation", "slug": "foundation",
+		  {"id": 5450, "name": "Foundation", "slug": "foundation", "is_completed": false,
 		   "primary_books_count": 7, "books_count": 9,
 		   "author": {"id": 9, "name": "Isaac Asimov"},
 		   "book_series": [
@@ -594,6 +592,10 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(srv.queries).To(HaveLen(1))
 			Expect(srv.queries[0]).To(ContainSubstring("book_series("))
 			Expect(srv.queries[0]).To(ContainSubstring("slug"))
+			Expect(srv.queries[0]).To(ContainSubstring("is_completed"))
+			Expect(
+				srv.queries[0],
+			).To(ContainSubstring("{book: {users_count: desc}}"))
 			Expect(
 				srv.vars[0]["ids"],
 			).To(Equal([]any{float64(5450), float64(60563)}))
@@ -601,6 +603,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			Expect(recs[0]).To(Equal(SeriesLookupRecord{
 				HardcoverID: 5450, Name: "Foundation", Slug: "foundation",
 				PrimaryBooks: 7, Books: 9, AuthorName: "Isaac Asimov",
+				Ongoing: new(true),
 				Volumes: []SeriesLookupVolume{
 					{
 						Position:        1,
@@ -614,6 +617,7 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 			}))
 			Expect(recs[1].HardcoverID).To(Equal(uint32(60563)))
 			Expect(recs[1].Slug).To(Equal("greater-foundation-universe"))
+			Expect(recs[1].Ongoing).To(BeNil())
 			Expect(recs[1].Volumes).To(Equal([]SeriesLookupVolume{
 				{
 					Position:        1,

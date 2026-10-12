@@ -135,9 +135,11 @@ func (s *Service) Lookup(
 // seriesHits splits a lookup's series in two. top is the series named like the
 // query, then the ones reached through a book whose title is the query, in the
 // books' order: they are what the user typed, so the cap never drops them.
-// rest is the other series the series search found. A series is listed once,
-// at its first place, and one with no primary volume (Hardcover's empty
-// translated duplicates) not at all.
+// rest, listed after the books, is the series reached through a book whose
+// title only holds the query's words — a broad query like "star wars" reaches
+// dozens, which in top would push out every book — then the other series the
+// series search found. A series is listed once, at its first place, and one
+// with no primary volume (Hardcover's empty translated duplicates) not at all.
 func seriesHits(
 	ctx context.Context,
 	p metadata.BookProvider,
@@ -166,7 +168,7 @@ func seriesHits(
 		byID[recs[i].HardcoverID] = &recs[i]
 	}
 
-	var top, rest []LookupHit
+	var top, loose, rest []LookupHit
 	searched := map[uint32]metadata.BookLookupHit{}
 	placed := map[uint32]bool{}
 	for _, sr := range series {
@@ -195,7 +197,11 @@ func seriesHits(
 			h.MatchedTitle = r.via
 		}
 		placed[r.id] = true
-		top = append(top, h)
+		if r.exact {
+			top = append(top, h)
+		} else {
+			loose = append(loose, h)
+		}
 	}
 	for _, sr := range series {
 		if _, ok := searched[sr.HardcoverID]; !ok || placed[sr.HardcoverID] {
@@ -204,12 +210,13 @@ func seriesHits(
 		placed[sr.HardcoverID] = true
 		rest = append(rest, seriesHit(sr, byID[sr.HardcoverID]))
 	}
-	return top, rest, nil
+	return top, append(loose, rest...), nil
 }
 
 type reachedSeries struct {
-	id  uint32
-	via string
+	id    uint32
+	via   string
+	exact bool
 }
 
 // seriesReached lists, in the books' order, every series of each book whose
@@ -218,14 +225,14 @@ func seriesReached(query string, books []metadata.BookLookupHit) []reachedSeries
 	var out []reachedSeries
 	seen := map[uint32]bool{}
 	for _, b := range books {
-		via := titleNaming(query, b)
+		via, exact := titleNaming(query, b)
 		if via == "" {
 			continue
 		}
 		for _, id := range b.SeriesIDs {
 			if !seen[id] {
 				seen[id] = true
-				out = append(out, reachedSeries{id: id, via: via})
+				out = append(out, reachedSeries{id: id, via: via, exact: exact})
 			}
 		}
 	}
@@ -233,25 +240,25 @@ func seriesReached(query string, books []metadata.BookLookupHit) []reachedSeries
 }
 
 // titleNaming is the first of a book's title and alternative titles equal to
-// the query once folded, else the first holding every word of it; empty when
-// none does.
-func titleNaming(query string, b metadata.BookLookupHit) string {
+// the query once folded (exact), else the first holding every word of it;
+// empty when none does.
+func titleNaming(query string, b metadata.BookLookupHit) (string, bool) {
 	titles := append([]string{b.Title}, b.AlternativeTitles...)
 	for _, t := range titles {
 		if library.TitleMatchesStrict(t, query) {
-			return t
+			return t, true
 		}
 	}
 	q := queryTokens(query)
 	if len(q) == 0 {
-		return ""
+		return "", false
 	}
 	for _, t := range titles {
 		if titleCovers(queryTokens(t), q) {
-			return t
+			return t, false
 		}
 	}
-	return ""
+	return "", false
 }
 
 // seriesHit is a series hit with what the batched read adds to its search
@@ -269,6 +276,9 @@ func seriesHit(
 	h.Author = cmp.Or(h.Author, rec.AuthorName)
 	h.Volumes = rec.PrimaryBooks
 	h.Slug = cmp.Or(rec.Slug, h.Slug)
+	if rec.Ongoing != nil {
+		h.Ongoing = rec.Ongoing
+	}
 	h.CoverBookIDs = coverBooks(rec.Volumes)
 	return h
 }
