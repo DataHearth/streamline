@@ -1,7 +1,9 @@
 package restapi
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path"
@@ -9,11 +11,15 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
+	entartist "github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
 )
@@ -71,7 +77,7 @@ func (s *Server) IdentifyPending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie != nil || rec.Edges.AnchorEpisode != nil {
+	if matched(rec) {
 		return IdentifyPending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"this proposal is already matched to a title",
@@ -79,33 +85,185 @@ func (s *Server) IdentifyPending(
 		}, nil
 	}
 
-	var (
-		movieID, episodeID uint32
-		episodeIDs         []uint32
-	)
-	switch request.Body.Kind {
-	case IdentifyPendingRequestKindSeries:
-		ep, eps, resp := s.identifySeries(ctx, rec, request.Body.ProviderId)
-		if resp != nil {
-			return resp, nil
-		}
-		episodeID, episodeIDs = ep, eps
-	default:
-		m, resp := s.identifyMovie(ctx, request.Body.ProviderId)
-		if resp != nil {
-			return resp, nil
-		}
-		movieID = m
+	kind := request.Body.Kind
+	var providerID uint32
+	if request.Body.ProviderId != nil {
+		providerID = *request.Body.ProviderId
+	}
+	mbid := deref(request.Body.Mbid)
+	if kind == IdentifyPendingRequestKindAlbum && mbid == "" ||
+		kind != IdentifyPendingRequestKindAlbum && providerID == 0 {
+		return IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				"an album takes mbid, every other kind provider_id",
+			),
+		}, nil
 	}
 
-	if err := s.store.IdentifyDownloadRecord(
-		ctx, request.Id, movieID, episodeID, episodeIDs, reasonIdentified,
-	); err != nil {
+	switch kind {
+	case IdentifyPendingRequestKindAlbum:
+		albumID, resp := s.identifyAlbum(ctx, mbid)
+		if resp != nil {
+			return resp, nil
+		}
+		err = s.store.IdentifyAlbumDownloadRecord(
+			ctx, request.Id, albumID, reasonIdentified,
+		)
+	case IdentifyPendingRequestKindBook:
+		slot := cmp.Or(library.ParseBookRelease(rec.Title).Kind, book.MonitorEbook)
+		bookID, resp := s.identifyBook(ctx, providerID, slot)
+		if resp != nil {
+			return resp, nil
+		}
+		err = s.store.IdentifyBookDownloadRecord(
+			ctx, request.Id, bookID, downloadrecord.BookKind(slot), reasonIdentified,
+		)
+	case IdentifyPendingRequestKindSeries:
+		ep, eps, resp := s.identifySeries(ctx, rec, providerID)
+		if resp != nil {
+			return resp, nil
+		}
+		err = s.store.IdentifyDownloadRecord(
+			ctx, request.Id, 0, ep, eps, reasonIdentified,
+		)
+	default:
+		m, resp := s.identifyMovie(ctx, providerID)
+		if resp != nil {
+			return resp, nil
+		}
+		err = s.store.IdentifyDownloadRecord(
+			ctx, request.Id, m, 0, nil, reasonIdentified,
+		)
+	}
+	if err != nil {
 		return IdentifyPending500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	return IdentifyPending204Response{}, nil
+}
+
+// matched reports whether a proposal is filed under any title.
+func matched(rec *ent.DownloadRecord) bool {
+	return rec.Edges.Movie != nil || rec.Edges.AnchorEpisode != nil ||
+		rec.Edges.Album != nil || rec.Edges.Book != nil
+}
+
+// identifyAlbum resolves a release group to a library album, adding its
+// artist first when the library does not hold it — under the manual policy,
+// as an approved album request does, so naming one album never monitors a
+// discography.
+func (s *Server) identifyAlbum(
+	ctx context.Context, mbid string,
+) (uint32, IdentifyPendingResponseObject) {
+	if al, err := s.store.FindAlbumByMBID(ctx, mbid); err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	} else if al != nil {
+		return al.ID, nil
+	}
+	rg, err := s.metadataMusic.GetReleaseGroup(ctx, mbid)
+	if err != nil || rg.ArtistMBID == "" {
+		return 0, identifyMusicError(ctx, err, "could not resolve that album")
+	}
+	artist, err := s.store.FindArtistByMBID(ctx, rg.ArtistMBID)
+	if err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	}
+	if artist == nil {
+		artist, err = s.music.Add(ctx, music.AddParams{
+			MBID:    rg.ArtistMBID,
+			Monitor: string(entartist.MonitorManual),
+		})
+		if err != nil {
+			return 0, identifyMusicError(ctx, err, "could not add that artist")
+		}
+	}
+	al, err := s.store.FindAlbumByMBID(ctx, mbid)
+	if err == nil && al == nil {
+		// The artist was held before this release group reached its
+		// discography; one refresh is what an album request does too.
+		if _, err = s.music.RefreshOne(ctx, artist.ID); err == nil {
+			al, err = s.store.FindAlbumByMBID(ctx, mbid)
+		}
+	}
+	if err != nil {
+		return 0, identifyMusicError(ctx, err, "could not load that album")
+	}
+	if al == nil {
+		return 0, IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(fmt.Sprintf(
+				"%s has no release group %s", artist.Name, mbid,
+			)),
+		}
+	}
+	return al.ID, nil
+}
+
+func identifyMusicError(
+	ctx context.Context, err error, what string,
+) IdentifyPendingResponseObject {
+	switch {
+	case err == nil, errors.Is(err, metadata.ErrNotFound):
+		return IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				what + ": MusicBrainz does not know it",
+			),
+		}
+	case rateLimited(err):
+		return IdentifyPending429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}
+	default:
+		slog.WarnContext(ctx, "identify pending: music lookup failed",
+			"error", err)
+		return IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				fmt.Sprintf("%s: %v", what, err),
+			),
+		}
+	}
+}
+
+// identifyBook resolves a Hardcover id to a library book, adding it with only
+// the slot the release fills monitored.
+func (s *Server) identifyBook(
+	ctx context.Context, hardcoverID uint32, slot string,
+) (uint32, IdentifyPendingResponseObject) {
+	existing, err := s.store.FindBookByHardcoverID(ctx, hardcoverID)
+	if err != nil {
+		return 0, IdentifyPending500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}
+	}
+	if existing != nil {
+		return existing.ID, nil
+	}
+	added, err := s.books.AddBook(ctx, book.AddBookParams{
+		HardcoverID: hardcoverID,
+		Monitor:     slot,
+	})
+	switch {
+	case err == nil:
+		return added.ID, nil
+	case rateLimited(err):
+		return 0, IdentifyPending429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
+		}
+	case providerUnavailable(err):
+		return 0, IdentifyPending503JSONResponse{
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
+		}
+	default:
+		return 0, IdentifyPending422JSONResponse{
+			UnprocessableEntityJSONResponse: errUnprocessable(
+				fmt.Sprintf("could not add that book: %v", err),
+			),
+		}
+	}
 }
 
 // identifySeries resolves tvdbID to a show — adding it when the library does
@@ -335,7 +493,7 @@ func (s *Server) ImportPending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie == nil && rec.Edges.AnchorEpisode == nil {
+	if !matched(rec) {
 		return ImportPending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"identify this proposal before importing it",
@@ -371,7 +529,7 @@ func (s *Server) ReplacePending(
 		}
 		return nil, err
 	}
-	if rec.Edges.Movie == nil && rec.Edges.AnchorEpisode == nil {
+	if !matched(rec) {
 		return ReplacePending409JSONResponse{
 			ConflictJSONResponse: errConflict(
 				"identify this proposal before replacing anything",

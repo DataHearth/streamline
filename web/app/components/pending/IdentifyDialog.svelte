@@ -6,7 +6,9 @@
 	import type { SeriesLookupResult, TMDBMovieResult } from "@lib/types";
 	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
 	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
+	import ImportMatchSheet from "@components/library/ImportMatchSheet.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
+	import type { MatchId } from "@lib/imports-touch";
 
 	type Props = {
 		open: boolean;
@@ -19,13 +21,15 @@
 	};
 	let { open, id, title, parsedTitle, onClose }: Props = $props();
 
-	// A season token in the release name means series; nothing else in a name
-	// distinguishes the two, so it is a default for the first step, not a
-	// decision — the operator answers before any search runs.
-	let guess = $derived<"movie" | "series">(
-		/\bS\d{2}(E\d{2})?\b/i.test(title) ? "series" : "movie",
-	);
-	let kind = $state<"movie" | "series" | null>(null);
+	type Kind = "movie" | "series" | "album" | "book";
+	// A default for the first step, not a decision — the operator answers
+	// before any search runs.
+	let guess = $derived.by<Kind>(() => {
+		if (/\b(epub|mobi|azw3?|pdf|cbz|cbr|m4b|audiobook)\b/i.test(title)) return "book";
+		if (/\b(flac|alac|mp3|aac|ogg|opus)\b/i.test(title)) return "album";
+		return /\bS\d{2}(E\d{2})?\b/i.test(title) ? "series" : "movie";
+	});
+	let kind = $state<Kind | null>(null);
 
 	$effect(() => {
 		if (!open) kind = null;
@@ -33,19 +37,16 @@
 
 	const qc = useQueryClient();
 
-	const identify = createMutation<
-		void,
-		Error,
-		{ kind: "movie" | "series"; providerId: number }
-	>(() => ({
+	const libraryKey: Record<Kind, string> = { movie: "movies", series: "series", album: "music", book: "books" };
+	const identify = createMutation<void, Error, { kind: Kind; providerId: MatchId }>(() => ({
 		mutationFn: (v) =>
 			api<void>(`/activity/pending/${id}/identify`, {
 				method: "POST",
-				body: { kind: v.kind, provider_id: v.providerId },
+				body: v.kind === "album" ? { kind: v.kind, mbid: v.providerId } : { kind: v.kind, provider_id: v.providerId },
 			}),
 		onSuccess: (_res, v) => {
 			qc.invalidateQueries({ queryKey: ["activity", "pending"] });
-			qc.invalidateQueries({ queryKey: [v.kind === "movie" ? "movies" : "series"] });
+			qc.invalidateQueries({ queryKey: [libraryKey[v.kind]] });
 			toast.ok(i18n.pending_matched());
 			kind = null;
 			onClose();
@@ -60,7 +61,26 @@
 		identify.mutate({ kind: "series", providerId: r.tvdb_id });
 	}
 
+	function action(k: Kind, label: string) {
+		return {
+			label,
+			variant: guess === k ? ("primary" as const) : ("ghost" as const),
+			autofocus: guess === k,
+			dismiss: false,
+			onClick: () => (kind = k),
+		};
+	}
+
 	let seed = $derived(parsedTitle || title);
+	// The parsed title is the video parser's, which reads "1984" as a year and
+	// cuts "George Orwell - 1984" to the author. The release name minus its
+	// extension and bracketed tags searches MusicBrainz and Hardcover better.
+	let creatorSeed = $derived(
+		title
+			.replace(/\.[a-z0-9]{2,4}$/i, "")
+			.replace(/[[(][^\])]*[\])]/g, "")
+			.trim(),
+	);
 </script>
 
 <Dialog
@@ -68,26 +88,17 @@
 	title={i18n.pending_identify_title()}
 	body={i18n.pending_identify_body()}
 	actions={[
-		{
-			label: i18n.pending_identify_movie(),
-			variant: guess === "movie" ? "primary" : "ghost",
-			autofocus: guess === "movie",
-			dismiss: false,
-			onClick: () => (kind = "movie"),
-		},
-		{
-			label: i18n.pending_identify_series(),
-			variant: guess === "series" ? "primary" : "ghost",
-			autofocus: guess === "series",
-			dismiss: false,
-			onClick: () => (kind = "series"),
-		},
+		action("movie", i18n.pending_identify_movie()),
+		action("series", i18n.pending_identify_series()),
+		action("album", i18n.pending_identify_album()),
+		action("book", i18n.pending_identify_book()),
 	]}
 	{onClose}
 />
 
-<!-- The picker is the add-flow's own TMDB/TVDB selector in pick mode: same
-     search and detail panel, and no library write until we ask for one. -->
+<!-- Movies and series pick through the add-flow's own TMDB/TVDB selector in
+     pick mode; music and books have none, so they take the import review's
+     MusicBrainz/Hardcover picker. Neither writes to the library until we ask. -->
 {#if kind === "movie"}
 	<AddMovieModal
 		open={true}
@@ -102,6 +113,17 @@
 		mode="pick"
 		seedQuery={seed}
 		onPick={onPickSeries}
+		onClose={() => (kind = null)}
+	/>
+{:else if kind === "album" || kind === "book"}
+	<ImportMatchSheet
+		open={true}
+		kind={kind === "album" ? "music" : "book"}
+		dialog
+		seed={creatorSeed}
+		context={title}
+		busy={identify.isPending}
+		onPick={(matchId) => kind && identify.mutate({ kind, providerId: matchId })}
 		onClose={() => (kind = null)}
 	/>
 {/if}

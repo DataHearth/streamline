@@ -183,6 +183,8 @@ func (db *DB) ListPendingDownloadRecords(
 			q.WithMediaFiles()
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
+		WithAlbum().
+		WithBook().
 		Order(ent.Desc(downloadrecord.FieldCreateTime)).
 		Limit(int(limit)).
 		Offset(int(offset)).
@@ -212,6 +214,30 @@ func (db *DB) IdentifyDownloadRecord(
 		q = q.SetAnchorEpisodeID(episodeID).AddEpisodeIDs(episodeID)
 	}
 	return q.Exec(ctx)
+}
+
+func (db *DB) IdentifyAlbumDownloadRecord(
+	ctx context.Context,
+	id, albumID uint32,
+	reason string,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetFailureReason(reason).
+		SetAlbumID(albumID).
+		Exec(ctx)
+}
+
+func (db *DB) IdentifyBookDownloadRecord(
+	ctx context.Context,
+	id, bookID uint32,
+	kind downloadrecord.BookKind,
+	reason string,
+) error {
+	return db.client.DownloadRecord.UpdateOneID(id).
+		SetFailureReason(reason).
+		SetBookID(bookID).
+		SetBookKind(kind).
+		Exec(ctx)
 }
 
 // DeleteStalePendingAdoptions removes pending adoption proposals for clientName
@@ -304,6 +330,8 @@ func (db *DB) FindPendingDownloadRecordByID(
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
+		WithAlbum().
+		WithBook().
 		Only(ctx)
 }
 

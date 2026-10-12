@@ -13,6 +13,9 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	entbook "github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -981,6 +984,31 @@ func toPendingItem(r *ent.DownloadRecord) PendingItem {
 			}
 		}
 		item.Media = media
+	case r.Edges.Album != nil:
+		al := r.Edges.Album
+		item.HasFile = al.Status == album.StatusAvailable
+		item.Media = &PendingMedia{
+			Type:  PendingMediaTypeAlbum,
+			Id:    al.ID,
+			Title: al.Title,
+		}
+		if al.ReleaseDate != nil {
+			y := numeric.SaturateU16(al.ReleaseDate.Year())
+			item.Media.Year = &y
+		}
+	case r.Edges.Book != nil:
+		b := r.Edges.Book
+		if r.BookKind == downloadrecord.BookKindAudiobook {
+			item.HasFile = b.AudiobookStatus == entbook.AudiobookStatusAvailable
+		} else {
+			item.HasFile = b.EbookStatus == entbook.EbookStatusAvailable
+		}
+		item.Media = &PendingMedia{
+			Type:  PendingMediaTypeBook,
+			Id:    b.ID,
+			Title: b.Title,
+			Year:  b.ReleaseYear,
+		}
 	default:
 		// Nothing matched at adoption time. The raw release name is useless as
 		// a search seed, so hand the SPA what the parser made of it.

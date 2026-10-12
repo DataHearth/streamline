@@ -9780,6 +9780,150 @@ func (_c *MockTx_HydratingArtists_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// IdentifyAlbumDownloadRecord provides a mock function for the type MockTx
+func (_mock *MockTx) IdentifyAlbumDownloadRecord(ctx context.Context, id uint32, albumID uint32, reason string) error {
+	ret := _mock.Called(ctx, id, albumID, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IdentifyAlbumDownloadRecord")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, albumID, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_IdentifyAlbumDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IdentifyAlbumDownloadRecord'
+type MockTx_IdentifyAlbumDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// IdentifyAlbumDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - albumID uint32
+//   - reason string
+func (_e *MockTx_Expecter) IdentifyAlbumDownloadRecord(ctx any, id any, albumID any, reason any) *MockTx_IdentifyAlbumDownloadRecord_Call {
+	return &MockTx_IdentifyAlbumDownloadRecord_Call{Call: _e.mock.On("IdentifyAlbumDownloadRecord", ctx, id, albumID, reason)}
+}
+
+func (_c *MockTx_IdentifyAlbumDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, albumID uint32, reason string)) *MockTx_IdentifyAlbumDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_IdentifyAlbumDownloadRecord_Call) Return(err error) *MockTx_IdentifyAlbumDownloadRecord_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_IdentifyAlbumDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, albumID uint32, reason string) error) *MockTx_IdentifyAlbumDownloadRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IdentifyBookDownloadRecord provides a mock function for the type MockTx
+func (_mock *MockTx) IdentifyBookDownloadRecord(ctx context.Context, id uint32, bookID uint32, kind downloadrecord.BookKind, reason string) error {
+	ret := _mock.Called(ctx, id, bookID, kind, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IdentifyBookDownloadRecord")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, downloadrecord.BookKind, string) error); ok {
+		r0 = returnFunc(ctx, id, bookID, kind, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_IdentifyBookDownloadRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IdentifyBookDownloadRecord'
+type MockTx_IdentifyBookDownloadRecord_Call struct {
+	*mock.Call
+}
+
+// IdentifyBookDownloadRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - bookID uint32
+//   - kind downloadrecord.BookKind
+//   - reason string
+func (_e *MockTx_Expecter) IdentifyBookDownloadRecord(ctx any, id any, bookID any, kind any, reason any) *MockTx_IdentifyBookDownloadRecord_Call {
+	return &MockTx_IdentifyBookDownloadRecord_Call{Call: _e.mock.On("IdentifyBookDownloadRecord", ctx, id, bookID, kind, reason)}
+}
+
+func (_c *MockTx_IdentifyBookDownloadRecord_Call) Run(run func(ctx context.Context, id uint32, bookID uint32, kind downloadrecord.BookKind, reason string)) *MockTx_IdentifyBookDownloadRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 downloadrecord.BookKind
+		if args[3] != nil {
+			arg3 = args[3].(downloadrecord.BookKind)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_IdentifyBookDownloadRecord_Call) Return(err error) *MockTx_IdentifyBookDownloadRecord_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_IdentifyBookDownloadRecord_Call) RunAndReturn(run func(ctx context.Context, id uint32, bookID uint32, kind downloadrecord.BookKind, reason string) error) *MockTx_IdentifyBookDownloadRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IdentifyDownloadRecord provides a mock function for the type MockTx
 func (_mock *MockTx) IdentifyDownloadRecord(ctx context.Context, id uint32, movieID uint32, episodeID uint32, episodeIDs []uint32, reason string) error {
 	ret := _mock.Called(ctx, id, movieID, episodeID, episodeIDs, reason)

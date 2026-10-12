@@ -830,6 +830,8 @@ func (e HoldReasonCheck) Valid() bool {
 
 // Defines values for IdentifyPendingRequestKind.
 const (
+	IdentifyPendingRequestKindAlbum  IdentifyPendingRequestKind = "album"
+	IdentifyPendingRequestKindBook   IdentifyPendingRequestKind = "book"
 	IdentifyPendingRequestKindMovie  IdentifyPendingRequestKind = "movie"
 	IdentifyPendingRequestKindSeries IdentifyPendingRequestKind = "series"
 )
@@ -837,6 +839,10 @@ const (
 // Valid indicates whether the value is a known member of the IdentifyPendingRequestKind enum.
 func (e IdentifyPendingRequestKind) Valid() bool {
 	switch e {
+	case IdentifyPendingRequestKindAlbum:
+		return true
+	case IdentifyPendingRequestKindBook:
+		return true
 	case IdentifyPendingRequestKindMovie:
 		return true
 	case IdentifyPendingRequestKindSeries:
@@ -2072,6 +2078,8 @@ func (e PathMigrationRootRoot) Valid() bool {
 
 // Defines values for PendingMediaType.
 const (
+	PendingMediaTypeAlbum   PendingMediaType = "album"
+	PendingMediaTypeBook    PendingMediaType = "book"
 	PendingMediaTypeEpisode PendingMediaType = "episode"
 	PendingMediaTypeMovie   PendingMediaType = "movie"
 )
@@ -2079,6 +2087,10 @@ const (
 // Valid indicates whether the value is a known member of the PendingMediaType enum.
 func (e PendingMediaType) Valid() bool {
 	switch e {
+	case PendingMediaTypeAlbum:
+		return true
+	case PendingMediaTypeBook:
+		return true
 	case PendingMediaTypeEpisode:
 		return true
 	case PendingMediaTypeMovie:
@@ -4984,8 +4996,12 @@ type HoldReasonCheck string
 type IdentifyPendingRequest struct {
 	Kind IdentifyPendingRequestKind `json:"kind"`
 
-	// ProviderId TMDB id when `kind` is `movie`, TVDB id when it is `series`.
-	ProviderId uint32 `json:"provider_id"`
+	// Mbid MusicBrainz release-group id. Required when `kind` is `album`.
+	Mbid *string `json:"mbid,omitempty"`
+
+	// ProviderId TMDB id when `kind` is `movie`, TVDB id when it is `series`,
+	// Hardcover book id when it is `book`. Required for those three.
+	ProviderId *uint32 `json:"provider_id,omitempty"`
 }
 
 // IdentifyPendingRequestKind defines model for IdentifyPendingRequest.Kind.
@@ -6703,7 +6719,8 @@ type PathRewrite struct {
 
 // PendingItem defines model for PendingItem.
 type PendingItem struct {
-	// HasFile Whether the matched movie/episode currently has a file. The UI
+	// HasFile Whether the matched movie/episode/album/book slot currently has a
+	// file. The UI
 	// shows Replace (swap) when true and Import (accept into the empty
 	// slot) when false.
 	HasFile bool          `json:"has_file"`
@@ -20598,6 +20615,23 @@ func (response IdentifyPending422JSONResponse) VisitIdentifyPendingResponse(w ht
 	return err
 }
 
+type IdentifyPending429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response IdentifyPending429JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type IdentifyPending500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response IdentifyPending500JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
@@ -20608,6 +20642,20 @@ func (response IdentifyPending500JSONResponse) VisitIdentifyPendingResponse(w ht
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type IdentifyPending503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response IdentifyPending503JSONResponse) VisitIdentifyPendingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }

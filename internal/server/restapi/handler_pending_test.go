@@ -14,6 +14,9 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/mediafiletest"
 )
@@ -182,6 +185,101 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			resp := identify(`{"kind":"movie","provider_id":414906}`)
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("adds the book under the slot the release names", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(&ent.DownloadRecord{
+					ID: 1, Title: "George Orwell - 1984.epub",
+				}, nil).Once()
+			app.store.EXPECT().
+				FindBookByHardcoverID(mock.Anything, uint32(1984)).
+				Return(nil, nil).Once()
+			app.books.EXPECT().
+				AddBook(mock.Anything, book.AddBookParams{
+					HardcoverID: 1984, Monitor: book.MonitorEbook,
+				}).
+				Return(&ent.Book{ID: 7}, nil).Once()
+			app.store.EXPECT().
+				IdentifyBookDownloadRecord(
+					mock.Anything, uint32(1), uint32(7),
+					downloadrecord.BookKindEbook, mock.AnythingOfType("string"),
+				).Return(nil).Once()
+
+			resp := identify(`{"kind":"book","provider_id":1984}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It(
+			"files an audiobook release under the held book's audiobook slot",
+			func() {
+				app.store.EXPECT().
+					FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(&ent.DownloadRecord{
+						ID: 1, Title: "George Orwell - 1984 (Unabridged) M4B",
+					}, nil).Once()
+				app.store.EXPECT().
+					FindBookByHardcoverID(mock.Anything, uint32(1984)).
+					Return(&ent.Book{ID: 7}, nil).Once()
+				app.store.EXPECT().
+					IdentifyBookDownloadRecord(
+						mock.Anything, uint32(1), uint32(7),
+						downloadrecord.BookKindAudiobook, mock.AnythingOfType("string"),
+					).
+					Return(nil).Once()
+
+				resp := identify(`{"kind":"book","provider_id":1984}`)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			},
+		)
+
+		It(
+			"adds the album's artist under the manual policy then links the album",
+			func() {
+				app.store.EXPECT().
+					FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(&ent.DownloadRecord{
+						ID: 1, Title: "Artist - Album (2020) FLAC",
+					}, nil).Once()
+				app.store.EXPECT().
+					FindAlbumByMBID(mock.Anything, "rg-1").
+					Return(nil, nil).Once()
+				app.metadataMusic.EXPECT().
+					GetReleaseGroup(mock.Anything, "rg-1").
+					Return(&metadata.ReleaseGroupDetails{ArtistMBID: "ar-1"}, nil).
+					Once()
+				app.store.EXPECT().
+					FindArtistByMBID(mock.Anything, "ar-1").
+					Return(nil, nil).Once()
+				app.music.EXPECT().
+					Add(mock.Anything, music.AddParams{MBID: "ar-1", Monitor: "manual"}).
+					Return(&ent.Artist{ID: 5}, nil).Once()
+				app.store.EXPECT().
+					FindAlbumByMBID(mock.Anything, "rg-1").
+					Return(&ent.Album{ID: 9}, nil).Once()
+				app.store.EXPECT().
+					IdentifyAlbumDownloadRecord(
+						mock.Anything, uint32(1), uint32(9), mock.AnythingOfType("string"),
+					).
+					Return(nil).Once()
+
+				resp := identify(`{"kind":"album","mbid":"rg-1"}`)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			},
+		)
+
+		It("422s an album without an mbid", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(unidentified(), nil).Once()
+
+			resp := identify(`{"kind":"album","provider_id":3}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
 		})
 
 		It("409s when the proposal already carries media", func() {

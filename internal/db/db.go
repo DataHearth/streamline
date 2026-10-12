@@ -602,6 +602,21 @@ type Store interface {
 		episodeIDs []uint32,
 		reason string,
 	) error
+	// IdentifyAlbumDownloadRecord files a proposal that matched nothing under
+	// an album, and rewrites its reason.
+	IdentifyAlbumDownloadRecord(
+		ctx context.Context,
+		id, albumID uint32,
+		reason string,
+	) error
+	// IdentifyBookDownloadRecord files a proposal that matched nothing under
+	// one slot of a book, and rewrites its reason.
+	IdentifyBookDownloadRecord(
+		ctx context.Context,
+		id, bookID uint32,
+		kind downloadrecord.BookKind,
+		reason string,
+	) error
 	// SetDownloadRecordReplaceMode sets how the importer treats episodes
 	// that already have a file for this record.
 	SetDownloadRecordReplaceMode(

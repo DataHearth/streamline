@@ -4884,10 +4884,12 @@ paths:
       operationId: identifyPending
       summary: Name the title behind an unidentified proposal.
       description: |
-        Adds the chosen movie/series to the library when it isn't there yet and
-        links the proposal to it, leaving the proposal pending so the usual
-        import/replace/ignore decision still applies. Only valid for a proposal
-        carrying no `media` — 409 otherwise.
+        Adds the chosen movie, series, album (with its artist) or book to the
+        library when it isn't there yet and links the proposal to it, leaving
+        the proposal pending so the usual import/replace/ignore decision still
+        applies. A book is filed under the slot the release name states
+        (an audiobook format), the ebook slot otherwise. Only valid for a
+        proposal carrying no `media` — 409 otherwise.
       tags: [activity]
       requestBody:
         $ref: "#/components/requestBodies/IdentifyPending"
@@ -4904,8 +4906,12 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /activity/pending/{id}/ignore:
     parameters:
@@ -7278,7 +7284,7 @@ components:
       properties:
         type:
           type: string
-          enum: [movie, episode]
+          enum: [movie, episode, album, book]
         id:
           type: integer
           x-go-type: uint32
@@ -7310,7 +7316,8 @@ components:
         has_file:
           type: boolean
           description: |
-            Whether the matched movie/episode currently has a file. The UI
+            Whether the matched movie/episode/album/book slot currently has a
+            file. The UI
             shows Replace (swap) when true and Import (accept into the empty
             slot) when false.
         parsed_title:
@@ -7396,16 +7403,21 @@ components:
 
     IdentifyPendingRequest:
       type: object
-      required: [kind, provider_id]
+      required: [kind]
       properties:
         kind:
           type: string
-          enum: [movie, series]
+          enum: [movie, series, album, book]
         provider_id:
           type: integer
           x-go-type: uint32
           description: |
-            TMDB id when `kind` is `movie`, TVDB id when it is `series`.
+            TMDB id when `kind` is `movie`, TVDB id when it is `series`,
+            Hardcover book id when it is `book`. Required for those three.
+        mbid:
+          type: string
+          description: |
+            MusicBrainz release-group id. Required when `kind` is `album`.
 
     IgnorePendingRequest:
       type: object

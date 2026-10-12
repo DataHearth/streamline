@@ -732,7 +732,7 @@ export type QueueEntry = {
 export type DownloadQueue = { items: QueueEntry[]; refreshed_at: string };
 
 export type PendingMedia = {
-	type: "movie" | "episode";
+	type: "movie" | "episode" | "album" | "book";
 	id: number;
 	title: string;
 	year?: number;
