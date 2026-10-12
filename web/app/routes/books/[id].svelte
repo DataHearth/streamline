@@ -179,7 +179,7 @@
 		if (pages) rows.push({ label: i18n.lookup_pages(), value: pages.toLocaleString() });
 		if (book.rating) rows.push({ label: i18n.books_fact_rating(), value: `★ ${book.rating.toFixed(1)}` });
 		if (book.hardcover_id)
-			rows.push({ label: "Hardcover", value: [{ text: String(book.hardcover_id), href: `https://hardcover.app/books/${book.hardcover_id}`, external: true }], mono: true });
+			rows.push({ label: "Hardcover", value: [{ text: String(book.hardcover_id), href: `https://hardcover.app/book/${book.hardcover_id}`, external: true }], mono: true });
 		return rows;
 	});
 	let libraryRows = $derived.by<InfoRow[]>(() => {

@@ -94,7 +94,7 @@
 			bookDetail?.pages ? { label: i18n.lookup_pages(), value: String(bookDetail.pages) } : null,
 			b.volumes ? { label: i18n.books_volumes(), value: String(b.volumes) } : null,
 			b.type === "series" ? { label: i18n.common_status(), value: b.ongoing ? i18n.books_ongoing() : i18n.books_completed() } : null,
-			{ label: "Hardcover", value: String(b.hardcover_id), href: `https://hardcover.app/${b.type === "series" ? "series" : "books"}/${b.hardcover_id}` },
+			{ label: "Hardcover", value: String(b.hardcover_id), href: b.type === "series" ? undefined : `https://hardcover.app/book/${b.hardcover_id}` },
 		];
 		return rows.filter((f) => f !== null);
 	});

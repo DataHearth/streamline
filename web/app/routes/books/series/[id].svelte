@@ -137,7 +137,7 @@
 		if (s.original_title) rows.push({ label: i18n.books_fact_original_title(), value: s.original_title, mono: false });
 		if (s.rating) rows.push({ label: i18n.books_fact_rating(), value: `★ ${s.rating.toFixed(1)}` });
 		if (s.hardcover_id)
-			rows.push({ label: "Hardcover", value: [{ text: String(s.hardcover_id), href: `https://hardcover.app/series/${s.hardcover_id}`, external: true }], mono: true });
+			rows.push({ label: "Hardcover", value: [{ text: String(s.hardcover_id) }], mono: true });
 		return rows;
 	});
 	let libraryRows = $derived.by<InfoRow[]>(() => {
