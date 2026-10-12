@@ -11,6 +11,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 var _ = Describe(
@@ -80,6 +81,56 @@ var _ = Describe(
 				Expect(
 					client.Album.GetX(ctx, live.ID).Status,
 				).To(Equal(album.StatusDownloading))
+			},
+		)
+
+		It(
+			"reverts a stranded album to available only when it holds every track",
+			func() {
+				_, err := store.CreateArtist(ctx, CreateArtistParams{
+					MBID: "a-1", Name: "Nirvana",
+					Albums: []AlbumSeed{
+						{
+							MBID:      "rg-1",
+							Title:     "Nevermind",
+							Type:      "album",
+							Monitored: true,
+						},
+						{
+							MBID:      "rg-2",
+							Title:     "In Utero",
+							Type:      "album",
+							Monitored: true,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				hydrateAlbum(ctx, store, "rg-1",
+					TrackSeed{MBID: "t-1", Title: "Breed", Disc: 1, Position: 1},
+					TrackSeed{MBID: "t-2", Title: "Polly", Disc: 1, Position: 2})
+				hydrateAlbum(ctx, store, "rg-2",
+					TrackSeed{MBID: "t-3", Title: "Serve", Disc: 1, Position: 1})
+				for _, mbid := range []string{"t-1", "t-3"} {
+					client.MediaFile.Create().SetPath("/m/" + mbid).SetSize(1).
+						SetQuality("lossless").SetFormat("flac").
+						SetTrackID(client.Track.Query().
+							Where(track.MbidEQ(mbid)).OnlyIDX(ctx)).
+						ExecX(ctx)
+				}
+				client.Album.Update().SetStatus(album.StatusDownloading).ExecX(ctx)
+
+				n, err := store.RevertOrphanedDownloadingAlbumsAndBooks(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(Equal(2))
+				Expect(
+					client.Album.Query().Where(album.Mbid("rg-1")).OnlyX(ctx).Status,
+				).
+					To(Equal(album.StatusWanted), "one track of two is held")
+				Expect(
+					client.Album.Query().Where(album.Mbid("rg-2")).OnlyX(ctx).Status,
+				).
+					To(Equal(album.StatusAvailable))
 			},
 		)
 

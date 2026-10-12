@@ -682,8 +682,7 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 // episode still holds a file: an upgrade grab anchors its record on an
 // episode it was replacing, and rejecting the replacement leaves that file in
 // place, so "wanted" would claim we have nothing. Albums follow the movie rule,
-// and one that already holds files is left to the orphan sweep, which returns
-// it to available.
+// except that one holding every track goes back to available.
 func (db *DB) FailHeldDownloadRecord(
 	ctx context.Context,
 	id uint32,
@@ -739,24 +738,57 @@ func (db *DB) FailHeldDownloadRecord(
 	for _, a := range rec.Edges.Albums {
 		albumIDs = append(albumIDs, a.ID)
 	}
-	if len(albumIDs) > 0 {
-		u := tx.Album.Update().
-			Where(
-				album.IDIn(albumIDs...),
-				album.StatusEQ(album.StatusDownloading),
-				album.Not(album.HasTracksWith(track.HasMediaFiles())),
-			)
-		if requeue {
-			u = u.SetStatus(album.StatusWanted)
-		} else {
-			u = u.SetStatus(album.StatusFailed).SetFailureReason(reason)
-		}
-		if err := u.Exec(ctx); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("update albums: %w", err)
-		}
+	if err := settleFailedAlbums(ctx, tx, albumIDs, reason, requeue); err != nil {
+		tx.Rollback()
+		return err
 	}
 	return tx.Commit()
+}
+
+// completeAlbum is an album whose every track holds a file. One with no track
+// rows yet is not complete.
+func completeAlbum() predicate.Album {
+	return album.And(
+		album.HasTracks(),
+		album.Not(album.HasTracksWith(track.Not(track.HasMediaFiles()))),
+	)
+}
+
+// settleFailedAlbums moves the downloading albums of a record that failed: one
+// holding every track back to available, any other to failed with the reason,
+// or to wanted when requeue. A partial album goes to failed rather than wanted
+// because the missing search would grab the same release again.
+func settleFailedAlbums(
+	ctx context.Context,
+	tx *ent.Tx,
+	ids []uint32,
+	reason string,
+	requeue bool,
+) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	downloading := album.And(
+		album.IDIn(ids...),
+		album.StatusEQ(album.StatusDownloading),
+	)
+	if err := tx.Album.Update().
+		Where(downloading, completeAlbum()).
+		SetStatus(album.StatusAvailable).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("return complete albums to available: %w", err)
+	}
+	// Whatever is still downloading after the update above is incomplete.
+	u := tx.Album.Update().Where(downloading)
+	if requeue {
+		u = u.SetStatus(album.StatusWanted)
+	} else {
+		u = u.SetStatus(album.StatusFailed).SetFailureReason(reason)
+	}
+	if err := u.Exec(ctx); err != nil {
+		return fmt.Errorf("settle failed albums: %w", err)
+	}
+	return nil
 }
 
 // RecordImportSuccess writes MediaFile row, flips DownloadRecord to completed,
@@ -1061,8 +1093,8 @@ func (db *DB) RecordBookImportSuccess(
 }
 
 // RecordImportFailure writes attempt counter on retryable; on terminal also
-// flips DownloadRecord + Movie to failed with reason, and an album (or each
-// album a pack expected) that holds no file yet.
+// flips DownloadRecord + Movie to failed with reason, and settles the album
+// (or each album a pack expected) through settleFailedAlbums.
 func (db *DB) RecordImportFailure(
 	ctx context.Context,
 	p RecordImportFailureParams,
@@ -1111,57 +1143,14 @@ func (db *DB) RecordImportFailure(
 			}
 		}
 	}
-	if p.Terminal && p.AlbumID != 0 {
-		hasFile, err := tx.Track.Query().
-			Where(
-				track.HasAlbumWith(album.ID(p.AlbumID)),
-				track.HasMediaFiles(),
-			).
-			Exist(ctx)
-		if err != nil {
-			tx.Rollback()
-			return fmt.Errorf("check album media files: %w", err)
-		}
-		if !hasFile {
-			if err := tx.Album.Update().
-				Where(
-					album.ID(p.AlbumID),
-					album.StatusEQ(album.StatusDownloading),
-				).
-				SetStatus(album.StatusFailed).
-				SetFailureReason(p.Reason).
-				Exec(ctx); err != nil {
-				tx.Rollback()
-				return fmt.Errorf("update album: %w", err)
-			}
-		}
-	}
 	if p.Terminal {
-		for _, id := range p.PackAlbumIDs {
-			hasFile, err := tx.Track.Query().
-				Where(
-					track.HasAlbumWith(album.ID(id)),
-					track.HasMediaFiles(),
-				).
-				Exist(ctx)
-			if err != nil {
-				tx.Rollback()
-				return fmt.Errorf("check pack album media files: %w", err)
-			}
-			if hasFile {
-				continue
-			}
-			if err := tx.Album.Update().
-				Where(
-					album.ID(id),
-					album.StatusEQ(album.StatusDownloading),
-				).
-				SetStatus(album.StatusFailed).
-				SetFailureReason(p.Reason).
-				Exec(ctx); err != nil {
-				tx.Rollback()
-				return fmt.Errorf("update pack album: %w", err)
-			}
+		ids := p.PackAlbumIDs
+		if p.AlbumID != 0 {
+			ids = append(ids, p.AlbumID)
+		}
+		if err := settleFailedAlbums(ctx, tx, ids, p.Reason, false); err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
 	if p.Terminal && p.BookID != 0 {
@@ -1810,7 +1799,7 @@ func (db *DB) RevertOrphanedDownloadingEpisodes(
 // for albums and book slots: one left "downloading" with no in-flight record
 // covering it — the client refused the torrent, it was removed from the
 // Torrents page, or its record was purged — goes back to "wanted", or to
-// "available" when it already holds files. Only the import-failure path moved
+// "available" when it holds every track. Only the import-failure path moved
 // them before, so every other way a record ended stranded the title, and the
 // searches skip anything downloading. Returns rows reverted.
 func (db *DB) RevertOrphanedDownloadingAlbumsAndBooks(
@@ -1824,11 +1813,11 @@ func (db *DB) RevertOrphanedDownloadingAlbumsAndBooks(
 	)
 	total := 0
 	for _, arm := range []struct {
-		files bool
-		to    album.Status
+		complete bool
+		to       album.Status
 	}{{false, album.StatusWanted}, {true, album.StatusAvailable}} {
-		held := album.HasTracksWith(track.HasMediaFiles())
-		if !arm.files {
+		held := completeAlbum()
+		if !arm.complete {
 			held = album.Not(held)
 		}
 		n, err := db.client.Album.Update().

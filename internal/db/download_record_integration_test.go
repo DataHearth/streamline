@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -2387,15 +2388,17 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 
 var _ = Describe("Album import failure", Label("integration", "db"), func() {
 	var (
-		ctx   context.Context
-		store *DB
-		alb   *ent.Album
-		rec   *ent.DownloadRecord
+		ctx    context.Context
+		client *ent.Client
+		store  *DB
+		alb    *ent.Album
+		rec    *ent.DownloadRecord
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		client, err := Open(ctx, ":memory:")
+		var err error
+		client, err = Open(ctx, ":memory:")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { client.Close() })
 		store = New(client)
@@ -2416,6 +2419,12 @@ var _ = Describe("Album import failure", Label("integration", "db"), func() {
 				Title:    "Hail the Apocalypse",
 				Disc:     1,
 				Position: 1,
+			},
+			TrackSeed{
+				MBID:     "t-2",
+				Title:    "What I Don't Know",
+				Disc:     1,
+				Position: 2,
 			},
 		)
 		alb = client.Album.Query().OnlyX(ctx)
@@ -2445,6 +2454,48 @@ var _ = Describe("Album import failure", Label("integration", "db"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		return got
 	}
+
+	holdTracks := func(mbids ...string) {
+		GinkgoHelper()
+		for _, mbid := range mbids {
+			client.MediaFile.Create().SetPath("/music/" + mbid + ".flac").
+				SetSize(1).SetQuality("lossless").SetFormat("flac").
+				SetTrackID(client.Track.Query().
+					Where(track.MbidEQ(mbid)).OnlyIDX(ctx)).
+				ExecX(ctx)
+		}
+	}
+
+	It("parks an album holding only some tracks at failed", func() {
+		holdTracks("t-1")
+
+		failTerminally()
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusFailed))
+		Expect(got.FailureReason).To(Equal("release is a CD image"))
+	})
+
+	It("returns an album holding every track to available", func() {
+		holdTracks("t-1", "t-2")
+
+		failTerminally()
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusAvailable))
+		Expect(got.FailureReason).To(BeEmpty())
+	})
+
+	It("fails a partial album of a rejected held record unless requeued", func() {
+		holdTracks("t-1")
+		Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+			{Check: "tracks", Expected: "11", Actual: "1"},
+		})).To(Succeed())
+		Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+			To(Succeed())
+
+		Expect(albumNow().Status).To(Equal(entalbum.StatusFailed))
+	})
 
 	It("keeps a failed album out of the missing searches", func() {
 		failTerminally()

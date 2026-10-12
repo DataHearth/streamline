@@ -173,7 +173,7 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 			Expect(client.DownloadRecord.GetX(ctx, rec.ID).Status).
 				To(Equal(downloadrecord.StatusFailed))
 			Expect(client.Album.GetX(ctx, albums[0].ID).Status).
-				To(Equal(album.StatusDownloading), "it holds a file already")
+				To(Equal(album.StatusAvailable), "it holds every track already")
 			failed := client.Album.GetX(ctx, albums[1].ID)
 			Expect(failed.Status).To(Equal(album.StatusFailed))
 			Expect(failed.FailureReason).To(Equal("boom"))
