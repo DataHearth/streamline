@@ -29,7 +29,9 @@
 	const url = $derived(attempt === 0 ? src : `${src}?retry=${attempt}`);
 
 	function handleError() {
-		if (attempt >= retryDelays.length) {
+		// The lookup proxy resolves on the request itself, so its 404 already
+		// means "no art"; retrying only fills the console.
+		if (attempt >= retryDelays.length || src.startsWith("/posters/lookup/")) {
 			markPosterMissing(src);
 			visible = false;
 			return;
