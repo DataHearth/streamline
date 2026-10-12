@@ -21,7 +21,7 @@
 	let mon = $state("all");
 	let query = $state("");
 	let debounced = $state("");
-	let sort = $state("recent");
+	let sort = $state("name");
 
 	onMount(() =>
 		onRouteQuery("/music", (p) => {
@@ -30,7 +30,7 @@
 			status = STATUSES.has(s) ? s : "all";
 			mon = MONS.has(m) ? m : "all";
 			query = debounced = p.get("q") ?? "";
-			sort = p.get("sort") === "name" ? "name" : "recent";
+			sort = p.get("sort") === "recent" ? "recent" : "name";
 		}),
 	);
 	$effect(() => {
@@ -43,7 +43,7 @@
 		if (status !== "all") p.set("status", status);
 		if (mon !== "all") p.set("monitored", mon);
 		if (query) p.set("q", query);
-		if (sort !== "recent") p.set("sort", sort);
+		if (sort !== "name") p.set("sort", sort);
 		const search = p.toString();
 		if (typeof window === "undefined" || window.location.pathname !== "/music") return;
 		const next = `/music${search ? `?${search}` : ""}`;
@@ -150,8 +150,8 @@
 		},
 	]);
 	const SORTS = [
-		{ key: "recent", label: i18n.library_sort_recent() },
 		{ key: "name", label: i18n.sort_name_az() },
+		{ key: "recent", label: i18n.library_sort_recent() },
 	];
 
 	function reset() {
