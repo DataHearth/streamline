@@ -19,6 +19,8 @@
 	<span class="shrink-0 font-mono text-[10.5px] text-status-downloading">{Math.round(r.progress ?? 0)}%</span>
 {:else if r.status === "skipped"}
 	<span class="shrink-0 font-mono text-[10.5px] text-status-skipped">{i18n.status_skipped()}</span>
+{:else if r.status === "failed"}
+	<span class="shrink-0 font-mono text-[10.5px] text-status-failed">{i18n.status_failed()}</span>
 {:else if releaseIdle(r)}
 	<!-- Unmonitored and empty: no state to show. -->
 {:else if r.status === "wanted"}

@@ -68,6 +68,9 @@ var _ = Describe("Views", Label("unit", "music"), func() {
 			),
 			Entry("paused counts as downloading", "downloading",
 				al(album.StatusPaused, true, &past)),
+			Entry("failed counts as wanted", "wanted",
+				al(album.StatusAvailable, true, &past),
+				al(album.StatusFailed, true, &past)),
 			Entry(
 				"wanted when any monitored album is wanted",
 				"wanted",

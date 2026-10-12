@@ -44,6 +44,8 @@ type Album struct {
 	LastSearchAt *time.Time `json:"last_search_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status album.Status `json:"status,omitempty"`
+	// FailureReason holds the value of the "failure_reason" field.
+	FailureReason string `json:"failure_reason,omitempty"`
 	// Label holds the value of the "label" field.
 	Label string `json:"label,omitempty"`
 	// CatalogNumber holds the value of the "catalog_number" field.
@@ -138,7 +140,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -244,6 +246,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = album.Status(value.String)
+			}
+		case album.FieldFailureReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field failure_reason", values[i])
+			} else if value.Valid {
+				_m.FailureReason = value.String
 			}
 		case album.FieldLabel:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -399,6 +407,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	builder.WriteString("failure_reason=")
+	builder.WriteString(_m.FailureReason)
 	builder.WriteString(", ")
 	builder.WriteString("label=")
 	builder.WriteString(_m.Label)

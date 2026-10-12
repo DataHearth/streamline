@@ -728,8 +728,13 @@ func (d *download) GrabArtistPack(
 	}
 	for _, id := range ids {
 		if _, err := d.db.SetAlbumStatus(
-			ctx, id,
-			[]album.Status{album.StatusWanted, album.StatusPaused},
+			ctx,
+			id,
+			[]album.Status{
+				album.StatusWanted,
+				album.StatusPaused,
+				album.StatusFailed,
+			},
 			album.StatusDownloading,
 		); err != nil {
 			slog.WarnContext(ctx, "mark pack album downloading failed",

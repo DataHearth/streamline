@@ -112,6 +112,7 @@ type AlbumMutation struct {
 	addgrab_failures        *int8
 	last_search_at          *time.Time
 	status                  *album.Status
+	failure_reason          *string
 	label                   *string
 	catalog_number          *string
 	country                 *string
@@ -783,6 +784,55 @@ func (m *AlbumMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetFailureReason sets the "failure_reason" field.
+func (m *AlbumMutation) SetFailureReason(s string) {
+	m.failure_reason = &s
+}
+
+// FailureReason returns the value of the "failure_reason" field in the mutation.
+func (m *AlbumMutation) FailureReason() (r string, exists bool) {
+	v := m.failure_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFailureReason returns the old "failure_reason" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldFailureReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFailureReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFailureReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFailureReason: %w", err)
+	}
+	return oldValue.FailureReason, nil
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (m *AlbumMutation) ClearFailureReason() {
+	m.failure_reason = nil
+	m.clearedFields[album.FieldFailureReason] = struct{}{}
+}
+
+// FailureReasonCleared returns if the "failure_reason" field was cleared in this mutation.
+func (m *AlbumMutation) FailureReasonCleared() bool {
+	_, ok := m.clearedFields[album.FieldFailureReason]
+	return ok
+}
+
+// ResetFailureReason resets all changes to the "failure_reason" field.
+func (m *AlbumMutation) ResetFailureReason() {
+	m.failure_reason = nil
+	delete(m.clearedFields, album.FieldFailureReason)
+}
+
 // SetLabel sets the "label" field.
 func (m *AlbumMutation) SetLabel(s string) {
 	m.label = &s
@@ -1415,7 +1465,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1454,6 +1504,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, album.FieldStatus)
+	}
+	if m.failure_reason != nil {
+		fields = append(fields, album.FieldFailureReason)
 	}
 	if m.label != nil {
 		fields = append(fields, album.FieldLabel)
@@ -1510,6 +1563,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.LastSearchAt()
 	case album.FieldStatus:
 		return m.Status()
+	case album.FieldFailureReason:
+		return m.FailureReason()
 	case album.FieldLabel:
 		return m.Label()
 	case album.FieldCatalogNumber:
@@ -1559,6 +1614,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldLastSearchAt(ctx)
 	case album.FieldStatus:
 		return m.OldStatus(ctx)
+	case album.FieldFailureReason:
+		return m.OldFailureReason(ctx)
 	case album.FieldLabel:
 		return m.OldLabel(ctx)
 	case album.FieldCatalogNumber:
@@ -1673,6 +1730,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case album.FieldFailureReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFailureReason(v)
+		return nil
 	case album.FieldLabel:
 		v, ok := value.(string)
 		if !ok {
@@ -1779,6 +1843,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldLastSearchAt) {
 		fields = append(fields, album.FieldLastSearchAt)
 	}
+	if m.FieldCleared(album.FieldFailureReason) {
+		fields = append(fields, album.FieldFailureReason)
+	}
 	if m.FieldCleared(album.FieldLabel) {
 		fields = append(fields, album.FieldLabel)
 	}
@@ -1825,6 +1892,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldLastSearchAt:
 		m.ClearLastSearchAt()
+		return nil
+	case album.FieldFailureReason:
+		m.ClearFailureReason()
 		return nil
 	case album.FieldLabel:
 		m.ClearLabel()
@@ -1893,6 +1963,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case album.FieldFailureReason:
+		m.ResetFailureReason()
 		return nil
 	case album.FieldLabel:
 		m.ResetLabel()

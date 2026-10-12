@@ -2346,6 +2346,7 @@
 	"music_upcoming": "À venir",
 	"music_upcoming_monitored": "Suivi : recherché le jour de la sortie.",
 	"music_upcoming_unmonitored": "Non suivi : rien n'est recherché le jour de la sortie.",
+	"music_import_failed": "Le téléchargement n'a pas pu être importé, il n'est donc plus recherché automatiquement. Choisissez une autre version avec la recherche manuelle, ou relancez celle-ci depuis l'activité.",
 	"music_visible_of": "{visible} sur {total} artistes",
 	"qp_tier_hires": "Sans perte haute résolution",
 	"qp_tier_low": "Basse",

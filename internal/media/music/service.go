@@ -618,7 +618,7 @@ func (s *Service) GrabAlbum(
 
 	_, err = s.db.SetAlbumStatus(
 		ctx, albumID,
-		[]album.Status{album.StatusWanted, album.StatusPaused},
+		[]album.Status{album.StatusWanted, album.StatusPaused, album.StatusFailed},
 		album.StatusDownloading,
 	)
 	if err != nil {

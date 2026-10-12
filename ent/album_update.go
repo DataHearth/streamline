@@ -224,6 +224,26 @@ func (_u *AlbumUpdate) SetNillableStatus(v *album.Status) *AlbumUpdate {
 	return _u
 }
 
+// SetFailureReason sets the "failure_reason" field.
+func (_u *AlbumUpdate) SetFailureReason(v string) *AlbumUpdate {
+	_u.mutation.SetFailureReason(v)
+	return _u
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableFailureReason(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetFailureReason(*v)
+	}
+	return _u
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (_u *AlbumUpdate) ClearFailureReason() *AlbumUpdate {
+	_u.mutation.ClearFailureReason()
+	return _u
+}
+
 // SetLabel sets the "label" field.
 func (_u *AlbumUpdate) SetLabel(v string) *AlbumUpdate {
 	_u.mutation.SetLabel(v)
@@ -662,6 +682,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.FailureReason(); ok {
+		_spec.SetField(album.FieldFailureReason, field.TypeString, value)
+	}
+	if _u.mutation.FailureReasonCleared() {
+		_spec.ClearField(album.FieldFailureReason, field.TypeString)
 	}
 	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(album.FieldLabel, field.TypeString, value)
@@ -1124,6 +1150,26 @@ func (_u *AlbumUpdateOne) SetNillableStatus(v *album.Status) *AlbumUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (_u *AlbumUpdateOne) SetFailureReason(v string) *AlbumUpdateOne {
+	_u.mutation.SetFailureReason(v)
+	return _u
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableFailureReason(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetFailureReason(*v)
+	}
+	return _u
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (_u *AlbumUpdateOne) ClearFailureReason() *AlbumUpdateOne {
+	_u.mutation.ClearFailureReason()
 	return _u
 }
 
@@ -1595,6 +1641,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.FailureReason(); ok {
+		_spec.SetField(album.FieldFailureReason, field.TypeString, value)
+	}
+	if _u.mutation.FailureReasonCleared() {
+		_spec.ClearField(album.FieldFailureReason, field.TypeString)
 	}
 	if value, ok := _u.mutation.Label(); ok {
 		_spec.SetField(album.FieldLabel, field.TypeString, value)

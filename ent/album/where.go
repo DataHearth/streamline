@@ -110,6 +110,11 @@ func LastSearchAt(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldLastSearchAt, v))
 }
 
+// FailureReason applies equality check predicate on the "failure_reason" field. It's identical to FailureReasonEQ.
+func FailureReason(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldFailureReason, v))
+}
+
 // CatalogNumber applies equality check predicate on the "catalog_number" field. It's identical to CatalogNumberEQ.
 func CatalogNumber(v string) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldCatalogNumber, v))
@@ -698,6 +703,81 @@ func StatusIn(vs ...Status) predicate.Album {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.Album {
 	return predicate.Album(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// FailureReasonEQ applies the EQ predicate on the "failure_reason" field.
+func FailureReasonEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldFailureReason, v))
+}
+
+// FailureReasonNEQ applies the NEQ predicate on the "failure_reason" field.
+func FailureReasonNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldFailureReason, v))
+}
+
+// FailureReasonIn applies the In predicate on the "failure_reason" field.
+func FailureReasonIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldFailureReason, vs...))
+}
+
+// FailureReasonNotIn applies the NotIn predicate on the "failure_reason" field.
+func FailureReasonNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldFailureReason, vs...))
+}
+
+// FailureReasonGT applies the GT predicate on the "failure_reason" field.
+func FailureReasonGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldFailureReason, v))
+}
+
+// FailureReasonGTE applies the GTE predicate on the "failure_reason" field.
+func FailureReasonGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldFailureReason, v))
+}
+
+// FailureReasonLT applies the LT predicate on the "failure_reason" field.
+func FailureReasonLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldFailureReason, v))
+}
+
+// FailureReasonLTE applies the LTE predicate on the "failure_reason" field.
+func FailureReasonLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldFailureReason, v))
+}
+
+// FailureReasonContains applies the Contains predicate on the "failure_reason" field.
+func FailureReasonContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldFailureReason, v))
+}
+
+// FailureReasonHasPrefix applies the HasPrefix predicate on the "failure_reason" field.
+func FailureReasonHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldFailureReason, v))
+}
+
+// FailureReasonHasSuffix applies the HasSuffix predicate on the "failure_reason" field.
+func FailureReasonHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldFailureReason, v))
+}
+
+// FailureReasonIsNil applies the IsNil predicate on the "failure_reason" field.
+func FailureReasonIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldFailureReason))
+}
+
+// FailureReasonNotNil applies the NotNil predicate on the "failure_reason" field.
+func FailureReasonNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldFailureReason))
+}
+
+// FailureReasonEqualFold applies the EqualFold predicate on the "failure_reason" field.
+func FailureReasonEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldFailureReason, v))
+}
+
+// FailureReasonContainsFold applies the ContainsFold predicate on the "failure_reason" field.
+func FailureReasonContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldFailureReason, v))
 }
 
 // LabelEQ applies the EQ predicate on the "label" field.

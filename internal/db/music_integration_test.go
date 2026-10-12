@@ -748,6 +748,14 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			).To(Equal([]string{"Nirvana"}))
 		})
 
+		It("counts a monitored, released, failed album as wanted", func() {
+			client.Album.Update().Where(album.MbidEQ("rg-2")).
+				SetStatus(album.StatusFailed).ExecX(ctx)
+			Expect(
+				names(ListArtistsParams{Status: "wanted"}),
+			).To(Equal([]string{"Nirvana"}))
+		})
+
 		It("filters on monitoring: not none is monitored", func() {
 			Expect(names(ListArtistsParams{Monitored: "unmonitored"})).
 				To(Equal([]string{"Björk"}))

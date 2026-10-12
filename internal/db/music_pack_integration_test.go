@@ -158,7 +158,7 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 	})
 
 	It(
-		"returns every linked album without a file to wanted on a terminal failure",
+		"fails every linked album without a file on a terminal failure",
 		func() {
 			rec := createPack()
 			client.MediaFile.Create().SetPath("/m/blew.flac").SetSize(1).
@@ -174,8 +174,9 @@ var _ = Describe("Discography pack records", Label("integration", "db"), func() 
 				To(Equal(downloadrecord.StatusFailed))
 			Expect(client.Album.GetX(ctx, albums[0].ID).Status).
 				To(Equal(album.StatusDownloading), "it holds a file already")
-			Expect(client.Album.GetX(ctx, albums[1].ID).Status).
-				To(Equal(album.StatusWanted))
+			failed := client.Album.GetX(ctx, albums[1].ID)
+			Expect(failed.Status).To(Equal(album.StatusFailed))
+			Expect(failed.FailureReason).To(Equal("boom"))
 		},
 	)
 

@@ -12,7 +12,7 @@ export type MediaState = "available" | "wanted" | "downloading";
 
 // ── Music ────────────────────────────────────────────────────────────────
 export type ReleaseType = "album" | "ep" | "single" | "compilation" | "live" | "other";
-export type ReleaseStatus = MediaState | "upcoming" | "paused" | "skipped";
+export type ReleaseStatus = MediaState | "upcoming" | "paused" | "skipped" | "failed";
 // What following an artist means. "all" is the default: every release, past
 // and future.
 export type ArtistMonitor = "all" | "future" | "manual" | "none";
@@ -65,6 +65,8 @@ export type Release = {
 	size?: number;
 	duration?: number;
 	progress?: number;
+	// Why the import was refused, while status is failed.
+	failure_reason?: string;
 	// Detail only; the list leaves them out.
 	tracks?: Track[];
 	mbid?: string;
@@ -315,6 +317,7 @@ export function releasePill(r: Release): { token: string; label: string; live?: 
 			live: true,
 		};
 	if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped() };
+	if (r.status === "failed") return { token: "failed", label: i18n.status_failed() };
 	if (releaseIdle(r)) return null;
 	if (r.status === "wanted") {
 		const missing = r.track_count - r.tracks_have;
@@ -386,7 +389,7 @@ export function releaseGroups(releases: Release[]) {
 // else the newest that is out.
 export function defaultRelease(releases: Release[]): Release | undefined {
 	return (
-		releases.find((r) => r.status === "wanted" || r.status === "downloading" || r.status === "paused") ??
+		releases.find((r) => ["wanted", "downloading", "paused", "failed"].includes(r.status)) ??
 		releases.find((r) => r.status !== "upcoming") ??
 		releases[0]
 	);

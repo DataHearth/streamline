@@ -16,6 +16,7 @@
 	let badge = $derived.by(() => {
 		if (up) return { token: "unaired", label: formatDateShort(r.release_date), live: false };
 		if (r.status === "skipped") return { token: "skipped", label: i18n.status_skipped(), live: false };
+		if (r.status === "failed") return { token: "failed", label: i18n.status_failed(), live: false };
 		if (r.status === "wanted")
 			return {
 				token: "wanted",

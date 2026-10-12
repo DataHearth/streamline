@@ -41,6 +41,8 @@ const (
 	FieldLastSearchAt = "last_search_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldFailureReason holds the string denoting the failure_reason field in the database.
+	FieldFailureReason = "failure_reason"
 	// FieldLabel holds the string denoting the label field in the database.
 	FieldLabel = "label"
 	// FieldCatalogNumber holds the string denoting the catalog_number field in the database.
@@ -118,6 +120,7 @@ var Columns = []string{
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
+	FieldFailureReason,
 	FieldLabel,
 	FieldCatalogNumber,
 	FieldCountry,
@@ -216,6 +219,7 @@ const (
 	StatusPaused      Status = "paused"
 	StatusAvailable   Status = "available"
 	StatusSkipped     Status = "skipped"
+	StatusFailed      Status = "failed"
 )
 
 func (s Status) String() string {
@@ -225,7 +229,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusWanted, StatusDownloading, StatusPaused, StatusAvailable, StatusSkipped:
+	case StatusWanted, StatusDownloading, StatusPaused, StatusAvailable, StatusSkipped, StatusFailed:
 		return nil
 	default:
 		return fmt.Errorf("album: invalid enum value for status field: %q", s)
@@ -303,6 +307,11 @@ func ByLastSearchAt(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByFailureReason orders the results by the failure_reason field.
+func ByFailureReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFailureReason, opts...).ToFunc()
 }
 
 // ByLabel orders the results by the label field.

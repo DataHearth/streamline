@@ -190,6 +190,20 @@ func (_c *AlbumCreate) SetNillableStatus(v *album.Status) *AlbumCreate {
 	return _c
 }
 
+// SetFailureReason sets the "failure_reason" field.
+func (_c *AlbumCreate) SetFailureReason(v string) *AlbumCreate {
+	_c.mutation.SetFailureReason(v)
+	return _c
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableFailureReason(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetFailureReason(*v)
+	}
+	return _c
+}
+
 // SetLabel sets the "label" field.
 func (_c *AlbumCreate) SetLabel(v string) *AlbumCreate {
 	_c.mutation.SetLabel(v)
@@ -565,6 +579,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(album.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.FailureReason(); ok {
+		_spec.SetField(album.FieldFailureReason, field.TypeString, value)
+		_node.FailureReason = value
 	}
 	if value, ok := _c.mutation.Label(); ok {
 		_spec.SetField(album.FieldLabel, field.TypeString, value)

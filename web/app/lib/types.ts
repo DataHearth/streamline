@@ -547,7 +547,7 @@ export type UpcomingEpisode = {
 // A release on a monitored artist's discography, dated to the day. Album and
 // book rows carry the item's real state: a release day that has passed can be
 // grabbed, paused or skipped like any episode.
-export type UpcomingStatus = "wanted" | "downloading" | "available" | "paused" | "skipped";
+export type UpcomingStatus = "wanted" | "downloading" | "available" | "paused" | "skipped" | "failed";
 
 export type UpcomingAlbum = {
 	id: number;

@@ -89,6 +89,7 @@ func toMusicProgress(a music.AlbumView) *float32 {
 func toMusicAlbumSummary(a music.AlbumView, artistID uint32) MusicAlbumSummary {
 	return MusicAlbumSummary{
 		ArtistId:      artistID,
+		FailureReason: optString(a.Album.FailureReason),
 		Id:            a.Album.ID,
 		Monitored:     a.Album.Monitored,
 		Progress:      toMusicProgress(a),
@@ -109,6 +110,7 @@ func toMusicAlbum(a music.AlbumView, artistID uint32) MusicAlbum {
 		CatalogNumber: optString(row.CatalogNumber),
 		Country:       optString(row.Country),
 		Credits:       make([]MusicCredit, 0, len(a.Credits)),
+		FailureReason: optString(row.FailureReason),
 		Format:        optString(a.Format),
 		Id:            row.ID,
 		Label:         optString(row.Label),

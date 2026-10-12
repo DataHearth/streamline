@@ -8412,18 +8412,21 @@ components:
 
     MusicAlbumStatus:
       type: string
-      enum: [wanted, downloading, paused, available, skipped, upcoming]
+      enum: [wanted, downloading, paused, available, skipped, failed, upcoming]
       description: |
         `upcoming` is derived, never stored: a `wanted` album whose release
         date is after today (UTC). An undated album is never `upcoming`.
+        `failed` is an album whose download could not be imported
+        (`failure_reason` says why); the missing searches skip it, and a
+        manual grab or a retry from the activity history takes it out.
 
     MusicArtistStatus:
       type: string
       enum: [wanted, downloading, available]
       description: |
         Rollup over the monitored, non-upcoming albums: `downloading` if any
-        is downloading or paused, else `wanted` if any is wanted, else
-        `available` (including an artist with nothing monitored).
+        is downloading or paused, else `wanted` if any is wanted or failed,
+        else `available` (including an artist with nothing monitored).
 
     MusicTier:
       type: string
@@ -8649,6 +8652,9 @@ components:
           minimum: 0
           maximum: 100
           description: Present while `status` is `downloading`; live torrent progress, 100 while the record is importing.
+        failure_reason:
+          type: string
+          description: Present while `status` is `failed`; why the import was refused.
         tracks_pending:
           type: boolean
           description: True until the album's tracks have been fetched.
@@ -13340,7 +13346,7 @@ components:
           format: date
         status:
           type: string
-          enum: [wanted, downloading, paused, available, skipped]
+          enum: [wanted, downloading, paused, available, skipped, failed]
           description: The stored album status; never `upcoming`.
 
     UpcomingBook:

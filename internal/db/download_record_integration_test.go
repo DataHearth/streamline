@@ -844,13 +844,15 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				To(Equal(downloadrecord.StatusImporting))
 		})
 
-		It("walks a downloading album back to wanted on a terminal failure", func() {
+		It("parks a downloading album at failed on a terminal failure", func() {
 			Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
 				RecordID: recID, AlbumID: albumID, Terminal: true,
 				Reason: "no audio", Attempts: 1,
 			})).To(Succeed())
 
-			Expect(albumStatus()).To(Equal(entalbum.StatusWanted))
+			Expect(albumStatus()).To(Equal(entalbum.StatusFailed))
+			Expect(client.Album.GetX(ctx, albumID).FailureReason).
+				To(Equal("no audio"))
 			Expect(client.DownloadRecord.GetX(ctx, recID).Status).
 				To(Equal(downloadrecord.StatusFailed))
 		})
@@ -2380,5 +2382,107 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 				Expect(RecordEpisodeIDs(list[0])).To(ConsistOf(episodeID))
 			},
 		)
+	})
+})
+
+var _ = Describe("Album import failure", Label("integration", "db"), func() {
+	var (
+		ctx   context.Context
+		store *DB
+		alb   *ent.Album
+		rec   *ent.DownloadRecord
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		client, err := Open(ctx, ":memory:")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { client.Close() })
+		store = New(client)
+
+		_, err = store.CreateArtist(ctx, CreateArtistParams{
+			MBID: "a-1", Name: "Avatar",
+			Albums: []AlbumSeed{
+				{MBID: "rg-1", Title: "Hail the Apocalypse", Monitored: true},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		hydrateAlbum(
+			ctx,
+			store,
+			"rg-1",
+			TrackSeed{
+				MBID:     "t-1",
+				Title:    "Hail the Apocalypse",
+				Disc:     1,
+				Position: 1,
+			},
+		)
+		alb = client.Album.Query().OnlyX(ctx)
+		rec, err = store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+			Title: "Avatar - Hail the Apocalypse (2014) [FLAC]", Size: 1,
+			TorrentHash: "cue-hash", Status: downloadrecord.StatusImporting,
+			AlbumID: alb.ID,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(store.SetAlbumStatus(
+			ctx, alb.ID, []entalbum.Status{entalbum.StatusWanted},
+			entalbum.StatusDownloading,
+		)).To(BeTrue())
+	})
+
+	failTerminally := func() {
+		GinkgoHelper()
+		Expect(store.RecordImportFailure(ctx, RecordImportFailureParams{
+			RecordID: rec.ID, Terminal: true, Attempts: 1,
+			Reason: "release is a CD image", AlbumID: alb.ID,
+		})).To(Succeed())
+	}
+
+	albumNow := func() *ent.Album {
+		GinkgoHelper()
+		got, err := store.FindAlbumByID(ctx, alb.ID)
+		Expect(err).NotTo(HaveOccurred())
+		return got
+	}
+
+	It("keeps a failed album out of the missing searches", func() {
+		failTerminally()
+
+		Expect(store.ListEligibleAlbumsForSync(ctx, 5, time.Now())).To(BeEmpty())
+		Expect(store.ListWantedAlbums(ctx, 5)).To(BeEmpty())
+	})
+
+	It("walks the album back to downloading on a retry", func() {
+		failTerminally()
+
+		Expect(store.RetryFailedDownloadRecord(ctx, rec.ID)).To(Succeed())
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusDownloading))
+		Expect(got.FailureReason).To(BeEmpty())
+	})
+
+	It("lets a manual grab take a failed album, clearing the reason", func() {
+		failTerminally()
+
+		Expect(store.SetAlbumStatus(
+			ctx, alb.ID, []entalbum.Status{entalbum.StatusFailed},
+			entalbum.StatusDownloading,
+		)).To(BeTrue())
+
+		Expect(albumNow().FailureReason).To(BeEmpty())
+	})
+
+	It("fails the album of a rejected held record unless requeued", func() {
+		Expect(store.HoldDownloadRecord(ctx, rec.ID, []schema.HoldReason{
+			{Check: "tracks", Expected: "11", Actual: "1"},
+		})).To(Succeed())
+		Expect(store.FailHeldDownloadRecord(ctx, rec.ID, "rejected", false)).
+			To(Succeed())
+
+		got := albumNow()
+		Expect(got.Status).To(Equal(entalbum.StatusFailed))
+		Expect(got.FailureReason).To(Equal("rejected"))
 	})
 })

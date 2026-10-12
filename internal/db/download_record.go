@@ -681,7 +681,9 @@ func (db *DB) ReleaseHeldDownloadRecord(ctx context.Context, id uint32) error {
 // revert to wanted either way, mirroring RecordImportFailure — unless the
 // episode still holds a file: an upgrade grab anchors its record on an
 // episode it was replacing, and rejecting the replacement leaves that file in
-// place, so "wanted" would claim we have nothing.
+// place, so "wanted" would claim we have nothing. Albums follow the movie rule,
+// and one that already holds files is left to the orphan sweep, which returns
+// it to available.
 func (db *DB) FailHeldDownloadRecord(
 	ctx context.Context,
 	id uint32,
@@ -728,6 +730,30 @@ func (db *DB) FailHeldDownloadRecord(
 			Save(ctx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("update episode: %w", err)
+		}
+	}
+	var albumIDs []uint32
+	if rec.Edges.Album != nil {
+		albumIDs = append(albumIDs, rec.Edges.Album.ID)
+	}
+	for _, a := range rec.Edges.Albums {
+		albumIDs = append(albumIDs, a.ID)
+	}
+	if len(albumIDs) > 0 {
+		u := tx.Album.Update().
+			Where(
+				album.IDIn(albumIDs...),
+				album.StatusEQ(album.StatusDownloading),
+				album.Not(album.HasTracksWith(track.HasMediaFiles())),
+			)
+		if requeue {
+			u = u.SetStatus(album.StatusWanted)
+		} else {
+			u = u.SetStatus(album.StatusFailed).SetFailureReason(reason)
+		}
+		if err := u.Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update albums: %w", err)
 		}
 	}
 	return tx.Commit()
@@ -909,9 +935,14 @@ func (db *DB) RecordAlbumImportSuccess(
 	if err := tx.Album.Update().
 		Where(
 			album.ID(p.AlbumID),
-			album.StatusIn(album.StatusDownloading, album.StatusWanted),
+			album.StatusIn(
+				album.StatusDownloading,
+				album.StatusWanted,
+				album.StatusFailed,
+			),
 		).
 		SetStatus(status).
+		ClearFailureReason().
 		Exec(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update album: %w", err)
@@ -1030,7 +1061,8 @@ func (db *DB) RecordBookImportSuccess(
 }
 
 // RecordImportFailure writes attempt counter on retryable; on terminal also
-// flips DownloadRecord + Movie to failed with reason.
+// flips DownloadRecord + Movie to failed with reason, and an album (or each
+// album a pack expected) that holds no file yet.
 func (db *DB) RecordImportFailure(
 	ctx context.Context,
 	p RecordImportFailureParams,
@@ -1096,7 +1128,8 @@ func (db *DB) RecordImportFailure(
 					album.ID(p.AlbumID),
 					album.StatusEQ(album.StatusDownloading),
 				).
-				SetStatus(album.StatusWanted).
+				SetStatus(album.StatusFailed).
+				SetFailureReason(p.Reason).
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("update album: %w", err)
@@ -1123,7 +1156,8 @@ func (db *DB) RecordImportFailure(
 					album.ID(id),
 					album.StatusEQ(album.StatusDownloading),
 				).
-				SetStatus(album.StatusWanted).
+				SetStatus(album.StatusFailed).
+				SetFailureReason(p.Reason).
 				Exec(ctx); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("update pack album: %w", err)
@@ -1209,8 +1243,8 @@ func (db *DB) MarkWantedRecordEpisodesImporting(
 // the importer: importing, attempt counter cleared, failure reason dropped.
 //
 // The media it owns is walked back with it, because the terminal failure moved
-// that too — RecordImportFailure flips the movie to failed and the linked
-// episode to wanted. Leaving either behind would have the retry importing into
+// that too — RecordImportFailure flips the movie and the albums to failed and
+// the linked episode to wanted. Leaving either behind would have the retry importing into
 // rows that claim nothing is coming, and the missing-search would grab a
 // second release for an episode already being imported.
 //
@@ -1225,6 +1259,8 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 			downloadrecord.StatusEQ(downloadrecord.StatusFailed),
 		).
 		WithMovie().
+		WithAlbum().
+		WithAlbums().
 		Only(ctx)
 	if err != nil {
 		return err
@@ -1257,6 +1293,23 @@ func (db *DB) RetryFailedDownloadRecord(ctx context.Context, id uint32) error {
 		Save(ctx); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("update episodes: %w", err)
+	}
+	var albumIDs []uint32
+	if rec.Edges.Album != nil {
+		albumIDs = append(albumIDs, rec.Edges.Album.ID)
+	}
+	for _, a := range rec.Edges.Albums {
+		albumIDs = append(albumIDs, a.ID)
+	}
+	if len(albumIDs) > 0 {
+		if err := tx.Album.Update().
+			Where(album.IDIn(albumIDs...), album.StatusEQ(album.StatusFailed)).
+			SetStatus(album.StatusDownloading).
+			ClearFailureReason().
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("update albums: %w", err)
+		}
 	}
 	return tx.Commit()
 }

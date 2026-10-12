@@ -387,11 +387,15 @@ func downloadingAlbum() predicate.Album {
 }
 
 // artistStatus is the rollup over the monitored, non-upcoming albums:
-// downloading if any is downloading or paused, else wanted if any is wanted,
-// else available.
+// downloading if any is downloading or paused, else wanted if any is wanted
+// or failed, else available.
 func artistStatus(status string, now time.Time) predicate.Artist {
 	downloading := artist.HasAlbumsWith(downloadingAlbum())
-	wanted := artist.HasAlbumsWith(wantedAlbum(now))
+	wanted := artist.HasAlbumsWith(album.And(
+		album.Monitored(true),
+		album.StatusIn(album.StatusWanted, album.StatusFailed),
+		releasedAlbum(now),
+	))
 	switch status {
 	case "downloading":
 		return downloading
@@ -922,7 +926,8 @@ func (db *DB) SetAlbumMonitored(
 
 // SetAlbumStatus moves the album to `to` only while it is in one of the from
 // statuses, and reports whether it did, so a concurrent change is never
-// overwritten.
+// overwritten. It clears failure_reason: only the import-failure writers park
+// an album at failed, and they set the reason themselves.
 func (db *DB) SetAlbumStatus(
 	ctx context.Context,
 	id uint32,
@@ -932,6 +937,7 @@ func (db *DB) SetAlbumStatus(
 	n, err := db.client.Album.Update().
 		Where(album.IDEQ(id), album.StatusIn(from...)).
 		SetStatus(to).
+		ClearFailureReason().
 		Save(ctx)
 	return n > 0, err
 }
@@ -1217,7 +1223,7 @@ func (db *DB) ListArtistAlbumsForSearch(
 }
 
 // ListPackAlbums returns the artist's albums a discography pack may cover:
-// monitored, released, hydrated, and wanted or paused.
+// monitored, released, hydrated, and wanted, paused or failed.
 func (db *DB) ListPackAlbums(
 	ctx context.Context,
 	artistID uint32,
@@ -1228,7 +1234,11 @@ func (db *DB) ListPackAlbums(
 			album.Monitored(true),
 			releasedAlbum(time.Now()),
 			album.MetadataFetchedAtNotNil(),
-			album.StatusIn(album.StatusWanted, album.StatusPaused),
+			album.StatusIn(
+				album.StatusWanted,
+				album.StatusPaused,
+				album.StatusFailed,
+			),
 		).
 		Order(ent.Asc(album.FieldID)).
 		All(ctx)

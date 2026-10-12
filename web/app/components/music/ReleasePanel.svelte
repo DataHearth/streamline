@@ -37,6 +37,7 @@
 	} = $props();
 
 	let up = $derived(r.status === "upcoming");
+	let failed = $derived(r.status === "failed");
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
 	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
@@ -72,11 +73,19 @@
 					<span>{f}</span>
 				{/each}
 			</div>
+			{#if failed}
+				<div class="mt-3 text-[13px] leading-snug">
+					{#if r.failure_reason}
+						<p class="font-mono text-xs text-status-failed">{r.failure_reason}</p>
+					{/if}
+					<p class="mt-1 text-fg-muted">{i18n.music_import_failed()}</p>
+				</div>
+			{/if}
 			{#if canEdit}
 				<!-- gap-1.5: at 1024 the column is 265 and French needs 179 + 36 + 36
 				     plus the gaps, which gap-2 took to 267. -->
 				<div class="mt-4 flex flex-wrap items-center gap-1.5">
-					{#if !up}
+					{#if !up && !failed}
 						<button
 							type="button"
 							onclick={onSearch}
@@ -85,6 +94,8 @@
 							<Radar size={15} aria-hidden="true" />
 							{i18n.music_search_now()}
 						</button>
+					{/if}
+					{#if !up}
 						<button
 							type="button"
 							onclick={onManualSearch}

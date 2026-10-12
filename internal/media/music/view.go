@@ -110,8 +110,8 @@ func albumStatusAt(a *ent.Album, now time.Time) string {
 }
 
 // artistStatusAt rolls the monitored, non-upcoming albums up: downloading if
-// any is downloading or paused, else wanted if any is wanted, else available.
-// An artist with nothing monitored is available.
+// any is downloading or paused, else wanted if any is wanted or failed, else
+// available. An artist with nothing monitored is available.
 func artistStatusAt(albums []*ent.Album, now time.Time) string {
 	wanted := false
 	for _, a := range albums {
@@ -121,7 +121,7 @@ func artistStatusAt(albums []*ent.Album, now time.Time) string {
 		switch albumStatusAt(a, now) {
 		case string(album.StatusDownloading), string(album.StatusPaused):
 			return string(album.StatusDownloading)
-		case string(album.StatusWanted):
+		case string(album.StatusWanted), string(album.StatusFailed):
 			wanted = true
 		}
 	}

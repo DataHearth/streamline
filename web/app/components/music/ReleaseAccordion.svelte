@@ -86,9 +86,17 @@
 					{/if}
 					<span class="font-mono text-[11px] text-fg-muted">{releaseFacts(r).join(" · ")}</span>
 				</div>
+				{#if r.status === "failed"}
+					<div class="mt-2 text-[12.5px] leading-snug">
+						{#if r.failure_reason}
+							<p class="font-mono text-[11px] text-status-failed">{r.failure_reason}</p>
+						{/if}
+						<p class="mt-1 text-fg-muted">{i18n.music_import_failed()}</p>
+					</div>
+				{/if}
 				{#if canEdit}
 					<div class="mt-3 flex gap-2">
-						{#if !up}
+						{#if !up && r.status !== "failed"}
 							<button
 								type="button"
 								onclick={() => onSearch(r)}
@@ -97,6 +105,8 @@
 								<Radar size={16} aria-hidden="true" />
 								{i18n.music_search_now()}
 							</button>
+						{/if}
+						{#if !up}
 							<button
 								type="button"
 								onclick={() => onManualSearch(r)}

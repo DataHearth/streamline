@@ -832,7 +832,11 @@ var _ = Describe("GrabAlbum and GrabBook", Label("unit", "downloads"), func() {
 				for _, id := range []uint32{10, 11} {
 					store.EXPECT().SetAlbumStatus(
 						mock.Anything, id,
-						[]album.Status{album.StatusWanted, album.StatusPaused},
+						[]album.Status{
+							album.StatusWanted,
+							album.StatusPaused,
+							album.StatusFailed,
+						},
 						album.StatusDownloading,
 					).Return(true, nil).Once()
 				}

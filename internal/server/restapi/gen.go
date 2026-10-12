@@ -1765,6 +1765,7 @@ func (e MovieStatus) Valid() bool {
 const (
 	MusicAlbumStatusAvailable   MusicAlbumStatus = "available"
 	MusicAlbumStatusDownloading MusicAlbumStatus = "downloading"
+	MusicAlbumStatusFailed      MusicAlbumStatus = "failed"
 	MusicAlbumStatusPaused      MusicAlbumStatus = "paused"
 	MusicAlbumStatusSkipped     MusicAlbumStatus = "skipped"
 	MusicAlbumStatusUpcoming    MusicAlbumStatus = "upcoming"
@@ -1777,6 +1778,8 @@ func (e MusicAlbumStatus) Valid() bool {
 	case MusicAlbumStatusAvailable:
 		return true
 	case MusicAlbumStatusDownloading:
+		return true
+	case MusicAlbumStatusFailed:
 		return true
 	case MusicAlbumStatusPaused:
 		return true
@@ -2845,6 +2848,7 @@ func (e TranscodingConfigViewHwStatus) Valid() bool {
 const (
 	UpcomingAlbumStatusAvailable   UpcomingAlbumStatus = "available"
 	UpcomingAlbumStatusDownloading UpcomingAlbumStatus = "downloading"
+	UpcomingAlbumStatusFailed      UpcomingAlbumStatus = "failed"
 	UpcomingAlbumStatusPaused      UpcomingAlbumStatus = "paused"
 	UpcomingAlbumStatusSkipped     UpcomingAlbumStatus = "skipped"
 	UpcomingAlbumStatusWanted      UpcomingAlbumStatus = "wanted"
@@ -2856,6 +2860,8 @@ func (e UpcomingAlbumStatus) Valid() bool {
 	case UpcomingAlbumStatusAvailable:
 		return true
 	case UpcomingAlbumStatusDownloading:
+		return true
+	case UpcomingAlbumStatusFailed:
 		return true
 	case UpcomingAlbumStatusPaused:
 		return true
@@ -5975,6 +5981,9 @@ type MusicAlbum struct {
 	// Duration Sum of the track durations in seconds; omitted at 0.
 	Duration *uint32 `json:"duration,omitempty"`
 
+	// FailureReason Present while `status` is `failed`; why the import was refused.
+	FailureReason *string `json:"failure_reason,omitempty"`
+
 	// Format Display label of the worst-tier file, for example "FLAC" or "MP3 320". Omitted with no files.
 	Format *string `json:"format,omitempty"`
 	Id     uint32  `json:"id"`
@@ -5998,6 +6007,9 @@ type MusicAlbum struct {
 
 	// Status `upcoming` is derived, never stored: a `wanted` album whose release
 	// date is after today (UTC). An undated album is never `upcoming`.
+	// `failed` is an album whose download could not be imported
+	// (`failure_reason` says why); the missing searches skip it, and a
+	// manual grab or a retry from the activity history takes it out.
 	Status MusicAlbumStatus `json:"status"`
 
 	// Studio Most frequent "recorded at" place; omitted when none.
@@ -6020,13 +6032,19 @@ type MusicAlbum struct {
 
 // MusicAlbumStatus `upcoming` is derived, never stored: a `wanted` album whose release
 // date is after today (UTC). An undated album is never `upcoming`.
+// `failed` is an album whose download could not be imported
+// (`failure_reason` says why); the missing searches skip it, and a
+// manual grab or a retry from the activity history takes it out.
 type MusicAlbumStatus string
 
 // MusicAlbumSummary defines model for MusicAlbumSummary.
 type MusicAlbumSummary struct {
-	ArtistId  uint32 `json:"artist_id"`
-	Id        uint32 `json:"id"`
-	Monitored bool   `json:"monitored"`
+	ArtistId uint32 `json:"artist_id"`
+
+	// FailureReason Present while `status` is `failed`; why the import was refused.
+	FailureReason *string `json:"failure_reason,omitempty"`
+	Id            uint32  `json:"id"`
+	Monitored     bool    `json:"monitored"`
 
 	// Progress Present while `status` is `downloading`; live torrent progress, 100 while the record is importing.
 	Progress    *float32            `json:"progress,omitempty"`
@@ -6034,6 +6052,9 @@ type MusicAlbumSummary struct {
 
 	// Status `upcoming` is derived, never stored: a `wanted` album whose release
 	// date is after today (UTC). An undated album is never `upcoming`.
+	// `failed` is an album whose download could not be imported
+	// (`failure_reason` says why); the missing searches skip it, and a
+	// manual grab or a retry from the activity history takes it out.
 	Status MusicAlbumStatus `json:"status"`
 	Title  string           `json:"title"`
 
@@ -6101,8 +6122,8 @@ type MusicArtist struct {
 	SortName string `json:"sort_name"`
 
 	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
-	// is downloading or paused, else `wanted` if any is wanted, else
-	// `available` (including an artist with nothing monitored).
+	// is downloading or paused, else `wanted` if any is wanted or failed,
+	// else `available` (including an artist with nothing monitored).
 	Status MusicArtistStatus `json:"status"`
 
 	// TracksHave Tracks with at least one media file.
@@ -6159,8 +6180,8 @@ type MusicArtistCore struct {
 	SortName string `json:"sort_name"`
 
 	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
-	// is downloading or paused, else `wanted` if any is wanted, else
-	// `available` (including an artist with nothing monitored).
+	// is downloading or paused, else `wanted` if any is wanted or failed,
+	// else `available` (including an artist with nothing monitored).
 	Status MusicArtistStatus `json:"status"`
 
 	// TracksHave Tracks with at least one media file.
@@ -6238,8 +6259,8 @@ type MusicArtistDetail struct {
 	SortName string `json:"sort_name"`
 
 	// Status Rollup over the monitored, non-upcoming albums: `downloading` if any
-	// is downloading or paused, else `wanted` if any is wanted, else
-	// `available` (including an artist with nothing monitored).
+	// is downloading or paused, else `wanted` if any is wanted or failed,
+	// else `available` (including an artist with nothing monitored).
 	Status MusicArtistStatus `json:"status"`
 
 	// TracksHave Tracks with at least one media file.
@@ -6335,8 +6356,8 @@ type MusicArtistSearchResultList struct {
 }
 
 // MusicArtistStatus Rollup over the monitored, non-upcoming albums: `downloading` if any
-// is downloading or paused, else `wanted` if any is wanted, else
-// `available` (including an artist with nothing monitored).
+// is downloading or paused, else `wanted` if any is wanted or failed,
+// else `available` (including an artist with nothing monitored).
 type MusicArtistStatus string
 
 // MusicCredit defines model for MusicCredit.
@@ -8495,8 +8516,8 @@ type MusicArtistQueryParam = string
 type MusicArtistSortParam string
 
 // MusicArtistStatusParam Rollup over the monitored, non-upcoming albums: `downloading` if any
-// is downloading or paused, else `wanted` if any is wanted, else
-// `available` (including an artist with nothing monitored).
+// is downloading or paused, else `wanted` if any is wanted or failed,
+// else `available` (including an artist with nothing monitored).
 type MusicArtistStatusParam = MusicArtistStatus
 
 // MusicReleaseSearchLimit defines model for MusicReleaseSearchLimit.

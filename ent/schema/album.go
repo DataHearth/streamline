@@ -39,8 +39,12 @@ func (Album) Fields() []ent.Field {
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").
-			Values("wanted", "downloading", "paused", "available", "skipped").
+			Values("wanted", "downloading", "paused", "available", "skipped", "failed").
 			Default("wanted"),
+		// failure_reason is the terminal import error that parked the album
+		// at failed. The missing searches skip a failed album, so this is what
+		// tells the user why nothing more is happening.
+		field.String("failure_reason").Optional(),
 		field.String("label").Optional(),
 		field.String("catalog_number").Optional(),
 		field.String("country").Optional(),

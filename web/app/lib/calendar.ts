@@ -34,7 +34,7 @@ export type CalendarEvent = {
 	square?: boolean;
 	date: Date;
 	// Movies reach this list only while wanted; episodes carry their own.
-	status: EpisodeStatus;
+	status: EpisodeStatus | "failed";
 };
 
 // Dots are a bare colour with no label, so they may only encode the one thing
@@ -155,13 +155,14 @@ export function booksToCalendarEvents(books: UpcomingBook[]): CalendarEvent[] {
 }
 
 // The pill an album or book row carries. Wanted is what every unreleased row
-// is, so it says nothing and gets none; the four states that do say something
-// are labelled. Movies and episodes keep the bare dot they had.
-const SAID: Partial<Record<EpisodeStatus, StatusKind>> = {
+// is, so it says nothing and gets none; the states that do say something are
+// labelled. Movies and episodes keep the bare dot they had.
+const SAID: Partial<Record<CalendarEvent["status"], StatusKind>> = {
 	available: "available",
 	downloading: "downloading",
 	paused: "paused",
 	skipped: "skipped",
+	failed: "failed",
 };
 export function statusPill(e: CalendarEvent): StatusKind | null {
 	if (e.kind !== "album" && e.kind !== "book") return null;

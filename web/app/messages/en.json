@@ -2346,6 +2346,7 @@
 	"music_upcoming": "Upcoming",
 	"music_upcoming_monitored": "Monitored: searched for on release day.",
 	"music_upcoming_unmonitored": "Not monitored: nothing is searched for on release day.",
+	"music_import_failed": "The download could not be imported, so it is no longer searched for automatically. Pick another release with Manual search, or retry this one from Activity.",
 	"music_visible_of": "{visible} of {total} artists",
 	"qp_tier_hires": "Hi-res lossless",
 	"qp_tier_low": "Low",
