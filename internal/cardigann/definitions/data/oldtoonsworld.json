@@ -21,6 +21,16 @@
         "desc": "TV"
       },
       {
+        "id": "7",
+        "cat": "Movies/Other",
+        "desc": "Anime Movies"
+      },
+      {
+        "id": "8",
+        "cat": "TV/Anime",
+        "desc": "Anime TV"
+      },
+      {
         "id": "3",
         "cat": "Books",
         "desc": "Books"
@@ -334,7 +344,7 @@
   },
   "source": {
     "path": "definitions/v11/oldtoonsworld.yml",
-    "sha256": "eda0beec37c32e6603cb988f6f3f95be9c7eda3bd0979d205132632ffc9b88dc",
+    "sha256": "8bdba7312f6cdab45b72b3dcf3d17d42094bbcdf756866e06ce1c7ea53059cc9",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

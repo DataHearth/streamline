@@ -284,13 +284,13 @@
     },
     "fields": {
       "category": {
-        "selector": "a[href^=\"browse.php?cat=\"]",
+        "selector": "a[href^=\"browse.php?cats[]=\"]",
         "attribute": "href",
         "filters": [
           {
             "name": "querystring",
             "args": [
-              "cat"
+              "cats[]"
             ]
           }
         ]
@@ -351,7 +351,7 @@
   },
   "source": {
     "path": "definitions/v11/docspedia.yml",
-    "sha256": "44fa8c81c6726ade84d1279a548913f92d7c76b3ee2e399467d52811ee176113",
+    "sha256": "d9d4f5410733e314a0d6819a9c0999b8da500ecd31a81e114660224a02fef360",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

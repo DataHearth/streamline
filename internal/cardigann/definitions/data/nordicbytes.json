@@ -358,7 +358,7 @@
   },
   "source": {
     "path": "definitions/v11/nordicbytes.yml",
-    "sha256": "263f6f83454676042f9fc2f0107cb38e429ca6adfcf9ae73611639d93b22a313",
+    "sha256": "d230940d8a27aa08008065e796159a6d04eff66f2b9b1ae0ca4c6d85aed9da99",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

@@ -430,6 +430,11 @@
         "desc": "Music Other"
       },
       {
+        "id": "MusicRadioShows",
+        "cat": "Audio/Other",
+        "desc": "Music Radio Shows"
+      },
+      {
         "id": "Musicvideos",
         "cat": "Audio/Video",
         "desc": "Music videos"
@@ -619,7 +624,7 @@
   },
   "source": {
     "path": "definitions/v11/kickasstorrents-to.yml",
-    "sha256": "3aa4c53349e651c91a02c37a4a33c7c02268d1cfd0ce9a70212bd2853a9f4182",
+    "sha256": "14882ea47239af765e1a26267ad711c61c3791070e5252409babc2aa8ca96b1b",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

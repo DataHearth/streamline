@@ -69,6 +69,11 @@
         "id": "12",
         "cat": "Books/Comics",
         "desc": "Cómics"
+      },
+      {
+        "id": "13",
+        "cat": "PC/Games",
+        "desc": "Juegos/ROMSets"
       }
     ],
     "modes": {
@@ -361,7 +366,7 @@
   },
   "source": {
     "path": "definitions/v11/milnueve-api.yml",
-    "sha256": "a7d8eface02a19f3d004311298ae4e5ce82492f61e98dc6cd60404b70b4eebda",
+    "sha256": "d49875cd457433c9e2fb02408614bdf12df210d40945abb0d510d87f320332ba",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

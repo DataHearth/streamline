@@ -63,7 +63,7 @@ definition deleted upstream disappears here too.
   schema read and `OldestSchemaVersion` (11) the oldest. v12 is v11 plus the `base64decode`
   and `base64encode` filters (Prowlarr's `WebEncoders.Base64Url*`: URL alphabet, no
   padding; the decoder takes the standard alphabet and padding too), and upstream puts a
-  file in `v12/` only when it needs them — at `8df0764` that is `blueroms` alone — while
+  file in `v12/` only when it needs them — at `8b78ad6` that is `blueroms` alone — while
   Prowlarr falls back to `v11/` file by file. `snapshot.Build` does the same: every
   directory in `snapshot.Prefixes()` is read and the newest copy of a name wins, its
   `source.path` naming the directory it came from. The sync fails when upstream's
@@ -87,9 +87,10 @@ definition deleted upstream disappears here too.
   recorded in `index.json`'s `skipped` with the reason, and printed**, never a failed sync.
   One broken upstream file must not block every other tracker's update.
 
-At `8df0764` (2026-10-09): 580 definitions (one of them from v12), 579 converted, 1 skipped — `1337x.yml`, an
-unbalanced `)` in a search-path template that Jackett's regex-driven template engine
-tolerates and Go's parser does not. The fix belongs upstream; do not teach the converter to
+At `8b78ad6` (2026-10-12): 580 definitions (one of them from v12), all converted. Until
+then `1337x.yml` was skipped for an unbalanced `)` in a search-path template that Jackett's
+regex-driven template engine tolerates and Go's parser does not; it was fixed upstream
+(Jackett/Jackett#17187), which is where such a fix belongs — do not teach the converter to
 guess at unbalanced parentheses.
 
 ## Runtime updates
@@ -559,13 +560,13 @@ Hence, and **never to be dropped**:
 - Every converted file has a `source` block — upstream path, sha256 of the original,
   `convert.Modified` — the "this file was changed" notice GPL-2 §2(a) / GPL-3 §5(a) ask for.
   The per-file date lives in the NOTICE (the upstream commit date), not in each file, so a
-  sync does not rewrite 579 files just to move a date.
+  sync does not rewrite every file just to move a date.
 - The runtime update, when it lands, runs the same `Convert` and must write the same
   provenance for what it fetched.
 
 ## Size
 
-The snapshot is ~6.4 MB of indented JSON (579 files) plus a ~330 KB index, embedded
+The snapshot is ~6.5 MB of indented JSON (580 files) plus a ~330 KB index, embedded
 uncompressed. That is deliberate: indented per-file JSON is what makes a sync reviewable as
 a diff. Compressing it at embed time is the lever if binary size ever matters; the
 committed form should stay diffable either way.

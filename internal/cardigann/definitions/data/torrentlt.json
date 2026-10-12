@@ -6,11 +6,11 @@
   "type": "private",
   "encoding": "UTF-8",
   "links": [
-    "https://torrent.lt/"
+    "https://torrent.ai/"
   ],
   "legacylinks": [
     "http://www.torrent.ai/",
-    "https://torrent.ai/"
+    "https://torrent.lt/"
   ],
   "caps": {
     "categorymappings": [
@@ -515,7 +515,7 @@
   },
   "source": {
     "path": "definitions/v11/torrentlt.yml",
-    "sha256": "6005e55fbd102354077b58721f242bb1c9ee3c23e37a97409fdca6ae1d233eee",
+    "sha256": "c13fb3205364b48570a0f1cb5f700c53ba2470f2cb14b3a700e3e87699c25ce8",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

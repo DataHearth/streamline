@@ -302,7 +302,7 @@
         "selector": "downloadUrl"
       },
       "category": {
-        "selector": "category"
+        "selector": "categorySlug"
       },
       "size": {
         "selector": "size"
@@ -339,7 +339,7 @@
         "optional": true
       },
       "imdb": {
-        "selector": "imdb",
+        "selector": "imdbId",
         "optional": true
       },
       "tmdbid": {
@@ -353,16 +353,16 @@
         "selector": "uploadvolumefactor"
       },
       "minimumratio": {
-        "text": "1.1"
+        "selector": "minimumratio"
       },
       "minimumseedtime": {
-        "text": "172800"
+        "selector": "minimumseedtime"
       }
     }
   },
   "source": {
     "path": "definitions/v11/ultrabits-api.yml",
-    "sha256": "8af582d0cd1351fef1849829e3e2cc5cdaea954781e3bd7f81b838a6e0b56177",
+    "sha256": "2335dbbffb6959487b631022f1c6c3ceabfc7f580a1f58d80db37904a04c29a4",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

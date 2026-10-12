@@ -236,6 +236,11 @@
         "desc": "Jogos: PS4"
       },
       {
+        "id": "64",
+        "cat": "Console",
+        "desc": "Jogos: PS5"
+      },
+      {
         "id": "50",
         "cat": "Console/PSP",
         "desc": "Jogos: PSP"
@@ -785,7 +790,7 @@
   },
   "source": {
     "path": "definitions/v11/amigosshare.yml",
-    "sha256": "0ba15f7e86257520141fc783e0a67e1893d095f0834483533516723b6c201d9f",
+    "sha256": "f5f19d630d58c779a5a18dd07ec6d6343d71c508a2cd66cce76fd216eeadc9d5",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   },
   "regex_net": true
