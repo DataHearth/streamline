@@ -149,8 +149,11 @@ func send(
 	if err != nil {
 		return fmt.Errorf("smtp data: %w", err)
 	}
+	// Closing w would send the terminating dot and deliver a truncated book;
+	// returning lets the deferred c.Close drop the connection mid-DATA, which
+	// makes the server discard the message.
 	if err := writeMessage(w, cfg.From, to, subject, atts); err != nil {
-		return errors.Join(fmt.Errorf("write message: %w", err), w.Close())
+		return fmt.Errorf("write message: %w", err)
 	}
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("smtp deliver: %w", err)

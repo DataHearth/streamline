@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/mail"
 	"strings"
+	"testing/iotest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -146,6 +147,24 @@ var _ = Describe("Mailer", Label("unit", "mailer"), func() {
 		seen, _ := f.auth()
 		Expect(seen).To(BeFalse())
 		Expect(f.captured()).To(BeEmpty())
+	})
+
+	It("aborts without delivering when an attachment fails mid-read", func() {
+		f := newFakeSMTP(false, false)
+		useServer(f, "none")
+		broken := Attachment{
+			Name: "a.epub",
+			Body: io.MultiReader(
+				bytes.NewReader(bytes.Repeat([]byte("x"), 4096)),
+				iotest.ErrReader(errors.New("disk gone")),
+			),
+			Size: 8192,
+		}
+
+		err := New().Send(ctx, "me@kindle.com", "Books", []Attachment{broken})
+
+		Expect(err).To(MatchError(ContainSubstring("disk gone")))
+		Consistently(f.captured, "300ms").Should(BeEmpty())
 	})
 
 	It("surfaces the server's rejection text", func() {
