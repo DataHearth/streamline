@@ -614,6 +614,65 @@ quality_profiles:
 		})
 	})
 
+	Describe("smtp", func() {
+		loadSMTP := func(body string) (*Config, error) {
+			GinkgoHelper()
+			dir := GinkgoT().TempDir()
+			dataDir := filepath.Join(dir, "data")
+			Expect(os.MkdirAll(dataDir, 0o755)).To(Succeed())
+			cfgFile := filepath.Join(dir, "config.yaml")
+			Expect(os.WriteFile(
+				cfgFile,
+				[]byte("data_dir: "+dataDir+"\n"+body),
+				0o600,
+			)).To(Succeed())
+			return Load(cfgFile)
+		}
+
+		It("defaults smtp to off on 587/starttls/25MB", func() {
+			cfg, err := loadSMTP("")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.SMTP.Enabled()).To(BeFalse())
+			Expect(cfg.SMTP.Port).To(Equal(uint16(587)))
+			Expect(cfg.SMTP.TLS).To(Equal("starttls"))
+			Expect(cfg.SMTP.MaxMessageBytes()).To(Equal(int64(25 << 20)))
+		})
+
+		It("refuses tls none to a non-loopback host", func() {
+			_, err := loadSMTP(`smtp:
+  host: smtp.example.com
+  tls: none
+  from: a@example.com
+`)
+			Expect(err).To(MatchError(ContainSubstring("smtp.tls")))
+		})
+
+		It("accepts tls none to a loopback host", func() {
+			for _, h := range []string{"localhost", "127.0.0.1", `"::1"`} {
+				_, err := loadSMTP("smtp:\n  host: " + h +
+					"\n  tls: none\n  from: a@example.com\n")
+				Expect(err).NotTo(HaveOccurred(), h)
+			}
+		})
+
+		It("requires from when host is set", func() {
+			_, err := loadSMTP("smtp:\n  host: smtp.example.com\n")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("reads smtp.password_file into SecretValue", func() {
+			pw := filepath.Join(GinkgoT().TempDir(), "smtp")
+			Expect(os.WriteFile(pw, []byte("hunter2\n"), 0o600)).To(Succeed())
+			cfg, err := loadSMTP(`smtp:
+  host: smtp.example.com
+  from: a@example.com
+  password_file: ` + pw + "\n")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(SecretValue(cfg.SMTP.Password, cfg.SMTP.PasswordFile)).
+				To(Equal("hunter2"))
+		})
+	})
+
 	Describe("transcoding", func() {
 		loadTranscoding := func(body string) (*Config, error) {
 			GinkgoHelper()

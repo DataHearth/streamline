@@ -675,6 +675,33 @@
         }
       }
     },
+    "smtp": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Outgoing mail relay used to send a book to a user's e-reader. File-only: restart required, never reachable through the config API. Empty host disables the feature.",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tls": {
+          "type": "string",
+          "enum": ["starttls", "implicit", "none"],
+          "description": "starttls upgrades a plain connection (port 587) and fails when the server does not offer it; implicit is TLS from the first byte (port 465); none is accepted only for a loopback host."
+        },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "password_file": { "type": "string" },
+        "from": {
+          "type": "string",
+          "description": "Sender address. Required when host is set."
+        },
+        "max_message_size_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Raw attachment bytes per email, before base64."
+        }
+      }
+    },
     "transcoding": {
       "type": "object",
       "additionalProperties": false,

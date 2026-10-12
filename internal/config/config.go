@@ -47,6 +47,7 @@ type Config struct {
 	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
 	Download    DownloadConfig    `koanf:"download"`
 	Transcoding TranscodingConfig `koanf:"transcoding"`
+	SMTP        SMTPConfig        `koanf:"smtp"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -373,6 +374,27 @@ func (c DownloadConfig) SelectionGraceDuration() time.Duration {
 		return d
 	}
 	return 10 * time.Minute
+}
+
+// SMTPConfig is the outgoing mail relay for sending books to a device. File-only:
+// it holds a secret, and secrets never go through /config/*.
+type SMTPConfig struct {
+	Host         string `koanf:"host"`
+	Port         uint16 `koanf:"port"          validate:"omitempty,min=1"`
+	TLS          string `koanf:"tls"           validate:"omitempty,oneof=starttls implicit none"`
+	Username     string `koanf:"username"`
+	Password     string `koanf:"password"      validate:"excluded_with=PasswordFile"`
+	PasswordFile string `koanf:"password_file" validate:"omitempty,excluded_with=Password,filepath"`
+	From         string `koanf:"from"          validate:"required_with=Host,omitempty,email"`
+	// MaxMessageSizeMB bounds the raw attachment bytes of one email, before
+	// base64.
+	MaxMessageSizeMB uint16 `koanf:"max_message_size_mb" validate:"min=1"`
+}
+
+func (c SMTPConfig) Enabled() bool { return c.Host != "" }
+
+func (c SMTPConfig) MaxMessageBytes() int64 {
+	return int64(c.MaxMessageSizeMB) << 20
 }
 
 // TranscodingConfig is the global switch and budget for the post-import
@@ -754,7 +776,22 @@ func (c *Config) checkInvariants() error {
 			v.MaxSizePercent,
 		))
 	}
+	if c.SMTP.Enabled() && c.SMTP.TLS == "none" && !isLoopbackHost(c.SMTP.Host) {
+		errs = append(errs, fmt.Errorf(
+			"smtp.tls %q sends credentials in clear: only a loopback smtp.host may use it, not %q",
+			c.SMTP.TLS,
+			c.SMTP.Host,
+		))
+	}
 	return errors.Join(errs...)
+}
+
+func isLoopbackHost(h string) bool {
+	if h == "localhost" {
+		return true
+	}
+	a, err := netip.ParseAddr(h)
+	return err == nil && a.IsLoopback()
 }
 
 // checkMusicBookProfiles checks each music and book profile's preferred entry
@@ -962,6 +999,14 @@ func defaults() map[string]any {
 		"transcoding.verify.min_size_percent": 5,
 		"transcoding.verify.health_check":     false,
 		"transcoding.verify.min_vmaf":         0,
+		"smtp.host":                           "",
+		"smtp.port":                           587,
+		"smtp.tls":                            "starttls",
+		"smtp.username":                       "",
+		"smtp.password":                       "",
+		"smtp.password_file":                  "",
+		"smtp.from":                           "",
+		"smtp.max_message_size_mb":            25,
 		"log.app.enabled":                     true,
 		"log.app.level":                       "info",
 		"log.app.format":                      "text",
@@ -1462,6 +1507,7 @@ func loadSecretFiles(c *Config) (map[string]string, error) {
 	read(c.Metadata.TMDBAPIKeyFile)
 	read(c.Metadata.TVDBAPIKeyFile)
 	read(c.Metadata.HardcoverAPIKeyFile)
+	read(c.SMTP.PasswordFile)
 	for _, o := range c.Auth.OIDC {
 		read(o.ClientSecretFile)
 	}

@@ -132,6 +132,12 @@ var _ = Describe("config.SchemaJSON", Label("unit", "config"), func() {
 		Expect(compiledSchema().Validate(any(doc))).To(HaveOccurred())
 	})
 
+	It("rejects an unknown smtp.tls value", func() {
+		doc := dumpedDefaultsDoc()
+		doc["smtp"].(map[string]any)["tls"] = "ssl"
+		Expect(compiledSchema().Validate(any(doc))).To(HaveOccurred())
+	})
+
 	It("rejects an invalid enum value", func() {
 		doc := dumpedDefaultsDoc()
 		doc["auth"].(map[string]any)["mode"] = "not-a-mode"
