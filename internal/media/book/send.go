@@ -24,6 +24,7 @@ const (
 	maxEmailAttachments = 25
 	bytesPerMB          = 1 << 20
 	reasonMissingFile   = "file is missing on disk"
+	reasonNoEbookFile   = "no ebook file"
 )
 
 var (
@@ -61,7 +62,7 @@ func Sendable(files []*ent.MediaFile, maxBytes int64) (*ent.MediaFile, string) {
 	}
 	if pick == nil {
 		if other == nil {
-			return nil, "no ebook file"
+			return nil, reasonNoEbookFile
 		}
 		format := other.Quality
 		if format == "" {
@@ -277,6 +278,11 @@ func (s *Service) SendSeries(
 			if statErr != nil {
 				reason = reasonMissingFile
 			}
+		}
+		// A volume the library does not hold was never going to be sent;
+		// listing it would bury the real refusals in a long series.
+		if reason == reasonNoEbookFile {
+			continue
 		}
 		if reason != "" {
 			plan.Skipped = append(plan.Skipped,

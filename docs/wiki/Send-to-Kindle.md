@@ -39,7 +39,7 @@ A book holding both EPUB and PDF sends the EPUB. Streamline does not convert any
 
 ## Sending a series
 
-A series send packs the hydrated, sendable volumes into as few emails as fit under the size limit, in volume order. The request answers at once with how many emails and volumes were queued and which volumes were skipped, with the reason for each (a CBZ volume, a missing file, a file over the limit).
+A series send packs the hydrated, sendable volumes into as few emails as fit under the size limit, in volume order. The request answers at once with how many emails and volumes were queued and which volumes were skipped, with the reason for each (a CBZ volume, a missing file, a file over the limit). Volumes you don't have an ebook for aren't listed.
 
 The emails are sent in the background. If one fails, nothing is shown in the interface: look for a `WARN` line from the book service in the logs (see [Observability and Logging](Observability-and-Logging)), which carries the SMTP server's reply. Sending a single book reports its failure on screen.
 

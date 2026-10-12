@@ -1999,7 +1999,9 @@ paths:
       description: |
         Plans the emails (volumes packed first-fit under the size and attachment limits), answers
          with the plan and sends in the background; a failed email is logged and the rest still
-         go out. Volumes with no sendable file are listed in `skipped`. Answers 422 `not_sendable`
+         go out. A volume holding an ebook that cannot be sent (wrong format, missing on disk,
+         over the size limit) is listed in `skipped`; a volume with no ebook file is left out.
+         Answers 422 `not_sendable`
          when no volume is sendable.
       tags: [books]
       responses:

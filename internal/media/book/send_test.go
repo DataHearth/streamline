@@ -204,7 +204,7 @@ var _ = Describe("sending", Label("unit", "book"), func() {
 	})
 
 	Describe("SendSeries", func() {
-		It("plans, skips and sends one packed email", func() {
+		It("packs one email and lists refusals, not unowned volumes", func() {
 			setup("me@kindle.com")
 			now := time.Now()
 			seed := func(hc uint32, pos float64, refreshed *time.Time) db.BookSeed {
@@ -221,13 +221,13 @@ var _ = Describe("sending", Label("unit", "book"), func() {
 				Monitor: "none", RefreshedAt: now,
 				Volumes: []db.BookSeed{
 					seed(1001, 1, &now), seed(1002, 2, &now), seed(1003, 3, &now),
-					seed(1004, 4, &now), seed(1005, 5, nil),
+					seed(1004, 4, &now), seed(1005, 5, nil), seed(1006, 6, &now),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			vols := f.reloadSeries(s.ID).Edges.Volumes
-			Expect(vols).To(HaveLen(5))
+			Expect(vols).To(HaveLen(6))
 			addFile(vols[0], writeFile(f.dir, "v1.epub", 10), "EPUB")
 			addFile(vols[1], writeFile(f.dir, "v2.epub", 10), "EPUB")
 			addFile(vols[2], writeFile(f.dir, "v3.cbz", 10), "CBZ")
