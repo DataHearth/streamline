@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/mail"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -385,7 +386,10 @@ type SMTPConfig struct {
 	Username     string `koanf:"username"`
 	Password     string `koanf:"password"      validate:"excluded_with=PasswordFile"`
 	PasswordFile string `koanf:"password_file" validate:"omitempty,excluded_with=Password,filepath"`
-	From         string `koanf:"from"          validate:"required_with=Host,omitempty,email"`
+	// From is checked in checkInvariants, not with the `email` tag: that tag
+	// demands a dotted domain and refuses streamline@localhost, the natural
+	// sender for a loopback relay.
+	From string `koanf:"from" validate:"required_with=Host"`
 	// MaxMessageSizeMB bounds the raw attachment bytes of one email, before
 	// base64.
 	MaxMessageSizeMB uint16 `koanf:"max_message_size_mb" validate:"min=1"`
@@ -782,6 +786,14 @@ func (c *Config) checkInvariants() error {
 			c.SMTP.TLS,
 			c.SMTP.Host,
 		))
+	}
+	if from := c.SMTP.From; from != "" {
+		if a, err := mail.ParseAddress(from); err != nil || a.Address != from {
+			errs = append(errs, fmt.Errorf(
+				"smtp.from %q must be a bare address like streamline@example.com",
+				c.SMTP.From,
+			))
+		}
 	}
 	return errors.Join(errs...)
 }

@@ -660,6 +660,21 @@ quality_profiles:
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("accepts a sender on a dotless domain like localhost", func() {
+			_, err := loadSMTP("smtp:\n  host: 127.0.0.1\n  tls: none\n" +
+				"  from: streamline@localhost\n")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("refuses a from that is not a bare address", func() {
+			for _, from := range []string{"not an address", "Streamline <s@example.com>"} {
+				_, err := loadSMTP(
+					"smtp:\n  host: smtp.example.com\n  from: \"" + from + "\"\n",
+				)
+				Expect(err).To(MatchError(ContainSubstring("smtp.from")), from)
+			}
+		})
+
 		It("reads smtp.password_file into SecretValue", func() {
 			pw := filepath.Join(GinkgoT().TempDir(), "smtp")
 			Expect(os.WriteFile(pw, []byte("hunter2\n"), 0o600)).To(Succeed())
