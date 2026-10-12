@@ -255,6 +255,27 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				},
 			)
 
+			It("drops an empty series the batch did not return", func() {
+				empty := seriesHit(39538, "Fondation")
+				empty.PrimaryBooks = new(uint32(0))
+				f.meta.EXPECT().LookupBooks(anyCtx, "Fondation").
+					Return([]metadata.BookLookupHit{foundation()}, nil).Once()
+				f.meta.EXPECT().LookupSeries(anyCtx, "Fondation").
+					Return([]metadata.BookLookupHit{empty}, nil).Once()
+				f.meta.EXPECT().
+					GetSeriesLookup(anyCtx, ids(5450, 10331, 39538, 60563)).
+					Return([]metadata.SeriesLookupRecord{
+						seriesRec(5450, "Foundation", 7),
+						seriesRec(10331, "Foundation (Chronological Order)", 7),
+						seriesRec(60563, "Greater Foundation Universe", 15),
+					}, nil).Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "Fondation", lookupAll)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hitIDs(hits)).NotTo(ContainElement("series:39538"))
+			})
+
 			It("lists a series only once, at its name-matched place", func() {
 				f.meta.EXPECT().LookupBooks(anyCtx, "foundation").
 					Return([]metadata.BookLookupHit{foundation()}, nil).Once()

@@ -173,7 +173,7 @@ func seriesHits(
 	placed := map[uint32]bool{}
 	for _, sr := range series {
 		rec := byID[sr.HardcoverID]
-		if placed[sr.HardcoverID] || (rec != nil && rec.PrimaryBooks == 0) {
+		if placed[sr.HardcoverID] || empty(sr, rec) {
 			continue
 		}
 		searched[sr.HardcoverID] = sr
@@ -211,6 +211,17 @@ func seriesHits(
 		rest = append(rest, seriesHit(sr, byID[sr.HardcoverID]))
 	}
 	return top, append(loose, rest...), nil
+}
+
+// empty reports a series with no primary volume, judged by the batch when it
+// returned the series and by the search document otherwise: Hardcover's search
+// index and its database drift apart, and the batch can miss a duplicate the
+// search still lists.
+func empty(sr metadata.BookLookupHit, rec *metadata.SeriesLookupRecord) bool {
+	if rec != nil {
+		return rec.PrimaryBooks == 0
+	}
+	return sr.PrimaryBooks != nil && *sr.PrimaryBooks == 0
 }
 
 type reachedSeries struct {

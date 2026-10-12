@@ -131,6 +131,9 @@ type BookLookupHit struct {
 	ImageURL    string
 	// Slug is a series hit's hardcover.app/series path segment.
 	Slug string
+	// PrimaryBooks is a series hit's primary_books_count as its search
+	// document states it, nil when the document omits it.
+	PrimaryBooks *uint32
 	// AlternativeTitles and SeriesIDs are a book hit's translations and series
 	// membership, as the search document carries them.
 	AlternativeTitles []string

@@ -84,7 +84,7 @@ type hcSeriesDoc struct {
 	Slug              string   `json:"slug"`
 	AuthorName        string   `json:"author_name"`
 	BooksCount        uint32   `json:"books_count"`
-	PrimaryBooksCount uint32   `json:"primary_books_count"`
+	PrimaryBooksCount *uint32  `json:"primary_books_count"`
 	IsCompleted       *bool    `json:"is_completed"`
 	Genres            []string `json:"genres"`
 }
@@ -213,13 +213,14 @@ func (h *Hardcover) LookupSeries(
 			continue
 		}
 		hit := BookLookupHit{
-			HardcoverID: uint32(d.ID),
-			Type:        "series",
-			Title:       d.Name,
-			Slug:        d.Slug,
-			Author:      d.AuthorName,
-			Volumes:     cmpOr(d.PrimaryBooksCount, d.BooksCount),
-			Genres:      d.Genres,
+			HardcoverID:  uint32(d.ID),
+			Type:         "series",
+			Title:        d.Name,
+			Slug:         d.Slug,
+			Author:       d.AuthorName,
+			Volumes:      cmpOr(derefU32(d.PrimaryBooksCount), d.BooksCount),
+			PrimaryBooks: d.PrimaryBooksCount,
+			Genres:       d.Genres,
 		}
 		if d.IsCompleted != nil {
 			ongoing := !*d.IsCompleted
