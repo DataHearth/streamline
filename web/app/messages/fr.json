@@ -2597,5 +2597,20 @@
 	"dash_unit_releases_other": "sorties",
 	"dash_unit_titles_one": "titre",
 	"dash_unit_titles_other": "titres",
-	"dash_open_library": "Ouvrir {name}"
+	"dash_open_library": "Ouvrir {name}",
+	"account_device_title": "Envoyer vers Kindle / liseuse",
+	"account_device_help": "Envoyez vos livres EPUB et PDF par courriel vers votre appareil.",
+	"account_device_email": "Courriel de l'appareil",
+	"account_device_placeholder": "nom@kindle.com",
+	"account_device_approve": "Ajoutez {from} à la liste Amazon des expéditeurs de documents personnels approuvés.",
+	"account_device_unconfigured": "L'envoi n'est pas configuré sur ce serveur. Un administrateur renseigne smtp dans le fichier de configuration.",
+	"account_device_saved": "Courriel de l'appareil enregistré",
+	"books_send_to_device": "Envoyer vers Kindle",
+	"books_send_sent": "Envoyé à {email}",
+	"books_send_series": "Envoyer la série",
+	"books_send_series_no_device": "Renseignez d'abord le courriel de votre appareil dans votre compte.",
+	"books_send_series_started": "Envoi de {emails} courriel(s) ({volumes} tomes)",
+	"books_send_series_skipped": "{n} ignoré(s)",
+	"books_send_series_details": "Détails",
+	"books_send_series_skipped_title": "Tomes non envoyés"
 }

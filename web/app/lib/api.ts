@@ -53,6 +53,7 @@ const BY_CODE: Record<string, () => string> = {
 	register_failed: i18n.err_register_failed,
 	rate_limited: i18n.err_rate_limited,
 	no_quality_profile: i18n.err_no_quality_profile,
+	smtp_not_configured: i18n.account_device_unconfigured,
 	series_volume: i18n.err_series_volume,
 	bad_request: i18n.err_bad_request,
 	body_too_large: i18n.err_body_too_large,
@@ -112,6 +113,9 @@ export function errorText(err: unknown, fallback?: string): string {
 		// the request body, which sent an operator hunting through releases for
 		// a reason this message had already named.
 		if (code === "grab_rejected" && err.message) return err.message;
+		// A send's refusal names the reason: the file's format, the SMTP server's
+		// own reply. The generic 422 or 502 would hide it.
+		if ((code === "send_failed" || code === "not_sendable" || code === "no_device_email") && err.message) return err.message;
 		// A 429 that says how long to wait: the sentence says it too (a login,
 		// a Hardcover add or approve).
 		if (err.status === 429 && err.retryAfter) return waitText(err.retryAfter);

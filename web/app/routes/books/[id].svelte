@@ -2,7 +2,7 @@
 	import { onMount, tick } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
-	import { LoaderCircle, Radar, Search } from "@lucide/svelte";
+	import { LoaderCircle, Radar, Search, Send } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
@@ -107,6 +107,12 @@
 				: f
 					? i18n.books_search_started({ title: book.title, format: formatLabel(f).toLowerCase() })
 					: i18n.books_search_all_started({ title: book.title }),
+	}));
+	const send = createAction(() => ({
+		run: () => api(`/books/${id}/send`, { method: "POST" }),
+		refresh: [],
+		failed: () => i18n.common_update_failed(),
+		succeeded: () => i18n.books_send_sent({ email: auth.user?.device_email ?? "" }),
 	}));
 	const search = (f: BookFormat) => searchNow.mutate(f);
 	const searchAll = () => searchNow.mutate(undefined);
@@ -299,6 +305,18 @@
 				/>
 			{/each}
 		</div>
+		{#if book.ebook_send}
+			<button
+				type="button"
+				onclick={() => send.mutate()}
+				disabled={!book.ebook_send.ok || send.isPending}
+				title={book.ebook_send.ok ? undefined : book.ebook_send.reason}
+				class="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-border-strong bg-bg-elevated px-4 text-[14px] font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50 lg:h-9 lg:min-h-0"
+			>
+				<Send size={16} aria-hidden="true" />
+				{i18n.books_send_to_device()}
+			</button>
+		{/if}
 
 		<div class="mt-8 grid gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10">
 			<section class="min-w-0" aria-labelledby="book-synopsis">

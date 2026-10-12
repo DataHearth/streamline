@@ -9,6 +9,7 @@
 		RefreshCw,
 		Headphones,
 		BookMarked,
+		Send,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "@lib/api";
@@ -25,6 +26,7 @@
 	import SessionsCard from "./SessionsCard.svelte";
 	import JWTRotateCard from "./JWTRotateCard.svelte";
 	import AppAccessCard from "./AppAccessCard.svelte";
+	import DeviceEmailCard from "./DeviceEmailCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Touch account: the same four sections, but as rows that state their
@@ -71,6 +73,7 @@
 		| "sessions"
 		| "subsonic"
 		| "opds"
+		| "device"
 		| "jwt";
 
 	let openRow = $state<RowKey | null>(null);
@@ -83,6 +86,7 @@
 		sessions: i18n.account_active_sessions(),
 		subsonic: "Subsonic",
 		opds: "OPDS",
+		device: i18n.account_device_title(),
 		jwt: i18n.account_rotate_key_long(),
 	});
 
@@ -154,6 +158,12 @@
 					Icon: BookMarked,
 					label: "OPDS",
 					value: onOff(opds.data),
+				},
+				{
+					key: "device" as RowKey,
+					Icon: Send,
+					label: i18n.account_device_title(),
+					value: auth.user?.device_email ?? "",
 				},
 			],
 		},
@@ -254,6 +264,8 @@
 		<AppAccessCard kind="subsonic" />
 	{:else if openRow === "opds"}
 		<AppAccessCard kind="opds" />
+	{:else if openRow === "device"}
+		<DeviceEmailCard />
 	{:else if openRow === "jwt"}
 		<JWTRotateCard />
 	{/if}

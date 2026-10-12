@@ -180,6 +180,13 @@ export type Book = {
 	formats: FormatSlot[];
 	editions: Edition[];
 	series?: { id: number; title: string; number: number };
+	// Whether the ebook can be emailed to the caller's device, and why not.
+	ebook_send?: { ok: boolean; reason?: string };
+};
+export type SeriesSendPlan = {
+	emails: number;
+	sent_volumes: number;
+	skipped: { book_id: number; title: string; reason: string }[];
 };
 
 export type Volume = {

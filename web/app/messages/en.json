@@ -2597,5 +2597,20 @@
 	"dash_unit_releases_other": "releases",
 	"dash_unit_titles_one": "title",
 	"dash_unit_titles_other": "titles",
-	"dash_open_library": "Open {name}"
+	"dash_open_library": "Open {name}",
+	"account_device_title": "Send to Kindle / e-reader",
+	"account_device_help": "Email EPUB and PDF books to your device.",
+	"account_device_email": "Device email",
+	"account_device_placeholder": "name@kindle.com",
+	"account_device_approve": "Add {from} to Amazon's Approved Personal Document E-mail List.",
+	"account_device_unconfigured": "Sending isn't set up on this server. An admin configures smtp in the config file.",
+	"account_device_saved": "Device email saved",
+	"books_send_to_device": "Send to Kindle",
+	"books_send_sent": "Sent to {email}",
+	"books_send_series": "Send series",
+	"books_send_series_no_device": "Add your device email on the Account page first.",
+	"books_send_series_started": "Sending {emails} email(s) ({volumes} volumes)",
+	"books_send_series_skipped": "{n} skipped",
+	"books_send_series_details": "Details",
+	"books_send_series_skipped_title": "Volumes not sent"
 }

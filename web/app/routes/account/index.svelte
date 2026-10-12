@@ -8,6 +8,7 @@
 	import JWTRotateCard from "@components/account/JWTRotateCard.svelte";
 	import LanguageCard from "@components/account/LanguageCard.svelte";
 	import AppAccessCard from "@components/account/AppAccessCard.svelte";
+	import DeviceEmailCard from "@components/account/DeviceEmailCard.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -110,6 +111,7 @@
 	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 		<AppAccessCard kind="subsonic" />
 		<AppAccessCard kind="opds" />
+		<DeviceEmailCard />
 	</div>
 {/snippet}
 

@@ -800,6 +800,10 @@ export type User = {
 	role: UserRole;
 	auth_method: AuthMethod;
 	display_name?: string;
+	// The e-reader's send-by-email address; empty when unset.
+	device_email?: string;
+	// Only /auth/me fills this; admin user lists leave it out.
+	send?: { configured: boolean; from: string };
 	created_at: string;
 	failed_login_count?: number;
 	locked_until?: string | null;

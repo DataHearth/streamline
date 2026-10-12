@@ -2,13 +2,14 @@
 	import { onMount } from "svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
-	import { Search } from "@lucide/svelte";
+	import { Search, Send } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { cn } from "@lib/cn";
 	import { formatDate, formatDateShort, formatRelative } from "@lib/dates";
 	import { bookPosterUrl } from "@lib/posters";
+	import Dialog from "@components/modals/Dialog.svelte";
 	import MediaHero from "@components/shared/MediaHero.svelte";
 	import MonitorSelect from "@components/shared/MonitorSelect.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
@@ -28,8 +29,10 @@
 		personPhoto,
 		volumeLabel,
 		type BookSeries,
+		type SeriesSendPlan,
 		type SeriesMonitor,
 	} from "@lib/music-books";
+	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Where a stacked BD or manga card leads: monitoring and edition are set
@@ -81,6 +84,26 @@
 		failed: searchFailed,
 		succeeded: () => (s ? i18n.music_search_started({ title: s.title }) : undefined),
 	}));
+	let skipped = $state<SeriesSendPlan["skipped"]>([]);
+	let skippedOpen = $state(false);
+	const sendSeries = createAction<void, SeriesSendPlan>(() => ({
+		run: () => api<SeriesSendPlan>(`/books/series/${id}/send`, { method: "POST" }),
+		refresh: [],
+		failed: () => i18n.common_update_failed(),
+		then: (_, plan) => {
+			const list = plan.skipped ?? [];
+			const head = i18n.books_send_series_started({ emails: String(plan.emails), volumes: String(plan.sent_volumes) });
+			if (list.length === 0) {
+				toast.ok(head);
+				return;
+			}
+			skipped = list;
+			toast.ok(`${head} — ${i18n.books_send_series_skipped({ n: String(list.length) })}`, {
+				action: { label: i18n.books_send_series_details(), onClick: () => (skippedOpen = true) },
+			});
+		},
+	}));
+	let noDevice = $derived(!auth.user?.device_email);
 	const searchMissing = () => searchNow.mutate();
 
 	let meta = $derived.by(() => {
@@ -192,6 +215,18 @@
 				</div>
 			{/snippet}
 			{#snippet actions()}
+				{#if auth.user?.send?.configured}
+					<button
+						type="button"
+						onclick={() => sendSeries.mutate()}
+						disabled={noDevice || sendSeries.isPending}
+						title={noDevice ? i18n.books_send_series_no_device() : undefined}
+						class="inline-flex h-11 w-fit items-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-4 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<Send size={16} aria-hidden="true" />
+						{i18n.books_send_series()}
+					</button>
+				{/if}
 				{#if canEdit}
 					<!-- Two lines from md, as on the book page: what the series follows
 					     (label, select, bookmark), then the search and the menu. With
@@ -314,3 +349,17 @@
 		{/if}
 	</div>
 {/if}
+
+<Dialog
+	open={skippedOpen}
+	title={i18n.books_send_series_skipped_title()}
+	size="lg"
+	onClose={() => (skippedOpen = false)}
+	actions={[{ label: i18n.common_close(), variant: "ghost", autofocus: true }]}
+>
+	<ul class="grid gap-1.5 text-sm text-fg-muted">
+		{#each skipped as sk (sk.book_id)}
+			<li><span class="text-fg">{sk.title}</span> — {sk.reason}</li>
+		{/each}
+	</ul>
+</Dialog>
