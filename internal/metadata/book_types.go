@@ -98,6 +98,8 @@ type BookRecord struct {
 type SeriesVolumeRef struct {
 	Position        float64
 	BookHardcoverID uint32
+	UsersCount      uint32
+	Compilation     bool
 }
 
 // SeriesRecord is a series skeleton: the row and the (position, book id) pairs
@@ -105,6 +107,7 @@ type SeriesVolumeRef struct {
 type SeriesRecord struct {
 	HardcoverID       uint32
 	Name              string
+	Slug              string
 	Description       string
 	Completed         bool
 	PrimaryBooks      uint32
@@ -126,6 +129,45 @@ type BookLookupHit struct {
 	Ongoing     *bool
 	Genres      []string
 	ImageURL    string
+	// Slug is a series hit's hardcover.app/series path segment.
+	Slug string
+	// AlternativeTitles, SeriesIDs and FeaturedSeries are a book hit's
+	// translations and series membership, as the search document carries them.
+	AlternativeTitles []string
+	SeriesIDs         []uint32
+	FeaturedSeries    *LookupSeriesRef
+}
+
+// LookupSeriesRef is the series a book search document features.
+type LookupSeriesRef struct {
+	ID           uint32
+	Name         string
+	Slug         string
+	Position     float64
+	PrimaryBooks uint32
+	Books        uint32
+}
+
+// SeriesLookupVolume is one numbered entry of a series in the batched lookup,
+// with what the add path's winner rule reads.
+type SeriesLookupVolume struct {
+	Position        float64
+	BookHardcoverID uint32
+	UsersCount      uint32
+	Compilation     bool
+	ImageURL        string
+}
+
+// SeriesLookupRecord is one series of the batched lookup read. Volumes are in
+// position order and may hold several books at one position.
+type SeriesLookupRecord struct {
+	HardcoverID  uint32
+	Name         string
+	Slug         string
+	PrimaryBooks uint32
+	Books        uint32
+	AuthorName   string
+	Volumes      []SeriesLookupVolume
 }
 
 // BookSearchResult is a Hardcover book search hit, used to match scanned
@@ -155,4 +197,8 @@ type BookProvider interface {
 	GetBooksFresh(ctx context.Context, ids []uint32) ([]*BookRecord, error)
 	// GetSeries returns the series skeleton in one request; nil when unknown.
 	GetSeries(ctx context.Context, id uint32) (*SeriesRecord, error)
+	// GetSeriesLookup reads many series in one request, memoised for a few
+	// minutes per id set. The answer is in ascending id order; an unknown id
+	// is simply absent.
+	GetSeriesLookup(ctx context.Context, ids []uint32) ([]SeriesLookupRecord, error)
 }

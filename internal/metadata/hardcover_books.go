@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -72,11 +73,25 @@ type hcBookDoc struct {
 	ReleaseYear uint16   `json:"release_year"`
 	Image       hcImage  `json:"image"`
 	Genres      []string `json:"genres"`
+
+	AlternativeTitles []string `json:"alternative_titles"`
+	SeriesIDs         []hcID   `json:"series_ids"`
+	FeaturedSeries    *struct {
+		Position float64 `json:"position"`
+		Series   struct {
+			ID                hcID   `json:"id"`
+			Name              string `json:"name"`
+			Slug              string `json:"slug"`
+			PrimaryBooksCount uint32 `json:"primary_books_count"`
+			BooksCount        uint32 `json:"books_count"`
+		} `json:"series"`
+	} `json:"featured_series"`
 }
 
 type hcSeriesDoc struct {
 	ID                hcID     `json:"id"`
 	Name              string   `json:"name"`
+	Slug              string   `json:"slug"`
 	AuthorName        string   `json:"author_name"`
 	BooksCount        uint32   `json:"books_count"`
 	PrimaryBooksCount uint32   `json:"primary_books_count"`
@@ -160,6 +175,23 @@ func (h *Hardcover) LookupBooks(
 			Year:        d.ReleaseYear,
 			Genres:      d.Genres,
 			ImageURL:    string(d.Image),
+
+			AlternativeTitles: d.AlternativeTitles,
+		}
+		for _, id := range d.SeriesIDs {
+			if id != 0 {
+				hit.SeriesIDs = append(hit.SeriesIDs, uint32(id))
+			}
+		}
+		if fs := d.FeaturedSeries; fs != nil && fs.Series.ID != 0 {
+			hit.FeaturedSeries = &LookupSeriesRef{
+				ID:           uint32(fs.Series.ID),
+				Name:         fs.Series.Name,
+				Slug:         fs.Series.Slug,
+				Position:     fs.Position,
+				PrimaryBooks: fs.Series.PrimaryBooksCount,
+				Books:        fs.Series.BooksCount,
+			}
 		}
 		if len(d.AuthorNames) > 0 {
 			hit.Author = strings.Join(
@@ -204,6 +236,7 @@ func (h *Hardcover) LookupSeries(
 			HardcoverID: uint32(d.ID),
 			Type:        "series",
 			Title:       d.Name,
+			Slug:        d.Slug,
 			Author:      d.AuthorName,
 			Volumes:     cmpOr(d.PrimaryBooksCount, d.BooksCount),
 			Genres:      d.Genres,
@@ -760,10 +793,11 @@ func (h *Hardcover) getBooks(
 const hcSeriesQuery = `
 query ($id: Int!) {
   series(where: {id: {_eq: $id}}) {
-    id name description is_completed primary_books_count books_count
+    id name slug description is_completed primary_books_count books_count
     author { id name cached_image }
     book_series(where: {position: {_is_null: false}}, order_by: {position: asc}, limit: 500) {
       position book_id
+      book { users_count compilation }
     }
   }
 }`
@@ -779,6 +813,7 @@ func (h *Hardcover) GetSeries(
 		Series []struct {
 			ID                uint32  `json:"id"`
 			Name              string  `json:"name"`
+			Slug              string  `json:"slug"`
 			Description       *string `json:"description"`
 			IsCompleted       *bool   `json:"is_completed"`
 			PrimaryBooksCount *uint32 `json:"primary_books_count"`
@@ -791,6 +826,10 @@ func (h *Hardcover) GetSeries(
 			BookSeries []struct {
 				Position *float64 `json:"position"`
 				BookID   uint32   `json:"book_id"`
+				Book     *struct {
+					UsersCount  *uint32 `json:"users_count"`
+					Compilation *bool   `json:"compilation"`
+				} `json:"book"`
 			} `json:"book_series"`
 		} `json:"series"`
 	}
@@ -806,6 +845,7 @@ func (h *Hardcover) GetSeries(
 	rec := &SeriesRecord{
 		HardcoverID: row.ID,
 		Name:        strings.TrimSpace(row.Name),
+		Slug:        strings.TrimSpace(row.Slug),
 		Description: derefStr(row.Description),
 		Completed:   row.IsCompleted != nil && *row.IsCompleted,
 	}
@@ -826,9 +866,120 @@ func (h *Hardcover) GetSeries(
 			continue
 		}
 		seenBook[v.BookID] = true
-		rec.Volumes = append(rec.Volumes, SeriesVolumeRef{
-			Position: *v.Position, BookHardcoverID: v.BookID,
-		})
+		ref := SeriesVolumeRef{Position: *v.Position, BookHardcoverID: v.BookID}
+		if v.Book != nil {
+			ref.UsersCount = derefU32(v.Book.UsersCount)
+			ref.Compilation = v.Book.Compilation != nil && *v.Book.Compilation
+		}
+		rec.Volumes = append(rec.Volumes, ref)
 	}
 	return rec, nil
+}
+
+func derefU32(p *uint32) uint32 {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+// hcSeriesLookupQuery reads the volumes' cached_image, not image: image is a
+// relation, one level past the depth limit under series > book_series > book.
+// The limit leaves room for the same position to hold many translations.
+const hcSeriesLookupQuery = `
+query ($ids: [Int!]!) {
+  series(where: {id: {_in: $ids}}) {
+    id name slug primary_books_count books_count
+    author { id name }
+    book_series(where: {position: {_is_null: false}}, order_by: {position: asc}, limit: 50) {
+      position
+      book { id users_count compilation cached_image }
+    }
+  }
+}`
+
+// GetSeriesLookup is the add flow's series read: one request for every
+// candidate series, memoised per sorted id set.
+func (h *Hardcover) GetSeriesLookup(
+	ctx context.Context,
+	ids []uint32,
+) ([]SeriesLookupRecord, error) {
+	ctx, span := tracer.Start(ctx, "metadata.hardcover.get_series_lookup")
+	defer span.End()
+
+	sorted := slices.Clone(ids)
+	slices.Sort(sorted)
+	sorted = slices.Compact(sorted)
+	if len(sorted) == 0 {
+		return nil, nil
+	}
+	parts := make([]string, len(sorted))
+	for i, id := range sorted {
+		parts[i] = strconv.FormatUint(uint64(id), 10)
+	}
+	key := strings.Join(parts, ",")
+	if recs, ok := h.seriesLookups.get(key); ok {
+		return recs, nil
+	}
+
+	var payload struct {
+		Series []struct {
+			ID                hcID    `json:"id"`
+			Name              string  `json:"name"`
+			Slug              string  `json:"slug"`
+			PrimaryBooksCount *uint32 `json:"primary_books_count"`
+			BooksCount        *uint32 `json:"books_count"`
+			Author            *struct {
+				Name string `json:"name"`
+			} `json:"author"`
+			BookSeries []struct {
+				Position *float64 `json:"position"`
+				Book     *struct {
+					ID          hcID    `json:"id"`
+					UsersCount  *uint32 `json:"users_count"`
+					Compilation *bool   `json:"compilation"`
+					CachedImage hcImage `json:"cached_image"`
+				} `json:"book"`
+			} `json:"book_series"`
+		} `json:"series"`
+	}
+	if err := h.query(
+		ctx, hcSeriesLookupQuery, map[string]any{"ids": sorted}, &payload,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	recs := make([]SeriesLookupRecord, 0, len(payload.Series))
+	for _, row := range payload.Series {
+		if row.ID == 0 {
+			continue
+		}
+		rec := SeriesLookupRecord{
+			HardcoverID:  uint32(row.ID),
+			Name:         strings.TrimSpace(row.Name),
+			Slug:         strings.TrimSpace(row.Slug),
+			PrimaryBooks: derefU32(row.PrimaryBooksCount),
+			Books:        derefU32(row.BooksCount),
+		}
+		if row.Author != nil {
+			rec.AuthorName = strings.TrimSpace(row.Author.Name)
+		}
+		for _, v := range row.BookSeries {
+			if v.Position == nil || v.Book == nil || v.Book.ID == 0 {
+				continue
+			}
+			rec.Volumes = append(rec.Volumes, SeriesLookupVolume{
+				Position:        *v.Position,
+				BookHardcoverID: uint32(v.Book.ID),
+				UsersCount:      derefU32(v.Book.UsersCount),
+				Compilation:     v.Book.Compilation != nil && *v.Book.Compilation,
+				ImageURL:        string(v.Book.CachedImage),
+			})
+		}
+		recs = append(recs, rec)
+	}
+	slices.SortFunc(recs, func(a, b SeriesLookupRecord) int {
+		return cmp.Compare(a.HardcoverID, b.HardcoverID)
+	})
+	h.seriesLookups.put(key, recs, hcLookupTTL)
+	return recs, nil
 }

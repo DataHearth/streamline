@@ -65,8 +65,9 @@ type Hardcover struct {
 	budgetDay time.Time
 	used      int
 
-	lookups memo[[]BookLookupHit]
-	books   memo[*BookRecord]
+	lookups       memo[[]BookLookupHit]
+	seriesLookups memo[[]SeriesLookupRecord]
+	books         memo[*BookRecord]
 }
 
 func NewHardcover() (*Hardcover, error) {

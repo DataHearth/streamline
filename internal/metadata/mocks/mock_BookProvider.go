@@ -317,6 +317,74 @@ func (_c *MockBookProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// GetSeriesLookup provides a mock function for the type MockBookProvider
+func (_mock *MockBookProvider) GetSeriesLookup(ctx context.Context, ids []uint32) ([]metadata.SeriesLookupRecord, error) {
+	ret := _mock.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSeriesLookup")
+	}
+
+	var r0 []metadata.SeriesLookupRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) ([]metadata.SeriesLookupRecord, error)); ok {
+		return returnFunc(ctx, ids)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []uint32) []metadata.SeriesLookupRecord); ok {
+		r0 = returnFunc(ctx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]metadata.SeriesLookupRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []uint32) error); ok {
+		r1 = returnFunc(ctx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBookProvider_GetSeriesLookup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSeriesLookup'
+type MockBookProvider_GetSeriesLookup_Call struct {
+	*mock.Call
+}
+
+// GetSeriesLookup is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []uint32
+func (_e *MockBookProvider_Expecter) GetSeriesLookup(ctx any, ids any) *MockBookProvider_GetSeriesLookup_Call {
+	return &MockBookProvider_GetSeriesLookup_Call{Call: _e.mock.On("GetSeriesLookup", ctx, ids)}
+}
+
+func (_c *MockBookProvider_GetSeriesLookup_Call) Run(run func(ctx context.Context, ids []uint32)) *MockBookProvider_GetSeriesLookup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []uint32
+		if args[1] != nil {
+			arg1 = args[1].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBookProvider_GetSeriesLookup_Call) Return(seriesLookupRecords []metadata.SeriesLookupRecord, err error) *MockBookProvider_GetSeriesLookup_Call {
+	_c.Call.Return(seriesLookupRecords, err)
+	return _c
+}
+
+func (_c *MockBookProvider_GetSeriesLookup_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) ([]metadata.SeriesLookupRecord, error)) *MockBookProvider_GetSeriesLookup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LookupBooks provides a mock function for the type MockBookProvider
 func (_mock *MockBookProvider) LookupBooks(ctx context.Context, query string) ([]metadata.BookLookupHit, error) {
 	ret := _mock.Called(ctx, query)

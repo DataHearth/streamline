@@ -175,7 +175,47 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		)
 	})
 
+	Describe("LookupBooks series derivation fields", func() {
+		It("reads alternative titles, series ids and the featured series", func() {
+			hc.client.Transport = srv.transport(
+				`{"data":{"search":{"results":{"hits":[
+			  {"document":{"id":"188628","title":"Foundation","author_names":["Isaac Asimov"],
+			   "alternative_titles":["Fondation","Fundação"],
+			   "series_ids":[5450,"10331",60563],
+			   "featured_series":{"position":1,"series":{"id":5450,"name":"Foundation","slug":"foundation","primary_books_count":7,"books_count":9}}}},
+			  {"document":{"id":"5","title":"Standalone"}}]}}}}`,
+			)
+
+			hits, err := hc.LookupBooks(ctx, "Fondation")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits).To(HaveLen(2))
+			Expect(
+				hits[0].AlternativeTitles,
+			).To(Equal([]string{"Fondation", "Fundação"}))
+			Expect(hits[0].SeriesIDs).To(Equal([]uint32{5450, 10331, 60563}))
+			Expect(hits[0].FeaturedSeries).To(Equal(&LookupSeriesRef{
+				ID: 5450, Name: "Foundation", Slug: "foundation",
+				Position: 1, PrimaryBooks: 7, Books: 9,
+			}))
+			Expect(hits[1].AlternativeTitles).To(BeEmpty())
+			Expect(hits[1].SeriesIDs).To(BeEmpty())
+			Expect(hits[1].FeaturedSeries).To(BeNil())
+		})
+	})
+
 	Describe("LookupSeries", func() {
+		It("reads the slug", func() {
+			hc.client.Transport = srv.transport(
+				`{"data":{"search":{"results":{"hits":[
+				  {"document":{"id":"5450","name":"Foundation","slug":"foundation","primary_books_count":7}}]}}}}`,
+			)
+
+			hits, err := hc.LookupSeries(ctx, "foundation")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hits[0].Slug).To(Equal("foundation"))
+		})
 		It("prefers the primary book count and reads is_completed", func() {
 			hc.client.Transport = srv.transport(
 				`{"data":{"search":{"results":{"hits":[
@@ -531,7 +571,117 @@ var _ = Describe("Hardcover provider", Label("unit", "metadata"), func() {
 		})
 	})
 
+	Describe("GetSeriesLookup", func() {
+		const body = `{"data":{"series":[
+		  {"id": 60563, "name": "Greater Foundation Universe", "slug": "greater-foundation-universe",
+		   "primary_books_count": 15, "books_count": 20,
+		   "author": {"id": 9, "name": "Isaac Asimov"},
+		   "book_series": [{"position": 1, "book": {"id": 11, "users_count": 50, "compilation": false, "cached_image": {"url": "https://img/11.jpg"}}}]},
+		  {"id": 5450, "name": "Foundation", "slug": "foundation",
+		   "primary_books_count": 7, "books_count": 9,
+		   "author": {"id": 9, "name": "Isaac Asimov"},
+		   "book_series": [
+		     {"position": 1, "book": {"id": 21, "users_count": 10, "compilation": true, "cached_image": "https://img/21.jpg"}},
+		     {"position": 1, "book": {"id": 22, "users_count": null, "compilation": null, "cached_image": null}},
+		     {"position": 2, "book": null}]}]}}`
+
+		It("reads many series in one request, ordered by id", func() {
+			hc.client.Transport = srv.transport(body)
+
+			recs, err := hc.GetSeriesLookup(ctx, []uint32{60563, 5450, 5450})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(srv.queries).To(HaveLen(1))
+			Expect(srv.queries[0]).To(ContainSubstring("book_series("))
+			Expect(srv.queries[0]).To(ContainSubstring("slug"))
+			Expect(
+				srv.vars[0]["ids"],
+			).To(Equal([]any{float64(5450), float64(60563)}))
+			Expect(recs).To(HaveLen(2))
+			Expect(recs[0]).To(Equal(SeriesLookupRecord{
+				HardcoverID: 5450, Name: "Foundation", Slug: "foundation",
+				PrimaryBooks: 7, Books: 9, AuthorName: "Isaac Asimov",
+				Volumes: []SeriesLookupVolume{
+					{
+						Position:        1,
+						BookHardcoverID: 21,
+						UsersCount:      10,
+						Compilation:     true,
+						ImageURL:        "https://img/21.jpg",
+					},
+					{Position: 1, BookHardcoverID: 22},
+				},
+			}))
+			Expect(recs[1].HardcoverID).To(Equal(uint32(60563)))
+			Expect(recs[1].Slug).To(Equal("greater-foundation-universe"))
+			Expect(recs[1].Volumes).To(Equal([]SeriesLookupVolume{
+				{
+					Position:        1,
+					BookHardcoverID: 11,
+					UsersCount:      50,
+					ImageURL:        "https://img/11.jpg",
+				},
+			}))
+		})
+
+		It("memoises per sorted id set", func() {
+			hc.client.Transport = srv.transport(body)
+
+			_, err := hc.GetSeriesLookup(ctx, []uint32{60563, 5450})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = hc.GetSeriesLookup(ctx, []uint32{5450, 60563})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(srv.queries).To(HaveLen(1))
+
+			_, err = hc.GetSeriesLookup(ctx, []uint32{5450})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(srv.queries).To(HaveLen(2))
+		})
+
+		It("sends nothing for no ids", func() {
+			hc.client.Transport = srv.transport(body)
+			recs, err := hc.GetSeriesLookup(ctx, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recs).To(BeEmpty())
+			Expect(srv.queries).To(BeEmpty())
+		})
+
+		It("surfaces a Hardcover error without memoising it", func() {
+			hc.client.Transport = mbRoundTripper(
+				func(*http.Request) (*http.Response, error) {
+					return jsonResponse(200, `{"errors":[{"message":"boom"}]}`), nil
+				},
+			)
+			_, err := hc.GetSeriesLookup(ctx, []uint32{1})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("GetSeries", func() {
+		It("reads the slug and each volume's readers and compilation flag", func() {
+			hc.client.Transport = srv.transport(`{"data":{"series":[{
+			  "id": 3, "name": "One Piece", "slug": "one-piece",
+			  "book_series": [
+			    {"position": 1, "book_id": 201, "book": {"users_count": 40, "compilation": true}},
+			    {"position": 2, "book_id": 202, "book": null}]}]}}`)
+
+			sk, err := hc.GetSeries(ctx, 3)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(srv.queries[0]).To(ContainSubstring("slug"))
+			Expect(srv.queries[0]).To(ContainSubstring("users_count"))
+			Expect(sk.Slug).To(Equal("one-piece"))
+			Expect(sk.Volumes).To(Equal([]SeriesVolumeRef{
+				{
+					Position:        1,
+					BookHardcoverID: 201,
+					UsersCount:      40,
+					Compilation:     true,
+				},
+				{Position: 2, BookHardcoverID: 202},
+			}))
+		})
+
 		It("reads the skeleton in one request", func() {
 			hc.client.Transport = srv.transport(`{"data":{"series":[{
 			  "id": 3, "name": "One Piece", "description": "Pirates", "is_completed": false,
