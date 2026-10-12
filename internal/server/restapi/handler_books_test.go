@@ -135,6 +135,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 								Type:        "series",
 								ID:          9,
 								CoverID:     31,
+								CoverIDs:    []uint32{31, 32, 33},
 								Title:       "One Piece",
 								Author:      "Oda",
 								Kind:        "manga",
@@ -174,6 +175,8 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				Expect(*b.QualityProfile).To(Equal("std"))
 				Expect(s.Type).To(Equal(BookShelfTypeSeries))
 				Expect(s.CoverId).To(Equal(uint32(31)))
+				Expect(*s.CoverIds).To(Equal([]uint32{31, 32, 33}))
+				Expect(b.CoverIds).To(BeNil())
 				Expect(*s.VolumesHave).To(Equal(uint32(3)))
 				Expect(*s.VolumesOut).To(Equal(uint32(10)))
 				Expect(s.Formats).To(BeNil())
@@ -304,6 +307,9 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 						LibraryID:    9,
 						CoverID:      31,
 						Year:         1997,
+						Slug:         "one-piece",
+						CoverBookIDs: []uint32{1001, 1002, 1003},
+						MatchedTitle: "ワンピース",
 					},
 					{
 						HardcoverID: 4,
@@ -332,6 +338,12 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			Expect(*s.CoverId).To(Equal(uint32(31)))
 			Expect(*s.Volumes).To(Equal(uint32(105)))
 			Expect(s.Kind).To(BeNil())
+			Expect(*s.Slug).To(Equal("one-piece"))
+			Expect(*s.CoverBookIds).To(Equal([]uint32{1001, 1002, 1003}))
+			Expect(*s.MatchedTitle).To(Equal("ワンピース"))
+			Expect(b.Slug).To(BeNil())
+			Expect(b.CoverBookIds).To(BeNil())
+			Expect(b.MatchedTitle).To(BeNil())
 			Expect(*b.Kind).To(Equal(BookKindNovel))
 			Expect(b.LibraryId).To(BeNil())
 		})
@@ -400,14 +412,16 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 		It("renders a detail with its extras", func() {
 			app.books.EXPECT().LookupDetail(mock.Anything, "series", uint32(3)).
 				Return(&book.LookupDetail{
-					HardcoverID: 3,
-					Type:        "series",
-					Title:       "One Piece",
-					Author:      "Oda",
-					Kind:        "manga",
-					Volumes:     105,
-					Overview:    "Pirates",
-					Genres:      []string{"Manga"},
+					HardcoverID:  3,
+					Type:         "series",
+					Title:        "One Piece",
+					Author:       "Oda",
+					Kind:         "manga",
+					Volumes:      105,
+					Slug:         "one-piece",
+					CoverBookIDs: []uint32{1001, 1002},
+					Overview:     "Pirates",
+					Genres:       []string{"Manga"},
 					Editions: []book.LookupEdition{
 						{
 							Language:  "fr",
@@ -431,6 +445,8 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 			var d BookLookupDetail
 			decode(resp, &d)
 			Expect(d.Overview).To(Equal(new("Pirates")))
+			Expect(*d.Slug).To(Equal("one-piece"))
+			Expect(*d.CoverBookIds).To(Equal([]uint32{1001, 1002}))
 			Expect(*d.VolumeBookIds).To(Equal([]uint32{1001, 1002}))
 			Expect(*d.Editions).To(HaveLen(1))
 			Expect(*(*d.Editions)[0].Original).To(BeTrue())
@@ -823,6 +839,7 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 					EditionLanguage:  "fr",
 					EditionPublisher: "Glenat",
 					QualityProfile:   "comics",
+					HardcoverSlug:    "one-piece",
 				}
 				refreshed := now
 				mk := func(id uint32, pos float64, status string, tenths uint8, year uint16) *ent.Book {
@@ -894,6 +911,8 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 				Expect(out.Contributors).To(HaveLen(2))
 				Expect(*out.Contributors[1].Language).To(Equal("fr"))
 				Expect(*out.QualityProfile).To(Equal("comics"))
+				Expect(*out.HardcoverSlug).To(Equal("one-piece"))
+				Expect(out.CoverIds).To(Equal([]uint32{31, 32, 33}))
 			},
 		)
 

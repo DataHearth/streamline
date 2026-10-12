@@ -9357,11 +9357,12 @@ components:
 
     BookSeries:
       type: object
-      description: Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+      description: Series detail; also the response of add, patch and refresh. The cover is the first volumes' posters (`cover_ids`).
       required:
         [
           id,
           hardcover_id,
+          cover_ids,
           title,
           author,
           kind,
@@ -9384,6 +9385,16 @@ components:
           type: integer
           x-go-type: uint32
           description: Hardcover series id, a separate id space from books.
+        hardcover_slug:
+          type: string
+          description: The hardcover.app/series path segment; absent until Hardcover has reported one.
+        cover_ids:
+          type: array
+          maxItems: 3
+          description: Library Book ids of the first hydrated volumes (at most 3, position order) whose posters make up the cover.
+          items:
+            type: integer
+            x-go-type: uint32
         title:
           type: string
         original_title:
@@ -9464,6 +9475,13 @@ components:
           type: integer
           x-go-type: uint32
           description: Book id whose poster is the cover; for a series, its lowest-position volume.
+        cover_ids:
+          type: array
+          maxItems: 3
+          description: Series only; library Book ids of the first volumes (at most 3, position order) whose posters make up the cover.
+          items:
+            type: integer
+            x-go-type: uint32
         title:
           type: string
         author:
@@ -9620,6 +9638,22 @@ components:
           type: integer
           x-go-type: uint32
           description: Series hit that is already added; Book id of the library series' lowest-position volume.
+        slug:
+          type: string
+          description: Series only; the hardcover.app/series path segment.
+        cover_book_ids:
+          type: array
+          maxItems: 3
+          description: |
+            Series only; Hardcover book ids of the volumes adding the series
+            would pick at its first positions. The SPA builds
+            `/posters/lookup/books/{id}/poster.jpg` from each.
+          items:
+            type: integer
+            x-go-type: uint32
+        matched_title:
+          type: string
+          description: Series only; the book title, in whatever language, through which the series was found, when it is not the series' own name.
 
     BookLookupList:
       type: object

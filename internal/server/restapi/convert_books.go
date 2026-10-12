@@ -295,6 +295,8 @@ func toAPISeries(s *ent.BookSeries) BookSeries {
 	return BookSeries{
 		Id:             s.ID,
 		HardcoverId:    s.HardcoverID,
+		HardcoverSlug:  optString(s.HardcoverSlug),
+		CoverIds:       db.SeriesCoverIDs(s),
 		Title:          s.Title,
 		OriginalTitle:  optString(s.OriginalTitle),
 		Overview:       optString(s.Overview),
@@ -330,6 +332,11 @@ func toShelfItem(r db.ShelfRow, progress map[uint32]float64) ShelfItem {
 	if r.Type == "series" {
 		have, out := r.VolumesHave, r.VolumesOut
 		item.VolumesHave, item.VolumesOut = &have, &out
+		covers := r.CoverIDs
+		if covers == nil {
+			covers = []uint32{}
+		}
+		item.CoverIds = &covers
 		return item
 	}
 	if r.Year != 0 {
@@ -376,6 +383,12 @@ func toAPILookupHit(h book.LookupHit) BookLookupHit {
 		Ongoing:      h.Ongoing,
 	}
 	out.OriginalTitle = optString(h.OriginalTitle)
+	out.Slug = optString(h.Slug)
+	out.MatchedTitle = optString(h.MatchedTitle)
+	if len(h.CoverBookIDs) > 0 {
+		ids := h.CoverBookIDs
+		out.CoverBookIds = &ids
+	}
 	if h.Kind != "" {
 		k := BookKind(h.Kind)
 		out.Kind = &k
@@ -414,6 +427,9 @@ func toAPILookupDetail(d *book.LookupDetail) BookLookupDetail {
 		AlreadyAdded:  hit.AlreadyAdded,
 		LibraryId:     hit.LibraryId,
 		CoverId:       hit.CoverId,
+		Slug:          hit.Slug,
+		CoverBookIds:  hit.CoverBookIds,
+		MatchedTitle:  hit.MatchedTitle,
 		Overview:      optString(d.Overview),
 	}
 	if len(d.Genres) > 0 {

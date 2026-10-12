@@ -4262,6 +4262,11 @@ type BookLookupDetail struct {
 	AlreadyAdded bool   `json:"already_added"`
 	Author       string `json:"author"`
 
+	// CoverBookIds Series only; Hardcover book ids of the volumes adding the series
+	// would pick at its first positions. The SPA builds
+	// `/posters/lookup/books/{id}/poster.jpg` from each.
+	CoverBookIds *[]uint32 `json:"cover_book_ids,omitempty"`
+
 	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
 	CoverId  *uint32              `json:"cover_id,omitempty"`
 	Editions *[]BookLookupEdition `json:"editions,omitempty"`
@@ -4276,6 +4281,9 @@ type BookLookupDetail struct {
 	// LibraryId Set with `already_added`; a book that is a volume of a library series answers with its Book id.
 	LibraryId *uint32 `json:"library_id,omitempty"`
 
+	// MatchedTitle Series only; the book title, in whatever language, through which the series was found, when it is not the series' own name.
+	MatchedTitle *string `json:"matched_title,omitempty"`
+
 	// Ongoing Series only, when the search document carries it.
 	Ongoing *bool `json:"ongoing,omitempty"`
 
@@ -4284,7 +4292,10 @@ type BookLookupDetail struct {
 	Overview      *string `json:"overview,omitempty"`
 
 	// Pages Books only.
-	Pages *uint16       `json:"pages,omitempty"`
+	Pages *uint16 `json:"pages,omitempty"`
+
+	// Slug Series only; the hardcover.app/series path segment.
+	Slug  *string       `json:"slug,omitempty"`
 	Title string        `json:"title"`
 	Type  BookShelfType `json:"type"`
 
@@ -4314,6 +4325,11 @@ type BookLookupHit struct {
 	AlreadyAdded bool   `json:"already_added"`
 	Author       string `json:"author"`
 
+	// CoverBookIds Series only; Hardcover book ids of the volumes adding the series
+	// would pick at its first positions. The SPA builds
+	// `/posters/lookup/books/{id}/poster.jpg` from each.
+	CoverBookIds *[]uint32 `json:"cover_book_ids,omitempty"`
+
 	// CoverId Series hit that is already added; Book id of the library series' lowest-position volume.
 	CoverId     *uint32 `json:"cover_id,omitempty"`
 	HardcoverId uint32  `json:"hardcover_id"`
@@ -4324,13 +4340,19 @@ type BookLookupHit struct {
 	// LibraryId Set with `already_added`; a book that is a volume of a library series answers with its Book id.
 	LibraryId *uint32 `json:"library_id,omitempty"`
 
+	// MatchedTitle Series only; the book title, in whatever language, through which the series was found, when it is not the series' own name.
+	MatchedTitle *string `json:"matched_title,omitempty"`
+
 	// Ongoing Series only, when the search document carries it.
 	Ongoing *bool `json:"ongoing,omitempty"`
 
 	// OriginalTitle Absent from the search document; filled by the detail.
-	OriginalTitle *string       `json:"original_title,omitempty"`
-	Title         string        `json:"title"`
-	Type          BookShelfType `json:"type"`
+	OriginalTitle *string `json:"original_title,omitempty"`
+
+	// Slug Series only; the hardcover.app/series path segment.
+	Slug  *string       `json:"slug,omitempty"`
+	Title string        `json:"title"`
+	Type  BookShelfType `json:"type"`
 
 	// Volumes Series only.
 	Volumes *uint32 `json:"volumes,omitempty"`
@@ -4399,11 +4421,14 @@ type BookSendState struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
-// BookSeries Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+// BookSeries Series detail; also the response of add, patch and refresh. The cover is the first volumes' posters (`cover_ids`).
 type BookSeries struct {
 	AddedAt      time.Time    `json:"added_at"`
 	Author       string       `json:"author"`
 	Contributors []BookCredit `json:"contributors"`
+
+	// CoverIds Library Book ids of the first hydrated volumes (at most 3, position order) whose posters make up the cover.
+	CoverIds []uint32 `json:"cover_ids"`
 
 	// Edition Label of the selected (language, publisher), "{language in its own name} · {publisher}".
 	Edition string `json:"edition"`
@@ -4413,6 +4438,9 @@ type BookSeries struct {
 
 	// HardcoverId Hardcover series id, a separate id space from books.
 	HardcoverId uint32 `json:"hardcover_id"`
+
+	// HardcoverSlug The hardcover.app/series path segment; absent until Hardcover has reported one.
+	HardcoverSlug *string `json:"hardcover_slug,omitempty"`
 
 	// Hydrating True while any volume is still a stub (`last_refreshed_at` unset);
 	// the SPA polls the detail every 10 seconds while it holds.
@@ -7529,6 +7557,9 @@ type ShelfItem struct {
 	// CoverId Book id whose poster is the cover; for a series, its lowest-position volume.
 	CoverId uint32 `json:"cover_id"`
 
+	// CoverIds Series only; library Book ids of the first volumes (at most 3, position order) whose posters make up the cover.
+	CoverIds *[]uint32 `json:"cover_ids,omitempty"`
+
 	// Formats Books only.
 	Formats *[]BookShelfFormat `json:"formats,omitempty"`
 	Id      uint32             `json:"id"`
@@ -8663,10 +8694,10 @@ type BookRenamePlanResponse = BookRenamePlan
 // BookSearchAcceptedResponse defines model for BookSearchAcceptedResponse.
 type BookSearchAcceptedResponse = BookSearchAccepted
 
-// BookSeriesCreated Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+// BookSeriesCreated Series detail; also the response of add, patch and refresh. The cover is the first volumes' posters (`cover_ids`).
 type BookSeriesCreated = BookSeries
 
-// BookSeriesDetail Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
+// BookSeriesDetail Series detail; also the response of add, patch and refresh. The cover is the first volumes' posters (`cover_ids`).
 type BookSeriesDetail = BookSeries
 
 // BookSeriesRenamePlanResponse defines model for BookSeriesRenamePlanResponse.
