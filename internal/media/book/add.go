@@ -170,38 +170,83 @@ func orderedVolumes(in []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
 	return slices.Compact(out)
 }
 
-// firstPerPosition keeps the lowest book id at each position of an ordered
-// skeleton, for callers that have no records to choose with.
-func firstPerPosition(vols []metadata.SeriesVolumeRef) []metadata.SeriesVolumeRef {
-	return slices.CompactFunc(
-		slices.Clone(vols),
-		func(a, b metadata.SeriesVolumeRef) bool { return a.Position == b.Position },
-	)
+// volumeCandidate is one book listed at a position of a series, with what the
+// winner rule reads.
+type volumeCandidate struct {
+	position    float64
+	bookID      uint32
+	users       uint32
+	compilation bool
 }
 
-// positionWinners picks, at each position of an ordered skeleton, the
-// non-compilation record with the most readers; the lowest book id wins a
-// tie. A position whose candidates are all compilations or unknown has none.
+// winnersByPosition picks, at each position of candidates ordered by position
+// then book id, the non-compilation book with the most readers; the lowest
+// book id wins a tie. The winners come in position order, and a position whose
+// candidates are all compilations has none.
+func winnersByPosition(cands []volumeCandidate) []uint32 {
+	var (
+		out  []uint32
+		best volumeCandidate
+		have bool
+	)
+	for i, c := range cands {
+		if i > 0 && c.position != cands[i-1].position {
+			if have {
+				out = append(out, best.bookID)
+			}
+			have = false
+		}
+		if c.compilation {
+			continue
+		}
+		if !have || c.users > best.users {
+			best, have = c, true
+		}
+	}
+	if have {
+		out = append(out, best.bookID)
+	}
+	return out
+}
+
+// positionWinners is the winner rule over an ordered skeleton whose candidates
+// are judged by their records; a candidate with no record is not one.
 func positionWinners(
 	vols []metadata.SeriesVolumeRef,
 	byID map[uint32]*metadata.BookRecord,
 ) map[uint32]bool {
-	best := map[float64]uint32{}
+	cands := make([]volumeCandidate, 0, len(vols))
 	for _, v := range vols {
-		rec := byID[v.BookHardcoverID]
-		if rec == nil || rec.Compilation {
-			continue
-		}
-		if cur, ok := best[v.Position]; !ok ||
-			rec.UsersCount > byID[cur].UsersCount {
-			best[v.Position] = v.BookHardcoverID
+		if rec := byID[v.BookHardcoverID]; rec != nil {
+			cands = append(cands, volumeCandidate{
+				position:    v.Position,
+				bookID:      v.BookHardcoverID,
+				users:       rec.UsersCount,
+				compilation: rec.Compilation,
+			})
 		}
 	}
-	out := make(map[uint32]bool, len(best))
-	for _, id := range best {
+	out := map[uint32]bool{}
+	for _, id := range winnersByPosition(cands) {
 		out[id] = true
 	}
 	return out
+}
+
+// skeletonWinners is the winner rule over an ordered skeleton, judged by the
+// reader counts and compilation flags the skeleton itself carries, so a
+// preview needs no record to pick the volume an add would.
+func skeletonWinners(vols []metadata.SeriesVolumeRef) []uint32 {
+	cands := make([]volumeCandidate, 0, len(vols))
+	for _, v := range vols {
+		cands = append(cands, volumeCandidate{
+			position:    v.Position,
+			bookID:      v.BookHardcoverID,
+			users:       v.UsersCount,
+			compilation: v.Compilation,
+		})
+	}
+	return winnersByPosition(cands)
 }
 
 // seriesCredits lists a series' people: its author, the makers of its first
@@ -414,6 +459,7 @@ func (s *Service) AddSeries(
 
 	params := db.CreateSeriesParams{
 		HardcoverID:     sk.HardcoverID,
+		Slug:            sk.Slug,
 		Title:           f.title,
 		OriginalTitle:   f.original,
 		Overview:        f.overview,

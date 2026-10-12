@@ -182,6 +182,21 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			},
 		)
 
+		It("writes the slug Hardcover now gives the series", func() {
+			s := addSeries(1)
+			Expect(s.HardcoverSlug).To(BeEmpty())
+			sk := seriesRecord("One Piece", 1)
+			sk.Slug = "one-piece"
+			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001)).
+				Return([]*metadata.BookRecord{volumeRec(1001)}, nil).Once()
+
+			got, err := f.svc.RefreshSeries(f.ctx, s.ID)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.HardcoverSlug).To(Equal("one-piece"))
+		})
+
 		It("hydrates a stub it meets", func() {
 			s := addSeries(1)
 			stub := f.client.Book.Create().

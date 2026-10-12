@@ -49,6 +49,8 @@ const (
 	FieldEditionPublisher = "edition_publisher"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
 	FieldLastRefreshedAt = "last_refreshed_at"
+	// FieldHardcoverSlug holds the string denoting the hardcover_slug field in the database.
+	FieldHardcoverSlug = "hardcover_slug"
 	// EdgeVolumes holds the string denoting the volumes edge name in mutations.
 	EdgeVolumes = "volumes"
 	// EdgeContributions holds the string denoting the contributions edge name in mutations.
@@ -91,6 +93,7 @@ var Columns = []string{
 	FieldEditionLanguage,
 	FieldEditionPublisher,
 	FieldLastRefreshedAt,
+	FieldHardcoverSlug,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -262,6 +265,11 @@ func ByEditionPublisher(opts ...sql.OrderTermOption) OrderOption {
 // ByLastRefreshedAt orders the results by the last_refreshed_at field.
 func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastRefreshedAt, opts...).ToFunc()
+}
+
+// ByHardcoverSlug orders the results by the hardcover_slug field.
+func ByHardcoverSlug(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHardcoverSlug, opts...).ToFunc()
 }
 
 // ByVolumesCount orders the results by volumes count.

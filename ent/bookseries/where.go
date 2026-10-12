@@ -130,6 +130,11 @@ func LastRefreshedAt(v time.Time) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldEQ(FieldLastRefreshedAt, v))
 }
 
+// HardcoverSlug applies equality check predicate on the "hardcover_slug" field. It's identical to HardcoverSlugEQ.
+func HardcoverSlug(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldEQ(FieldHardcoverSlug, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldEQ(FieldCreateTime, v))
@@ -1038,6 +1043,81 @@ func LastRefreshedAtIsNil() predicate.BookSeries {
 // LastRefreshedAtNotNil applies the NotNil predicate on the "last_refreshed_at" field.
 func LastRefreshedAtNotNil() predicate.BookSeries {
 	return predicate.BookSeries(sql.FieldNotNull(FieldLastRefreshedAt))
+}
+
+// HardcoverSlugEQ applies the EQ predicate on the "hardcover_slug" field.
+func HardcoverSlugEQ(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldEQ(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugNEQ applies the NEQ predicate on the "hardcover_slug" field.
+func HardcoverSlugNEQ(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldNEQ(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugIn applies the In predicate on the "hardcover_slug" field.
+func HardcoverSlugIn(vs ...string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldIn(FieldHardcoverSlug, vs...))
+}
+
+// HardcoverSlugNotIn applies the NotIn predicate on the "hardcover_slug" field.
+func HardcoverSlugNotIn(vs ...string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldNotIn(FieldHardcoverSlug, vs...))
+}
+
+// HardcoverSlugGT applies the GT predicate on the "hardcover_slug" field.
+func HardcoverSlugGT(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldGT(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugGTE applies the GTE predicate on the "hardcover_slug" field.
+func HardcoverSlugGTE(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldGTE(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugLT applies the LT predicate on the "hardcover_slug" field.
+func HardcoverSlugLT(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldLT(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugLTE applies the LTE predicate on the "hardcover_slug" field.
+func HardcoverSlugLTE(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldLTE(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugContains applies the Contains predicate on the "hardcover_slug" field.
+func HardcoverSlugContains(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldContains(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugHasPrefix applies the HasPrefix predicate on the "hardcover_slug" field.
+func HardcoverSlugHasPrefix(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldHasPrefix(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugHasSuffix applies the HasSuffix predicate on the "hardcover_slug" field.
+func HardcoverSlugHasSuffix(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldHasSuffix(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugIsNil applies the IsNil predicate on the "hardcover_slug" field.
+func HardcoverSlugIsNil() predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldIsNull(FieldHardcoverSlug))
+}
+
+// HardcoverSlugNotNil applies the NotNil predicate on the "hardcover_slug" field.
+func HardcoverSlugNotNil() predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldNotNull(FieldHardcoverSlug))
+}
+
+// HardcoverSlugEqualFold applies the EqualFold predicate on the "hardcover_slug" field.
+func HardcoverSlugEqualFold(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldEqualFold(FieldHardcoverSlug, v))
+}
+
+// HardcoverSlugContainsFold applies the ContainsFold predicate on the "hardcover_slug" field.
+func HardcoverSlugContainsFold(v string) predicate.BookSeries {
+	return predicate.BookSeries(sql.FieldContainsFold(FieldHardcoverSlug, v))
 }
 
 // HasVolumes applies the HasEdge predicate on the "volumes" edge.

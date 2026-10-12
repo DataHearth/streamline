@@ -1,6 +1,7 @@
 package book
 
 import (
+	"cmp"
 	"context"
 	"slices"
 	"strconv"
@@ -26,6 +27,7 @@ const (
 	lookupAll    = "all"
 
 	lookupCap        = 20
+	lookupCovers     = 3
 	detailVolumeIDs  = 6
 	detailGenreLimit = 3
 )
@@ -48,6 +50,14 @@ type LookupHit struct {
 	// CoverID is the lowest-position volume of an added series, whose poster
 	// is the series' cover.
 	CoverID uint32
+	// Slug is a series' hardcover.app/series path segment.
+	Slug string
+	// CoverBookIDs are the Hardcover ids of the books adding a series would
+	// pick at its first positions, whose covers stand for it.
+	CoverBookIDs []uint32
+	// MatchedTitle is the book title, in whatever language, through which a
+	// series was found, when it is not the series' own name.
+	MatchedTitle string
 }
 
 // LookupEdition is one edition a title would be added with.
@@ -71,8 +81,11 @@ type LookupDetail struct {
 	VolumeBookIDs []uint32
 }
 
-// Lookup searches Hardcover for books and series to add. A search for both is
-// two requests, one for one kind; either is memoised per query.
+// Lookup searches Hardcover for books and series to add. Books alone are one
+// request. Series are three: the book search, because a series is also found
+// through any of its books whose title, in whatever language, is the query; the
+// series search; and one batch reading every candidate series. Each is
+// memoised by the provider; the library join is read fresh every time.
 func (s *Service) Lookup(
 	ctx context.Context,
 	query, kind string,
@@ -85,55 +98,207 @@ func (s *Service) Lookup(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	var books, series []metadata.BookLookupHit
-	if kind != lookupSeries {
-		if books, err = p.LookupBooks(ctx, query); err != nil {
+	books, err := p.LookupBooks(ctx, query)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	var top, rest []LookupHit
+	if kind != lookupBook {
+		series, err := p.LookupSeries(ctx, query)
+		if err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
-	}
-	if kind != lookupBook {
-		if series, err = p.LookupSeries(ctx, query); err != nil {
+		if top, rest, err = seriesHits(ctx, p, query, books, series); err != nil {
 			return nil, otelx.RecordSpanError(span, err)
 		}
 	}
 
-	hits := orderHits(query, books, series)
-	if len(hits) > lookupCap {
-		hits = hits[:lookupCap]
-	}
-	out := make([]LookupHit, 0, len(hits))
-	for _, h := range hits {
-		out = append(out, hitFrom(h))
-		if h.Type == lookupBook {
-			rememberCover(h.HardcoverID, h.ImageURL)
+	limit := max(lookupCap, len(top))
+	out := make([]LookupHit, 0, limit)
+	out = append(out, top...)
+	if kind != lookupSeries {
+		for _, b := range authorMatchedFirst(query, books) {
+			if len(out) == limit {
+				break
+			}
+			out = append(out, hitFrom(b))
+			rememberCover(b.HardcoverID, b.ImageURL)
 		}
 	}
+	out = append(out, rest[:min(len(rest), limit-len(out))]...)
 	if err := s.markAdded(ctx, out); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	return out, nil
 }
 
-// orderHits puts the series named like the query first, then the books in
-// Hardcover's relevance order with the ones credited to an author the query
-// names ahead of the rest, then the other series.
-func orderHits(
+// seriesHits splits a lookup's series in two. top is the series named like the
+// query, then the ones reached through a book whose title is the query, in the
+// books' order: they are what the user typed, so the cap never drops them.
+// rest is the other series the series search found. A series is listed once,
+// at its first place, and one with no primary volume (Hardcover's empty
+// translated duplicates) not at all.
+func seriesHits(
+	ctx context.Context,
+	p metadata.BookProvider,
 	query string,
 	books, series []metadata.BookLookupHit,
-) []metadata.BookLookupHit {
-	var named, rest []metadata.BookLookupHit
+) ([]LookupHit, []LookupHit, error) {
+	reached := seriesReached(query, books)
+	ids := make([]uint32, 0, len(series)+len(reached))
 	for _, sr := range series {
+		ids = append(ids, sr.HardcoverID)
+	}
+	for _, r := range reached {
+		ids = append(ids, r.id)
+	}
+	slices.Sort(ids)
+	ids = slices.Compact(ids)
+	if len(ids) == 0 {
+		return nil, nil, nil
+	}
+	recs, err := p.GetSeriesLookup(ctx, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	byID := make(map[uint32]*metadata.SeriesLookupRecord, len(recs))
+	for i := range recs {
+		byID[recs[i].HardcoverID] = &recs[i]
+	}
+
+	var top, rest []LookupHit
+	searched := map[uint32]metadata.BookLookupHit{}
+	placed := map[uint32]bool{}
+	for _, sr := range series {
+		rec := byID[sr.HardcoverID]
+		if placed[sr.HardcoverID] || (rec != nil && rec.PrimaryBooks == 0) {
+			continue
+		}
+		searched[sr.HardcoverID] = sr
 		if library.TitleMatches(sr.Title, query) ||
 			library.TitlePrefixMatches(sr.Title, query) {
-			named = append(named, sr)
-		} else {
-			rest = append(rest, sr)
+			placed[sr.HardcoverID] = true
+			top = append(top, seriesHit(sr, rec))
 		}
 	}
-	out := make([]metadata.BookLookupHit, 0, len(books)+len(series))
-	out = append(out, named...)
-	out = append(out, authorMatchedFirst(query, books)...)
-	return append(out, rest...)
+	for _, r := range reached {
+		rec := byID[r.id]
+		if placed[r.id] || rec == nil || rec.PrimaryBooks == 0 {
+			continue
+		}
+		base, ok := searched[r.id]
+		if !ok {
+			base = metadata.BookLookupHit{HardcoverID: r.id, Type: lookupSeries}
+		}
+		h := seriesHit(base, rec)
+		if !library.TitleMatches(r.via, h.Title) {
+			h.MatchedTitle = r.via
+		}
+		placed[r.id] = true
+		top = append(top, h)
+	}
+	for _, sr := range series {
+		if _, ok := searched[sr.HardcoverID]; !ok || placed[sr.HardcoverID] {
+			continue
+		}
+		placed[sr.HardcoverID] = true
+		rest = append(rest, seriesHit(sr, byID[sr.HardcoverID]))
+	}
+	return top, rest, nil
+}
+
+type reachedSeries struct {
+	id  uint32
+	via string
+}
+
+// seriesReached lists, in the books' order, every series of each book whose
+// title or an alternative title is the query, with that title.
+func seriesReached(query string, books []metadata.BookLookupHit) []reachedSeries {
+	var out []reachedSeries
+	seen := map[uint32]bool{}
+	for _, b := range books {
+		via := titleNaming(query, b)
+		if via == "" {
+			continue
+		}
+		for _, id := range b.SeriesIDs {
+			if !seen[id] {
+				seen[id] = true
+				out = append(out, reachedSeries{id: id, via: via})
+			}
+		}
+	}
+	return out
+}
+
+// titleNaming is the first of a book's title and alternative titles equal to
+// the query once folded, else the first holding every word of it; empty when
+// none does.
+func titleNaming(query string, b metadata.BookLookupHit) string {
+	titles := append([]string{b.Title}, b.AlternativeTitles...)
+	for _, t := range titles {
+		if library.TitleMatchesStrict(t, query) {
+			return t
+		}
+	}
+	q := queryTokens(query)
+	if len(q) == 0 {
+		return ""
+	}
+	for _, t := range titles {
+		if titleCovers(queryTokens(t), q) {
+			return t
+		}
+	}
+	return ""
+}
+
+// seriesHit is a series hit with what the batched read adds to its search
+// document: the primary volume count, the slug and the cover books. rec is nil
+// when the batch did not return the series.
+func seriesHit(
+	base metadata.BookLookupHit,
+	rec *metadata.SeriesLookupRecord,
+) LookupHit {
+	h := hitFrom(base)
+	if rec == nil {
+		return h
+	}
+	h.Title = cmp.Or(rec.Name, h.Title)
+	h.Author = cmp.Or(h.Author, rec.AuthorName)
+	h.Volumes = rec.PrimaryBooks
+	h.Slug = cmp.Or(rec.Slug, h.Slug)
+	h.CoverBookIDs = coverBooks(rec.Volumes)
+	return h
+}
+
+// coverBooks is the book adding the series would pick at each of its first
+// positions, up to lookupCovers of them, each cover remembered for the proxy.
+func coverBooks(vols []metadata.SeriesLookupVolume) []uint32 {
+	cands := make([]volumeCandidate, 0, len(vols))
+	urls := make(map[uint32]string, len(vols))
+	for _, v := range vols {
+		cands = append(cands, volumeCandidate{
+			position:    v.Position,
+			bookID:      v.BookHardcoverID,
+			users:       v.UsersCount,
+			compilation: v.Compilation,
+		})
+		urls[v.BookHardcoverID] = v.ImageURL
+	}
+	slices.SortStableFunc(cands, func(a, b volumeCandidate) int {
+		return cmp.Or(
+			cmp.Compare(a.position, b.position),
+			cmp.Compare(a.bookID, b.bookID),
+		)
+	})
+	win := winnersByPosition(cands)
+	win = win[:min(len(win), lookupCovers)]
+	for _, id := range win {
+		rememberCover(id, urls[id])
+	}
+	return win
 }
 
 // authorMatchedFirst moves the books whose credited author is named in the
@@ -202,6 +367,7 @@ func hitFrom(h metadata.BookLookupHit) LookupHit {
 		Year:        h.Year,
 		Volumes:     h.Volumes,
 		Ongoing:     h.Ongoing,
+		Slug:        h.Slug,
 	}
 	if len(h.Genres) > 0 {
 		out.Kind = metadata.ClassifyBookKind(h.Genres, "")
@@ -386,10 +552,11 @@ func (s *Service) seriesDetail(
 	if skeleton == nil {
 		return nil, ErrHardcoverNotFound
 	}
-	volumes := firstPerPosition(orderedVolumes(skeleton.Volumes))
+	volumes := skeletonWinners(orderedVolumes(skeleton.Volumes))
 	d := &LookupDetail{
 		HardcoverID: skeleton.HardcoverID,
 		Type:        lookupSeries,
+		Slug:        skeleton.Slug,
 		Title:       skeleton.Name,
 		Author:      skeleton.AuthorName,
 		Volumes:     cmpOr(skeleton.PrimaryBooks, skeleton.Books),
@@ -401,10 +568,7 @@ func (s *Service) seriesDetail(
 		return d, nil
 	}
 
-	ids := make([]uint32, 0, detailVolumeIDs)
-	for _, v := range volumes[:min(len(volumes), detailVolumeIDs)] {
-		ids = append(ids, v.BookHardcoverID)
-	}
+	ids := volumes[:min(len(volumes), detailVolumeIDs)]
 	recs, err := p.GetBooks(ctx, ids)
 	if err != nil {
 		return nil, err

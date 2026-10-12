@@ -244,6 +244,20 @@ func (_c *BookSeriesCreate) SetNillableLastRefreshedAt(v *time.Time) *BookSeries
 	return _c
 }
 
+// SetHardcoverSlug sets the "hardcover_slug" field.
+func (_c *BookSeriesCreate) SetHardcoverSlug(v string) *BookSeriesCreate {
+	_c.mutation.SetHardcoverSlug(v)
+	return _c
+}
+
+// SetNillableHardcoverSlug sets the "hardcover_slug" field if the given value is not nil.
+func (_c *BookSeriesCreate) SetNillableHardcoverSlug(v *string) *BookSeriesCreate {
+	if v != nil {
+		_c.SetHardcoverSlug(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *BookSeriesCreate) SetID(v uint32) *BookSeriesCreate {
 	_c.mutation.SetID(v)
@@ -474,6 +488,10 @@ func (_c *BookSeriesCreate) createSpec() (*BookSeries, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastRefreshedAt(); ok {
 		_spec.SetField(bookseries.FieldLastRefreshedAt, field.TypeTime, value)
 		_node.LastRefreshedAt = &value
+	}
+	if value, ok := _c.mutation.HardcoverSlug(); ok {
+		_spec.SetField(bookseries.FieldHardcoverSlug, field.TypeString, value)
+		_node.HardcoverSlug = value
 	}
 	if nodes := _c.mutation.VolumesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

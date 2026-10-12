@@ -51,6 +51,8 @@ type BookSeries struct {
 	EditionPublisher string `json:"edition_publisher,omitempty"`
 	// When the series row and its volume skeleton were last read.
 	LastRefreshedAt *time.Time `json:"last_refreshed_at,omitempty"`
+	// The hardcover.app/series path segment; the id form is a 404.
+	HardcoverSlug string `json:"hardcover_slug,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the BookSeriesQuery when eager-loading is set.
 	Edges        BookSeriesEdges `json:"edges"`
@@ -95,7 +97,7 @@ func (*BookSeries) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case bookseries.FieldID, bookseries.FieldHardcoverID, bookseries.FieldRatingTenths, bookseries.FieldSince:
 			values[i] = new(sql.NullInt64)
-		case bookseries.FieldTitle, bookseries.FieldOriginalTitle, bookseries.FieldSortTitle, bookseries.FieldOverview, bookseries.FieldAuthorName, bookseries.FieldKind, bookseries.FieldMonitor, bookseries.FieldQualityProfile, bookseries.FieldEditionLanguage, bookseries.FieldEditionPublisher:
+		case bookseries.FieldTitle, bookseries.FieldOriginalTitle, bookseries.FieldSortTitle, bookseries.FieldOverview, bookseries.FieldAuthorName, bookseries.FieldKind, bookseries.FieldMonitor, bookseries.FieldQualityProfile, bookseries.FieldEditionLanguage, bookseries.FieldEditionPublisher, bookseries.FieldHardcoverSlug:
 			values[i] = new(sql.NullString)
 		case bookseries.FieldCreateTime, bookseries.FieldUpdateTime, bookseries.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -225,6 +227,12 @@ func (_m *BookSeries) assignValues(columns []string, values []any) error {
 				_m.LastRefreshedAt = new(time.Time)
 				*_m.LastRefreshedAt = value.Time
 			}
+		case bookseries.FieldHardcoverSlug:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field hardcover_slug", values[i])
+			} else if value.Valid {
+				_m.HardcoverSlug = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -327,6 +335,9 @@ func (_m *BookSeries) String() string {
 		builder.WriteString("last_refreshed_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("hardcover_slug=")
+	builder.WriteString(_m.HardcoverSlug)
 	builder.WriteByte(')')
 	return builder.String()
 }

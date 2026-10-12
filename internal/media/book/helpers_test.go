@@ -48,6 +48,25 @@ func seriesRecord(name string, n int) *metadata.SeriesRecord {
 	return sk
 }
 
+// seriesRec is a batched series read of n volumes, one book per position,
+// whose Hardcover book ids are id*100+position.
+func seriesRec(id uint32, name string, n int) metadata.SeriesLookupRecord {
+	r := metadata.SeriesLookupRecord{
+		HardcoverID: id, Name: name, Slug: "slug-" + itoa(id),
+		PrimaryBooks: numeric.SaturateU32(n), Books: numeric.SaturateU32(n),
+		AuthorName: "Isaac Asimov",
+	}
+	for i := 1; i <= n; i++ {
+		r.Volumes = append(r.Volumes, metadata.SeriesLookupVolume{
+			Position:        float64(i),
+			BookHardcoverID: id*100 + uint32(i),
+			UsersCount:      1,
+			ImageURL:        "https://img/s" + itoa(id*100+uint32(i)) + ".jpg",
+		})
+	}
+	return r
+}
+
 // volumeRec is a Hardcover record for one volume of a series.
 func volumeRec(id uint32) *metadata.BookRecord {
 	r := rec(id, "Volume "+itoa(id))

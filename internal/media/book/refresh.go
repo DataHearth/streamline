@@ -253,6 +253,7 @@ func (s *Service) RefreshSeries(
 
 	f := seriesFieldsFrom(sk, lead)
 	if err := s.db.ApplySeriesMetadata(ctx, id, db.SeriesMetadata{
+		Slug:          sk.Slug,
 		Title:         f.title,
 		OriginalTitle: f.original,
 		Overview:      f.overview,

@@ -6,6 +6,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -40,6 +42,12 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 						seriesHit(10, "Piece of Cake"),
 						seriesHit(11, "One Piece"),
 						seriesHit(12, "One Piece: Color Walk"),
+					}, nil).Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(10, 11, 12)).
+					Return([]metadata.SeriesLookupRecord{
+						seriesRec(10, "Piece of Cake", 3),
+						seriesRec(11, "One Piece", 3),
+						seriesRec(12, "One Piece: Color Walk", 3),
 					}, nil).Once()
 
 				hits, err := f.svc.Lookup(f.ctx, "one piece", lookupAll)
@@ -80,8 +88,10 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 		)
 
 		It("asks Hardcover for one kind only when told to", func() {
+			elantris := bookHit(1, "Elantris")
+			elantris.SeriesIDs = []uint32{5}
 			f.meta.EXPECT().LookupBooks(anyCtx, "elantris").
-				Return([]metadata.BookLookupHit{bookHit(1, "Elantris")}, nil).Once()
+				Return([]metadata.BookLookupHit{elantris}, nil).Once()
 
 			hits, err := f.svc.Lookup(f.ctx, "elantris", lookupBook)
 
@@ -119,13 +129,20 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 		It(
 			"leaves a series' kind out when its search document says nothing",
 			func() {
+				f.meta.EXPECT().LookupBooks(anyCtx, "one").
+					Return([]metadata.BookLookupHit{bookHit(1, "Unrelated")}, nil).
+					Once()
 				f.meta.EXPECT().LookupSeries(anyCtx, "one").
 					Return([]metadata.BookLookupHit{seriesHit(11, "One Piece")}, nil).
+					Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(11)).
+					Return([]metadata.SeriesLookupRecord{seriesRec(11, "One Piece", 12)}, nil).
 					Once()
 
 				hits, err := f.svc.Lookup(f.ctx, "one", lookupSeries)
 
 				Expect(err).NotTo(HaveOccurred())
+				Expect(hits).To(HaveLen(1))
 				Expect(hits[0].Kind).To(BeEmpty())
 				Expect(*hits[0].Ongoing).To(BeTrue())
 				Expect(hits[0].Volumes).To(Equal(uint32(12)))
@@ -151,6 +168,10 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				f.meta.EXPECT().LookupSeries(anyCtx, "x").
 					Return([]metadata.BookLookupHit{seriesHit(50, "One Piece"), seriesHit(51, "New")}, nil).
 					Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, mock.Anything).
+					Return([]metadata.SeriesLookupRecord{
+						seriesRec(50, "One Piece", 3), seriesRec(51, "New", 3),
+					}, nil).Once()
 
 				hits, err := f.svc.Lookup(f.ctx, "x", lookupAll)
 
@@ -172,6 +193,199 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				Expect(byTitle["New"].AlreadyAdded).To(BeFalse())
 			},
 		)
+
+		Describe("series reached through a book", func() {
+			foundation := func() metadata.BookLookupHit {
+				b := bookHit(188628, "Foundation")
+				b.Author = "Isaac Asimov"
+				b.AlternativeTitles = []string{"Fondation", "Fundação"}
+				b.SeriesIDs = []uint32{5450, 10331, 60563}
+				return b
+			}
+			hitIDs := func(hits []LookupHit) []string {
+				out := make([]string, 0, len(hits))
+				for _, h := range hits {
+					out = append(out, h.Type+":"+itoa(h.HardcoverID))
+				}
+				return out
+			}
+
+			It(
+				"lists every series of a book whose translated title is the query, without the empty duplicates",
+				func() {
+					f.meta.EXPECT().LookupBooks(anyCtx, "Fondation").
+						Return([]metadata.BookLookupHit{foundation()}, nil).Once()
+					f.meta.EXPECT().LookupSeries(anyCtx, "Fondation").
+						Return([]metadata.BookLookupHit{seriesHit(39538, "Fondation")}, nil).
+						Once()
+					empty := seriesRec(39538, "Fondation", 0)
+					f.meta.EXPECT().
+						GetSeriesLookup(anyCtx, ids(5450, 10331, 39538, 60563)).
+						Return([]metadata.SeriesLookupRecord{
+							seriesRec(5450, "Foundation", 7),
+							seriesRec(10331, "Foundation (Chronological Order)", 7),
+							empty,
+							seriesRec(60563, "Greater Foundation Universe", 15),
+						}, nil).Once()
+
+					hits, err := f.svc.Lookup(f.ctx, "Fondation", lookupAll)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hitIDs(hits)).To(Equal([]string{
+						"series:5450", "series:10331", "series:60563", "book:188628",
+					}))
+					Expect(hits[0].Title).To(Equal("Foundation"))
+					Expect(hits[0].Author).To(Equal("Isaac Asimov"))
+					Expect(hits[0].Volumes).To(Equal(uint32(7)))
+					Expect(hits[0].Slug).To(Equal("slug-5450"))
+					Expect(hits[0].MatchedTitle).To(Equal("Fondation"))
+					Expect(hits[2].Volumes).To(Equal(uint32(15)))
+					Expect(hits[2].MatchedTitle).To(Equal("Fondation"))
+					Expect(hits[3].MatchedTitle).To(BeEmpty())
+				},
+			)
+
+			It("lists a series only once, at its name-matched place", func() {
+				f.meta.EXPECT().LookupBooks(anyCtx, "foundation").
+					Return([]metadata.BookLookupHit{foundation()}, nil).Once()
+				f.meta.EXPECT().LookupSeries(anyCtx, "foundation").
+					Return([]metadata.BookLookupHit{
+						seriesHit(60563, "Greater Foundation Universe"),
+						seriesHit(5450, "Foundation"),
+					}, nil).Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(5450, 10331, 60563)).
+					Return([]metadata.SeriesLookupRecord{
+						seriesRec(5450, "Foundation", 7),
+						seriesRec(10331, "Foundation (Chronological Order)", 7),
+						seriesRec(60563, "Greater Foundation Universe", 15),
+					}, nil).Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "foundation", lookupAll)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hitIDs(hits)).To(Equal([]string{
+					"series:5450", "series:10331", "series:60563", "book:188628",
+				}))
+				Expect(hits[0].MatchedTitle).To(BeEmpty())
+				Expect(hits[1].MatchedTitle).To(Equal("Foundation"))
+			})
+
+			It("never follows a book whose title is not the query", func() {
+				prelude := bookHit(7, "Prelude to Empire")
+				prelude.SeriesIDs = []uint32{5450}
+				f.meta.EXPECT().LookupBooks(anyCtx, "fondation").
+					Return([]metadata.BookLookupHit{prelude}, nil).Once()
+				f.meta.EXPECT().LookupSeries(anyCtx, "fondation").
+					Return(nil, nil).Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "fondation", lookupAll)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hitIDs(hits)).To(Equal([]string{"book:7"}))
+			})
+
+			It("keeps the series ahead of the books when the cap cuts", func() {
+				books := make([]metadata.BookLookupHit, 0, 31)
+				books = append(books, foundation())
+				for i := range 30 {
+					books = append(
+						books,
+						bookHit(uint32(i+1), fmt.Sprintf("Book %d", i)),
+					)
+				}
+				f.meta.EXPECT().LookupBooks(anyCtx, "fondation").
+					Return(books, nil).Once()
+				f.meta.EXPECT().LookupSeries(anyCtx, "fondation").
+					Return([]metadata.BookLookupHit{seriesHit(77, "Fondation et Empire")}, nil).
+					Once()
+				f.meta.EXPECT().
+					GetSeriesLookup(anyCtx, ids(77, 5450, 10331, 60563)).
+					Return([]metadata.SeriesLookupRecord{
+						seriesRec(77, "Fondation et Empire", 2),
+						seriesRec(5450, "Foundation", 7),
+						seriesRec(10331, "Foundation (Chronological Order)", 7),
+						seriesRec(60563, "Greater Foundation Universe", 15),
+					}, nil).Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "fondation", lookupAll)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hits).To(HaveLen(20))
+				Expect(hitIDs(hits)[:5]).To(Equal([]string{
+					"series:77", "series:5450", "series:10331", "series:60563",
+					"book:188628",
+				}))
+			})
+
+			It("never lets the cap drop a series the query reached", func() {
+				many := foundation()
+				many.SeriesIDs = nil
+				recs := make([]metadata.SeriesLookupRecord, 0, 21)
+				want := make([]uint32, 0, 21)
+				for i := range uint32(21) {
+					many.SeriesIDs = append(many.SeriesIDs, 100+i)
+					want = append(want, 100+i)
+					recs = append(
+						recs,
+						seriesRec(100+i, fmt.Sprintf("Universe %d", i), 2),
+					)
+				}
+				f.meta.EXPECT().LookupBooks(anyCtx, "fondation").
+					Return([]metadata.BookLookupHit{many}, nil).Once()
+				f.meta.EXPECT().
+					LookupSeries(anyCtx, "fondation").
+					Return(nil, nil).
+					Once()
+				f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(want...)).
+					Return(recs, nil).Once()
+
+				hits, err := f.svc.Lookup(f.ctx, "fondation", lookupAll)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(hits).To(HaveLen(21))
+				for _, h := range hits {
+					Expect(h.Type).To(Equal("series"))
+				}
+			})
+
+			It(
+				"covers a series with the book adding it would pick at each of its first positions",
+				func() {
+					f.meta.EXPECT().
+						LookupBooks(anyCtx, "foundation").
+						Return(nil, nil).
+						Once()
+					f.meta.EXPECT().LookupSeries(anyCtx, "foundation").
+						Return([]metadata.BookLookupHit{seriesHit(5450, "Foundation")}, nil).
+						Once()
+					r := seriesRec(5450, "Foundation", 0)
+					r.PrimaryBooks = 7
+					r.Volumes = []metadata.SeriesLookupVolume{
+						{Position: 1, BookHardcoverID: 900, UsersCount: 5},
+						{
+							Position:        1,
+							BookHardcoverID: 901,
+							UsersCount:      50,
+							Compilation:     true,
+						},
+						{Position: 1, BookHardcoverID: 902, UsersCount: 20},
+						{Position: 2, BookHardcoverID: 911, UsersCount: 1},
+						{Position: 2, BookHardcoverID: 910, UsersCount: 1},
+						{Position: 3, BookHardcoverID: 920},
+						{Position: 4, BookHardcoverID: 930, UsersCount: 99},
+					}
+					f.meta.EXPECT().GetSeriesLookup(anyCtx, ids(5450)).
+						Return([]metadata.SeriesLookupRecord{r}, nil).Once()
+
+					hits, err := f.svc.Lookup(f.ctx, "foundation", lookupSeries)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hits).To(HaveLen(1))
+					Expect(hits[0].CoverBookIDs).To(Equal([]uint32{902, 910, 920}))
+					Expect(hits[0].Volumes).To(Equal(uint32(7)))
+				},
+			)
+		})
 
 		It("says so when there is no Hardcover key", func() {
 			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil, nil)
@@ -280,6 +494,40 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 				// Distinct (language, publisher) of the first volume's ebooks.
 				Expect(d.Editions).To(HaveLen(2))
 				Expect(d.Editions[0].Format).To(Equal("ebook"))
+			},
+		)
+
+		It(
+			"previews the volume adding the series would pick at each position",
+			func() {
+				sk := seriesRecord("One Piece", 3)
+				sk.Slug = "one-piece"
+				sk.Volumes[0].UsersCount = 5
+				sk.Volumes = append(
+					sk.Volumes,
+					metadata.SeriesVolumeRef{
+						Position:        1,
+						BookHardcoverID: 1101,
+						UsersCount:      50,
+					},
+					metadata.SeriesVolumeRef{
+						Position:        2,
+						BookHardcoverID: 1102,
+						UsersCount:      90,
+						Compilation:     true,
+					},
+				)
+				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+				f.meta.EXPECT().GetBooks(anyCtx, ids(1101, 1002, 1003)).
+					Return([]*metadata.BookRecord{
+						volumeRec(1101), volumeRec(1002), volumeRec(1003),
+					}, nil).Once()
+
+				d, err := f.svc.LookupDetail(f.ctx, lookupSeries, 50)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(d.VolumeBookIDs).To(Equal([]uint32{1101, 1002, 1003}))
+				Expect(d.Slug).To(Equal("one-piece"))
 			},
 		)
 

@@ -405,6 +405,7 @@ var (
 		{Name: "edition_language", Type: field.TypeString, Nullable: true},
 		{Name: "edition_publisher", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "hardcover_slug", Type: field.TypeString, Nullable: true},
 	}
 	// BookSeriesTable holds the schema information for the "book_series" table.
 	BookSeriesTable = &schema.Table{

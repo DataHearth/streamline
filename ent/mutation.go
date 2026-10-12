@@ -11577,6 +11577,7 @@ type BookSeriesMutation struct {
 	edition_language     *string
 	edition_publisher    *string
 	last_refreshed_at    *time.Time
+	hardcover_slug       *string
 	clearedFields        map[string]struct{}
 	volumes              map[uint32]struct{}
 	removedvolumes       map[uint32]struct{}
@@ -12497,6 +12498,55 @@ func (m *BookSeriesMutation) ResetLastRefreshedAt() {
 	delete(m.clearedFields, bookseries.FieldLastRefreshedAt)
 }
 
+// SetHardcoverSlug sets the "hardcover_slug" field.
+func (m *BookSeriesMutation) SetHardcoverSlug(s string) {
+	m.hardcover_slug = &s
+}
+
+// HardcoverSlug returns the value of the "hardcover_slug" field in the mutation.
+func (m *BookSeriesMutation) HardcoverSlug() (r string, exists bool) {
+	v := m.hardcover_slug
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHardcoverSlug returns the old "hardcover_slug" field's value of the BookSeries entity.
+// If the BookSeries object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BookSeriesMutation) OldHardcoverSlug(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHardcoverSlug is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHardcoverSlug requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHardcoverSlug: %w", err)
+	}
+	return oldValue.HardcoverSlug, nil
+}
+
+// ClearHardcoverSlug clears the value of the "hardcover_slug" field.
+func (m *BookSeriesMutation) ClearHardcoverSlug() {
+	m.hardcover_slug = nil
+	m.clearedFields[bookseries.FieldHardcoverSlug] = struct{}{}
+}
+
+// HardcoverSlugCleared returns if the "hardcover_slug" field was cleared in this mutation.
+func (m *BookSeriesMutation) HardcoverSlugCleared() bool {
+	_, ok := m.clearedFields[bookseries.FieldHardcoverSlug]
+	return ok
+}
+
+// ResetHardcoverSlug resets all changes to the "hardcover_slug" field.
+func (m *BookSeriesMutation) ResetHardcoverSlug() {
+	m.hardcover_slug = nil
+	delete(m.clearedFields, bookseries.FieldHardcoverSlug)
+}
+
 // AddVolumeIDs adds the "volumes" edge to the Book entity by ids.
 func (m *BookSeriesMutation) AddVolumeIDs(ids ...uint32) {
 	if m.volumes == nil {
@@ -12639,7 +12689,7 @@ func (m *BookSeriesMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BookSeriesMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 18)
 	if m.create_time != nil {
 		fields = append(fields, bookseries.FieldCreateTime)
 	}
@@ -12691,6 +12741,9 @@ func (m *BookSeriesMutation) Fields() []string {
 	if m.last_refreshed_at != nil {
 		fields = append(fields, bookseries.FieldLastRefreshedAt)
 	}
+	if m.hardcover_slug != nil {
+		fields = append(fields, bookseries.FieldHardcoverSlug)
+	}
 	return fields
 }
 
@@ -12733,6 +12786,8 @@ func (m *BookSeriesMutation) Field(name string) (ent.Value, bool) {
 		return m.EditionPublisher()
 	case bookseries.FieldLastRefreshedAt:
 		return m.LastRefreshedAt()
+	case bookseries.FieldHardcoverSlug:
+		return m.HardcoverSlug()
 	}
 	return nil, false
 }
@@ -12776,6 +12831,8 @@ func (m *BookSeriesMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldEditionPublisher(ctx)
 	case bookseries.FieldLastRefreshedAt:
 		return m.OldLastRefreshedAt(ctx)
+	case bookseries.FieldHardcoverSlug:
+		return m.OldHardcoverSlug(ctx)
 	}
 	return nil, fmt.Errorf("unknown BookSeries field %s", name)
 }
@@ -12904,6 +12961,13 @@ func (m *BookSeriesMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastRefreshedAt(v)
 		return nil
+	case bookseries.FieldHardcoverSlug:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHardcoverSlug(v)
+		return nil
 	}
 	return fmt.Errorf("unknown BookSeries field %s", name)
 }
@@ -13003,6 +13067,9 @@ func (m *BookSeriesMutation) ClearedFields() []string {
 	if m.FieldCleared(bookseries.FieldLastRefreshedAt) {
 		fields = append(fields, bookseries.FieldLastRefreshedAt)
 	}
+	if m.FieldCleared(bookseries.FieldHardcoverSlug) {
+		fields = append(fields, bookseries.FieldHardcoverSlug)
+	}
 	return fields
 }
 
@@ -13046,6 +13113,9 @@ func (m *BookSeriesMutation) ClearField(name string) error {
 		return nil
 	case bookseries.FieldLastRefreshedAt:
 		m.ClearLastRefreshedAt()
+		return nil
+	case bookseries.FieldHardcoverSlug:
+		m.ClearHardcoverSlug()
 		return nil
 	}
 	return fmt.Errorf("unknown BookSeries nullable field %s", name)
@@ -13105,6 +13175,9 @@ func (m *BookSeriesMutation) ResetField(name string) error {
 		return nil
 	case bookseries.FieldLastRefreshedAt:
 		m.ResetLastRefreshedAt()
+		return nil
+	case bookseries.FieldHardcoverSlug:
+		m.ResetHardcoverSlug()
 		return nil
 	}
 	return fmt.Errorf("unknown BookSeries field %s", name)

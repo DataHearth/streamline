@@ -42,6 +42,8 @@ func (BookSeries) Fields() []ent.Field {
 		field.String("edition_publisher").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable().
 			Comment("When the series row and its volume skeleton were last read."),
+		field.String("hardcover_slug").Optional().
+			Comment("The hardcover.app/series path segment; the id form is a 404."),
 	}
 }
 

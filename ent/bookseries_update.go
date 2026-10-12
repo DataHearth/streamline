@@ -328,6 +328,26 @@ func (_u *BookSeriesUpdate) ClearLastRefreshedAt() *BookSeriesUpdate {
 	return _u
 }
 
+// SetHardcoverSlug sets the "hardcover_slug" field.
+func (_u *BookSeriesUpdate) SetHardcoverSlug(v string) *BookSeriesUpdate {
+	_u.mutation.SetHardcoverSlug(v)
+	return _u
+}
+
+// SetNillableHardcoverSlug sets the "hardcover_slug" field if the given value is not nil.
+func (_u *BookSeriesUpdate) SetNillableHardcoverSlug(v *string) *BookSeriesUpdate {
+	if v != nil {
+		_u.SetHardcoverSlug(*v)
+	}
+	return _u
+}
+
+// ClearHardcoverSlug clears the value of the "hardcover_slug" field.
+func (_u *BookSeriesUpdate) ClearHardcoverSlug() *BookSeriesUpdate {
+	_u.mutation.ClearHardcoverSlug()
+	return _u
+}
+
 // AddVolumeIDs adds the "volumes" edge to the Book entity by IDs.
 func (_u *BookSeriesUpdate) AddVolumeIDs(ids ...uint32) *BookSeriesUpdate {
 	_u.mutation.AddVolumeIDs(ids...)
@@ -565,6 +585,12 @@ func (_u *BookSeriesUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.LastRefreshedAtCleared() {
 		_spec.ClearField(bookseries.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.HardcoverSlug(); ok {
+		_spec.SetField(bookseries.FieldHardcoverSlug, field.TypeString, value)
+	}
+	if _u.mutation.HardcoverSlugCleared() {
+		_spec.ClearField(bookseries.FieldHardcoverSlug, field.TypeString)
 	}
 	if _u.mutation.VolumesCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -975,6 +1001,26 @@ func (_u *BookSeriesUpdateOne) ClearLastRefreshedAt() *BookSeriesUpdateOne {
 	return _u
 }
 
+// SetHardcoverSlug sets the "hardcover_slug" field.
+func (_u *BookSeriesUpdateOne) SetHardcoverSlug(v string) *BookSeriesUpdateOne {
+	_u.mutation.SetHardcoverSlug(v)
+	return _u
+}
+
+// SetNillableHardcoverSlug sets the "hardcover_slug" field if the given value is not nil.
+func (_u *BookSeriesUpdateOne) SetNillableHardcoverSlug(v *string) *BookSeriesUpdateOne {
+	if v != nil {
+		_u.SetHardcoverSlug(*v)
+	}
+	return _u
+}
+
+// ClearHardcoverSlug clears the value of the "hardcover_slug" field.
+func (_u *BookSeriesUpdateOne) ClearHardcoverSlug() *BookSeriesUpdateOne {
+	_u.mutation.ClearHardcoverSlug()
+	return _u
+}
+
 // AddVolumeIDs adds the "volumes" edge to the Book entity by IDs.
 func (_u *BookSeriesUpdateOne) AddVolumeIDs(ids ...uint32) *BookSeriesUpdateOne {
 	_u.mutation.AddVolumeIDs(ids...)
@@ -1242,6 +1288,12 @@ func (_u *BookSeriesUpdateOne) sqlSave(ctx context.Context) (_node *BookSeries, 
 	}
 	if _u.mutation.LastRefreshedAtCleared() {
 		_spec.ClearField(bookseries.FieldLastRefreshedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.HardcoverSlug(); ok {
+		_spec.SetField(bookseries.FieldHardcoverSlug, field.TypeString, value)
+	}
+	if _u.mutation.HardcoverSlugCleared() {
+		_spec.ClearField(bookseries.FieldHardcoverSlug, field.TypeString)
 	}
 	if _u.mutation.VolumesCleared() {
 		edge := &sqlgraph.EdgeSpec{

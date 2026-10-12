@@ -204,6 +204,46 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 		})
 
 		It(
+			"covers a series with its first three positioned, hydrated volumes",
+			func() {
+				loose := volumeSeed(406, 0, now)
+				loose.SeriesPosition = nil
+				stub := BookSeed{
+					HardcoverID: 402, Title: "Dune #2", Kind: "manga",
+					PreferredLanguage: "en", SeriesPosition: new(2.0),
+				}
+				dune, _, err := store.CreateSeries(ctx, CreateSeriesParams{
+					HardcoverID: 400, Title: "Dune", Kind: "manga", Monitor: "all",
+					EditionLanguage: "en", RefreshedAt: now,
+					Volumes: []BookSeed{
+						volumeSeed(404, 4, now), volumeSeed(401, 1, now), stub,
+						volumeSeed(403, 3, now), volumeSeed(405, 5, now), loose,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				id := func(hc uint32) uint32 {
+					return client.Book.Query().
+						Where(book.HardcoverIDEQ(hc)).
+						OnlyX(ctx).
+						ID
+				}
+				want := []uint32{id(401), id(403), id(404)}
+
+				rows, _ := list(ShelfParams{})
+				byTitle := map[string]ShelfRow{}
+				for _, r := range rows {
+					byTitle[r.Title] = r
+				}
+
+				Expect(byTitle["Dune"].CoverIDs).To(Equal(want))
+				Expect(byTitle["Berserk"].CoverIDs).To(Equal([]uint32{id(301)}))
+				detail, err := store.FindSeriesByID(ctx, dune.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(SeriesCoverIDs(detail)).To(Equal(want))
+			},
+		)
+
+		It(
 			"leaves out an upcoming volume from the status and the out count",
 			func() {
 				future := now.Add(24 * time.Hour)

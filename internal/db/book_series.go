@@ -18,6 +18,7 @@ import (
 // RefreshedAt is nil are stubs.
 type CreateSeriesParams struct {
 	HardcoverID      uint32
+	Slug             string
 	Title            string
 	OriginalTitle    string
 	Overview         string
@@ -38,6 +39,7 @@ type CreateSeriesParams struct {
 // SeriesMetadata is the provider-derived part of a series, written on a
 // refresh. Monitor, profile and the chosen edition are never in it.
 type SeriesMetadata struct {
+	Slug          string
 	Title         string
 	OriginalTitle string
 	Overview      string
@@ -122,6 +124,7 @@ func (db *DB) CreateSeries(
 	c := tx.Client()
 	row, err := c.BookSeries.Create().
 		SetHardcoverID(p.HardcoverID).
+		SetHardcoverSlug(p.Slug).
 		SetTitle(p.Title).
 		SetSortTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
@@ -295,6 +298,7 @@ func (db *DB) ApplySeriesMetadata(
 	}
 	c := tx.Client()
 	u := c.BookSeries.UpdateOneID(id).
+		SetHardcoverSlug(m.Slug).
 		SetTitle(m.Title).
 		SetSortTitle(m.Title).
 		SetOriginalTitle(m.OriginalTitle).

@@ -1,13 +1,16 @@
 package db
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookseries"
 )
@@ -54,6 +57,9 @@ type ShelfRow struct {
 	VolumesOut     uint32    `sql:"volumes_out"`
 	QualityProfile string    `sql:"quality_profile"`
 	AddedAt        time.Time `sql:"-"`
+	// CoverIDs are a series' first positioned, hydrated volumes, whose posters
+	// stand for it; empty for a book.
+	CoverIDs []uint32 `sql:"-"`
 }
 
 // ShelfAuthorCount is one entry of the author facet.
@@ -319,6 +325,9 @@ func (db *DB) ListShelf(
 	if err := db.shelfAddedAt(ctx, rows); err != nil {
 		return nil, 0, err
 	}
+	if err := db.shelfCoverIDs(ctx, rows); err != nil {
+		return nil, 0, err
+	}
 	return rows, total, nil
 }
 
@@ -496,4 +505,76 @@ func (db *DB) ShelfCountsFor(
 		return c, fmt.Errorf("list shelf authors: %w", err)
 	}
 	return c, nil
+}
+
+// seriesCoverCount is how many volumes stand for a series on its cover.
+const seriesCoverCount = 3
+
+// SeriesCoverIDs lists the volumes whose posters stand for a series: its first
+// positioned, hydrated volumes (a stub never has a poster), in position order.
+// It is the Go twin of the shelf's cover ids; change one and the other.
+func SeriesCoverIDs(s *ent.BookSeries) []uint32 {
+	vols := make([]*ent.Book, 0, len(s.Edges.Volumes))
+	for _, v := range s.Edges.Volumes {
+		if v.SeriesPosition != nil && v.LastRefreshedAt != nil {
+			vols = append(vols, v)
+		}
+	}
+	slices.SortStableFunc(vols, func(a, b *ent.Book) int {
+		return cmp.Or(
+			cmp.Compare(*a.SeriesPosition, *b.SeriesPosition),
+			cmp.Compare(a.ID, b.ID),
+		)
+	})
+	out := make([]uint32, 0, seriesCoverCount)
+	for _, v := range vols[:min(len(vols), seriesCoverCount)] {
+		out = append(out, v.ID)
+	}
+	return out
+}
+
+// shelfCoverIDs fills the cover volumes of a page's series in one query.
+func (db *DB) shelfCoverIDs(ctx context.Context, rows []ShelfRow) error {
+	var seriesIDs []any
+	for _, r := range rows {
+		if r.Type == "series" {
+			seriesIDs = append(seriesIDs, r.ID)
+		}
+	}
+	if len(seriesIDs) == 0 {
+		return nil
+	}
+	q := &sqlBuilder{}
+	q.w(`SELECT series_id, id, n FROM (
+ SELECT v.book_series_volumes AS series_id, v.id AS id,
+  ROW_NUMBER() OVER (PARTITION BY v.book_series_volumes ORDER BY v.series_position, v.id) AS n
+ FROM books v
+ WHERE v.book_series_volumes IN (`+strings.TrimSuffix(strings.Repeat("?,", len(seriesIDs)), ",")+`)
+  AND v.series_position IS NOT NULL AND v.last_refreshed_at IS NOT NULL
+ ) WHERE n <= ?`, append(seriesIDs, seriesCoverCount)...)
+	type cover struct {
+		SeriesID uint32 `sql:"series_id"`
+		ID       uint32 `sql:"id"`
+		N        int    `sql:"n"`
+	}
+	var got []cover
+	if err := db.scanRaw(
+		ctx,
+		q,
+		[]string{"series_id", "id", "n"},
+		&got,
+	); err != nil {
+		return fmt.Errorf("shelf series covers: %w", err)
+	}
+	slices.SortFunc(got, func(a, b cover) int { return cmp.Compare(a.N, b.N) })
+	covers := map[uint32][]uint32{}
+	for _, g := range got {
+		covers[g.SeriesID] = append(covers[g.SeriesID], g.ID)
+	}
+	for i := range rows {
+		if rows[i].Type == "series" {
+			rows[i].CoverIDs = covers[rows[i].ID]
+		}
+	}
+	return nil
 }

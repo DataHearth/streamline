@@ -191,6 +191,18 @@ var _ = Describe("Adding books", Label("unit", "integration", "books"), func() {
 			Expect(s.Edges.Volumes[0].Edges.Editions).To(HaveLen(3))
 		})
 
+		It("keeps the series' Hardcover slug", func() {
+			sk := seriesRecord("One Piece", 1)
+			sk.Slug = "one-piece"
+			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).Return(sk, nil).Once()
+			batch(1, 1)
+
+			s, err := f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(s.HardcoverSlug).To(Equal("one-piece"))
+		})
+
 		It(
 			"reads the first twenty volumes and leaves a stub for each other position",
 			func() {
