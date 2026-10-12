@@ -9,16 +9,12 @@
   "links": [
     "https://magnetcatcat.com/",
     "https://clmclm.com/",
-    "https://ksos9z8i.8800591.xyz/",
-    "https://aiohf4w8.8800592.xyz/",
-    "https://nd6mgjh9.8800593.xyz/",
-    "https://7z8qnsfv.8800594.xyz/"
+    "https://ny52n449.8800591.xyz/",
+    "https://abfexssj.8800592.xyz/",
+    "https://cvo4a9m3.8800593.xyz/",
+    "https://mrn4etas.8800594.xyz/"
   ],
   "legacylinks": [
-    "https://5l3obnl8.8800591.xyz/",
-    "https://m7z0fr4i.8800592.xyz/",
-    "https://41lragki.8800593.xyz/",
-    "https://tsh1e0qo.8800594.xyz/",
     "https://g6nh94lg.8800591.xyz/",
     "https://x82z60f1.8800592.xyz/",
     "https://9e9cta7o.8800593.xyz/",
@@ -30,7 +26,11 @@
     "https://pxv3w11f.8800591.xyz/",
     "https://1npq05i9.8800592.xyz/",
     "https://coohnwox.8800593.xyz/",
-    "https://9bd87yuc.8800594.xyz/"
+    "https://9bd87yuc.8800594.xyz/",
+    "https://ksos9z8i.8800591.xyz/",
+    "https://aiohf4w8.8800592.xyz/",
+    "https://nd6mgjh9.8800593.xyz/",
+    "https://7z8qnsfv.8800594.xyz/"
   ],
   "caps": {
     "categorymappings": [
@@ -231,7 +231,7 @@
   },
   "source": {
     "path": "definitions/v11/magnetcat.yml",
-    "sha256": "558956223fa416c9a064d4e57f52804f57ee01373d100c3b417bd342ac14e6d4",
+    "sha256": "b02b29cb4fc5e62c0b96d51629f5afec69bfbf7c6e6f4416df33e4f24ed69436",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

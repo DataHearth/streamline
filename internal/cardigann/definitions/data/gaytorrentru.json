@@ -278,6 +278,15 @@
       "type": "info_cookie"
     },
     {
+      "name": "useragent",
+      "label": "User-Agent",
+      "type": "text"
+    },
+    {
+      "name": "info_useragent",
+      "type": "info_useragent"
+    },
+    {
       "name": "freeleech",
       "label": "Search freeleech only",
       "type": "checkbox",
@@ -336,6 +345,9 @@
     "headers": {
       "Referer": [
         "{{ .Config.sitelink }}search.php?view=legacy"
+      ],
+      "User-Agent": [
+        "{{ .Config.useragent }}"
       ]
     }
   },
@@ -360,6 +372,9 @@
     "headers": {
       "Referer": [
         "{{ .Config.sitelink }}search.php?view=legacy"
+      ],
+      "User-Agent": [
+        "{{ .Config.useragent }}"
       ]
     },
     "rows": {
@@ -484,7 +499,7 @@
   },
   "source": {
     "path": "definitions/v11/gaytorrentru.yml",
-    "sha256": "bd60f1bf07b574462e9f51e65f2bab4dc75f51c5e97e05e4837bf5ccf233ac82",
+    "sha256": "7b257e3b8eb3433ac24d88f82d8d30418aa9af9219c8c5dc4430b55134af9e37",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }

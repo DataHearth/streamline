@@ -5,7 +5,7 @@ The files under data/ are converted from the Cardigann YAML indexer
 definitions maintained by the Prowlarr project:
 
     https://github.com/Prowlarr/Indexers (definitions/v12, falling back to v11 per file)
-    revision 8df0764eec2d6d138a60cc461d7a850dda8dee5a, committed 2026-10-09T02:26:31+02:00
+    revision 8b78ad64e4d1dfc531af697c236d570f77c1a22c, committed 2026-10-12T09:43:47+02:00
 
 Most of those definitions are synced from Jackett
 (https://github.com/Jackett/Jackett). All credit for them belongs to the

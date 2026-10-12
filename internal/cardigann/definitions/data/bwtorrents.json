@@ -551,6 +551,11 @@
         "id": "221",
         "cat": "TV",
         "desc": "TV-JioTv"
+      },
+      {
+        "id": "222",
+        "cat": "Movies",
+        "desc": "Hybrid"
       }
     ],
     "modes": {
@@ -742,7 +747,7 @@
   },
   "source": {
     "path": "definitions/v11/bwtorrents.yml",
-    "sha256": "1e33cc44613637e3798f266d1eae79a966e4279c9fba4acca5ba2eedb279cb51",
+    "sha256": "ccaf605922a863a7bfac78593d0cfe8cdca6ededf431456d062e486ef82aa1e2",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   },
   "regex_net": true

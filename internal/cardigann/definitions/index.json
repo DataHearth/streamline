@@ -3,8 +3,8 @@
   "converter": 6,
   "upstream": {
     "repository": "https://github.com/Prowlarr/Indexers",
-    "commit": "8df0764eec2d6d138a60cc461d7a850dda8dee5a",
-    "date": "2026-10-09T02:26:31+02:00"
+    "commit": "8b78ad64e4d1dfc531af697c236d570f77c1a22c",
+    "date": "2026-10-12T09:43:47+02:00"
   },
   "definitions": [
     {
@@ -84,6 +84,42 @@
       "categories": [
         "XXX"
       ]
+    },
+    {
+      "file": "1337x",
+      "id": "1337x",
+      "name": "1337x",
+      "description": "1337x is a Public torrent site that offers verified torrent downloads",
+      "language": "en-US",
+      "type": "public",
+      "links": [
+        "https://1337x.to/",
+        "https://1337x.st/",
+        "https://x1337x.ws/",
+        "https://x1337x.eu/",
+        "https://x1337x.cc/"
+      ],
+      "login": "none",
+      "challenge": true,
+      "categories": [
+        "Audio",
+        "Books",
+        "Console",
+        "Movies",
+        "Other",
+        "PC",
+        "TV",
+        "XXX"
+      ],
+      "movie_search": [
+        "q"
+      ],
+      "tv_search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "regex_net": true
     },
     {
       "file": "13city",
@@ -292,8 +328,8 @@
       "language": "en-US",
       "type": "public",
       "links": [
-        "https://rav0mz0e.529075.xyz/",
-        "https://1xzwn2ev.529076.xyz/"
+        "https://372fbohe.529075.xyz/",
+        "https://ax7czmpg.529076.xyz/"
       ],
       "login": "none",
       "challenge": true,
@@ -312,6 +348,37 @@
         "q",
         "season",
         "ep"
+      ]
+    },
+    {
+      "file": "52movie",
+      "id": "52movie",
+      "name": "52movie",
+      "description": "52movie is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
+      "language": "zh-CN",
+      "type": "private",
+      "links": [
+        "https://www.52movie.top/"
+      ],
+      "login": "form",
+      "captcha": true,
+      "categories": [
+        "Audio",
+        "Movies",
+        "Other",
+        "TV"
+      ],
+      "movie_search": [
+        "q",
+        "imdbid",
+        "doubanid"
+      ],
+      "tv_search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "doubanid"
       ]
     },
     {
@@ -7642,10 +7709,10 @@
       "links": [
         "https://magnetcatcat.com/",
         "https://clmclm.com/",
-        "https://ksos9z8i.8800591.xyz/",
-        "https://aiohf4w8.8800592.xyz/",
-        "https://nd6mgjh9.8800593.xyz/",
-        "https://7z8qnsfv.8800594.xyz/"
+        "https://ny52n449.8800591.xyz/",
+        "https://abfexssj.8800592.xyz/",
+        "https://cvo4a9m3.8800593.xyz/",
+        "https://mrn4etas.8800594.xyz/"
       ],
       "login": "none",
       "categories": [
@@ -8118,6 +8185,7 @@
         "Audio",
         "Books",
         "Movies",
+        "PC",
         "TV"
       ],
       "movie_search": [
@@ -12124,23 +12192,6 @@
       ]
     },
     {
-      "file": "slobitgames",
-      "id": "slobitgames",
-      "name": "Slobit Games",
-      "description": "Slobit Games is a Private Torrent Tracker for GAMES",
-      "language": "en-US",
-      "type": "private",
-      "links": [
-        "https://games.slo-bitcloud.eu/"
-      ],
-      "login": "post",
-      "categories": [
-        "Console",
-        "Other",
-        "PC"
-      ]
-    },
-    {
       "file": "snowpt",
       "id": "snowpt",
       "name": "SnowPT",
@@ -13960,7 +14011,7 @@
       "language": "lt-LT",
       "type": "private",
       "links": [
-        "https://torrent.lt/"
+        "https://torrent.ai/"
       ],
       "login": "post",
       "categories": [
@@ -15876,12 +15927,6 @@
         "ep",
         "imdbid"
       ]
-    }
-  ],
-  "skipped": [
-    {
-      "file": "1337x.yml",
-      "reason": "Search.Paths[1].Path: template \"{{ if and (.Keywords) (eq .Config.disablesort .False) }}sort-{{ else }}{{ end }}{{ if .Keywords }}search/{{ .Keywords }}{{ else }}cat/TV{{ end }}{{ if and (.Keywords) (eq .Config.disablesort .False)) }}/{{ .Config.sort }}/{{ .Config.type }}{{ else }}{{ end }}/{{ if .Keywords }}2{{ else }}1{{ end }}/\": template: :1: unexpected right paren"
     }
   ]
 }

@@ -353,7 +353,7 @@
   },
   "source": {
     "path": "definitions/v11/peergarden.yml",
-    "sha256": "98975e4da2e261f17b179abb4f2ef793d78ddf6e7f6225a34808d0d8ef593402",
+    "sha256": "13c461bfc5e4246bf4e32d56f7e94867d32883dcd151d51a2244db68ef3792f4",
     "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
   }
 }
