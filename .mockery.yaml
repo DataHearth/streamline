@@ -67,6 +67,9 @@ packages:
       Manager: {}
       Refresher: {}
       Server: {}
+  github.com/datahearth/streamline/internal/mailer:
+    interfaces:
+      Sender: {}
   github.com/datahearth/streamline/internal/metadata:
     interfaces:
       BookProvider: {}
