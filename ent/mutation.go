@@ -44607,6 +44607,7 @@ type UserMutation struct {
 	role                   *user.Role
 	auth_method            *user.AuthMethod
 	display_name           *string
+	device_email           *string
 	subsonic_password      *string
 	subsonic_created_at    *time.Time
 	subsonic_last_used_at  *time.Time
@@ -45017,6 +45018,55 @@ func (m *UserMutation) DisplayNameCleared() bool {
 func (m *UserMutation) ResetDisplayName() {
 	m.display_name = nil
 	delete(m.clearedFields, user.FieldDisplayName)
+}
+
+// SetDeviceEmail sets the "device_email" field.
+func (m *UserMutation) SetDeviceEmail(s string) {
+	m.device_email = &s
+}
+
+// DeviceEmail returns the value of the "device_email" field in the mutation.
+func (m *UserMutation) DeviceEmail() (r string, exists bool) {
+	v := m.device_email
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeviceEmail returns the old "device_email" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldDeviceEmail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeviceEmail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeviceEmail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeviceEmail: %w", err)
+	}
+	return oldValue.DeviceEmail, nil
+}
+
+// ClearDeviceEmail clears the value of the "device_email" field.
+func (m *UserMutation) ClearDeviceEmail() {
+	m.device_email = nil
+	m.clearedFields[user.FieldDeviceEmail] = struct{}{}
+}
+
+// DeviceEmailCleared returns if the "device_email" field was cleared in this mutation.
+func (m *UserMutation) DeviceEmailCleared() bool {
+	_, ok := m.clearedFields[user.FieldDeviceEmail]
+	return ok
+}
+
+// ResetDeviceEmail resets all changes to the "device_email" field.
+func (m *UserMutation) ResetDeviceEmail() {
+	m.device_email = nil
+	delete(m.clearedFields, user.FieldDeviceEmail)
 }
 
 // SetSubsonicPassword sets the "subsonic_password" field.
@@ -45815,7 +45865,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -45836,6 +45886,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.display_name != nil {
 		fields = append(fields, user.FieldDisplayName)
+	}
+	if m.device_email != nil {
+		fields = append(fields, user.FieldDeviceEmail)
 	}
 	if m.subsonic_password != nil {
 		fields = append(fields, user.FieldSubsonicPassword)
@@ -45892,6 +45945,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.AuthMethod()
 	case user.FieldDisplayName:
 		return m.DisplayName()
+	case user.FieldDeviceEmail:
+		return m.DeviceEmail()
 	case user.FieldSubsonicPassword:
 		return m.SubsonicPassword()
 	case user.FieldSubsonicCreatedAt:
@@ -45937,6 +45992,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldAuthMethod(ctx)
 	case user.FieldDisplayName:
 		return m.OldDisplayName(ctx)
+	case user.FieldDeviceEmail:
+		return m.OldDeviceEmail(ctx)
 	case user.FieldSubsonicPassword:
 		return m.OldSubsonicPassword(ctx)
 	case user.FieldSubsonicCreatedAt:
@@ -46016,6 +46073,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDisplayName(v)
+		return nil
+	case user.FieldDeviceEmail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeviceEmail(v)
 		return nil
 	case user.FieldSubsonicPassword:
 		v, ok := value.(string)
@@ -46145,6 +46209,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldDisplayName) {
 		fields = append(fields, user.FieldDisplayName)
 	}
+	if m.FieldCleared(user.FieldDeviceEmail) {
+		fields = append(fields, user.FieldDeviceEmail)
+	}
 	if m.FieldCleared(user.FieldSubsonicPassword) {
 		fields = append(fields, user.FieldSubsonicPassword)
 	}
@@ -46194,6 +46261,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldDisplayName:
 		m.ClearDisplayName()
+		return nil
+	case user.FieldDeviceEmail:
+		m.ClearDeviceEmail()
 		return nil
 	case user.FieldSubsonicPassword:
 		m.ClearSubsonicPassword()
@@ -46253,6 +46323,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldDisplayName:
 		m.ResetDisplayName()
+		return nil
+	case user.FieldDeviceEmail:
+		m.ResetDeviceEmail()
 		return nil
 	case user.FieldSubsonicPassword:
 		m.ResetSubsonicPassword()

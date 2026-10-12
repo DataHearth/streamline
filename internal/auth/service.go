@@ -103,7 +103,7 @@ type Manager interface {
 	UpdateProfile(
 		ctx context.Context,
 		userID uint32,
-		displayName string,
+		p ProfilePatch,
 	) (*ent.User, error)
 	ChangePassword(
 		ctx context.Context,

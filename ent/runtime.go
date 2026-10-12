@@ -874,15 +874,15 @@ func init() {
 	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
 	// userDescSubsonicLastClient is the schema descriptor for subsonic_last_client field.
-	userDescSubsonicLastClient := userFields[8].Descriptor()
+	userDescSubsonicLastClient := userFields[9].Descriptor()
 	// user.SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
 	user.SubsonicLastClientValidator = userDescSubsonicLastClient.Validators[0].(func(string) error)
 	// userDescOpdsLastClient is the schema descriptor for opds_last_client field.
-	userDescOpdsLastClient := userFields[12].Descriptor()
+	userDescOpdsLastClient := userFields[13].Descriptor()
 	// user.OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
 	user.OpdsLastClientValidator = userDescOpdsLastClient.Validators[0].(func(string) error)
 	// userDescFailedLoginCount is the schema descriptor for failed_login_count field.
-	userDescFailedLoginCount := userFields[13].Descriptor()
+	userDescFailedLoginCount := userFields[14].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
 }

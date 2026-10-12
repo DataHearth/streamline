@@ -30,7 +30,7 @@ func (s *Server) AuthMe(
 		}
 		return nil, err
 	}
-	return AuthMe200JSONResponse(toAPIUser(u)), nil
+	return AuthMe200JSONResponse(toAPIUserWithSend(u)), nil
 }
 
 func (s *Server) ListInvites(

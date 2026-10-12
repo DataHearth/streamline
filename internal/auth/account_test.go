@@ -44,16 +44,79 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 				Return(row, nil).
 				Once()
 
-			got, err := svc.UpdateProfile(ctx, 1, "  Alice  ")
+			got, err := svc.UpdateProfile(
+				ctx,
+				1,
+				ProfilePatch{DisplayName: new("  Alice  ")},
+			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(Equal(row))
 		})
+
+		It("patches device_email without touching display_name", func() {
+			row := &ent.User{ID: 1}
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.DisplayName == nil && p.DeviceEmail != nil &&
+					*p.DeviceEmail == "me@kindle.com"
+			})).
+				Return(row, nil).
+				Once()
+
+			_, err := svc.UpdateProfile(
+				ctx,
+				1,
+				ProfilePatch{DeviceEmail: new(" me@kindle.com ")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("patches display_name without touching device_email", func() {
+			row := &ent.User{ID: 1}
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.DeviceEmail == nil && p.DisplayName != nil &&
+					*p.DisplayName == "Bob"
+			})).
+				Return(row, nil).
+				Once()
+
+			_, err := svc.UpdateProfile(
+				ctx,
+				1,
+				ProfilePatch{DisplayName: new("Bob")},
+			)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("clears device_email on empty string", func() {
+			row := &ent.User{ID: 1}
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.DeviceEmail != nil && *p.DeviceEmail == ""
+			})).
+				Return(row, nil).
+				Once()
+
+			_, err := svc.UpdateProfile(ctx, 1, ProfilePatch{DeviceEmail: new("")})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("rejects an invalid device_email",
+			func(v string) {
+				_, err := svc.UpdateProfile(
+					ctx,
+					1,
+					ProfilePatch{DeviceEmail: new(v)},
+				)
+				Expect(err).To(MatchError(ErrInvalidDeviceEmail))
+			},
+			Entry("no at-sign", "kindle at example"),
+			Entry("display name form", "A <a@b.c>"),
+		)
 
 		It("wraps store errors", func() {
 			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.AnythingOfType("db.UpdateUserParams")).
 				Return(nil, errors.New("update fail")).
 				Once()
-			_, err := svc.UpdateProfile(ctx, 1, "x")
+			_, err := svc.UpdateProfile(ctx, 1, ProfilePatch{DisplayName: new("x")})
 			Expect(err).To(MatchError(ContainSubstring("update profile")))
 		})
 	})

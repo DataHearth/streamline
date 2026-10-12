@@ -19,15 +19,22 @@ func (s *Server) UpdateMe(
 			UnauthorizedJSONResponse: unauthorizedResp("unauthorized"),
 		}, nil
 	}
-	dn := ""
-	if req.Body != nil && req.Body.DisplayName != nil {
-		dn = *req.Body.DisplayName
+	var patch auth.ProfilePatch
+	if req.Body != nil {
+		patch.DisplayName = req.Body.DisplayName
+		patch.DeviceEmail = req.Body.DeviceEmail
 	}
-	u, err := s.auth.UpdateProfile(ctx, claims.UserID, dn)
-	if err != nil {
+	u, err := s.auth.UpdateProfile(ctx, claims.UserID, patch)
+	switch {
+	case err == nil:
+		return UpdateMe200JSONResponse(toAPIUserWithSend(u)), nil
+	case errors.Is(err, auth.ErrInvalidDeviceEmail):
+		return UpdateMe422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	default:
 		return nil, err
 	}
-	return UpdateMe200JSONResponse(toAPIUser(u)), nil
 }
 
 // ChangePassword verifies the current password, rotates to the new one, signs

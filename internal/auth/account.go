@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -37,6 +38,10 @@ var (
 	// ErrAPIKeyQuotaExceeded is returned when a user tries to create an API
 	// key past maxAPIKeysPerUser. Handlers map to a 4xx.
 	ErrAPIKeyQuotaExceeded = errors.New("api key quota exceeded")
+
+	// ErrInvalidDeviceEmail is returned when a device address is not a bare
+	// email address. Handlers map to 422.
+	ErrInvalidDeviceEmail = errors.New("device email is not a valid address")
 )
 
 // maxAPIKeysPerUser bounds how many API keys a single account may hold, so
@@ -57,22 +62,40 @@ func validatePassword(p string) error {
 	return nil
 }
 
-// UpdateProfile writes the user-editable profile fields. Currently limited to
-// display_name; extend here when more fields become self-service.
+// ProfilePatch is the self-service profile update; a nil field is left
+// untouched, and an empty DeviceEmail clears it.
+type ProfilePatch struct {
+	DisplayName *string
+	DeviceEmail *string
+}
+
+// UpdateProfile writes the user-editable profile fields.
 func (s *auth) UpdateProfile(
 	ctx context.Context,
 	userID uint32,
-	displayName string,
+	p ProfilePatch,
 ) (*ent.User, error) {
 	ctx, span := tracer.Start(ctx, "auth.update_profile",
 		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
 	)
 	defer span.End()
 
-	dn := strings.TrimSpace(displayName)
-	u, err := s.db.UpdateUser(ctx, userID, db.UpdateUserParams{
-		DisplayName: &dn,
-	})
+	var params db.UpdateUserParams
+	if p.DisplayName != nil {
+		dn := strings.TrimSpace(*p.DisplayName)
+		params.DisplayName = &dn
+	}
+	if p.DeviceEmail != nil {
+		de := strings.TrimSpace(*p.DeviceEmail)
+		if de != "" {
+			addr, err := mail.ParseAddress(de)
+			if err != nil || addr.Address != de {
+				return nil, otelx.RecordSpanError(span, ErrInvalidDeviceEmail)
+			}
+		}
+		params.DeviceEmail = &de
+	}
+	u, err := s.db.UpdateUser(ctx, userID, params)
 	if err != nil {
 		return nil, otelx.RecordSpanError(
 			span,

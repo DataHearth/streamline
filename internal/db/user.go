@@ -70,6 +70,7 @@ type UpdateUserParams struct {
 	Role                   *role.Value
 	AuthMethod             *user.AuthMethod
 	DisplayName            *string
+	DeviceEmail            *string
 	Email                  *string
 	FailedLoginCount       *uint8
 	LastFailedLoginAt      *time.Time
@@ -277,6 +278,9 @@ func applyUserUpdate(
 	}
 	if p.DisplayName != nil {
 		upd = upd.SetDisplayName(*p.DisplayName)
+	}
+	if p.DeviceEmail != nil {
+		upd = upd.SetDeviceEmail(*p.DeviceEmail)
 	}
 	if p.Email != nil {
 		upd = upd.SetEmail(*p.Email)

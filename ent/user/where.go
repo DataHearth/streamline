@@ -80,6 +80,11 @@ func DisplayName(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldDisplayName, v))
 }
 
+// DeviceEmail applies equality check predicate on the "device_email" field. It's identical to DeviceEmailEQ.
+func DeviceEmail(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDeviceEmail, v))
+}
+
 // SubsonicPassword applies equality check predicate on the "subsonic_password" field. It's identical to SubsonicPasswordEQ.
 func SubsonicPassword(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldSubsonicPassword, v))
@@ -468,6 +473,81 @@ func DisplayNameEqualFold(v string) predicate.User {
 // DisplayNameContainsFold applies the ContainsFold predicate on the "display_name" field.
 func DisplayNameContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldDisplayName, v))
+}
+
+// DeviceEmailEQ applies the EQ predicate on the "device_email" field.
+func DeviceEmailEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDeviceEmail, v))
+}
+
+// DeviceEmailNEQ applies the NEQ predicate on the "device_email" field.
+func DeviceEmailNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldDeviceEmail, v))
+}
+
+// DeviceEmailIn applies the In predicate on the "device_email" field.
+func DeviceEmailIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldDeviceEmail, vs...))
+}
+
+// DeviceEmailNotIn applies the NotIn predicate on the "device_email" field.
+func DeviceEmailNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldDeviceEmail, vs...))
+}
+
+// DeviceEmailGT applies the GT predicate on the "device_email" field.
+func DeviceEmailGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldDeviceEmail, v))
+}
+
+// DeviceEmailGTE applies the GTE predicate on the "device_email" field.
+func DeviceEmailGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldDeviceEmail, v))
+}
+
+// DeviceEmailLT applies the LT predicate on the "device_email" field.
+func DeviceEmailLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldDeviceEmail, v))
+}
+
+// DeviceEmailLTE applies the LTE predicate on the "device_email" field.
+func DeviceEmailLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldDeviceEmail, v))
+}
+
+// DeviceEmailContains applies the Contains predicate on the "device_email" field.
+func DeviceEmailContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldDeviceEmail, v))
+}
+
+// DeviceEmailHasPrefix applies the HasPrefix predicate on the "device_email" field.
+func DeviceEmailHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldDeviceEmail, v))
+}
+
+// DeviceEmailHasSuffix applies the HasSuffix predicate on the "device_email" field.
+func DeviceEmailHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldDeviceEmail, v))
+}
+
+// DeviceEmailIsNil applies the IsNil predicate on the "device_email" field.
+func DeviceEmailIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldDeviceEmail))
+}
+
+// DeviceEmailNotNil applies the NotNil predicate on the "device_email" field.
+func DeviceEmailNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldDeviceEmail))
+}
+
+// DeviceEmailEqualFold applies the EqualFold predicate on the "device_email" field.
+func DeviceEmailEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldDeviceEmail, v))
+}
+
+// DeviceEmailContainsFold applies the ContainsFold predicate on the "device_email" field.
+func DeviceEmailContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldDeviceEmail, v))
 }
 
 // SubsonicPasswordEQ applies the EQ predicate on the "subsonic_password" field.

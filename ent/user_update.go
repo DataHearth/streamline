@@ -121,6 +121,26 @@ func (_u *UserUpdate) ClearDisplayName() *UserUpdate {
 	return _u
 }
 
+// SetDeviceEmail sets the "device_email" field.
+func (_u *UserUpdate) SetDeviceEmail(v string) *UserUpdate {
+	_u.mutation.SetDeviceEmail(v)
+	return _u
+}
+
+// SetNillableDeviceEmail sets the "device_email" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableDeviceEmail(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetDeviceEmail(*v)
+	}
+	return _u
+}
+
+// ClearDeviceEmail clears the value of the "device_email" field.
+func (_u *UserUpdate) ClearDeviceEmail() *UserUpdate {
+	_u.mutation.ClearDeviceEmail()
+	return _u
+}
+
 // SetSubsonicPassword sets the "subsonic_password" field.
 func (_u *UserUpdate) SetSubsonicPassword(v string) *UserUpdate {
 	_u.mutation.SetSubsonicPassword(v)
@@ -599,6 +619,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DisplayNameCleared() {
 		_spec.ClearField(user.FieldDisplayName, field.TypeString)
 	}
+	if value, ok := _u.mutation.DeviceEmail(); ok {
+		_spec.SetField(user.FieldDeviceEmail, field.TypeString, value)
+	}
+	if _u.mutation.DeviceEmailCleared() {
+		_spec.ClearField(user.FieldDeviceEmail, field.TypeString)
+	}
 	if value, ok := _u.mutation.SubsonicPassword(); ok {
 		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)
 	}
@@ -952,6 +978,26 @@ func (_u *UserUpdateOne) SetNillableDisplayName(v *string) *UserUpdateOne {
 // ClearDisplayName clears the value of the "display_name" field.
 func (_u *UserUpdateOne) ClearDisplayName() *UserUpdateOne {
 	_u.mutation.ClearDisplayName()
+	return _u
+}
+
+// SetDeviceEmail sets the "device_email" field.
+func (_u *UserUpdateOne) SetDeviceEmail(v string) *UserUpdateOne {
+	_u.mutation.SetDeviceEmail(v)
+	return _u
+}
+
+// SetNillableDeviceEmail sets the "device_email" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableDeviceEmail(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetDeviceEmail(*v)
+	}
+	return _u
+}
+
+// ClearDeviceEmail clears the value of the "device_email" field.
+func (_u *UserUpdateOne) ClearDeviceEmail() *UserUpdateOne {
+	_u.mutation.ClearDeviceEmail()
 	return _u
 }
 
@@ -1462,6 +1508,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.DisplayNameCleared() {
 		_spec.ClearField(user.FieldDisplayName, field.TypeString)
+	}
+	if value, ok := _u.mutation.DeviceEmail(); ok {
+		_spec.SetField(user.FieldDeviceEmail, field.TypeString, value)
+	}
+	if _u.mutation.DeviceEmailCleared() {
+		_spec.ClearField(user.FieldDeviceEmail, field.TypeString)
 	}
 	if value, ok := _u.mutation.SubsonicPassword(); ok {
 		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)

@@ -2523,8 +2523,8 @@ func (_c *MockManager_Unlock_Call) RunAndReturn(run func(ctx context.Context, em
 }
 
 // UpdateProfile provides a mock function for the type MockManager
-func (_mock *MockManager) UpdateProfile(ctx context.Context, userID uint32, displayName string) (*ent.User, error) {
-	ret := _mock.Called(ctx, userID, displayName)
+func (_mock *MockManager) UpdateProfile(ctx context.Context, userID uint32, p auth.ProfilePatch) (*ent.User, error) {
+	ret := _mock.Called(ctx, userID, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateProfile")
@@ -2532,18 +2532,18 @@ func (_mock *MockManager) UpdateProfile(ctx context.Context, userID uint32, disp
 
 	var r0 *ent.User
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*ent.User, error)); ok {
-		return returnFunc(ctx, userID, displayName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, auth.ProfilePatch) (*ent.User, error)); ok {
+		return returnFunc(ctx, userID, p)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *ent.User); ok {
-		r0 = returnFunc(ctx, userID, displayName)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, auth.ProfilePatch) *ent.User); ok {
+		r0 = returnFunc(ctx, userID, p)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*ent.User)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
-		r1 = returnFunc(ctx, userID, displayName)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, auth.ProfilePatch) error); ok {
+		r1 = returnFunc(ctx, userID, p)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2558,12 +2558,12 @@ type MockManager_UpdateProfile_Call struct {
 // UpdateProfile is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uint32
-//   - displayName string
-func (_e *MockManager_Expecter) UpdateProfile(ctx any, userID any, displayName any) *MockManager_UpdateProfile_Call {
-	return &MockManager_UpdateProfile_Call{Call: _e.mock.On("UpdateProfile", ctx, userID, displayName)}
+//   - p auth.ProfilePatch
+func (_e *MockManager_Expecter) UpdateProfile(ctx any, userID any, p any) *MockManager_UpdateProfile_Call {
+	return &MockManager_UpdateProfile_Call{Call: _e.mock.On("UpdateProfile", ctx, userID, p)}
 }
 
-func (_c *MockManager_UpdateProfile_Call) Run(run func(ctx context.Context, userID uint32, displayName string)) *MockManager_UpdateProfile_Call {
+func (_c *MockManager_UpdateProfile_Call) Run(run func(ctx context.Context, userID uint32, p auth.ProfilePatch)) *MockManager_UpdateProfile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -2573,9 +2573,9 @@ func (_c *MockManager_UpdateProfile_Call) Run(run func(ctx context.Context, user
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 string
+		var arg2 auth.ProfilePatch
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(auth.ProfilePatch)
 		}
 		run(
 			arg0,
@@ -2591,7 +2591,7 @@ func (_c *MockManager_UpdateProfile_Call) Return(user *ent.User, err error) *Moc
 	return _c
 }
 
-func (_c *MockManager_UpdateProfile_Call) RunAndReturn(run func(ctx context.Context, userID uint32, displayName string) (*ent.User, error)) *MockManager_UpdateProfile_Call {
+func (_c *MockManager_UpdateProfile_Call) RunAndReturn(run func(ctx context.Context, userID uint32, p auth.ProfilePatch) (*ent.User, error)) *MockManager_UpdateProfile_Call {
 	_c.Call.Return(run)
 	return _c
 }

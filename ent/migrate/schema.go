@@ -1565,6 +1565,7 @@ var (
 		{Name: "role", Type: field.TypeEnum, Enums: []string{"admin", "member", "request_only"}, Default: "member"},
 		{Name: "auth_method", Type: field.TypeEnum, Enums: []string{"local", "oidc", "both"}, Default: "local"},
 		{Name: "display_name", Type: field.TypeString, Nullable: true},
+		{Name: "device_email", Type: field.TypeString, Nullable: true},
 		{Name: "subsonic_password", Type: field.TypeString, Nullable: true},
 		{Name: "subsonic_created_at", Type: field.TypeTime, Nullable: true},
 		{Name: "subsonic_last_used_at", Type: field.TypeTime, Nullable: true},

@@ -27,6 +27,7 @@ func (User) Fields() []ent.Field {
 			Default("member"),
 		field.Enum("auth_method").Values("local", "oidc", "both").Default("local"),
 		field.String("display_name").Optional(),
+		field.String("device_email").Optional(),
 		// Recoverable on purpose: the Subsonic token scheme (t=md5(pass+salt))
 		// needs the plaintext. Never valid for web or REST auth.
 		field.String("subsonic_password").Optional().Sensitive(),

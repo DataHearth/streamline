@@ -31,6 +31,8 @@ type User struct {
 	AuthMethod user.AuthMethod `json:"auth_method,omitempty"`
 	// DisplayName holds the value of the "display_name" field.
 	DisplayName string `json:"display_name,omitempty"`
+	// DeviceEmail holds the value of the "device_email" field.
+	DeviceEmail string `json:"device_email,omitempty"`
 	// SubsonicPassword holds the value of the "subsonic_password" field.
 	SubsonicPassword string `json:"-"`
 	// SubsonicCreatedAt holds the value of the "subsonic_created_at" field.
@@ -117,7 +119,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldID, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldSubsonicPassword, user.FieldSubsonicLastClient, user.FieldOpdsToken, user.FieldOpdsLastClient:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient, user.FieldOpdsToken, user.FieldOpdsLastClient:
 			values[i] = new(sql.NullString)
 		case user.FieldCreateTime, user.FieldUpdateTime, user.FieldSubsonicCreatedAt, user.FieldSubsonicLastUsedAt, user.FieldOpdsCreatedAt, user.FieldOpdsLastUsedAt, user.FieldLastFailedLoginAt, user.FieldLockedUntil:
 			values[i] = new(sql.NullTime)
@@ -183,6 +185,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field display_name", values[i])
 			} else if value.Valid {
 				_m.DisplayName = value.String
+			}
+		case user.FieldDeviceEmail:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field device_email", values[i])
+			} else if value.Valid {
+				_m.DeviceEmail = value.String
 			}
 		case user.FieldSubsonicPassword:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -331,6 +339,9 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("display_name=")
 	builder.WriteString(_m.DisplayName)
+	builder.WriteString(", ")
+	builder.WriteString("device_email=")
+	builder.WriteString(_m.DeviceEmail)
 	builder.WriteString(", ")
 	builder.WriteString("subsonic_password=<sensitive>")
 	builder.WriteString(", ")

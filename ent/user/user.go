@@ -29,6 +29,8 @@ const (
 	FieldAuthMethod = "auth_method"
 	// FieldDisplayName holds the string denoting the display_name field in the database.
 	FieldDisplayName = "display_name"
+	// FieldDeviceEmail holds the string denoting the device_email field in the database.
+	FieldDeviceEmail = "device_email"
 	// FieldSubsonicPassword holds the string denoting the subsonic_password field in the database.
 	FieldSubsonicPassword = "subsonic_password"
 	// FieldSubsonicCreatedAt holds the string denoting the subsonic_created_at field in the database.
@@ -101,6 +103,7 @@ var Columns = []string{
 	FieldRole,
 	FieldAuthMethod,
 	FieldDisplayName,
+	FieldDeviceEmail,
 	FieldSubsonicPassword,
 	FieldSubsonicCreatedAt,
 	FieldSubsonicLastUsedAt,
@@ -236,6 +239,11 @@ func ByAuthMethod(opts ...sql.OrderTermOption) OrderOption {
 // ByDisplayName orders the results by the display_name field.
 func ByDisplayName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDisplayName, opts...).ToFunc()
+}
+
+// ByDeviceEmail orders the results by the device_email field.
+func ByDeviceEmail(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeviceEmail, opts...).ToFunc()
 }
 
 // BySubsonicPassword orders the results by the subsonic_password field.

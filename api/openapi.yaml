@@ -3187,6 +3187,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /auth/password:
     post:
       operationId: changePassword
@@ -10797,6 +10799,11 @@ components:
           enum: [local, oidc, both]
         display_name:
           type: string
+        device_email:
+          type: string
+          description: Address of the user's e-reader; empty when unset.
+        send:
+          $ref: "#/components/schemas/UserSend"
         created_at:
           type: string
           format: date-time
@@ -10807,6 +10814,16 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    UserSend:
+      type: object
+      required: [configured, from]
+      properties:
+        configured:
+          type: boolean
+        from:
+          type: string
+          description: Sender address to approve on the device; empty when SMTP is not configured.
 
     JWTRotated:
       type: object
@@ -10986,6 +11003,9 @@ components:
       properties:
         display_name:
           type: string
+        device_email:
+          type: string
+          description: Empty string clears it.
 
     ChangePasswordRequest:
       type: object

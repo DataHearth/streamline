@@ -14,6 +14,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe(
@@ -38,7 +39,7 @@ var _ = Describe(
 					AuthMethod:  "local",
 				}
 				app.auth.EXPECT().
-					UpdateProfile(mock.Anything, app.adminID, dn).
+					UpdateProfile(mock.Anything, app.adminID, auth.ProfilePatch{DisplayName: &dn}).
 					Return(updated, nil).
 					Once()
 
@@ -59,6 +60,78 @@ var _ = Describe(
 				Expect(u.DisplayName).NotTo(BeNil())
 				Expect(*u.DisplayName).To(Equal("Alice"))
 			})
+
+			It("UpdateMe with only device_email keeps display_name", func() {
+				dev := "me@kindle.com"
+				app.auth.EXPECT().
+					UpdateProfile(mock.Anything, app.adminID, auth.ProfilePatch{DeviceEmail: &dev}).
+					Return(&ent.User{ID: app.adminID, Email: "admin@test.com", DisplayName: "Alice", DeviceEmail: dev, Role: "admin", AuthMethod: "local"}, nil).
+					Once()
+
+				req := app.req(http.MethodPatch, "/api/v1/auth/me", app.adminKey,
+					strings.NewReader(`{"device_email":"me@kindle.com"}`))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var u User
+				Expect(json.NewDecoder(resp.Body).Decode(&u)).To(Succeed())
+				Expect(*u.DisplayName).To(Equal("Alice"))
+				Expect(*u.DeviceEmail).To(Equal(dev))
+			})
+
+			It("UpdateMe answers 422 for an invalid device_email", func() {
+				bad := "nope"
+				app.auth.EXPECT().
+					UpdateProfile(mock.Anything, app.adminID, auth.ProfilePatch{DeviceEmail: &bad}).
+					Return(nil, auth.ErrInvalidDeviceEmail).
+					Once()
+
+				req := app.req(http.MethodPatch, "/api/v1/auth/me", app.adminKey,
+					strings.NewReader(`{"device_email":"nope"}`))
+				req.Header.Set("Content-Type", "application/json")
+				resp := app.do(req)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+			})
+
+			DescribeTable("AuthMe reports send.configured and from",
+				func(override map[string]any, configured bool, from string) {
+					configtest.Setup(override)
+					app.auth.EXPECT().GetUserByID(mock.Anything, app.adminID).
+						Return(&ent.User{ID: app.adminID, Email: "admin@test.com", Role: "admin", AuthMethod: "local"}, nil).
+						Once()
+					req := app.req(
+						http.MethodGet,
+						"/api/v1/auth/me",
+						app.adminKey,
+						nil,
+					)
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					var u User
+					Expect(json.NewDecoder(resp.Body).Decode(&u)).To(Succeed())
+					Expect(u.Send).NotTo(BeNil())
+					Expect(u.Send.Configured).To(Equal(configured))
+					Expect(u.Send.From).To(Equal(from))
+				},
+				Entry(
+					"smtp set",
+					map[string]any{
+						"smtp": map[string]any{
+							"host": "127.0.0.1",
+							"from": "lib@example.com",
+							"tls":  "none",
+						},
+					},
+					true,
+					"lib@example.com",
+				),
+				Entry("smtp unset", map[string]any{}, false, ""),
+			)
 
 			It("returns 401 without auth", func() {
 				req := app.req(

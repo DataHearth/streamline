@@ -8249,6 +8249,8 @@ type UpcomingMovieReleaseType string
 
 // UpdateMeRequest defines model for UpdateMeRequest.
 type UpdateMeRequest struct {
+	// DeviceEmail Empty string clears it.
+	DeviceEmail *string `json:"device_email,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
 }
 
@@ -8282,14 +8284,18 @@ type UpdateUserRequestRole string
 
 // User defines model for User.
 type User struct {
-	AuthMethod       UserAuthMethod      `json:"auth_method"`
-	CreatedAt        time.Time           `json:"created_at"`
+	AuthMethod UserAuthMethod `json:"auth_method"`
+	CreatedAt  time.Time      `json:"created_at"`
+
+	// DeviceEmail Address of the user's e-reader; empty when unset.
+	DeviceEmail      *string             `json:"device_email,omitempty"`
 	DisplayName      *string             `json:"display_name,omitempty"`
 	Email            openapi_types.Email `json:"email"`
 	FailedLoginCount *uint8              `json:"failed_login_count,omitempty"`
 	Id               uint32              `json:"id"`
 	LockedUntil      *time.Time          `json:"locked_until,omitempty"`
 	Role             UserRole            `json:"role"`
+	Send             *UserSend           `json:"send,omitempty"`
 }
 
 // UserAuthMethod defines model for User.AuthMethod.
@@ -8311,6 +8317,14 @@ type UserList struct {
 
 	// Total Total number of users matching the filter.
 	Total uint32 `json:"total"`
+}
+
+// UserSend defines model for UserSend.
+type UserSend struct {
+	Configured bool `json:"configured"`
+
+	// From Sender address to approve on the device; empty when SMTP is not configured.
+	From string `json:"from"`
 }
 
 // ActivityBefore defines model for ActivityBefore.
@@ -21505,6 +21519,22 @@ func (response UpdateMe413JSONResponse) VisitUpdateMeResponse(w http.ResponseWri
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMe422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateMe422JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }

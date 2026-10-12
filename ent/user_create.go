@@ -114,6 +114,20 @@ func (_c *UserCreate) SetNillableDisplayName(v *string) *UserCreate {
 	return _c
 }
 
+// SetDeviceEmail sets the "device_email" field.
+func (_c *UserCreate) SetDeviceEmail(v string) *UserCreate {
+	_c.mutation.SetDeviceEmail(v)
+	return _c
+}
+
+// SetNillableDeviceEmail sets the "device_email" field if the given value is not nil.
+func (_c *UserCreate) SetNillableDeviceEmail(v *string) *UserCreate {
+	if v != nil {
+		_c.SetDeviceEmail(*v)
+	}
+	return _c
+}
+
 // SetSubsonicPassword sets the "subsonic_password" field.
 func (_c *UserCreate) SetSubsonicPassword(v string) *UserCreate {
 	_c.mutation.SetSubsonicPassword(v)
@@ -495,6 +509,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DisplayName(); ok {
 		_spec.SetField(user.FieldDisplayName, field.TypeString, value)
 		_node.DisplayName = value
+	}
+	if value, ok := _c.mutation.DeviceEmail(); ok {
+		_spec.SetField(user.FieldDeviceEmail, field.TypeString, value)
+		_node.DeviceEmail = value
 	}
 	if value, ok := _c.mutation.SubsonicPassword(); ok {
 		_spec.SetField(user.FieldSubsonicPassword, field.TypeString, value)

@@ -214,6 +214,17 @@ func providerPersonURL(tmdbID, tvdbID uint32) string {
 	}
 }
 
+func toAPIUserWithSend(u *ent.User) User {
+	out := toAPIUser(u)
+	smtp := config.Get().SMTP
+	send := UserSend{Configured: smtp.Enabled()}
+	if send.Configured {
+		send.From = smtp.From
+	}
+	out.Send = &send
+	return out
+}
+
 func toAPIUser(u *ent.User) User {
 	var dn *string
 	if u.DisplayName != "" {
@@ -227,6 +238,7 @@ func toAPIUser(u *ent.User) User {
 		Role:        UserRole(u.Role),
 		AuthMethod:  UserAuthMethod(u.AuthMethod),
 		DisplayName: dn,
+		DeviceEmail: &u.DeviceEmail,
 		CreatedAt:   u.CreateTime,
 	}
 }
