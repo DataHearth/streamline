@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -71,9 +72,19 @@ type UserEdges struct {
 	Requests []*Request `json:"requests,omitempty"`
 	// Sessions holds the value of the sessions edge.
 	Sessions []*Session `json:"sessions,omitempty"`
+	// MusicAnnotations holds the value of the music_annotations edge.
+	MusicAnnotations []*MusicAnnotation `json:"music_annotations,omitempty"`
+	// Playlists holds the value of the playlists edge.
+	Playlists []*Playlist `json:"playlists,omitempty"`
+	// Shares holds the value of the shares edge.
+	Shares []*Share `json:"shares,omitempty"`
+	// Bookmarks holds the value of the bookmarks edge.
+	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
+	// PlayQueue holds the value of the play_queue edge.
+	PlayQueue *PlayQueue `json:"play_queue,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [9]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -110,6 +121,53 @@ func (e UserEdges) SessionsOrErr() ([]*Session, error) {
 		return e.Sessions, nil
 	}
 	return nil, &NotLoadedError{edge: "sessions"}
+}
+
+// MusicAnnotationsOrErr returns the MusicAnnotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) MusicAnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[4] {
+		return e.MusicAnnotations, nil
+	}
+	return nil, &NotLoadedError{edge: "music_annotations"}
+}
+
+// PlaylistsOrErr returns the Playlists value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PlaylistsOrErr() ([]*Playlist, error) {
+	if e.loadedTypes[5] {
+		return e.Playlists, nil
+	}
+	return nil, &NotLoadedError{edge: "playlists"}
+}
+
+// SharesOrErr returns the Shares value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) SharesOrErr() ([]*Share, error) {
+	if e.loadedTypes[6] {
+		return e.Shares, nil
+	}
+	return nil, &NotLoadedError{edge: "shares"}
+}
+
+// BookmarksOrErr returns the Bookmarks value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) BookmarksOrErr() ([]*Bookmark, error) {
+	if e.loadedTypes[7] {
+		return e.Bookmarks, nil
+	}
+	return nil, &NotLoadedError{edge: "bookmarks"}
+}
+
+// PlayQueueOrErr returns the PlayQueue value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) PlayQueueOrErr() (*PlayQueue, error) {
+	if e.PlayQueue != nil {
+		return e.PlayQueue, nil
+	} else if e.loadedTypes[8] {
+		return nil, &NotFoundError{label: playqueue.Label}
+	}
+	return nil, &NotLoadedError{edge: "play_queue"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -295,6 +353,31 @@ func (_m *User) QueryRequests() *RequestQuery {
 // QuerySessions queries the "sessions" edge of the User entity.
 func (_m *User) QuerySessions() *SessionQuery {
 	return NewUserClient(_m.config).QuerySessions(_m)
+}
+
+// QueryMusicAnnotations queries the "music_annotations" edge of the User entity.
+func (_m *User) QueryMusicAnnotations() *MusicAnnotationQuery {
+	return NewUserClient(_m.config).QueryMusicAnnotations(_m)
+}
+
+// QueryPlaylists queries the "playlists" edge of the User entity.
+func (_m *User) QueryPlaylists() *PlaylistQuery {
+	return NewUserClient(_m.config).QueryPlaylists(_m)
+}
+
+// QueryShares queries the "shares" edge of the User entity.
+func (_m *User) QueryShares() *ShareQuery {
+	return NewUserClient(_m.config).QueryShares(_m)
+}
+
+// QueryBookmarks queries the "bookmarks" edge of the User entity.
+func (_m *User) QueryBookmarks() *BookmarkQuery {
+	return NewUserClient(_m.config).QueryBookmarks(_m)
+}
+
+// QueryPlayQueue queries the "play_queue" edge of the User entity.
+func (_m *User) QueryPlayQueue() *PlayQueueQuery {
+	return NewUserClient(_m.config).QueryPlayQueue(_m)
 }
 
 // Update returns a builder for updating this User.

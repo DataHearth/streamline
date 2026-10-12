@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/bookmark"
 	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -26,14 +27,19 @@ import (
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
 	"github.com/datahearth/streamline/ent/person"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
+	"github.com/datahearth/streamline/ent/radiostation"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/scheduledjob"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
@@ -284,6 +290,25 @@ func init() {
 	bookseriesDescOngoing := bookseriesFields[8].Descriptor()
 	// bookseries.DefaultOngoing holds the default value on creation for the ongoing field.
 	bookseries.DefaultOngoing = bookseriesDescOngoing.Default.(bool)
+	bookmarkMixin := schema.Bookmark{}.Mixin()
+	bookmarkMixinFields1 := bookmarkMixin[1].Fields()
+	_ = bookmarkMixinFields1
+	bookmarkFields := schema.Bookmark{}.Fields()
+	_ = bookmarkFields
+	// bookmarkDescCreateTime is the schema descriptor for create_time field.
+	bookmarkDescCreateTime := bookmarkMixinFields1[0].Descriptor()
+	// bookmark.DefaultCreateTime holds the default value on creation for the create_time field.
+	bookmark.DefaultCreateTime = bookmarkDescCreateTime.Default.(func() time.Time)
+	// bookmarkDescUpdateTime is the schema descriptor for update_time field.
+	bookmarkDescUpdateTime := bookmarkMixinFields1[1].Descriptor()
+	// bookmark.DefaultUpdateTime holds the default value on creation for the update_time field.
+	bookmark.DefaultUpdateTime = bookmarkDescUpdateTime.Default.(func() time.Time)
+	// bookmark.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	bookmark.UpdateDefaultUpdateTime = bookmarkDescUpdateTime.UpdateDefault.(func() time.Time)
+	// bookmarkDescPosition is the schema descriptor for position field.
+	bookmarkDescPosition := bookmarkFields[0].Descriptor()
+	// bookmark.PositionValidator is a validator for the "position" field. It is called by the builders before save.
+	bookmark.PositionValidator = bookmarkDescPosition.Validators[0].(func(int64) error)
 	creditMixin := schema.Credit{}.Mixin()
 	creditMixinFields1 := creditMixin[1].Fields()
 	_ = creditMixinFields1
@@ -580,6 +605,31 @@ func init() {
 	movieDescRating := movieFields[14].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
+	musicannotationMixin := schema.MusicAnnotation{}.Mixin()
+	musicannotationMixinFields1 := musicannotationMixin[1].Fields()
+	_ = musicannotationMixinFields1
+	musicannotationFields := schema.MusicAnnotation{}.Fields()
+	_ = musicannotationFields
+	// musicannotationDescCreateTime is the schema descriptor for create_time field.
+	musicannotationDescCreateTime := musicannotationMixinFields1[0].Descriptor()
+	// musicannotation.DefaultCreateTime holds the default value on creation for the create_time field.
+	musicannotation.DefaultCreateTime = musicannotationDescCreateTime.Default.(func() time.Time)
+	// musicannotationDescUpdateTime is the schema descriptor for update_time field.
+	musicannotationDescUpdateTime := musicannotationMixinFields1[1].Descriptor()
+	// musicannotation.DefaultUpdateTime holds the default value on creation for the update_time field.
+	musicannotation.DefaultUpdateTime = musicannotationDescUpdateTime.Default.(func() time.Time)
+	// musicannotation.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	musicannotation.UpdateDefaultUpdateTime = musicannotationDescUpdateTime.UpdateDefault.(func() time.Time)
+	// musicannotationDescRating is the schema descriptor for rating field.
+	musicannotationDescRating := musicannotationFields[1].Descriptor()
+	// musicannotation.DefaultRating holds the default value on creation for the rating field.
+	musicannotation.DefaultRating = musicannotationDescRating.Default.(uint8)
+	// musicannotation.RatingValidator is a validator for the "rating" field. It is called by the builders before save.
+	musicannotation.RatingValidator = musicannotationDescRating.Validators[0].(func(uint8) error)
+	// musicannotationDescPlayCount is the schema descriptor for play_count field.
+	musicannotationDescPlayCount := musicannotationFields[2].Descriptor()
+	// musicannotation.DefaultPlayCount holds the default value on creation for the play_count field.
+	musicannotation.DefaultPlayCount = musicannotationDescPlayCount.Default.(uint32)
 	musiccreditMixin := schema.MusicCredit{}.Mixin()
 	musiccreditMixinFields1 := musiccreditMixin[1].Fields()
 	_ = musiccreditMixinFields1
@@ -653,6 +703,83 @@ func init() {
 	personDescName := personFields[2].Descriptor()
 	// person.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	person.NameValidator = personDescName.Validators[0].(func(string) error)
+	playqueueMixin := schema.PlayQueue{}.Mixin()
+	playqueueMixinFields1 := playqueueMixin[1].Fields()
+	_ = playqueueMixinFields1
+	playqueueFields := schema.PlayQueue{}.Fields()
+	_ = playqueueFields
+	// playqueueDescCreateTime is the schema descriptor for create_time field.
+	playqueueDescCreateTime := playqueueMixinFields1[0].Descriptor()
+	// playqueue.DefaultCreateTime holds the default value on creation for the create_time field.
+	playqueue.DefaultCreateTime = playqueueDescCreateTime.Default.(func() time.Time)
+	// playqueueDescUpdateTime is the schema descriptor for update_time field.
+	playqueueDescUpdateTime := playqueueMixinFields1[1].Descriptor()
+	// playqueue.DefaultUpdateTime holds the default value on creation for the update_time field.
+	playqueue.DefaultUpdateTime = playqueueDescUpdateTime.Default.(func() time.Time)
+	// playqueue.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	playqueue.UpdateDefaultUpdateTime = playqueueDescUpdateTime.UpdateDefault.(func() time.Time)
+	// playqueueDescCurrent is the schema descriptor for current field.
+	playqueueDescCurrent := playqueueFields[1].Descriptor()
+	// playqueue.DefaultCurrent holds the default value on creation for the current field.
+	playqueue.DefaultCurrent = playqueueDescCurrent.Default.(int)
+	// playqueue.CurrentValidator is a validator for the "current" field. It is called by the builders before save.
+	playqueue.CurrentValidator = playqueueDescCurrent.Validators[0].(func(int) error)
+	// playqueueDescPosition is the schema descriptor for position field.
+	playqueueDescPosition := playqueueFields[2].Descriptor()
+	// playqueue.DefaultPosition holds the default value on creation for the position field.
+	playqueue.DefaultPosition = playqueueDescPosition.Default.(int64)
+	// playqueue.PositionValidator is a validator for the "position" field. It is called by the builders before save.
+	playqueue.PositionValidator = playqueueDescPosition.Validators[0].(func(int64) error)
+	// playqueueDescChangedBy is the schema descriptor for changed_by field.
+	playqueueDescChangedBy := playqueueFields[3].Descriptor()
+	// playqueue.ChangedByValidator is a validator for the "changed_by" field. It is called by the builders before save.
+	playqueue.ChangedByValidator = playqueueDescChangedBy.Validators[0].(func(string) error)
+	playlistMixin := schema.Playlist{}.Mixin()
+	playlistMixinFields1 := playlistMixin[1].Fields()
+	_ = playlistMixinFields1
+	playlistFields := schema.Playlist{}.Fields()
+	_ = playlistFields
+	// playlistDescCreateTime is the schema descriptor for create_time field.
+	playlistDescCreateTime := playlistMixinFields1[0].Descriptor()
+	// playlist.DefaultCreateTime holds the default value on creation for the create_time field.
+	playlist.DefaultCreateTime = playlistDescCreateTime.Default.(func() time.Time)
+	// playlistDescUpdateTime is the schema descriptor for update_time field.
+	playlistDescUpdateTime := playlistMixinFields1[1].Descriptor()
+	// playlist.DefaultUpdateTime holds the default value on creation for the update_time field.
+	playlist.DefaultUpdateTime = playlistDescUpdateTime.Default.(func() time.Time)
+	// playlist.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	playlist.UpdateDefaultUpdateTime = playlistDescUpdateTime.UpdateDefault.(func() time.Time)
+	// playlistDescName is the schema descriptor for name field.
+	playlistDescName := playlistFields[0].Descriptor()
+	// playlist.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	playlist.NameValidator = playlistDescName.Validators[0].(func(string) error)
+	// playlistDescPublic is the schema descriptor for public field.
+	playlistDescPublic := playlistFields[2].Descriptor()
+	// playlist.DefaultPublic holds the default value on creation for the public field.
+	playlist.DefaultPublic = playlistDescPublic.Default.(bool)
+	radiostationMixin := schema.RadioStation{}.Mixin()
+	radiostationMixinFields1 := radiostationMixin[1].Fields()
+	_ = radiostationMixinFields1
+	radiostationFields := schema.RadioStation{}.Fields()
+	_ = radiostationFields
+	// radiostationDescCreateTime is the schema descriptor for create_time field.
+	radiostationDescCreateTime := radiostationMixinFields1[0].Descriptor()
+	// radiostation.DefaultCreateTime holds the default value on creation for the create_time field.
+	radiostation.DefaultCreateTime = radiostationDescCreateTime.Default.(func() time.Time)
+	// radiostationDescUpdateTime is the schema descriptor for update_time field.
+	radiostationDescUpdateTime := radiostationMixinFields1[1].Descriptor()
+	// radiostation.DefaultUpdateTime holds the default value on creation for the update_time field.
+	radiostation.DefaultUpdateTime = radiostationDescUpdateTime.Default.(func() time.Time)
+	// radiostation.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	radiostation.UpdateDefaultUpdateTime = radiostationDescUpdateTime.UpdateDefault.(func() time.Time)
+	// radiostationDescName is the schema descriptor for name field.
+	radiostationDescName := radiostationFields[0].Descriptor()
+	// radiostation.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	radiostation.NameValidator = radiostationDescName.Validators[0].(func(string) error)
+	// radiostationDescStreamURL is the schema descriptor for stream_url field.
+	radiostationDescStreamURL := radiostationFields[1].Descriptor()
+	// radiostation.StreamURLValidator is a validator for the "stream_url" field. It is called by the builders before save.
+	radiostation.StreamURLValidator = radiostationDescStreamURL.Validators[0].(func(string) error)
 	requestMixin := schema.Request{}.Mixin()
 	requestMixinFields1 := requestMixin[1].Fields()
 	_ = requestMixinFields1
@@ -736,6 +863,29 @@ func init() {
 	sessionDescUserAgent := sessionFields[5].Descriptor()
 	// session.UserAgentValidator is a validator for the "user_agent" field. It is called by the builders before save.
 	session.UserAgentValidator = sessionDescUserAgent.Validators[0].(func(string) error)
+	shareMixin := schema.Share{}.Mixin()
+	shareMixinFields1 := shareMixin[1].Fields()
+	_ = shareMixinFields1
+	shareFields := schema.Share{}.Fields()
+	_ = shareFields
+	// shareDescCreateTime is the schema descriptor for create_time field.
+	shareDescCreateTime := shareMixinFields1[0].Descriptor()
+	// share.DefaultCreateTime holds the default value on creation for the create_time field.
+	share.DefaultCreateTime = shareDescCreateTime.Default.(func() time.Time)
+	// shareDescUpdateTime is the schema descriptor for update_time field.
+	shareDescUpdateTime := shareMixinFields1[1].Descriptor()
+	// share.DefaultUpdateTime holds the default value on creation for the update_time field.
+	share.DefaultUpdateTime = shareDescUpdateTime.Default.(func() time.Time)
+	// share.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	share.UpdateDefaultUpdateTime = shareDescUpdateTime.UpdateDefault.(func() time.Time)
+	// shareDescToken is the schema descriptor for token field.
+	shareDescToken := shareFields[0].Descriptor()
+	// share.TokenValidator is a validator for the "token" field. It is called by the builders before save.
+	share.TokenValidator = shareDescToken.Validators[0].(func(string) error)
+	// shareDescVisitCount is the schema descriptor for visit_count field.
+	shareDescVisitCount := shareFields[5].Descriptor()
+	// share.DefaultVisitCount holds the default value on creation for the visit_count field.
+	share.DefaultVisitCount = shareDescVisitCount.Default.(uint32)
 	tvshowMixin := schema.TVShow{}.Mixin()
 	tvshowMixinFields1 := tvshowMixin[1].Fields()
 	_ = tvshowMixinFields1

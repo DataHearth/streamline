@@ -24,14 +24,14 @@ Hardcover's free plan allows 60 requests a minute and 5,000 a day. Streamline pa
 
 | Protocol | Path | Clients | Credentials |
 | --- | --- | --- | --- |
-| Subsonic 1.16.1 | `/rest` | Symfonium, DSub, play:Sub, Sublime Music | your email plus a generated Subsonic password |
+| [Subsonic](Subsonic) 1.16.1 + OpenSubsonic | `/rest` | Symfonium, DSub, Tempo, play:Sub, Sublime Music | your email plus a generated Subsonic password |
 | OPDS 1.2 | `/opds` | KOReader, Moon+ Reader, Foliate, Thorium | your email plus a generated OPDS token |
 
 Both secrets are per user and separate from your login password. Generate, rotate or disable them through `/api/v1/account/subsonic-password` and `/api/v1/account/opds-token`; the account page in the web UI exposes the same actions. A secret is shown **once**, when you generate it; a lost one is replaced, not read back, and rotating signs every player or reader out. Each card also shows when the secret was created, when it was last used and by which client (the Subsonic `c` parameter, or the OPDS reader's name). Neither secret works for the web UI or the REST API.
 
 For OPDS the catalogue URL carries no secret: point the reader at `https://your-host/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
 
-Subsonic serves artists (getArtists and getIndexes), albums, songs, album lists, search and raw streaming with seeking. Transcoding parameters sent by the client are ignored. OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
+Subsonic covers browsing, album and song lists, search, stars, ratings and play counts, playlists, play queue sync across devices, bookmarks, public share links, lyrics, internet radio and streaming with on-the-fly transcoding; see [Subsonic](Subsonic) for what each does. OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
 
 ## How books are organised
 

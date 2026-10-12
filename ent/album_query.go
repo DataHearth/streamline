@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
@@ -31,6 +32,7 @@ type AlbumQuery struct {
 	withTracks          *TrackQuery
 	withDownloadRecords *DownloadRecordQuery
 	withCredits         *MusicCreditQuery
+	withAnnotations     *MusicAnnotationQuery
 	withPackRecords     *DownloadRecordQuery
 	withFKs             bool
 	modifiers           []func(*sql.Selector)
@@ -151,6 +153,28 @@ func (_q *AlbumQuery) QueryCredits() *MusicCreditQuery {
 			sqlgraph.From(album.Table, album.FieldID, selector),
 			sqlgraph.To(musiccredit.Table, musiccredit.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, album.CreditsTable, album.CreditsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAnnotations chains the current query on the "annotations" edge.
+func (_q *AlbumQuery) QueryAnnotations() *MusicAnnotationQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, selector),
+			sqlgraph.To(musicannotation.Table, musicannotation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.AnnotationsTable, album.AnnotationsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -376,6 +400,7 @@ func (_q *AlbumQuery) Clone() *AlbumQuery {
 		withTracks:          _q.withTracks.Clone(),
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
 		withCredits:         _q.withCredits.Clone(),
+		withAnnotations:     _q.withAnnotations.Clone(),
 		withPackRecords:     _q.withPackRecords.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -425,6 +450,17 @@ func (_q *AlbumQuery) WithCredits(opts ...func(*MusicCreditQuery)) *AlbumQuery {
 		opt(query)
 	}
 	_q.withCredits = query
+	return _q
+}
+
+// WithAnnotations tells the query-builder to eager-load the nodes that are connected to
+// the "annotations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AlbumQuery) WithAnnotations(opts ...func(*MusicAnnotationQuery)) *AlbumQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAnnotations = query
 	return _q
 }
 
@@ -518,11 +554,12 @@ func (_q *AlbumQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Album,
 		nodes       = []*Album{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withArtist != nil,
 			_q.withTracks != nil,
 			_q.withDownloadRecords != nil,
 			_q.withCredits != nil,
+			_q.withAnnotations != nil,
 			_q.withPackRecords != nil,
 		}
 	)
@@ -577,6 +614,13 @@ func (_q *AlbumQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Album,
 		if err := _q.loadCredits(ctx, query, nodes,
 			func(n *Album) { n.Edges.Credits = []*MusicCredit{} },
 			func(n *Album, e *MusicCredit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAnnotations; query != nil {
+		if err := _q.loadAnnotations(ctx, query, nodes,
+			func(n *Album) { n.Edges.Annotations = []*MusicAnnotation{} },
+			func(n *Album, e *MusicAnnotation) { n.Edges.Annotations = append(n.Edges.Annotations, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -710,6 +754,39 @@ func (_q *AlbumQuery) loadCredits(ctx context.Context, query *MusicCreditQuery, 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "album_credits" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AlbumQuery) loadAnnotations(ctx context.Context, query *MusicAnnotationQuery, nodes []*Album, init func(*Album), assign func(*Album, *MusicAnnotation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Album)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(musicannotation.FieldAlbumID)
+	}
+	query.Where(predicate.MusicAnnotation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(album.AnnotationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AlbumID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "album_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "album_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

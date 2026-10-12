@@ -11,9 +11,14 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -348,6 +353,85 @@ func (_c *UserCreate) AddSessions(v ...*Session) *UserCreate {
 	return _c.AddSessionIDs(ids...)
 }
 
+// AddMusicAnnotationIDs adds the "music_annotations" edge to the MusicAnnotation entity by IDs.
+func (_c *UserCreate) AddMusicAnnotationIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddMusicAnnotationIDs(ids...)
+	return _c
+}
+
+// AddMusicAnnotations adds the "music_annotations" edges to the MusicAnnotation entity.
+func (_c *UserCreate) AddMusicAnnotations(v ...*MusicAnnotation) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMusicAnnotationIDs(ids...)
+}
+
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (_c *UserCreate) AddPlaylistIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddPlaylistIDs(ids...)
+	return _c
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (_c *UserCreate) AddPlaylists(v ...*Playlist) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPlaylistIDs(ids...)
+}
+
+// AddShareIDs adds the "shares" edge to the Share entity by IDs.
+func (_c *UserCreate) AddShareIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddShareIDs(ids...)
+	return _c
+}
+
+// AddShares adds the "shares" edges to the Share entity.
+func (_c *UserCreate) AddShares(v ...*Share) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddShareIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_c *UserCreate) AddBookmarkIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddBookmarkIDs(ids...)
+	return _c
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_c *UserCreate) AddBookmarks(v ...*Bookmark) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddBookmarkIDs(ids...)
+}
+
+// SetPlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID.
+func (_c *UserCreate) SetPlayQueueID(id uint32) *UserCreate {
+	_c.mutation.SetPlayQueueID(id)
+	return _c
+}
+
+// SetNillablePlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID if the given value is not nil.
+func (_c *UserCreate) SetNillablePlayQueueID(id *uint32) *UserCreate {
+	if id != nil {
+		_c = _c.SetPlayQueueID(*id)
+	}
+	return _c
+}
+
+// SetPlayQueue sets the "play_queue" edge to the PlayQueue entity.
+func (_c *UserCreate) SetPlayQueue(v *PlayQueue) *UserCreate {
+	return _c.SetPlayQueueID(v.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_c *UserCreate) Mutation() *UserMutation {
 	return _c.mutation
@@ -615,6 +699,86 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MusicAnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PlayQueueIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

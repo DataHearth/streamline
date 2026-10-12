@@ -49,9 +49,13 @@ type TrackEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*MusicCredit `json:"credits,omitempty"`
+	// Annotations holds the value of the annotations edge.
+	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
+	// Bookmarks holds the value of the bookmarks edge.
+	Bookmarks []*Bookmark `json:"bookmarks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // AlbumOrErr returns the Album value or an error if the edge
@@ -81,6 +85,24 @@ func (e TrackEdges) CreditsOrErr() ([]*MusicCredit, error) {
 		return e.Credits, nil
 	}
 	return nil, &NotLoadedError{edge: "credits"}
+}
+
+// AnnotationsOrErr returns the Annotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[3] {
+		return e.Annotations, nil
+	}
+	return nil, &NotLoadedError{edge: "annotations"}
+}
+
+// BookmarksOrErr returns the Bookmarks value or an error if the edge
+// was not loaded in eager-loading.
+func (e TrackEdges) BookmarksOrErr() ([]*Bookmark, error) {
+	if e.loadedTypes[4] {
+		return e.Bookmarks, nil
+	}
+	return nil, &NotLoadedError{edge: "bookmarks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -200,6 +222,16 @@ func (_m *Track) QueryMediaFiles() *MediaFileQuery {
 // QueryCredits queries the "credits" edge of the Track entity.
 func (_m *Track) QueryCredits() *MusicCreditQuery {
 	return NewTrackClient(_m.config).QueryCredits(_m)
+}
+
+// QueryAnnotations queries the "annotations" edge of the Track entity.
+func (_m *Track) QueryAnnotations() *MusicAnnotationQuery {
+	return NewTrackClient(_m.config).QueryAnnotations(_m)
+}
+
+// QueryBookmarks queries the "bookmarks" edge of the Track entity.
+func (_m *Track) QueryBookmarks() *BookmarkQuery {
+	return NewTrackClient(_m.config).QueryBookmarks(_m)
 }
 
 // Update returns a builder for updating this Track.

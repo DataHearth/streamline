@@ -385,6 +385,6 @@ var _ = g.Describe("browse", g.Label("integration"), func() {
 	})
 
 	g.It("answers error 0 for an unimplemented endpoint", func() {
-		Expect(errCode(f.call("getPlaylists", nil))).To(BeEquivalentTo(0))
+		Expect(errCode(f.call("getPodcasts", nil))).To(BeEquivalentTo(0))
 	})
 })

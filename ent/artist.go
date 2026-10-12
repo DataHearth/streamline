@@ -71,9 +71,11 @@ type ArtistEdges struct {
 	Members []*ArtistMember `json:"members,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
+	// Annotations holds the value of the annotations edge.
+	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
@@ -101,6 +103,15 @@ func (e ArtistEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 		return e.DownloadRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "download_records"}
+}
+
+// AnnotationsOrErr returns the Annotations value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
+	if e.loadedTypes[3] {
+		return e.Annotations, nil
+	}
+	return nil, &NotLoadedError{edge: "annotations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -283,6 +294,11 @@ func (_m *Artist) QueryMembers() *ArtistMemberQuery {
 // QueryDownloadRecords queries the "download_records" edge of the Artist entity.
 func (_m *Artist) QueryDownloadRecords() *DownloadRecordQuery {
 	return NewArtistClient(_m.config).QueryDownloadRecords(_m)
+}
+
+// QueryAnnotations queries the "annotations" edge of the Artist entity.
+func (_m *Artist) QueryAnnotations() *MusicAnnotationQuery {
+	return NewArtistClient(_m.config).QueryAnnotations(_m)
 }
 
 // Update returns a builder for updating this Artist.

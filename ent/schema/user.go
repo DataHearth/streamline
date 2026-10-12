@@ -57,5 +57,16 @@ func (User) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("sessions", Session.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("music_annotations", MusicAnnotation.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("playlists", Playlist.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("shares", Share.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("bookmarks", Bookmark.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("play_queue", PlayQueue.Type).
+			Unique().
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
