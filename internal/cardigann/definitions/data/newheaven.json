@@ -1,0 +1,528 @@
+{
+  "id": "newheaven",
+  "name": "New Heaven",
+  "description": "New Heaven is a GERMAN Private tracker for MOVIES / AUDIO / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "iso-8859-1",
+  "requestDelay": 2,
+  "links": [
+    "https://newheaven.nl/"
+  ],
+  "legacylinks": [
+    "https://torrentheaven.myfqdn.info/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "PC/Games",
+        "desc": "GAMES- PC"
+      },
+      {
+        "id": "3",
+        "cat": "Console",
+        "desc": "GAMES - Sonstige"
+      },
+      {
+        "id": "59",
+        "cat": "Console/PS4",
+        "desc": "GAMES - PlayStation"
+      },
+      {
+        "id": "60",
+        "cat": "Console/PSP",
+        "desc": "GAMES- PSP"
+      },
+      {
+        "id": "63",
+        "cat": "Console/Wii",
+        "desc": "GAMES - Wii"
+      },
+      {
+        "id": "67",
+        "cat": "Console/XBox 360",
+        "desc": "GAMES - XBOX 360"
+      },
+      {
+        "id": "68",
+        "cat": "PC/Mobile-Other",
+        "desc": "GAMES - PDA / Handy"
+      },
+      {
+        "id": "72",
+        "cat": "Console/NDS",
+        "desc": "GAMES - NDS"
+      },
+      {
+        "id": "7",
+        "cat": "Movies/DVD",
+        "desc": "MOVIES - DVD"
+      },
+      {
+        "id": "8",
+        "cat": "Movies/SD",
+        "desc": "MOVIES - SD"
+      },
+      {
+        "id": "37",
+        "cat": "Movies/DVD",
+        "desc": "MOVIES - DVD Spezial"
+      },
+      {
+        "id": "41",
+        "cat": "Movies/Foreign",
+        "desc": "MOVIES - International"
+      },
+      {
+        "id": "101",
+        "cat": "Movies/HD",
+        "desc": "MOVIES - 720p"
+      },
+      {
+        "id": "102",
+        "cat": "Movies/HD",
+        "desc": "MOVIES - 1080p"
+      },
+      {
+        "id": "103",
+        "cat": "Movies/HD",
+        "desc": "MOVIES - AVCHD"
+      },
+      {
+        "id": "104",
+        "cat": "Movies/BluRay",
+        "desc": "MOVIES - Blu Ray"
+      },
+      {
+        "id": "106",
+        "cat": "Movies/3D",
+        "desc": "MOVIES - 3D"
+      },
+      {
+        "id": "109",
+        "cat": "Movies/UHD",
+        "desc": "MOVIES - 4K"
+      },
+      {
+        "id": "14",
+        "cat": "Audio/MP3",
+        "desc": "AUDIO - Musik"
+      },
+      {
+        "id": "15",
+        "cat": "Audio/Audiobook",
+        "desc": "AUDIO - Hoerbuecher"
+      },
+      {
+        "id": "16",
+        "cat": "Audio/Audiobook",
+        "desc": "AUDIO - Hoerspiele"
+      },
+      {
+        "id": "36",
+        "cat": "Audio/Lossless",
+        "desc": "AUDIO - Flac"
+      },
+      {
+        "id": "42",
+        "cat": "Audio/Other",
+        "desc": "AUDIO/Soundtracks"
+      },
+      {
+        "id": "58",
+        "cat": "Audio/Video",
+        "desc": "AUDIO - Musikvideos"
+      },
+      {
+        "id": "18",
+        "cat": "TV/SD",
+        "desc": "TV/Serien - Serien SD"
+      },
+      {
+        "id": "19",
+        "cat": "TV/HD",
+        "desc": "TV/Serien - Serien HD 720p"
+      },
+      {
+        "id": "20",
+        "cat": "TV/HD",
+        "desc": "TV/Serien - Serien HD 1080p"
+      },
+      {
+        "id": "49",
+        "cat": "TV/SD",
+        "desc": "TV/Serien - Serien DVD"
+      },
+      {
+        "id": "51",
+        "cat": "TV/Documentary",
+        "desc": "TV/Serien - Doku SD"
+      },
+      {
+        "id": "52",
+        "cat": "TV/Documentary",
+        "desc": "TV/Serien - Doku HD"
+      },
+      {
+        "id": "53",
+        "cat": "TV",
+        "desc": "TV/Serien - Serien Complete Packs"
+      },
+      {
+        "id": "54",
+        "cat": "TV/Sport",
+        "desc": "TV/Serien - Sport"
+      },
+      {
+        "id": "66",
+        "cat": "TV/Foreign",
+        "desc": "TV/Serien - International"
+      },
+      {
+        "id": "110",
+        "cat": "TV/UHD",
+        "desc": "TV/Serien - 4K"
+      },
+      {
+        "id": "22",
+        "cat": "Books/EBook",
+        "desc": "MISC - EBooks"
+      },
+      {
+        "id": "24",
+        "cat": "Other",
+        "desc": "MISC - Sonstiges"
+      },
+      {
+        "id": "25",
+        "cat": "Other",
+        "desc": "MISC- Tonspuren"
+      },
+      {
+        "id": "108",
+        "cat": "TV/Anime",
+        "desc": "TV/Serien - Anime"
+      },
+      {
+        "id": "28",
+        "cat": "PC",
+        "desc": "APPLICATIONS - PC"
+      },
+      {
+        "id": "29",
+        "cat": "PC/Mobile-Other",
+        "desc": "APPLICATIONS - Mobile"
+      },
+      {
+        "id": "30",
+        "cat": "PC",
+        "desc": "APPLICATIONS - Sonstige"
+      },
+      {
+        "id": "70",
+        "cat": "PC",
+        "desc": "APPLICATIONS - Linux"
+      },
+      {
+        "id": "71",
+        "cat": "PC/Mac",
+        "desc": "APPLICATIONS - Mac"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_general",
+      "label": "Layout Manager Settings",
+      "type": "info",
+      "default": "Go to <b>Usercenter</b>-><b>Einstellungen</b>, scroll down to <b>Layout Manager</b> and ensure <b>Comments</b>-, <b>Files</b>- and <b>Snatcher</b>-Anzeige are set to <b>anzeigen</b>, so that the number of files, grabs, seeders and leechers can be correctly detected."
+    },
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "onlyupload",
+      "label": "Filter OnlyUpload only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_free",
+      "label": "About Freeleech and OnlyUpload at NewHeaven",
+      "type": "info",
+      "default": "<ul><li>FreeLeech are torrents where neither the download or upload is counted. (On the Jackett dashboard search results these are tagged as NoUpload).</li><li>OnlyUpload are torrents where download is not counted but upload is. Good for building your Ratio up. (On the Jackett dashboard search results these are tagged as Freeleech).</li></ul>"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "torrent_added",
+      "options": {
+        "torrent_added": "created",
+        "torrent_seeder": "seeders",
+        "torrent_size": "size",
+        "torrent_name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "d",
+      "options": {
+        "d": "desc",
+        "a": "asc",
+        "n": "none"
+      }
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href*=\"index.php?strWebValue=account&strWebAction=logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php",
+        "inputs": {
+          "page": "0"
+        }
+      },
+      {
+        "path": "index.php",
+        "inputs": {
+          "page": "1"
+        }
+      },
+      {
+        "path": "index.php",
+        "inputs": {
+          "page": "2"
+        }
+      },
+      {
+        "path": "index.php",
+        "inputs": {
+          "page": "3"
+        }
+      }
+    ],
+    "inputs": {
+      "strWebValue": "torrent",
+      "strWebAction": "search",
+      "sort": "{{ .Config.sort }}",
+      "by": "{{ .Config.type }}",
+      "$raw": "{{ range .Categories }}dirs{{.}}=1&{{end}}",
+      "searchstring": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "type": "2",
+      "do_search": "suchen",
+      "time": "0",
+      "details": "{{ if .Query.IMDBID }}all{{ else }}title{{ end }}"
+    },
+    "rows": {
+      "selector": "table.torrenttable > tbody > tr:not(:has(td.torrenttableheader)){{ if .Config.onlyupload }}:has(img[src$=\"/onlyup.png\"]){{ else }}{{ end }}"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"index.php?strWebValue=torrent&strWebAction=search&dir=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "dir"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href*=\"index.php?strWebValue=torrent&strWebAction=details&id=\"]"
+      },
+      "title_optional": {
+        "selector": "a[href*=\"index.php?strWebValue=torrent&strWebAction=details&id=\"][onmouseover]",
+        "attribute": "onmouseover",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "return buildTable\\('([^']+)',"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Result.title_optional }}{{ .Result.title_optional }}{{ else }}{{ .Result.title_default }}{{ end }}"
+      },
+      "details": {
+        "selector": "a[href*=\"index.php?strWebValue=torrent&strWebAction=details&id=\"]",
+        "attribute": "href"
+      },
+      "_id": {
+        "selector": "a[href*=\"index.php?strWebValue=torrent&strWebAction=details&id=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "id"
+            ]
+          }
+        ]
+      },
+      "download": {
+        "text": "index.php?strWebValue=torrent&strWebAction=download&id={{ .Result._id }}"
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true,
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "url"
+            ]
+          }
+        ]
+      },
+      "date_day": {
+        "selector": "font:has(a):contains(\"Heute\"), font:has(a):contains(\"Gestern\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "((Heute|Gestern)([\\t-\\r\\x{85}\\p{Z}]\\p{Nd}{2}\\:\\p{Nd}{2}))"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Heute",
+              "Today"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Gestern",
+              "Yesterday"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "font:has(a):not(:contains(\"Heute\")):not(:contains(\"Gestern\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\p{Nd}{2}\\.\\p{Nd}{2}.\\p{Nd}{4}[\\t-\\r\\x{85}\\p{Z}]\\p{Nd}{2}\\:\\p{Nd}{2})"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04 -07:00",
+              "02.01.2006 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_year .Result.date_day }}{{ or .Result.date_year .Result.date_day }}{{ else }}now{{ end }}"
+      },
+      "files": {
+        "selector": "a[href$=\"#filelist\"]"
+      },
+      "size": {
+        "selector": "td:nth-child(4)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "seeders": {
+        "selector": "a[href$=\"#seeders\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "a[href$=\"#leechers\"]",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "div:contains(\"50% DL\")": "0.5",
+          "div:contains(\"25% DL\")": "0.25",
+          "img[src$=\"/onlyup.png\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src$=\"/freeleech.png\"]": "0",
+          "div:contains(\"200% UP\")": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.8"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/newheaven.yml",
+    "sha256": "c53e9f7676b2cd0d17148b182c7279edd8e9aad04713f227fde3aeb5df1d3a26",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

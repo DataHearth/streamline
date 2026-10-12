@@ -975,3 +975,110 @@ var _ = Describe("stock music profile", Label("unit", "config"), func() {
 		Expect(p.Tiers).To(Equal([]string{"lossless", "high"}))
 	})
 })
+
+var _ = Describe("cardigann indexer", Label("unit", "config"), func() {
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		configtest.SetupFile()
+	})
+
+	cardigann := func(def string, settings map[string]string) config.IndexerEntry {
+		return config.IndexerEntry{
+			Name: def, Protocol: "cardigann", Enabled: true,
+			Cardigann: &config.CardigannIndexer{Definition: def, Settings: settings},
+		}
+	}
+
+	It(
+		"accepts a definition that needs no login, with no host, port or key",
+		func() {
+			Expect(config.AddIndexer(ctx, cardigann("yts", nil))).To(Succeed())
+		},
+	)
+
+	It("accepts a definition that logs in", func() {
+		Expect(config.AddIndexer(ctx, cardigann("0dayfiles-api", map[string]string{
+			"apikey": "k",
+		}))).To(Succeed())
+	})
+
+	It("takes an http or socks5 proxy and refuses anything else", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Proxy = "socks5://u:p@vpn:1080"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		e = cardigann("nyaasi", nil)
+		e.Cardigann.Proxy = "ftp://vpn:21"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("cardigann.proxy")))
+	})
+
+	It("defaults the solver timeout and refuses one that is not positive", func() {
+		c := configtest.Setup()
+		Expect(c.Cardigann.SolverTimeout).To(Equal("60s"))
+		c.Cardigann.SolverTimeout = "0s"
+		Expect(
+			c.Validate(),
+		).To(MatchError(ContainSubstring("cardigann.solver_timeout")))
+	})
+
+	It("starts the settings over when an edit changes the definition", func() {
+		e := cardigann(
+			"3dtorrents",
+			map[string]string{"username": "u", "password": "p"},
+		)
+		e.Cardigann.Proxy = "http://vpn:3128"
+		Expect(config.AddIndexer(ctx, e)).To(Succeed())
+		def, clear := "yts", ""
+		Expect(config.UpdateIndexer(ctx, e.Name, config.IndexerPatch{
+			Cardigann: &config.CardigannPatch{Definition: &def, Proxy: &clear},
+		})).To(Succeed())
+		got, _ := config.FindIndexer(e.Name)
+		Expect(got.Cardigann.Definition).To(Equal("yts"))
+		Expect(got.Cardigann.Settings).To(BeEmpty())
+		Expect(got.Cardigann.Proxy).To(BeEmpty())
+	})
+
+	It("rejects a definition the snapshot does not hold", func() {
+		Expect(config.AddIndexer(ctx, cardigann("no-such-tracker", nil))).
+			To(MatchError(ContainSubstring("not found")))
+	})
+
+	It("rejects a setting the definition does not declare", func() {
+		Expect(
+			config.AddIndexer(ctx, cardigann("yts", map[string]string{"nope": "1"})),
+		).
+			To(MatchError(ContainSubstring(`unknown setting "nope"`)))
+	})
+
+	It("rejects a site that is not one of the definition's links", func() {
+		e := cardigann("yts", nil)
+		e.Cardigann.Site = "https://elsewhere.example/"
+		Expect(config.AddIndexer(ctx, e)).
+			To(MatchError(ContainSubstring("not one of the definition's links")))
+	})
+
+	It(
+		"rejects protocol cardigann without its block, and the block elsewhere",
+		func() {
+			Expect(
+				config.AddIndexer(
+					ctx,
+					config.IndexerEntry{Name: "x", Protocol: "cardigann"},
+				),
+			).
+				To(MatchError(ContainSubstring("cardigann.definition is required")))
+			e := cardigann("yts", nil)
+			e.Protocol, e.Host, e.Port, e.APIKey = "torznab", "h", 1, "k"
+			Expect(config.AddIndexer(ctx, e)).
+				To(MatchError(ContainSubstring("needs protocol cardigann")))
+		},
+	)
+
+	It("still requires an API key of a Torznab entry", func() {
+		Expect(config.AddIndexer(ctx, config.IndexerEntry{
+			Name: "t", Protocol: "torznab", Host: "h", Port: 9117,
+		})).To(MatchError(ContainSubstring("api_key or api_key_file is required")))
+	})
+})

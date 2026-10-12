@@ -31,6 +31,9 @@ func (Movie) Fields() []ent.Field {
 			Default("wanted"),
 		field.Bool("monitored").Default(true),
 		field.Uint32("tmdb_id").Unique(),
+		// "tt" + digits, as TMDB reports it. A tracker that cannot search by
+		// TMDB id often can by IMDb id, which is what this is queried for.
+		field.String("imdb_id").Optional(),
 		field.Time("last_search_at").Optional().Nillable(),
 		// Primary (theatrical) release, as TMDB reports it. Distinct from
 		// digital_release_date, which is what the release-radar search waits on;

@@ -862,7 +862,7 @@ func (d *download) grabWith(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 
-	src, err := resolveTorrentSource(ctx, result.Download)
+	src, err := resolveTorrentSource(ctx, d.db, result.Download)
 	if err != nil {
 		outcome = "fetch_torrent_failed"
 		return nil, otelx.RecordSpanError(
@@ -1994,8 +1994,26 @@ func fromConfiguredIndexer(u *url.URL) bool {
 		}
 	}
 	for _, ix := range config.EnabledIndexers() {
-		if strings.EqualFold(u.Hostname(), ix.Host) &&
-			port == strconv.Itoa(int(ix.Port)) {
+		host, ixPort := ix.Host, strconv.Itoa(int(ix.Port))
+		// A cardigann entry's links point at the tracker's own site.
+		if ix.Protocol == "cardigann" {
+			site, err := indexer.CardigannSite(ix)
+			if err != nil {
+				continue
+			}
+			su, err := url.Parse(site)
+			if err != nil {
+				continue
+			}
+			host, ixPort = su.Hostname(), su.Port()
+			if ixPort == "" {
+				ixPort = "443"
+				if su.Scheme == "http" {
+					ixPort = "80"
+				}
+			}
+		}
+		if strings.EqualFold(u.Hostname(), host) && port == ixPort {
 			return true
 		}
 	}
@@ -2013,7 +2031,11 @@ func isRedirect(code int) bool {
 // Client.AddTorrent expects. magnet: links pass through; http(s) URLs are
 // fetched in-process so download clients that can't reach the indexer
 // (Docker/VPN sandboxes) still get the .torrent bytes.
-func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error) {
+func resolveTorrentSource(
+	ctx context.Context,
+	store db.Store,
+	dl string,
+) (TorrentSource, error) {
 	if dl == "" {
 		return TorrentSource{}, fmt.Errorf("empty download URL")
 	}
@@ -2023,14 +2045,35 @@ func resolveTorrentSource(ctx context.Context, dl string) (TorrentSource, error)
 	if err := checkReleaseSource(dl); err != nil {
 		return TorrentSource{}, err
 	}
+	// A native tracker's link may be a release page its definition reads the
+	// real link off, with the headers it sends.
+	method, header := http.MethodGet, http.Header(nil)
+	target, native, err := indexer.ResolveDownload(ctx, store, dl)
+	if err != nil {
+		return TorrentSource{}, fmt.Errorf("resolve download: %w", err)
+	}
+	if native {
+		if strings.HasPrefix(target.URL, "magnet:") {
+			return TorrentSource{Magnet: target.URL}, nil
+		}
+		if err := checkReleaseSource(target.URL); err != nil {
+			return TorrentSource{}, err
+		}
+		dl, method, header = target.URL, target.Method, target.Header
+	}
 	// Both errors below render the release link, which authenticates the
 	// download: Jackett puts a `jackett_apikey` query parameter on it and
 	// Prowlarr an `apikey` (its X-Api-Key header covers the search API, not the
 	// download links it hands back). grab records whatever comes out of here on
 	// the download.grab span, so an unredacted one exports the key.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, dl, nil)
+	req, err := http.NewRequestWithContext(ctx, method, dl, nil)
 	if err != nil {
 		return TorrentSource{}, otelx.RedactTransportError(err)
+	}
+	for k, vs := range header {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
 	}
 	// Every redirect hop is held to the same allowlist as the first: an
 	// allowlisted indexer answering 302 to an arbitrary host otherwise turns

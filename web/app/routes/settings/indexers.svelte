@@ -6,23 +6,27 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
-	import { Plus, Trash2, Search, Pencil, Eye } from "@lucide/svelte";
+	import { Plus, Trash2, Search, Pencil, Eye, KeyRound, Library } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import { indexerForm } from "@lib/schemas";
-	import type { Indexer, IndexerProtocol } from "@lib/types";
+	import type { EditableIndexerProtocol, Indexer } from "@lib/types";
 	import ConfigFormShell from "@components/modals/ConfigFormShell.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import IndexerForm from "@components/settings/forms/IndexerForm.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
+	import IndexerLoginDialog from "@components/settings/IndexerLoginDialog.svelte";
+	import CardigannUpdates from "@components/settings/CardigannUpdates.svelte";
+	import CardigannCatalog from "@components/settings/CardigannCatalog.svelte";
+	import CardigannIndexerForm from "@components/settings/CardigannIndexerForm.svelte";
 	import TestConnectionButton from "@components/settings/TestConnectionButton.svelte";
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	type Values = {
 		name: string;
-		protocol: IndexerProtocol;
+		protocol: EditableIndexerProtocol;
 		host: string;
 		port: number;
 		path: string;
@@ -35,19 +39,34 @@
 		private: boolean;
 	};
 
-	// Prowlarr aggregates via its native API; everything else is a Torznab feed
-	// (a single tracker, or a Jackett /all aggregate). Drives the card badge.
-	const PROVIDERS: Record<
-		IndexerProtocol,
-		{ label: string; hint: string; logo?: string }
-	> = {
-		prowlarr: {
-			label: "Prowlarr",
-			hint: i18n.indexer_hint_all(),
-			logo: "prowlarr",
-		},
-		torznab: { label: "Torznab", hint: i18n.indexer_hint_single() },
-	};
+	// Prowlarr aggregates via its native API, a built-in indexer runs an
+	// embedded definition, everything else is a Torznab feed (a single
+	// tracker, or a Jackett /all aggregate). Drives the card badge.
+	function provider(i: Indexer): { label: string; hint: string; logo?: string } {
+		switch (i.protocol) {
+			case "prowlarr":
+				return {
+					label: "Prowlarr",
+					hint: i18n.indexer_hint_all(),
+					logo: "prowlarr",
+				};
+			case "cardigann":
+				return {
+					label: i18n.indexer_builtin(),
+					hint: i18n.indexer_hint_definition({
+						definition: i.definition ?? "",
+					}),
+				};
+			default:
+				return { label: "Torznab", hint: i18n.indexer_hint_single() };
+		}
+	}
+
+	// A built-in indexer is picked from the catalog and edited in a form
+	// generated from its definition.
+	let catalogOpen = $state(false);
+	let builtinFile = $state<string | null>(null);
+	let builtinEditing = $state<Indexer | null>(null);
 
 	const qc = useQueryClient();
 
@@ -115,6 +134,10 @@
 	}
 
 	function openEdit(i: Indexer) {
+		if (i.protocol === "cardigann") {
+			builtinEditing = i;
+			return;
+		}
 		editing = i;
 		form.reset({
 			name: i.name,
@@ -129,6 +152,36 @@
 			private: i.private ?? false,
 		});
 		modalOpen = true;
+	}
+
+	// A tracker that may show a captcha logs in through the dialog; the rest
+	// log in straight from the card.
+	let captchaFor = $state<Indexer | null>(null);
+	const login = createMutation<Indexer, Error, string>(() => ({
+		mutationFn: (name) =>
+			api<Indexer>(`/indexers/${encodeURIComponent(name)}/login`, {
+				method: "POST",
+				body: {},
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["indexers"] });
+			toast.ok(i18n.indexer_logged_in());
+		},
+		onError: (err) => {
+			qc.invalidateQueries({ queryKey: ["indexers"] });
+			toast.err(errorText(err));
+		},
+	}));
+	function onLogin(i: Indexer) {
+		if (i.session?.captcha) captchaFor = i;
+		else login.mutate(i.name);
+	}
+	function sessionHint(i: Indexer): string | null {
+		const s = i.session;
+		if (!s?.last_error) return null;
+		return s.retry_at
+			? `${s.last_error} ${i18n.indexer_session_retry({ at: new Date(s.retry_at).toLocaleString() })}`
+			: s.last_error;
 	}
 
 	let deleting = $state<Indexer | null>(null);
@@ -146,6 +199,17 @@
 				{i18n.indexer_intro()}
 			</p>
 		</div>
+		<div class="flex flex-wrap gap-2">
+		<button
+			type="button"
+			onclick={() => (catalogOpen = true)}
+			disabled={config.readOnly}
+			title={config.readOnly ? READONLY_HINT : null}
+			class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 py-2 text-sm font-semibold text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+		>
+			<Library size={16} aria-hidden="true" />
+			{i18n.cardigann_add()}
+		</button>
 		<button
 			type="button"
 			onclick={openCreate}
@@ -156,7 +220,10 @@
 			<Plus size={16} aria-hidden="true" />
 			{i18n.indexer_add()}
 		</button>
+		</div>
 	</header>
+
+	<CardigannUpdates />
 
 	<div class="mt-6 grid gap-3 sm:grid-cols-2">
 		{#if list.isPending}
@@ -187,7 +254,7 @@
 					<button
 						type="button"
 						onclick={() => openEdit(i)}
-						class="flex items-start gap-3 text-left"
+						class="flex items-start gap-3 text-left disabled:cursor-default"
 						aria-label={config.readOnly
 							? i18n.common_view_name({ name: i.name })
 							: i18n.common_edit_name({ name: i.name })}
@@ -195,11 +262,11 @@
 						<div
 							class="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-bg-card text-fg-muted"
 						>
-							{#if PROVIDERS[i.protocol].logo}
+							{#if provider(i).logo}
 								<BrandLogo
-									name={PROVIDERS[i.protocol].logo!}
+									name={provider(i).logo!}
 									size={26}
-									ariaLabel={PROVIDERS[i.protocol].label}
+									ariaLabel={provider(i).label}
 								/>
 							{:else}
 								<Search size={24} aria-hidden="true" />
@@ -230,7 +297,30 @@
 										{i18n.releases_private()}
 									</span>
 								{/if}
-								{#if i.api_key_set}
+								{#if i.protocol === "cardigann"}
+									{#if i.session?.login_required}
+										{#if i.session.logged_in}
+											<span
+												class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
+											>
+												{i18n.indexer_session_ok()}
+											</span>
+										{:else if i.session.last_error}
+											<span
+												title={sessionHint(i)}
+												class="inline-flex items-center rounded-full bg-status-failed/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-failed"
+											>
+												{i18n.indexer_session_failed()}
+											</span>
+										{:else}
+											<span
+												class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-muted"
+											>
+												{i18n.indexer_session_none()}
+											</span>
+										{/if}
+									{/if}
+								{:else if i.api_key_set}
 									<span
 										class="inline-flex items-center rounded-full bg-status-available/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-available"
 									>
@@ -251,10 +341,8 @@
 									""}
 							</div>
 							<div class="mt-0.5 text-[11px] text-fg-subtle">
-								{PROVIDERS[i.protocol].label}
-								<span class="text-fg-faint"
-									>· {PROVIDERS[i.protocol].hint}</span
-								>
+								{provider(i).label}
+								<span class="text-fg-faint">· {provider(i).hint}</span>
 							</div>
 						</div>
 					</button>
@@ -264,6 +352,18 @@
 					>
 						{#snippet trailing()}
 							<div class="flex shrink-0 items-center gap-1">
+								{#if i.session?.login_required}
+									<button
+										type="button"
+										onclick={() => onLogin(i)}
+										disabled={login.isPending}
+										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg disabled:opacity-60"
+										aria-label={i18n.indexer_login()}
+										title={i18n.indexer_login()}
+									>
+										<KeyRound size={16} aria-hidden="true" />
+									</button>
+								{/if}
 								{#if config.readOnly}
 									<button
 										type="button"
@@ -346,6 +446,26 @@
 		{/if}
 	{/snippet}
 </ConfigFormShell>
+
+<IndexerLoginDialog indexer={captchaFor} onClose={() => (captchaFor = null)} />
+
+<CardigannCatalog
+	open={catalogOpen}
+	onPick={(file) => {
+		catalogOpen = false;
+		builtinFile = file;
+	}}
+	onClose={() => (catalogOpen = false)}
+/>
+
+<CardigannIndexerForm
+	file={builtinFile}
+	editing={builtinEditing}
+	onClose={() => {
+		builtinFile = null;
+		builtinEditing = null;
+	}}
+/>
 
 <Dialog
 	open={deleting !== null}

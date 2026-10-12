@@ -213,6 +213,18 @@ func (f ImportScanShowFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ImportScanShowMutation", m)
 }
 
+// The IndexerSessionFunc type is an adapter to allow the use of ordinary
+// function as IndexerSession mutator.
+type IndexerSessionFunc func(context.Context, *ent.IndexerSessionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IndexerSessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IndexerSessionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IndexerSessionMutation", m)
+}
+
 // The InviteFunc type is an adapter to allow the use of ordinary
 // function as Invite mutator.
 type InviteFunc func(context.Context, *ent.InviteMutation) (ent.Value, error)

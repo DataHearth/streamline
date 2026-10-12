@@ -1,0 +1,176 @@
+{
+  "id": "eztv",
+  "name": "EZTV",
+  "description": "EZTV is a Public torrent site for TV shows",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://eztvx.to/",
+    "https://eztv.wf/",
+    "https://eztv.tf/",
+    "https://eztv.yt/",
+    "https://eztv1.xyz/"
+  ],
+  "legacylinks": [
+    "https://eztv.ag/",
+    "https://eztv.it/",
+    "https://eztv.ch/",
+    "https://eztv.io/",
+    "https://eztv.re/",
+    "https://eztv.li/",
+    "https://eztv.mrunblock.bond/",
+    "https://eztv.nocensor.cloud/",
+    "https://eztv.unblockninja.com/",
+    "https://eztv.ninjaproxy1.com/",
+    "https://eztv.proxyninja.org/",
+    "https://eztv.abcproxy.org/",
+    "https://eztv.unblockit.download/"
+  ],
+  "caps": {
+    "categories": {
+      "1": "TV"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "{{ if .Keywords }}search/{{ .Keywords }}{{ else }}home{{ end }}"
+      }
+    ],
+    "headers": {
+      "cookie": [
+        "sort_no=100; q_filter=all; q_filter_web=on; q_filter_reality=on; q_filter_x265=on; layout=def_wlinks"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\bS\\d{2,3}\\b",
+          ""
+        ],
+        "engine": "regexp2"
+      },
+      {
+        "name": "trim"
+      },
+      {
+        "name": "replace",
+        "args": [
+          "-",
+          ""
+        ]
+      },
+      {
+        "name": "replace",
+        "args": [
+          " ",
+          "-"
+        ]
+      },
+      {
+        "name": "replace",
+        "args": [
+          "&",
+          ""
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "table.forum_header_border:contains('Latest') tr[name='hover'].forum_header_border:has(a.magnet), table.forum_header_border:contains('Releases') tr[name='hover'].forum_header_border:has(a.magnet)",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "td:nth-child(2) a",
+        "attribute": "title",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "[eztv]",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "\\(.*\\)$",
+              ""
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "trim"
+          }
+        ]
+      },
+      "details": {
+        "selector": "td:nth-child(2) a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "td:nth-child(3) a.magnet, td:nth-child(3) a",
+        "attribute": "href"
+      },
+      "size": {
+        "selector": "td:nth-child(4)",
+        "optional": true,
+        "default": "512 MB"
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " ago"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "td:nth-child(6)"
+      },
+      "leechers": {
+        "text": "0"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/eztv.yml",
+    "sha256": "f277bf623a48c987981c1cd21f0d0dbca4e9aee9e564e6126b4dccf40360bcaf",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

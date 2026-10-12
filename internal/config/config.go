@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/netip"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,6 +24,8 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 
+	"github.com/datahearth/streamline/internal/cardigann/definitions"
+	"github.com/datahearth/streamline/internal/cardigann/engine"
 	"github.com/datahearth/streamline/internal/quality"
 )
 
@@ -47,6 +50,7 @@ type Config struct {
 	FFmpeg      FFmpegConfig      `koanf:"ffmpeg"`
 	Download    DownloadConfig    `koanf:"download"`
 	Transcoding TranscodingConfig `koanf:"transcoding"`
+	Cardigann   CardigannConfig   `koanf:"cardigann"`
 	// TorrentListenPort overrides the builtin download client's own
 	// listen_port, and is a top-level scalar so the environment can reach it:
 	// STREAMLINE_TORRENT_LISTEN_PORT lands here, while nothing in
@@ -69,6 +73,13 @@ type Config struct {
 
 	BookQualityProfiles        []BookQualityProfileEntry `koanf:"book_quality_profiles"         validate:"unique=Name,dive"`
 	BookQualityDefaultProfiles BookQualityDefaults       `koanf:"book_quality_default_profiles"`
+}
+
+// CardigannDir is where built-in indexer definitions beyond the embedded
+// snapshot live: the runtime update's, those held for approval, and the
+// operator's own (internal/cardigann/definitions).
+func (c Config) CardigannDir() string {
+	return filepath.Join(c.DataDir, "cardigann")
 }
 
 // DatabasePath is the SQLite database location, derived from DataDir.
@@ -314,6 +325,18 @@ type ScheduleConfig struct {
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
+	// CardigannUpdate fetches upstream's built-in indexer definitions.
+	CardigannUpdate string `koanf:"cardigann_update" validate:"required"`
+}
+
+// CardigannConfig is what every built-in indexer shares.
+type CardigannConfig struct {
+	// SolverURL is a FlareSolverr-compatible service (FlareSolverr, trawl,
+	// Byparr) a built-in indexer asks to get past a browser challenge. Empty
+	// fails a challenged request instead.
+	SolverURL string `koanf:"solver_url" validate:"omitempty,http_url"`
+	// SolverTimeout bounds one solve.
+	SolverTimeout string `koanf:"solver_timeout" validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -628,6 +651,16 @@ func (c *Config) checkInvariants() error {
 		}
 	}
 	errs = append(errs, c.checkMusicBookProfiles()...)
+	errs = append(errs, c.checkIndexers()...)
+	if d, err := time.ParseDuration(
+		c.Cardigann.SolverTimeout,
+	); err != nil ||
+		d <= 0 {
+		errs = append(errs, fmt.Errorf(
+			"cardigann.solver_timeout %q: want a positive duration",
+			c.Cardigann.SolverTimeout,
+		))
+	}
 	builtin := 0
 	for _, dc := range c.DownloadClients {
 		if dc.ClientType == "builtin" {
@@ -888,6 +921,7 @@ func defaults() map[string]any {
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
 		"schedules.file_selection":         "30s",
+		"schedules.cardigann_update":       "24h",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
@@ -947,6 +981,8 @@ func defaults() map[string]any {
 		"book_quality_default_profiles.comic": "default",
 		"book_quality_default_profiles.manga": "default",
 		"events.retention":                    "2160h",
+		"cardigann.solver_url":                "",
+		"cardigann.solver_timeout":            "60s",
 		"ffmpeg.enabled":                      true,
 		"ffmpeg.path":                         "",
 		"download.selective_files":            false,
@@ -1499,4 +1535,61 @@ func Load(cfgFile string) (*Config, error) {
 	}
 	store(cfg, cfgFile, k, layer)
 	return cfg, nil
+}
+
+// checkIndexers holds each indexer to what its protocol needs: an API key for
+// a Torznab or Prowlarr endpoint, and for a cardigann entry a definition the
+// engine can run with the settings it was given.
+func (c *Config) checkIndexers() []error {
+	var errs []error
+	for _, ix := range c.Indexers {
+		if ix.Protocol != "cardigann" {
+			if ix.APIKey == "" && ix.APIKeyFile == "" {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: api_key or api_key_file is required", ix.Name,
+				))
+			}
+			if ix.Cardigann != nil {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: a cardigann block needs protocol cardigann",
+					ix.Name,
+				))
+			}
+			continue
+		}
+		if err := CheckCardigann(c.CardigannDir(), ix); err != nil {
+			errs = append(errs, fmt.Errorf("indexers %q: %w", ix.Name, err))
+		}
+		if p := ix.Cardigann; p != nil && p.Proxy != "" {
+			u, err := url.Parse(p.Proxy)
+			if err != nil || u.Host == "" ||
+				!slices.Contains(
+					[]string{"http", "https", "socks5", "socks5h"},
+					u.Scheme,
+				) {
+				errs = append(errs, fmt.Errorf(
+					"indexers %q: cardigann.proxy wants an http, https or socks5 URL",
+					ix.Name,
+				))
+			}
+		}
+	}
+	return errs
+}
+
+// CheckCardigann reports whether a cardigann entry names a definition the
+// engine can run with its settings, among those in force under dir.
+func CheckCardigann(dir string, ix IndexerEntry) error {
+	if ix.Cardigann == nil || ix.Cardigann.Definition == "" {
+		return errors.New("cardigann.definition is required")
+	}
+	def, err := definitions.Load(dir, ix.Cardigann.Definition)
+	if err != nil {
+		return err
+	}
+	if _, err := engine.Site(def, ix.Cardigann.Site); err != nil {
+		return err
+	}
+	_, err = engine.Config(def, ix.Cardigann.Settings)
+	return err
 }

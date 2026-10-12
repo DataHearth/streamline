@@ -1,0 +1,361 @@
+{
+  "id": "tr4ker",
+  "name": "TR4KER",
+  "description": "TR4KER is a FRENCH Semi-Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "fr-FR",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "requestDelay": 1,
+  "links": [
+    "https://tr4ker.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1000",
+        "cat": "Console",
+        "desc": "PC Games"
+      },
+      {
+        "id": "1010",
+        "cat": "Console/XBox",
+        "desc": "Xbox"
+      },
+      {
+        "id": "1020",
+        "cat": "Console/Wii",
+        "desc": "Nintendo"
+      },
+      {
+        "id": "1030",
+        "cat": "Console/PS4",
+        "desc": "PlayStation"
+      },
+      {
+        "id": "2000",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "2010",
+        "cat": "Movies/Foreign",
+        "desc": "Films Foreign"
+      },
+      {
+        "id": "2040",
+        "cat": "Movies/HD",
+        "desc": "Movies/HD"
+      },
+      {
+        "id": "3000",
+        "cat": "Audio",
+        "desc": "Audio"
+      },
+      {
+        "id": "3010",
+        "cat": "Audio/MP3",
+        "desc": "Audio/MP3"
+      },
+      {
+        "id": "3030",
+        "cat": "Audio/Audiobook",
+        "desc": "iobook"
+      },
+      {
+        "id": "3040",
+        "cat": "Audio/Lossless",
+        "desc": "Audio/Lossless"
+      },
+      {
+        "id": "4000",
+        "cat": "PC/0day",
+        "desc": "PC"
+      },
+      {
+        "id": "4030",
+        "cat": "PC/Mac",
+        "desc": "PC/Mac"
+      },
+      {
+        "id": "4070",
+        "cat": "PC/Mobile-Android",
+        "desc": "PC/Android"
+      },
+      {
+        "id": "5000",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "5040",
+        "cat": "TV/HD",
+        "desc": "TV/HD"
+      },
+      {
+        "id": "5060",
+        "cat": "TV/Sport",
+        "desc": "TV/Sport"
+      },
+      {
+        "id": "5070",
+        "cat": "TV/Anime",
+        "desc": "TV/Anime"
+      },
+      {
+        "id": "6000",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "7000",
+        "cat": "Books",
+        "desc": "Books"
+      },
+      {
+        "id": "7010",
+        "cat": "Books/Mags",
+        "desc": "Books/Mags"
+      },
+      {
+        "id": "7020",
+        "cat": "Books/EBook",
+        "desc": "Books/eBook"
+      },
+      {
+        "id": "7030",
+        "cat": "Books/Comics",
+        "desc": "Books/Comics"
+      },
+      {
+        "id": "8000",
+        "cat": "Other",
+        "desc": "Other"
+      },
+      {
+        "id": "8010",
+        "cat": "Other/Misc",
+        "desc": "Other/Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    },
+    "allowrawsearch": true,
+    "allowtvsearchimdb": true
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Key",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "You can find or generate a new API Key by accessing the <a href=\"https://tr4ker.net/mon-compte/parametres\" target=\"_blank\">TR4KER Paramètres</a> page and scrolling down to the <b>Clé API</b> section."
+    },
+    {
+      "name": "multilang",
+      "label": "Replace MULTi by another language in release name",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "multilanguage",
+      "label": "Replace MULTi by this language",
+      "type": "select",
+      "default": "FRENCH",
+      "options": {
+        "FRENCH": "FRENCH",
+        "MULTi.FRENCH": "MULTi.FRENCH",
+        "ENGLISH": "ENGLISH",
+        "MULTi.ENGLISH": "MULTi.ENGLISH",
+        "VOSTFR": "VOSTFR",
+        "MULTi.VOSTFR": "MULTi.VOSTFR"
+      }
+    },
+    {
+      "name": "vostfr",
+      "label": "Replace VOSTFR and SUBFRENCH with ENGLISH",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_3x",
+      "label": "Including 3X",
+      "type": "info",
+      "default": "IF you want to see 3x torrents access your <a href=\"https://tr4ker.net/mon-compte/parametres\" target=\"_blank\">TR4KER Paramètres</a> page and flick the <b>Contenu adulte (+18)</b> switch."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torznab",
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "search",
+      "limit": "1"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torznab/all",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "{{ if .Query.Type }}{{ .Query.Type }}{{ else }}search{{ end }}",
+      "q": "{{ .Keywords }}",
+      "cat": "{{ join .Categories \",\" }}",
+      "imdbid": "{{ .Query.IMDBID }}",
+      "tmdbid": "{{ .Query.TMDBID }}",
+      "tvdbid": "{{ .Query.TVDBID }}",
+      "limit": "100"
+    },
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title_phase1": {
+        "selector": "title"
+      },
+      "title_vostfr": {
+        "text": "{{ .Result.title_phase1 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(vostfr|subfrench)\\b",
+              "ENGLISH"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title_phase2": {
+        "text": "{{ if .Config.vostfr }}{{ .Result.title_vostfr }}{{ else }}{{ .Result.title_phase1 }}{{ end }}"
+      },
+      "title_multilang": {
+        "text": "{{ .Result.title_phase2 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(MULTI(?!.*(?:FRENCH|ENGLISH|VOSTFR|VF2|VFF|VFQ|VOQ|VFI|VOF)))\\b",
+              "{{ .Config.multilanguage }}"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
+      },
+      "details": {
+        "selector": "comments",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "/torrents/",
+              "/torrent/"
+            ]
+          }
+        ]
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "imdbid": {
+        "selector": "[name=imdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "[name=tmdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "[name=tvdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "[name=size]",
+        "attribute": "value"
+      },
+      "seeders": {
+        "selector": "[name=seeders]",
+        "attribute": "value"
+      },
+      "leechers": {
+        "selector": "[name=peers]",
+        "attribute": "value"
+      },
+      "grabs": {
+        "selector": "[name=grabs]",
+        "attribute": "value"
+      },
+      "downloadvolumefactor": {
+        "selector": "[name=downloadvolumefactor]",
+        "attribute": "value"
+      },
+      "uploadvolumefactor": {
+        "selector": "[name=uploadvolumefactor]",
+        "attribute": "value"
+      },
+      "minimumratio": {
+        "text": "0.51"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/tr4ker.yml",
+    "sha256": "80fdcdcf00b9b39349292c2528f36e5f778e9e3fa45c8fb22128d2326f602819",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

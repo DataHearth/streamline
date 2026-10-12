@@ -282,6 +282,16 @@ export const indexerForm = v.object({
 	private: v.boolean(),
 });
 
+export const cardigannIndexerForm = v.object({
+	name: v.pipe(v.string(), v.minLength(1, i18n.validation_required())),
+	site: v.string(),
+	enabled: v.boolean(),
+	priority,
+	private: v.boolean(),
+	proxy: v.string(),
+	settings: v.record(v.string(), v.string()),
+});
+
 export const downloadClientType = v.picklist(
 	["qbittorrent", "transmission", "deluge"] as const,
 	i18n.validation_pick_client(),

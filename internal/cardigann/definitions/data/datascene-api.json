@@ -1,0 +1,474 @@
+{
+  "id": "datascene-api",
+  "name": "DataScene (API)",
+  "description": "DataScene (DS) is a ROMANIAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://datascene.xyz/"
+  ],
+  "legacylinks": [
+    "http://datascene.net/",
+    "https://datascene.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies/HD",
+        "desc": "Movie HD"
+      },
+      {
+        "id": "23",
+        "cat": "Movies/HD",
+        "desc": "Movies HD Ro"
+      },
+      {
+        "id": "11",
+        "cat": "Movies/UHD",
+        "desc": "Movies 4K"
+      },
+      {
+        "id": "12",
+        "cat": "Movies/UHD",
+        "desc": "Movies 4K Ro"
+      },
+      {
+        "id": "14",
+        "cat": "Movies/BluRay",
+        "desc": "Movies Bluray"
+      },
+      {
+        "id": "15",
+        "cat": "Movies/BluRay",
+        "desc": "Movies Bluray Ro"
+      },
+      {
+        "id": "27",
+        "cat": "Movies/DVD",
+        "desc": "DVD"
+      },
+      {
+        "id": "28",
+        "cat": "Movies/DVD",
+        "desc": "DVD Ro"
+      },
+      {
+        "id": "19",
+        "cat": "Movies/SD",
+        "desc": "SD"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/SD",
+        "desc": "SD Ro"
+      },
+      {
+        "id": "2",
+        "cat": "TV/HD",
+        "desc": "TV HD"
+      },
+      {
+        "id": "18",
+        "cat": "TV/HD",
+        "desc": "TV HD Ro"
+      },
+      {
+        "id": "26",
+        "cat": "TV/SD",
+        "desc": "TV SD"
+      },
+      {
+        "id": "10",
+        "cat": "TV/SD",
+        "desc": "TV SD Ro"
+      },
+      {
+        "id": "31",
+        "cat": "TV/SD",
+        "desc": "DVD"
+      },
+      {
+        "id": "32",
+        "cat": "TV/SD",
+        "desc": "DVD Ro"
+      },
+      {
+        "id": "29",
+        "cat": "TV/UHD",
+        "desc": "TV 4K"
+      },
+      {
+        "id": "30",
+        "cat": "TV/UHD",
+        "desc": "TV 4K Ro"
+      },
+      {
+        "id": "22",
+        "cat": "TV",
+        "desc": "TV Pack"
+      },
+      {
+        "id": "33",
+        "cat": "TV",
+        "desc": "TV Pack Ro"
+      },
+      {
+        "id": "4",
+        "cat": "PC/Games",
+        "desc": "Game"
+      },
+      {
+        "id": "3",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "21",
+        "cat": "Audio/Video",
+        "desc": "Music Video"
+      },
+      {
+        "id": "7",
+        "cat": "PC/Mobile-Other",
+        "desc": "Mobile"
+      },
+      {
+        "id": "24",
+        "cat": "PC",
+        "desc": "Linux"
+      },
+      {
+        "id": "8",
+        "cat": "Books/EBook",
+        "desc": "E-Book"
+      },
+      {
+        "id": "25",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "5",
+        "cat": "PC/0day",
+        "desc": "Application"
+      },
+      {
+        "id": "13",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "6",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid",
+        "tmdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://datascene.xyz/\" target=\"_blank\">DataScene</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "single_file_release_use_filename",
+      "label": "Use filename as title for single file releases",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "<ul><li>Accounts with zero activity (0 bytes download and 0 bytes upload) are automatically deleted after 30 days.</li><li>Inactive account under the rank of VIP that are unparked are automatically deleted after 40 days.</li></ul>"
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "seasonNumber": "{{ .Query.Season }}",
+      "episodeNumber": "{{ .Query.Ep }}",
+      "imdbId": "{{ .Query.IMDBIDShort }}",
+      "tmdbId": "{{ .Query.TMDBID }}",
+      "tvdbId": "{{ .Query.TVDBID }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title_optional": {
+        "selector": "name"
+      },
+      "title_filename": {
+        "selector": "files[0].name",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "title": {
+        "text": "{{ if and (.Config.single_file_release_use_filename) (eq .Result.files \"1\") (.Result.title_filename) }}{{ .Result.title_filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "infohash": {
+        "selector": "info_hash"
+      },
+      "poster": {
+        "selector": "meta.poster",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "imdb_id",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "tmdb_id",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "tvdb_id",
+        "optional": true
+      },
+      "genre": {
+        "selector": "meta.genres",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(All Sex)",
+              "All_Sex"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(Science Fiction)",
+              "Science_Fiction"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(TV Movie)",
+              "TV_Movie"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " & ",
+              "_&_"
+            ]
+          }
+        ]
+      },
+      "_internal": {
+        "selector": "internal",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +02:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/datascene-api.yml",
+    "sha256": "7036fbf06893d30e629620c3225d0eea61ef203287aadb1f0d36228ae0da0b4b",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

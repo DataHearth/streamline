@@ -185,6 +185,26 @@ func (_u *MovieUpdate) AddTmdbID(v int32) *MovieUpdate {
 	return _u
 }
 
+// SetImdbID sets the "imdb_id" field.
+func (_u *MovieUpdate) SetImdbID(v string) *MovieUpdate {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableImdbID(v *string) *MovieUpdate {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *MovieUpdate) ClearImdbID() *MovieUpdate {
+	_u.mutation.ClearImdbID()
+	return _u
+}
+
 // SetLastSearchAt sets the "last_search_at" field.
 func (_u *MovieUpdate) SetLastSearchAt(v time.Time) *MovieUpdate {
 	_u.mutation.SetLastSearchAt(v)
@@ -654,6 +674,12 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.AddedTmdbID(); ok {
 		_spec.AddField(movie.FieldTmdbID, field.TypeUint32, value)
 	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(movie.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(movie.FieldImdbID, field.TypeString)
+	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)
 	}
@@ -1077,6 +1103,26 @@ func (_u *MovieUpdateOne) SetNillableTmdbID(v *uint32) *MovieUpdateOne {
 // AddTmdbID adds value to the "tmdb_id" field.
 func (_u *MovieUpdateOne) AddTmdbID(v int32) *MovieUpdateOne {
 	_u.mutation.AddTmdbID(v)
+	return _u
+}
+
+// SetImdbID sets the "imdb_id" field.
+func (_u *MovieUpdateOne) SetImdbID(v string) *MovieUpdateOne {
+	_u.mutation.SetImdbID(v)
+	return _u
+}
+
+// SetNillableImdbID sets the "imdb_id" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableImdbID(v *string) *MovieUpdateOne {
+	if v != nil {
+		_u.SetImdbID(*v)
+	}
+	return _u
+}
+
+// ClearImdbID clears the value of the "imdb_id" field.
+func (_u *MovieUpdateOne) ClearImdbID() *MovieUpdateOne {
+	_u.mutation.ClearImdbID()
 	return _u
 }
 
@@ -1578,6 +1624,12 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if value, ok := _u.mutation.AddedTmdbID(); ok {
 		_spec.AddField(movie.FieldTmdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.ImdbID(); ok {
+		_spec.SetField(movie.FieldImdbID, field.TypeString, value)
+	}
+	if _u.mutation.ImdbIDCleared() {
+		_spec.ClearField(movie.FieldImdbID, field.TypeString)
 	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)

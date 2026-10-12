@@ -19,7 +19,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		svc = New()
+		svc = New(nil)
 	})
 
 	Describe("SearchMovie", func() {
@@ -33,6 +33,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						[]string{"Interstellar"},
 						nil,
 						157336,
+						"",
 					)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(BeEmpty())
@@ -44,7 +45,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
 				results, err := svc.SearchMovie(ctx, []string{"", ""},
-					nil, 0)
+					nil, 0, "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -130,6 +131,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						[]string{"The Black Sea"},
 						nil,
 						12345,
+						"",
 						3,
 					)
 					Expect(err).NotTo(HaveOccurred())
@@ -142,7 +144,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			It("returns nil without contacting any indexer", func() {
 				configtest.Setup()
 				results, err := svc.SearchSeason(ctx, []string{"", ""},
-					nil, 0, 0)
+					nil, 0, "", 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
 			})
@@ -160,6 +162,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						[]string{"The Black Sea"},
 						nil,
 						12345,
+						"",
 						3,
 						5,
 					)
@@ -178,6 +181,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					[]string{"", ""},
 					nil,
 					0,
+					"",
 					0,
 					0,
 				)
@@ -372,6 +376,64 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			in := []SearchResult{{Title: "a", TVDBID: 99999}}
 			Expect(filterProviderIDs(in, SearchParams{Query: "a"})).To(HaveLen(1))
 		})
+
+		It("compares IMDb ids by value, whatever their spelling", func() {
+			// Trackers publish "tt0903747", "0903747" and "903747" alike.
+			in := []SearchResult{
+				{Title: "right", IMDbID: 903747},
+				{Title: "wrong", IMDbID: 111161},
+				{Title: "unlabelled"},
+			}
+			out := filterProviderIDs(in, SearchParams{
+				Kind:   KindTV,
+				IMDbID: "tt0903747",
+			})
+			titles := make([]string, len(out))
+			for i, r := range out {
+				titles[i] = r.Title
+			}
+			Expect(titles).To(ConsistOf("right", "unlabelled"))
+		})
+	})
+
+	Describe("imdbNumber", func() {
+		It("reads the number with or without the prefix, zero otherwise", func() {
+			Expect(imdbNumber("tt0903747")).To(Equal(uint32(903747)))
+			Expect(imdbNumber("0903747")).To(Equal(uint32(903747)))
+			Expect(imdbNumber("")).To(BeZero())
+			Expect(imdbNumber("nm0000190")).To(BeZero())
+		})
+	})
+
+	Describe("fallbacks", func() {
+		ids := SearchParams{
+			Query: "Dune", Kind: KindMovie, TMDBID: 438631, IMDbID: "tt1160419",
+		}
+
+		It("asks a Torznab endpoint by IMDb id alone before the bare title", func() {
+			Expect(fallbacks("torznab", ids)).To(Equal([]SearchParams{
+				{Query: "Dune", Kind: KindMovie, IMDbID: "tt1160419"},
+				{Query: "Dune", Kind: KindMovie},
+			}))
+		})
+
+		It("goes straight to the bare title for Prowlarr", func() {
+			// Prowlarr never forwards an id, so the IMDb rung would re-issue
+			// the query that just came back empty.
+			Expect(fallbacks("prowlarr", ids)).To(Equal([]SearchParams{
+				{Query: "Dune", Kind: KindMovie},
+			}))
+		})
+
+		It("skips the IMDb rung when it was the only id already", func() {
+			Expect(fallbacks("torznab", SearchParams{
+				Query: "Dune", Kind: KindMovie, IMDbID: "tt1160419",
+			})).To(Equal([]SearchParams{{Query: "Dune", Kind: KindMovie}}))
+		})
+
+		It("has nothing wider to offer a bare title", func() {
+			Expect(fallbacks("torznab", SearchParams{Query: "Dune"})).To(BeEmpty())
+		})
 	})
 
 	Describe("SearchParams.narrowed", func() {
@@ -382,6 +444,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(SearchParams{Query: "x", Kind: KindTV}.narrowed()).To(BeFalse())
 			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{IMDbID: "tt1"}.narrowed()).To(BeTrue())
 			// Season and episode count now that they narrow at the tracker.
 			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())

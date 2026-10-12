@@ -1,0 +1,494 @@
+{
+  "id": "p2pbg",
+  "name": "P2PBG",
+  "description": "P2PBG is a BULGARIAN Private PAY2DL Torrent Tracker for 0DAY / GENERAL",
+  "language": "bg-BG",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.p2pbg.com/"
+  ],
+  "legacylinks": [
+    "http://www.p2pbg.com/",
+    "http://p2pbg.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "7",
+        "cat": "TV/Documentary",
+        "desc": "Movies Documentary"
+      },
+      {
+        "id": "11",
+        "cat": "Movies/DVD",
+        "desc": "Movies DVD"
+      },
+      {
+        "id": "14",
+        "cat": "TV",
+        "desc": "TV Shows"
+      },
+      {
+        "id": "15",
+        "cat": "TV",
+        "desc": "TV Boxset"
+      },
+      {
+        "id": "24",
+        "cat": "TV/SD",
+        "desc": "TV BG"
+      },
+      {
+        "id": "34",
+        "cat": "Movies",
+        "desc": "Movies BG"
+      },
+      {
+        "id": "35",
+        "cat": "Movies",
+        "desc": "Movies GSM"
+      },
+      {
+        "id": "38",
+        "cat": "TV/Anime",
+        "desc": "Cartoons"
+      },
+      {
+        "id": "59",
+        "cat": "Movies/SD",
+        "desc": "Movies VHS"
+      },
+      {
+        "id": "60",
+        "cat": "Movies/UHD",
+        "desc": "Movies 4K"
+      },
+      {
+        "id": "67",
+        "cat": "Movies/SD",
+        "desc": "Movies SD"
+      },
+      {
+        "id": "68",
+        "cat": "Movies/HD",
+        "desc": "Movies HD"
+      },
+      {
+        "id": "69",
+        "cat": "Movies",
+        "desc": "Movies Pack"
+      },
+      {
+        "id": "2",
+        "cat": "Audio/MP3",
+        "desc": "Music Song"
+      },
+      {
+        "id": "3",
+        "cat": "Audio/Video",
+        "desc": "Music DVD"
+      },
+      {
+        "id": "19",
+        "cat": "Audio/Video",
+        "desc": "Music Videos"
+      },
+      {
+        "id": "28",
+        "cat": "Audio",
+        "desc": "Music Album"
+      },
+      {
+        "id": "29",
+        "cat": "Audio",
+        "desc": "Music Discography"
+      },
+      {
+        "id": "8",
+        "cat": "PC/Games",
+        "desc": "Games PC ISO"
+      },
+      {
+        "id": "9",
+        "cat": "PC/Games",
+        "desc": "Games PC Rips"
+      },
+      {
+        "id": "12",
+        "cat": "Console/PS3",
+        "desc": "Games PS2"
+      },
+      {
+        "id": "20",
+        "cat": "Console/PSP",
+        "desc": "Games PSP"
+      },
+      {
+        "id": "21",
+        "cat": "Console/XBox",
+        "desc": "Games XboX"
+      },
+      {
+        "id": "22",
+        "cat": "Console/XBox 360",
+        "desc": "Games X360"
+      },
+      {
+        "id": "23",
+        "cat": "Console/PS3",
+        "desc": "Games PS3"
+      },
+      {
+        "id": "33",
+        "cat": "Console/Wii",
+        "desc": "Games Wii"
+      },
+      {
+        "id": "26",
+        "cat": "PC/ISO",
+        "desc": "Appz PC ISO"
+      },
+      {
+        "id": "27",
+        "cat": "PC",
+        "desc": "Appz GSM"
+      },
+      {
+        "id": "30",
+        "cat": "PC",
+        "desc": "Appz Linux"
+      },
+      {
+        "id": "31",
+        "cat": "PC/0day",
+        "desc": "Appz Ripped"
+      },
+      {
+        "id": "49",
+        "cat": "PC/Mac",
+        "desc": "Appz MacOS"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Sport",
+        "desc": "Formula 1"
+      },
+      {
+        "id": "51",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "57",
+        "cat": "TV/Sport",
+        "desc": "Formula 2"
+      },
+      {
+        "id": "64",
+        "cat": "TV/Sport",
+        "desc": "Football"
+      },
+      {
+        "id": "65",
+        "cat": "TV/Sport",
+        "desc": "E-Sports"
+      },
+      {
+        "id": "4",
+        "cat": "Other",
+        "desc": "Other"
+      },
+      {
+        "id": "6",
+        "cat": "Books",
+        "desc": "Books"
+      },
+      {
+        "id": "37",
+        "cat": "Other/Misc",
+        "desc": "Pictures"
+      },
+      {
+        "id": "39",
+        "cat": "Other",
+        "desc": "e-Learning"
+      },
+      {
+        "id": "13",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "32",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX Pictures"
+      },
+      {
+        "id": "48",
+        "cat": "XXX",
+        "desc": "XXX BG Amateurs"
+      },
+      {
+        "id": "53",
+        "cat": "XXX",
+        "desc": "XXX Hentai"
+      },
+      {
+        "id": "54",
+        "cat": "XXX",
+        "desc": "XXX 4K"
+      },
+      {
+        "id": "56",
+        "cat": "XXX",
+        "desc": "XXX VR"
+      },
+      {
+        "id": "61",
+        "cat": "XXX",
+        "desc": "XXX OF"
+      },
+      {
+        "id": "66",
+        "cat": "XXX",
+        "desc": "XXX HD"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "info_magnets",
+      "label": "About Magnets",
+      "type": "info",
+      "default": "IF you do not see Magnets in the results then this means that you are not a <b>Super User</b> or <b>VIP</b>.<br />You will need to visit the <a href=\"https://www.p2pbg.com/marketplace\" target=\"_blank\">MarketPlace</a>."
+    },
+    {
+      "name": "info_results",
+      "label": "Search results",
+      "type": "info",
+      "default": "Only the <b>Base</b> style is supported with this indexer.<br />For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "data",
+      "options": {
+        "data": "created",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "DESC",
+      "options": {
+        "DESC": "desc",
+        "ASC": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login",
+    "form": "form.auth-form",
+    "inputs": {
+      "uid": "{{ .Config.username }}",
+      "pwd": "{{ .Config.password }}",
+      "remember": "1"
+    },
+    "error": [
+      {
+        "selector": "div.auth-notice:contains(\"Incorrect\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "form[action$=\"logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents"
+      }
+    ],
+    "allowEmptyInputs": true,
+    "inputs": {
+      "category": "{{ if .Categories }}{{ range .Categories }}{{.}};{{end}}{{ else }}0{{ end }}",
+      "fakeusernameremembered": "",
+      "fakepasswordremembered": "",
+      "search": "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ end }}",
+      "active": "0",
+      "order": "{{ .Config.sort }}",
+      "by": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.torrent-index__table:not(table.torrent-index__table--recommended) > tbody > tr.torrent-index__row"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"category=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "category"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "td:nth-child(2) a"
+      },
+      "title_download": {
+        "text": "{{ .Result.title }}",
+        "filters": [
+          {
+            "name": "urlencode"
+          }
+        ]
+      },
+      "infohash": {
+        "selector": "td:nth-child(2) a",
+        "attribute": "onclick",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "text": "torrents/{{ .Result.infohash }}"
+      },
+      "download": {
+        "text": "download.php?id={{ .Result.infohash }}&f={{ .Result.title_download }}.torrent"
+      },
+      "magnet": {
+        "selector": "a[href^=\"magnet:?xt=\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "poster": {
+        "selector": "a:has(img[src*=\"/torrentimg/pic\"])",
+        "attribute": "data-overlib",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=\\\"(.*?)\\\""
+            ]
+          }
+        ]
+      },
+      "date_day": {
+        "selector": "td:nth-last-child(5):not(:contains(\"/\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)сейчас|Сега",
+              "now"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)сегодня|Днес",
+              "Today"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)вчера|Вчера",
+              "Yesterday"
+            ]
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "td:nth-last-child(5):contains(\"/\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "02/01/2006"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_day .Result.date_year }}{{ or .Result.date_day .Result.date_year }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "leechers": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(1)"
+      },
+      "downloadvolumefactor": {
+        "text": "1"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/p2pbg.yml",
+    "sha256": "1984e766929e066a97276e7828d9b1af7a7a6309bfac2214ccc22ab31ab1a862",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "id": "pornotorrent",
+  "name": "PornoTorrent",
+  "description": "PornoTorrent is a BRAZILIAN Public Torrent Tracker for 3X",
+  "language": "pt-BR",
+  "type": "public",
+  "encoding": "UTF-8",
+  "testlinktorrent": false,
+  "links": [
+    "https://pornotorrent.com.br/"
+  ],
+  "legacylinks": [
+    "https://www.pornotorrent.eu/",
+    "https://pornotorrent.net.br/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "6000",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "6080",
+        "cat": "XXX/SD",
+        "desc": "XXX/SD"
+      },
+      {
+        "id": "6090",
+        "cat": "XXX/WEB-DL",
+        "desc": "XXX/WEB-DL"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "movie-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [],
+  "search": {
+    "paths": [
+      {
+        "path": "torznab/",
+        "method": "get",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "t": "search",
+      "q": "{{ .Keywords }}",
+      "limit": "100"
+    },
+    "rows": {
+      "selector": "channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title": {
+        "selector": "title"
+      },
+      "details": {
+        "selector": "guid"
+      },
+      "magnet": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "size_check": {
+        "selector": "size"
+      },
+      "size": {
+        "text": "{{ if eq .Result.size_check \"0\" }}5GB{{ else }}{{ .Result.size_check }}{{ end }}"
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "GMT",
+              "+00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "0"
+      },
+      "downloadvolumefactor": {
+        "selector": "[name=downloadvolumefactor]",
+        "attribute": "value"
+      },
+      "uploadvolumefactor": {
+        "selector": "[name=uploadvolumefactor]",
+        "attribute": "value"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/pornotorrent.yml",
+    "sha256": "9a25c2929d80321cf4ac3072fc9bca3d7f12d36f330dd70be2f6ce3845023524",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

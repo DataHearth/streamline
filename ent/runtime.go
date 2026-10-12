@@ -22,6 +22,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/indexersession"
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -484,6 +485,29 @@ func init() {
 	importscanshowDescFileCount := importscanshowFields[7].Descriptor()
 	// importscanshow.DefaultFileCount holds the default value on creation for the file_count field.
 	importscanshow.DefaultFileCount = importscanshowDescFileCount.Default.(uint16)
+	indexersessionMixin := schema.IndexerSession{}.Mixin()
+	indexersessionMixinFields1 := indexersessionMixin[1].Fields()
+	_ = indexersessionMixinFields1
+	indexersessionFields := schema.IndexerSession{}.Fields()
+	_ = indexersessionFields
+	// indexersessionDescCreateTime is the schema descriptor for create_time field.
+	indexersessionDescCreateTime := indexersessionMixinFields1[0].Descriptor()
+	// indexersession.DefaultCreateTime holds the default value on creation for the create_time field.
+	indexersession.DefaultCreateTime = indexersessionDescCreateTime.Default.(func() time.Time)
+	// indexersessionDescUpdateTime is the schema descriptor for update_time field.
+	indexersessionDescUpdateTime := indexersessionMixinFields1[1].Descriptor()
+	// indexersession.DefaultUpdateTime holds the default value on creation for the update_time field.
+	indexersession.DefaultUpdateTime = indexersessionDescUpdateTime.Default.(func() time.Time)
+	// indexersession.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	indexersession.UpdateDefaultUpdateTime = indexersessionDescUpdateTime.UpdateDefault.(func() time.Time)
+	// indexersessionDescName is the schema descriptor for name field.
+	indexersessionDescName := indexersessionFields[0].Descriptor()
+	// indexersession.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	indexersession.NameValidator = indexersessionDescName.Validators[0].(func(string) error)
+	// indexersessionDescLoginFailures is the schema descriptor for login_failures field.
+	indexersessionDescLoginFailures := indexersessionFields[4].Descriptor()
+	// indexersession.DefaultLoginFailures holds the default value on creation for the login_failures field.
+	indexersession.DefaultLoginFailures = indexersessionDescLoginFailures.Default.(uint8)
 	inviteMixin := schema.Invite{}.Mixin()
 	inviteMixinFields1 := inviteMixin[1].Fields()
 	_ = inviteMixinFields1
@@ -573,11 +597,11 @@ func init() {
 	// movie.DefaultMonitored holds the default value on creation for the monitored field.
 	movie.DefaultMonitored = movieDescMonitored.Default.(bool)
 	// movieDescGrabFailures is the schema descriptor for grab_failures field.
-	movieDescGrabFailures := movieFields[11].Descriptor()
+	movieDescGrabFailures := movieFields[12].Descriptor()
 	// movie.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	movie.DefaultGrabFailures = movieDescGrabFailures.Default.(uint8)
 	// movieDescRating is the schema descriptor for rating field.
-	movieDescRating := movieFields[14].Descriptor()
+	movieDescRating := movieFields[15].Descriptor()
 	// movie.DefaultRating holds the default value on creation for the rating field.
 	movie.DefaultRating = movieDescRating.Default.(float64)
 	musiccreditMixin := schema.MusicCredit{}.Mixin()
@@ -760,11 +784,11 @@ func init() {
 	// tvshow.DefaultMonitored holds the default value on creation for the monitored field.
 	tvshow.DefaultMonitored = tvshowDescMonitored.Default.(bool)
 	// tvshowDescRuntime is the schema descriptor for runtime field.
-	tvshowDescRuntime := tvshowFields[12].Descriptor()
+	tvshowDescRuntime := tvshowFields[13].Descriptor()
 	// tvshow.DefaultRuntime holds the default value on creation for the runtime field.
 	tvshow.DefaultRuntime = tvshowDescRuntime.Default.(uint16)
 	// tvshowDescRating is the schema descriptor for rating field.
-	tvshowDescRating := tvshowFields[13].Descriptor()
+	tvshowDescRating := tvshowFields[14].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
 	torrentsessionMixin := schema.TorrentSession{}.Mixin()

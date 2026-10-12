@@ -414,6 +414,15 @@ type Store interface {
 	DeleteAPIKeysByUser(ctx context.Context, userID uint32) (int, error)
 
 	// torrent sessions (builtin BitTorrent engine persistence)
+	// IndexerSession returns nil, nil when the indexer has none.
+	IndexerSession(ctx context.Context, name string) (*ent.IndexerSession, error)
+	PutIndexerSession(
+		ctx context.Context,
+		name string,
+		p IndexerSessionParams,
+	) error
+	DeleteIndexerSession(ctx context.Context, name string) error
+
 	CreateTorrentSession(
 		ctx context.Context,
 		p CreateTorrentSessionParams,

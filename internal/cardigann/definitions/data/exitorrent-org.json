@@ -1,0 +1,371 @@
+{
+  "id": "exitorrent-org",
+  "name": "exitorrent.org",
+  "description": "exitorrent.org is a POLISH Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "pl-PL",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://exitorrent.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "33",
+        "cat": "Movies/BluRay",
+        "desc": "BluRay"
+      },
+      {
+        "id": "28",
+        "cat": "Movies/Other",
+        "desc": "Dla dzieci"
+      },
+      {
+        "id": "20",
+        "cat": "Movies/DVD",
+        "desc": "DVD-R 5/9"
+      },
+      {
+        "id": "37",
+        "cat": "Movies/SD",
+        "desc": "DVDFan"
+      },
+      {
+        "id": "30",
+        "cat": "Movies/3D",
+        "desc": "Filmy/3D "
+      },
+      {
+        "id": "38",
+        "cat": "Movies/SD",
+        "desc": "Filmy/BDRip-BRRip"
+      },
+      {
+        "id": "35",
+        "cat": "Movies/HD",
+        "desc": "Filmy/x264-BluRay/HD"
+      },
+      {
+        "id": "45",
+        "cat": "Movies/HD",
+        "desc": "Filmy/x265-BluRay/HD"
+      },
+      {
+        "id": "44",
+        "cat": "Movies/UHD",
+        "desc": "UHD BluRay"
+      },
+      {
+        "id": "42",
+        "cat": "Movies/UHD",
+        "desc": "UHD Remux"
+      },
+      {
+        "id": "23",
+        "cat": "Movies/WEB-DL",
+        "desc": "WEB-DL / WEBRip"
+      },
+      {
+        "id": "19",
+        "cat": "Movies/SD",
+        "desc": "HQ / DVDRip"
+      },
+      {
+        "id": "39",
+        "cat": "Movies/HD",
+        "desc": "Remux"
+      },
+      {
+        "id": "49",
+        "cat": "Movies",
+        "desc": "Filmy/BluRay-AV1/HD"
+      },
+      {
+        "id": "7",
+        "cat": "TV",
+        "desc": "Seriale"
+      },
+      {
+        "id": "2",
+        "cat": "TV/HD",
+        "desc": "HDTV"
+      },
+      {
+        "id": "30",
+        "cat": "TV/Documentary",
+        "desc": "Filmy-Seriale/Dokumentalne"
+      },
+      {
+        "id": "43",
+        "cat": "Audio/Audiobook",
+        "desc": "Audiobooki"
+      },
+      {
+        "id": "22",
+        "cat": "Audio/Video",
+        "desc": "Teledyski / Koncerty"
+      },
+      {
+        "id": "6",
+        "cat": "Audio",
+        "desc": "Muzyka"
+      },
+      {
+        "id": "31",
+        "cat": "Books/EBook",
+        "desc": "eBooki / PDF"
+      },
+      {
+        "id": "1",
+        "cat": "PC",
+        "desc": "Aplikacje PC"
+      },
+      {
+        "id": "4",
+        "cat": "PC/Games",
+        "desc": "Gry PC"
+      },
+      {
+        "id": "21",
+        "cat": "PC/Mobile-Other",
+        "desc": "GSM/PDA"
+      },
+      {
+        "id": "29",
+        "cat": "Other",
+        "desc": "Różne"
+      },
+      {
+        "id": "9",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "drop_polish_prefix",
+      "label": "Drop the Polish title prefix",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "/",
+      "selector": "a[href$=\"/logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "blah": "{{ if .Query.IMDBID }}1{{ else }}0{{ end }}",
+      "podkat": "0",
+      "hashTag": "0",
+      "incldead": "0",
+      "polish": "{{ if .Config.freeleech }}3{{ else }}0{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          " +(?:19|20)\\d{2} *$",
+          ""
+        ],
+        "engine": "regexp2"
+      }
+    ],
+    "rows": {
+      "selector": "table[class=\"text\"][border=\"0\"][cellspacing=\"0\"][cellpadding=\"4\"] > tbody > tr:has(a[href^=\"details.php?id=\"]):has(td[class*=\"tableBody1\"], td[class*=\"tableBody1B\"])",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_raw": {
+        "selector": "div[class=\"span_title\"] > a[href^=\"details.php?id=\"]"
+      },
+      "title_stripped": {
+        "selector": "div[class=\"span_title\"] > a[href^=\"details.php?id=\"]",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^(.*/)(.*)$",
+              "$2"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "trim"
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Config.drop_polish_prefix }}{{ .Result.title_stripped }}{{ else }}{{ .Result.title_raw }}{{ end }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "div.span_icon > a[onclick^=\"return downloadTorrent\"]",
+        "attribute": "onclick",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "^return downloadTorrent\\('([^']+)', '([^']+)', '[^']*'\\);$",
+              "download.php/$1/$2.torrent"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "genre": {
+        "selector": "div.span_title span div",
+        "optional": true
+      },
+      "_language": {
+        "selector": "span.span_style_pl",
+        "attribute": "title",
+        "optional": true
+      },
+      "_subbed": {
+        "selector": "span.span_style_plsub",
+        "attribute": "title",
+        "optional": true
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ if .Result._language }}Language: {{ .Result._language }} {{ else }}{{ end }}{{ if .Result._subbed }}Subbed: {{ .Result._subbed }} {{ else }}{{ end }}{{ if .Result.genre }}Genres: {{ .Result.genre }}{{ else }}{{ end }}"
+      },
+      "date": {
+        "selector": "td:nth-child(5)",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(6)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "seeders": {
+        "selector": "td:nth-child(8)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(9)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "a[href^=\"downloadfl.php/\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/exitorrent-org.yml",
+    "sha256": "ca3e17afc98493e68c5af92d20f00ce579dcfc1dd8ef1de45b02de9e87d29ed5",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

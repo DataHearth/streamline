@@ -57,6 +57,9 @@ type ImportScanFile func(*sql.Selector)
 // ImportScanShow is the predicate function for importscanshow builders.
 type ImportScanShow func(*sql.Selector)
 
+// IndexerSession is the predicate function for indexersession builders.
+type IndexerSession func(*sql.Selector)
+
 // Invite is the predicate function for invite builders.
 type Invite func(*sql.Selector)
 

@@ -1,0 +1,436 @@
+{
+  "id": "theoldschool-api",
+  "name": "The Old School (API)",
+  "description": "The Old School (TOS) is a FRENCH Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "fr-FR",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://theoldschool.cc/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Films"
+      },
+      {
+        "id": "6",
+        "cat": "Movies",
+        "desc": "Films VOSTFR"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "Series"
+      },
+      {
+        "id": "7",
+        "cat": "TV",
+        "desc": "Series VOSTFR"
+      },
+      {
+        "id": "8",
+        "cat": "TV",
+        "desc": "Series Pack"
+      },
+      {
+        "id": "9",
+        "cat": "TV",
+        "desc": "Series Pack VOSTFR"
+      },
+      {
+        "id": "4",
+        "cat": "Console",
+        "desc": "Jeux"
+      },
+      {
+        "id": "3",
+        "cat": "Books",
+        "desc": "Ebooks"
+      },
+      {
+        "id": "5",
+        "cat": "PC",
+        "desc": "Logiciel"
+      },
+      {
+        "id": "10",
+        "cat": "TV/Sport",
+        "desc": "Sports"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid",
+        "tmdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://theoldschool.cc/\" target=\"_blank\">The Old School</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "single_file_release_use_filename",
+      "label": "Use filename as title for single file releases",
+      "type": "checkbox",
+      "default": "true"
+    },
+    {
+      "name": "tmdbidonly",
+      "label": "Disable IMDB and TVDB ID search (only support TMDB ID) to potentially improve Sonarr and Radarr results",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "multilang",
+      "label": "Replace MULTi by another language in release name",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "multilanguage",
+      "label": "Replace MULTi by this language",
+      "type": "select",
+      "default": "FRENCH",
+      "options": {
+        "FRENCH": "FRENCH",
+        "MULTi FRENCH": "MULTi FRENCH",
+        "ENGLISH": "ENGLISH",
+        "MULTi ENGLISH": "MULTi ENGLISH",
+        "VOSTFR": "VOSTFR",
+        "MULTi VOSTFR": "MULTi VOSTFR"
+      }
+    },
+    {
+      "name": "vostfr",
+      "label": "Replace VOSTFR and SUBFRENCH with ENGLISH",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "vfq",
+      "label": "Replace VFQ with FRENCH",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "'Pruning' account<ul><li>Your membership requires that you remain active at TOS.</li><li>To not be disabled, you must log in to the tracker at least once every 90 days or continuously see at least 1 torrent. If you haven't logged in for more than 90 days and you don't have any seed torrents as of midnight UTC, your account will be deactivated.</li><li>To be reactivated, you also have 30 days to log in and show that your account is back to normal.</li><li>Disabled account: 90 days of inactivity and no seed torrent.</li><li>'Pruned' account: Has been deactivated for 30 days , and 90 days of inactivity.</li></ul>"
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "seasonNumber": "{{ .Query.Season }}",
+      "episodeNumber": "{{ .Query.Ep }}",
+      "imdbId": "{{ if .Config.tmdbidonly }}{{ else }}{{ .Query.IMDBIDShort }}{{ end }}",
+      "tmdbId": "{{ .Query.TMDBID }}",
+      "tvdbId": "{{ if .Config.tmdbidonly }}{{ else }}{{ .Query.TVDBID }}{{ end }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title_optional": {
+        "selector": "name"
+      },
+      "title_filename": {
+        "selector": "files[0].name",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "title_phase1": {
+        "text": "{{ if and (.Config.single_file_release_use_filename) (eq .Result.files \"1\") (.Result.title_filename) }}{{ .Result.title_filename }}{{ else }}{{ .Result.title_optional }}{{ end }}"
+      },
+      "title_vfq": {
+        "text": "{{ .Result.title_phase1 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(VFQ)\\b",
+              "FRENCH"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title_phase2": {
+        "text": "{{ if .Config.vfq }}{{ .Result.title_vfq }}{{ else }}{{ .Result.title_phase1 }}{{ end }}"
+      },
+      "title_vostfr": {
+        "text": "{{ .Result.title_phase2 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(vostfr|subfrench)\\b",
+              "ENGLISH"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title_phase3": {
+        "text": "{{ if .Config.vostfr }}{{ .Result.title_vostfr }}{{ else }}{{ .Result.title_phase2 }}{{ end }}"
+      },
+      "title_multilang": {
+        "text": "{{ .Result.title_phase3 }}",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\b(MULTI(?!.*(?:FRENCH|ENGLISH|VOSTFR)))\\b",
+              "{{ .Config.multilanguage }}"
+            ],
+            "engine": "regexp2"
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Config.multilang }}{{ .Result.title_multilang }}{{ else }}{{ .Result.title_phase3 }}{{ end }}"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "infohash": {
+        "selector": "info_hash"
+      },
+      "poster": {
+        "selector": "meta.poster",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "imdb_id",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "tmdb_id",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "tvdb_id",
+        "optional": true
+      },
+      "genre": {
+        "selector": "meta.genres",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              " & ",
+              "_&_"
+            ]
+          }
+        ]
+      },
+      "_internal": {
+        "selector": "internal",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ if .Result._internal }}Internal{{ else }}{{ end }}{{ if and .Result._internal .Result.genre }} | {{ else }}{{ end }}{{ .Result.genre }}"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "172800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/theoldschool-api.yml",
+    "sha256": "b086e248796ce5674f8bde1d96d5884c5fcfbddab35078cd8411c51fb37aa120",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

@@ -1,0 +1,346 @@
+{
+  "id": "hdarea",
+  "name": "HDArea",
+  "description": "HDArea (HDA) is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://hdarea.club/"
+  ],
+  "legacylinks": [
+    "https://www.hdarea.co/",
+    "https://www.hdarea.club/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "300",
+        "cat": "Movies/UHD",
+        "desc": "Movies UHD-4K"
+      },
+      {
+        "id": "401",
+        "cat": "Movies/BluRay",
+        "desc": "Movies Blu-ray"
+      },
+      {
+        "id": "415",
+        "cat": "Movies/HD",
+        "desc": "Movies REMUX"
+      },
+      {
+        "id": "416",
+        "cat": "Movies/3D",
+        "desc": "Movies 3D"
+      },
+      {
+        "id": "410",
+        "cat": "Movies/HD",
+        "desc": "Movies 1080p"
+      },
+      {
+        "id": "411",
+        "cat": "Movies/HD",
+        "desc": "Movies 720p"
+      },
+      {
+        "id": "414",
+        "cat": "Movies/DVD",
+        "desc": "Movies DVD"
+      },
+      {
+        "id": "412",
+        "cat": "Movies/WEB-DL",
+        "desc": "Movies WEB-DL"
+      },
+      {
+        "id": "413",
+        "cat": "Movies/HD",
+        "desc": "Movies HDTV"
+      },
+      {
+        "id": "417",
+        "cat": "Movies/Other",
+        "desc": "Movies iPad"
+      },
+      {
+        "id": "404",
+        "cat": "TV/Documentary",
+        "desc": "Documentaries"
+      },
+      {
+        "id": "405",
+        "cat": "TV/Anime",
+        "desc": "Animations"
+      },
+      {
+        "id": "402",
+        "cat": "TV",
+        "desc": "TV Series"
+      },
+      {
+        "id": "403",
+        "cat": "TV",
+        "desc": "TV Shows"
+      },
+      {
+        "id": "406",
+        "cat": "Audio/Video",
+        "desc": "Music Videos"
+      },
+      {
+        "id": "407",
+        "cat": "TV/Sport",
+        "desc": "Sports"
+      },
+      {
+        "id": "409",
+        "cat": "Other",
+        "desc": "Misc"
+      },
+      {
+        "id": "408",
+        "cat": "Audio",
+        "desc": "HQ Audio"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "doubanid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "doubanid"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account Retention Rules:<ol><li>Veteran Users and above will be retained forever</li><li> Insane User and above will not be deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 60 consecutive days.</li><li> Newly registered users who have no traffic for 7 days (i.e., upload/download data is 0) will be deleted.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"usercp.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ if or .Query.IMDBID .Query.DoubanID }}{{ or .Query.IMDBID .Query.DoubanID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "incldead": "1",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "0",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(table.torrentname)"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href^=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "doubanid": {
+        "selector": "a[href*=\"movie.douban.com/subject/\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "date_elapsed": {
+        "selector": "td.rowfollow:nth-last-child(6) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td.rowfollow:nth-last-child(6):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td.rowfollow:nth-last-child(5)"
+      },
+      "seeders": {
+        "selector": "td.rowfollow:nth-last-child(4)"
+      },
+      "leechers": {
+        "selector": "td.rowfollow:nth-last-child(3)"
+      },
+      "grabs": {
+        "selector": "td.rowfollow:nth-last-child(2)"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.8"
+      },
+      "description": {
+        "selector": "td:nth-child(2)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/hdarea.yml",
+    "sha256": "885837f1020a5b302a6c5478be3754ab1fda7a5e62c402bcca1677b232823b8e",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

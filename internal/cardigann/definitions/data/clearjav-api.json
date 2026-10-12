@@ -1,0 +1,225 @@
+{
+  "id": "clearjav-api",
+  "name": "ClearJAV (API)",
+  "description": "ClearJAV is a Private Torrent Tracker for Japanese Adult Video (JAV) content from official JAV studios only.",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://clearjav.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "XXX",
+        "desc": "JAV"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://clearjav.com/\" target=\"_blank\">ClearJAV</a> account <i>My Settings</i> page and clicking on the <b>API Key</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "You must download or upload data within 30 days of joining, or your account may be pruned for lurking."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "name": "{{ .Keywords }}",
+      "free[]": "{{ if .Config.freeleech }}100{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "category": {
+        "selector": "category_id"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "poster_meta": {
+        "selector": "meta.poster"
+      },
+      "poster_https": {
+        "selector": "meta.poster:has(:contains(https))",
+        "optional": true
+      },
+      "poster": {
+        "optional": true,
+        "text": "{{ if .Result.poster_https }}{{ .Result.poster_https }}{{ else }}https://pics.dmm.co.jp/{{ .Result.poster_meta }}{{ end }}"
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "_featured": {
+        "selector": "featured",
+        "case": {
+          "False": "{{ .False }}",
+          "True": "{{ .True }}"
+        }
+      },
+      "downloadvolumefactor_freeleech": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "downloadvolumefactor": {
+        "text": "{{ if .Result._featured }}0{{ else }}{{ .Result.downloadvolumefactor_freeleech }}{{ end }}"
+      },
+      "uploadvolumefactor_double_upload": {
+        "selector": "double_upload",
+        "case": {
+          "False": "1",
+          "True": "2"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "{{ if .Result._featured }}2{{ else }}{{ .Result.uploadvolumefactor_double_upload }}{{ end }}"
+      },
+      "minimumseedtime": {
+        "text": "604800"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/clearjav-api.yml",
+    "sha256": "6994522792928ce851f1c1e2c7068504895afa76afd09af259836bbdf730620d",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

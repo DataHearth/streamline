@@ -163,10 +163,12 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				context.Background(),
 				SearchParams{
 					Query: "Breaking Bad", Kind: KindTV,
-					TVDBID: 81189, TMDBID: 1396, Season: 2, Episode: 3,
+					TVDBID: 81189, TMDBID: 1396, IMDbID: "tt0903747",
+					Season: 2, Episode: 3,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(gotQuery).NotTo(ContainSubstring("0903747"))
 			Expect(gotQuery).NotTo(ContainSubstring("81189"))
 			Expect(gotQuery).NotTo(ContainSubstring("1396"))
 		})
@@ -176,7 +178,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				func(w http.ResponseWriter, _ *http.Request) {
 					_, _ = w.Write([]byte(`[
 					{"title":"Tagged","downloadUrl":"http://x/a.torrent",
-					 "protocol":"torrent","tvdbId":81189,"tmdbId":1396},
+					 "protocol":"torrent","tvdbId":81189,"tmdbId":1396,"imdbId":903747},
 					{"title":"Untagged","downloadUrl":"http://x/b.torrent",
 					 "protocol":"torrent"}
 				]`))
@@ -189,6 +191,7 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 			Expect(res).To(HaveLen(2))
 			Expect(res[0].TVDBID).To(Equal(uint32(81189)))
 			Expect(res[0].TMDBID).To(Equal(uint32(1396)))
+			Expect(res[0].IMDbID).To(Equal(uint32(903747)))
 			// Absent means the tracker said nothing, and stays zero.
 			Expect(res[1].TVDBID).To(BeZero())
 			Expect(res[1].TMDBID).To(BeZero())

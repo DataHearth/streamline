@@ -1,0 +1,247 @@
+{
+  "id": "hqmusic",
+  "name": "HQMusic",
+  "description": "HQMusic is a VIETNAMESE Private Torrent Tracker for MUSIC",
+  "language": "vi-VN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://tracker.hqmusic.info/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Audio",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q",
+        "album",
+        "artist"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Inactive accounts will be deleted according to the following rules:<ol><li> Power Users and above will never have their accounts deleted.</li><li>Users and above will never have their accounts deleted if they park their accounts (See [User CP]).</li><li>Parked accounts will be deleted if they do not log in within 365 days.</li><li>Unparked accounts will be deleted if they do not log in within 240 days.</li><li>Inactive accounts downloading or uploading on the tracker will be deleted after 240 days of not logging in or after 120 days from the time of registration.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ if .Query.Artist }}{{ .Query.Artist }}{{ else }}{{ end }}{{ if .Query.Album }} {{ .Query.Album }}{{ else }}{{ end }}{{ if or .Query.Artist .Query.Album }}{{ else }}{{ .Keywords }}{{ end }}",
+      "search_area": "0",
+      "search_mode": "0",
+      "incldead": "0",
+      "haslog": "0",
+      "cue": "0",
+      "cover": "0",
+      "tracks": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.main > tbody > tr > td.embedded > table.torrents > tbody > tr:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title_default": {
+        "selector": "a[href*=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href*=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href*=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img[src^=\"imagescover\"]",
+        "attribute": "src",
+        "optional": true,
+        "filters": [
+          {
+            "name": "prepend",
+            "args": [
+              "https://images.weserv.nl/?url={{ .Config.sitelink }}"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "&w=180&h=270"
+            ]
+          }
+        ]
+      },
+      "date_elapsed": {
+        "selector": "td.rowfollow:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +07:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td.rowfollow:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +07:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td.rowfollow:nth-child(5)",
+        "optional": true,
+        "default": "512MB"
+      },
+      "seeders": {
+        "selector": "td.rowfollow:nth-child(6)",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "td.rowfollow:nth-child(7)",
+        "optional": true,
+        "default": "0"
+      },
+      "grabs": {
+        "selector": "td.rowfollow:nth-child(8)",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "0.4"
+      },
+      "minimumseedtime": {
+        "text": "216000"
+      },
+      "description": {
+        "selector": "td:nth-child(1)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/hqmusic.yml",
+    "sha256": "77676e2b709e3286e6a4ae318ebbecee3977f8b1d50a8c6e3359b029727668a0",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

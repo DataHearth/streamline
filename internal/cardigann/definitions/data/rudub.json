@@ -1,0 +1,481 @@
+{
+  "id": "rudub",
+  "replaces": [
+    "baibako"
+  ],
+  "name": "RUDUB",
+  "description": "RUDUB (ex-BaibaKoTV) is a RUSSIAN Semi-Private Torrent Tracker for TV",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "windows-1251",
+  "followredirect": true,
+  "links": [
+    "https://r4.rudub.world/"
+  ],
+  "legacylinks": [
+    "http://dec13.rudub.bet/",
+    "https://dec13.rudub.bet/",
+    "http://dec14.rudub.bet/",
+    "https://dec14.rudub.bet/",
+    "http://dec15.rudub.bet/",
+    "https://dec15.rudub.bet/",
+    "http://dec16.rudub.bet/",
+    "https://dec16.rudub.bet/",
+    "http://dec17.rudub.bet/",
+    "https://dec17.rudub.bet/",
+    "http://dec18.rudub.bet/",
+    "https://dec18.rudub.bet/",
+    "http://dec19.rudub.bet/",
+    "https://dec19.rudub.bet/",
+    "http://dec20.rudub.bet/",
+    "https://dec20.rudub.bet/",
+    "http://dec21.rudub.bet/",
+    "https://dec21.rudub.bet/",
+    "http://dec22.rudub.bet/",
+    "https://dec22.rudub.bet/",
+    "http://dec23.rudub.bet/",
+    "https://dec23.rudub.bet/",
+    "http://dec24.rudub.bet/",
+    "https://dec24.rudub.bet/",
+    "http://dec25.rudub.bet/",
+    "https://dec25.rudub.bet/",
+    "http://dec26.rudub.bet/",
+    "https://dec26.rudub.bet/",
+    "https://r2.rudub.world/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "TV",
+        "desc": "TV"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    },
+    "allowrawsearch": true
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "addrussiantotitle",
+      "label": "Add RUS to end of all titles to improve language detection by Sonarr and Radarr. Will cause English-only results to be misidentified.",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "div.login2"
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "search": "{{ .Keywords }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}0{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(?i)\\b(?:[SE]\\d{1,4}){1,2}\\b\\s?",
+          ""
+        ],
+        "engine": "regexp2"
+      }
+    ],
+    "rows": {
+      "selector": "div.card__torlist__browse_2"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?).+?(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*[CС]езоны?.+?(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*[CС]езоны?.+?(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}]+из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?).+?(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))?",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?).+?(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}]+из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)",
+              "S${1}E${2} of ${3}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?).+?(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?)",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*[CС]езоны?.+?(\\p{Nd}+(?:-\\p{Nd}+)?)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?).+?(\\p{Nd}+(?:-\\p{Nd}+)?)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "S${1}E${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)[CС]езоны?[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?)",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]+[CС]езоны?",
+              "S${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]*из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]+(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}]+из[\\t-\\r\\x{85}\\p{Z}]*([\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]?)",
+              "E${1} of ${2}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))[\\t-\\r\\x{85}\\p{Z}:]*(\\p{Nd}+(?:-\\p{Nd}+)?)",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)(\\p{Nd}+(?:-\\p{Nd}+)?)[\\t-\\r\\x{85}\\p{Z}]+(?:[\\t-\\r\\x{85}\\p{Z}]*(?:[CС]ери[ияй]|Эпизод|Выпуски?))",
+              "E${1}"
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\u0400-\\u04FF\\W\\u200C\\u200D]+\\))|(^[\\u0400-\\u04FF\\W\\u200C\\u200D\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bHDTV[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bSAT[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB[-\\s]?DL[-\\s]?Rip\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sRip\\b",
+              "WEBRip"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sDL\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "replace",
+            "args": [
+              "BD720p",
+              "BD 720p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "HD720p",
+              "HD 720p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "HDR720p",
+              "HDR 720p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "BD1080p",
+              "BD 1080p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "HD1080p",
+              "HD 1080p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "HDR1080p",
+              "HDR 1080p"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " (Золото)",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "[\\[\\(\\{<«][\\s\\W\\u200C\\u200D]*[\\]\\)\\}>»]",
+              ""
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^[\\t-\\r\\x{85}\\p{Z}&,\\.!\\?\\+\\-_\\|\\/':]+",
+              ""
+            ]
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^\\((.+?)[\\t-\\r\\x{85}\\p{Z}]?\\)",
+              "${1} "
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Config.addrussiantotitle }} RUS{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "li[title=\"Дата\"]",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "li[title=\"Файлов\"]"
+      },
+      "size": {
+        "selector": "li[title=\"Размер\"]"
+      },
+      "seeders": {
+        "selector": "li[title=\"Активность\"]",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\p{Nd}+)[\\t-\\r\\x{85}\\p{Z}]+\\p{Nd}+"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "li[title=\"Активность\"]",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "\\p{Nd}+[\\t-\\r\\x{85}\\p{Z}]+(\\p{Nd}+)"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "li[title=\"Завершено\"]"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "a[href^=\"details.php?id=\"]:contains(\"(Золото)\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.3"
+      },
+      "description": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "optional": true
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/rudub.yml",
+    "sha256": "97f2aa2e892f767cab1105b50fe989eb28bd2a6ada2ed346278755385d22cc10",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

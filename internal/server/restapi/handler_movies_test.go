@@ -307,7 +307,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.BluRay.x264",
@@ -357,7 +357,7 @@ var _ = Describe(
 					Return(&ent.Movie{ID: 5, Title: "Fight Club", TmdbID: 550}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{{
 						Title:             "Fight.Club.1999.1080p.BluRay.x264",
 						Download:          "magnet:a",
@@ -425,7 +425,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.indexers.EXPECT().
-					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550)).
+					SearchMovie(mock.Anything, []string{"Fight Club", ""}, mock.Anything, uint32(550), "").
 					Return([]indexer.SearchResult{
 						{
 							Title:    "Fight.Club.1999.1080p.WEB-DL.x264",

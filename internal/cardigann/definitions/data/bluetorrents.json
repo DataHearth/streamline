@@ -1,0 +1,230 @@
+{
+  "id": "bluetorrents",
+  "name": "BlueTorrents",
+  "description": "BlueTorrents is a Private Torrent Tracker for MOVIES / TV / MUSIC / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://bluetorrents.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "2000",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "5000",
+        "cat": "TV",
+        "desc": "TV Shows"
+      },
+      {
+        "id": "1000",
+        "cat": "Console",
+        "desc": "Games"
+      },
+      {
+        "id": "3000",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "4000",
+        "cat": "PC/0day",
+        "desc": "Apps"
+      },
+      {
+        "id": "6000",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "8000",
+        "cat": "Other",
+        "desc": "Other"
+      },
+      {
+        "id": "7000",
+        "cat": "Books",
+        "desc": "Books"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    },
+    "allowtvsearchimdb": true
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Key",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "You can find your API Key by accessing the <a href=\"https://bluetorrents.com/settings\" target=\"_blank\">BlueTorrents Settings</a> page, and scrolling down to the <b>API keys</b> section."
+    },
+    {
+      "name": "info_3x",
+      "label": "Including 3X",
+      "type": "info",
+      "default": "IF you want to see 3x torrents access your <a href=\"https://bluetorrents.com/settings\" target=\"_blank\">BlueTorrents Settings</a> page and tick the <b>Show NSFW content</b> checkbox."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Accounts with no activity for 90+ days may be disabled."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/external",
+    "inputs": {
+      "t": "search",
+      "apikey": "{{ .Config.apikey }}",
+      "limit": "1"
+    },
+    "error": [
+      {
+        "selector": "error",
+        "message": {
+          "selector": "error[description]",
+          "attribute": "description"
+        }
+      }
+    ]
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/external",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "{{ if .Query.TMDBID }}movie{{ else }}{{ end }}{{ if or .Query.Season .Query.Ep .Query.IMDBID }}tvsearch{{ else }}{{ end }}{{ if or .Query.IMDBID .Query.TMDBID .Query.Season .Query.Ep }}{{ else }}search{{ end }}",
+      "q": "{{ .Keywords }}",
+      "cat": "{{ join .Categories \",\" }}",
+      "season": "{{ .Query.Season }}",
+      "ep": "{{ .Query.Ep }}",
+      "imdbid": "{{ .Query.IMDBID }}",
+      "tmdbid": "{{ .Query.TMDBID }}",
+      "limit": "100"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "[^\\p{L}\\p{Mn}\\p{Nd}\\p{Pc}]+",
+          "%"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title": {
+        "selector": "title"
+      },
+      "details": {
+        "selector": "link"
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "infohash": {
+        "selector": "[name=infohash]",
+        "attribute": "value"
+      },
+      "imdbid": {
+        "selector": "[name=imdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "[name=tmdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "seeders": {
+        "selector": "[name=seeders]",
+        "attribute": "value"
+      },
+      "leechers": {
+        "selector": "[name=peers]",
+        "attribute": "value"
+      },
+      "grabs": {
+        "selector": "[name=grabs]",
+        "attribute": "value"
+      },
+      "downloadvolumefactor": {
+        "selector": "[name=downloadvolumefactor]",
+        "attribute": "value"
+      },
+      "uploadvolumefactor": {
+        "selector": "[name=uploadvolumefactor]",
+        "attribute": "value"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "259200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/bluetorrents.yml",
+    "sha256": "b45f3e28444d34871e008f3b5cfbe59cf46fe1e29f14e3f45a51a5c0ed6495a9",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

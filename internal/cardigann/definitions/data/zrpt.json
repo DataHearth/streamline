@@ -1,0 +1,306 @@
+{
+  "id": "zrpt",
+  "name": "ZRPT (自然)",
+  "description": "ZRPT (自然) is a CHINESE Private Torrent Tracker for Documentaries",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://naturept.top/"
+  ],
+  "legacylinks": [
+    "https://zrpt.cc/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "412",
+        "cat": "TV/Documentary",
+        "desc": "Nature"
+      },
+      {
+        "id": "413",
+        "cat": "TV/Documentary",
+        "desc": "NatureWeb"
+      },
+      {
+        "id": "401",
+        "cat": "TV/Documentary",
+        "desc": "军事纪实"
+      },
+      {
+        "id": "402",
+        "cat": "TV/Documentary",
+        "desc": "生物自然"
+      },
+      {
+        "id": "403",
+        "cat": "TV/Documentary",
+        "desc": "餐饮美食"
+      },
+      {
+        "id": "404",
+        "cat": "TV/Documentary",
+        "desc": "人文记录"
+      },
+      {
+        "id": "405",
+        "cat": "TV/Documentary",
+        "desc": "宇宙星球"
+      },
+      {
+        "id": "406",
+        "cat": "TV/Documentary",
+        "desc": "音乐视频"
+      },
+      {
+        "id": "407",
+        "cat": "TV/Documentary",
+        "desc": "体育运动"
+      },
+      {
+        "id": "409",
+        "cat": "TV/Documentary",
+        "desc": "其它"
+      },
+      {
+        "id": "415",
+        "cat": "TV/Documentary",
+        "desc": "旅游风景"
+      },
+      {
+        "id": "416",
+        "cat": "TV/Documentary",
+        "desc": "纪录片"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules:<ol><li>Veteran User and above will be retained forever</li><li>Elite User and above will not have their account deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 400 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users who have no traffic (i.e. upload/download data are both 0) will be deleted if they do not log in for 100 consecutive days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "{{ if .Query.IMDBID }}4{{ else }}0{{ end }}",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(a[href*=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href*=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title_default": {
+        "selector": "a[href*=\"details.php?id=\"]"
+      },
+      "title": {
+        "selector": "a[title][href*=\"details.php?id=\"]",
+        "attribute": "title",
+        "optional": true,
+        "default": "{{ .Result.title_default }}"
+      },
+      "details": {
+        "selector": "a[href*=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href*=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img[data-src]",
+        "attribute": "data-src",
+        "optional": true
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "date_elapsed": {
+        "selector": "td.rowfollow:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td.rowfollow:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td.rowfollow:nth-child(5)",
+        "optional": true,
+        "default": "512MB"
+      },
+      "seeders": {
+        "selector": "td.rowfollow:nth-child(6)",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "td.rowfollow:nth-child(7)",
+        "optional": true,
+        "default": "0"
+      },
+      "grabs": {
+        "selector": "td.rowfollow:nth-child(8)",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "minimumseedtime": {
+        "text": "86400"
+      },
+      "description": {
+        "selector": "td.rowfollow:nth-child(2)",
+        "optional": true,
+        "remove": "a, b, font, img, span"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/zrpt.yml",
+    "sha256": "da596b2d36120b7efc290cbd61a8516d17e7f30af9d300c94e99bac0ca8acc4c",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

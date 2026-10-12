@@ -1,0 +1,366 @@
+{
+  "id": "whiteangel",
+  "name": "White Angel",
+  "description": "White Angel is a HUNGARIAN Private Tracker for MOVIES / TV",
+  "language": "hu-HU",
+  "type": "private",
+  "encoding": "ISO-8859-2",
+  "links": [
+    "https://white-angel.hu/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "39",
+        "cat": "Books/EBook",
+        "desc": "E-book"
+      },
+      {
+        "id": "53",
+        "cat": "XXX",
+        "desc": "Film (XXX)"
+      },
+      {
+        "id": "74",
+        "cat": "TV/Anime",
+        "desc": "Film (Animáció cam)"
+      },
+      {
+        "id": "72",
+        "cat": "TV/Anime",
+        "desc": "Film (Animáció)"
+      },
+      {
+        "id": "44",
+        "cat": "Movies/SD",
+        "desc": "Film (Cam Hun)"
+      },
+      {
+        "id": "40",
+        "cat": "Movies/DVD",
+        "desc": "Film (DVD Eng)"
+      },
+      {
+        "id": "41",
+        "cat": "Movies/DVD",
+        "desc": "Film (DVD Hun)"
+      },
+      {
+        "id": "57",
+        "cat": "Movies/HD",
+        "desc": "Film (HD Eng)"
+      },
+      {
+        "id": "38",
+        "cat": "Movies/HD",
+        "desc": "Film (HD Hun)"
+      },
+      {
+        "id": "42",
+        "cat": "Movies/SD",
+        "desc": "Film (Xvid Eng)"
+      },
+      {
+        "id": "73",
+        "cat": "Movies/SD",
+        "desc": "Film (Xvid Eng-Hun)"
+      },
+      {
+        "id": "43",
+        "cat": "Movies/SD",
+        "desc": "Film (Xvid Hun)"
+      },
+      {
+        "id": "69",
+        "cat": "XXX/x264",
+        "desc": "Film (XXX HD)"
+      },
+      {
+        "id": "63",
+        "cat": "Movies/SD",
+        "desc": "Film (Cam Eng)"
+      },
+      {
+        "id": "71",
+        "cat": "Audio/Audiobook",
+        "desc": "Hangos könyv"
+      },
+      {
+        "id": "45",
+        "cat": "PC/Games",
+        "desc": "Játék ISO"
+      },
+      {
+        "id": "46",
+        "cat": "Console/PS3",
+        "desc": "Játék Ps2"
+      },
+      {
+        "id": "66",
+        "cat": "PC/Games",
+        "desc": "Játék Rip"
+      },
+      {
+        "id": "47",
+        "cat": "Console/XBox",
+        "desc": "Játék Xbox"
+      },
+      {
+        "id": "70",
+        "cat": "XXX/Other",
+        "desc": "Játék XXX"
+      },
+      {
+        "id": "48",
+        "cat": "Other",
+        "desc": "Képek"
+      },
+      {
+        "id": "65",
+        "cat": "TV/Anime",
+        "desc": "Mese Eng"
+      },
+      {
+        "id": "49",
+        "cat": "TV/Anime",
+        "desc": "Mese Hun"
+      },
+      {
+        "id": "50",
+        "cat": "PC/Mobile-Other",
+        "desc": "Mobil"
+      },
+      {
+        "id": "52",
+        "cat": "TV",
+        "desc": "Sorozat (Hun Xvid)"
+      },
+      {
+        "id": "59",
+        "cat": "TV",
+        "desc": "Sorozat (Xvid Eng)"
+      },
+      {
+        "id": "68",
+        "cat": "PC/ISO",
+        "desc": "Win/Program/ISO"
+      },
+      {
+        "id": "51",
+        "cat": "PC/0day",
+        "desc": "Win/Program/Rip"
+      },
+      {
+        "id": "54",
+        "cat": "XXX/ImageSet",
+        "desc": "XXX/Kép"
+      },
+      {
+        "id": "55",
+        "cat": "Audio",
+        "desc": "Zene/Eng"
+      },
+      {
+        "id": "56",
+        "cat": "Audio",
+        "desc": "Zene/Hun"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search FreeLeech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "1": "title",
+        "4": "added",
+        "5": "size",
+        "7": "seeders"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrentek száma egy oldalon:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "table:contains(\"bejelentkezés nem sikerült\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href^=\"logout.php?k=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table[cellpadding=\"5\"] tbody tr:has(a[href^=\"download.php?torrent=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?torrent=\"]",
+        "attribute": "href"
+      },
+      "genre": {
+        "selector": "tr",
+        "attribute": "data-tt-desc",
+        "optional": true
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.genre }}"
+      },
+      "date_date": {
+        "selector": "span.tt-added-date"
+      },
+      "date_time": {
+        "selector": "span.tt-added-time"
+      },
+      "date": {
+        "text": "{{ .Result.date_date }} {{ .Result.date_time }}",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-last-child(4)"
+      },
+      "grabs": {
+        "selector": "td:nth-last-child(3)"
+      },
+      "seeders": {
+        "selector": "td:nth-last-child(2)"
+      },
+      "leechers": {
+        "selector": "td:last-child"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "span.tt-row-flag:contains(\"FREE\")": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "span.tt-row-flag:contains(\"x2\")": "2",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "86400"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/whiteangel.yml",
+    "sha256": "6ea8c124c94ceba843bdec9486c7212527514818f04c34785dde0f6bf5a2a821",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

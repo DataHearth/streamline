@@ -1,0 +1,105 @@
+{
+  "id": "nipponsei",
+  "name": "Nipponsei",
+  "description": "Nipponsei is a Public site for MUSIC fresh from JAPAN",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://nipponsei.minglong.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "music",
+        "cat": "Audio",
+        "desc": "Music"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [],
+  "search": {
+    "paths": [
+      {
+        "path": "index.php"
+      }
+    ],
+    "inputs": {
+      "section": "Tracker",
+      "search": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "tr.odd, tr.even"
+    },
+    "fields": {
+      "category": {
+        "text": "music"
+      },
+      "title": {
+        "selector": "a",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "[Nipponsei] ",
+              ""
+            ]
+          }
+        ]
+      },
+      "details": {
+        "text": "/"
+      },
+      "download": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "date": {
+        "selector": "td.date",
+        "optional": true,
+        "default": "now",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td.bytes",
+        "optional": true,
+        "default": "128 MB"
+      },
+      "seeders": {
+        "selector": "{{ if .Keywords }}td:nth-child(2){{ else }}td:nth-child(4){{ end }}"
+      },
+      "leechers": {
+        "selector": "{{ if .Keywords }}td:nth-child(3){{ else }}td:nth-child(5){{ end }}"
+      },
+      "grabs": {
+        "selector": "td.number"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/nipponsei.yml",
+    "sha256": "5ebe51793ab1c0699113d1f225f3c9962c84a7c818727d89c5562e8eb122a591",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

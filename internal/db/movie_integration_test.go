@@ -183,6 +183,32 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(m.Overview).To(Equal("Spice planet"))
 		})
+
+		It("keeps the aliases it was created with", func() {
+			// The first search runs straight after the add, before any
+			// refresh: a film held under its localized title matches none of
+			// its releases without them.
+			m, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title: "Dune : Première partie", OriginalTitle: "Dune",
+				Year: 2021, TmdbID: 438631,
+				Status:         entmovie.StatusWanted,
+				QualityProfile: qualityProfile,
+				Aliases:        []string{"Dune: Part One"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.Aliases).To(ConsistOf("Dune: Part One"))
+		})
+
+		It("keeps the IMDb id", func() {
+			m, err := store.CreateMovie(ctx, CreateMovieParams{
+				Title: "Dune", OriginalTitle: "Dune",
+				Year: 2021, TmdbID: 438632, IMDbID: "tt1160419",
+				Status:         entmovie.StatusWanted,
+				QualityProfile: qualityProfile,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m.ImdbID).To(Equal("tt1160419"))
+		})
 	})
 
 	Describe("FindMovieByID", func() {
@@ -571,9 +597,11 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 				Overview:      "fresh",
 				Year:          2024,
 				Runtime:       144,
+				IMDbID:        "tt0000001",
 			})).To(Succeed())
 			got, err := store.FindMovieByID(ctx, m.ID)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ImdbID).To(Equal("tt0000001"))
 			Expect(got.Title).To(Equal("New"))
 			Expect(got.OriginalTitle).To(Equal("Original Nouveau"))
 			Expect(got.Year).To(Equal(uint16(2024)))

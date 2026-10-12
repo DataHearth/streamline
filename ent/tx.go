@@ -46,6 +46,8 @@ type Tx struct {
 	ImportScanFile *ImportScanFileClient
 	// ImportScanShow is the client for interacting with the ImportScanShow builders.
 	ImportScanShow *ImportScanShowClient
+	// IndexerSession is the client for interacting with the IndexerSession builders.
+	IndexerSession *IndexerSessionClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
 	// MediaEvent is the client for interacting with the MediaEvent builders.
@@ -226,6 +228,7 @@ func (tx *Tx) init() {
 	tx.ImportScanBook = NewImportScanBookClient(tx.config)
 	tx.ImportScanFile = NewImportScanFileClient(tx.config)
 	tx.ImportScanShow = NewImportScanShowClient(tx.config)
+	tx.IndexerSession = NewIndexerSessionClient(tx.config)
 	tx.Invite = NewInviteClient(tx.config)
 	tx.MediaEvent = NewMediaEventClient(tx.config)
 	tx.MediaFile = NewMediaFileClient(tx.config)

@@ -1197,7 +1197,10 @@ export type CustomFormatTestResult = {
 // "torznab" covers plain Torznab endpoints and Jackett (its /indexers/all
 // aggregate feed is standard Torznab). "prowlarr" uses Prowlarr's native JSON
 // search API, the only way to query all of Prowlarr's indexers at once.
-export type IndexerProtocol = "torznab" | "prowlarr";
+// "cardigann" is a tracker streamline runs itself from an embedded
+// definition; it lives in the config file and the API does not edit it.
+export type IndexerProtocol = "torznab" | "prowlarr" | "cardigann";
+export type EditableIndexerProtocol = Exclude<IndexerProtocol, "cardigann">;
 
 export type Indexer = {
 	name: string;
@@ -1207,11 +1210,79 @@ export type Indexer = {
 	use_ssl?: boolean;
 	api_key_set: boolean;
 	protocol: IndexerProtocol;
+	// The embedded definition a "cardigann" indexer runs.
+	definition?: string;
 	priority?: number;
 	enabled: boolean;
 	// The operator's word for it: Torznab carries no privacy flag. Feeds
 	// SearchResult.indexer_private.
 	private?: boolean;
+	// A built-in indexer's tracker login.
+	session?: IndexerSession;
+	// A built-in indexer's chosen link, its settings without the secret ones
+	// (secrets_set names those holding a value), and its proxy without
+	// credentials.
+	site?: string;
+	settings?: Record<string, string>;
+	secrets_set?: string[];
+	proxy?: string;
+};
+
+export type IndexerSession = {
+	login_required: boolean;
+	captcha: boolean;
+	logged_in: boolean;
+	expires_at?: string;
+	retry_at?: string;
+	last_error?: string;
+};
+
+export type IndexerCaptcha = { token: string; image: string };
+
+export type CardigannSummary = {
+	file: string;
+	name: string;
+	description: string;
+	language: string;
+	type: string;
+	links: string[];
+	login: string;
+	captcha: boolean;
+	challenge: boolean;
+	categories: string[];
+	custom: boolean;
+};
+
+export type CardigannCatalog = {
+	upstream: { commit: string; date: string };
+	definitions: CardigannSummary[];
+};
+
+export type CardigannSetting = {
+	name: string;
+	label: string;
+	type: string;
+	default?: string;
+	options?: { key: string; label: string }[];
+	secret: boolean;
+};
+
+export type CardigannDefinition = CardigannSummary & {
+	settings: CardigannSetting[];
+};
+
+export type CardigannUpdate = {
+	file: string;
+	name: string;
+	reasons: string[];
+	removed: boolean;
+	indexers: string[];
+	diff: string;
+};
+
+export type CardigannUpdates = {
+	upstream: { commit: string; date: string };
+	pending: CardigannUpdate[];
 };
 
 export type DownloadClientType =

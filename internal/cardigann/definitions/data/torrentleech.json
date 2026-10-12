@@ -1,0 +1,479 @@
+{
+  "id": "torrentleech",
+  "name": "TorrentLeech",
+  "description": "TorrentLeech (TL) is a Private Torrent Tracker for 0DAY / GENERAL. not here _ not scene",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "requestDelay": 4.1,
+  "links": [
+    "https://www.torrentleech.org/",
+    "https://www.torrentleech.cc/",
+    "https://www.torrentleech.me/",
+    "https://www.tleechreload.org/",
+    "https://www.tlgetin.cc/",
+    "https://rss.torrentleech.cc/"
+  ],
+  "legacylinks": [
+    "https://v4.torrentleech.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "8",
+        "cat": "Movies/SD",
+        "desc": "Movies Cam"
+      },
+      {
+        "id": "9",
+        "cat": "Movies/SD",
+        "desc": "Movies TS/TC"
+      },
+      {
+        "id": "11",
+        "cat": "Movies/SD",
+        "desc": "Movies DVDRip/DVDScreener"
+      },
+      {
+        "id": "37",
+        "cat": "Movies/WEB-DL",
+        "desc": "Movies WEBRip"
+      },
+      {
+        "id": "43",
+        "cat": "Movies/HD",
+        "desc": "Movies HDRip"
+      },
+      {
+        "id": "14",
+        "cat": "Movies/HD",
+        "desc": "Movies BlurayRip"
+      },
+      {
+        "id": "12",
+        "cat": "Movies/DVD",
+        "desc": "Movies DVD-R"
+      },
+      {
+        "id": "13",
+        "cat": "Movies/BluRay",
+        "desc": "Movies Bluray"
+      },
+      {
+        "id": "47",
+        "cat": "Movies/UHD",
+        "desc": "Movies 4K"
+      },
+      {
+        "id": "15",
+        "cat": "Movies",
+        "desc": "Movies Boxsets"
+      },
+      {
+        "id": "29",
+        "cat": "Movies/Other",
+        "desc": "Documentaries"
+      },
+      {
+        "id": "26",
+        "cat": "TV/SD",
+        "desc": "TV Episodes"
+      },
+      {
+        "id": "32",
+        "cat": "TV/HD",
+        "desc": "TV Episodes HD"
+      },
+      {
+        "id": "27",
+        "cat": "TV",
+        "desc": "TV Boxsets"
+      },
+      {
+        "id": "17",
+        "cat": "PC/Games",
+        "desc": "Games PC"
+      },
+      {
+        "id": "42",
+        "cat": "PC/Mac",
+        "desc": "Games Mac"
+      },
+      {
+        "id": "18",
+        "cat": "Console/XBox",
+        "desc": "Games XBOX"
+      },
+      {
+        "id": "19",
+        "cat": "Console/XBox 360",
+        "desc": "Games XBOX360"
+      },
+      {
+        "id": "40",
+        "cat": "Console/XBox One",
+        "desc": "Games XBOXONE"
+      },
+      {
+        "id": "20",
+        "cat": "Console/PS3",
+        "desc": "Games PS2"
+      },
+      {
+        "id": "21",
+        "cat": "Console/PS3",
+        "desc": "Games Mac"
+      },
+      {
+        "id": "39",
+        "cat": "Console/PS4",
+        "desc": "Games PS4"
+      },
+      {
+        "id": "49",
+        "cat": "Console/PS4",
+        "desc": "Games PS5"
+      },
+      {
+        "id": "22",
+        "cat": "Console/PSP",
+        "desc": "Games PSP"
+      },
+      {
+        "id": "28",
+        "cat": "Console/Wii",
+        "desc": "Games Wii"
+      },
+      {
+        "id": "30",
+        "cat": "Console/NDS",
+        "desc": "Games Nintendo DS"
+      },
+      {
+        "id": "48",
+        "cat": "Console/Other",
+        "desc": "Games Nintendo Switch"
+      },
+      {
+        "id": "23",
+        "cat": "PC/ISO",
+        "desc": "PC ISO"
+      },
+      {
+        "id": "24",
+        "cat": "PC/Mac",
+        "desc": "PC Mac"
+      },
+      {
+        "id": "25",
+        "cat": "PC/Mobile-Other",
+        "desc": "PC Mobile"
+      },
+      {
+        "id": "33",
+        "cat": "PC/0day",
+        "desc": "PC 0-day"
+      },
+      {
+        "id": "38",
+        "cat": "Other",
+        "desc": "Education"
+      },
+      {
+        "id": "34",
+        "cat": "TV/Anime",
+        "desc": "TV Anime"
+      },
+      {
+        "id": "35",
+        "cat": "TV",
+        "desc": "TV Cartoons"
+      },
+      {
+        "id": "45",
+        "cat": "Books/EBook",
+        "desc": "Books EBooks"
+      },
+      {
+        "id": "46",
+        "cat": "Books/Comics",
+        "desc": "Books Comics"
+      },
+      {
+        "id": "31",
+        "cat": "Audio",
+        "desc": "Audio"
+      },
+      {
+        "id": "16",
+        "cat": "Audio/Video",
+        "desc": "Music videos"
+      },
+      {
+        "id": "36",
+        "cat": "Movies/Foreign",
+        "desc": "Movies Foreign"
+      },
+      {
+        "id": "44",
+        "cat": "TV/Foreign",
+        "desc": "TV Foreign"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    },
+    "allowrawsearch": true
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "alt2fatoken",
+      "label": "Alt 2FA Token",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_alt2fatoken",
+      "label": "About Alt 2FA Token",
+      "type": "info",
+      "default": "(Site Profile => Alt 2FA Token) Only fill in the <b>Alt 2FA Token</b> if you have enabled <b>2FA</b> on the TorrentLeech Web Site. Otherwise just leave it empty."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "exclude_scene",
+      "label": "Exclude SCENE torrents from results",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "exclude_archives",
+      "label": "Exclude torrents with the tag RAR from results (does not support IMDBID search)",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "nameSort": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "user/account/login/",
+    "form": "form[name=\"login-form\"]",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "alt2FAToken": "{{ .Config.alt2fatoken }}"
+    },
+    "error": [
+      {
+        "selector": "p.text-danger"
+      },
+      {
+        "selector": ".login-container h2:contains(\"One Time Password\")",
+        "message": {
+          "text": "Your TorrentLeech account has 2FA enabled. Please recheck your indexer settings."
+        }
+      },
+      {
+        "selector": "form[name=\"login-form\"]",
+        "message": {
+          "text": "Login page detected at {{ .Config.sitelink }}."
+        }
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href=\"/user/account/logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents/browse/list{{ if .Categories }}/categories/{{ join .Categories \",\" }}{{ else }}{{ end }}{{ if or .Config.freeleech .Config.exclude_scene }}/facets/tags:{{ else }}{{ end }}{{ if .Config.freeleech }}FREELEECH{{ else }}{{ end }}{{ if and .Config.freeleech .Config.exclude_scene }},{{ else }}{{ end }}{{ if .Config.exclude_scene }}nonscene{{ else }}{{ end }}/{{ if .Query.IMDBID }}imdbID/{{ .Query.IMDBID }}/{{ else }}exact/1/query/{{ .Keywords }}/{{ end }}{{ if .Keywords }}{{ else }}newfilter/2/{{ end }}orderby/{{ .Config.sort }}/order/{{ .Config.type }}",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "(^|[\\t-\\r\\x{85}\\p{Z}])-",
+          " "
+        ]
+      },
+      {
+        "name": "append",
+        "args": [
+          "{{ if .Config.exclude_archives }} -tags:rar{{ else }}{{ end }}"
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "torrentList",
+      "count": {
+        "selector": "$.numFound"
+      }
+    },
+    "fields": {
+      "category": {
+        "selector": "categoryID"
+      },
+      "title_test": {
+        "selector": "name",
+        "optional": true,
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)^\\[REQ(UEST(ED)?)?\\][\\t-\\r\\x{85}\\p{Z}]*",
+              ""
+            ]
+          }
+        ]
+      },
+      "title": {
+        "text": "{{ if .Result.title_test }}{{ .Result.title_test }}{{ else }}TorrentLeech did not provide a title{{ end }}"
+      },
+      "_id": {
+        "selector": "fid"
+      },
+      "_filename": {
+        "selector": "filename"
+      },
+      "details": {
+        "text": "/torrent/{{ .Result._id }}"
+      },
+      "download": {
+        "text": "/download/{{ .Result._id }}/{{ .Result._filename }}"
+      },
+      "genre": {
+        "selector": "tags",
+        "optional": true,
+        "filters": [
+          {
+            "name": "validate",
+            "args": [
+              "Action, Adventure, Animation, Biography, Comedy, Crime, Documentary, Drama, Family, Fantasy, Game-Show, History, Horror, Kids, Music, Musical, Mystery, News, Reality-TV, Romance, Sci-Fi, Science-Fiction, Sport, Soap, Talk-Show, Thriller, War, Western"
+            ]
+          }
+        ]
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.genre }}"
+      },
+      "imdbid": {
+        "selector": "imdbID",
+        "optional": true
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "completed"
+      },
+      "date": {
+        "selector": "addedTimestamp",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "downloadvolumefactor": {
+        "selector": "download_multiplier",
+        "case": {
+          "0": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "864000"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/torrentleech.yml",
+    "sha256": "6b76b71eb2154f544d5df51e1903c74beb586360f5d53bcb106ec25f68f0ee69",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

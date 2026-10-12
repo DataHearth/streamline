@@ -1,0 +1,81 @@
+{
+  "id": "acgrip",
+  "name": "ACG.RIP",
+  "description": "ACG.RIP is a CHINESE Public torrent tracker for the latest anime and Japanese related torrents",
+  "language": "zh-CN",
+  "type": "public",
+  "encoding": "UTF-8",
+  "followredirect": true,
+  "links": [
+    "https://acg.rip/"
+  ],
+  "caps": {
+    "categories": {
+      "1": "TV"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ]
+    }
+  },
+  "settings": [],
+  "search": {
+    "paths": [
+      {
+        "path": "/"
+      }
+    ],
+    "inputs": {
+      "term": "{{ .Keywords }}"
+    },
+    "rows": {
+      "selector": "tbody tr"
+    },
+    "fields": {
+      "category": {
+        "text": "1"
+      },
+      "title": {
+        "selector": "td.title > span.title a"
+      },
+      "details": {
+        "selector": "td.title > span.title a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "td.action a",
+        "attribute": "href"
+      },
+      "size": {
+        "selector": "td.size"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "date": {
+        "selector": "td.date time",
+        "attribute": "datetime"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/acgrip.yml",
+    "sha256": "82d92768fcdc1f2ecd6af328ee4242782e3c1e0179e353780a3de6bc9ec90252",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

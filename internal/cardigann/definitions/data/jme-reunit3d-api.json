@@ -1,0 +1,297 @@
+{
+  "id": "jme-reunit3d-api",
+  "name": "JME-REUNIT3D (API)",
+  "description": "JME-REUNIT3D is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://jme-reunit3d.de/"
+  ],
+  "legacylinks": [
+    "https://jme-reunit3d.eu/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "2",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "6",
+        "cat": "XXX",
+        "desc": "XXX"
+      },
+      {
+        "id": "7",
+        "cat": "TV/Sport",
+        "desc": "Sport"
+      },
+      {
+        "id": "3",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "5",
+        "cat": "PC",
+        "desc": "Application"
+      },
+      {
+        "id": "4",
+        "cat": "Console",
+        "desc": "Game"
+      },
+      {
+        "id": "8",
+        "cat": "Books",
+        "desc": "E-Books"
+      },
+      {
+        "id": "9",
+        "cat": "Audio/Audiobook",
+        "desc": "Audio-Books"
+      },
+      {
+        "id": "12",
+        "cat": "Audio/Video",
+        "desc": "Music-Video"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tvdbid",
+        "tmdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "APIKey",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API key",
+      "type": "info",
+      "default": "Find or Generate a new API Token by accessing your <a href=\"https://jme-reunit3d.de/\" target=\"_blank\">JME-REUNIT3D</a> account <i>My Security</i> page and clicking on the <b>API Token</b> tab."
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "created_at",
+      "options": {
+        "created_at": "created",
+        "seeders": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "If a user has not actively logged in for 30 days, the profile is automatically deactivated and receives the user class 'Disabled'.<br>After deactivation, the profile can be reactivated within 60 days – after which it will be permanently deleted."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "api/torrents",
+    "error": [
+      {
+        "selector": "a[href*=\"/login\"]",
+        "message": {
+          "text": "The API key was not accepted by {{ .Config.sitelink }}."
+        }
+      },
+      {
+        "selector": ":root:contains(\"Account is Banned\")"
+      }
+    ],
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/torrents/filter",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}&categories[]={{.}}{{end}}",
+      "name": "{{ .Keywords }}",
+      "imdbId": "{{ .Query.IMDBIDShort }}",
+      "tmdbId": "{{ .Query.TMDBID }}",
+      "tvdbId": "{{ .Query.TVDBID }}",
+      "free": "{{ if .Config.freeleech }}1{{ else }}{{ end }}",
+      "sortField": "{{ .Config.sort }}",
+      "sortDirection": "{{ .Config.type }}",
+      "perPage": "100"
+    },
+    "headers": {
+      "Authorization": [
+        "Bearer {{ .Config.apikey }}"
+      ]
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "\\.",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "data",
+      "attribute": "attributes"
+    },
+    "fields": {
+      "categorydesc": {
+        "selector": "category"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "details": {
+        "selector": "details_link"
+      },
+      "download": {
+        "selector": "download_link"
+      },
+      "poster": {
+        "selector": "poster",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "https://via.placeholder.com/90x135",
+              ""
+            ]
+          }
+        ]
+      },
+      "imdbid": {
+        "selector": "imdb_id",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "tmdb_id",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "tvdb_id",
+        "optional": true
+      },
+      "files": {
+        "selector": "num_file"
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "times_completed"
+      },
+      "date": {
+        "selector": "created_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size"
+      },
+      "downloadvolumefactor": {
+        "selector": "freeleech",
+        "case": {
+          "0%": "1",
+          "25%": "0.75",
+          "50%": "0.5",
+          "75%": "0.25",
+          "100%": "0",
+          "*": "0"
+        }
+      },
+      "uploadvolumefactor": {
+        "selector": "double_upload",
+        "case": {
+          "0": "1",
+          "1": "2"
+        }
+      },
+      "minimumseedtime": {
+        "text": "345600"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/jme-reunit3d-api.yml",
+    "sha256": "049be394cfc8fef953547eb1bb0b50691f86fcaac93eb647d8b825da34d1d1e9",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

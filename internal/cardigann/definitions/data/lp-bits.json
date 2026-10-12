@@ -1,0 +1,261 @@
+{
+  "id": "lp-bits",
+  "name": "LP-Bits 2.0",
+  "description": "LP-Bits 2.0 is a Private Torrent Tracker for Linkin Park Music Releases.\"",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://lp-bits.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "409",
+        "cat": "Audio/Video",
+        "desc": "Video Audience Shot"
+      },
+      {
+        "id": "404",
+        "cat": "Audio/Video",
+        "desc": "Documentaries  Misc"
+      },
+      {
+        "id": "406",
+        "cat": "Audio/Video",
+        "desc": "Music Videos"
+      },
+      {
+        "id": "407",
+        "cat": "Audio",
+        "desc": "Audio Professional"
+      },
+      {
+        "id": "408",
+        "cat": "Audio/Video",
+        "desc": "Pro Shot Video"
+      },
+      {
+        "id": "410",
+        "cat": "Audio",
+        "desc": "Audio Audience Shot"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules:<ol><li>Veteran User and above will be retained forever</li><li>Elite User and above will not have their account deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 400 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users who have no traffic (i.e. upload/download data are both 0) will be deleted if they do not log in for 100 consecutive days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    },
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "0",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "table.torrents > tbody > tr:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[title][href^=\"details.php?id=\"]",
+        "attribute": "title"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img[data-src]",
+        "attribute": "data-src",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "pic/imdb_pic/nophoto.gif",
+              ""
+            ]
+          }
+        ]
+      },
+      "date_elapsed": {
+        "selector": "td.rowfollow:nth-child(4) > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "td.rowfollow:nth-child(4):not(:has(span))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-0215:04:05 -07:00",
+              "2006-01-0215:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td.rowfollow:nth-child(5)",
+        "optional": true,
+        "default": "512MB"
+      },
+      "seeders": {
+        "selector": "td.rowfollow:nth-child(6)",
+        "optional": true,
+        "default": "0"
+      },
+      "leechers": {
+        "selector": "td.rowfollow:nth-child(7)",
+        "optional": true,
+        "default": "0"
+      },
+      "grabs": {
+        "selector": "td.rowfollow:nth-child(8)",
+        "optional": true,
+        "default": "0"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/lp-bits.yml",
+    "sha256": "cebb0d131075412b3d5991f1440ac84700fb87cc612c427d62eb4098a88d9361",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

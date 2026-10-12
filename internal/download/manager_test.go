@@ -33,6 +33,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )
@@ -185,14 +186,14 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 		})
 
 		It("passes magnet links through without a fetch", func() {
-			src, err := resolveTorrentSource(ctx, "magnet:?xt=urn:btih:abc")
+			src, err := resolveTorrentSource(ctx, nil, "magnet:?xt=urn:btih:abc")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(src.Magnet).To(Equal("magnet:?xt=urn:btih:abc"))
 		})
 
 		DescribeTable("rejects URLs outside the configured indexers",
 			func(dl string) {
-				_, err := resolveTorrentSource(ctx, dl)
+				_, err := resolveTorrentSource(ctx, nil, dl)
 				Expect(err).To(MatchError(ErrUntrustedSource))
 			},
 			Entry("cloud metadata", "http://169.254.169.254/latest/meta-data/"),
@@ -211,8 +212,61 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			// Reaching the transport (and failing there) proves the guard let
 			// the URL through — resolution of a non-existent host cannot
 			// succeed, but it is no longer ErrUntrustedSource.
-			_, err := resolveTorrentSource(ctx, "https://tracker.example/dl?id=1")
+			_, err := resolveTorrentSource(
+				ctx,
+				nil,
+				"https://tracker.example/dl?id=1",
+			)
 			Expect(err).NotTo(MatchError(ErrUntrustedSource))
+		})
+
+		Context("with a native cardigann indexer", func() {
+			BeforeEach(func() {
+				configtest.Setup(map[string]any{
+					"indexers": []map[string]any{{
+						"name":      "YTS",
+						"protocol":  "cardigann",
+						"enabled":   true,
+						"cardigann": map[string]any{"definition": "yts"},
+					}},
+				})
+			})
+
+			It("trusts links on the tracker's own site and fetches them", func() {
+				srv := httptest.NewServer(http.HandlerFunc(
+					func(w http.ResponseWriter, _ *http.Request) {
+						_, _ = w.Write([]byte("d8:announce0:e"))
+					}))
+				DeferCleanup(srv.Close)
+				target, err := url.Parse(srv.URL)
+				Expect(err).NotTo(HaveOccurred())
+				orig := otelx.HTTPClient.Transport
+				otelx.HTTPClient.Transport = roundTripFunc(
+					func(r *http.Request) (*http.Response, error) {
+						Expect(r.URL.Host).To(Equal("yts.gg"))
+						r = r.Clone(r.Context())
+						r.URL.Scheme, r.URL.Host = target.Scheme, target.Host
+						return http.DefaultTransport.RoundTrip(r)
+					})
+				DeferCleanup(func() { otelx.HTTPClient.Transport = orig })
+
+				src, err := resolveTorrentSource(
+					ctx,
+					nil,
+					"https://yts.gg/torrent/download/AAA",
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(src.Bytes)).To(Equal("d8:announce0:e"))
+			})
+
+			It("still refuses another host", func() {
+				_, err := resolveTorrentSource(
+					ctx,
+					nil,
+					"https://yts.mx/torrent/download/AAA",
+				)
+				Expect(err).To(MatchError(ErrUntrustedSource))
+			})
 		})
 
 		Context("when the indexer redirects", func() {
@@ -244,13 +298,17 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 				dl := indexerRedirectingTo(
 					"http://169.254.169.254/latest/meta-data/",
 				)
-				_, err := resolveTorrentSource(ctx, dl)
+				_, err := resolveTorrentSource(ctx, nil, dl)
 				Expect(err).To(MatchError(ErrUntrustedSource))
 			})
 
 			It("takes a redirect to a magnet as the magnet", func() {
 				const magnet = "magnet:?xt=urn:btih:abc"
-				src, err := resolveTorrentSource(ctx, indexerRedirectingTo(magnet))
+				src, err := resolveTorrentSource(
+					ctx,
+					nil,
+					indexerRedirectingTo(magnet),
+				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(src.Magnet).To(Equal(magnet))
 			})
@@ -2061,3 +2119,9 @@ var _ = Describe("extractBtihFromMagnet", Label("unit", "downloads"), func() {
 		Entry("no btih", "magnet:?dn=x", ""),
 	)
 })
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}

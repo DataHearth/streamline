@@ -1,0 +1,257 @@
+{
+  "id": "rousi-pro",
+  "name": "Rousi.pro",
+  "description": "Rousi.pro is a CHINESE Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://rousi.pro/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "movies",
+        "cat": "Movies",
+        "desc": "电影"
+      },
+      {
+        "id": "tv",
+        "cat": "TV",
+        "desc": "电视剧"
+      },
+      {
+        "id": "documentary",
+        "cat": "TV/Documentary",
+        "desc": "纪录片"
+      },
+      {
+        "id": "anime",
+        "cat": "TV/Anime",
+        "desc": "动漫"
+      },
+      {
+        "id": "music",
+        "cat": "Audio",
+        "desc": "音乐"
+      },
+      {
+        "id": "variety",
+        "cat": "TV",
+        "desc": "综艺"
+      },
+      {
+        "id": "sports",
+        "cat": "TV/Sport",
+        "desc": "体育"
+      },
+      {
+        "id": "software",
+        "cat": "PC",
+        "desc": "软件"
+      },
+      {
+        "id": "ebooks",
+        "cat": "Books",
+        "desc": "电子书"
+      },
+      {
+        "id": "9kg",
+        "cat": "XXX",
+        "desc": "9KG"
+      },
+      {
+        "id": "other",
+        "cat": "Other",
+        "desc": "其它"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "cookie",
+      "label": "Cookie",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_cookie",
+      "type": "info_cookie"
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "published",
+      "options": {
+        "published": "created",
+        "size": "size"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "DESC",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules (Inactive Accounts):<ol><li>Not logged in for more than 30 days: Send email reminders</li><li>Not logged in for more than 60 days: 5000 Mana points are deducted daily</li><li>After the mana value is deducted to 0: the account is banned</li><li>If the user expects to be unable to log in for a period of time, they can pay in advance 150,000 mana to protect account for 60 days</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "cookie",
+    "inputs": {
+      "cookie": "{{ .Config.cookie }}"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "api/v1/torrents",
+        "response": {
+          "type": "json"
+        }
+      }
+    ],
+    "inputs": {
+      "query": "{{ .Keywords }}",
+      "promotion": "{{ if .Config.freeleech }}free{{ else }}{{ end }}",
+      "sort": "{{ .Config.sort }}_{{ .Config.type }}",
+      "limit": "50"
+    },
+    "keywordsfilters": [
+      {
+        "name": "re_replace",
+        "args": [
+          "[\\.\\t-\\r\\x{85}\\p{Z}]",
+          " "
+        ]
+      }
+    ],
+    "rows": {
+      "selector": "items"
+    },
+    "fields": {
+      "_id": {
+        "selector": "id"
+      },
+      "title": {
+        "selector": "name"
+      },
+      "category": {
+        "selector": "category.id"
+      },
+      "details": {
+        "text": "{{ .Config.sitelink }}torrents/{{ .Result._id }}"
+      },
+      "download": {
+        "text": "{{ .Config.sitelink }}api/v1/torrents/{{ .Result._id }}/download"
+      },
+      "poster": {
+        "optional": true,
+        "text": "{{ .Config.sitelink }}api/v1/torrents/{{ .Result._id }}/cover"
+      },
+      "description": {
+        "selector": "subtitle",
+        "optional": true
+      },
+      "seeders": {
+        "selector": "seeders"
+      },
+      "leechers": {
+        "selector": "leechers"
+      },
+      "grabs": {
+        "selector": "completed"
+      },
+      "date": {
+        "selector": "uploaded_at",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +00:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "01/02/2006 15:04:05 -07:00",
+              "01/02/2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "size_bytes"
+      },
+      "downloadvolumefactor": {
+        "selector": "promotion",
+        "case": {
+          "free": "0",
+          "double_upload": "1",
+          "double_upload_free": "0",
+          "half_download": "0.5",
+          "double_upload_half_download": "0.5",
+          "thirty_percent_download": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "selector": "promotion",
+        "case": {
+          "free": "1",
+          "double_upload": "2",
+          "double_upload_free": "2",
+          "half_download": "1",
+          "double_upload_half_download": "2",
+          "thirty_percent_download": "1",
+          "*": "1"
+        }
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "86400"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/rousi-pro.yml",
+    "sha256": "03027e1800688b9c959e5ec057e2ee891dd4d3b3dd8525aa6798a39a11484b04",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

@@ -1,0 +1,534 @@
+{
+  "id": "selezen",
+  "name": "seleZen",
+  "description": "seleZen is a RUSSIAN Semi-Private Torrent Tracker for MOVIES",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://use.selezen.club/",
+    "https://www.selezen.club/",
+    "https://open.selezen.org/",
+    "https://www.selezen.top/",
+    "https://open.selezen.top/"
+  ],
+  "legacylinks": [
+    "https://www.selezen.site/",
+    "https://mel.selezen.net/",
+    "https://s1.selezen.site/",
+    "https://www.selezen.net/",
+    "https://selezen.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "0",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "40",
+        "cat": "Movies/BluRay",
+        "desc": "Blu-Ray"
+      },
+      {
+        "id": "78",
+        "cat": "Other",
+        "desc": "RePack от селезень"
+      },
+      {
+        "id": "45",
+        "cat": "Movies/HD",
+        "desc": "WEBRip 720p"
+      },
+      {
+        "id": "46",
+        "cat": "Movies/HD",
+        "desc": "WEBRip 1080p"
+      },
+      {
+        "id": "47",
+        "cat": "Movies/UHD",
+        "desc": "WEBRip 2160p"
+      },
+      {
+        "id": "48",
+        "cat": "Movies/HD",
+        "desc": "WEB-DL 720p"
+      },
+      {
+        "id": "49",
+        "cat": "Movies/HD",
+        "desc": "WEB-DL 1080p"
+      },
+      {
+        "id": "50",
+        "cat": "Movies/UHD",
+        "desc": "SDR WEB-DL 2160p"
+      },
+      {
+        "id": "51",
+        "cat": "Movies/UHD",
+        "desc": "HDR WEB-DL 2160p"
+      },
+      {
+        "id": "52",
+        "cat": "Movies/HD",
+        "desc": "BDRip 720p"
+      },
+      {
+        "id": "53",
+        "cat": "Movies/HD",
+        "desc": "BDRip 1080p"
+      },
+      {
+        "id": "54",
+        "cat": "Movies/UHD",
+        "desc": "SDR BDRip 2160p"
+      },
+      {
+        "id": "55",
+        "cat": "Movies/UHD",
+        "desc": "HDR BDRip 2160p"
+      },
+      {
+        "id": "56",
+        "cat": "Movies/HD",
+        "desc": "UHD BDRip 720p"
+      },
+      {
+        "id": "57",
+        "cat": "Movies/HD",
+        "desc": "UHD BDRip 1080p"
+      },
+      {
+        "id": "58",
+        "cat": "Movies/HD",
+        "desc": "BDRemux 1080p"
+      },
+      {
+        "id": "59",
+        "cat": "Movies/UHD",
+        "desc": "SDR BDRemux 2160p"
+      },
+      {
+        "id": "60",
+        "cat": "Movies/UHD",
+        "desc": "HDR BDRemux 2160p"
+      },
+      {
+        "id": "61",
+        "cat": "Movies/UHD",
+        "desc": "DV BDRemux 2160p"
+      },
+      {
+        "id": "62",
+        "cat": "Movies/HD",
+        "desc": "Blu-Ray 1080p"
+      },
+      {
+        "id": "63",
+        "cat": "Movies/UHD",
+        "desc": "Blu-Ray 2160p"
+      },
+      {
+        "id": "64",
+        "cat": "Movies/3D",
+        "desc": "3D BDRemux 1080p"
+      },
+      {
+        "id": "65",
+        "cat": "Movies/3D",
+        "desc": "3D Blu-Ray 1080p"
+      },
+      {
+        "id": "74",
+        "cat": "Movies/HD",
+        "desc": "WEBRip"
+      },
+      {
+        "id": "75",
+        "cat": "Movies/HD",
+        "desc": "BDRip"
+      },
+      {
+        "id": "76",
+        "cat": "Movies/HD",
+        "desc": "WEB-DLRip"
+      },
+      {
+        "id": "77",
+        "cat": "Movies/HD",
+        "desc": "HDRip"
+      },
+      {
+        "id": "69",
+        "cat": "Movies",
+        "desc": "WEB-DLRip-AVC"
+      },
+      {
+        "id": "70",
+        "cat": "Movies",
+        "desc": "HDRip-AVC"
+      },
+      {
+        "id": "71",
+        "cat": "Movies",
+        "desc": "BDRip-AVC"
+      },
+      {
+        "id": "72",
+        "cat": "Movies/HD",
+        "desc": "WEB-DLRip 720p"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    },
+    {
+      "name": "stripcyrillic",
+      "label": "Strip Cyrillic Letters",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "addrussiantotitle",
+      "label": "Add RUS to end of all titles to improve language detection by Radarr. Will cause English-only results to be misidentified.",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "date",
+      "options": {
+        "date": "created",
+        "title": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.html",
+    "form": "form[role=\"form\"]",
+    "inputs": {
+      "login_name": "{{ .Config.username }}",
+      "login_password": "{{ .Config.password }}",
+      "login_not_save": "",
+      "login": "submit"
+    },
+    "error": [
+      {
+        "selector": "div.alert-warning:contains(\"Ошибка авторизации\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href$=\"/index.php?action=logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php",
+        "followredirect": true
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}catlist[]={{.}}&{{end}}",
+      "do": "search",
+      "subaction": "search",
+      "showposts": "1",
+      "titleonly": "{{ if .Query.IMDBID }}0{{ else }}3{{ end }}",
+      "story": "{{ if or .Query.IMDBID .Keywords }}{{ or .Query.IMDBID .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}",
+      "sortby": "{{ .Config.sort }}",
+      "resorder": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "div.card:has(h4):not(:has(a[href*=\"/news/\"])):has(a:has(span.bx-download))"
+    },
+    "fields": {
+      "category": {
+        "selector": "h4",
+        "case": {
+          "h4:contains(\"WEBRip 720p\")": "45",
+          "h4:contains(\"WEBRip 1080p\")": "46",
+          "h4:contains(\"WEBRip 2160p\")": "47",
+          "h4:contains(\"SDR WEB-DL 2160p\")": "50",
+          "h4:contains(\"HDR WEB-DL 2160p\")": "51",
+          "h4:contains(\"WEB-DL 720p\")": "48",
+          "h4:contains(\"WEB-DL 1080p\")": "49",
+          "h4:contains(\"SDR BDRip 2160p\")": "54",
+          "h4:contains(\"HDR BDRip 2160p\")": "55",
+          "h4:contains(\"UHD BDRip 720p\")": "56",
+          "h4:contains(\"UHD BDRip 1080p\")": "57",
+          "h4:contains(\"SDR BDRemux 2160p\")": "59",
+          "h4:contains(\"HDR BDRemux 2160p\")": "60",
+          "h4:contains(\"DV BDRemux 2160p\")": "61",
+          "h4:contains(\"3D BDRemux 1080p\")": "64",
+          "h4:contains(\"3D Blu-Ray 1080p\")": "65",
+          "h4:contains(\"BDRemux 1080p\")": "58",
+          "h4:contains(\"Blu-Ray 1080p\")": "62",
+          "h4:contains(\"Blu-Ray 2160p\")": "63",
+          "h4:contains(\"BDRip 720p\")": "52",
+          "h4:contains(\"BDRip 1080p\")": "53",
+          "h4:contains(\"WEB-DLRip-AVC\")": "69",
+          "h4:contains(\"HDRip-AVC\")": "70",
+          "h4:contains(\"BDRip-AVC\")": "71",
+          "h4:contains(\"WEB-DLRip 720p\")": "72",
+          "h4:contains(\"WEBRip\")": "74",
+          "h4:contains(\"WEB-DLRip\")": "76",
+          "h4:contains(\"WEB-DL\")": "74",
+          "h4:contains(\"BDRip\")": "75",
+          "h4:contains(\"HDRip\")": "77",
+          "h4:contains(\"Blu-Ray\")": "40",
+          "h4:contains(\"RePack\")": "78",
+          "*": "0"
+        }
+      },
+      "title": {
+        "selector": "h4",
+        "filters": [
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bЛицензия\\b",
+              "Lic"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bселезень\\b",
+              "selezen"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(\\([\\u0400-\\u04FF\\W\\u200C\\u200D]+\\))|(^[\\u0400-\\u04FF\\W\\u200C\\u200D\\d]+\\/ )|([\\u0400-\\u04FF \\-]+,+)|([\\u0400-\\u04FF]+)",
+              "{{ if .Config.stripcyrillic }}{{ else }}$1$2$3$4{{ end }}"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bHDTV[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bSAT[-\\s]?Rip\\b",
+              "HDTV"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB[-\\s]?DL[-\\s]?Rip\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sRip\\b",
+              "WEBRip"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "(?i)\\bWEB\\sDL\\b",
+              "WEB-DL"
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "[\\[\\(\\{<«][\\s\\W\\u200C\\u200D]*[\\]\\)\\}>»]",
+              ""
+            ],
+            "engine": "regexp2"
+          },
+          {
+            "name": "re_replace",
+            "args": [
+              "^[\\t-\\r\\x{85}\\p{Z}&,\\.!\\?\\+\\-_\\|\\/':]+",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Config.addrussiantotitle }} RUS{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a:has(h4)",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a:has(h4)",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img.card-img",
+        "attribute": "src",
+        "optional": true
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "genre": {
+        "selector": "div.cats",
+        "optional": true,
+        "filters": [
+          {
+            "name": "validate",
+            "args": [
+              "Аниме, Биографический, Боевик, Вестерн, Военный, Детектив, Документальный, Драма, Исторический, Комедия, Короткометражный, Криминал, Мелодрама, Мистика, Музыкальный, Мультфильм, Приключения, Семейный, Спорт, Триллер, Ужасы, Фантастика, Фэнтези"
+            ]
+          }
+        ]
+      },
+      "description": {
+        "selector": "p.card-text",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "{{ if .Result.genre }}</br>{{ .Result.genre }}{{ else }}{{ end }}"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "selector": "a:has(span.bx-calendar)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2.01.2006 15:04 -07:00",
+              "2.01.2006 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "a:has(i.bx-chevrons-up)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              " ",
+              "0"
+            ]
+          }
+        ]
+      },
+      "leechers": {
+        "selector": "a:has(i.bx-chevrons-up)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              " ",
+              "1"
+            ]
+          }
+        ]
+      },
+      "grabs": {
+        "selector": "a:has(i.bx-chevrons-up)",
+        "filters": [
+          {
+            "name": "split",
+            "args": [
+              " ",
+              "-1"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "a:has(span.bx-download)"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"magnet:?xt=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/selezen.yml",
+    "sha256": "a3ad73c7c86097e2730039a40ce0e5868626df957fe092120cb95078f0d49197",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  },
+  "regex_net": true
+}

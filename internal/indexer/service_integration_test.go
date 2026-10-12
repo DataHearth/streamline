@@ -90,7 +90,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 		DescribeTable("queries the slot's categories with and without the year",
 			func(kind mediafile.BookKind, wantCat string) {
 				rec := recordingIndexer()
-				results, err := New().SearchBook(
+				results, err := New(nil).SearchBook(
 					context.Background(),
 					"Brandon Sanderson", "Elantris", 2005, kind)
 				Expect(err).NotTo(HaveOccurred())
@@ -107,7 +107,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 	Describe("SearchAlbum", func() {
 		It("queries the music category with and without the year", func() {
 			rec := recordingIndexer()
-			results, err := New().SearchAlbum(
+			results, err := New(nil).SearchAlbum(
 				context.Background(), "Nirvana", "Nevermind", 1991)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rec.queries()).To(ConsistOf(
@@ -119,7 +119,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 		It("issues only the bare query without a year", func() {
 			rec := recordingIndexer()
-			_, err := New().SearchAlbum(
+			_, err := New(nil).SearchAlbum(
 				context.Background(), "Nirvana", "Nevermind", 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rec.queries()).To(Equal([]string{"Nirvana Nevermind"}))
@@ -131,7 +131,9 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			"asks each indexer once, by the bare name, in the music category",
 			func() {
 				rec := recordingIndexer()
-				results, err := New().SearchArtist(context.Background(), "  Nirvana ")
+				results, err := New(
+					nil,
+				).SearchArtist(context.Background(), "  Nirvana ")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rec.queries()).To(Equal([]string{"Nirvana"}))
 				Expect(rec.categories()).To(HaveEach("3000"))
@@ -234,12 +236,13 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					},
 				})
 
-				svc := New()
+				svc := New(nil)
 				results, err := svc.SearchMovie(
 					ctx,
 					[]string{"Interstellar"},
 					nil,
 					157336,
+					"",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(2))
@@ -272,8 +275,8 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					}},
 				})
 
-				results, err := New().SearchMovie(
-					context.Background(), []string{"Interstellar"}, nil, 157336,
+				results, err := New(nil).SearchMovie(
+					context.Background(), []string{"Interstellar"}, nil, 157336, "",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -332,11 +335,12 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 				},
 			})
 
-			results, err := New().SearchMovie(
+			results, err := New(nil).SearchMovie(
 				ctx,
 				[]string{"Demon Slayer La Forteresse Infinie"},
 				[]string{"Demon Slayer Infinity Castle"},
 				1311031,
+				"",
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -407,11 +411,12 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 					},
 				})
 
-				results, err := New().SearchMovie(
+				results, err := New(nil).SearchMovie(
 					ctx,
 					[]string{"Comme un chef"},
 					nil,
 					127585,
+					"",
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -434,9 +439,9 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			results, _, err := New().
+			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, 2, 3)
+					nil, 111, "", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 
@@ -462,8 +467,8 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			_, err := New().SearchMovie(context.Background(), []string{"Dune"},
-				nil, 0)
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
+				nil, 0, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			queries := rec.Queries()
@@ -485,9 +490,9 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			DeferCleanup(rec.Close)
 			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
 
-			results, _, err := New().
+			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, 2, 3)
+					nil, 111, "", 2, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			// The wrong show had 900 seeders and would have won on score.
@@ -496,6 +501,53 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 		})
 	})
 })
+
+var _ = Describe("the Torznab id ladder", Label("integration", "indexers"),
+	func() {
+		It("asks by TMDB id, then IMDb id alone, then the bare title", func() {
+			var (
+				mu      sync.Mutex
+				queries []url.Values
+			)
+			ts := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					queries = append(queries, r.URL.Query())
+					mu.Unlock()
+					_, err := w.Write(torznabXML(nil))
+					Expect(err).NotTo(HaveOccurred())
+				}))
+			DeferCleanup(ts.Close)
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name":     "Jackett",
+					"host":     host,
+					"port":     int(port),
+					"api_key":  "key",
+					"protocol": "torznab",
+					"enabled":  true,
+				}},
+			})
+
+			_, err := New(nil).SearchMovie(context.Background(), []string{"Dune"},
+				nil, 438631, "tt1160419")
+			Expect(err).NotTo(HaveOccurred())
+
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(queries).To(HaveLen(3))
+			Expect(queries[0].Get("tmdbid")).To(Equal("438631"))
+			Expect(queries[0]).NotTo(HaveKey("imdbid"))
+			Expect(queries[1].Get("imdbid")).To(Equal("tt1160419"))
+			Expect(queries[1]).NotTo(HaveKey("tmdbid"))
+			Expect(queries[1].Get("t")).To(Equal("movie"))
+			Expect(queries[2]).NotTo(HaveKey("imdbid"))
+			Expect(queries[2]).NotTo(HaveKey("tmdbid"))
+			Expect(queries[2].Get("q")).To(Equal("Dune"))
+		})
+	},
+)
 
 // prowlarrRecorder is a Prowlarr /api/v1/search stand-in that records every
 // query it is asked and replies with the next canned body, repeating the last

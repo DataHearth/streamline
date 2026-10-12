@@ -1,0 +1,120 @@
+{
+  "id": "vsthouse",
+  "name": "VSTHouse",
+  "description": "VSTHouse is a RUSSIAN Public site for AUDIO apps, plugins and samples",
+  "language": "ru-RU",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://vsthouse.ru/"
+  ],
+  "legacylinks": [
+    "http://vsthouse.ru/",
+    "https://vsthouse.org/"
+  ],
+  "caps": {
+    "categories": {
+      "PC": "PC"
+    },
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [],
+  "search": {
+    "paths": [
+      {
+        "path": "search"
+      }
+    ],
+    "inputs": {
+      "q": "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}",
+      "m": "load",
+      "t": "0"
+    },
+    "rows": {
+      "selector": "table.eBlock:has(div.eDetails:contains(\":\"))",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "PC"
+      },
+      "title": {
+        "selector": "div.eTitle a"
+      },
+      "details": {
+        "selector": "div.eTitle a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "div.eTitle a",
+        "attribute": "href"
+      },
+      "description": {
+        "selector": "div.eDetails",
+        "optional": true
+      },
+      "date": {
+        "selector": "div.eDetails",
+        "remove": "a, span",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "- ",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "text": "512 MB"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[title^=\"Скачать:\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/vsthouse.yml",
+    "sha256": "89257ead17a838abfa26fe7ef4b29aaff011cfb47050dfdfe013b39d88153d71",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

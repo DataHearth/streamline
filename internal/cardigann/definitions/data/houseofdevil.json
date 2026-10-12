@@ -1,0 +1,425 @@
+{
+  "id": "houseofdevil",
+  "name": "House of Devil",
+  "description": "House of Devil is a GERMAN Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "de-DE",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://h-o-d.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "117",
+        "cat": "TV",
+        "desc": "Allgemein - Serien"
+      },
+      {
+        "id": "119",
+        "cat": "Other",
+        "desc": "Bilder"
+      },
+      {
+        "id": "120",
+        "cat": "Books",
+        "desc": "EBook"
+      },
+      {
+        "id": "138",
+        "cat": "Movies/3D",
+        "desc": "Filme - 3D"
+      },
+      {
+        "id": "101",
+        "cat": "TV/Anime",
+        "desc": "Filme - Animie"
+      },
+      {
+        "id": "102",
+        "cat": "Movies/BluRay",
+        "desc": "Filme - Bluray"
+      },
+      {
+        "id": "131",
+        "cat": "Movies/Other",
+        "desc": "Filme - Bollywood"
+      },
+      {
+        "id": "103",
+        "cat": "Movies/DVD",
+        "desc": "Filme - DVD"
+      },
+      {
+        "id": "104",
+        "cat": "Movies/DVD",
+        "desc": "Filme - DVD-R"
+      },
+      {
+        "id": "135",
+        "cat": "Movies/HD",
+        "desc": "Filme - HD"
+      },
+      {
+        "id": "132",
+        "cat": "Movies/DVD",
+        "desc": "Filme - HD2DVD"
+      },
+      {
+        "id": "130",
+        "cat": "Movies",
+        "desc": "Filme - Klassiker"
+      },
+      {
+        "id": "134",
+        "cat": "Movies/SD",
+        "desc": "Filme - SD"
+      },
+      {
+        "id": "136",
+        "cat": "Movies/UHD",
+        "desc": "Filme - UHD"
+      },
+      {
+        "id": "105",
+        "cat": "Movies/HD",
+        "desc": "Filme - x264"
+      },
+      {
+        "id": "106",
+        "cat": "Movies/SD",
+        "desc": "Filme - XviD / DivX"
+      },
+      {
+        "id": "127",
+        "cat": "Movies",
+        "desc": "Fuer Unsere Kleinsten"
+      },
+      {
+        "id": "121",
+        "cat": "PC/Mobile-Other",
+        "desc": "Handy-Stuff"
+      },
+      {
+        "id": "124",
+        "cat": "Audio",
+        "desc": "Musik - Alben"
+      },
+      {
+        "id": "141",
+        "cat": "Audio",
+        "desc": "Musik - Diskografie"
+      },
+      {
+        "id": "122",
+        "cat": "Audio/Audiobook",
+        "desc": "Musik - Hoerbuch"
+      },
+      {
+        "id": "123",
+        "cat": "Audio",
+        "desc": "Musik - Mixe"
+      },
+      {
+        "id": "133",
+        "cat": "Audio/MP3",
+        "desc": "Musik - MP3"
+      },
+      {
+        "id": "125",
+        "cat": "Audio/Video",
+        "desc": "Musik - Video"
+      },
+      {
+        "id": "113",
+        "cat": "PC",
+        "desc": "Programme - Linux"
+      },
+      {
+        "id": "114",
+        "cat": "PC/Mac",
+        "desc": "Programme - Mac"
+      },
+      {
+        "id": "115",
+        "cat": "PC/0day",
+        "desc": "Programme - Windows"
+      },
+      {
+        "id": "116",
+        "cat": "TV/Documentary",
+        "desc": "Serien - Dokus"
+      },
+      {
+        "id": "118",
+        "cat": "TV/Sport",
+        "desc": "Serien - Sport"
+      },
+      {
+        "id": "142",
+        "cat": "TV",
+        "desc": "Serien - Pack"
+      },
+      {
+        "id": "129",
+        "cat": "Other",
+        "desc": "Sonstiges"
+      },
+      {
+        "id": "109",
+        "cat": "PC/Mobile-Other",
+        "desc": "Spiele - Handy"
+      },
+      {
+        "id": "112",
+        "cat": "Console",
+        "desc": "Spiele - Konsolen"
+      },
+      {
+        "id": "111",
+        "cat": "PC/Games",
+        "desc": "Spiele - Mac / Linux"
+      },
+      {
+        "id": "110",
+        "cat": "PC/Games",
+        "desc": "Spiele - PC"
+      },
+      {
+        "id": "137",
+        "cat": "Console/Other",
+        "desc": "Wimmelspiele"
+      },
+      {
+        "id": "69",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "pin",
+      "label": "Pin",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "onlyupload",
+      "label": "Filter OnlyUpload only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "info_free",
+      "label": "About OnlyUpload at H-O-D",
+      "type": "info",
+      "default": "<ul><li>OnlyUpload are torrents where download is not counted but upload is. Good for building your Ratio up. (On the Prowlarr search results page these are tagged as Freeleech).</li></ul>"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "added",
+      "options": {
+        "added": "created",
+        "seeds": "seeders",
+        "size": "size",
+        "name": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents pro Seite:</b> setting to <b>100</b> on your <b>UserCP</b> page. The default is <i>15</i>."
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "If you are inactive for longer than 8 weeks, your account will be automatically deactivated."
+    },
+    {
+      "name": "info_seedhours",
+      "label": "Seeding Hours",
+      "type": "info",
+      "default": "Before using this indexer, make sure that you have set <b>Seed-Angaben</b> and <b>DSL Speed</b> on your <b>UserCP</b> page."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "pin": "{{ .Config.pin }}"
+    },
+    "error": [
+      {
+        "selector": ".tablea:contains(\"Fehler\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php",
+        "inheritinputs": true
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "showsearch": "1",
+      "search": "{{ .Keywords }}",
+      "incldead": "1",
+      "orderby": "{{ .Config.sort }}",
+      "sort": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.tableinborder[cellspacing=\"1\"][cellpadding=\"0\"]:not(:has(a[href=\"index.php\"])) > tbody > tr:has(a[href^=\"download.php\"]){{ if .Config.onlyupload }}:has(img[src=\"/pic/free.gif\"]){{ else }}{{ end }}"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[href^=\"details.php\"]",
+        "attribute": "onMouseOver",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=(.*?) width"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(1) b:nth-child(1)"
+      },
+      "files": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(1) b:nth-child(2)"
+      },
+      "seeders": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(2) b:nth-child(1)"
+      },
+      "leechers": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(2) > b:nth-of-type(2)"
+      },
+      "grabs": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(3) b:nth-child(1)"
+      },
+      "date": {
+        "selector": "td.tablea table tbody tr:nth-child(2) td:nth-child(5)",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +01:00"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              " ",
+              " "
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "02.01.2006 15:04:05 -07:00",
+              "02.01.2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"/pic/free.gif\"]": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "0.8"
+      },
+      "minimumseedtime": {
+        "text": "432000"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/houseofdevil.yml",
+    "sha256": "c582a26955f651e31cf98f3c3283d8dcad755b43d9104ae76aa719c40f87b4b7",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

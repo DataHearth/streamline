@@ -32,6 +32,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/indexersession"
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -89,6 +90,8 @@ type Client struct {
 	ImportScanFile *ImportScanFileClient
 	// ImportScanShow is the client for interacting with the ImportScanShow builders.
 	ImportScanShow *ImportScanShowClient
+	// IndexerSession is the client for interacting with the IndexerSession builders.
+	IndexerSession *IndexerSessionClient
 	// Invite is the client for interacting with the Invite builders.
 	Invite *InviteClient
 	// MediaEvent is the client for interacting with the MediaEvent builders.
@@ -149,6 +152,7 @@ func (c *Client) init() {
 	c.ImportScanBook = NewImportScanBookClient(c.config)
 	c.ImportScanFile = NewImportScanFileClient(c.config)
 	c.ImportScanShow = NewImportScanShowClient(c.config)
+	c.IndexerSession = NewIndexerSessionClient(c.config)
 	c.Invite = NewInviteClient(c.config)
 	c.MediaEvent = NewMediaEventClient(c.config)
 	c.MediaFile = NewMediaFileClient(c.config)
@@ -274,6 +278,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ImportScanBook:   NewImportScanBookClient(cfg),
 		ImportScanFile:   NewImportScanFileClient(cfg),
 		ImportScanShow:   NewImportScanShowClient(cfg),
+		IndexerSession:   NewIndexerSessionClient(cfg),
 		Invite:           NewInviteClient(cfg),
 		MediaEvent:       NewMediaEventClient(cfg),
 		MediaFile:        NewMediaFileClient(cfg),
@@ -326,6 +331,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ImportScanBook:   NewImportScanBookClient(cfg),
 		ImportScanFile:   NewImportScanFileClient(cfg),
 		ImportScanShow:   NewImportScanShowClient(cfg),
+		IndexerSession:   NewIndexerSessionClient(cfg),
 		Invite:           NewInviteClient(cfg),
 		MediaEvent:       NewMediaEventClient(cfg),
 		MediaFile:        NewMediaFileClient(cfg),
@@ -374,9 +380,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicCredit,
-		c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob, c.Season, c.Session,
-		c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob, c.User,
+		c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent, c.MediaFile,
+		c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
+		c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob,
+		c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -389,9 +396,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Album, c.ApiKey, c.Artist, c.ArtistMember, c.Author, c.Book,
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
-		c.ImportScanShow, c.Invite, c.MediaEvent, c.MediaFile, c.Movie, c.MusicCredit,
-		c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob, c.Season, c.Session,
-		c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob, c.User,
+		c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent, c.MediaFile,
+		c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
+		c.Season, c.Session, c.TVShow, c.TorrentSession, c.Track, c.TranscodeJob,
+		c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -434,6 +442,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ImportScanFile.mutate(ctx, m)
 	case *ImportScanShowMutation:
 		return c.ImportScanShow.mutate(ctx, m)
+	case *IndexerSessionMutation:
+		return c.IndexerSession.mutate(ctx, m)
 	case *InviteMutation:
 		return c.Invite.mutate(ctx, m)
 	case *MediaEventMutation:
@@ -3484,6 +3494,139 @@ func (c *ImportScanShowClient) mutate(ctx context.Context, m *ImportScanShowMuta
 	}
 }
 
+// IndexerSessionClient is a client for the IndexerSession schema.
+type IndexerSessionClient struct {
+	config
+}
+
+// NewIndexerSessionClient returns a client for the IndexerSession from the given config.
+func NewIndexerSessionClient(c config) *IndexerSessionClient {
+	return &IndexerSessionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `indexersession.Hooks(f(g(h())))`.
+func (c *IndexerSessionClient) Use(hooks ...Hook) {
+	c.hooks.IndexerSession = append(c.hooks.IndexerSession, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `indexersession.Intercept(f(g(h())))`.
+func (c *IndexerSessionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IndexerSession = append(c.inters.IndexerSession, interceptors...)
+}
+
+// Create returns a builder for creating a IndexerSession entity.
+func (c *IndexerSessionClient) Create() *IndexerSessionCreate {
+	mutation := newIndexerSessionMutation(c.config, OpCreate)
+	return &IndexerSessionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of IndexerSession entities.
+func (c *IndexerSessionClient) CreateBulk(builders ...*IndexerSessionCreate) *IndexerSessionCreateBulk {
+	return &IndexerSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *IndexerSessionClient) MapCreateBulk(slice any, setFunc func(*IndexerSessionCreate, int)) *IndexerSessionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &IndexerSessionCreateBulk{err: fmt.Errorf("calling to IndexerSessionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*IndexerSessionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &IndexerSessionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for IndexerSession.
+func (c *IndexerSessionClient) Update() *IndexerSessionUpdate {
+	mutation := newIndexerSessionMutation(c.config, OpUpdate)
+	return &IndexerSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *IndexerSessionClient) UpdateOne(_m *IndexerSession) *IndexerSessionUpdateOne {
+	mutation := newIndexerSessionMutation(c.config, OpUpdateOne, withIndexerSession(_m))
+	return &IndexerSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *IndexerSessionClient) UpdateOneID(id uint32) *IndexerSessionUpdateOne {
+	mutation := newIndexerSessionMutation(c.config, OpUpdateOne, withIndexerSessionID(id))
+	return &IndexerSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for IndexerSession.
+func (c *IndexerSessionClient) Delete() *IndexerSessionDelete {
+	mutation := newIndexerSessionMutation(c.config, OpDelete)
+	return &IndexerSessionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *IndexerSessionClient) DeleteOne(_m *IndexerSession) *IndexerSessionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *IndexerSessionClient) DeleteOneID(id uint32) *IndexerSessionDeleteOne {
+	builder := c.Delete().Where(indexersession.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &IndexerSessionDeleteOne{builder}
+}
+
+// Query returns a query builder for IndexerSession.
+func (c *IndexerSessionClient) Query() *IndexerSessionQuery {
+	return &IndexerSessionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeIndexerSession},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a IndexerSession entity by its id.
+func (c *IndexerSessionClient) Get(ctx context.Context, id uint32) (*IndexerSession, error) {
+	return c.Query().Where(indexersession.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *IndexerSessionClient) GetX(ctx context.Context, id uint32) *IndexerSession {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *IndexerSessionClient) Hooks() []Hook {
+	return c.hooks.IndexerSession
+}
+
+// Interceptors returns the client interceptors.
+func (c *IndexerSessionClient) Interceptors() []Interceptor {
+	return c.inters.IndexerSession
+}
+
+func (c *IndexerSessionClient) mutate(ctx context.Context, m *IndexerSessionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&IndexerSessionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&IndexerSessionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&IndexerSessionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&IndexerSessionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown IndexerSession mutation op: %q", m.Op())
+	}
+}
+
 // InviteClient is a client for the Invite schema.
 type InviteClient struct {
 	config
@@ -6161,17 +6304,17 @@ type (
 	hooks struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
 		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
-		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow, Invite,
-		MediaEvent, MediaFile, Movie, MusicCredit, OIDCIdentity, Person, Request,
-		ScheduledJob, Season, Session, TVShow, TorrentSession, Track, TranscodeJob,
-		User []ent.Hook
+		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
+		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicCredit,
+		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
+		TorrentSession, Track, TranscodeJob, User []ent.Hook
 	}
 	inters struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
 		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
-		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow, Invite,
-		MediaEvent, MediaFile, Movie, MusicCredit, OIDCIdentity, Person, Request,
-		ScheduledJob, Season, Session, TVShow, TorrentSession, Track, TranscodeJob,
-		User []ent.Interceptor
+		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
+		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicCredit,
+		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
+		TorrentSession, Track, TranscodeJob, User []ent.Interceptor
 	}
 )

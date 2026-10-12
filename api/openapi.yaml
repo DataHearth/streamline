@@ -2634,6 +2634,9 @@ paths:
     put:
       operationId: updateIndexer
       summary: Update an indexer
+      description: >-
+        Updates an indexer. Changing a `cardigann` indexer drops its tracker
+        session, so the next search logs in with what was saved.
       tags: [indexers]
       requestBody:
         $ref: "#/components/requestBodies/CreateIndexer"
@@ -2688,6 +2691,68 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /indexers/{name}/captcha:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: getIndexerCaptcha
+      summary: Load a built-in indexer's login captcha
+      description: >-
+        Fetches a `cardigann` indexer's login page and the image captcha on it,
+        for a person to read. The page is held for ten minutes under the
+        returned token, which `login` answers it with. 204 when the page shows
+        no captcha this time.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The captcha to read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexerCaptcha"
+        "204":
+          description: The login page shows no captcha
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /indexers/{name}/login:
+    parameters:
+      - $ref: "#/components/parameters/ResourceName"
+    post:
+      operationId: loginIndexer
+      summary: Log a built-in indexer in
+      description: >-
+        Runs a `cardigann` indexer's tracker login now, whatever backoff a
+        failed login left. A captcha answer carries the token `captcha`
+        returned. A refused login answers 422 with `code: connection_failed`
+        and the tracker's message.
+      tags: [indexers]
+      requestBody:
+        $ref: "#/components/requestBodies/IndexerLogin"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Indexer"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /indexers/test:
     post:
       operationId: testDraftIndexer
@@ -2707,6 +2772,106 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/catalog:
+    get:
+      operationId: getCardigannCatalog
+      summary: List the built-in indexer definitions
+      description: >-
+        Every Cardigann definition in force — shipped, updated or custom —
+        with what a catalog browser filters on.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardigannCatalog"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/catalog/{file}:
+    parameters:
+      - $ref: "#/components/parameters/DefinitionFile"
+    get:
+      operationId: getCardigannDefinition
+      summary: Describe one built-in indexer definition
+      description: Its links and the settings an indexer running it takes.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The definition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardigannDefinition"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/updates:
+    get:
+      operationId: listCardigannUpdates
+      summary: List held definition updates
+      description: >-
+        Upstream changes to the definition a configured built-in indexer runs
+        that would move it to other domains or change its login. They are held
+        — the indexer keeps running the version in force — until approved.
+      tags: [indexers]
+      responses:
+        "200":
+          description: The snapshot in force and the updates held
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardigannUpdates"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/updates/{file}/approve:
+    parameters:
+      - $ref: "#/components/parameters/DefinitionFile"
+    post:
+      operationId: approveCardigannUpdate
+      summary: Put a held definition update in force
+      tags: [indexers]
+      responses:
+        "204":
+          description: Approved
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cardigann/updates/{file}/reject:
+    parameters:
+      - $ref: "#/components/parameters/DefinitionFile"
+    post:
+      operationId: rejectCardigannUpdate
+      summary: Turn a held definition update down
+      description: >-
+        Keeps the version in force. The refused upstream version is not
+        proposed again; a later change to the definition is.
+      tags: [indexers]
+      responses:
+        "204":
+          description: Rejected
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -5340,6 +5505,13 @@ components:
         endpoints are unaffected.
 
   parameters:
+    DefinitionFile:
+      name: file
+      in: path
+      required: true
+      description: A Cardigann definition's file name, without .yml.
+      schema:
+        type: string
     ResourceID:
       name: id
       in: path
@@ -6182,6 +6354,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/IndexerCreate"
+
+    IndexerLogin:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/IndexerLogin"
 
     CreateDownloadClient:
       required: true
@@ -10419,7 +10598,16 @@ components:
           description: True when an API key is stored. The key itself is never returned.
         protocol:
           type: string
-          enum: [torznab, prowlarr]
+          enum: [torznab, prowlarr, cardigann]
+          description: >-
+            `cardigann` is a tracker streamline runs itself from a
+            Prowlarr/Jackett definition; its host and port are the tracker
+            site's.
+        definition:
+          type: string
+          description: >-
+            The Cardigann definition a `cardigann` indexer runs (its file
+            name). Absent for the other protocols.
         priority:
           type: integer
           x-go-type: uint8
@@ -10431,10 +10619,218 @@ components:
             Whether the tracker is private (invite-only, ratio-tracked). A
             Torznab feed carries no such flag, so this is the operator's
             setting; a Prowlarr entry's applies to every tracker behind it.
+        session:
+          $ref: "#/components/schemas/IndexerSession"
+        site:
+          type: string
+          description: A `cardigann` indexer's chosen link, when not the definition's first.
+        settings:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            A `cardigann` indexer's settings, secret ones left out (see
+            `secrets_set`).
+        secrets_set:
+          type: array
+          items:
+            type: string
+          description: The secret settings of a `cardigann` indexer that hold a value.
+        proxy:
+          type: string
+          description: A `cardigann` indexer's proxy, credentials stripped.
+
+    IndexerSession:
+      type: object
+      description: >-
+        A `cardigann` indexer's tracker login. Absent for the other protocols.
+      required: [login_required, captcha, logged_in]
+      properties:
+        login_required:
+          type: boolean
+          description: The definition logs in to its tracker.
+        captcha:
+          type: boolean
+          description: >-
+            The tracker's login form may show an image captcha, which only a
+            person can answer (`captcha`, then `login`).
+        logged_in:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+        retry_at:
+          type: string
+          format: date-time
+          description: >-
+            After a failed login, when the next automatic attempt may run.
+        last_error:
+          type: string
+
+    IndexerCaptcha:
+      type: object
+      required: [token, image]
+      properties:
+        token:
+          type: string
+        image:
+          type: string
+          description: The captcha image as a `data:` URL.
+
+    IndexerLogin:
+      type: object
+      properties:
+        token:
+          type: string
+        answer:
+          type: string
+
+    CardigannCatalog:
+      type: object
+      required: [upstream, definitions]
+      properties:
+        upstream:
+          $ref: "#/components/schemas/CardigannUpstream"
+        definitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardigannSummary"
+
+    CardigannSummary:
+      type: object
+      required: [file, name, description, language, type, links, login, captcha, challenge, categories, custom]
+      properties:
+        file:
+          type: string
+          description: What an indexer's `definition` names.
+        name:
+          type: string
+        description:
+          type: string
+        language:
+          type: string
+        type:
+          type: string
+          description: public, private or semi-private.
+        links:
+          type: array
+          items:
+            type: string
+        login:
+          type: string
+          description: The login method, or `none`.
+        captcha:
+          type: boolean
+          description: The login form may show an image captcha.
+        challenge:
+          type: boolean
+          description: The site sits behind a browser challenge that needs a solver.
+        categories:
+          type: array
+          items:
+            type: string
+          description: Top-level newznab categories (Movies, TV, Audio, Books…).
+        custom:
+          type: boolean
+          description: Read from the data directory's custom folder.
+
+    CardigannDefinition:
+      allOf:
+        - $ref: "#/components/schemas/CardigannSummary"
+        - type: object
+          required: [settings]
+          properties:
+            settings:
+              type: array
+              items:
+                $ref: "#/components/schemas/CardigannSetting"
+
+    CardigannSetting:
+      type: object
+      required: [name, label, type, secret]
+      properties:
+        name:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          description: >-
+            text, password, checkbox or select take a value; info, info_cookie,
+            info_flaresolverr, info_useragent and info_category_8000 only
+            explain, their text in `default`.
+        default:
+          type: string
+          description: The default value, or an info setting's text (plain, tags stripped).
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardigannOption"
+        secret:
+          type: boolean
+          description: Never returned once stored; an edit that leaves it empty keeps it.
+
+    CardigannOption:
+      type: object
+      required: [key, label]
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+
+    CardigannUpdates:
+      type: object
+      required: [upstream, pending]
+      properties:
+        upstream:
+          $ref: "#/components/schemas/CardigannUpstream"
+        pending:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardigannUpdate"
+
+    CardigannUpstream:
+      type: object
+      description: The Prowlarr/Indexers revision the definitions in force come from.
+      required: [commit, date]
+      properties:
+        commit:
+          type: string
+        date:
+          type: string
+
+    CardigannUpdate:
+      type: object
+      required: [file, name, reasons, removed, indexers, diff]
+      properties:
+        file:
+          type: string
+        name:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+          description: What the change does to where the definition sends things or how it logs in.
+        removed:
+          type: boolean
+          description: Upstream deleted the definition; approving removes it.
+        indexers:
+          type: array
+          items:
+            type: string
+          description: The configured indexers running the definition.
+        diff:
+          type: string
+          description: Unified diff from the version in force to the held one.
 
     IndexerCreate:
       type: object
-      required: [name, host, port, api_key]
+      required: [name]
+      description: >-
+        A Torznab or Prowlarr indexer takes host, port and api_key; a
+        `cardigann` one takes definition and its settings instead.
       properties:
         name:
           type: string
@@ -10451,7 +10847,7 @@ components:
           type: string
         protocol:
           type: string
-          enum: [torznab, prowlarr]
+          enum: [torznab, prowlarr, cardigann]
         priority:
           type: integer
           x-go-type: uint8
@@ -10463,6 +10859,22 @@ components:
             Whether the tracker is private (invite-only, ratio-tracked). A
             Torznab feed carries no such flag, so this is the operator's
             setting; a Prowlarr entry's applies to every tracker behind it.
+        definition:
+          type: string
+        site:
+          type: string
+        settings:
+          type: object
+          additionalProperties:
+            type: string
+          description: >-
+            By setting name. On an update, a secret setting left empty or out
+            keeps its stored value, unless the definition changes.
+        proxy:
+          type: string
+          description: >-
+            On an update, absent keeps the stored proxy and an empty string
+            clears it.
 
     DownloadClient:
       type: object

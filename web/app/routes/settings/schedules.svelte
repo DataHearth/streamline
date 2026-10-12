@@ -47,6 +47,7 @@
 		"drift-check":
 			i18n.schedule_verify_files(),
 		"file-selection": i18n.schedule_file_selection(),
+		"cardigann-update": i18n.schedule_cardigann_update(),
 	};
 
 	const qc = useQueryClient();

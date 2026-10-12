@@ -1,0 +1,145 @@
+{
+  "id": "damagnet",
+  "name": "DaMagNet",
+  "description": "DaMagNet is a Public DHT Crawler",
+  "language": "en-US",
+  "type": "public",
+  "encoding": "UTF-8",
+  "links": [
+    "https://damag.net/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "Other",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "movie-search": [
+        "q"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "info_category_8000",
+      "type": "info_category_8000"
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    }
+  ],
+  "search": {
+    "paths": [
+      {
+        "path": "/"
+      }
+    ],
+    "inputs": {
+      "q": "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}",
+      "wanted": "100"
+    },
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}"
+      ]
+    },
+    "rows": {
+      "selector": "table.table-striped > tbody > tr:has(a)",
+      "filters": [
+        {
+          "name": "andmatch"
+        }
+      ]
+    },
+    "fields": {
+      "category": {
+        "text": "Other"
+      },
+      "title": {
+        "selector": "a"
+      },
+      "details": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a",
+        "attribute": "href"
+      },
+      "date": {
+        "text": "now"
+      },
+      "files": {
+        "selector": "span.label"
+      },
+      "size": {
+        "selector": "span[id^=\"size\"]"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "infohash": {
+      "hash": {
+        "selector": "a[href^=\"magnet:?xt\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "([A-F|a-f|0-9]{40})"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "input[name=\"q\"]",
+        "attribute": "value",
+        "filters": [
+          {
+            "name": "validfilename"
+          }
+        ]
+      }
+    },
+    "headers": {
+      "Referer": [
+        "{{ .Config.sitelink }}"
+      ]
+    }
+  },
+  "source": {
+    "path": "definitions/v11/damagnet.yml",
+    "sha256": "6e4f2a4255d84ad786fbe22367b8b1f4fc196e896e2b0b809e6e601e5a27cf97",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

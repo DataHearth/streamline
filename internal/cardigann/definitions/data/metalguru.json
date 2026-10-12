@@ -1,0 +1,329 @@
+{
+  "id": "metalguru",
+  "name": "MetalGuru",
+  "description": "MetalGuru is a Private Torrent Tracker for GENERAL with focus on MUSIC",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://metalguru.me/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "51",
+        "cat": "Audio/Lossless",
+        "desc": "24bit"
+      },
+      {
+        "id": "58",
+        "cat": "TV/Anime",
+        "desc": "Anime"
+      },
+      {
+        "id": "39",
+        "cat": "PC/Mobile-Other",
+        "desc": "Anything Mobile"
+      },
+      {
+        "id": "1",
+        "cat": "PC",
+        "desc": "Applications"
+      },
+      {
+        "id": "2",
+        "cat": "Books",
+        "desc": "Books Ebooks & mags"
+      },
+      {
+        "id": "59",
+        "cat": "Movies/SD",
+        "desc": "Cams"
+      },
+      {
+        "id": "52",
+        "cat": "Audio",
+        "desc": "DJ"
+      },
+      {
+        "id": "53",
+        "cat": "Audio",
+        "desc": "DJ PACKS"
+      },
+      {
+        "id": "46",
+        "cat": "Books",
+        "desc": "Documents"
+      },
+      {
+        "id": "47",
+        "cat": "Audio/Lossless",
+        "desc": "Flac/HD Audio"
+      },
+      {
+        "id": "61",
+        "cat": "Console",
+        "desc": "Games"
+      },
+      {
+        "id": "62",
+        "cat": "Audio",
+        "desc": "Karaoke"
+      },
+      {
+        "id": "45",
+        "cat": "Other",
+        "desc": "Misc"
+      },
+      {
+        "id": "57",
+        "cat": "Movies",
+        "desc": "Movie Packs"
+      },
+      {
+        "id": "10",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "50",
+        "cat": "Audio",
+        "desc": "MQA"
+      },
+      {
+        "id": "29",
+        "cat": "Audio",
+        "desc": "Music"
+      },
+      {
+        "id": "31",
+        "cat": "Audio/Video",
+        "desc": "Music| Movie/Videos"
+      },
+      {
+        "id": "32",
+        "cat": "Audio",
+        "desc": "Music| Packs"
+      },
+      {
+        "id": "60",
+        "cat": "TV",
+        "desc": "Toons"
+      },
+      {
+        "id": "54",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "63",
+        "cat": "TV",
+        "desc": "TV Packs"
+      },
+      {
+        "id": "56",
+        "cat": "XXX",
+        "desc": "XXX"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ],
+      "book-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "use_ssl": "1",
+      "submitme": "X"
+    },
+    "error": [
+      {
+        "selector": "h2:contains(\"failed\")",
+        "message": {
+          "selector": "td.colhead2"
+        }
+      }
+    ],
+    "test": {
+      "path": "browse.php",
+      "selector": "a[href*=\"logout.php?hash_please=\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }} {{ else }}{{ end }}{{ .Keywords }}",
+      "searchin": "{{ if .Query.IMDBID }}descr{{else}}title{{ end }}",
+      "incldead": "1",
+      "only_free": "{{ if .Config.freeleech }}1{{else}}0{{end}}",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.table-bordered > tbody > tr:has(a[href^=\"details.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?torrent=\"]",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "a[href^=\"details.php?id=\"][onmouseover]",
+        "attribute": "onmouseover",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "src=\\\\'(.*?)\\\\'"
+            ]
+          }
+        ]
+      },
+      "files": {
+        "selector": "td:nth-child(5)"
+      },
+      "date_day": {
+        "selector": "td:nth-child(7):contains(\"day\")",
+        "optional": true
+      },
+      "date_year": {
+        "selector": "td:nth-child(7):not(:contains(\"day\"))",
+        "optional": true,
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Jan 2 2006 03:04 PM",
+              "Jan 2 2006 03:04 pm"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_day .Result.date_year }}{{ or .Result.date_day .Result.date_year }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "selector": "td:nth-child(8)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(9)"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "a.infofree": "0",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "case": {
+          "a.infofree": "172800",
+          "*": "129600"
+        }
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/metalguru.yml",
+    "sha256": "697d46bc9e20ae17e53062999777b80e8427f8d474ee13a440a87f813925e531",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

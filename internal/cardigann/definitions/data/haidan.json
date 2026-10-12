@@ -1,0 +1,347 @@
+{
+  "id": "haidan",
+  "name": "HaiDan",
+  "description": "HaiDan is a CHINESE Private Torrent Tracker for HD MOVIES / TV",
+  "language": "zh-CN",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://www.haidan.cc/"
+  ],
+  "legacylinks": [
+    "https://www.haidan.video/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "404",
+        "cat": "TV/Documentary",
+        "desc": "Documentaries(纪录片)"
+      },
+      {
+        "id": "401",
+        "cat": "Movies",
+        "desc": "Movies(电影)"
+      },
+      {
+        "id": "405",
+        "cat": "TV/Anime",
+        "desc": "Animations(动画片)"
+      },
+      {
+        "id": "402",
+        "cat": "TV",
+        "desc": "TV Series(电视剧)"
+      },
+      {
+        "id": "403",
+        "cat": "TV",
+        "desc": "TV Shows(综艺)"
+      },
+      {
+        "id": "406",
+        "cat": "Audio/Video",
+        "desc": "Music Videos(MV)"
+      },
+      {
+        "id": "407",
+        "cat": "TV/Sport",
+        "desc": "Sports(体育)"
+      },
+      {
+        "id": "409",
+        "cat": "Other",
+        "desc": "Misc(其他)"
+      },
+      {
+        "id": "408",
+        "cat": "Audio",
+        "desc": "HQ Audio(音乐)"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "doubanid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "doubanid"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    },
+    {
+      "name": "info_indexer",
+      "label": "Alert",
+      "type": "info",
+      "default": "HaiDan has switched to a <b>group</b> torrent list, which means this Indexer can only display the first item in each group.<br>This <b>yml</b> Indexer will eventually be re-written in c# as soon as a c# dev volunteers, to display all items in a group."
+    },
+    {
+      "name": "info_flaresolverr",
+      "type": "info_flaresolverr"
+    },
+    {
+      "name": "info_activity",
+      "label": "Account Inactivity",
+      "type": "info",
+      "default": "Account retention rules:<ol><li>Veteran User and above will be retained forever</li><li>Elite User and above will not have their account deleted after parking (in the control panel)</li><li>Users with a parked account will be deleted if they do not log in for 400 consecutive days</li><li>Users with a non-parked account will be deleted if they do not log in for 150 consecutive days</li><li>Users with no traffic (ie, upload/download data are both 0) will be deleted if they do not log in for 100 consecutive days.</li></ol>"
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "login.php",
+    "form": "form[action=\"takelogin.php\"]",
+    "captcha": {
+      "type": "image",
+      "selector": "img[alt=\"CAPTCHA\"]",
+      "input": "imagestring"
+    },
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}",
+      "logout": "",
+      "securelogin": "",
+      "ssl": "yes",
+      "trackerssl": "yes"
+    },
+    "error": [
+      {
+        "selector": "td.embedded:has(h2:contains(\"失败\"))"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href*=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torrents.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}cat{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}{{ .Query.DoubanID }}{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}{{ .Keywords }}{{ else }}{{ end }}",
+      "incldead": "0",
+      "spstate": "{{ if .Config.freeleech }}2{{ else }}0{{ end }}",
+      "search_area": "{{ if .Query.IMDBID }}4{{ else }}{{ end }}{{ if and .Query.DoubanID (eq .Query.IMDBID .False) }}1{{ else }}{{ end }}{{ if and (eq .Query.IMDBID .False) (eq .Query.DoubanID .False) }}0{{ else }}{{ end }}",
+      "search_mode": "0",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}",
+      "notnewword": "1"
+    },
+    "rows": {
+      "selector": "div.group_content:has(a[href^=\"download.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "year": {
+        "selector": "div.video_year",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "年份:",
+              " "
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a.video_name_str",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              "{{ .Result.year }}"
+            ]
+          }
+        ]
+      },
+      "details": {
+        "selector": "a.video_name_str",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "description": {
+        "selector": "div.torrent_name_col > a",
+        "optional": true
+      },
+      "poster": {
+        "selector": "img#poster",
+        "attribute": "data-src",
+        "optional": true
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "doubanid": {
+        "selector": "a[href*=\"movie.douban.com/subject/\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "size": {
+        "selector": "div.group > div.video_size, div.torrent_item > div.video_size"
+      },
+      "seeders": {
+        "selector": "div.group > div.seeder_col, div.torrent_item > div.seeder_col"
+      },
+      "leechers": {
+        "selector": "div.group > div.leecher_col, div.torrent_item > div.leecher_col"
+      },
+      "grabs": {
+        "selector": "div.group > div.snatched_col, div.torrent_item > div.snatched_col"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img.pro_free": "0",
+          "img.pro_free2up": "0",
+          "img.pro_50pctdown": "0.5",
+          "img.pro_50pctdown2up": "0.5",
+          "img.pro_30pctdown": "0.3",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img.pro_50pctdown2up": "2",
+          "img.pro_free2up": "2",
+          "img.pro_2up": "2",
+          "*": "1"
+        }
+      },
+      "date_elapsed": {
+        "selector": "div.time_col > span[title]",
+        "attribute": "title",
+        "optional": true,
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date_added": {
+        "selector": "div.time_col:contains(\"发布于\"):not(:has(span[title]))",
+        "optional": true,
+        "remove": "span",
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "发布于",
+              ""
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +08:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_elapsed .Result.date_added }}{{ or .Result.date_elapsed .Result.date_added }}{{ else }}now{{ end }}"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/haidan.yml",
+    "sha256": "12affb3875708753f8c5d37808eee5186e7440d25a977f6d6a038d2089bfc7b1",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

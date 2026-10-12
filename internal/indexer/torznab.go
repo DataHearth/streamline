@@ -107,6 +107,20 @@ func (t *Torznab) Search(
 	if params.Episode > 0 {
 		q.Set("ep", strconv.FormatUint(uint64(params.Episode), 10))
 	}
+	// Only when no TMDB/TVDB id is sent: Jackett refuses a query carrying an
+	// id its tracker cannot search by (TorznabCapabilities' CanHandleQuery)
+	// and answers it with nothing, so pairing the two would lose every
+	// tracker that knows one but not the other. searchAll asks again with
+	// this id alone when the first query comes back empty.
+	if params.IMDbID != "" && params.TMDBID == 0 && params.TVDBID == 0 {
+		switch params.Kind {
+		case KindMovie:
+			q.Set("t", "movie")
+		case KindTV:
+			q.Set("t", "tvsearch")
+		}
+		q.Set("imdbid", params.IMDbID)
+	}
 	if cat := torznabCategories(params.Kind); cat != "" {
 		q.Set("cat", cat)
 	}
@@ -188,6 +202,8 @@ func parseItems(items []torznabItem) []SearchResult {
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
 					r.TMDBID = uint32(v)
 				}
+			case "imdbid", "imdb":
+				r.IMDbID = imdbNumber(attr.Value)
 			}
 		}
 		r.InfoHash = infoHash(hash, magnet, r.Download)

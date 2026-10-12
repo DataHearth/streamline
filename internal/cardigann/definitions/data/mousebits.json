@@ -1,0 +1,267 @@
+{
+  "id": "mousebits",
+  "name": "MouseBits",
+  "description": "MouseBits is a Private Torrent Tracker for all things Disney",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://mousebits.com/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "34",
+        "cat": "TV",
+        "desc": "Video (DVD ISO)"
+      },
+      {
+        "id": "14",
+        "cat": "TV",
+        "desc": "Multi-angle tribute"
+      },
+      {
+        "id": "36",
+        "cat": "TV",
+        "desc": "Martin Vid"
+      },
+      {
+        "id": "15",
+        "cat": "TV",
+        "desc": "One-take ride-through"
+      },
+      {
+        "id": "26",
+        "cat": "TV",
+        "desc": "TV Specials"
+      },
+      {
+        "id": "28",
+        "cat": "TV",
+        "desc": "Promotional Content"
+      },
+      {
+        "id": "29",
+        "cat": "TV",
+        "desc": "Vacation Planner"
+      },
+      {
+        "id": "30",
+        "cat": "Audio/MP3",
+        "desc": "Music Album (lossy)"
+      },
+      {
+        "id": "31",
+        "cat": "Audio/Lossless",
+        "desc": "Music Album (FLAC)"
+      },
+      {
+        "id": "32",
+        "cat": "Audio",
+        "desc": "Attraction Series"
+      },
+      {
+        "id": "35",
+        "cat": "Audio",
+        "desc": "Background Series"
+      },
+      {
+        "id": "17",
+        "cat": "Audio",
+        "desc": "Multi-track collection"
+      },
+      {
+        "id": "18",
+        "cat": "Audio",
+        "desc": "Studio mix ride-through"
+      },
+      {
+        "id": "19",
+        "cat": "Audio",
+        "desc": "Live recording"
+      },
+      {
+        "id": "33",
+        "cat": "Audio",
+        "desc": "Induction Recording"
+      },
+      {
+        "id": "21",
+        "cat": "Other",
+        "desc": "Park update"
+      },
+      {
+        "id": "22",
+        "cat": "Other",
+        "desc": "Desktops"
+      },
+      {
+        "id": "23",
+        "cat": "Other",
+        "desc": "Vacation photos"
+      },
+      {
+        "id": "25",
+        "cat": "Other",
+        "desc": "Community media"
+      },
+      {
+        "id": "27",
+        "cat": "Other",
+        "desc": "Off-topic"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "3",
+      "options": {
+        "3": "created",
+        "5": "seeders",
+        "2": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "2",
+      "options": {
+        "2": "desc",
+        "1": "asc"
+      }
+    },
+    {
+      "name": "info",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "?page=login",
+    "form": "form",
+    "inputs": {
+      "uid": "{{ .Config.username }}",
+      "pwd": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "span:contains(\"Password Incorrect\")"
+      },
+      {
+        "selector": "span:contains(\"Username Incorrect\")"
+      }
+    ],
+    "test": {
+      "path": "index.php",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}filter_cat[{{.}}]=1&{{end}}",
+      "search": "{{ .Keywords }}",
+      "page": "torrents",
+      "category": "0",
+      "active": "0",
+      "order": "{{ .Config.sort }}",
+      "by": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table.lista:last-of-type > tbody > tr:has(a[href^=\"index.php?page=torrents&category=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"index.php?page=torrents&category=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "category"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"index.php?page=torrent-details&id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"index.php?page=torrent-details&id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "size": {
+        "text": "512 MB"
+      },
+      "date": {
+        "selector": "td:nth-child(4)",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "02/01/2006"
+            ]
+          }
+        ]
+      },
+      "seeders": {
+        "selector": "td:nth-child(5)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)"
+      },
+      "grabs": {
+        "selector": "td:nth-child(7)"
+      },
+      "downloadvolumefactor": {
+        "text": "1"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/mousebits.yml",
+    "sha256": "78bfce0ddd1c615508ea7415332e75abd9cebb652c45c58834ba771e50f2257e",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

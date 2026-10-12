@@ -1,0 +1,283 @@
+{
+  "id": "proporno",
+  "name": "ProPorno",
+  "description": "ProPorno is a RUSSIAN Semi-Private tracker for 3X",
+  "language": "ru-RU",
+  "type": "semi-private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://proporno.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "2",
+        "cat": "XXX",
+        "desc": "порно видео"
+      },
+      {
+        "id": "4",
+        "cat": "XXX",
+        "desc": "Порно с блондинками"
+      },
+      {
+        "id": "5",
+        "cat": "XXX",
+        "desc": "лесбиянки"
+      },
+      {
+        "id": "19",
+        "cat": "XXX",
+        "desc": "эротика"
+      },
+      {
+        "id": "20",
+        "cat": "XXX",
+        "desc": "груповушка"
+      },
+      {
+        "id": "16",
+        "cat": "XXX",
+        "desc": "анальный секс"
+      },
+      {
+        "id": "22",
+        "cat": "XXX",
+        "desc": "Молодые девушки"
+      },
+      {
+        "id": "24",
+        "cat": "XXX",
+        "desc": "Минет / куннилингус / оральный секс"
+      },
+      {
+        "id": "25",
+        "cat": "XXX",
+        "desc": "большая грудь"
+      },
+      {
+        "id": "28",
+        "cat": "XXX",
+        "desc": "порно видео зрелых"
+      },
+      {
+        "id": "29",
+        "cat": "XXX",
+        "desc": "видео кастинг"
+      },
+      {
+        "id": "32",
+        "cat": "XXX",
+        "desc": "девушки с красивыми попами"
+      },
+      {
+        "id": "33",
+        "cat": "XXX",
+        "desc": "порно с мулатками"
+      },
+      {
+        "id": "21",
+        "cat": "XXX",
+        "desc": "любительское видео"
+      },
+      {
+        "id": "3",
+        "cat": "XXX",
+        "desc": "порно фильмы"
+      },
+      {
+        "id": "30",
+        "cat": "XXX",
+        "desc": "зарубежные порно фильмы"
+      },
+      {
+        "id": "31",
+        "cat": "XXX",
+        "desc": "фильмы с русским переводом"
+      },
+      {
+        "id": "7",
+        "cat": "XXX",
+        "desc": "русское порно видео"
+      },
+      {
+        "id": "27",
+        "cat": "XXX",
+        "desc": "убойная эротика"
+      },
+      {
+        "id": "26",
+        "cat": "XXX",
+        "desc": "онлайн порно"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    }
+  ],
+  "login": {
+    "method": "form",
+    "path": "/",
+    "form": "form[onSubmit]",
+    "inputs": {
+      "login_name": "{{ .Config.username }}",
+      "login_password": "{{ .Config.password }}",
+      "login": "submit"
+    },
+    "error": [
+      {
+        "selector": "div.berrors:contains(\"Ошибка авторизации\")"
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href$=\"/index.php?action=logout\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "index.php"
+      }
+    ],
+    "inputs": {
+      "do": "search",
+      "subaction": "search",
+      "story": "{{ if .Keywords }}{{ .Keywords }}{{ else }}{{ .Today.Year }}{{ end }}",
+      "titleonly": "{{ if .Keywords }}3{{ else }}0{{ end }}",
+      "sortby": "date",
+      "resorder": "desc",
+      "showposts": "0",
+      "$raw": "{{ range .Categories }}catlist[]={{.}}&{{end}}"
+    },
+    "rows": {
+      "after": 1,
+      "selector": "div.goods-777:has(div.inmy), div.goods-7777:has(div.mini)"
+    },
+    "fields": {
+      "categorydesc_optional": {
+        "selector": "div.inmy > a:last-of-type",
+        "optional": true
+      },
+      "categorydesc": {
+        "text": "{{ if .Result.categorydesc_optional }}{{ .Result.categorydesc_optional }}{{ else }}порно видео{{ end }}"
+      },
+      "title": {
+        "selector": "div.news_text > a"
+      },
+      "details": {
+        "selector": "div.news_text > a",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "div.news_text > a",
+        "attribute": "href"
+      },
+      "poster": {
+        "selector": "img[src*=\"/uploads/posts/\"]",
+        "attribute": "src",
+        "optional": true
+      },
+      "date_day": {
+        "selector": "div.mini:contains(\"Сегодня\"), div.mini:contains(\"Вчера\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "((Вчера|Сегодня)(, \\p{Nd}{2}:\\p{Nd}{2}))"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Вчера",
+              "Yesterday"
+            ]
+          },
+          {
+            "name": "replace",
+            "args": [
+              "Сегодня",
+              "Today"
+            ]
+          },
+          {
+            "name": "fuzzytime"
+          }
+        ]
+      },
+      "date_year": {
+        "selector": "div.mini:contains(\"-\")",
+        "optional": true,
+        "filters": [
+          {
+            "name": "regexp",
+            "args": [
+              "(\\p{Nd}{1,2}-\\p{Nd}{2}-\\p{Nd}{4}, \\p{Nd}{2}:\\p{Nd}{2})"
+            ]
+          },
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2-01-2006, 15:04 -07:00",
+              "2-01-2006, 15:04 -0700"
+            ]
+          }
+        ]
+      },
+      "date": {
+        "text": "{{ if or .Result.date_year .Result.date_day }}{{ or .Result.date_year .Result.date_day }}{{ else }}now{{ end }}"
+      },
+      "size": {
+        "text": "1 GB"
+      },
+      "seeders": {
+        "text": "1"
+      },
+      "leechers": {
+        "text": "1"
+      },
+      "downloadvolumefactor": {
+        "text": "0"
+      },
+      "uploadvolumefactor": {
+        "text": "1"
+      }
+    }
+  },
+  "download": {
+    "selectors": [
+      {
+        "selector": "a[href^=\"magnet:?xt=\"]",
+        "attribute": "href"
+      }
+    ]
+  },
+  "source": {
+    "path": "definitions/v11/proporno.yml",
+    "sha256": "da4d2b10b99eedd7b346a3c4f37a6a5c7bee0ad04c7ce568e825dc4de3f6b614",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

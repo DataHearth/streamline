@@ -1436,13 +1436,16 @@ func (e ImportScanShowDecisionRequestDecision) Valid() bool {
 
 // Defines values for IndexerProtocol.
 const (
-	IndexerProtocolProwlarr IndexerProtocol = "prowlarr"
-	IndexerProtocolTorznab  IndexerProtocol = "torznab"
+	IndexerProtocolCardigann IndexerProtocol = "cardigann"
+	IndexerProtocolProwlarr  IndexerProtocol = "prowlarr"
+	IndexerProtocolTorznab   IndexerProtocol = "torznab"
 )
 
 // Valid indicates whether the value is a known member of the IndexerProtocol enum.
 func (e IndexerProtocol) Valid() bool {
 	switch e {
+	case IndexerProtocolCardigann:
+		return true
 	case IndexerProtocolProwlarr:
 		return true
 	case IndexerProtocolTorznab:
@@ -1454,13 +1457,16 @@ func (e IndexerProtocol) Valid() bool {
 
 // Defines values for IndexerCreateProtocol.
 const (
-	IndexerCreateProtocolProwlarr IndexerCreateProtocol = "prowlarr"
-	IndexerCreateProtocolTorznab  IndexerCreateProtocol = "torznab"
+	IndexerCreateProtocolCardigann IndexerCreateProtocol = "cardigann"
+	IndexerCreateProtocolProwlarr  IndexerCreateProtocol = "prowlarr"
+	IndexerCreateProtocolTorznab   IndexerCreateProtocol = "torznab"
 )
 
 // Valid indicates whether the value is a known member of the IndexerCreateProtocol enum.
 func (e IndexerCreateProtocol) Valid() bool {
 	switch e {
+	case IndexerCreateProtocolCardigann:
+		return true
 	case IndexerCreateProtocolProwlarr:
 		return true
 	case IndexerCreateProtocolTorznab:
@@ -4490,6 +4496,123 @@ type BookVolume struct {
 // monitored.
 type BookVolumeStatus string
 
+// CardigannCatalog defines model for CardigannCatalog.
+type CardigannCatalog struct {
+	Definitions []CardigannSummary `json:"definitions"`
+
+	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	Upstream CardigannUpstream `json:"upstream"`
+}
+
+// CardigannDefinition defines model for CardigannDefinition.
+type CardigannDefinition struct {
+	// Captcha The login form may show an image captcha.
+	Captcha bool `json:"captcha"`
+
+	// Categories Top-level newznab categories (Movies, TV, Audio, Books…).
+	Categories []string `json:"categories"`
+
+	// Challenge The site sits behind a browser challenge that needs a solver.
+	Challenge bool `json:"challenge"`
+
+	// Custom Read from the data directory's custom folder.
+	Custom      bool   `json:"custom"`
+	Description string `json:"description"`
+
+	// File What an indexer's `definition` names.
+	File     string   `json:"file"`
+	Language string   `json:"language"`
+	Links    []string `json:"links"`
+
+	// Login The login method, or `none`.
+	Login    string             `json:"login"`
+	Name     string             `json:"name"`
+	Settings []CardigannSetting `json:"settings"`
+
+	// Type public, private or semi-private.
+	Type string `json:"type"`
+}
+
+// CardigannOption defines model for CardigannOption.
+type CardigannOption struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+}
+
+// CardigannSetting defines model for CardigannSetting.
+type CardigannSetting struct {
+	// Default The default value, or an info setting's text (plain, tags stripped).
+	Default *string            `json:"default,omitempty"`
+	Label   string             `json:"label"`
+	Name    string             `json:"name"`
+	Options *[]CardigannOption `json:"options,omitempty"`
+
+	// Secret Never returned once stored; an edit that leaves it empty keeps it.
+	Secret bool `json:"secret"`
+
+	// Type text, password, checkbox or select take a value; info, info_cookie, info_flaresolverr, info_useragent and info_category_8000 only explain, their text in `default`.
+	Type string `json:"type"`
+}
+
+// CardigannSummary defines model for CardigannSummary.
+type CardigannSummary struct {
+	// Captcha The login form may show an image captcha.
+	Captcha bool `json:"captcha"`
+
+	// Categories Top-level newznab categories (Movies, TV, Audio, Books…).
+	Categories []string `json:"categories"`
+
+	// Challenge The site sits behind a browser challenge that needs a solver.
+	Challenge bool `json:"challenge"`
+
+	// Custom Read from the data directory's custom folder.
+	Custom      bool   `json:"custom"`
+	Description string `json:"description"`
+
+	// File What an indexer's `definition` names.
+	File     string   `json:"file"`
+	Language string   `json:"language"`
+	Links    []string `json:"links"`
+
+	// Login The login method, or `none`.
+	Login string `json:"login"`
+	Name  string `json:"name"`
+
+	// Type public, private or semi-private.
+	Type string `json:"type"`
+}
+
+// CardigannUpdate defines model for CardigannUpdate.
+type CardigannUpdate struct {
+	// Diff Unified diff from the version in force to the held one.
+	Diff string `json:"diff"`
+	File string `json:"file"`
+
+	// Indexers The configured indexers running the definition.
+	Indexers []string `json:"indexers"`
+	Name     string   `json:"name"`
+
+	// Reasons What the change does to where the definition sends things or how it logs in.
+	Reasons []string `json:"reasons"`
+
+	// Removed Upstream deleted the definition; approving removes it.
+	Removed bool `json:"removed"`
+}
+
+// CardigannUpdates defines model for CardigannUpdates.
+type CardigannUpdates struct {
+	Pending []CardigannUpdate `json:"pending"`
+
+	// Upstream The Prowlarr/Indexers revision the definitions in force come from.
+	Upstream CardigannUpstream `json:"upstream"`
+}
+
+// CardigannUpstream The Prowlarr/Indexers revision the definitions in force come from.
+type CardigannUpstream struct {
+	Commit string `json:"commit"`
+	Date   string `json:"date"`
+}
+
 // CastMember defines model for CastMember.
 type CastMember struct {
 	Character *string `json:"character,omitempty"`
@@ -5368,41 +5491,97 @@ type ImportScanShowList struct {
 // Indexer defines model for Indexer.
 type Indexer struct {
 	// ApiKeySet True when an API key is stored. The key itself is never returned.
-	ApiKeySet bool    `json:"api_key_set"`
-	Enabled   bool    `json:"enabled"`
-	Host      string  `json:"host"`
-	Name      string  `json:"name"`
-	Path      *string `json:"path,omitempty"`
-	Port      uint16  `json:"port"`
-	Priority  *uint8  `json:"priority,omitempty"`
+	ApiKeySet bool `json:"api_key_set"`
+
+	// Definition The Cardigann definition a `cardigann` indexer runs (its file name). Absent for the other protocols.
+	Definition *string `json:"definition,omitempty"`
+	Enabled    bool    `json:"enabled"`
+	Host       string  `json:"host"`
+	Name       string  `json:"name"`
+	Path       *string `json:"path,omitempty"`
+	Port       uint16  `json:"port"`
+	Priority   *uint8  `json:"priority,omitempty"`
 
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
-	Private  bool            `json:"private"`
+	Private bool `json:"private"`
+
+	// Protocol `cardigann` is a tracker streamline runs itself from a Prowlarr/Jackett definition; its host and port are the tracker site's.
 	Protocol IndexerProtocol `json:"protocol"`
-	UseSsl   *bool           `json:"use_ssl,omitempty"`
+
+	// Proxy A `cardigann` indexer's proxy, credentials stripped.
+	Proxy *string `json:"proxy,omitempty"`
+
+	// SecretsSet The secret settings of a `cardigann` indexer that hold a value.
+	SecretsSet *[]string `json:"secrets_set,omitempty"`
+
+	// Session A `cardigann` indexer's tracker login. Absent for the other protocols.
+	Session *IndexerSession `json:"session,omitempty"`
+
+	// Settings A `cardigann` indexer's settings, secret ones left out (see `secrets_set`).
+	Settings *map[string]string `json:"settings,omitempty"`
+
+	// Site A `cardigann` indexer's chosen link, when not the definition's first.
+	Site   *string `json:"site,omitempty"`
+	UseSsl *bool   `json:"use_ssl,omitempty"`
 }
 
-// IndexerProtocol defines model for Indexer.Protocol.
+// IndexerProtocol `cardigann` is a tracker streamline runs itself from a Prowlarr/Jackett definition; its host and port are the tracker site's.
 type IndexerProtocol string
 
-// IndexerCreate defines model for IndexerCreate.
+// IndexerCaptcha defines model for IndexerCaptcha.
+type IndexerCaptcha struct {
+	// Image The captcha image as a `data:` URL.
+	Image string `json:"image"`
+	Token string `json:"token"`
+}
+
+// IndexerCreate A Torznab or Prowlarr indexer takes host, port and api_key; a `cardigann` one takes definition and its settings instead.
 type IndexerCreate struct {
-	ApiKey   string  `json:"api_key"`
-	Enabled  *bool   `json:"enabled,omitempty"`
-	Host     string  `json:"host"`
-	Name     string  `json:"name"`
-	Path     *string `json:"path,omitempty"`
-	Port     uint16  `json:"port"`
-	Priority *uint8  `json:"priority,omitempty"`
+	ApiKey     *string `json:"api_key,omitempty"`
+	Definition *string `json:"definition,omitempty"`
+	Enabled    *bool   `json:"enabled,omitempty"`
+	Host       *string `json:"host,omitempty"`
+	Name       string  `json:"name"`
+	Path       *string `json:"path,omitempty"`
+	Port       *uint16 `json:"port,omitempty"`
+	Priority   *uint8  `json:"priority,omitempty"`
 
 	// Private Whether the tracker is private (invite-only, ratio-tracked). A Torznab feed carries no such flag, so this is the operator's setting; a Prowlarr entry's applies to every tracker behind it.
 	Private  *bool                  `json:"private,omitempty"`
 	Protocol *IndexerCreateProtocol `json:"protocol,omitempty"`
-	UseSsl   *bool                  `json:"use_ssl,omitempty"`
+
+	// Proxy On an update, absent keeps the stored proxy and an empty string clears it.
+	Proxy *string `json:"proxy,omitempty"`
+
+	// Settings By setting name. On an update, a secret setting left empty or out keeps its stored value, unless the definition changes.
+	Settings *map[string]string `json:"settings,omitempty"`
+	Site     *string            `json:"site,omitempty"`
+	UseSsl   *bool              `json:"use_ssl,omitempty"`
 }
 
 // IndexerCreateProtocol defines model for IndexerCreate.Protocol.
 type IndexerCreateProtocol string
+
+// IndexerLogin defines model for IndexerLogin.
+type IndexerLogin struct {
+	Answer *string `json:"answer,omitempty"`
+	Token  *string `json:"token,omitempty"`
+}
+
+// IndexerSession A `cardigann` indexer's tracker login. Absent for the other protocols.
+type IndexerSession struct {
+	// Captcha The tracker's login form may show an image captcha, which only a person can answer (`captcha`, then `login`).
+	Captcha   bool       `json:"captcha"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	LastError *string    `json:"last_error,omitempty"`
+	LoggedIn  bool       `json:"logged_in"`
+
+	// LoginRequired The definition logs in to its tracker.
+	LoginRequired bool `json:"login_required"`
+
+	// RetryAt After a failed login, when the next automatic attempt may run.
+	RetryAt *time.Time `json:"retry_at,omitempty"`
+}
 
 // Invite defines model for Invite.
 type Invite struct {
@@ -8379,6 +8558,9 @@ type CalendarFrom = time.Time
 // CalendarTo defines model for CalendarTo.
 type CalendarTo = time.Time
 
+// DefinitionFile defines model for DefinitionFile.
+type DefinitionFile = string
+
 // DeleteFiles defines model for DeleteFiles.
 type DeleteFiles = bool
 
@@ -8826,7 +9008,7 @@ type CreateCustomFormat = CustomFormatCreate
 // CreateDownloadClient defines model for CreateDownloadClient.
 type CreateDownloadClient = DownloadClientCreate
 
-// CreateIndexer defines model for CreateIndexer.
+// CreateIndexer A Torznab or Prowlarr indexer takes host, port and api_key; a `cardigann` one takes definition and its settings instead.
 type CreateIndexer = IndexerCreate
 
 // CreateInvite defines model for CreateInvite.
@@ -9589,6 +9771,9 @@ type TestDraftIndexerJSONRequestBody = IndexerCreate
 // UpdateIndexerJSONRequestBody defines body for UpdateIndexer for application/json ContentType.
 type UpdateIndexerJSONRequestBody = IndexerCreate
 
+// LoginIndexerJSONRequestBody defines body for LoginIndexer for application/json ContentType.
+type LoginIndexerJSONRequestBody = IndexerLogin
+
 // StartImportJSONRequestBody defines body for StartImport for application/json ContentType.
 type StartImportJSONRequestBody = ImportScanCreateRequest
 
@@ -9994,6 +10179,21 @@ type ServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
+	// GetCardigannCatalog List the built-in indexer definitions
+	// (GET /cardigann/catalog)
+	GetCardigannCatalog(w http.ResponseWriter, r *http.Request)
+	// GetCardigannDefinition Describe one built-in indexer definition
+	// (GET /cardigann/catalog/{file})
+	GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile)
+	// ListCardigannUpdates List held definition updates
+	// (GET /cardigann/updates)
+	ListCardigannUpdates(w http.ResponseWriter, r *http.Request)
+	// ApproveCardigannUpdate Put a held definition update in force
+	// (POST /cardigann/updates/{file}/approve)
+	ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile)
+	// RejectCardigannUpdate Turn a held definition update down
+	// (POST /cardigann/updates/{file}/reject)
+	RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile)
 	// GetConfigAuth Get auth configuration (admin)
 	// (GET /config/auth)
 	GetConfigAuth(w http.ResponseWriter, r *http.Request)
@@ -10105,6 +10305,12 @@ type ServerInterface interface {
 	// UpdateIndexer Update an indexer
 	// (PUT /indexers/{name})
 	UpdateIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// GetIndexerCaptcha Load a built-in indexer's login captcha
+	// (POST /indexers/{name}/captcha)
+	GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// LoginIndexer Log a built-in indexer in
+	// (POST /indexers/{name}/login)
+	LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
 	// TestIndexer Test indexer connection
 	// (POST /indexers/{name}/test)
 	TestIndexer(w http.ResponseWriter, r *http.Request, name ResourceName)
@@ -10891,6 +11097,36 @@ func (_ Unimplemented) ListUpcomingReleases(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetCardigannCatalog List the built-in indexer definitions
+// (GET /cardigann/catalog)
+func (_ Unimplemented) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetCardigannDefinition Describe one built-in indexer definition
+// (GET /cardigann/catalog/{file})
+func (_ Unimplemented) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListCardigannUpdates List held definition updates
+// (GET /cardigann/updates)
+func (_ Unimplemented) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApproveCardigannUpdate Put a held definition update in force
+// (POST /cardigann/updates/{file}/approve)
+func (_ Unimplemented) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RejectCardigannUpdate Turn a held definition update down
+// (POST /cardigann/updates/{file}/reject)
+func (_ Unimplemented) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // GetConfigAuth Get auth configuration (admin)
 // (GET /config/auth)
 func (_ Unimplemented) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
@@ -11110,6 +11346,18 @@ func (_ Unimplemented) DeleteIndexer(w http.ResponseWriter, r *http.Request, nam
 // UpdateIndexer Update an indexer
 // (PUT /indexers/{name})
 func (_ Unimplemented) UpdateIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetIndexerCaptcha Load a built-in indexer's login captcha
+// (POST /indexers/{name}/captcha)
+func (_ Unimplemented) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// LoginIndexer Log a built-in indexer in
+// (POST /indexers/{name}/login)
+func (_ Unimplemented) LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -13735,6 +13983,112 @@ func (siw *ServerInterfaceWrapper) ListUpcomingReleases(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetCardigannCatalog operation middleware
+func (siw *ServerInterfaceWrapper) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCardigannCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCardigannDefinition operation middleware
+func (siw *ServerInterfaceWrapper) GetCardigannDefinition(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCardigannDefinition(w, r, file)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCardigannUpdates operation middleware
+func (siw *ServerInterfaceWrapper) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCardigannUpdates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApproveCardigannUpdate operation middleware
+func (siw *ServerInterfaceWrapper) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApproveCardigannUpdate(w, r, file)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectCardigannUpdate operation middleware
+func (siw *ServerInterfaceWrapper) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "file" -------------
+	var file DefinitionFile
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file", chi.URLParam(r, "file"), &file, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectCardigannUpdate(w, r, file)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetConfigAuth operation middleware
 func (siw *ServerInterfaceWrapper) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
 
@@ -14388,6 +14742,58 @@ func (siw *ServerInterfaceWrapper) UpdateIndexer(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIndexer(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIndexerCaptcha operation middleware
+func (siw *ServerInterfaceWrapper) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIndexerCaptcha(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LoginIndexer operation middleware
+func (siw *ServerInterfaceWrapper) LoginIndexer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LoginIndexer(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19305,7 +19711,28 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/indexers/{name}/test", wrapper.TestIndexer)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/indexers/{name}/captcha", wrapper.GetIndexerCaptcha)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/indexers/{name}/login", wrapper.LoginIndexer)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/indexers/test", wrapper.TestDraftIndexer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/catalog", wrapper.GetCardigannCatalog)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/catalog/{file}", wrapper.GetCardigannDefinition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/cardigann/updates", wrapper.ListCardigannUpdates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/cardigann/updates/{file}/approve", wrapper.ApproveCardigannUpdate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/cardigann/updates/{file}/reject", wrapper.RejectCardigannUpdate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/download-clients", wrapper.ListDownloadClients)
@@ -23888,6 +24315,284 @@ func (response ListUpcomingReleases400JSONResponse) VisitListUpcomingReleasesRes
 	return err
 }
 
+type GetCardigannCatalogRequestObject struct {
+}
+
+type GetCardigannCatalogResponseObject interface {
+	VisitGetCardigannCatalogResponse(w http.ResponseWriter) error
+}
+
+type GetCardigannCatalog200JSONResponse CardigannCatalog
+
+func (response GetCardigannCatalog200JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannCatalog403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCardigannCatalog403JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannCatalog500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCardigannCatalog500JSONResponse) VisitGetCardigannCatalogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinitionRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type GetCardigannDefinitionResponseObject interface {
+	VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error
+}
+
+type GetCardigannDefinition200JSONResponse CardigannDefinition
+
+func (response GetCardigannDefinition200JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCardigannDefinition403JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCardigannDefinition404JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCardigannDefinition500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCardigannDefinition500JSONResponse) VisitGetCardigannDefinitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdatesRequestObject struct {
+}
+
+type ListCardigannUpdatesResponseObject interface {
+	VisitListCardigannUpdatesResponse(w http.ResponseWriter) error
+}
+
+type ListCardigannUpdates200JSONResponse CardigannUpdates
+
+func (response ListCardigannUpdates200JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdates403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCardigannUpdates403JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCardigannUpdates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListCardigannUpdates500JSONResponse) VisitListCardigannUpdatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdateRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type ApproveCardigannUpdateResponseObject interface {
+	VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error
+}
+
+type ApproveCardigannUpdate204Response struct {
+}
+
+func (response ApproveCardigannUpdate204Response) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ApproveCardigannUpdate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApproveCardigannUpdate403JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApproveCardigannUpdate404JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApproveCardigannUpdate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApproveCardigannUpdate500JSONResponse) VisitApproveCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdateRequestObject struct {
+	File DefinitionFile `json:"file"`
+}
+
+type RejectCardigannUpdateResponseObject interface {
+	VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error
+}
+
+type RejectCardigannUpdate204Response struct {
+}
+
+func (response RejectCardigannUpdate204Response) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RejectCardigannUpdate403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RejectCardigannUpdate403JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RejectCardigannUpdate404JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectCardigannUpdate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RejectCardigannUpdate500JSONResponse) VisitRejectCardigannUpdateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetConfigAuthRequestObject struct {
 }
 
@@ -26213,6 +26918,189 @@ func (response UpdateIndexer422JSONResponse) VisitUpdateIndexerResponse(w http.R
 type UpdateIndexer500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response UpdateIndexer500JSONResponse) VisitUpdateIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptchaRequestObject struct {
+	Name ResourceName `json:"name"`
+}
+
+type GetIndexerCaptchaResponseObject interface {
+	VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error
+}
+
+type GetIndexerCaptcha200JSONResponse IndexerCaptcha
+
+func (response GetIndexerCaptcha200JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha204Response struct {
+}
+
+func (response GetIndexerCaptcha204Response) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type GetIndexerCaptcha403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetIndexerCaptcha403JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetIndexerCaptcha404JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetIndexerCaptcha422JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIndexerCaptcha500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetIndexerCaptcha500JSONResponse) VisitGetIndexerCaptchaResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexerRequestObject struct {
+	Name ResourceName `json:"name"`
+	Body *LoginIndexerJSONRequestBody
+}
+
+type LoginIndexerResponseObject interface {
+	VisitLoginIndexerResponse(w http.ResponseWriter) error
+}
+
+type LoginIndexer200JSONResponse Indexer
+
+func (response LoginIndexer200JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response LoginIndexer403JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response LoginIndexer404JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response LoginIndexer413JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response LoginIndexer422JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginIndexer500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response LoginIndexer500JSONResponse) VisitLoginIndexerResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -35653,6 +36541,21 @@ type StrictServerInterface interface {
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
+	// GetCardigannCatalog List the built-in indexer definitions
+	// (GET /cardigann/catalog)
+	GetCardigannCatalog(ctx context.Context, request GetCardigannCatalogRequestObject) (GetCardigannCatalogResponseObject, error)
+	// GetCardigannDefinition Describe one built-in indexer definition
+	// (GET /cardigann/catalog/{file})
+	GetCardigannDefinition(ctx context.Context, request GetCardigannDefinitionRequestObject) (GetCardigannDefinitionResponseObject, error)
+	// ListCardigannUpdates List held definition updates
+	// (GET /cardigann/updates)
+	ListCardigannUpdates(ctx context.Context, request ListCardigannUpdatesRequestObject) (ListCardigannUpdatesResponseObject, error)
+	// ApproveCardigannUpdate Put a held definition update in force
+	// (POST /cardigann/updates/{file}/approve)
+	ApproveCardigannUpdate(ctx context.Context, request ApproveCardigannUpdateRequestObject) (ApproveCardigannUpdateResponseObject, error)
+	// RejectCardigannUpdate Turn a held definition update down
+	// (POST /cardigann/updates/{file}/reject)
+	RejectCardigannUpdate(ctx context.Context, request RejectCardigannUpdateRequestObject) (RejectCardigannUpdateResponseObject, error)
 	// GetConfigAuth Get auth configuration (admin)
 	// (GET /config/auth)
 	GetConfigAuth(ctx context.Context, request GetConfigAuthRequestObject) (GetConfigAuthResponseObject, error)
@@ -35764,6 +36667,12 @@ type StrictServerInterface interface {
 	// UpdateIndexer Update an indexer
 	// (PUT /indexers/{name})
 	UpdateIndexer(ctx context.Context, request UpdateIndexerRequestObject) (UpdateIndexerResponseObject, error)
+	// GetIndexerCaptcha Load a built-in indexer's login captcha
+	// (POST /indexers/{name}/captcha)
+	GetIndexerCaptcha(ctx context.Context, request GetIndexerCaptchaRequestObject) (GetIndexerCaptchaResponseObject, error)
+	// LoginIndexer Log a built-in indexer in
+	// (POST /indexers/{name}/login)
+	LoginIndexer(ctx context.Context, request LoginIndexerRequestObject) (LoginIndexerResponseObject, error)
 	// TestIndexer Test indexer connection
 	// (POST /indexers/{name}/test)
 	TestIndexer(ctx context.Context, request TestIndexerRequestObject) (TestIndexerResponseObject, error)
@@ -37866,6 +38775,132 @@ func (sh *strictHandler) ListUpcomingReleases(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// GetCardigannCatalog operation middleware
+func (sh *strictHandler) GetCardigannCatalog(w http.ResponseWriter, r *http.Request) {
+	var request GetCardigannCatalogRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCardigannCatalog(ctx, request.(GetCardigannCatalogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCardigannCatalog")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCardigannCatalogResponseObject); ok {
+		if err := validResponse.VisitGetCardigannCatalogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCardigannDefinition operation middleware
+func (sh *strictHandler) GetCardigannDefinition(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request GetCardigannDefinitionRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCardigannDefinition(ctx, request.(GetCardigannDefinitionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCardigannDefinition")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCardigannDefinitionResponseObject); ok {
+		if err := validResponse.VisitGetCardigannDefinitionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCardigannUpdates operation middleware
+func (sh *strictHandler) ListCardigannUpdates(w http.ResponseWriter, r *http.Request) {
+	var request ListCardigannUpdatesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCardigannUpdates(ctx, request.(ListCardigannUpdatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCardigannUpdates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCardigannUpdatesResponseObject); ok {
+		if err := validResponse.VisitListCardigannUpdatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApproveCardigannUpdate operation middleware
+func (sh *strictHandler) ApproveCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request ApproveCardigannUpdateRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveCardigannUpdate(ctx, request.(ApproveCardigannUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveCardigannUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApproveCardigannUpdateResponseObject); ok {
+		if err := validResponse.VisitApproveCardigannUpdateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectCardigannUpdate operation middleware
+func (sh *strictHandler) RejectCardigannUpdate(w http.ResponseWriter, r *http.Request, file DefinitionFile) {
+	var request RejectCardigannUpdateRequestObject
+
+	request.File = file
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectCardigannUpdate(ctx, request.(RejectCardigannUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectCardigannUpdate")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectCardigannUpdateResponseObject); ok {
+		if err := validResponse.VisitRejectCardigannUpdateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetConfigAuth operation middleware
 func (sh *strictHandler) GetConfigAuth(w http.ResponseWriter, r *http.Request) {
 	var request GetConfigAuthRequestObject
@@ -38904,6 +39939,68 @@ func (sh *strictHandler) UpdateIndexer(w http.ResponseWriter, r *http.Request, n
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIndexerResponseObject); ok {
 		if err := validResponse.VisitUpdateIndexerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIndexerCaptcha operation middleware
+func (sh *strictHandler) GetIndexerCaptcha(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request GetIndexerCaptchaRequestObject
+
+	request.Name = name
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIndexerCaptcha(ctx, request.(GetIndexerCaptchaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIndexerCaptcha")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIndexerCaptchaResponseObject); ok {
+		if err := validResponse.VisitGetIndexerCaptchaResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LoginIndexer operation middleware
+func (sh *strictHandler) LoginIndexer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	var request LoginIndexerRequestObject
+
+	request.Name = name
+
+	var body LoginIndexerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LoginIndexer(ctx, request.(LoginIndexerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LoginIndexer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoginIndexerResponseObject); ok {
+		if err := validResponse.VisitLoginIndexerResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

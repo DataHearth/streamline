@@ -1,0 +1,186 @@
+{
+  "id": "fileiplay",
+  "name": "FileIplay",
+  "description": "FileIplay is a Private Torrent Tracker for MOVIES / TV / GENERAL",
+  "language": "en-US",
+  "type": "private",
+  "encoding": "UTF-8",
+  "links": [
+    "https://fileiplay.org/"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "2000",
+        "cat": "Movies",
+        "desc": "Movies"
+      },
+      {
+        "id": "3000",
+        "cat": "Audio",
+        "desc": "Audio"
+      },
+      {
+        "id": "4000",
+        "cat": "PC",
+        "desc": "PC"
+      },
+      {
+        "id": "5000",
+        "cat": "TV",
+        "desc": "TV"
+      },
+      {
+        "id": "7000",
+        "cat": "Other",
+        "desc": "Other"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid",
+        "tmdbid",
+        "tvdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid",
+        "tmdbid",
+        "year"
+      ]
+    },
+    "allowtvsearchimdb": true
+  },
+  "settings": [
+    {
+      "name": "apikey",
+      "label": "API Key",
+      "type": "text",
+      "secret": true
+    },
+    {
+      "name": "info_key",
+      "label": "About your API Key",
+      "type": "info",
+      "default": "You can find your API Key by accessing the <a href=\"https://fileiplay.org/integrations/\" target=\"_blank\">FileIplay Integrations</a> page and scrolling down to <b>Your integration API key</b>."
+    }
+  ],
+  "login": {
+    "method": "get",
+    "path": "torznab/api",
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "caps"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "torznab/api",
+        "response": {
+          "type": "xml"
+        }
+      }
+    ],
+    "inputs": {
+      "apikey": "{{ .Config.apikey }}",
+      "t": "{{ if .Query.Type }}{{ .Query.Type }}{{ else }}search{{ end }}",
+      "q": "{{ .Keywords }}",
+      "cat": "{{ join .Categories \",\" }}",
+      "season": "{{ .Query.Season }}",
+      "ep": "{{ .Query.Ep }}",
+      "year": "{{ .Query.Year }}",
+      "imdbid": "{{ .Query.IMDBID }}",
+      "tmdbid": "{{ .Query.TMDBID }}",
+      "tvdbid": "{{ .Query.TVDBID }}",
+      "limit": "100"
+    },
+    "rows": {
+      "selector": "rss > channel > item"
+    },
+    "fields": {
+      "category": {
+        "selector": "[name=category]",
+        "attribute": "value"
+      },
+      "title": {
+        "selector": "title"
+      },
+      "details": {
+        "selector": "comments"
+      },
+      "download": {
+        "selector": "enclosure",
+        "attribute": "url"
+      },
+      "date": {
+        "selector": "pubDate",
+        "filters": [
+          {
+            "name": "dateparse",
+            "args": [
+              "Mon, 02 Jan 2006 15:04:05 -07:00",
+              "Mon, 02 Jan 2006 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "[name=size]",
+        "attribute": "value"
+      },
+      "imdbid": {
+        "selector": "[name=imdb]",
+        "attribute": "value",
+        "optional": true
+      },
+      "tmdbid": {
+        "selector": "[name=tmdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "tvdbid": {
+        "selector": "[name=tvdbid]",
+        "attribute": "value",
+        "optional": true
+      },
+      "seeders": {
+        "selector": "[name=seeders]",
+        "attribute": "value"
+      },
+      "leechers": {
+        "selector": "[name=peers]",
+        "attribute": "value"
+      },
+      "grabs": {
+        "selector": "[name=grabs]",
+        "attribute": "value"
+      },
+      "downloadvolumefactor": {
+        "selector": "[name=downloadvolumefactor]",
+        "attribute": "value"
+      },
+      "uploadvolumefactor": {
+        "selector": "[name=uploadvolumefactor]",
+        "attribute": "value"
+      },
+      "minimumratio": {
+        "text": "1.0"
+      },
+      "minimumseedtime": {
+        "text": "43200"
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/fileiplay.yml",
+    "sha256": "bf94796f2c0839b3eb9f40e6495bfa03c6dc28a6cf3fb1c33fd0c9edf6d46bf4",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}

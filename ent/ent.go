@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/ent/indexersession"
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -122,6 +123,7 @@ func checkColumn(t, c string) error {
 			importscanbook.Table:   importscanbook.ValidColumn,
 			importscanfile.Table:   importscanfile.ValidColumn,
 			importscanshow.Table:   importscanshow.ValidColumn,
+			indexersession.Table:   indexersession.ValidColumn,
 			invite.Table:           invite.ValidColumn,
 			mediaevent.Table:       mediaevent.ValidColumn,
 			mediafile.Table:        mediafile.ValidColumn,

@@ -878,6 +878,25 @@ var (
 			},
 		},
 	}
+	// IndexerSessionsColumns holds the columns for the "indexer_sessions" table.
+	IndexerSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "cookies", Type: field.TypeJSON, Nullable: true},
+		{Name: "user_agent", Type: field.TypeString, Nullable: true},
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "login_failures", Type: field.TypeUint8, Default: 0},
+		{Name: "retry_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_error", Type: field.TypeString, Nullable: true},
+	}
+	// IndexerSessionsTable holds the schema information for the "indexer_sessions" table.
+	IndexerSessionsTable = &schema.Table{
+		Name:       "indexer_sessions",
+		Columns:    IndexerSessionsColumns,
+		PrimaryKey: []*schema.Column{IndexerSessionsColumns[0]},
+	}
 	// InvitesColumns holds the columns for the "invites" table.
 	InvitesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1103,6 +1122,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "importing", "available", "failed"}, Default: "wanted"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
+		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "digital_release_date", Type: field.TypeTime, Nullable: true},
@@ -1123,7 +1143,7 @@ var (
 			{
 				Name:    "movie_digital_release_date",
 				Unique:  false,
-				Columns: []*schema.Column{MoviesColumns[13]},
+				Columns: []*schema.Column{MoviesColumns[14]},
 			},
 			{
 				Name:    "movie_status",
@@ -1429,6 +1449,7 @@ var (
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"standard", "anime", "daily"}, Default: "standard"},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tvdb_id", Type: field.TypeUint32, Unique: true},
+		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
 		{Name: "poster_path", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "creator", Type: field.TypeString, Nullable: true},
@@ -1652,6 +1673,7 @@ var (
 		ImportScanBooksTable,
 		ImportScanFilesTable,
 		ImportScanShowsTable,
+		IndexerSessionsTable,
 		InvitesTable,
 		MediaEventsTable,
 		MediaFilesTable,

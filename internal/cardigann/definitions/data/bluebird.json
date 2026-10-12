@@ -1,0 +1,262 @@
+{
+  "id": "bluebirdhd",
+  "name": "BlueBird",
+  "description": "BlueBird is a RUSSIAN Private Torrent Tracker for HD MOVIES",
+  "language": "ru-RU",
+  "type": "private",
+  "encoding": "windows-1251",
+  "links": [
+    "https://bluebird-hd.org/"
+  ],
+  "certificates": [
+    "9a8e78a5ca90ab1fa74240caafe2bf04a9eb3c72"
+  ],
+  "caps": {
+    "categorymappings": [
+      {
+        "id": "1",
+        "cat": "Movies",
+        "desc": "Фильмы Films"
+      },
+      {
+        "id": "2",
+        "cat": "TV/Anime",
+        "desc": "Мультфильмы Cartoons"
+      },
+      {
+        "id": "3",
+        "cat": "TV/Documentary",
+        "desc": "Документалистика Documentary"
+      },
+      {
+        "id": "4",
+        "cat": "Audio",
+        "desc": "Шоу/Музыка Show/Music"
+      },
+      {
+        "id": "5",
+        "cat": "TV/Sport",
+        "desc": "Спорт Sport"
+      },
+      {
+        "id": "6",
+        "cat": "TV",
+        "desc": "Сериалы TV Series"
+      },
+      {
+        "id": "7",
+        "cat": "XXX",
+        "desc": "Эротика Erotica"
+      },
+      {
+        "id": "8",
+        "cat": "Other",
+        "desc": "Дэмо/Misc Demo/Misc"
+      }
+    ],
+    "modes": {
+      "search": [
+        "q"
+      ],
+      "tv-search": [
+        "q",
+        "season",
+        "ep",
+        "imdbid"
+      ],
+      "movie-search": [
+        "q",
+        "imdbid"
+      ],
+      "music-search": [
+        "q"
+      ]
+    }
+  },
+  "settings": [
+    {
+      "name": "username",
+      "label": "Username",
+      "type": "text"
+    },
+    {
+      "name": "password",
+      "label": "Password",
+      "type": "password",
+      "secret": true
+    },
+    {
+      "name": "freeleech",
+      "label": "Search freeleech only",
+      "type": "checkbox",
+      "default": "false"
+    },
+    {
+      "name": "sort",
+      "label": "Sort requested from site",
+      "type": "select",
+      "default": "4",
+      "options": {
+        "4": "created",
+        "7": "seeders",
+        "5": "size",
+        "1": "title"
+      }
+    },
+    {
+      "name": "type",
+      "label": "Order requested from site",
+      "type": "select",
+      "default": "desc",
+      "options": {
+        "desc": "desc",
+        "asc": "asc"
+      }
+    },
+    {
+      "name": "info_tpp",
+      "label": "Results Per Page",
+      "type": "info",
+      "default": "For best results, change the <b>Torrents per page:</b> setting to <b>100</b> on your account profile."
+    }
+  ],
+  "login": {
+    "method": "post",
+    "path": "takelogin.php",
+    "inputs": {
+      "username": "{{ .Config.username }}",
+      "password": "{{ .Config.password }}"
+    },
+    "error": [
+      {
+        "selector": "div.error",
+        "message": {
+          "text": "Error during login. Its likely your username or password is incorrect."
+        }
+      }
+    ],
+    "test": {
+      "path": "/",
+      "selector": "a[href=\"logout.php\"]"
+    }
+  },
+  "search": {
+    "paths": [
+      {
+        "path": "browse.php"
+      }
+    ],
+    "inputs": {
+      "$raw": "{{ range .Categories }}c{{.}}=1&{{end}}",
+      "search": "{{ if .Query.IMDBID }}{{ else }}{{ .Keywords }}{{ end }}",
+      "dsearch": "{{ if .Query.IMDBID }}{{ .Query.IMDBID }}{{ else }}{{ end }}",
+      "incldead": "{{ if .Config.freeleech }}3{{ else }}1{{ end }}",
+      "genre": "{{ .Query.Genre }}",
+      "stype": "and",
+      "sort": "{{ .Config.sort }}",
+      "type": "{{ .Config.type }}"
+    },
+    "rows": {
+      "selector": "table[class=\"embedded\"][cellspacing=\"0\"][cellpadding=\"5\"][width=\"100%\"] > tbody#highlighted > tr:has(a[href^=\"details.php?id=\"])"
+    },
+    "fields": {
+      "category": {
+        "selector": "a[href^=\"browse.php?cat=\"]",
+        "attribute": "href",
+        "filters": [
+          {
+            "name": "querystring",
+            "args": [
+              "cat"
+            ]
+          }
+        ]
+      },
+      "title": {
+        "selector": "a[href^=\"details.php?id=\"]"
+      },
+      "details": {
+        "selector": "a[href^=\"details.php?id=\"]",
+        "attribute": "href"
+      },
+      "download": {
+        "selector": "a[href^=\"download.php?id=\"]",
+        "attribute": "href"
+      },
+      "imdbid": {
+        "selector": "a[href*=\"imdb.com/title/tt\"]",
+        "attribute": "href",
+        "optional": true
+      },
+      "grabs": {
+        "selector": "td:nth-child(7) > nobr > a, td:nth-child(7) > nobr > b"
+      },
+      "date": {
+        "selector": "div#frame > div#cleft",
+        "remove": "a",
+        "filters": [
+          {
+            "name": "append",
+            "args": [
+              " +03:00"
+            ]
+          },
+          {
+            "name": "dateparse",
+            "args": [
+              "2006-01-02 15:04:05 -07:00",
+              "2006-01-02 15:04:05 -0700"
+            ]
+          }
+        ]
+      },
+      "size": {
+        "selector": "td:nth-child(7)",
+        "remove": "a"
+      },
+      "seeders": {
+        "selector": "td:nth-child(5)"
+      },
+      "leechers": {
+        "selector": "td:nth-child(6)"
+      },
+      "genre": {
+        "selector": "div#cleft",
+        "optional": true,
+        "filters": [
+          {
+            "name": "replace",
+            "args": [
+              "Жанр:",
+              ""
+            ]
+          }
+        ]
+      },
+      "description": {
+        "optional": true,
+        "text": "{{ .Result.genre }}"
+      },
+      "downloadvolumefactor": {
+        "case": {
+          "img[src=\"pic/diamond.png\"]": "0",
+          "img[src=\"pic/freedownload.gif\"]": "0",
+          "img[src=\"pic/silver.gif\"]": "0.5",
+          "img[src=\"pic/bronze.gif\"]": "0.75",
+          "*": "1"
+        }
+      },
+      "uploadvolumefactor": {
+        "case": {
+          "img[src=\"pic/diamond.png\"]": "2",
+          "*": "1"
+        }
+      }
+    }
+  },
+  "source": {
+    "path": "definitions/v11/bluebird.yml",
+    "sha256": "300c6e6504529b9851bac34c3065224950ec714cad35ef4e2a9336a69d50099f",
+    "modified": "converted by streamline's internal/cardigann/convert: YAML to JSON; .NET regexes, substitutions, date layouts and template string literals rewritten for Go"
+  }
+}
