@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/mailer"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/posters"
@@ -118,6 +119,7 @@ type Service struct {
 	indexers indexer.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
+	mail     mailer.Sender
 
 	hydrating atomic.Bool
 	details   detailMemo
@@ -130,9 +132,11 @@ func NewService(
 	idx indexer.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
+	mail mailer.Sender,
 ) *Service {
 	return &Service{
 		db: store, metadata: meta, posters: p, indexers: idx, download: dl, ms: ms,
+		mail: mail,
 	}
 }
 

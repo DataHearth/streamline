@@ -29,6 +29,7 @@ import (
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/library/hygiene"
 	"github.com/datahearth/streamline/internal/library/pathmigrate"
+	"github.com/datahearth/streamline/internal/mailer"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/media/movie"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -211,8 +212,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		store, mb, postersSvc, deezer, indexerSvc, dlManager,
 		metadata.NewWikipedia(), deezer, dispatcher,
 	)
+	var mail mailer.Sender
+	if cfg.SMTP.Enabled() {
+		mail = mailer.New()
+	}
 	bookSvc := book.NewService(
-		store, bookMeta, postersSvc, indexerSvc, dlManager, dispatcher,
+		store, bookMeta, postersSvc, indexerSvc, dlManager, dispatcher, mail,
 	)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title

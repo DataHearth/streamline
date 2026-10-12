@@ -91,6 +91,7 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
+				nil,
 			)
 			svc = NewService(
 				store,
