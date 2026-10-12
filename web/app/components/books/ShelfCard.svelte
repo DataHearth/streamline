@@ -4,14 +4,15 @@
 	import { auth } from "@lib/auth.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import BookCover from "./BookCover.svelte";
+	import SeriesCover from "./SeriesCover.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import { bookPosterUrl } from "@lib/posters";
 	import { formatLabel, kindLabel, type FormatState, type ShelfItem } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// A cover on a shelf or in a kind's grid. A series is one card with two
-	// sheets stacked behind it; a book shows which formats it follows, white
-	// when that format is in the library, amber when it is wanted.
+	// A cover on a shelf or in a kind's grid. A series is one card fanning its
+	// first volumes; a book shows which formats it follows, white when that
+	// format is in the library, amber when it is wanted.
 	let { item }: { item: ShelfItem } = $props();
 	let canEdit = $derived(auth.canAddDirectly);
 	let isSeries = $derived(item.type === "series");
@@ -31,14 +32,21 @@
 	class="relative block rounded-lg transition duration-200 hover:scale-[1.02] focus:outline-none focus-visible:scale-[1.02]"
 	title={item.title}
 >
-	{#if item.type === "series"}
-		<div class="absolute inset-0 translate-x-[7px] -translate-y-[7px] rounded-lg border border-white/10 bg-bg-hover" aria-hidden="true"></div>
-		<div class="absolute inset-0 translate-x-[3.5px] -translate-y-[3.5px] rounded-lg border border-white/10 bg-bg-card" aria-hidden="true"></div>
-	{/if}
 	<div
-		class="relative overflow-hidden rounded-lg transition group-hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)] group-has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]"
+		class={cn(
+			"relative overflow-hidden rounded-lg transition group-hover:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)] group-has-[:focus-visible]:shadow-[0_0_0_2px_var(--accent-ring),0_24px_64px_rgb(0_0_0_/0.55)]",
+			isSeries && "bg-bg-deep",
+		)}
 	>
-		<BookCover src={bookPosterUrl(item.cover_id)} alt={i18n.common_poster_alt({ title: item.title })} />
+		{#if isSeries}
+			<SeriesCover
+				srcs={(item.cover_ids ?? []).map(bookPosterUrl)}
+				alt={i18n.common_poster_alt({ title: item.title })}
+				rounded="rounded-md"
+			/>
+		{:else}
+			<BookCover src={bookPosterUrl(item.cover_id)} alt={i18n.common_poster_alt({ title: item.title })} />
+		{/if}
 		<div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-2.5 pt-12">
 			<p class="truncate text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]">{item.title}</p>
 			<p class="truncate text-[11px] text-white/70">{item.author}</p>

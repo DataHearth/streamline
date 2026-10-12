@@ -33,6 +33,7 @@
 	import MusicBookLookupPanel from "./MusicBookLookupPanel.svelte";
 	import Select from "@components/forms/Select.svelte";
 	import Img from "./Img.svelte";
+	import SeriesCover from "@components/books/SeriesCover.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The touch add/request flow for an artist or a book: MediaLookupScreen's
@@ -297,18 +298,22 @@
 						<li>
 							<button type="button" onclick={() => pick(r)} class="w-full text-left transition active:opacity-80">
 								<div class="relative">
-									<div class="relative overflow-hidden border border-white/[0.06] bg-bg-card shadow-1 {thumb}">
-										<div class="absolute inset-0 grid place-items-center text-fg-faint">
-											{#if isArtist}
-												<Music class="h-6 w-6" aria-hidden="true" />
-											{:else}
-												<BookOpen class="h-6 w-6" aria-hidden="true" />
+									{#if r.series}
+										<SeriesCover srcs={r.covers} rounded="rounded-md" loading="eager" />
+									{:else}
+										<div class="relative overflow-hidden border border-white/[0.06] bg-bg-card shadow-1 {thumb}">
+											<div class="absolute inset-0 grid place-items-center text-fg-faint">
+												{#if isArtist}
+													<Music class="h-6 w-6" aria-hidden="true" />
+												{:else}
+													<BookOpen class="h-6 w-6" aria-hidden="true" />
+												{/if}
+											</div>
+											{#if r.image && !failedImages.has(r.key)}
+												<Img src={r.image} alt="" onerror={() => markImageFailed(r.key)} class="relative h-full w-full object-cover" />
 											{/if}
 										</div>
-										{#if r.image && !failedImages.has(r.key)}
-											<Img src={r.image} alt="" onerror={() => markImageFailed(r.key)} class="relative h-full w-full object-cover" />
-										{/if}
-									</div>
+									{/if}
 									<span
 										aria-hidden="true"
 										class="absolute right-1 bottom-1 grid h-7 w-7 place-items-center rounded-full shadow-2 {done
@@ -326,6 +331,16 @@
 								<p class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle {isArtist ? 'text-center' : ''}">
 									{isArtist ? (r.artist?.genre ?? "—") : (r.subtitle ?? "—")}
 								</p>
+								{#if r.series && r.book?.volumes}
+									<p class="mt-1 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-accent-text">
+										{i18n.lookup_series_badge({ count: String(r.book.volumes) })}
+									</p>
+								{/if}
+								{#if r.book?.matched_title}
+									<p class="mt-0.5 truncate text-[10.5px] italic text-fg-faint">
+										{i18n.lookup_series_via({ title: r.book.matched_title })}
+									</p>
+								{/if}
 							</button>
 						</li>
 					{/each}
@@ -343,18 +358,24 @@
 		{#snippet peek(atFullHeight)}
 			{#if selected}
 				<div class="flex gap-4 pt-1">
-					<div class="relative w-[84px] flex-none overflow-hidden border border-white/[0.06] bg-bg-card shadow-2 {thumb}">
-						<div class="absolute inset-0 grid place-items-center text-fg-faint">
-							{#if isArtist}
-								<Music class="h-6 w-6" aria-hidden="true" />
-							{:else}
-								<BookOpen class="h-6 w-6" aria-hidden="true" />
+					{#if selected.series}
+						<div class="w-[84px] flex-none">
+							<SeriesCover srcs={selected.covers} rounded="rounded-md" loading="eager" />
+						</div>
+					{:else}
+						<div class="relative w-[84px] flex-none overflow-hidden border border-white/[0.06] bg-bg-card shadow-2 {thumb}">
+							<div class="absolute inset-0 grid place-items-center text-fg-faint">
+								{#if isArtist}
+									<Music class="h-6 w-6" aria-hidden="true" />
+								{:else}
+									<BookOpen class="h-6 w-6" aria-hidden="true" />
+								{/if}
+							</div>
+							{#if selected.image && !failedImages.has(selected.key)}
+								<Img src={selected.image} alt="" class="relative h-full w-full object-cover" />
 							{/if}
 						</div>
-						{#if selected.image && !failedImages.has(selected.key)}
-							<Img src={selected.image} alt="" class="relative h-full w-full object-cover" />
-						{/if}
-					</div>
+					{/if}
 					<div class="flex min-w-0 flex-1 flex-col justify-center">
 						{#if selectedHeld}
 							<span class="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-accent-text">

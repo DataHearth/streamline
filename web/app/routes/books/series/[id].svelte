@@ -17,12 +17,14 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
 	import BookCover from "@components/books/BookCover.svelte";
+	import SeriesCover from "@components/books/SeriesCover.svelte";
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import PeopleGrid from "@components/shared/PeopleGrid.svelte";
 	import InfoCard, { type InfoRow } from "@components/shared/InfoCard.svelte";
 	import {
 		bookPeople,
 		bookRoleLabel,
+		hardcoverSeriesHref,
 		kindLabel,
 		languageName,
 		personHref,
@@ -48,8 +50,10 @@
 	}));
 	let s = $derived(seriesQuery.data);
 	let canEdit = $derived(auth.canAddDirectly);
-	// A series has no art of its own: its cover is the first volume's.
-	let cover = $derived(s?.volumes[0] ? bookPosterUrl(s.volumes[0].id) : undefined);
+	// A series has no art of its own: the hero fans its first volumes, and the
+	// backdrop is the front one.
+	let covers = $derived((s?.cover_ids ?? []).map(bookPosterUrl));
+	let cover = $derived(covers[0]);
 	let out = $derived(s ? s.volumes.filter((v) => v.status !== "upcoming") : []);
 	let have = $derived(out.filter((v) => v.status === "available").length);
 	let wanted = $derived(out.filter((v) => v.status === "wanted").length);
@@ -137,7 +141,11 @@
 		if (s.original_title) rows.push({ label: i18n.books_fact_original_title(), value: s.original_title, mono: false });
 		if (s.rating) rows.push({ label: i18n.books_fact_rating(), value: `★ ${s.rating.toFixed(1)}` });
 		if (s.hardcover_id)
-			rows.push({ label: "Hardcover", value: [{ text: String(s.hardcover_id) }], mono: true });
+			rows.push({
+				label: "Hardcover",
+				value: [{ text: String(s.hardcover_id), href: hardcoverSeriesHref(s.hardcover_slug), external: true }],
+				mono: true,
+			});
 		return rows;
 	});
 	let libraryRows = $derived.by<InfoRow[]>(() => {
@@ -188,9 +196,7 @@
 			overview={s.overview}
 		>
 			{#snippet art()}
-				<div class="shadow-[0_24px_48px_rgb(0_0_0_/0.5)]">
-					<BookCover src={cover} alt={i18n.common_poster_alt({ title: s.title })} />
-				</div>
+				<SeriesCover srcs={covers} alt={i18n.common_poster_alt({ title: s.title })} />
 			{/snippet}
 			{#snippet pills()}
 				<StatusPill status={s.status} size="md" variant="translucent" />

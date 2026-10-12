@@ -204,6 +204,10 @@ export type SeriesMonitor = "all" | "future" | "none";
 export type BookSeries = {
 	id: number;
 	hardcover_id?: number;
+	// The hardcover.app/series path segment: Hardcover links a series by slug only.
+	hardcover_slug?: string;
+	// Book ids of the first hydrated volumes, at most three: the fanned cover.
+	cover_ids: number[];
 	rating?: number;
 	contributors?: BookCredit[];
 	title: string;
@@ -236,6 +240,8 @@ export type ShelfItem = {
 	status: MediaState;
 	// The id of the book whose poster is the cover (a series': its first volume).
 	cover_id: number;
+	// Series only: book ids of the first volumes, at most three, fanned.
+	cover_ids?: number[];
 	added_at: string;
 	year?: number;
 	progress?: number;
@@ -244,6 +250,9 @@ export type ShelfItem = {
 	volumes_out?: number;
 	quality_profile?: string;
 };
+
+// Hardcover links a series by slug only; `/series/{id}` is a 404.
+export const hardcoverSeriesHref = (slug?: string) => (slug ? `https://hardcover.app/series/${slug}` : undefined);
 
 export type ShelfList = { items: ShelfItem[]; total: number; page: number; limit: number };
 export type BookCounts = {

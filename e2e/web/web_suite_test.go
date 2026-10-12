@@ -14,10 +14,12 @@ import (
 	"github.com/datahearth/streamline/e2e/apptest"
 	"github.com/datahearth/streamline/e2e/fakes"
 	"github.com/datahearth/streamline/internal/auth"
+	"github.com/datahearth/streamline/internal/server"
 	"github.com/datahearth/streamline/internal/testutil"
 )
 
 var (
+	app     *server.App
 	baseURL string
 	browser *rod.Browser
 )
@@ -42,7 +44,7 @@ var _ = BeforeSuite(func() {
 
 	DeferCleanup(testutil.InstallSlog())
 	tmdb := fakes.NewTMDB()
-	_, baseURL = apptest.Start(map[string]any{
+	app, baseURL = apptest.Start(map[string]any{
 		"metadata": map[string]any{
 			"tmdb": map[string]any{"base_url": tmdb.URL},
 		},

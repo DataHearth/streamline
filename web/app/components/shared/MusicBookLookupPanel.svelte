@@ -2,9 +2,11 @@
 	import { BookOpen, Check, ChevronLeft, ExternalLink, Music } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import Img from "./Img.svelte";
+	import SeriesCover from "@components/books/SeriesCover.svelte";
 	import { lookupPosterUrl } from "@lib/posters";
 	import { formatLabel, languageName, releaseTypeLabel } from "@lib/music-books";
 	import {
+		hardcoverHref,
 		hitChips,
 		volumesCount,
 		type ArtistDetail,
@@ -94,7 +96,7 @@
 			bookDetail?.pages ? { label: i18n.lookup_pages(), value: String(bookDetail.pages) } : null,
 			b.volumes ? { label: i18n.books_volumes(), value: String(b.volumes) } : null,
 			b.type === "series" ? { label: i18n.common_status(), value: b.ongoing ? i18n.books_ongoing() : i18n.books_completed() } : null,
-			{ label: "Hardcover", value: String(b.hardcover_id), href: b.type === "series" ? undefined : `https://hardcover.app/book/${b.hardcover_id}` },
+			{ label: "Hardcover", value: String(b.hardcover_id), href: hardcoverHref(b) },
 		];
 		return rows.filter((f) => f !== null);
 	});
@@ -130,24 +132,30 @@
 
 		{#if !headless}
 			<div class="flex gap-4">
-				<div
-					class="relative w-[104px] flex-none overflow-hidden border border-white/[0.06] bg-bg-card shadow-2 {isArtist
-						? 'aspect-square rounded-full'
-						: 'aspect-[2/3] rounded-md'}"
-				>
-					<div class="absolute inset-0 grid place-items-center text-fg-faint">
-						{#if isArtist}
-							<Music class="h-7 w-7" aria-hidden="true" />
-						{:else}
-							<BookOpen class="h-7 w-7" aria-hidden="true" />
+				{#if hit.series}
+					<div class="w-[104px] flex-none">
+						<SeriesCover srcs={hit.covers} rounded="rounded-md" loading="eager" />
+					</div>
+				{:else}
+					<div
+						class="relative w-[104px] flex-none overflow-hidden border border-white/[0.06] bg-bg-card shadow-2 {isArtist
+							? 'aspect-square rounded-full'
+							: 'aspect-[2/3] rounded-md'}"
+					>
+						<div class="absolute inset-0 grid place-items-center text-fg-faint">
+							{#if isArtist}
+								<Music class="h-7 w-7" aria-hidden="true" />
+							{:else}
+								<BookOpen class="h-7 w-7" aria-hidden="true" />
+							{/if}
+						</div>
+						{#if hit.image}
+							<!-- Never loading="lazy": this panel lives in a portaled modal, and
+							     Chrome never fires the deferred load for it. -->
+							<Img src={hit.image} alt="" class="relative h-full w-full object-cover" />
 						{/if}
 					</div>
-					{#if hit.image}
-						<!-- Never loading="lazy": this panel lives in a portaled modal, and
-						     Chrome never fires the deferred load for it. -->
-						<Img src={hit.image} alt="" class="relative h-full w-full object-cover" />
-					{/if}
-				</div>
+				{/if}
 				<div class="flex min-w-0 flex-1 flex-col justify-center">
 					{#if showTitle}
 						<h3 class="text-xl font-bold leading-tight tracking-tight text-fg [text-wrap:pretty]">

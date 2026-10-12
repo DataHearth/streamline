@@ -2374,6 +2374,8 @@
 	"qp_books_upgrades_help": "Remplacer une copie dans un autre format dès que le format préféré apparaît.",
 	"lookup_volumes_one": "{count} tome",
 	"lookup_volumes_other": "{count} tomes",
+	"lookup_series_badge": "Série · {count} vol.",
+	"lookup_series_via": "via « {title} »",
 	"lookup_group": "Groupe",
 	"lookup_members": "Membres",
 	"lookup_first_published": "Première parution",

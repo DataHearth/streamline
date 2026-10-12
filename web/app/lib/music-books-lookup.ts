@@ -4,7 +4,7 @@
 
 import { api, ApiError, errorText } from "./api";
 import type { RequestMediaDetails } from "./types";
-import { kindLabel, overviewLang, type ProfileMedia, type BookFormat, type BookKind, type ReleaseType } from "./music-books";
+import { hardcoverSeriesHref, kindLabel, overviewLang, type ProfileMedia, type BookFormat, type BookKind, type ReleaseType } from "./music-books";
 import { artistPosterUrl, bookPosterUrl, lookupPosterUrl } from "./posters";
 import { m as i18n } from "./paraglide/messages.js";
 
@@ -43,6 +43,14 @@ export type BookHit = {
 	library_id?: number;
 	// The library book whose poster is the cover, when the title is held.
 	cover_id?: number;
+	// Series only: the hardcover.app/series path segment.
+	slug?: string;
+	// Series only: Hardcover book ids of the first volumes adding it would pick,
+	// at most three, each a lookup cover.
+	cover_book_ids?: number[];
+	// Series only: the book title, in any language, the series was found
+	// through, when it is not the series' own name.
+	matched_title?: string;
 };
 
 // `mbid` is the release group's: what an album request names.
@@ -92,6 +100,8 @@ export type LookupHit = {
 	// Disambiguation or original title, shown in italics where there is room.
 	aside?: string;
 	image?: string;
+	// A series' fanned cover: up to three volume posters, front first.
+	covers?: string[];
 	year?: number;
 	held: boolean;
 	library_id?: number;
@@ -115,7 +125,7 @@ export function artistHit(a: ArtistHit): LookupHit {
 	};
 }
 
-// A series hit has no cover of its own; the placeholder renders.
+// A series hit has no cover of its own: `covers` fans its first volumes.
 function bookImage(b: BookHit): string | undefined {
 	if (b.library_id && b.cover_id) return bookPosterUrl(b.cover_id);
 	return b.type === "book" ? lookupPosterUrl("books", b.hardcover_id) : undefined;
@@ -130,6 +140,7 @@ export function bookHit(b: BookHit): LookupHit {
 		subtitle: b.author,
 		aside: b.original_title && b.original_title !== b.title ? b.original_title : undefined,
 		image: bookImage(b),
+		covers: b.type === "series" ? (b.cover_book_ids ?? []).map((id) => lookupPosterUrl("books", id)) : undefined,
 		year: b.year,
 		held: !!b.already_added,
 		library_id: b.library_id,
@@ -269,6 +280,11 @@ export function hitChips(h: LookupHit): string[] {
 		b.year ? String(b.year) : undefined,
 		b.volumes ? volumesCount(b.volumes) : undefined,
 	].filter((x): x is string => !!x);
+}
+
+export function hardcoverHref(b: BookHit): string | undefined {
+	if (b.type === "book") return `https://hardcover.app/book/${b.hardcover_id}`;
+	return hardcoverSeriesHref(b.slug);
 }
 
 export const volumesCount = (n: number) =>

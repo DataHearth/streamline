@@ -5,7 +5,6 @@
 		BookOpen,
 		Eye,
 		Gauge,
-		Layers,
 		LoaderCircle,
 		Music,
 		Plus,
@@ -28,7 +27,6 @@
 		monitorOptions,
 		profileMedia,
 		requestBody,
-		volumesCount,
 		LOOKUP_SOURCE,
 		hardcoverIssue,
 		type HardcoverIssue,
@@ -41,6 +39,7 @@
 	import MusicBookLookupPanel from "./MusicBookLookupPanel.svelte";
 	import ProviderKeyNotice from "./ProviderKeyNotice.svelte";
 	import Img from "./Img.svelte";
+	import SeriesCover from "@components/books/SeriesCover.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The split add/request modal for an artist or a book, from md up: the same
@@ -368,22 +367,28 @@
 											? 'border-accent/40 bg-accent/5 hover:border-border-strong'
 											: 'border-border bg-bg-card hover:border-border-strong hover:bg-bg-elevated'}"
 								>
-									<div
-										class="relative w-11 flex-none overflow-hidden border border-white/[0.06] bg-bg-deep shadow-1 {isArtist
-											? 'aspect-square rounded-full'
-											: 'aspect-[2/3] rounded-md'}"
-									>
-										<div class="absolute inset-0 grid place-items-center text-fg-faint">
-											{#if isArtist}
-												<Music class="h-4 w-4" aria-hidden="true" />
-											{:else}
-												<BookOpen class="h-4 w-4" aria-hidden="true" />
+									{#if r.series}
+										<div class="w-11 flex-none">
+											<SeriesCover srcs={r.covers} rounded="rounded-[3px]" loading="eager" />
+										</div>
+									{:else}
+										<div
+											class="relative w-11 flex-none overflow-hidden border border-white/[0.06] bg-bg-deep shadow-1 {isArtist
+												? 'aspect-square rounded-full'
+												: 'aspect-[2/3] rounded-md'}"
+										>
+											<div class="absolute inset-0 grid place-items-center text-fg-faint">
+												{#if isArtist}
+													<Music class="h-4 w-4" aria-hidden="true" />
+												{:else}
+													<BookOpen class="h-4 w-4" aria-hidden="true" />
+												{/if}
+											</div>
+											{#if r.image && !failedImages.has(r.key)}
+												<Img src={r.image} alt="" onerror={() => markImageFailed(r.key)} class="relative h-full w-full object-cover" />
 											{/if}
 										</div>
-										{#if r.image && !failedImages.has(r.key)}
-											<Img src={r.image} alt="" onerror={() => markImageFailed(r.key)} class="relative h-full w-full object-cover" />
-										{/if}
-									</div>
+									{/if}
 									<div class="flex min-w-0 flex-1 flex-col justify-center">
 										<span class="block truncate text-[13.5px] font-semibold text-fg">
 											{r.title}
@@ -391,21 +396,30 @@
 												<span class="ml-1 font-mono text-[11px] font-normal text-fg-subtle">· {r.year}</span>
 											{/if}
 										</span>
-										{#if held}
-											<span
-												class="mt-1 inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
-											>
-												{i18n.status_in_library()}
-											</span>
-										{:else}
-											<span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] text-fg-muted">
-												<span class="truncate">{r.aside && isArtist ? r.aside : r.subtitle}</span>
-												{#if r.series && r.book?.volumes}
-													<span class="inline-flex shrink-0 items-center gap-1 font-mono text-[10.5px] text-fg-subtle">
-														<Layers size={11} aria-hidden="true" />
-														{volumesCount(r.book.volumes)}
+										{#if !held}
+											<span class="mt-0.5 truncate text-[11.5px] text-fg-muted">{r.aside && isArtist ? r.aside : r.subtitle}</span>
+										{/if}
+										{#if held || (r.series && r.book?.volumes)}
+											<span class="mt-1 flex flex-wrap items-center gap-1">
+												{#if held}
+													<span
+														class="inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
+													>
+														{i18n.status_in_library()}
 													</span>
 												{/if}
+												{#if r.series && r.book?.volumes}
+													<span
+														class="inline-flex w-fit items-center rounded-full border border-accent/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-accent-text"
+													>
+														{i18n.lookup_series_badge({ count: String(r.book.volumes) })}
+													</span>
+												{/if}
+											</span>
+										{/if}
+										{#if r.book?.matched_title}
+											<span class="mt-0.5 truncate text-[11px] italic text-fg-faint">
+												{i18n.lookup_series_via({ title: r.book.matched_title })}
 											</span>
 										{/if}
 									</div>
