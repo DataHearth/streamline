@@ -24,6 +24,7 @@ func classify(err error) classification {
 		errors.Is(err, ErrMovieHasFile),
 		errors.Is(err, ErrEpisodeHasFile),
 		errors.Is(err, ErrNoAlbumTracks),
+		errors.Is(err, ErrCueImage),
 		errors.Is(err, ErrNoBookProfile):
 		return terminal
 	default:

@@ -461,6 +461,31 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		Expect(classify(err)).To(Equal(terminal))
 	})
 
+	It("refuses a single-file CD image with a cue sheet beside it", func() {
+		seedTrackFile(
+			dlDir,
+			"Nirvana - Nevermind.flac",
+			"tagged.flac",
+			1,
+			albumTracks[0].title,
+		)
+		Expect(
+			os.WriteFile(
+				filepath.Join(dlDir, "Nirvana - Nevermind.CUE"),
+				[]byte("x"),
+				0o600,
+			),
+		).
+			To(Succeed())
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+
+		err := w.runImport(context.Background(), 1)
+
+		Expect(err).To(MatchError(ErrCueImage))
+		Expect(classify(err)).To(Equal(terminal))
+	})
+
 	It("hands the album to the failure write on a terminal outcome", func() {
 		rec := fixtureAlbumRecord(dlDir, alb)
 		expectFind(rec)

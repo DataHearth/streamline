@@ -101,6 +101,21 @@ func (w *Worker) importAlbumRecord(
 	return nil
 }
 
+// cueImage reports whether files are one audio file with a CUE sheet in its
+// folder: a disc ripped to a single image, its tracks only marked by the sheet.
+func cueImage(files []string) bool {
+	if len(files) != 1 {
+		return false
+	}
+	entries, err := os.ReadDir(filepath.Dir(files[0]))
+	if err != nil {
+		return false
+	}
+	return slices.ContainsFunc(entries, func(e os.DirEntry) bool {
+		return !e.IsDir() && strings.EqualFold(filepath.Ext(e.Name()), ".cue")
+	})
+}
+
 // hydratedAlbum returns the album with its tracks: one added as a stub has
 // none until its release data is fetched, and a download for it cannot be
 // matched before that.
@@ -146,6 +161,12 @@ func (w *Worker) importAlbumFiles(
 		attribute.Int64("artist.id", int64(artist.ID)),
 	)
 	defer w.lockEntity(fmt.Sprintf("album:%d", alb.ID))()
+
+	// Checked before matching: the image's tags can name the first track, and
+	// the whole disc would then be imported as that one track.
+	if len(alb.Edges.Tracks) > 1 && cueImage(files) {
+		return false, otelx.RecordSpanError(span, ErrCueImage)
+	}
 
 	profile, haveProfile := config.ResolveMusicQualityProfile(artist.QualityProfile)
 	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)

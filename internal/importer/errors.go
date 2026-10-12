@@ -14,6 +14,12 @@ var (
 	// ErrNoAlbumTracks is returned when no audio file under an album record's
 	// save path matched a track the import was allowed to fill.
 	ErrNoAlbumTracks = errors.New("no audio file matched an album track")
+	// ErrCueImage is returned when an album release is one audio file holding
+	// the whole disc, cut by a CUE sheet beside it.
+	ErrCueImage = errors.New(
+		"release is a single-file CD image with a CUE sheet; " +
+			"splitting it into tracks is not supported",
+	)
 	// ErrNoBookProfile is returned when an ebook record has no quality profile
 	// to choose its format by: none is configured for the author or as the
 	// default.
