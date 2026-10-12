@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/datahearth/streamline/internal/auth"
+
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/media/book"
@@ -378,8 +380,13 @@ func (s *Server) GetBook(
 		}, nil
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
+	out := toAPIBook(row, progress)
+	if claims := auth.ClaimsFromContext(ctx); claims != nil {
+		state := s.books.SendState(ctx, claims.UserID, row)
+		out.EbookSend = &BookSendState{Ok: state.OK, Reason: optString(state.Reason)}
+	}
 	return GetBook200JSONResponse{
-		BookDetailJSONResponse: BookDetailJSONResponse(toAPIBook(row, progress)),
+		BookDetailJSONResponse: BookDetailJSONResponse(out),
 	}, nil
 }
 

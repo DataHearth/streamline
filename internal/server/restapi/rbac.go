@@ -281,6 +281,8 @@ var minRole = map[string]string{
 	"RenameBookSeriesFiles":         roleMember,
 	"RenameMusicArtistFiles":        roleMember,
 	"SearchBookNow":                 roleMember,
+	"SendBook":                      roleRequestOnly,
+	"SendBookSeries":                roleRequestOnly,
 	"SearchBookSeriesNow":           roleMember,
 	"SearchBooks":                   roleRequestOnly,
 	"SearchMusicAlbumNow":           roleMember,

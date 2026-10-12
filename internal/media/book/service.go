@@ -108,6 +108,12 @@ type Manager interface {
 		id uint32,
 		preview bool,
 	) (library.RenamePlan, error)
+	SendBook(ctx context.Context, userID, bookID uint32) error
+	SendSeries(
+		ctx context.Context,
+		userID, seriesID uint32,
+	) (SeriesSendPlan, error)
+	SendState(ctx context.Context, userID uint32, b *ent.Book) SendState
 }
 
 var _ Manager = (*Service)(nil)

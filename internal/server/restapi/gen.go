@@ -4102,6 +4102,9 @@ type Book struct {
 	// Contributors Makers only (author, writer, artist, colorist, cover). Translators and narrators live on the editions.
 	Contributors []BookCredit `json:"contributors"`
 
+	// EbookSend Whether the caller can email this book to their device; set on the detail response only.
+	EbookSend *BookSendState `json:"ebook_send,omitempty"`
+
 	// Editions Preferred language first, then by format.
 	Editions       []BookEdition `json:"editions"`
 	FirstPublished uint16        `json:"first_published"`
@@ -4380,6 +4383,14 @@ type BookRole string
 type BookSearchAccepted struct {
 	// Queued Slots (book) or volumes (series) the pass will search.
 	Queued uint32 `json:"queued"`
+}
+
+// BookSendState defines model for BookSendState.
+type BookSendState struct {
+	Ok bool `json:"ok"`
+
+	// Reason Why the send button is disabled; absent when `ok`.
+	Reason *string `json:"reason,omitempty"`
 }
 
 // BookSeries Series detail; also the response of add, patch and refresh. The cover is the first volume's poster.
@@ -4884,7 +4895,8 @@ type Error struct {
 	// Code Stable machine-readable error code (e.g. last_admin,
 	// self_delete_forbidden, email_exists, connection_failed,
 	// invalid_condition, grab_rejected, rate_limited, worker_unavailable,
-	// hardcover_not_configured, hardcover_key_rejected). Present for domain errors
+	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
+	// no_device_email, smtp_not_configured, send_failed). Present for domain errors
 	// where the caller needs to branch on the specific reason; absent
 	// for generic errors where the message is sufficient.
 	Code *string `json:"code,omitempty"`
@@ -7463,6 +7475,20 @@ type SeriesRenamePlan struct {
 	SeriesId   uint32            `json:"series_id"`
 }
 
+// SeriesSendPlan defines model for SeriesSendPlan.
+type SeriesSendPlan struct {
+	Emails      int                 `json:"emails"`
+	SentVolumes int                 `json:"sent_volumes"`
+	Skipped     []SeriesSendSkipped `json:"skipped"`
+}
+
+// SeriesSendSkipped defines model for SeriesSendSkipped.
+type SeriesSendSkipped struct {
+	BookId uint32 `json:"book_id"`
+	Reason string `json:"reason"`
+	Title  string `json:"title"`
+}
+
 // Session defines model for Session.
 type Session struct {
 	CreatedAt  time.Time  `json:"created_at"`
@@ -8581,6 +8607,9 @@ type UsersSort string
 // AuthConfig defines model for AuthConfig.
 type AuthConfig = AuthConfigView
 
+// BadGateway defines model for BadGateway.
+type BadGateway = Error
+
 // BadRequest defines model for BadRequest.
 type BadRequest = Error
 
@@ -8773,6 +8802,9 @@ type SeriesLookupResults = SeriesLookupResultList
 
 // SeriesPlayOnLinks defines model for SeriesPlayOnLinks.
 type SeriesPlayOnLinks = PlayOnLinkList
+
+// SeriesSendPlanResponse defines model for SeriesSendPlanResponse.
+type SeriesSendPlanResponse = SeriesSendPlan
 
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = Error
@@ -9981,6 +10013,9 @@ type ServerInterface interface {
 	// SearchBookSeriesNow Dispatch an indexer search for a series' wanted volumes
 	// (POST /books/series/{id}/search-now)
 	SearchBookSeriesNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// SendBookSeries Email a series' ebook volumes to the caller's device
+	// (POST /books/series/{id}/send)
+	SendBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// DeleteBook Remove a book from the library
 	// (DELETE /books/{id})
 	DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams)
@@ -10005,6 +10040,9 @@ type ServerInterface interface {
 	// SearchBookNow Dispatch an indexer search and grab for a book
 	// (POST /books/{id}/search-now)
 	SearchBookNow(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookNowParams)
+	// SendBook Email a book's ebook to the caller's device
+	// (POST /books/{id}/send)
+	SendBook(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(w http.ResponseWriter, r *http.Request, params ListUpcomingReleasesParams)
@@ -10851,6 +10889,12 @@ func (_ Unimplemented) SearchBookSeriesNow(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// SendBookSeries Email a series' ebook volumes to the caller's device
+// (POST /books/series/{id}/send)
+func (_ Unimplemented) SendBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // DeleteBook Remove a book from the library
 // (DELETE /books/{id})
 func (_ Unimplemented) DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams) {
@@ -10896,6 +10940,12 @@ func (_ Unimplemented) SearchBookReleases(w http.ResponseWriter, r *http.Request
 // SearchBookNow Dispatch an indexer search and grab for a book
 // (POST /books/{id}/search-now)
 func (_ Unimplemented) SearchBookNow(w http.ResponseWriter, r *http.Request, id ResourceID, params SearchBookNowParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// SendBook Email a book's ebook to the caller's device
+// (POST /books/{id}/send)
+func (_ Unimplemented) SendBook(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -13415,6 +13465,32 @@ func (siw *ServerInterfaceWrapper) SearchBookSeriesNow(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SendBookSeries operation middleware
+func (siw *ServerInterfaceWrapper) SendBookSeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendBookSeries(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteBook operation middleware
 func (siw *ServerInterfaceWrapper) DeleteBook(w http.ResponseWriter, r *http.Request) {
 
@@ -13694,6 +13770,32 @@ func (siw *ServerInterfaceWrapper) SearchBookNow(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchBookNow(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendBook operation middleware
+func (siw *ServerInterfaceWrapper) SendBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendBook(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19229,6 +19331,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/books/series/{id}/refresh-metadata", wrapper.RefreshBookSeries)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/series/{id}/send", wrapper.SendBookSeries)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/books/series/{id}/rename", wrapper.RenameBookSeriesFiles)
 	})
 	r.Group(func(r chi.Router) {
@@ -19269,6 +19374,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/books/{id}/rename", wrapper.RenameBookFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/books/{id}/send", wrapper.SendBook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/quality-profiles", wrapper.ListQualityProfiles)
@@ -19707,6 +19815,8 @@ type ActivityListJSONResponse ActivityList
 
 type AuthConfigJSONResponse AuthConfigView
 
+type BadGatewayJSONResponse Error
+
 type BadRequestJSONResponse Error
 
 type BookCountsResponseJSONResponse BookCounts
@@ -19961,6 +20071,8 @@ type SeriesRenamePlanJSONResponse SeriesRenamePlan
 
 type SeriesSearchAcceptedResponse struct {
 }
+
+type SeriesSendPlanResponseJSONResponse SeriesSendPlan
 
 type ServiceUnavailableJSONResponse Error
 
@@ -23224,6 +23336,102 @@ func (response SearchBookSeriesNow500JSONResponse) VisitSearchBookSeriesNowRespo
 	return err
 }
 
+type SendBookSeriesRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type SendBookSeriesResponseObject interface {
+	VisitSendBookSeriesResponse(w http.ResponseWriter) error
+}
+
+type SendBookSeries202JSONResponse struct {
+	SeriesSendPlanResponseJSONResponse
+}
+
+func (response SendBookSeries202JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookSeries403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SendBookSeries403JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookSeries404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SendBookSeries404JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookSeries422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SendBookSeries422JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookSeries500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SendBookSeries500JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookSeries503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response SendBookSeries503JSONResponse) VisitSendBookSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteBookRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params DeleteBookParams
@@ -23878,6 +24086,108 @@ func (response SearchBookNow500JSONResponse) VisitSearchBookNowResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBookRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type SendBookResponseObject interface {
+	VisitSendBookResponse(w http.ResponseWriter) error
+}
+
+type SendBook204Response struct {
+}
+
+func (response SendBook204Response) VisitSendBookResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SendBook403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SendBook403JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBook404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SendBook404JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBook422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response SendBook422JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBook500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SendBook500JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBook502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response SendBook502JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendBook503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response SendBook503JSONResponse) VisitSendBookResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -35656,6 +35966,9 @@ type StrictServerInterface interface {
 	// SearchBookSeriesNow Dispatch an indexer search for a series' wanted volumes
 	// (POST /books/series/{id}/search-now)
 	SearchBookSeriesNow(ctx context.Context, request SearchBookSeriesNowRequestObject) (SearchBookSeriesNowResponseObject, error)
+	// SendBookSeries Email a series' ebook volumes to the caller's device
+	// (POST /books/series/{id}/send)
+	SendBookSeries(ctx context.Context, request SendBookSeriesRequestObject) (SendBookSeriesResponseObject, error)
 	// DeleteBook Remove a book from the library
 	// (DELETE /books/{id})
 	DeleteBook(ctx context.Context, request DeleteBookRequestObject) (DeleteBookResponseObject, error)
@@ -35680,6 +35993,9 @@ type StrictServerInterface interface {
 	// SearchBookNow Dispatch an indexer search and grab for a book
 	// (POST /books/{id}/search-now)
 	SearchBookNow(ctx context.Context, request SearchBookNowRequestObject) (SearchBookNowResponseObject, error)
+	// SendBook Email a book's ebook to the caller's device
+	// (POST /books/{id}/send)
+	SendBook(ctx context.Context, request SendBookRequestObject) (SendBookResponseObject, error)
 	// ListUpcomingReleases Upcoming movie releases, episode air dates, monitored album releases and monitored book releases in [from, to).
 	// (GET /calendar/upcoming)
 	ListUpcomingReleases(ctx context.Context, request ListUpcomingReleasesRequestObject) (ListUpcomingReleasesResponseObject, error)
@@ -37643,6 +37959,32 @@ func (sh *strictHandler) SearchBookSeriesNow(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// SendBookSeries operation middleware
+func (sh *strictHandler) SendBookSeries(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SendBookSeriesRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendBookSeries(ctx, request.(SendBookSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendBookSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendBookSeriesResponseObject); ok {
+		if err := validResponse.VisitSendBookSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // DeleteBook operation middleware
 func (sh *strictHandler) DeleteBook(w http.ResponseWriter, r *http.Request, id ResourceID, params DeleteBookParams) {
 	var request DeleteBookRequestObject
@@ -37863,6 +38205,32 @@ func (sh *strictHandler) SearchBookNow(w http.ResponseWriter, r *http.Request, i
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(SearchBookNowResponseObject); ok {
 		if err := validResponse.VisitSearchBookNowResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SendBook operation middleware
+func (sh *strictHandler) SendBook(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request SendBookRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SendBook(ctx, request.(SendBookRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendBook")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SendBookResponseObject); ok {
+		if err := validResponse.VisitSendBookResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

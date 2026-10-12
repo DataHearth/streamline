@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strings"
 
+	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -163,4 +165,34 @@ const codeWorkerUnavailable = "worker_unavailable"
 func errWorkerUnavailable(msg string) ConflictJSONResponse {
 	code := codeWorkerUnavailable
 	return ConflictJSONResponse{Message: msg, Code: &code}
+}
+
+const (
+	codeNotSendable       = "not_sendable"
+	codeNoDeviceEmail     = "no_device_email"
+	codeSMTPNotConfigured = "smtp_not_configured"
+	codeSendFailed        = "send_failed"
+)
+
+func errNotSendable(err error) UnprocessableEntityJSONResponse {
+	code := codeNotSendable
+	return UnprocessableEntityJSONResponse{
+		Message: strings.TrimPrefix(err.Error(), book.ErrNotSendable.Error()+": "),
+		Code:    &code,
+	}
+}
+
+func errNoDeviceEmail(err error) UnprocessableEntityJSONResponse {
+	code := codeNoDeviceEmail
+	return UnprocessableEntityJSONResponse{Message: err.Error(), Code: &code}
+}
+
+func errSMTPNotConfigured(err error) ServiceUnavailableJSONResponse {
+	code := codeSMTPNotConfigured
+	return ServiceUnavailableJSONResponse{Message: err.Error(), Code: &code}
+}
+
+func errSendFailed(err error) BadGatewayJSONResponse {
+	code := codeSendFailed
+	return BadGatewayJSONResponse{Message: err.Error(), Code: &code}
 }

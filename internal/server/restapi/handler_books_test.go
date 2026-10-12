@@ -1,6 +1,7 @@
 package restapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -641,6 +642,39 @@ var _ = Describe("Handler: books", Label("unit", "server", "books"), func() {
 	})
 
 	Describe("GET /books/{id}", func() {
+		var sendState book.SendState
+		BeforeEach(func() {
+			sendState = book.SendState{OK: true}
+			app.books.EXPECT().
+				SendState(mock.Anything, mock.Anything, mock.Anything).
+				RunAndReturn(func(
+					context.Context, uint32, *ent.Book,
+				) book.SendState {
+					return sendState
+				}).Maybe()
+		})
+
+		It("carries ebook_send", func() {
+			sendState = book.SendState{
+				Reason: "AZW3 isn't accepted by email; use OPDS",
+			}
+			app.books.EXPECT().
+				GetBook(mock.Anything, uint32(7)).
+				Return(aBook(), nil).
+				Once()
+			app.books.EXPECT().
+				Progress(mock.Anything, mock.Anything).
+				Return(nil).
+				Once()
+
+			resp := send(http.MethodGet, "/api/v1/books/7", app.requestOnlyKey, "")
+
+			var out Book
+			decode(resp, &out)
+			Expect(out.EbookSend.Ok).To(BeFalse())
+			Expect(*out.EbookSend.Reason).To(ContainSubstring("AZW3"))
+		})
+
 		It(
 			"renders the book detail with makers, editions and the live progress",
 			func() {

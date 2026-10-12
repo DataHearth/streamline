@@ -1489,3 +1489,201 @@ func (_c *MockManager_SearchNowSeries_Call) RunAndReturn(run func(ctx context.Co
 	_c.Call.Return(run)
 	return _c
 }
+
+// SendBook provides a mock function for the type MockManager
+func (_mock *MockManager) SendBook(ctx context.Context, userID uint32, bookID uint32) error {
+	ret := _mock.Called(ctx, userID, bookID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendBook")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = returnFunc(ctx, userID, bookID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SendBook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendBook'
+type MockManager_SendBook_Call struct {
+	*mock.Call
+}
+
+// SendBook is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+//   - bookID uint32
+func (_e *MockManager_Expecter) SendBook(ctx any, userID any, bookID any) *MockManager_SendBook_Call {
+	return &MockManager_SendBook_Call{Call: _e.mock.On("SendBook", ctx, userID, bookID)}
+}
+
+func (_c *MockManager_SendBook_Call) Run(run func(ctx context.Context, userID uint32, bookID uint32)) *MockManager_SendBook_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SendBook_Call) Return(err error) *MockManager_SendBook_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SendBook_Call) RunAndReturn(run func(ctx context.Context, userID uint32, bookID uint32) error) *MockManager_SendBook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SendSeries provides a mock function for the type MockManager
+func (_mock *MockManager) SendSeries(ctx context.Context, userID uint32, seriesID uint32) (book.SeriesSendPlan, error) {
+	ret := _mock.Called(ctx, userID, seriesID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendSeries")
+	}
+
+	var r0 book.SeriesSendPlan
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) (book.SeriesSendPlan, error)); ok {
+		return returnFunc(ctx, userID, seriesID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) book.SeriesSendPlan); ok {
+		r0 = returnFunc(ctx, userID, seriesID)
+	} else {
+		r0 = ret.Get(0).(book.SeriesSendPlan)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, userID, seriesID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_SendSeries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendSeries'
+type MockManager_SendSeries_Call struct {
+	*mock.Call
+}
+
+// SendSeries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+//   - seriesID uint32
+func (_e *MockManager_Expecter) SendSeries(ctx any, userID any, seriesID any) *MockManager_SendSeries_Call {
+	return &MockManager_SendSeries_Call{Call: _e.mock.On("SendSeries", ctx, userID, seriesID)}
+}
+
+func (_c *MockManager_SendSeries_Call) Run(run func(ctx context.Context, userID uint32, seriesID uint32)) *MockManager_SendSeries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SendSeries_Call) Return(seriesSendPlan book.SeriesSendPlan, err error) *MockManager_SendSeries_Call {
+	_c.Call.Return(seriesSendPlan, err)
+	return _c
+}
+
+func (_c *MockManager_SendSeries_Call) RunAndReturn(run func(ctx context.Context, userID uint32, seriesID uint32) (book.SeriesSendPlan, error)) *MockManager_SendSeries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SendState provides a mock function for the type MockManager
+func (_mock *MockManager) SendState(ctx context.Context, userID uint32, b *ent.Book) book.SendState {
+	ret := _mock.Called(ctx, userID, b)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendState")
+	}
+
+	var r0 book.SendState
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, *ent.Book) book.SendState); ok {
+		r0 = returnFunc(ctx, userID, b)
+	} else {
+		r0 = ret.Get(0).(book.SendState)
+	}
+	return r0
+}
+
+// MockManager_SendState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendState'
+type MockManager_SendState_Call struct {
+	*mock.Call
+}
+
+// SendState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+//   - b *ent.Book
+func (_e *MockManager_Expecter) SendState(ctx any, userID any, b any) *MockManager_SendState_Call {
+	return &MockManager_SendState_Call{Call: _e.mock.On("SendState", ctx, userID, b)}
+}
+
+func (_c *MockManager_SendState_Call) Run(run func(ctx context.Context, userID uint32, b *ent.Book)) *MockManager_SendState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 *ent.Book
+		if args[2] != nil {
+			arg2 = args[2].(*ent.Book)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SendState_Call) Return(sendState book.SendState) *MockManager_SendState_Call {
+	_c.Call.Return(sendState)
+	return _c
+}
+
+func (_c *MockManager_SendState_Call) RunAndReturn(run func(ctx context.Context, userID uint32, b *ent.Book) book.SendState) *MockManager_SendState_Call {
+	_c.Call.Return(run)
+	return _c
+}
