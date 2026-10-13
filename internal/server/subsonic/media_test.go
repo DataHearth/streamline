@@ -185,6 +185,64 @@ var _ = g.Describe("media", g.Label("integration"), func() {
 		Expect(rec.Body.String()).To(ContainSubstring(`"code":0`))
 	})
 
+	g.It(
+		"sends the original instead of queueing when every transcode slot is busy",
+		func() {
+			h := New(
+				Deps{
+					Ent:        f.client,
+					Tracker:    appaccess.NewTracker(f.client),
+					Transcoder: trans,
+				},
+			)
+			for range maxTranscodes {
+				h.transcodes <- struct{}{}
+			}
+			rec := httptest.NewRecorder()
+			h.Routes().ServeHTTP(rec, httptest.NewRequest(
+				http.MethodGet,
+				"/stream?"+signedQuery(
+					"sesame",
+					url.Values{"id": {tr(f.withFile)}, "format": {"mp3"}},
+				).Encode(),
+				nil,
+			))
+			Expect(rec.Body.Bytes()).To(Equal(audio))
+			Expect(trans.calls).To(BeEmpty())
+
+			<-h.transcodes
+			rec = httptest.NewRecorder()
+			h.Routes().ServeHTTP(rec, httptest.NewRequest(
+				http.MethodGet,
+				"/stream?"+signedQuery(
+					"sesame",
+					url.Values{"id": {tr(f.withFile)}, "format": {"mp3"}},
+				).Encode(),
+				nil,
+			))
+			Expect(rec.Body.String()).To(Equal("MP3DATA"))
+			Expect(
+				h.transcodes,
+			).To(HaveLen(maxTranscodes-1), "the slot is given back")
+		},
+	)
+
+	g.It("answers HEAD on a transcode with its type and no body", func() {
+		rec := httptest.NewRecorder()
+		f.handler.ServeHTTP(rec, httptest.NewRequest(
+			http.MethodHead,
+			"/stream?"+signedQuery(
+				"sesame",
+				url.Values{"id": {tr(f.withFile)}, "format": {"opus"}},
+			).Encode(),
+			nil,
+		))
+		Expect(rec.Code).To(Equal(http.StatusOK))
+		Expect(rec.Header().Get("Content-Type")).To(Equal("audio/ogg"))
+		Expect(rec.Body.Len()).To(BeZero())
+		Expect(trans.calls).To(BeEmpty())
+	})
+
 	g.It("downloads the original as an attachment", func() {
 		rec := raw("download", url.Values{"id": {tr(f.withFile)}, "format": {"mp3"}})
 		Expect(rec.Body.Bytes()).To(Equal(audio))
