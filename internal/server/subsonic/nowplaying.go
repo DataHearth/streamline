@@ -16,6 +16,10 @@ import (
 // an entry whose track has no known duration.
 const nowPlayingTTL = 10 * time.Minute
 
+// maxPlayersPerUser bounds one account's entries: a client naming itself
+// differently on every call would otherwise grow the map without end.
+const maxPlayersPerUser = 8
+
 type playingKey struct {
 	userID uint32
 	player string
@@ -44,11 +48,43 @@ func (n *nowPlaying) set(u *ent.User, player string, trackID, durationSec uint32
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	now := n.now()
-	n.entries[playingKey{u.ID, player}] = playingEntry{
+	n.prune(now)
+	k := playingKey{u.ID, player}
+	if _, ok := n.entries[k]; !ok {
+		n.evictOldest(u.ID, maxPlayersPerUser-1)
+	}
+	n.entries[k] = playingEntry{
 		username: u.Email,
 		trackID:  trackID,
 		since:    now,
 		until:    now.Add(time.Duration(durationSec)*time.Second + nowPlayingTTL),
+	}
+}
+
+// prune drops expired entries. The caller holds mu.
+func (n *nowPlaying) prune(now time.Time) {
+	for k, e := range n.entries {
+		if now.After(e.until) {
+			delete(n.entries, k)
+		}
+	}
+}
+
+// evictOldest drops userID's oldest entries until at most keep remain. The
+// caller holds mu.
+func (n *nowPlaying) evictOldest(userID uint32, keep int) {
+	var mine []playingKey
+	for k := range n.entries {
+		if k.userID == userID {
+			mine = append(mine, k)
+		}
+	}
+	sort.Slice(mine, func(i, j int) bool {
+		return n.entries[mine[i]].since.Before(n.entries[mine[j]].since)
+	})
+	for len(mine) > keep {
+		delete(n.entries, mine[0])
+		mine = mine[1:]
 	}
 }
 
@@ -70,13 +106,9 @@ type playingSnapshot struct {
 func (n *nowPlaying) list() []playingSnapshot {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	now := n.now()
+	n.prune(n.now())
 	out := make([]playingSnapshot, 0, len(n.entries))
 	for k, e := range n.entries {
-		if now.After(e.until) {
-			delete(n.entries, k)
-			continue
-		}
 		out = append(out, playingSnapshot{k, e})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].since.After(out[j].since) })

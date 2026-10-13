@@ -41,7 +41,7 @@ Sharing creates a link like `https://your-host/share/AbCdEf…` that anyone can 
 
 - The link is the only protection, so share it the way you would share a file.
 - A link with an expiry date stops working on that date; deleting the share stops it at once.
-- A link plays with its owner's permissions: creating one needs both the stream and share permissions, an account whose share permission is switched off stops every link it handed out, and one whose stream permission is switched off leaves its links listing songs without playing them.
+- A link plays with its owner's permissions: creating one needs both the stream and share permissions, an account whose share permission is switched off stops every link it handed out, and one whose stream permission is switched off leaves its links listing songs without playing them, and a link's songs play within its owner's maximum bitrate.
 - Your app's share list shows how often each link was opened and when it was last opened.
 - The page is built from the address your app used to reach Streamline, so make sure the app points at your public address if you want links that work outside your network.
 
@@ -52,11 +52,11 @@ By default an app gets the original file, so seeking and caching work as with an
 - a **maximum bitrate** lower than the file's (common for "mobile data" settings), or
 - a **format** other than the file's: MP3, Opus or AAC.
 
-The converted stream uses the requested bitrate, between 32 and 320 kbps (MP3 defaults to 192, Opus to 128, AAC to 192 when only a format is asked for). Converted streams cannot be seeked by byte range; apps that support OpenSubsonic's `transcodeOffset` restart the stream at the right time instead. Transcoding needs ffmpeg (see `ffmpeg` in the [Configuration Reference](Configuration-Reference)); without it, or with `ffmpeg.enabled` off, apps always get the original file. At most eight conversions run at once; past that, apps get the original file instead of an error.
+The converted stream uses the requested bitrate, between 32 and 320 kbps (MP3 defaults to 192, Opus to 128, AAC to 192 when only a format is asked for). Converted streams cannot be seeked by byte range; apps that support OpenSubsonic's `transcodeOffset` restart the stream at the right time instead. Starting at a time always converts the song, even when the app asked for the original, and when no conversion can run (no ffmpeg, or all eight slots still busy after a few seconds) the app gets an error rather than the song from its start. Transcoding needs ffmpeg (see `ffmpeg` in the [Configuration Reference](Configuration-Reference)); without it, or with `ffmpeg.enabled` off, apps always get the original file. At most eight conversions run at once; past that, apps get the original file instead of an error.
 
 ## Lyrics
 
-Put a `.lrc` file with the same name next to the song (`01 - Song.flac` and `01 - Song.lrc`) for timed lyrics. Without one, lyrics embedded in the file are used. Streamline never fetches lyrics from the internet: it only reads what is on disk.
+Put a `.lrc` file with the same name next to the song (`01 - Song.flac` and `01 - Song.lrc`) for timed lyrics. Without one, lyrics embedded in the file are used. Section headers such as `[Chorus: Artist]` in untimed lyrics are kept as lines. Streamline never fetches lyrics from the internet: it only reads what is on disk.
 
 ## Users
 

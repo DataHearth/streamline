@@ -251,4 +251,28 @@ var _ = g.Describe("library", g.Label("integration"), func() {
 			errCode(f.call("getSong", url.Values{"id": {tr(f.withFile)}})),
 		).To(BeEquivalentTo(70))
 	})
+
+	g.It("counts genres in two grouped queries", func() {
+		ctx := context.Background()
+		other := f.addArtist("a-3", "Miles Davis", "Jazz")
+		_, err := f.client.Album.Create().
+			SetMbid("rg-jazz").
+			SetTitle("Kind of Blue").
+			SetType("album").
+			SetArtist(other).
+			Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		n := f.countTrackQueries()
+		gs := list(obj(okResp(f.call("getGenres", nil)), "genres"), "genre")
+		Expect(n.Load()).To(BeEquivalentTo(1))
+		byName := map[string][2]any{}
+		for _, g := range gs {
+			byName[g["value"].(string)] = [2]any{g["albumCount"], g["songCount"]}
+		}
+		Expect(byName).To(Equal(map[string][2]any{
+			"Grunge": {float64(1), float64(1)},
+			"Jazz":   {float64(1), float64(0)},
+		}))
+	})
 })

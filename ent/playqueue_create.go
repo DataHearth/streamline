@@ -56,13 +56,13 @@ func (_c *PlayQueueCreate) SetTrackIds(v []uint32) *PlayQueueCreate {
 }
 
 // SetCurrent sets the "current" field.
-func (_c *PlayQueueCreate) SetCurrent(v int) *PlayQueueCreate {
+func (_c *PlayQueueCreate) SetCurrent(v uint32) *PlayQueueCreate {
 	_c.mutation.SetCurrent(v)
 	return _c
 }
 
 // SetNillableCurrent sets the "current" field if the given value is not nil.
-func (_c *PlayQueueCreate) SetNillableCurrent(v *int) *PlayQueueCreate {
+func (_c *PlayQueueCreate) SetNillableCurrent(v *uint32) *PlayQueueCreate {
 	if v != nil {
 		_c.SetCurrent(*v)
 	}
@@ -178,11 +178,6 @@ func (_c *PlayQueueCreate) check() error {
 	if _, ok := _c.mutation.Current(); !ok {
 		return &ValidationError{Name: "current", err: errors.New(`ent: missing required field "PlayQueue.current"`)}
 	}
-	if v, ok := _c.mutation.Current(); ok {
-		if err := playqueue.CurrentValidator(v); err != nil {
-			return &ValidationError{Name: "current", err: fmt.Errorf(`ent: validator failed for field "PlayQueue.current": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.Position(); !ok {
 		return &ValidationError{Name: "position", err: errors.New(`ent: missing required field "PlayQueue.position"`)}
 	}
@@ -244,7 +239,7 @@ func (_c *PlayQueueCreate) createSpec() (*PlayQueue, *sqlgraph.CreateSpec) {
 		_node.TrackIds = value
 	}
 	if value, ok := _c.mutation.Current(); ok {
-		_spec.SetField(playqueue.FieldCurrent, field.TypeInt, value)
+		_spec.SetField(playqueue.FieldCurrent, field.TypeUint32, value)
 		_node.Current = value
 	}
 	if value, ok := _c.mutation.Position(); ok {

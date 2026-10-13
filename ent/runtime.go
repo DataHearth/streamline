@@ -721,9 +721,7 @@ func init() {
 	// playqueueDescCurrent is the schema descriptor for current field.
 	playqueueDescCurrent := playqueueFields[1].Descriptor()
 	// playqueue.DefaultCurrent holds the default value on creation for the current field.
-	playqueue.DefaultCurrent = playqueueDescCurrent.Default.(int)
-	// playqueue.CurrentValidator is a validator for the "current" field. It is called by the builders before save.
-	playqueue.CurrentValidator = playqueueDescCurrent.Validators[0].(func(int) error)
+	playqueue.DefaultCurrent = playqueueDescCurrent.Default.(uint32)
 	// playqueueDescPosition is the schema descriptor for position field.
 	playqueueDescPosition := playqueueFields[2].Descriptor()
 	// playqueue.DefaultPosition holds the default value on creation for the position field.

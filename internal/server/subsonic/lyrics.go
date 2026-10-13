@@ -68,7 +68,11 @@ func readSidecar(path string) (string, bool) {
 
 var (
 	lrcTime = regexp.MustCompile(`^\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]`)
-	lrcTag  = regexp.MustCompile(`^\[([a-zA-Z#]+):(.*)\]\s*$`)
+	// The LRC ID tags only: a section header such as "[Chorus: Rihanna]" in
+	// plain lyrics is text and stays.
+	lrcTag = regexp.MustCompile(
+		`(?i)^\[(ar|al|ti|au|by|offset|re|ve|length|tool|la|#)\s*:(.*)\]\s*$`,
+	)
 )
 
 // parseLRC reads LRC ("[01:02.34]words", several stamps allowed on a line,

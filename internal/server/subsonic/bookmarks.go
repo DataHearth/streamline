@@ -157,7 +157,7 @@ func (h *Handler) loadQueue(r *http.Request, u *ent.User) (*savedQueue, error) {
 		if !live[id] {
 			continue
 		}
-		if i == q.Current {
+		if i == int(q.Current) {
 			current = kept
 		}
 		kept++
@@ -306,10 +306,12 @@ func (h *Handler) storeQueue(
 		if len(ids) == 0 {
 			return nil
 		}
+		// An index into ids, range-checked by both callers.
+		cur := uint32(current) //nolint:gosec // see above
 		return c.PlayQueue.Create().
 			SetUserID(u.ID).
 			SetTrackIds(ids).
-			SetCurrent(current).
+			SetCurrent(cur).
 			SetPosition(pos).
 			SetChangedBy(client).
 			Exec(ctx)

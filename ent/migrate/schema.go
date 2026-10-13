@@ -1375,7 +1375,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "track_ids", Type: field.TypeJSON, Nullable: true},
-		{Name: "current", Type: field.TypeInt, Default: 0},
+		{Name: "current", Type: field.TypeUint32, Default: 0},
 		{Name: "position", Type: field.TypeInt64, Default: 0},
 		{Name: "changed_by", Type: field.TypeString, Nullable: true, Size: 64},
 		{Name: "user_play_queue", Type: field.TypeUint32, Unique: true},

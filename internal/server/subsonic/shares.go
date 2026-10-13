@@ -86,12 +86,13 @@ func (h *Handler) shareItems(r *http.Request, u *ent.User) ([]string, error) {
 	return out, nil
 }
 
-// expandShare resolves a share's items to the tracks it plays now, in item
-// order: an album by disc and position, an artist album by album.
-func (h *Handler) expandShare(
+// shareTrackIDs resolves a share's items to the track ids it holds now, in
+// item order: an album by disc and position, an artist album by album. It
+// reads ids only; playableTracks loads what is playable among them.
+func (h *Handler) shareTrackIDs(
 	ctx context.Context,
 	s *ent.Share,
-) ([]*ent.Track, error) {
+) ([]uint32, error) {
 	var ids []uint32
 	for _, item := range s.Items {
 		kind, id, err := parseID(item)
@@ -136,14 +137,23 @@ func (h *Handler) expandShare(
 			ids = append(ids, p.TrackIds...)
 		}
 	}
+	return ids, nil
+}
+
+// expandShare is the playable tracks a share plays now, in item order.
+func (h *Handler) expandShare(
+	ctx context.Context,
+	s *ent.Share,
+) ([]*ent.Track, error) {
+	ids, err := h.shareTrackIDs(ctx, s)
+	if err != nil {
+		return nil, err
+	}
 	return h.playableTracks(ctx, ids)
 }
 
-func (h *Handler) toShare(r *http.Request, s *ent.Share) (shareInfo, error) {
-	ts, err := h.expandShare(r.Context(), s)
-	if err != nil {
-		return shareInfo{}, err
-	}
+// toShare describes s, whose tracks ts the caller has expanded.
+func (h *Handler) toShare(r *http.Request, s *ent.Share, ts []*ent.Track) shareInfo {
 	// The link starts with the origin the client reached this server on, so
 	// it opens on the same host the app is pointed at.
 	return shareInfo{
@@ -156,7 +166,7 @@ func (h *Handler) toShare(r *http.Request, s *ent.Share) (shareInfo, error) {
 		LastVisited: optTimestamp(s.LastVisitedAt),
 		VisitCount:  s.VisitCount,
 		Entry:       songList(ts),
-	}, nil
+	}
 }
 
 func (h *Handler) getShares(
@@ -172,13 +182,28 @@ func (h *Handler) getShares(
 	if err != nil {
 		return err
 	}
-	out := &shares{Share: make([]shareInfo, 0, len(ss))}
-	for _, s := range ss {
-		sh, err := h.toShare(r, s)
+	// One read for every share's tracks, not one per share.
+	ctx := r.Context()
+	byShare := make([][]uint32, len(ss))
+	var all []uint32
+	for i, s := range ss {
+		ids, err := h.shareTrackIDs(ctx, s)
 		if err != nil {
 			return err
 		}
-		out.Share = append(out.Share, sh)
+		byShare[i] = ids
+		all = append(all, ids...)
+	}
+	ts, err := h.playableTracks(ctx, all)
+	if err != nil {
+		return err
+	}
+	out := &shares{Share: make([]shareInfo, 0, len(ss))}
+	for i, s := range ss {
+		out.Share = append(
+			out.Share,
+			h.toShare(r, s, inOrder(byShare[i], ts, trackIDOf)),
+		)
 	}
 	return h.respond(w, r, u, &body{Shares: out})
 }
@@ -218,11 +243,16 @@ func (h *Handler) createShare(
 		return err
 	}
 	s.Edges.Owner = u
-	sh, err := h.toShare(r, s)
+	ts, err := h.expandShare(ctx, s)
 	if err != nil {
 		return err
 	}
-	return h.respond(w, r, u, &body{Shares: &shares{Share: []shareInfo{sh}}})
+	return h.respond(
+		w,
+		r,
+		u,
+		&body{Shares: &shares{Share: []shareInfo{h.toShare(r, s, ts)}}},
+	)
 }
 
 func (h *Handler) ownShare(

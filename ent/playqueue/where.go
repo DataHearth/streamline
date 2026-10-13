@@ -66,7 +66,7 @@ func UpdateTime(v time.Time) predicate.PlayQueue {
 }
 
 // Current applies equality check predicate on the "current" field. It's identical to CurrentEQ.
-func Current(v int) predicate.PlayQueue {
+func Current(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldEQ(FieldCurrent, v))
 }
 
@@ -171,42 +171,42 @@ func TrackIdsNotNil() predicate.PlayQueue {
 }
 
 // CurrentEQ applies the EQ predicate on the "current" field.
-func CurrentEQ(v int) predicate.PlayQueue {
+func CurrentEQ(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldEQ(FieldCurrent, v))
 }
 
 // CurrentNEQ applies the NEQ predicate on the "current" field.
-func CurrentNEQ(v int) predicate.PlayQueue {
+func CurrentNEQ(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldNEQ(FieldCurrent, v))
 }
 
 // CurrentIn applies the In predicate on the "current" field.
-func CurrentIn(vs ...int) predicate.PlayQueue {
+func CurrentIn(vs ...uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldIn(FieldCurrent, vs...))
 }
 
 // CurrentNotIn applies the NotIn predicate on the "current" field.
-func CurrentNotIn(vs ...int) predicate.PlayQueue {
+func CurrentNotIn(vs ...uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldNotIn(FieldCurrent, vs...))
 }
 
 // CurrentGT applies the GT predicate on the "current" field.
-func CurrentGT(v int) predicate.PlayQueue {
+func CurrentGT(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldGT(FieldCurrent, v))
 }
 
 // CurrentGTE applies the GTE predicate on the "current" field.
-func CurrentGTE(v int) predicate.PlayQueue {
+func CurrentGTE(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldGTE(FieldCurrent, v))
 }
 
 // CurrentLT applies the LT predicate on the "current" field.
-func CurrentLT(v int) predicate.PlayQueue {
+func CurrentLT(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldLT(FieldCurrent, v))
 }
 
 // CurrentLTE applies the LTE predicate on the "current" field.
-func CurrentLTE(v int) predicate.PlayQueue {
+func CurrentLTE(v uint32) predicate.PlayQueue {
 	return predicate.PlayQueue(sql.FieldLTE(FieldCurrent, v))
 }
 

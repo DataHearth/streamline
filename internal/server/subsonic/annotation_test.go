@@ -218,4 +218,22 @@ var _ = g.Describe("annotations", g.Label("integration"), func() {
 			list(obj(okResp(f.call("getNowPlaying", nil)), "nowPlaying"), "entry"),
 		).To(BeEmpty())
 	})
+
+	g.It("bounds one account's now-playing entries", func() {
+		np := newNowPlaying()
+		u := f.client.User.Query().FirstX(context.Background())
+		clock := time.Now()
+		np.now = func() time.Time { return clock }
+		for i := range 20 {
+			clock = clock.Add(time.Second)
+			np.set(u, "player-"+strconv.Itoa(i), f.withFile.ID, 300)
+		}
+		got := np.list()
+		Expect(got).To(HaveLen(maxPlayersPerUser))
+		Expect(got[0].player).To(Equal("player-19"), "the newest are kept")
+
+		clock = clock.Add(time.Hour)
+		np.set(u, "late", f.withFile.ID, 300)
+		Expect(np.entries).To(HaveLen(1), "expired entries go on the next set")
+	})
 })

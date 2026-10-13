@@ -3,12 +3,14 @@ package subsonic
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
@@ -19,8 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/ffmpeg"
 )
 
-// maxTranscodes caps concurrent ffmpeg streams. Past it a request gets the
-// original file rather than an error: a player can still play it.
+// maxTranscodes caps concurrent ffmpeg streams.
 const maxTranscodes = 8
 
 // Bitrate bounds for a transcode, in kbps. The default applies when the
@@ -106,7 +107,8 @@ func streamLimits(r *http.Request, u *ent.User) (string, int) {
 
 // stream sends the original file with range support, or a transcode when
 // streamPlan asks for one. A transcode cannot seek by range; timeOffset
-// starts it that many seconds in instead (OpenSubsonic transcodeOffset).
+// starts it that many seconds in instead (OpenSubsonic transcodeOffset), and
+// only a transcode can, so an offset always takes one.
 func (h *Handler) stream(w http.ResponseWriter, r *http.Request, u *ent.User) error {
 	if err := require(u, permStream); err != nil {
 		return err
@@ -120,21 +122,94 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, u *ent.User) er
 		return err
 	}
 	format, maxKbps := streamLimits(r, u)
-	plan, convert := streamPlan(
-		suffixOf(mf),
-		// The same estimate the song listing reported, so an unprobed file
-		// is not taken for one of unknown bitrate and transcoded needlessly.
-		kbpsOf(mf, durationOf(mf, mf.Edges.Track)),
-		format,
-		maxKbps,
-	)
+	// The same estimate the song listing reported, so an unprobed file is
+	// not taken for one of unknown bitrate and transcoded needlessly.
+	srcKbps := kbpsOf(mf, durationOf(mf, mf.Edges.Track))
+	plan, convert := streamPlan(suffixOf(mf), srcKbps, format, maxKbps)
+	offset := intParam(r, "timeOffset", 0, 0, 1<<20)
+	if offset == 0 {
+		return h.sendAudio(w, r, mf, plan, convert)
+	}
+	// The client counts from the offset, so the original from 0 would play
+	// at the wrong position: transcode or refuse, never fall back.
+	if !convert {
+		plan = offsetPlan(suffixOf(mf), srcKbps)
+	}
+	if !h.transcodingAvailable() ||
+		!h.acquireTranscode(r.Context(), offsetSlotWait) {
+		return errOffsetUnavailable
+	}
+	defer h.releaseTranscode()
+	plan.OffsetSec = offset
+	return h.transcode(w, r, mf, plan)
+}
+
+// offsetSlotWait is how long a stream with timeOffset waits for a transcode
+// slot. It has no original to fall back on, so it queues briefly instead.
+// A variable only so the specs need not wait it out.
+var offsetSlotWait = 5 * time.Second
+
+var errOffsetUnavailable = &apiError{
+	Code:    errGeneric,
+	Message: "timeOffset needs a transcode and none can run now",
+}
+
+// offsetPlan is the transcode a timeOffset needs when streamPlan asked for
+// none: the file's own format when this server can make it, else mp3, at the
+// file's bitrate within the encoder's bounds.
+func offsetPlan(suffix string, srcKbps uint32) ffmpeg.AudioTranscode {
+	format := suffix
+	if _, ok := ffmpeg.AudioFormats[format]; !ok {
+		format = "mp3"
+	}
+	kbps := defaultTranscodeKbps[format]
+	if srcKbps > 0 {
+		kbps = min(int(srcKbps), maxTranscodeKbps)
+	}
+	return ffmpeg.AudioTranscode{
+		Format:      format,
+		BitrateKbps: max(kbps, minTranscodeKbps),
+	}
+}
+
+// acquireTranscode takes a transcode slot, waiting up to wait for one.
+func (h *Handler) acquireTranscode(ctx context.Context, wait time.Duration) bool {
+	select {
+	case h.transcodes <- struct{}{}:
+		return true
+	default:
+	}
+	if wait <= 0 {
+		return false
+	}
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case h.transcodes <- struct{}{}:
+		return true
+	case <-t.C:
+		return false
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (h *Handler) releaseTranscode() { <-h.transcodes }
+
+// sendAudio sends mf as planned: a transcode when convert asks for one and a
+// slot is free, else the original with range support. Past maxTranscodes the
+// original goes out rather than an error: a player can still play it.
+func (h *Handler) sendAudio(
+	w http.ResponseWriter,
+	r *http.Request,
+	mf *ent.MediaFile,
+	plan ffmpeg.AudioTranscode,
+	convert bool,
+) error {
 	if !convert || !h.transcodingAvailable() {
 		return serveFile(w, r, mf, false)
 	}
-	select {
-	case h.transcodes <- struct{}{}:
-		defer func() { <-h.transcodes }()
-	default:
+	if !h.acquireTranscode(r.Context(), 0) {
 		slog.InfoContext(
 			r.Context(),
 			"subsonic transcode limit reached, streaming original",
@@ -143,9 +218,63 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, u *ent.User) er
 		)
 		return serveFile(w, r, mf, false)
 	}
-	plan.OffsetSec = intParam(r, "timeOffset", 0, 0, 1<<20)
+	defer h.releaseTranscode()
 	return h.transcode(w, r, mf, plan)
 }
+
+// streamIdle is how long a stream or download may go without the client
+// taking a byte. It replaces the listener's WriteTimeout, which cut a long
+// track or a slow link off two minutes in, while still dropping a stalled
+// client, and the transcode slot it holds.
+const streamIdle = 2 * time.Minute
+
+// idleChunk bounds one sendfile step, so the deadline moves as bytes go out.
+const idleChunk = 4 << 20
+
+// idleWriter pushes the connection's write deadline streamIdle ahead of
+// every write.
+type idleWriter struct {
+	http.ResponseWriter
+	rc *http.ResponseController
+}
+
+func newIdleWriter(w http.ResponseWriter) *idleWriter {
+	iw := &idleWriter{ResponseWriter: w, rc: http.NewResponseController(w)}
+	iw.touch()
+	return iw
+}
+
+func (w *idleWriter) touch() {
+	// Unsupported only off a real connection (a test recorder).
+	_ = w.rc.SetWriteDeadline(time.Now().Add(streamIdle))
+}
+
+func (w *idleWriter) Write(p []byte) (int, error) {
+	w.touch()
+	return w.ResponseWriter.Write(p)
+}
+
+// ReadFrom keeps http.ServeContent's sendfile path, in idleChunk steps.
+func (w *idleWriter) ReadFrom(src io.Reader) (int64, error) {
+	rf, ok := w.ResponseWriter.(io.ReaderFrom)
+	lr, limited := src.(*io.LimitedReader)
+	if !ok || !limited {
+		return io.Copy(struct{ io.Writer }{w}, src)
+	}
+	var total int64
+	for lr.N > 0 {
+		w.touch()
+		n, err := rf.ReadFrom(&io.LimitedReader{R: lr.R, N: min(lr.N, idleChunk)})
+		total += n
+		lr.N -= n
+		if err != nil || n == 0 {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+func (w *idleWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 // sentWriter records whether anything reached the client, so a transcode
 // that fails before its first byte can still answer a Subsonic error.
@@ -168,7 +297,8 @@ func (h *Handler) transcode(
 	mf *ent.MediaFile,
 	plan ffmpeg.AudioTranscode,
 ) error {
-	if _, err := os.Stat(mf.Path); err != nil {
+	path := mf.Path                          // a library row, never request input
+	if _, err := os.Stat(path); err != nil { //nolint:gosec // see path
 		return &apiError{Code: errNotFound, Message: "file missing"}
 	}
 	hdr := w.Header()
@@ -177,7 +307,7 @@ func (h *Handler) transcode(
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
-	sw := &sentWriter{ResponseWriter: w}
+	sw := &sentWriter{ResponseWriter: newIdleWriter(w)}
 	hdr.Set("Content-Type", ffmpeg.AudioFormats[plan.Format].ContentType)
 	err := h.transcoder.TranscodeAudio(r.Context(), mf.Path, plan, sw)
 	switch {
@@ -234,7 +364,7 @@ func serveFile(
 		w.Header().Set("Content-Disposition",
 			mime.FormatMediaType("attachment", map[string]string{"filename": name}))
 	}
-	http.ServeContent(w, r, name, mf.UpdateTime, f)
+	http.ServeContent(newIdleWriter(w), r, name, mf.UpdateTime, f)
 	return nil
 }
 

@@ -56,14 +56,14 @@ func (_u *PlayQueueUpdate) ClearTrackIds() *PlayQueueUpdate {
 }
 
 // SetCurrent sets the "current" field.
-func (_u *PlayQueueUpdate) SetCurrent(v int) *PlayQueueUpdate {
+func (_u *PlayQueueUpdate) SetCurrent(v uint32) *PlayQueueUpdate {
 	_u.mutation.ResetCurrent()
 	_u.mutation.SetCurrent(v)
 	return _u
 }
 
 // SetNillableCurrent sets the "current" field if the given value is not nil.
-func (_u *PlayQueueUpdate) SetNillableCurrent(v *int) *PlayQueueUpdate {
+func (_u *PlayQueueUpdate) SetNillableCurrent(v *uint32) *PlayQueueUpdate {
 	if v != nil {
 		_u.SetCurrent(*v)
 	}
@@ -71,7 +71,7 @@ func (_u *PlayQueueUpdate) SetNillableCurrent(v *int) *PlayQueueUpdate {
 }
 
 // AddCurrent adds value to the "current" field.
-func (_u *PlayQueueUpdate) AddCurrent(v int) *PlayQueueUpdate {
+func (_u *PlayQueueUpdate) AddCurrent(v int32) *PlayQueueUpdate {
 	_u.mutation.AddCurrent(v)
 	return _u
 }
@@ -177,11 +177,6 @@ func (_u *PlayQueueUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PlayQueueUpdate) check() error {
-	if v, ok := _u.mutation.Current(); ok {
-		if err := playqueue.CurrentValidator(v); err != nil {
-			return &ValidationError{Name: "current", err: fmt.Errorf(`ent: validator failed for field "PlayQueue.current": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Position(); ok {
 		if err := playqueue.PositionValidator(v); err != nil {
 			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "PlayQueue.position": %w`, err)}
@@ -231,10 +226,10 @@ func (_u *PlayQueueUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.ClearField(playqueue.FieldTrackIds, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Current(); ok {
-		_spec.SetField(playqueue.FieldCurrent, field.TypeInt, value)
+		_spec.SetField(playqueue.FieldCurrent, field.TypeUint32, value)
 	}
 	if value, ok := _u.mutation.AddedCurrent(); ok {
-		_spec.AddField(playqueue.FieldCurrent, field.TypeInt, value)
+		_spec.AddField(playqueue.FieldCurrent, field.TypeUint32, value)
 	}
 	if value, ok := _u.mutation.Position(); ok {
 		_spec.SetField(playqueue.FieldPosition, field.TypeInt64, value)
@@ -324,14 +319,14 @@ func (_u *PlayQueueUpdateOne) ClearTrackIds() *PlayQueueUpdateOne {
 }
 
 // SetCurrent sets the "current" field.
-func (_u *PlayQueueUpdateOne) SetCurrent(v int) *PlayQueueUpdateOne {
+func (_u *PlayQueueUpdateOne) SetCurrent(v uint32) *PlayQueueUpdateOne {
 	_u.mutation.ResetCurrent()
 	_u.mutation.SetCurrent(v)
 	return _u
 }
 
 // SetNillableCurrent sets the "current" field if the given value is not nil.
-func (_u *PlayQueueUpdateOne) SetNillableCurrent(v *int) *PlayQueueUpdateOne {
+func (_u *PlayQueueUpdateOne) SetNillableCurrent(v *uint32) *PlayQueueUpdateOne {
 	if v != nil {
 		_u.SetCurrent(*v)
 	}
@@ -339,7 +334,7 @@ func (_u *PlayQueueUpdateOne) SetNillableCurrent(v *int) *PlayQueueUpdateOne {
 }
 
 // AddCurrent adds value to the "current" field.
-func (_u *PlayQueueUpdateOne) AddCurrent(v int) *PlayQueueUpdateOne {
+func (_u *PlayQueueUpdateOne) AddCurrent(v int32) *PlayQueueUpdateOne {
 	_u.mutation.AddCurrent(v)
 	return _u
 }
@@ -458,11 +453,6 @@ func (_u *PlayQueueUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PlayQueueUpdateOne) check() error {
-	if v, ok := _u.mutation.Current(); ok {
-		if err := playqueue.CurrentValidator(v); err != nil {
-			return &ValidationError{Name: "current", err: fmt.Errorf(`ent: validator failed for field "PlayQueue.current": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Position(); ok {
 		if err := playqueue.PositionValidator(v); err != nil {
 			return &ValidationError{Name: "position", err: fmt.Errorf(`ent: validator failed for field "PlayQueue.position": %w`, err)}
@@ -529,10 +519,10 @@ func (_u *PlayQueueUpdateOne) sqlSave(ctx context.Context) (_node *PlayQueue, er
 		_spec.ClearField(playqueue.FieldTrackIds, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Current(); ok {
-		_spec.SetField(playqueue.FieldCurrent, field.TypeInt, value)
+		_spec.SetField(playqueue.FieldCurrent, field.TypeUint32, value)
 	}
 	if value, ok := _u.mutation.AddedCurrent(); ok {
-		_spec.AddField(playqueue.FieldCurrent, field.TypeInt, value)
+		_spec.AddField(playqueue.FieldCurrent, field.TypeUint32, value)
 	}
 	if value, ok := _u.mutation.Position(); ok {
 		_spec.SetField(playqueue.FieldPosition, field.TypeInt64, value)

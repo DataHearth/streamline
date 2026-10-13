@@ -484,35 +484,59 @@ func (h *Handler) getMusicDirectory(
 
 // getGenres lists the artists' genres: MusicBrainz names one per artist, and
 // its albums and songs inherit it.
+type genreCount struct {
+	Genre string `sql:"genre"`
+	N     int    `sql:"n"`
+}
+
+// genreCounts makes s count its rows per artist genre, ar being the joined
+// artists table; an artist with no genre is left out.
+func genreCounts(s *sql.Selector, ar *sql.SelectTable) {
+	s.Where(sql.NEQ(ar.C(artist.FieldGenre), "")).
+		Select(sql.As(ar.C(artist.FieldGenre), "genre"), sql.As(sql.Count("*"), "n")).
+		GroupBy(ar.C(artist.FieldGenre))
+}
+
 func (h *Handler) getGenres(
 	w http.ResponseWriter,
 	r *http.Request,
 	_ *ent.User,
 ) error {
 	ctx := r.Context()
-	als, err := h.ent.Album.Query().
-		Where(album.HasArtistWith(artist.GenreNEQ(""))).
-		WithArtist(func(q *ent.ArtistQuery) { q.Select(artist.FieldGenre) }).
-		Select(album.FieldID).
-		All(ctx)
+	// Two grouped reads: albums per genre, then playable songs per genre.
+	var albumRows, songRows []genreCount
+	err := h.ent.Album.Query().
+		Modify(func(s *sql.Selector) {
+			ar := sql.Table(artist.Table)
+			s.Join(ar).On(s.C(album.ArtistColumn), ar.C(artist.FieldID))
+			genreCounts(s, ar)
+		}).
+		Scan(ctx, &albumRows)
 	if err != nil {
 		return err
 	}
-	albumCounts := map[string]int{}
-	for _, al := range als {
-		albumCounts[al.Edges.Artist.Genre]++
+	err = h.ent.Track.Query().
+		Where(playable()).
+		Modify(func(s *sql.Selector) {
+			al := sql.Table(album.Table)
+			ar := sql.Table(artist.Table)
+			s.Join(al).On(s.C(track.AlbumColumn), al.C(album.FieldID)).
+				Join(ar).On(al.C(album.ArtistColumn), ar.C(artist.FieldID))
+			genreCounts(s, ar)
+		}).
+		Scan(ctx, &songRows)
+	if err != nil {
+		return err
 	}
-	out := &genres{Genre: make([]genre, 0, len(albumCounts))}
-	for name, n := range albumCounts {
-		songs, err := h.ent.Track.Query().
-			Where(playable(), track.HasAlbumWith(album.HasArtistWith(artist.GenreEQ(name)))).
-			Count(ctx)
-		if err != nil {
-			return err
-		}
+	songs := make(map[string]int, len(songRows))
+	for _, row := range songRows {
+		songs[row.Genre] = row.N
+	}
+	out := &genres{Genre: make([]genre, 0, len(albumRows))}
+	for _, row := range albumRows {
 		out.Genre = append(
 			out.Genre,
-			genre{Value: name, SongCount: songs, AlbumCount: n},
+			genre{Value: row.Genre, SongCount: songs[row.Genre], AlbumCount: row.N},
 		)
 	}
 	sort.Slice(out.Genre, func(i, j int) bool {

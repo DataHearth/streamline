@@ -5,13 +5,16 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/share"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // SharePage serves share links to anyone holding one, with no account: the
@@ -26,12 +29,14 @@ func (h *Handler) SharePage() http.Handler {
 	return r
 }
 
-// openShare loads a live share and the tracks it plays. A missing or expired
-// share is a plain 404, the same for both, so a link reveals nothing.
+// openShare loads a live share and the track ids it holds. A missing or
+// expired share is a plain 404, the same for both, so a link reveals nothing.
+// The ids are cheap to read; each route loads only the tracks it serves, so
+// seeking in a shared discography does not reload all of it per request.
 func (h *Handler) openShare(
 	w http.ResponseWriter,
 	r *http.Request,
-) (*ent.Share, []*ent.Track, bool) {
+) (*ent.Share, []uint32, bool) {
 	ctx := r.Context()
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	s, err := h.ent.Share.Query().
@@ -50,13 +55,13 @@ func (h *Handler) openShare(
 		http.NotFound(w, r)
 		return nil, nil, false
 	}
-	ts, err := h.expandShare(ctx, s)
+	ids, err := h.shareTrackIDs(ctx, s)
 	if err != nil {
 		slog.ErrorContext(ctx, "expand share", "share.id", s.ID, "error", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return nil, nil, false
 	}
-	return s, ts, true
+	return s, ids, true
 }
 
 func pathID(r *http.Request, name string) (uint32, bool) {
@@ -65,30 +70,44 @@ func pathID(r *http.Request, name string) (uint32, bool) {
 }
 
 func (h *Handler) serveSharedTrack(w http.ResponseWriter, r *http.Request) {
-	s, ts, ok := h.openShare(w, r)
+	s, ids, ok := h.openShare(w, r)
 	if !ok {
 		return
 	}
 	id, ok := pathID(r, "track")
 	// The link plays with its owner's rights: an account that may not stream
 	// must not reach the files through a share either.
-	if !ok || !s.Edges.Owner.SubsonicCanStream {
+	owner := s.Edges.Owner
+	if !ok || !owner.SubsonicCanStream || !slices.Contains(ids, id) {
 		http.NotFound(w, r)
 		return
 	}
-	for _, t := range ts {
-		if t.ID == id {
-			if err := serveFile(w, r, firstFile(t), false); err != nil {
-				http.NotFound(w, r)
-			}
-			return
-		}
+	ctx := r.Context()
+	ts, err := h.playableTracks(ctx, []uint32{id})
+	if err != nil {
+		slog.ErrorContext(ctx, "load shared track", "track.id", id, "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
-	http.NotFound(w, r)
+	if len(ts) == 0 || firstFile(ts[0]) == nil {
+		http.NotFound(w, r)
+		return
+	}
+	t, mf := ts[0], firstFile(ts[0])
+	// The owner's bitrate cap holds here as on their own stream.
+	plan, convert := streamPlan(
+		suffixOf(mf),
+		kbpsOf(mf, durationOf(mf, t)),
+		"",
+		int(owner.SubsonicMaxBitRate),
+	)
+	if err := h.sendAudio(w, r, mf, plan, convert); err != nil {
+		http.NotFound(w, r)
+	}
 }
 
 func (h *Handler) serveSharedCover(w http.ResponseWriter, r *http.Request) {
-	_, ts, ok := h.openShare(w, r)
+	_, ids, ok := h.openShare(w, r)
 	if !ok {
 		return
 	}
@@ -97,13 +116,42 @@ func (h *Handler) serveSharedCover(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	for _, t := range ts {
-		if t.Edges.Album.ID == id {
-			h.posters.Serve(w, r, "albums", id)
-			return
+	ctx := r.Context()
+	found, err := h.shareHasAlbum(ctx, ids, id)
+	if err != nil {
+		slog.ErrorContext(ctx, "check shared cover", "album.id", id, "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		http.NotFound(w, r)
+		return
+	}
+	h.posters.Serve(w, r, "albums", id)
+}
+
+// shareHasAlbum is whether a playable track among ids is on album albumID.
+func (h *Handler) shareHasAlbum(
+	ctx context.Context,
+	ids []uint32,
+	albumID uint32,
+) (bool, error) {
+	uniq := slices.Clone(ids)
+	slices.Sort(uniq)
+	uniq = slices.Compact(uniq)
+	for chunk := range slices.Chunk(uniq, markChunk) {
+		found, err := h.ent.Track.Query().
+			Where(
+				track.IDIn(chunk...),
+				track.HasAlbumWith(album.IDEQ(albumID)),
+				playable(),
+			).
+			Exist(ctx)
+		if err != nil || found {
+			return found, err
 		}
 	}
-	http.NotFound(w, r)
+	return false, nil
 }
 
 type pageTrack struct {
@@ -155,11 +203,17 @@ func shareTitle(s *ent.Share, ts []*ent.Track) string {
 }
 
 func (h *Handler) servePage(w http.ResponseWriter, r *http.Request) {
-	s, ts, ok := h.openShare(w, r)
+	s, ids, ok := h.openShare(w, r)
 	if !ok {
 		return
 	}
 	ctx := r.Context()
+	ts, err := h.playableTracks(ctx, ids)
+	if err != nil {
+		slog.ErrorContext(ctx, "expand share", "share.id", s.ID, "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	if err := s.Update().
 		AddVisitCount(1).
 		SetLastVisitedAt(time.Now()).

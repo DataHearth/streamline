@@ -37948,8 +37948,8 @@ type PlayQueueMutation struct {
 	update_time     *time.Time
 	track_ids       *[]uint32
 	appendtrack_ids []uint32
-	current         *int
-	addcurrent      *int
+	current         *uint32
+	addcurrent      *int32
 	position        *int64
 	addposition     *int64
 	changed_by      *string
@@ -38203,13 +38203,13 @@ func (m *PlayQueueMutation) ResetTrackIds() {
 }
 
 // SetCurrent sets the "current" field.
-func (m *PlayQueueMutation) SetCurrent(i int) {
-	m.current = &i
+func (m *PlayQueueMutation) SetCurrent(u uint32) {
+	m.current = &u
 	m.addcurrent = nil
 }
 
 // Current returns the value of the "current" field in the mutation.
-func (m *PlayQueueMutation) Current() (r int, exists bool) {
+func (m *PlayQueueMutation) Current() (r uint32, exists bool) {
 	v := m.current
 	if v == nil {
 		return
@@ -38220,7 +38220,7 @@ func (m *PlayQueueMutation) Current() (r int, exists bool) {
 // OldCurrent returns the old "current" field's value of the PlayQueue entity.
 // If the PlayQueue object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PlayQueueMutation) OldCurrent(ctx context.Context) (v int, err error) {
+func (m *PlayQueueMutation) OldCurrent(ctx context.Context) (v uint32, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCurrent is only allowed on UpdateOne operations")
 	}
@@ -38234,17 +38234,17 @@ func (m *PlayQueueMutation) OldCurrent(ctx context.Context) (v int, err error) {
 	return oldValue.Current, nil
 }
 
-// AddCurrent adds i to the "current" field.
-func (m *PlayQueueMutation) AddCurrent(i int) {
+// AddCurrent adds u to the "current" field.
+func (m *PlayQueueMutation) AddCurrent(u int32) {
 	if m.addcurrent != nil {
-		*m.addcurrent += i
+		*m.addcurrent += u
 	} else {
-		m.addcurrent = &i
+		m.addcurrent = &u
 	}
 }
 
 // AddedCurrent returns the value that was added to the "current" field in this mutation.
-func (m *PlayQueueMutation) AddedCurrent() (r int, exists bool) {
+func (m *PlayQueueMutation) AddedCurrent() (r int32, exists bool) {
 	v := m.addcurrent
 	if v == nil {
 		return
@@ -38527,7 +38527,7 @@ func (m *PlayQueueMutation) SetField(name string, value ent.Value) error {
 		m.SetTrackIds(v)
 		return nil
 	case playqueue.FieldCurrent:
-		v, ok := value.(int)
+		v, ok := value.(uint32)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -38583,7 +38583,7 @@ func (m *PlayQueueMutation) AddedField(name string) (ent.Value, bool) {
 func (m *PlayQueueMutation) AddField(name string, value ent.Value) error {
 	switch name {
 	case playqueue.FieldCurrent:
-		v, ok := value.(int)
+		v, ok := value.(int32)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

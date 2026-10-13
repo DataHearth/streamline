@@ -17,6 +17,7 @@ import (
 
 	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/appaccess"
+	"github.com/datahearth/streamline/internal/ffmpeg"
 	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 )
 
@@ -238,5 +239,44 @@ var _ = g.Describe("shares", g.Label("integration"), func() {
 		Expect(
 			errCode(f.call("createShare", url.Values{"id": {al(f.album)}})),
 		).To(BeEquivalentTo(50))
+	})
+
+	g.It("holds a share stream to its owner's bitrate cap", func() {
+		trans := &fakeTranscoder{path: "/usr/bin/ffmpeg", out: "MP3DATA"}
+		h = New(Deps{
+			Ent:        f.client,
+			Posters:    posters,
+			Tracker:    appaccess.NewTracker(f.client),
+			Transcoder: trans,
+		})
+		f.handler = h.Routes()
+		page = h.SharePage()
+		s := list(obj(okResp(f.call("createShare", url.Values{"id": {al(f.album)}})), "shares"), "share")[0]
+		track := "/" + tokenOf(s) + "/stream/" + strconv.Itoa(int(f.withFile.ID))
+
+		Expect(visit(track).Body.Bytes()).To(Equal(audio), "no cap: the original")
+		Expect(trans.calls).To(BeEmpty())
+
+		Expect(f.client.User.Update().
+			Where(user.EmailEQ("listener@example.com")).
+			SetSubsonicMaxBitRate(128).
+			Exec(context.Background())).To(Succeed())
+		Expect(visit(track).Body.String()).To(Equal("MP3DATA"))
+		Expect(trans.calls).To(Equal([]ffmpeg.AudioTranscode{
+			{Format: "mp3", BitrateKbps: 128},
+		}))
+	})
+
+	g.It("reads every share's songs in one query", func() {
+		for range 3 {
+			okResp(f.call("createShare", url.Values{"id": {tr(f.withFile)}}))
+		}
+		n := f.countTrackQueries()
+		got := list(obj(okResp(f.call("getShares", nil)), "shares"), "share")
+		Expect(n.Load()).To(BeEquivalentTo(1))
+		Expect(got).To(HaveLen(3))
+		for _, sh := range got {
+			Expect(ids(list(sh, "entry"))).To(Equal([]string{tr(f.withFile)}))
+		}
 	})
 })

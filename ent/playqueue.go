@@ -26,7 +26,7 @@ type PlayQueue struct {
 	// TrackIds holds the value of the "track_ids" field.
 	TrackIds []uint32 `json:"track_ids,omitempty"`
 	// Current holds the value of the "current" field.
-	Current int `json:"current,omitempty"`
+	Current uint32 `json:"current,omitempty"`
 	// Position holds the value of the "position" field.
 	Position int64 `json:"position,omitempty"`
 	// ChangedBy holds the value of the "changed_by" field.
@@ -118,7 +118,7 @@ func (_m *PlayQueue) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field current", values[i])
 			} else if value.Valid {
-				_m.Current = int(value.Int64)
+				_m.Current = uint32(value.Int64)
 			}
 		case playqueue.FieldPosition:
 			if value, ok := values[i].(*sql.NullInt64); !ok {

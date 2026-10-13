@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,6 +24,8 @@ type fakeTranscoder struct {
 	calls []ffmpeg.AudioTranscode
 	out   string
 	err   error
+	// pause, when set, writes out one byte at a time with pause between.
+	pause time.Duration
 }
 
 func (t *fakeTranscoder) FFmpegPath() string { return t.path }
@@ -33,6 +37,15 @@ func (t *fakeTranscoder) TranscodeAudio(
 	w io.Writer,
 ) error {
 	t.calls = append(t.calls, o)
+	if t.pause > 0 {
+		for i := range len(t.out) {
+			if _, err := io.WriteString(w, t.out[i:i+1]); err != nil {
+				return err
+			}
+			time.Sleep(t.pause)
+		}
+		return t.err
+	}
 	if t.out != "" {
 		if _, err := io.WriteString(w, t.out); err != nil {
 			return err
@@ -322,5 +335,100 @@ var _ = g.Describe("media", g.Label("integration"), func() {
 		)
 		Expect(rec.Body.Bytes()).To(Equal(audio))
 		Expect(trans.calls).To(BeEmpty())
+	})
+
+	g.It("transcodes for a timeOffset even when no conversion is asked for", func() {
+		rec := raw(
+			"stream",
+			url.Values{"id": {tr(f.withFile)}, "timeOffset": {"30"}},
+		)
+		Expect(rec.Body.String()).To(Equal("MP3DATA"))
+		Expect(trans.calls).To(Equal([]ffmpeg.AudioTranscode{
+			{Format: "mp3", BitrateKbps: 320, OffsetSec: 30},
+		}))
+	})
+
+	g.It("refuses a timeOffset it cannot honour rather than play from 0", func() {
+		trans.path = ""
+		rec := raw("stream", url.Values{
+			"id": {tr(f.withFile)}, "format": {"mp3"}, "timeOffset": {"30"},
+		})
+		Expect(rec.Body.String()).To(ContainSubstring(`"code":0`))
+		Expect(rec.Body.Bytes()).NotTo(Equal(audio))
+
+		trans.path = "/usr/bin/ffmpeg"
+		h := New(Deps{
+			Ent:        f.client,
+			Tracker:    appaccess.NewTracker(f.client),
+			Transcoder: trans,
+		})
+		for range maxTranscodes {
+			h.transcodes <- struct{}{}
+		}
+		wait := offsetSlotWait
+		offsetSlotWait = 50 * time.Millisecond
+		g.DeferCleanup(func() { offsetSlotWait = wait })
+		rec = httptest.NewRecorder()
+		h.Routes().ServeHTTP(rec, httptest.NewRequest(
+			http.MethodGet,
+			"/stream?"+signedQuery("sesame", url.Values{
+				"id": {tr(f.withFile)}, "format": {"mp3"}, "timeOffset": {"30"},
+			}).Encode(),
+			nil,
+		))
+		Expect(rec.Body.String()).To(ContainSubstring(`"code":0`))
+		Expect(trans.calls).To(BeEmpty())
+	})
+
+	g.It("keeps a slow stream going past the listener's write timeout", func() {
+		trans.out = strings.Repeat("x", 8)
+		trans.pause = 60 * time.Millisecond
+		srv := httptest.NewUnstartedServer(f.handler)
+		srv.Config.WriteTimeout = 200 * time.Millisecond
+		srv.Start()
+		g.DeferCleanup(srv.Close)
+
+		resp, err := http.Get(
+			srv.URL + "/stream?" + signedQuery("sesame", url.Values{
+				"id": {tr(f.withFile)}, "maxBitRate": {"128"},
+			}).Encode(),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		got, err := io.ReadAll(resp.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(got)).To(Equal(trans.out))
+	})
+
+	g.It("sends a file larger than one sendfile step whole", func() {
+		big := make([]byte, idleChunk*2+12345)
+		for i := range big {
+			big[i] = byte(i % 251)
+		}
+		Expect(os.WriteFile(path, big, 0o600)).To(Succeed())
+		srv := httptest.NewServer(f.handler)
+		g.DeferCleanup(srv.Close)
+
+		resp, err := http.Get(
+			srv.URL + "/download?" + signedQuery("sesame", url.Values{
+				"id": {tr(f.withFile)},
+			}).Encode(),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		got, err := io.ReadAll(resp.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal(big))
+	})
+})
+
+var _ = g.Describe("parseLRC tags", g.Label("unit"), func() {
+	g.It("keeps a section header in plain lyrics and drops the ID tags", func() {
+		p := parseLRC("[ar: Rihanna]\n[ti:Work]\n[Chorus: Rihanna]\nwork work\n")
+		values := make([]string, 0, len(p.lines))
+		for _, l := range p.lines {
+			values = append(values, l.Value)
+		}
+		Expect(values).To(Equal([]string{"[Chorus: Rihanna]", "work work"}))
 	})
 })

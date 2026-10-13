@@ -79,9 +79,7 @@ var (
 	// UpdateDefaultUpdateTime holds the default value on update for the "update_time" field.
 	UpdateDefaultUpdateTime func() time.Time
 	// DefaultCurrent holds the default value on creation for the "current" field.
-	DefaultCurrent int
-	// CurrentValidator is a validator for the "current" field. It is called by the builders before save.
-	CurrentValidator func(int) error
+	DefaultCurrent uint32
 	// DefaultPosition holds the default value on creation for the "position" field.
 	DefaultPosition int64
 	// PositionValidator is a validator for the "position" field. It is called by the builders before save.
