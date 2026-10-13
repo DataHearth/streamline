@@ -15,6 +15,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/appaccess"
+	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -31,6 +32,18 @@ type Transcoder interface {
 	) error
 }
 
+// Accounts is the slice of the account service user management drives, so
+// every account and role write takes the admin API's own path.
+type Accounts interface {
+	CreateUserDirect(
+		ctx context.Context,
+		email, password, role, displayName string,
+	) (*ent.User, error)
+	UpdateUser(ctx context.Context, id uint32, p auth.UserPatch) error
+	DeleteUser(ctx context.Context, id, requesterID uint32) error
+	SetSubsonicPassword(ctx context.Context, userID uint32, password string) error
+}
+
 // Jobs is the slice of the scheduler startScan and getScanStatus drive.
 type Jobs interface {
 	Get(name string) (scheduler.JobInfo, error)
@@ -43,6 +56,7 @@ type Handler struct {
 	tracker    *appaccess.Tracker
 	transcoder Transcoder
 	jobs       Jobs
+	accounts   Accounts
 	playing    *nowPlaying
 	transcodes chan struct{}
 }
@@ -56,6 +70,8 @@ type Deps struct {
 	// Jobs is optional: without it startScan is refused and getScanStatus
 	// never reports a scan.
 	Jobs Jobs
+	// Accounts is optional: without it user management is refused.
+	Accounts Accounts
 }
 
 func New(d Deps) *Handler {
@@ -65,6 +81,7 @@ func New(d Deps) *Handler {
 		tracker:    d.Tracker,
 		transcoder: d.Transcoder,
 		jobs:       d.Jobs,
+		accounts:   d.Accounts,
 		playing:    newNowPlaying(),
 		transcodes: make(chan struct{}, maxTranscodes),
 	}
@@ -142,8 +159,13 @@ func (h *Handler) endpoints() map[string]endpoint {
 		"updateInternetRadioStation": h.updateInternetRadioStation,
 		"deleteInternetRadioStation": h.deleteInternetRadioStation,
 
-		// User management: the caller's own account only.
-		"getUser": h.getUser,
+		// User management
+		"getUser":        h.getUser,
+		"getUsers":       h.getUsers,
+		"createUser":     h.createUser,
+		"updateUser":     h.updateUser,
+		"deleteUser":     h.deleteUser,
+		"changePassword": h.changePassword,
 
 		// Bookmarks and the play queue
 		"getBookmarks":         h.getBookmarks,

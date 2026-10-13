@@ -223,6 +223,9 @@ func (h *Handler) createPlaylist(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permPlaylists); err != nil {
+		return err
+	}
 	ctx := r.Context()
 	ids, err := h.trackIDsParam(r, "songId")
 	if err != nil {
@@ -275,6 +278,9 @@ func (h *Handler) updatePlaylist(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permPlaylists); err != nil {
+		return err
+	}
 	ctx := r.Context()
 	id, err := idParamNamed(r, "playlistId", kindPlaylist)
 	if err != nil {
@@ -339,6 +345,9 @@ func (h *Handler) deletePlaylist(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permPlaylists); err != nil {
+		return err
+	}
 	id, err := idParam(r, kindPlaylist)
 	if err != nil {
 		return err

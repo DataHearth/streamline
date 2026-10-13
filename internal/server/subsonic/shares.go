@@ -202,6 +202,9 @@ func (h *Handler) createShare(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permShare); err != nil {
+		return err
+	}
 	ctx := r.Context()
 	items, err := h.shareItems(r, u)
 	if err != nil {
@@ -248,6 +251,9 @@ func (h *Handler) updateShare(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permShare); err != nil {
+		return err
+	}
 	id, err := idParam(r, kindShare)
 	if err != nil {
 		return err
@@ -279,6 +285,9 @@ func (h *Handler) deleteShare(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permShare); err != nil {
+		return err
+	}
 	id, err := idParam(r, kindShare)
 	if err != nil {
 		return err

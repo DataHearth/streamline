@@ -67,6 +67,7 @@ type body struct {
 	InternetRadioStations  *radioStations          `xml:"internetRadioStations,omitempty"  json:"internetRadioStations,omitempty"`
 	ScanStatus             *scanStatus             `xml:"scanStatus,omitempty"             json:"scanStatus,omitempty"`
 	User                   *subsonicUser           `xml:"user,omitempty"                   json:"user,omitempty"`
+	Users                  *subsonicUsers          `xml:"users,omitempty"                  json:"users,omitempty"`
 	Lyrics                 *lyrics                 `xml:"lyrics,omitempty"                 json:"lyrics,omitempty"`
 	LyricsList             *lyricsList             `xml:"lyricsList,omitempty"             json:"lyricsList,omitempty"`
 	OpenSubsonicExtensions []openSubsonicExtension `xml:"openSubsonicExtensions,omitempty" json:"openSubsonicExtensions,omitempty"`

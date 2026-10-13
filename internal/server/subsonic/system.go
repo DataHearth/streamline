@@ -3,7 +3,6 @@ package subsonic
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -63,34 +62,5 @@ func (h *Handler) startScan(
 		return err
 	}
 	writeOK(w, r, &body{ScanStatus: &scanStatus{Scanning: scanning, Count: n}})
-	return nil
-}
-
-// getUser describes the caller's own account; other accounts are not this
-// API's to read. The roles say what this server lets every user do through
-// Subsonic, which is how clients decide to offer sharing and downloads.
-func (h *Handler) getUser(
-	w http.ResponseWriter,
-	r *http.Request,
-	u *ent.User,
-) error {
-	name := r.FormValue("username")
-	if name == "" {
-		return missingParam("username")
-	}
-	if !strings.EqualFold(name, u.Email) {
-		return errNotAuthorizedErr
-	}
-	writeOK(w, r, &body{User: &subsonicUser{
-		Username:          u.Email,
-		Email:             u.Email,
-		ScrobblingEnabled: true,
-		AdminRole:         isAdmin(u),
-		DownloadRole:      true,
-		PlaylistRole:      true,
-		StreamRole:        true,
-		ShareRole:         true,
-		Folder:            []int{1},
-	}})
 	return nil
 }

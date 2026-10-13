@@ -85,10 +85,31 @@ func (h *Handler) trackFile(ctx context.Context, id uint32) (*ent.MediaFile, err
 	return mf, lookupErr(err)
 }
 
+// streamLimits is the format and bitrate cap a stream honours: the client's,
+// tightened by the account's own cap, which also overrides a request for the
+// raw file. The cap holds only while a transcode can run; without ffmpeg, or
+// with every transcode slot busy, the original is sent anyway.
+func streamLimits(r *http.Request, u *ent.User) (string, int) {
+	format := r.FormValue("format")
+	maxKbps := intParam(r, "maxBitRate", 0, 0, 1<<20)
+	if limit := int(u.SubsonicMaxBitRate); limit > 0 {
+		if maxKbps == 0 || maxKbps > limit {
+			maxKbps = limit
+		}
+		if strings.EqualFold(strings.TrimSpace(format), "raw") {
+			format = ""
+		}
+	}
+	return format, maxKbps
+}
+
 // stream sends the original file with range support, or a transcode when
 // streamPlan asks for one. A transcode cannot seek by range; timeOffset
 // starts it that many seconds in instead (OpenSubsonic transcodeOffset).
-func (h *Handler) stream(w http.ResponseWriter, r *http.Request, _ *ent.User) error {
+func (h *Handler) stream(w http.ResponseWriter, r *http.Request, u *ent.User) error {
+	if err := require(u, permStream); err != nil {
+		return err
+	}
 	id, err := idParam(r, kindTrack)
 	if err != nil {
 		return err
@@ -97,11 +118,12 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, _ *ent.User) er
 	if err != nil {
 		return err
 	}
+	format, maxKbps := streamLimits(r, u)
 	plan, convert := streamPlan(
 		suffixOf(mf),
 		kbpsOf(mf, mf.DurationSeconds),
-		r.FormValue("format"),
-		intParam(r, "maxBitRate", 0, 0, 1<<20),
+		format,
+		maxKbps,
 	)
 	if !convert || !h.transcodingAvailable() {
 		return serveFile(w, r, mf, false)
@@ -172,8 +194,11 @@ func (h *Handler) transcode(
 func (h *Handler) download(
 	w http.ResponseWriter,
 	r *http.Request,
-	_ *ent.User,
+	u *ent.User,
 ) error {
+	if err := require(u, permDownload); err != nil {
+		return err
+	}
 	id, err := idParam(r, kindTrack)
 	if err != nil {
 		return err

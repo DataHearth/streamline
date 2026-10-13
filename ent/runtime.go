@@ -1027,12 +1027,42 @@ func init() {
 	userDescSubsonicLastClient := userFields[9].Descriptor()
 	// user.SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
 	user.SubsonicLastClientValidator = userDescSubsonicLastClient.Validators[0].(func(string) error)
+	// userDescSubsonicCanStream is the schema descriptor for subsonic_can_stream field.
+	userDescSubsonicCanStream := userFields[10].Descriptor()
+	// user.DefaultSubsonicCanStream holds the default value on creation for the subsonic_can_stream field.
+	user.DefaultSubsonicCanStream = userDescSubsonicCanStream.Default.(bool)
+	// userDescSubsonicCanDownload is the schema descriptor for subsonic_can_download field.
+	userDescSubsonicCanDownload := userFields[11].Descriptor()
+	// user.DefaultSubsonicCanDownload holds the default value on creation for the subsonic_can_download field.
+	user.DefaultSubsonicCanDownload = userDescSubsonicCanDownload.Default.(bool)
+	// userDescSubsonicCanManagePlaylists is the schema descriptor for subsonic_can_manage_playlists field.
+	userDescSubsonicCanManagePlaylists := userFields[12].Descriptor()
+	// user.DefaultSubsonicCanManagePlaylists holds the default value on creation for the subsonic_can_manage_playlists field.
+	user.DefaultSubsonicCanManagePlaylists = userDescSubsonicCanManagePlaylists.Default.(bool)
+	// userDescSubsonicCanShare is the schema descriptor for subsonic_can_share field.
+	userDescSubsonicCanShare := userFields[13].Descriptor()
+	// user.DefaultSubsonicCanShare holds the default value on creation for the subsonic_can_share field.
+	user.DefaultSubsonicCanShare = userDescSubsonicCanShare.Default.(bool)
+	// userDescSubsonicCanRate is the schema descriptor for subsonic_can_rate field.
+	userDescSubsonicCanRate := userFields[14].Descriptor()
+	// user.DefaultSubsonicCanRate holds the default value on creation for the subsonic_can_rate field.
+	user.DefaultSubsonicCanRate = userDescSubsonicCanRate.Default.(bool)
+	// userDescSubsonicCanChangePassword is the schema descriptor for subsonic_can_change_password field.
+	userDescSubsonicCanChangePassword := userFields[15].Descriptor()
+	// user.DefaultSubsonicCanChangePassword holds the default value on creation for the subsonic_can_change_password field.
+	user.DefaultSubsonicCanChangePassword = userDescSubsonicCanChangePassword.Default.(bool)
+	// userDescSubsonicMaxBitRate is the schema descriptor for subsonic_max_bit_rate field.
+	userDescSubsonicMaxBitRate := userFields[16].Descriptor()
+	// user.DefaultSubsonicMaxBitRate holds the default value on creation for the subsonic_max_bit_rate field.
+	user.DefaultSubsonicMaxBitRate = userDescSubsonicMaxBitRate.Default.(uint16)
+	// user.SubsonicMaxBitRateValidator is a validator for the "subsonic_max_bit_rate" field. It is called by the builders before save.
+	user.SubsonicMaxBitRateValidator = userDescSubsonicMaxBitRate.Validators[0].(func(uint16) error)
 	// userDescOpdsLastClient is the schema descriptor for opds_last_client field.
-	userDescOpdsLastClient := userFields[13].Descriptor()
+	userDescOpdsLastClient := userFields[20].Descriptor()
 	// user.OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
 	user.OpdsLastClientValidator = userDescOpdsLastClient.Validators[0].(func(string) error)
 	// userDescFailedLoginCount is the schema descriptor for failed_login_count field.
-	userDescFailedLoginCount := userFields[14].Descriptor()
+	userDescFailedLoginCount := userFields[21].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
 }

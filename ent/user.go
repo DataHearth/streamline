@@ -42,6 +42,20 @@ type User struct {
 	SubsonicLastUsedAt *time.Time `json:"subsonic_last_used_at,omitempty"`
 	// SubsonicLastClient holds the value of the "subsonic_last_client" field.
 	SubsonicLastClient string `json:"subsonic_last_client,omitempty"`
+	// SubsonicCanStream holds the value of the "subsonic_can_stream" field.
+	SubsonicCanStream bool `json:"subsonic_can_stream,omitempty"`
+	// SubsonicCanDownload holds the value of the "subsonic_can_download" field.
+	SubsonicCanDownload bool `json:"subsonic_can_download,omitempty"`
+	// SubsonicCanManagePlaylists holds the value of the "subsonic_can_manage_playlists" field.
+	SubsonicCanManagePlaylists bool `json:"subsonic_can_manage_playlists,omitempty"`
+	// SubsonicCanShare holds the value of the "subsonic_can_share" field.
+	SubsonicCanShare bool `json:"subsonic_can_share,omitempty"`
+	// SubsonicCanRate holds the value of the "subsonic_can_rate" field.
+	SubsonicCanRate bool `json:"subsonic_can_rate,omitempty"`
+	// SubsonicCanChangePassword holds the value of the "subsonic_can_change_password" field.
+	SubsonicCanChangePassword bool `json:"subsonic_can_change_password,omitempty"`
+	// SubsonicMaxBitRate holds the value of the "subsonic_max_bit_rate" field.
+	SubsonicMaxBitRate uint16 `json:"subsonic_max_bit_rate,omitempty"`
 	// OpdsToken holds the value of the "opds_token" field.
 	OpdsToken string `json:"-"`
 	// OpdsCreatedAt holds the value of the "opds_created_at" field.
@@ -175,7 +189,9 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldID, user.FieldFailedLoginCount:
+		case user.FieldSubsonicCanStream, user.FieldSubsonicCanDownload, user.FieldSubsonicCanManagePlaylists, user.FieldSubsonicCanShare, user.FieldSubsonicCanRate, user.FieldSubsonicCanChangePassword:
+			values[i] = new(sql.NullBool)
+		case user.FieldID, user.FieldSubsonicMaxBitRate, user.FieldFailedLoginCount:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldAuthMethod, user.FieldDisplayName, user.FieldDeviceEmail, user.FieldSubsonicPassword, user.FieldSubsonicLastClient, user.FieldOpdsToken, user.FieldOpdsLastClient:
 			values[i] = new(sql.NullString)
@@ -275,6 +291,48 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field subsonic_last_client", values[i])
 			} else if value.Valid {
 				_m.SubsonicLastClient = value.String
+			}
+		case user.FieldSubsonicCanStream:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_stream", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanStream = value.Bool
+			}
+		case user.FieldSubsonicCanDownload:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_download", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanDownload = value.Bool
+			}
+		case user.FieldSubsonicCanManagePlaylists:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_manage_playlists", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanManagePlaylists = value.Bool
+			}
+		case user.FieldSubsonicCanShare:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_share", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanShare = value.Bool
+			}
+		case user.FieldSubsonicCanRate:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_rate", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanRate = value.Bool
+			}
+		case user.FieldSubsonicCanChangePassword:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_can_change_password", values[i])
+			} else if value.Valid {
+				_m.SubsonicCanChangePassword = value.Bool
+			}
+		case user.FieldSubsonicMaxBitRate:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field subsonic_max_bit_rate", values[i])
+			} else if value.Valid {
+				_m.SubsonicMaxBitRate = uint16(value.Int64)
 			}
 		case user.FieldOpdsToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -440,6 +498,27 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("subsonic_last_client=")
 	builder.WriteString(_m.SubsonicLastClient)
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_stream=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanStream))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_download=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanDownload))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_manage_playlists=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanManagePlaylists))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_share=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanShare))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanRate))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_can_change_password=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicCanChangePassword))
+	builder.WriteString(", ")
+	builder.WriteString("subsonic_max_bit_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SubsonicMaxBitRate))
 	builder.WriteString(", ")
 	builder.WriteString("opds_token=<sensitive>")
 	builder.WriteString(", ")

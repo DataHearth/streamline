@@ -50006,59 +50006,67 @@ func (m *TranscodeJobMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *uint32
-	create_time              *time.Time
-	update_time              *time.Time
-	email                    *string
-	password_hash            *string
-	role                     *user.Role
-	auth_method              *user.AuthMethod
-	display_name             *string
-	device_email             *string
-	subsonic_password        *string
-	subsonic_created_at      *time.Time
-	subsonic_last_used_at    *time.Time
-	subsonic_last_client     *string
-	opds_token               *string
-	opds_created_at          *time.Time
-	opds_last_used_at        *time.Time
-	opds_last_client         *string
-	failed_login_count       *uint8
-	addfailed_login_count    *int8
-	last_failed_login_at     *time.Time
-	locked_until             *time.Time
-	clearedFields            map[string]struct{}
-	api_keys                 map[uint32]struct{}
-	removedapi_keys          map[uint32]struct{}
-	clearedapi_keys          bool
-	oidc_identities          map[uint32]struct{}
-	removedoidc_identities   map[uint32]struct{}
-	clearedoidc_identities   bool
-	requests                 map[uint32]struct{}
-	removedrequests          map[uint32]struct{}
-	clearedrequests          bool
-	sessions                 map[uint32]struct{}
-	removedsessions          map[uint32]struct{}
-	clearedsessions          bool
-	music_annotations        map[uint32]struct{}
-	removedmusic_annotations map[uint32]struct{}
-	clearedmusic_annotations bool
-	playlists                map[uint32]struct{}
-	removedplaylists         map[uint32]struct{}
-	clearedplaylists         bool
-	shares                   map[uint32]struct{}
-	removedshares            map[uint32]struct{}
-	clearedshares            bool
-	bookmarks                map[uint32]struct{}
-	removedbookmarks         map[uint32]struct{}
-	clearedbookmarks         bool
-	play_queue               *uint32
-	clearedplay_queue        bool
-	done                     bool
-	oldValue                 func(context.Context) (*User, error)
-	predicates               []predicate.User
+	op                            Op
+	typ                           string
+	id                            *uint32
+	create_time                   *time.Time
+	update_time                   *time.Time
+	email                         *string
+	password_hash                 *string
+	role                          *user.Role
+	auth_method                   *user.AuthMethod
+	display_name                  *string
+	device_email                  *string
+	subsonic_password             *string
+	subsonic_created_at           *time.Time
+	subsonic_last_used_at         *time.Time
+	subsonic_last_client          *string
+	subsonic_can_stream           *bool
+	subsonic_can_download         *bool
+	subsonic_can_manage_playlists *bool
+	subsonic_can_share            *bool
+	subsonic_can_rate             *bool
+	subsonic_can_change_password  *bool
+	subsonic_max_bit_rate         *uint16
+	addsubsonic_max_bit_rate      *int16
+	opds_token                    *string
+	opds_created_at               *time.Time
+	opds_last_used_at             *time.Time
+	opds_last_client              *string
+	failed_login_count            *uint8
+	addfailed_login_count         *int8
+	last_failed_login_at          *time.Time
+	locked_until                  *time.Time
+	clearedFields                 map[string]struct{}
+	api_keys                      map[uint32]struct{}
+	removedapi_keys               map[uint32]struct{}
+	clearedapi_keys               bool
+	oidc_identities               map[uint32]struct{}
+	removedoidc_identities        map[uint32]struct{}
+	clearedoidc_identities        bool
+	requests                      map[uint32]struct{}
+	removedrequests               map[uint32]struct{}
+	clearedrequests               bool
+	sessions                      map[uint32]struct{}
+	removedsessions               map[uint32]struct{}
+	clearedsessions               bool
+	music_annotations             map[uint32]struct{}
+	removedmusic_annotations      map[uint32]struct{}
+	clearedmusic_annotations      bool
+	playlists                     map[uint32]struct{}
+	removedplaylists              map[uint32]struct{}
+	clearedplaylists              bool
+	shares                        map[uint32]struct{}
+	removedshares                 map[uint32]struct{}
+	clearedshares                 bool
+	bookmarks                     map[uint32]struct{}
+	removedbookmarks              map[uint32]struct{}
+	clearedbookmarks              bool
+	play_queue                    *uint32
+	clearedplay_queue             bool
+	done                          bool
+	oldValue                      func(context.Context) (*User, error)
+	predicates                    []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -50686,6 +50694,278 @@ func (m *UserMutation) SubsonicLastClientCleared() bool {
 func (m *UserMutation) ResetSubsonicLastClient() {
 	m.subsonic_last_client = nil
 	delete(m.clearedFields, user.FieldSubsonicLastClient)
+}
+
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (m *UserMutation) SetSubsonicCanStream(b bool) {
+	m.subsonic_can_stream = &b
+}
+
+// SubsonicCanStream returns the value of the "subsonic_can_stream" field in the mutation.
+func (m *UserMutation) SubsonicCanStream() (r bool, exists bool) {
+	v := m.subsonic_can_stream
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanStream returns the old "subsonic_can_stream" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanStream(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanStream is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanStream requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanStream: %w", err)
+	}
+	return oldValue.SubsonicCanStream, nil
+}
+
+// ResetSubsonicCanStream resets all changes to the "subsonic_can_stream" field.
+func (m *UserMutation) ResetSubsonicCanStream() {
+	m.subsonic_can_stream = nil
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (m *UserMutation) SetSubsonicCanDownload(b bool) {
+	m.subsonic_can_download = &b
+}
+
+// SubsonicCanDownload returns the value of the "subsonic_can_download" field in the mutation.
+func (m *UserMutation) SubsonicCanDownload() (r bool, exists bool) {
+	v := m.subsonic_can_download
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanDownload returns the old "subsonic_can_download" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanDownload(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanDownload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanDownload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanDownload: %w", err)
+	}
+	return oldValue.SubsonicCanDownload, nil
+}
+
+// ResetSubsonicCanDownload resets all changes to the "subsonic_can_download" field.
+func (m *UserMutation) ResetSubsonicCanDownload() {
+	m.subsonic_can_download = nil
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (m *UserMutation) SetSubsonicCanManagePlaylists(b bool) {
+	m.subsonic_can_manage_playlists = &b
+}
+
+// SubsonicCanManagePlaylists returns the value of the "subsonic_can_manage_playlists" field in the mutation.
+func (m *UserMutation) SubsonicCanManagePlaylists() (r bool, exists bool) {
+	v := m.subsonic_can_manage_playlists
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanManagePlaylists returns the old "subsonic_can_manage_playlists" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanManagePlaylists(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanManagePlaylists is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanManagePlaylists requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanManagePlaylists: %w", err)
+	}
+	return oldValue.SubsonicCanManagePlaylists, nil
+}
+
+// ResetSubsonicCanManagePlaylists resets all changes to the "subsonic_can_manage_playlists" field.
+func (m *UserMutation) ResetSubsonicCanManagePlaylists() {
+	m.subsonic_can_manage_playlists = nil
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (m *UserMutation) SetSubsonicCanShare(b bool) {
+	m.subsonic_can_share = &b
+}
+
+// SubsonicCanShare returns the value of the "subsonic_can_share" field in the mutation.
+func (m *UserMutation) SubsonicCanShare() (r bool, exists bool) {
+	v := m.subsonic_can_share
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanShare returns the old "subsonic_can_share" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanShare(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanShare is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanShare requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanShare: %w", err)
+	}
+	return oldValue.SubsonicCanShare, nil
+}
+
+// ResetSubsonicCanShare resets all changes to the "subsonic_can_share" field.
+func (m *UserMutation) ResetSubsonicCanShare() {
+	m.subsonic_can_share = nil
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (m *UserMutation) SetSubsonicCanRate(b bool) {
+	m.subsonic_can_rate = &b
+}
+
+// SubsonicCanRate returns the value of the "subsonic_can_rate" field in the mutation.
+func (m *UserMutation) SubsonicCanRate() (r bool, exists bool) {
+	v := m.subsonic_can_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanRate returns the old "subsonic_can_rate" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanRate(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanRate: %w", err)
+	}
+	return oldValue.SubsonicCanRate, nil
+}
+
+// ResetSubsonicCanRate resets all changes to the "subsonic_can_rate" field.
+func (m *UserMutation) ResetSubsonicCanRate() {
+	m.subsonic_can_rate = nil
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (m *UserMutation) SetSubsonicCanChangePassword(b bool) {
+	m.subsonic_can_change_password = &b
+}
+
+// SubsonicCanChangePassword returns the value of the "subsonic_can_change_password" field in the mutation.
+func (m *UserMutation) SubsonicCanChangePassword() (r bool, exists bool) {
+	v := m.subsonic_can_change_password
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicCanChangePassword returns the old "subsonic_can_change_password" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicCanChangePassword(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicCanChangePassword is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicCanChangePassword requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicCanChangePassword: %w", err)
+	}
+	return oldValue.SubsonicCanChangePassword, nil
+}
+
+// ResetSubsonicCanChangePassword resets all changes to the "subsonic_can_change_password" field.
+func (m *UserMutation) ResetSubsonicCanChangePassword() {
+	m.subsonic_can_change_password = nil
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (m *UserMutation) SetSubsonicMaxBitRate(u uint16) {
+	m.subsonic_max_bit_rate = &u
+	m.addsubsonic_max_bit_rate = nil
+}
+
+// SubsonicMaxBitRate returns the value of the "subsonic_max_bit_rate" field in the mutation.
+func (m *UserMutation) SubsonicMaxBitRate() (r uint16, exists bool) {
+	v := m.subsonic_max_bit_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubsonicMaxBitRate returns the old "subsonic_max_bit_rate" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSubsonicMaxBitRate(ctx context.Context) (v uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubsonicMaxBitRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubsonicMaxBitRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubsonicMaxBitRate: %w", err)
+	}
+	return oldValue.SubsonicMaxBitRate, nil
+}
+
+// AddSubsonicMaxBitRate adds u to the "subsonic_max_bit_rate" field.
+func (m *UserMutation) AddSubsonicMaxBitRate(u int16) {
+	if m.addsubsonic_max_bit_rate != nil {
+		*m.addsubsonic_max_bit_rate += u
+	} else {
+		m.addsubsonic_max_bit_rate = &u
+	}
+}
+
+// AddedSubsonicMaxBitRate returns the value that was added to the "subsonic_max_bit_rate" field in this mutation.
+func (m *UserMutation) AddedSubsonicMaxBitRate() (r int16, exists bool) {
+	v := m.addsubsonic_max_bit_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSubsonicMaxBitRate resets all changes to the "subsonic_max_bit_rate" field.
+func (m *UserMutation) ResetSubsonicMaxBitRate() {
+	m.subsonic_max_bit_rate = nil
+	m.addsubsonic_max_bit_rate = nil
 }
 
 // SetOpdsToken sets the "opds_token" field.
@@ -51543,7 +51823,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 26)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -51579,6 +51859,27 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.subsonic_last_client != nil {
 		fields = append(fields, user.FieldSubsonicLastClient)
+	}
+	if m.subsonic_can_stream != nil {
+		fields = append(fields, user.FieldSubsonicCanStream)
+	}
+	if m.subsonic_can_download != nil {
+		fields = append(fields, user.FieldSubsonicCanDownload)
+	}
+	if m.subsonic_can_manage_playlists != nil {
+		fields = append(fields, user.FieldSubsonicCanManagePlaylists)
+	}
+	if m.subsonic_can_share != nil {
+		fields = append(fields, user.FieldSubsonicCanShare)
+	}
+	if m.subsonic_can_rate != nil {
+		fields = append(fields, user.FieldSubsonicCanRate)
+	}
+	if m.subsonic_can_change_password != nil {
+		fields = append(fields, user.FieldSubsonicCanChangePassword)
+	}
+	if m.subsonic_max_bit_rate != nil {
+		fields = append(fields, user.FieldSubsonicMaxBitRate)
 	}
 	if m.opds_token != nil {
 		fields = append(fields, user.FieldOpdsToken)
@@ -51633,6 +51934,20 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.SubsonicLastUsedAt()
 	case user.FieldSubsonicLastClient:
 		return m.SubsonicLastClient()
+	case user.FieldSubsonicCanStream:
+		return m.SubsonicCanStream()
+	case user.FieldSubsonicCanDownload:
+		return m.SubsonicCanDownload()
+	case user.FieldSubsonicCanManagePlaylists:
+		return m.SubsonicCanManagePlaylists()
+	case user.FieldSubsonicCanShare:
+		return m.SubsonicCanShare()
+	case user.FieldSubsonicCanRate:
+		return m.SubsonicCanRate()
+	case user.FieldSubsonicCanChangePassword:
+		return m.SubsonicCanChangePassword()
+	case user.FieldSubsonicMaxBitRate:
+		return m.SubsonicMaxBitRate()
 	case user.FieldOpdsToken:
 		return m.OpdsToken()
 	case user.FieldOpdsCreatedAt:
@@ -51680,6 +51995,20 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldSubsonicLastUsedAt(ctx)
 	case user.FieldSubsonicLastClient:
 		return m.OldSubsonicLastClient(ctx)
+	case user.FieldSubsonicCanStream:
+		return m.OldSubsonicCanStream(ctx)
+	case user.FieldSubsonicCanDownload:
+		return m.OldSubsonicCanDownload(ctx)
+	case user.FieldSubsonicCanManagePlaylists:
+		return m.OldSubsonicCanManagePlaylists(ctx)
+	case user.FieldSubsonicCanShare:
+		return m.OldSubsonicCanShare(ctx)
+	case user.FieldSubsonicCanRate:
+		return m.OldSubsonicCanRate(ctx)
+	case user.FieldSubsonicCanChangePassword:
+		return m.OldSubsonicCanChangePassword(ctx)
+	case user.FieldSubsonicMaxBitRate:
+		return m.OldSubsonicMaxBitRate(ctx)
 	case user.FieldOpdsToken:
 		return m.OldOpdsToken(ctx)
 	case user.FieldOpdsCreatedAt:
@@ -51787,6 +52116,55 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSubsonicLastClient(v)
 		return nil
+	case user.FieldSubsonicCanStream:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanStream(v)
+		return nil
+	case user.FieldSubsonicCanDownload:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanDownload(v)
+		return nil
+	case user.FieldSubsonicCanManagePlaylists:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanManagePlaylists(v)
+		return nil
+	case user.FieldSubsonicCanShare:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanShare(v)
+		return nil
+	case user.FieldSubsonicCanRate:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanRate(v)
+		return nil
+	case user.FieldSubsonicCanChangePassword:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicCanChangePassword(v)
+		return nil
+	case user.FieldSubsonicMaxBitRate:
+		v, ok := value.(uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubsonicMaxBitRate(v)
+		return nil
 	case user.FieldOpdsToken:
 		v, ok := value.(string)
 		if !ok {
@@ -51844,6 +52222,9 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *UserMutation) AddedFields() []string {
 	var fields []string
+	if m.addsubsonic_max_bit_rate != nil {
+		fields = append(fields, user.FieldSubsonicMaxBitRate)
+	}
 	if m.addfailed_login_count != nil {
 		fields = append(fields, user.FieldFailedLoginCount)
 	}
@@ -51855,6 +52236,8 @@ func (m *UserMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldSubsonicMaxBitRate:
+		return m.AddedSubsonicMaxBitRate()
 	case user.FieldFailedLoginCount:
 		return m.AddedFailedLoginCount()
 	}
@@ -51866,6 +52249,13 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldSubsonicMaxBitRate:
+		v, ok := value.(int16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSubsonicMaxBitRate(v)
+		return nil
 	case user.FieldFailedLoginCount:
 		v, ok := value.(int8)
 		if !ok {
@@ -52016,6 +52406,27 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldSubsonicLastClient:
 		m.ResetSubsonicLastClient()
+		return nil
+	case user.FieldSubsonicCanStream:
+		m.ResetSubsonicCanStream()
+		return nil
+	case user.FieldSubsonicCanDownload:
+		m.ResetSubsonicCanDownload()
+		return nil
+	case user.FieldSubsonicCanManagePlaylists:
+		m.ResetSubsonicCanManagePlaylists()
+		return nil
+	case user.FieldSubsonicCanShare:
+		m.ResetSubsonicCanShare()
+		return nil
+	case user.FieldSubsonicCanRate:
+		m.ResetSubsonicCanRate()
+		return nil
+	case user.FieldSubsonicCanChangePassword:
+		m.ResetSubsonicCanChangePassword()
+		return nil
+	case user.FieldSubsonicMaxBitRate:
+		m.ResetSubsonicMaxBitRate()
 		return nil
 	case user.FieldOpdsToken:
 		m.ResetOpdsToken()

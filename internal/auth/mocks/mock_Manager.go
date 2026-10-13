@@ -2368,6 +2368,69 @@ func (_c *MockManager_RotateSubsonicPassword_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// SetSubsonicPassword provides a mock function for the type MockManager
+func (_mock *MockManager) SetSubsonicPassword(ctx context.Context, userID uint32, password string) error {
+	ret := _mock.Called(ctx, userID, password)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetSubsonicPassword")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, userID, password)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SetSubsonicPassword_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSubsonicPassword'
+type MockManager_SetSubsonicPassword_Call struct {
+	*mock.Call
+}
+
+// SetSubsonicPassword is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint32
+//   - password string
+func (_e *MockManager_Expecter) SetSubsonicPassword(ctx any, userID any, password any) *MockManager_SetSubsonicPassword_Call {
+	return &MockManager_SetSubsonicPassword_Call{Call: _e.mock.On("SetSubsonicPassword", ctx, userID, password)}
+}
+
+func (_c *MockManager_SetSubsonicPassword_Call) Run(run func(ctx context.Context, userID uint32, password string)) *MockManager_SetSubsonicPassword_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SetSubsonicPassword_Call) Return(err error) *MockManager_SetSubsonicPassword_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SetSubsonicPassword_Call) RunAndReturn(run func(ctx context.Context, userID uint32, password string) error) *MockManager_SetSubsonicPassword_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Shutdown provides a mock function for the type MockManager
 func (_mock *MockManager) Shutdown(ctx context.Context) error {
 	ret := _mock.Called(ctx)

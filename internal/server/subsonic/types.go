@@ -271,22 +271,27 @@ type scanStatus struct {
 }
 
 type subsonicUser struct {
-	Username            string `xml:"username,attr"            json:"username"`
-	Email               string `xml:"email,attr"               json:"email"`
-	ScrobblingEnabled   bool   `xml:"scrobblingEnabled,attr"   json:"scrobblingEnabled"`
-	AdminRole           bool   `xml:"adminRole,attr"           json:"adminRole"`
-	SettingsRole        bool   `xml:"settingsRole,attr"        json:"settingsRole"`
-	DownloadRole        bool   `xml:"downloadRole,attr"        json:"downloadRole"`
-	UploadRole          bool   `xml:"uploadRole,attr"          json:"uploadRole"`
-	PlaylistRole        bool   `xml:"playlistRole,attr"        json:"playlistRole"`
-	CoverArtRole        bool   `xml:"coverArtRole,attr"        json:"coverArtRole"`
-	CommentRole         bool   `xml:"commentRole,attr"         json:"commentRole"`
-	PodcastRole         bool   `xml:"podcastRole,attr"         json:"podcastRole"`
-	StreamRole          bool   `xml:"streamRole,attr"          json:"streamRole"`
-	JukeboxRole         bool   `xml:"jukeboxRole,attr"         json:"jukeboxRole"`
-	ShareRole           bool   `xml:"shareRole,attr"           json:"shareRole"`
-	VideoConversionRole bool   `xml:"videoConversionRole,attr" json:"videoConversionRole"`
-	Folder              []int  `xml:"folder"                   json:"folder"`
+	Username            string `xml:"username,attr"             json:"username"`
+	Email               string `xml:"email,attr"                json:"email"`
+	ScrobblingEnabled   bool   `xml:"scrobblingEnabled,attr"    json:"scrobblingEnabled"`
+	MaxBitRate          uint16 `xml:"maxBitRate,attr,omitempty" json:"maxBitRate,omitempty"`
+	AdminRole           bool   `xml:"adminRole,attr"            json:"adminRole"`
+	SettingsRole        bool   `xml:"settingsRole,attr"         json:"settingsRole"`
+	DownloadRole        bool   `xml:"downloadRole,attr"         json:"downloadRole"`
+	UploadRole          bool   `xml:"uploadRole,attr"           json:"uploadRole"`
+	PlaylistRole        bool   `xml:"playlistRole,attr"         json:"playlistRole"`
+	CoverArtRole        bool   `xml:"coverArtRole,attr"         json:"coverArtRole"`
+	CommentRole         bool   `xml:"commentRole,attr"          json:"commentRole"`
+	PodcastRole         bool   `xml:"podcastRole,attr"          json:"podcastRole"`
+	StreamRole          bool   `xml:"streamRole,attr"           json:"streamRole"`
+	JukeboxRole         bool   `xml:"jukeboxRole,attr"          json:"jukeboxRole"`
+	ShareRole           bool   `xml:"shareRole,attr"            json:"shareRole"`
+	VideoConversionRole bool   `xml:"videoConversionRole,attr"  json:"videoConversionRole"`
+	Folder              []int  `xml:"folder"                    json:"folder"`
+}
+
+type subsonicUsers struct {
+	User []subsonicUser `xml:"user" json:"user"`
 }
 
 type lyrics struct {

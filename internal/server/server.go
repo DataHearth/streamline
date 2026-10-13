@@ -206,6 +206,7 @@ func New(cfg Config) *Server {
 		Tracker:    appAccess,
 		Transcoder: cfg.AudioTranscoder,
 		Jobs:       cfg.Scheduler,
+		Accounts:   cfg.Auth,
 	})
 	s.router.Mount(
 		"/rest",

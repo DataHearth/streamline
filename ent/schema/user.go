@@ -34,6 +34,17 @@ func (User) Fields() []ent.Field {
 		field.Time("subsonic_created_at").Optional().Nillable(),
 		field.Time("subsonic_last_used_at").Optional().Nillable(),
 		field.String("subsonic_last_client").Optional().MaxLen(64),
+		// What this account may do through the Subsonic API, set by an admin
+		// with createUser/updateUser. They gate Subsonic calls only and never
+		// a web or REST permission, which follows role.
+		field.Bool("subsonic_can_stream").Default(true),
+		field.Bool("subsonic_can_download").Default(true),
+		field.Bool("subsonic_can_manage_playlists").Default(true),
+		field.Bool("subsonic_can_share").Default(true),
+		field.Bool("subsonic_can_rate").Default(true),
+		field.Bool("subsonic_can_change_password").Default(true),
+		// Kbps ceiling on every stream; 0 is none.
+		field.Uint16("subsonic_max_bit_rate").Default(0).Max(320),
 		// SHA-256 hex of the token, never the token: POST shows it once. Used
 		// as the HTTP Basic password for the OPDS catalog; never valid for web
 		// or REST auth.

@@ -21,8 +21,9 @@ Apps such as Symfonium, DSub, Ultrasonic, Tempo, play:Sub, Feishin and Sublime M
 | Downloads | The original file, for offline listening |
 | Internet radio | A shared list of radio streams; any user can listen, only admins can add, edit or remove stations |
 | Library scan | "Rescan" in an app checks every file Streamline tracks and marks missing ones (admins only) |
+| Users | Admins create, edit and delete accounts and set what each may do through Subsonic; everyone can see their own account and change their own Subsonic password |
 
-Not available: podcasts, chat, jukebox mode, video, user management and avatars. User management is limited to reading your own account (`getUser`), which apps use to decide whether to offer sharing and downloads.
+Not available: podcasts, chat, jukebox mode, video and avatars.
 
 ## Stars, ratings and play counts
 
@@ -55,6 +56,20 @@ The converted stream uses the requested bitrate, between 32 and 320 kbps (MP3 de
 ## Lyrics
 
 Put a `.lrc` file with the same name next to the song (`01 - Song.flac` and `01 - Song.lrc`) for timed lyrics. Without one, lyrics embedded in the file are used. Streamline never fetches lyrics from the internet: it only reads what is on disk.
+
+## Users
+
+An admin can manage accounts from a Subsonic app's admin screen, and every change goes through the same checks as the Users page of the web UI: the last admin can be neither demoted nor deleted, and nobody can delete themselves.
+
+- **The user name is the email.** An app asks for a user name, an email and a password. The email becomes the login. A user name that differs from it becomes the account's display name.
+- **The password is a Subsonic password.** It is what the new account signs in to apps with, and it never becomes the web login password, because Subsonic passwords are stored in a form the server can read back. An account created from an app therefore cannot sign in to the web UI until an admin sets a password on the Users page. Changing a password from an app (yours, or anyone's as an admin) changes the Subsonic password only.
+- **Admin.** The app's admin switch makes the account a Streamline admin, with full rights in the web UI too, and turning it off makes it a member. Either change signs the account out of the web UI.
+- **Permissions.** Each account has Subsonic-only switches: may stream, may download, may manage playlists, may share, may rate songs, may change their own password. A new account from an app follows the Subsonic defaults (streaming and password changes on, the rest off). Accounts created any other way have every switch on. The switches never limit what the account can do in the web UI. Browsing, searching, starring and scrobbling are always allowed.
+- **Maximum bitrate.** An admin can cap an account's streams at 32 to 320 kbps. Every stream above the cap is converted, even when the app asks for the original file. The cap needs ffmpeg: without it, or when the eight conversion slots are busy, the original file is sent.
+
+Only admins can create, edit or delete accounts, list all accounts, or read someone else's. An admin's Subsonic password can do all of that, so keep it as safe as the admin login.
+
+The permissions and the bitrate cap are only editable from a Subsonic app for now; the web UI does not show them.
 
 ## Library scan
 

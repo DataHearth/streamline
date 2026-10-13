@@ -189,6 +189,104 @@ func (_c *UserCreate) SetNillableSubsonicLastClient(v *string) *UserCreate {
 	return _c
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_c *UserCreate) SetSubsonicCanStream(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanStream(v)
+	return _c
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanStream(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanStream(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_c *UserCreate) SetSubsonicCanDownload(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanDownload(v)
+	return _c
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanDownload(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanDownload(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_c *UserCreate) SetSubsonicCanManagePlaylists(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanManagePlaylists(v)
+	return _c
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanManagePlaylists(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_c *UserCreate) SetSubsonicCanShare(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanShare(v)
+	return _c
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanShare(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanShare(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_c *UserCreate) SetSubsonicCanRate(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanRate(v)
+	return _c
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanRate(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanRate(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_c *UserCreate) SetSubsonicCanChangePassword(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanChangePassword(v)
+	return _c
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanChangePassword(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanChangePassword(*v)
+	}
+	return _c
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_c *UserCreate) SetSubsonicMaxBitRate(v uint16) *UserCreate {
+	_c.mutation.SetSubsonicMaxBitRate(v)
+	return _c
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicMaxBitRate(v *uint16) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicMaxBitRate(*v)
+	}
+	return _c
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_c *UserCreate) SetOpdsToken(v string) *UserCreate {
 	_c.mutation.SetOpdsToken(v)
@@ -483,6 +581,34 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultAuthMethod
 		_c.mutation.SetAuthMethod(v)
 	}
+	if _, ok := _c.mutation.SubsonicCanStream(); !ok {
+		v := user.DefaultSubsonicCanStream
+		_c.mutation.SetSubsonicCanStream(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanDownload(); !ok {
+		v := user.DefaultSubsonicCanDownload
+		_c.mutation.SetSubsonicCanDownload(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanManagePlaylists(); !ok {
+		v := user.DefaultSubsonicCanManagePlaylists
+		_c.mutation.SetSubsonicCanManagePlaylists(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanShare(); !ok {
+		v := user.DefaultSubsonicCanShare
+		_c.mutation.SetSubsonicCanShare(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanRate(); !ok {
+		v := user.DefaultSubsonicCanRate
+		_c.mutation.SetSubsonicCanRate(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanChangePassword(); !ok {
+		v := user.DefaultSubsonicCanChangePassword
+		_c.mutation.SetSubsonicCanChangePassword(v)
+	}
+	if _, ok := _c.mutation.SubsonicMaxBitRate(); !ok {
+		v := user.DefaultSubsonicMaxBitRate
+		_c.mutation.SetSubsonicMaxBitRate(v)
+	}
 	if _, ok := _c.mutation.FailedLoginCount(); !ok {
 		v := user.DefaultFailedLoginCount
 		_c.mutation.SetFailedLoginCount(v)
@@ -524,6 +650,32 @@ func (_c *UserCreate) check() error {
 	if v, ok := _c.mutation.SubsonicLastClient(); ok {
 		if err := user.SubsonicLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.SubsonicCanStream(); !ok {
+		return &ValidationError{Name: "subsonic_can_stream", err: errors.New(`ent: missing required field "User.subsonic_can_stream"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanDownload(); !ok {
+		return &ValidationError{Name: "subsonic_can_download", err: errors.New(`ent: missing required field "User.subsonic_can_download"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanManagePlaylists(); !ok {
+		return &ValidationError{Name: "subsonic_can_manage_playlists", err: errors.New(`ent: missing required field "User.subsonic_can_manage_playlists"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanShare(); !ok {
+		return &ValidationError{Name: "subsonic_can_share", err: errors.New(`ent: missing required field "User.subsonic_can_share"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanRate(); !ok {
+		return &ValidationError{Name: "subsonic_can_rate", err: errors.New(`ent: missing required field "User.subsonic_can_rate"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanChangePassword(); !ok {
+		return &ValidationError{Name: "subsonic_can_change_password", err: errors.New(`ent: missing required field "User.subsonic_can_change_password"`)}
+	}
+	if _, ok := _c.mutation.SubsonicMaxBitRate(); !ok {
+		return &ValidationError{Name: "subsonic_max_bit_rate", err: errors.New(`ent: missing required field "User.subsonic_max_bit_rate"`)}
+	}
+	if v, ok := _c.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.OpdsLastClient(); ok {
@@ -613,6 +765,34 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SubsonicLastClient(); ok {
 		_spec.SetField(user.FieldSubsonicLastClient, field.TypeString, value)
 		_node.SubsonicLastClient = value
+	}
+	if value, ok := _c.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+		_node.SubsonicCanStream = value
+	}
+	if value, ok := _c.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+		_node.SubsonicCanDownload = value
+	}
+	if value, ok := _c.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+		_node.SubsonicCanManagePlaylists = value
+	}
+	if value, ok := _c.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+		_node.SubsonicCanShare = value
+	}
+	if value, ok := _c.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+		_node.SubsonicCanRate = value
+	}
+	if value, ok := _c.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+		_node.SubsonicCanChangePassword = value
+	}
+	if value, ok := _c.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+		_node.SubsonicMaxBitRate = value
 	}
 	if value, ok := _c.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)

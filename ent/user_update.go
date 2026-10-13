@@ -226,6 +226,111 @@ func (_u *UserUpdate) ClearSubsonicLastClient() *UserUpdate {
 	return _u
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_u *UserUpdate) SetSubsonicCanStream(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanStream(v)
+	return _u
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanStream(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanStream(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_u *UserUpdate) SetSubsonicCanDownload(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanDownload(v)
+	return _u
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanDownload(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanDownload(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_u *UserUpdate) SetSubsonicCanManagePlaylists(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanManagePlaylists(v)
+	return _u
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanManagePlaylists(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_u *UserUpdate) SetSubsonicCanShare(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanShare(v)
+	return _u
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanShare(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanShare(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_u *UserUpdate) SetSubsonicCanRate(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanRate(v)
+	return _u
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanRate(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanRate(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_u *UserUpdate) SetSubsonicCanChangePassword(v bool) *UserUpdate {
+	_u.mutation.SetSubsonicCanChangePassword(v)
+	return _u
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicCanChangePassword(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicCanChangePassword(*v)
+	}
+	return _u
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_u *UserUpdate) SetSubsonicMaxBitRate(v uint16) *UserUpdate {
+	_u.mutation.ResetSubsonicMaxBitRate()
+	_u.mutation.SetSubsonicMaxBitRate(v)
+	return _u
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSubsonicMaxBitRate(v *uint16) *UserUpdate {
+	if v != nil {
+		_u.SetSubsonicMaxBitRate(*v)
+	}
+	return _u
+}
+
+// AddSubsonicMaxBitRate adds value to the "subsonic_max_bit_rate" field.
+func (_u *UserUpdate) AddSubsonicMaxBitRate(v int16) *UserUpdate {
+	_u.mutation.AddSubsonicMaxBitRate(v)
+	return _u
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_u *UserUpdate) SetOpdsToken(v string) *UserUpdate {
 	_u.mutation.SetOpdsToken(v)
@@ -743,6 +848,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.OpdsLastClient(); ok {
 		if err := user.OpdsLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
@@ -822,6 +932,30 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.SubsonicLastClientCleared() {
 		_spec.ClearField(user.FieldSubsonicLastClient, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
+		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
 	}
 	if value, ok := _u.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
@@ -1464,6 +1598,111 @@ func (_u *UserUpdateOne) ClearSubsonicLastClient() *UserUpdateOne {
 	return _u
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_u *UserUpdateOne) SetSubsonicCanStream(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanStream(v)
+	return _u
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanStream(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanStream(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_u *UserUpdateOne) SetSubsonicCanDownload(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanDownload(v)
+	return _u
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanDownload(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanDownload(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_u *UserUpdateOne) SetSubsonicCanManagePlaylists(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanManagePlaylists(v)
+	return _u
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanManagePlaylists(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_u *UserUpdateOne) SetSubsonicCanShare(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanShare(v)
+	return _u
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanShare(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanShare(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_u *UserUpdateOne) SetSubsonicCanRate(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanRate(v)
+	return _u
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanRate(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanRate(*v)
+	}
+	return _u
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_u *UserUpdateOne) SetSubsonicCanChangePassword(v bool) *UserUpdateOne {
+	_u.mutation.SetSubsonicCanChangePassword(v)
+	return _u
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicCanChangePassword(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicCanChangePassword(*v)
+	}
+	return _u
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_u *UserUpdateOne) SetSubsonicMaxBitRate(v uint16) *UserUpdateOne {
+	_u.mutation.ResetSubsonicMaxBitRate()
+	_u.mutation.SetSubsonicMaxBitRate(v)
+	return _u
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSubsonicMaxBitRate(v *uint16) *UserUpdateOne {
+	if v != nil {
+		_u.SetSubsonicMaxBitRate(*v)
+	}
+	return _u
+}
+
+// AddSubsonicMaxBitRate adds value to the "subsonic_max_bit_rate" field.
+func (_u *UserUpdateOne) AddSubsonicMaxBitRate(v int16) *UserUpdateOne {
+	_u.mutation.AddSubsonicMaxBitRate(v)
+	return _u
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_u *UserUpdateOne) SetOpdsToken(v string) *UserUpdateOne {
 	_u.mutation.SetOpdsToken(v)
@@ -1994,6 +2233,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.OpdsLastClient(); ok {
 		if err := user.OpdsLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "opds_last_client", err: fmt.Errorf(`ent: validator failed for field "User.opds_last_client": %w`, err)}
@@ -2090,6 +2334,30 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.SubsonicLastClientCleared() {
 		_spec.ClearField(user.FieldSubsonicLastClient, field.TypeString)
+	}
+	if value, ok := _u.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+	}
+	if value, ok := _u.mutation.AddedSubsonicMaxBitRate(); ok {
+		_spec.AddField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
 	}
 	if value, ok := _u.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)

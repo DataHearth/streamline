@@ -440,6 +440,9 @@ func (h *Handler) setRating(
 	r *http.Request,
 	u *ent.User,
 ) error {
+	if err := require(u, permRate); err != nil {
+		return err
+	}
 	kind, id, err := anyIDParam(r)
 	if err != nil {
 		return err

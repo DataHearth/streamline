@@ -39,6 +39,20 @@ const (
 	FieldSubsonicLastUsedAt = "subsonic_last_used_at"
 	// FieldSubsonicLastClient holds the string denoting the subsonic_last_client field in the database.
 	FieldSubsonicLastClient = "subsonic_last_client"
+	// FieldSubsonicCanStream holds the string denoting the subsonic_can_stream field in the database.
+	FieldSubsonicCanStream = "subsonic_can_stream"
+	// FieldSubsonicCanDownload holds the string denoting the subsonic_can_download field in the database.
+	FieldSubsonicCanDownload = "subsonic_can_download"
+	// FieldSubsonicCanManagePlaylists holds the string denoting the subsonic_can_manage_playlists field in the database.
+	FieldSubsonicCanManagePlaylists = "subsonic_can_manage_playlists"
+	// FieldSubsonicCanShare holds the string denoting the subsonic_can_share field in the database.
+	FieldSubsonicCanShare = "subsonic_can_share"
+	// FieldSubsonicCanRate holds the string denoting the subsonic_can_rate field in the database.
+	FieldSubsonicCanRate = "subsonic_can_rate"
+	// FieldSubsonicCanChangePassword holds the string denoting the subsonic_can_change_password field in the database.
+	FieldSubsonicCanChangePassword = "subsonic_can_change_password"
+	// FieldSubsonicMaxBitRate holds the string denoting the subsonic_max_bit_rate field in the database.
+	FieldSubsonicMaxBitRate = "subsonic_max_bit_rate"
 	// FieldOpdsToken holds the string denoting the opds_token field in the database.
 	FieldOpdsToken = "opds_token"
 	// FieldOpdsCreatedAt holds the string denoting the opds_created_at field in the database.
@@ -153,6 +167,13 @@ var Columns = []string{
 	FieldSubsonicCreatedAt,
 	FieldSubsonicLastUsedAt,
 	FieldSubsonicLastClient,
+	FieldSubsonicCanStream,
+	FieldSubsonicCanDownload,
+	FieldSubsonicCanManagePlaylists,
+	FieldSubsonicCanShare,
+	FieldSubsonicCanRate,
+	FieldSubsonicCanChangePassword,
+	FieldSubsonicMaxBitRate,
 	FieldOpdsToken,
 	FieldOpdsCreatedAt,
 	FieldOpdsLastUsedAt,
@@ -183,6 +204,22 @@ var (
 	EmailValidator func(string) error
 	// SubsonicLastClientValidator is a validator for the "subsonic_last_client" field. It is called by the builders before save.
 	SubsonicLastClientValidator func(string) error
+	// DefaultSubsonicCanStream holds the default value on creation for the "subsonic_can_stream" field.
+	DefaultSubsonicCanStream bool
+	// DefaultSubsonicCanDownload holds the default value on creation for the "subsonic_can_download" field.
+	DefaultSubsonicCanDownload bool
+	// DefaultSubsonicCanManagePlaylists holds the default value on creation for the "subsonic_can_manage_playlists" field.
+	DefaultSubsonicCanManagePlaylists bool
+	// DefaultSubsonicCanShare holds the default value on creation for the "subsonic_can_share" field.
+	DefaultSubsonicCanShare bool
+	// DefaultSubsonicCanRate holds the default value on creation for the "subsonic_can_rate" field.
+	DefaultSubsonicCanRate bool
+	// DefaultSubsonicCanChangePassword holds the default value on creation for the "subsonic_can_change_password" field.
+	DefaultSubsonicCanChangePassword bool
+	// DefaultSubsonicMaxBitRate holds the default value on creation for the "subsonic_max_bit_rate" field.
+	DefaultSubsonicMaxBitRate uint16
+	// SubsonicMaxBitRateValidator is a validator for the "subsonic_max_bit_rate" field. It is called by the builders before save.
+	SubsonicMaxBitRateValidator func(uint16) error
 	// OpdsLastClientValidator is a validator for the "opds_last_client" field. It is called by the builders before save.
 	OpdsLastClientValidator func(string) error
 	// DefaultFailedLoginCount holds the default value on creation for the "failed_login_count" field.
@@ -309,6 +346,41 @@ func BySubsonicLastUsedAt(opts ...sql.OrderTermOption) OrderOption {
 // BySubsonicLastClient orders the results by the subsonic_last_client field.
 func BySubsonicLastClient(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubsonicLastClient, opts...).ToFunc()
+}
+
+// BySubsonicCanStream orders the results by the subsonic_can_stream field.
+func BySubsonicCanStream(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanStream, opts...).ToFunc()
+}
+
+// BySubsonicCanDownload orders the results by the subsonic_can_download field.
+func BySubsonicCanDownload(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanDownload, opts...).ToFunc()
+}
+
+// BySubsonicCanManagePlaylists orders the results by the subsonic_can_manage_playlists field.
+func BySubsonicCanManagePlaylists(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanManagePlaylists, opts...).ToFunc()
+}
+
+// BySubsonicCanShare orders the results by the subsonic_can_share field.
+func BySubsonicCanShare(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanShare, opts...).ToFunc()
+}
+
+// BySubsonicCanRate orders the results by the subsonic_can_rate field.
+func BySubsonicCanRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanRate, opts...).ToFunc()
+}
+
+// BySubsonicCanChangePassword orders the results by the subsonic_can_change_password field.
+func BySubsonicCanChangePassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicCanChangePassword, opts...).ToFunc()
+}
+
+// BySubsonicMaxBitRate orders the results by the subsonic_max_bit_rate field.
+func BySubsonicMaxBitRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubsonicMaxBitRate, opts...).ToFunc()
 }
 
 // ByOpdsToken orders the results by the opds_token field.
