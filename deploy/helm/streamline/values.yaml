@@ -29,7 +29,8 @@ podSecurityContext:
 # readOnlyRootFilesystem holds only as long as every path the app writes to is a
 # mount — it is a property of your values, not of the chart, because the paths
 # are yours to set. The mounts are /data (PVC), the library volumes, and /tmp
-# (64Mi emptyDir, for sqlite temp spills only).
+# (64Mi emptyDir, for sqlite temp spills and the music tag writer's compiled
+# TagLib cache, about 3 MB).
 #
 # The chart refuses to render rather than let a bad path crashloop, but that
 # check reaches EXACTLY as far as the `config:` block below and no further.
