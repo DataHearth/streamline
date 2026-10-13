@@ -541,6 +541,10 @@ func init() {
 	mediafileDescLastSeenAt := mediafileFields[6].Descriptor()
 	// mediafile.DefaultLastSeenAt holds the default value on creation for the last_seen_at field.
 	mediafile.DefaultLastSeenAt = mediafileDescLastSeenAt.Default.(func() time.Time)
+	// mediafileDescTagFailures is the schema descriptor for tag_failures field.
+	mediafileDescTagFailures := mediafileFields[32].Descriptor()
+	// mediafile.DefaultTagFailures holds the default value on creation for the tag_failures field.
+	mediafile.DefaultTagFailures = mediafileDescTagFailures.Default.(uint8)
 	movieMixin := schema.Movie{}.Mixin()
 	movieMixinFields1 := movieMixin[1].Fields()
 	_ = movieMixinFields1
@@ -820,19 +824,19 @@ func init() {
 	// track.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
 	track.UpdateDefaultUpdateTime = trackDescUpdateTime.UpdateDefault.(func() time.Time)
 	// trackDescTitle is the schema descriptor for title field.
-	trackDescTitle := trackFields[1].Descriptor()
+	trackDescTitle := trackFields[2].Descriptor()
 	// track.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	track.TitleValidator = trackDescTitle.Validators[0].(func(string) error)
 	// trackDescDisc is the schema descriptor for disc field.
-	trackDescDisc := trackFields[2].Descriptor()
+	trackDescDisc := trackFields[3].Descriptor()
 	// track.DefaultDisc holds the default value on creation for the disc field.
 	track.DefaultDisc = trackDescDisc.Default.(uint8)
 	// trackDescDuration is the schema descriptor for duration field.
-	trackDescDuration := trackFields[4].Descriptor()
+	trackDescDuration := trackFields[5].Descriptor()
 	// track.DefaultDuration holds the default value on creation for the duration field.
 	track.DefaultDuration = trackDescDuration.Default.(uint32)
 	// trackDescBonus is the schema descriptor for bonus field.
-	trackDescBonus := trackFields[5].Descriptor()
+	trackDescBonus := trackFields[6].Descriptor()
 	// track.DefaultBonus holds the default value on creation for the bonus field.
 	track.DefaultBonus = trackDescBonus.Default.(bool)
 	transcodejobMixin := schema.TranscodeJob{}.Mixin()

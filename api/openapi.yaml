@@ -1570,6 +1570,41 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/tags/retag:
+    post:
+      operationId: retagMusicLibrary
+      summary: Rewrite every music file's tags (admin)
+      description: |
+        Queues every track file for the `music-tag-sync` job and empties its
+        stored tag hash, so the next pass rewrites each one with what
+        Streamline writes now, whatever it carries. This is how files tagged
+        before a change in what Streamline writes are brought up to date under
+        `library.music_tags.mode: import`, which writes each file once;
+        `managed` queues files on its own. A file a torrent still owns stays
+        deferred. Answers 409 when the mode is `off`. Run the job by hand
+        (`POST /schedules/music-tag-sync/run`) to start at once.
+      tags: [music, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/monitored-types/apply:
     post:
       operationId: applyMusicMonitoredTypes
@@ -11351,6 +11386,7 @@ components:
         - movie_path
         - series_path
         - download_path
+        - music_tags
       properties:
         monitor_specials:
           type: boolean
@@ -11418,6 +11454,8 @@ components:
           readOnly: true
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     LibraryConfigPatch:
       type: object
@@ -11466,6 +11504,8 @@ components:
             type: string
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     DownloadConfigView:
       type: object
@@ -11689,6 +11729,60 @@ components:
           description: |
             A file shorter than this share of the expected runtime fails the
             duration check.
+
+    MusicTagsConfig:
+      type: object
+      description: |
+        The tags Streamline writes into music files (`library.music_tags`).
+        The view always carries every field; when patched, only provided
+        fields are applied, and a patch that changes what a file should carry
+        (mode, strip, preserve, art) queues every managed file for the
+        music-tag-sync job under `managed`.
+      properties:
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: |
+            `off` never writes. `import` writes each file once, when it is
+            imported or adopted with tagging on. `managed` also rewrites a
+            file whenever the library's data for it changes, and undoes edits
+            made elsewhere to the keys Streamline owns.
+        seeding:
+          type: string
+          enum: [defer, copy]
+          description: |
+            `defer` keeps a hardlinked import as one copy on disk and tags it
+            once its torrent is gone; `copy` imports a copy and tags it at
+            once. A file a torrent still serves is never written.
+        embed_art:
+          type: boolean
+          description: Write the album cover into each file as its front cover.
+        art_max_px:
+          type: integer
+          minimum: 256
+          maximum: 3000
+          description: Longest edge of an embedded cover, in pixels.
+        sidecar_art:
+          type: boolean
+          description: |
+            Write cover.jpg into each album folder and folder.jpg into each
+            artist folder, never replacing one Streamline did not write.
+        strip:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys deleted from every file written (Picard's names). An entry
+            ending in `*` matches as a prefix.
+        preserve:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys never written or deleted; wins over strip and over the keys
+            Streamline manages. An entry ending in `*` matches as a prefix.
 
     FFmpegConfigView:
       type: object

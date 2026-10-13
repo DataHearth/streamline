@@ -976,6 +976,57 @@ func (_c *MockDownloader_ResumeQueueItem_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// SeedingTorrents provides a mock function for the type MockDownloader
+func (_mock *MockDownloader) SeedingTorrents(ctx context.Context) download.SeedingSet {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SeedingTorrents")
+	}
+
+	var r0 download.SeedingSet
+	if returnFunc, ok := ret.Get(0).(func(context.Context) download.SeedingSet); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(download.SeedingSet)
+	}
+	return r0
+}
+
+// MockDownloader_SeedingTorrents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SeedingTorrents'
+type MockDownloader_SeedingTorrents_Call struct {
+	*mock.Call
+}
+
+// SeedingTorrents is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDownloader_Expecter) SeedingTorrents(ctx any) *MockDownloader_SeedingTorrents_Call {
+	return &MockDownloader_SeedingTorrents_Call{Call: _e.mock.On("SeedingTorrents", ctx)}
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) Run(run func(ctx context.Context)) *MockDownloader_SeedingTorrents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) Return(seedingSet download.SeedingSet) *MockDownloader_SeedingTorrents_Call {
+	_c.Call.Return(seedingSet)
+	return _c
+}
+
+func (_c *MockDownloader_SeedingTorrents_Call) RunAndReturn(run func(ctx context.Context) download.SeedingSet) *MockDownloader_SeedingTorrents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Test provides a mock function for the type MockDownloader
 func (_mock *MockDownloader) Test(ctx context.Context, p download.TestParams) error {
 	ret := _mock.Called(ctx, p)

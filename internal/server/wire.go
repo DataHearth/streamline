@@ -288,6 +288,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Prober:      prober,
 		Covers:      musicSvc,
 		Albums:      musicSvc,
+		Tagger:      musicSvc,
 	})
 	go imp.Start(ctx)
 
@@ -476,6 +477,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 			func(time.Duration) scheduler.JobFunc {
 				return jobs.FileSelection(dlManager.(download.SelectionResolver))
 			},
+		},
+		{
+			"music-tag-sync",
+			cfg.Schedule.MusicTagSync,
+			func(time.Duration) scheduler.JobFunc { return musicSvc.SyncTags },
 		},
 	}
 	for _, j := range jobsToRegister {

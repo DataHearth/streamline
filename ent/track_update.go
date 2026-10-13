@@ -58,6 +58,26 @@ func (_u *TrackUpdate) ClearMbid() *TrackUpdate {
 	return _u
 }
 
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (_u *TrackUpdate) SetReleaseTrackMbid(v string) *TrackUpdate {
+	_u.mutation.SetReleaseTrackMbid(v)
+	return _u
+}
+
+// SetNillableReleaseTrackMbid sets the "release_track_mbid" field if the given value is not nil.
+func (_u *TrackUpdate) SetNillableReleaseTrackMbid(v *string) *TrackUpdate {
+	if v != nil {
+		_u.SetReleaseTrackMbid(*v)
+	}
+	return _u
+}
+
+// ClearReleaseTrackMbid clears the value of the "release_track_mbid" field.
+func (_u *TrackUpdate) ClearReleaseTrackMbid() *TrackUpdate {
+	_u.mutation.ClearReleaseTrackMbid()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *TrackUpdate) SetTitle(v string) *TrackUpdate {
 	_u.mutation.SetTitle(v)
@@ -325,6 +345,12 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.MbidCleared() {
 		_spec.ClearField(track.FieldMbid, field.TypeString)
 	}
+	if value, ok := _u.mutation.ReleaseTrackMbid(); ok {
+		_spec.SetField(track.FieldReleaseTrackMbid, field.TypeString, value)
+	}
+	if _u.mutation.ReleaseTrackMbidCleared() {
+		_spec.ClearField(track.FieldReleaseTrackMbid, field.TypeString)
+	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 	}
@@ -516,6 +542,26 @@ func (_u *TrackUpdateOne) SetNillableMbid(v *string) *TrackUpdateOne {
 // ClearMbid clears the value of the "mbid" field.
 func (_u *TrackUpdateOne) ClearMbid() *TrackUpdateOne {
 	_u.mutation.ClearMbid()
+	return _u
+}
+
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (_u *TrackUpdateOne) SetReleaseTrackMbid(v string) *TrackUpdateOne {
+	_u.mutation.SetReleaseTrackMbid(v)
+	return _u
+}
+
+// SetNillableReleaseTrackMbid sets the "release_track_mbid" field if the given value is not nil.
+func (_u *TrackUpdateOne) SetNillableReleaseTrackMbid(v *string) *TrackUpdateOne {
+	if v != nil {
+		_u.SetReleaseTrackMbid(*v)
+	}
+	return _u
+}
+
+// ClearReleaseTrackMbid clears the value of the "release_track_mbid" field.
+func (_u *TrackUpdateOne) ClearReleaseTrackMbid() *TrackUpdateOne {
+	_u.mutation.ClearReleaseTrackMbid()
 	return _u
 }
 
@@ -815,6 +861,12 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 	}
 	if _u.mutation.MbidCleared() {
 		_spec.ClearField(track.FieldMbid, field.TypeString)
+	}
+	if value, ok := _u.mutation.ReleaseTrackMbid(); ok {
+		_spec.SetField(track.FieldReleaseTrackMbid, field.TypeString, value)
+	}
+	if _u.mutation.ReleaseTrackMbidCleared() {
+		_spec.ClearField(track.FieldReleaseTrackMbid, field.TypeString)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)

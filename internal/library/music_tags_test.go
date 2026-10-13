@@ -26,7 +26,10 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 		ar = &ent.Artist{
 			Name: "Nirvana", SortName: "Nirvana", Mbid: "art-1", Genre: "Grunge",
 		}
-		tr = &ent.Track{Title: "Lithium", Disc: 1, Position: 5, Mbid: "rec-5"}
+		tr = &ent.Track{
+			Title: "Lithium", Disc: 1, Position: 5, Mbid: "rec-5",
+			ReleaseTrackMbid: "reltrack-5",
+		}
 		al = &ent.Album{
 			Mbid: "rg-1", ReleaseMbid: "rel-1", Title: "Nevermind",
 			Type: album.TypeAlbum, ReleaseDate: &rel,
@@ -73,6 +76,7 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 			audiotags.KeyMBAlbumID:        {"rel-1"},
 			audiotags.KeyMBReleaseGroupID: {"rg-1"},
 			audiotags.KeyMBRecordingID:    {"rec-5"},
+			audiotags.KeyMBReleaseTrackID: {"reltrack-5"},
 		}))
 	})
 

@@ -453,7 +453,7 @@ func (p *pack) writeTrack(dir, name string, n int) error {
 		audiotags.KeyTitle:       {fmt.Sprintf("Track %02d", n)},
 		audiotags.KeyTrackNumber: {strconv.Itoa(n)},
 		audiotags.KeyDiscNumber:  {"1"},
-	}, nil)
+	}, audiotags.Policy{})
 }
 
 func (p *pack) writeAlbum(dir string) error {

@@ -59,6 +59,9 @@ type Deps struct {
 	// Albums is optional: without it an album added as a stub is not hydrated
 	// before its download is matched to tracks.
 	Albums music.AlbumHydrator
+	// Tagger is optional: without it an imported album's files keep the tags
+	// they came with until the music-tag-sync job reaches them.
+	Tagger music.AlbumTagger
 }
 
 const (
@@ -74,6 +77,7 @@ type Worker struct {
 	probe  ffmpeg.Prober
 	covers music.CoverResolver
 	albums music.AlbumHydrator
+	tagger music.AlbumTagger
 
 	ch   chan uint32
 	stop chan struct{}
@@ -107,6 +111,7 @@ func NewWorker(d Deps) *Worker {
 		probe:    d.Prober,
 		covers:   d.Covers,
 		albums:   d.Albums,
+		tagger:   d.Tagger,
 		ch:       make(chan uint32, channelCap),
 		stop:     make(chan struct{}),
 		inFlight: make(map[uint32]struct{}),

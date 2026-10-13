@@ -70,6 +70,11 @@ func Mbid(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldMbid, v))
 }
 
+// ReleaseTrackMbid applies equality check predicate on the "release_track_mbid" field. It's identical to ReleaseTrackMbidEQ.
+func ReleaseTrackMbid(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldReleaseTrackMbid, v))
+}
+
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldTitle, v))
@@ -248,6 +253,81 @@ func MbidEqualFold(v string) predicate.Track {
 // MbidContainsFold applies the ContainsFold predicate on the "mbid" field.
 func MbidContainsFold(v string) predicate.Track {
 	return predicate.Track(sql.FieldContainsFold(FieldMbid, v))
+}
+
+// ReleaseTrackMbidEQ applies the EQ predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldEQ(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidNEQ applies the NEQ predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNEQ(v string) predicate.Track {
+	return predicate.Track(sql.FieldNEQ(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidIn applies the In predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldIn(FieldReleaseTrackMbid, vs...))
+}
+
+// ReleaseTrackMbidNotIn applies the NotIn predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNotIn(vs ...string) predicate.Track {
+	return predicate.Track(sql.FieldNotIn(FieldReleaseTrackMbid, vs...))
+}
+
+// ReleaseTrackMbidGT applies the GT predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidGT(v string) predicate.Track {
+	return predicate.Track(sql.FieldGT(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidGTE applies the GTE predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidGTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldGTE(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidLT applies the LT predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidLT(v string) predicate.Track {
+	return predicate.Track(sql.FieldLT(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidLTE applies the LTE predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidLTE(v string) predicate.Track {
+	return predicate.Track(sql.FieldLTE(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidContains applies the Contains predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidContains(v string) predicate.Track {
+	return predicate.Track(sql.FieldContains(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidHasPrefix applies the HasPrefix predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidHasPrefix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasPrefix(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidHasSuffix applies the HasSuffix predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidHasSuffix(v string) predicate.Track {
+	return predicate.Track(sql.FieldHasSuffix(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidIsNil applies the IsNil predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldReleaseTrackMbid))
+}
+
+// ReleaseTrackMbidNotNil applies the NotNil predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldReleaseTrackMbid))
+}
+
+// ReleaseTrackMbidEqualFold applies the EqualFold predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidEqualFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldEqualFold(FieldReleaseTrackMbid, v))
+}
+
+// ReleaseTrackMbidContainsFold applies the ContainsFold predicate on the "release_track_mbid" field.
+func ReleaseTrackMbidContainsFold(v string) predicate.Track {
+	return predicate.Track(sql.FieldContainsFold(FieldReleaseTrackMbid, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.

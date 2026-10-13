@@ -39,14 +39,15 @@ type PersonSeed struct {
 }
 
 type TrackSeed struct {
-	MBID      string
-	Title     string
-	Disc      uint8
-	Position  uint16
-	Duration  uint32
-	Bonus     bool
-	Featuring []PersonSeed
-	Writers   []PersonSeed
+	MBID             string
+	ReleaseTrackMBID string
+	Title            string
+	Disc             uint8
+	Position         uint16
+	Duration         uint32
+	Bonus            bool
+	Featuring        []PersonSeed
+	Writers          []PersonSeed
 }
 
 // AlbumCreditSeed is one production credit of an album; Role is one of the
@@ -1019,6 +1020,7 @@ func (db *DB) SetAlbumHydration(
 			id = cur.ID
 			if err := c.Track.UpdateOneID(id).
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
@@ -1029,6 +1031,7 @@ func (db *DB) SetAlbumHydration(
 		} else {
 			row, err := c.Track.Create().
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDisc(t.Disc).
 				SetPosition(t.Position).

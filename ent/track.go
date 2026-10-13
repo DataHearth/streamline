@@ -24,6 +24,8 @@ type Track struct {
 	UpdateTime time.Time `json:"update_time,omitempty"`
 	// Mbid holds the value of the "mbid" field.
 	Mbid string `json:"mbid,omitempty"`
+	// ReleaseTrackMbid holds the value of the "release_track_mbid" field.
+	ReleaseTrackMbid string `json:"release_track_mbid,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Disc holds the value of the "disc" field.
@@ -92,7 +94,7 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case track.FieldID, track.FieldDisc, track.FieldPosition, track.FieldDuration:
 			values[i] = new(sql.NullInt64)
-		case track.FieldMbid, track.FieldTitle:
+		case track.FieldMbid, track.FieldReleaseTrackMbid, track.FieldTitle:
 			values[i] = new(sql.NullString)
 		case track.FieldCreateTime, track.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
@@ -136,6 +138,12 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field mbid", values[i])
 			} else if value.Valid {
 				_m.Mbid = value.String
+			}
+		case track.FieldReleaseTrackMbid:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field release_track_mbid", values[i])
+			} else if value.Valid {
+				_m.ReleaseTrackMbid = value.String
 			}
 		case track.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -233,6 +241,9 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("mbid=")
 	builder.WriteString(_m.Mbid)
+	builder.WriteString(", ")
+	builder.WriteString("release_track_mbid=")
+	builder.WriteString(_m.ReleaseTrackMbid)
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)

@@ -636,6 +636,7 @@ type mbMedium struct {
 }
 
 type mbTrack struct {
+	ID           string     `json:"id"`
 	Position     uint16     `json:"position"`
 	Title        string     `json:"title"`
 	Length       uint32     `json:"length"`
@@ -870,12 +871,13 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 		mediumBonus := strings.Contains(strings.ToLower(md.Title), "bonus")
 		for _, t := range md.Tracks {
 			ti := TrackInfo{
-				MBID:      t.Recording.ID,
-				Title:     t.Title,
-				Disc:      disc,
-				Position:  t.Position,
-				Duration:  t.Length / 1000,
-				Featuring: featuring(t.ArtistCredit),
+				MBID:             t.Recording.ID,
+				ReleaseTrackMBID: t.ID,
+				Title:            t.Title,
+				Disc:             disc,
+				Position:         t.Position,
+				Duration:         t.Length / 1000,
+				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
 			}

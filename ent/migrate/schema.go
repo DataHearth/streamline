@@ -1023,6 +1023,14 @@ var (
 		{Name: "transcoded_at", Type: field.TypeTime, Nullable: true},
 		{Name: "size_before", Type: field.TypeInt64, Nullable: true},
 		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook"}},
+		{Name: "tags_state", Type: field.TypeEnum, Nullable: true, Enums: []string{"pending", "deferred", "written", "failed"}},
+		{Name: "tags_hash", Type: field.TypeString, Nullable: true},
+		{Name: "tagged_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tags_mtime", Type: field.TypeInt64, Nullable: true},
+		{Name: "tags_size", Type: field.TypeInt64, Nullable: true},
+		{Name: "tags_checked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tag_failures", Type: field.TypeUint8, Default: 0},
+		{Name: "tags_error", Type: field.TypeString, Nullable: true},
 		{Name: "book_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
@@ -1036,25 +1044,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_books_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[29]},
+				Columns:    []*schema.Column{MediaFilesColumns[37]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[30]},
+				Columns:    []*schema.Column{MediaFilesColumns[38]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[31]},
+				Columns:    []*schema.Column{MediaFilesColumns[39]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_tracks_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[32]},
+				Columns:    []*schema.Column{MediaFilesColumns[40]},
 				RefColumns: []*schema.Column{TracksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1063,20 +1071,25 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[30]},
+				Columns: []*schema.Column{MediaFilesColumns[38]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[31]},
+				Columns: []*schema.Column{MediaFilesColumns[39]},
 			},
 			{
 				Name:    "mediafile_track_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[32]},
+				Columns: []*schema.Column{MediaFilesColumns[40]},
 			},
 			{
 				Name:    "mediafile_book_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[37]},
+			},
+			{
+				Name:    "mediafile_tags_state",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[29]},
 			},
@@ -1491,6 +1504,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
+		{Name: "release_track_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "disc", Type: field.TypeUint8, Default: 1},
 		{Name: "position", Type: field.TypeUint16},
@@ -1506,7 +1520,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[9]},
+				Columns:    []*schema.Column{TracksColumns[10]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1515,7 +1529,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[9]},
+				Columns: []*schema.Column{TracksColumns[10]},
 			},
 		},
 	}

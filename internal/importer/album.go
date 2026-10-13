@@ -24,14 +24,21 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-// albumImportMode is the transfer mode an album import uses. A moved file is
-// the seeding source itself, and tagging it would corrupt what the torrent is
-// still serving. A hardlink is safe from the write (audiotags renames a fresh
-// copy over the file), but that first write splits it from the torrent's
-// anyway, so it costs a copy's disk regardless and copies outright.
+// albumImportMode is the transfer mode an album import uses. A move while the
+// torrent seeds would pull the file out from under it, so it copies. A
+// hardlink is safe from the tag writer, which renames a fresh copy over the
+// file and so never reaches the torrent's bytes, but its first write splits
+// the two: under music_tags.seeding copy that is accepted now and the import
+// copies outright, under defer the hardlink is kept and the job tags the file
+// once its torrent is gone. With tags off a hardlink stays a hardlink.
 func albumImportMode(libCfg config.LibraryConfig) string {
-	if libCfg.ImportMode == "hardlink" ||
-		(libCfg.KeepTorrentSeeding && libCfg.ImportMode == "move") {
+	tags := libCfg.MusicTags
+	switch {
+	case libCfg.KeepTorrentSeeding && libCfg.ImportMode == "move":
+		return "copy"
+	case libCfg.ImportMode == "hardlink" &&
+		tags.Mode != config.MusicTagsOff &&
+		tags.Seeding == config.MusicTagsSeedingCopy:
 		return "copy"
 	}
 	return libCfg.ImportMode
@@ -193,6 +200,7 @@ func (w *Worker) importAlbumFiles(
 		return t.Disc > 1
 	})
 	mode := albumImportMode(libCfg)
+	tagging := libCfg.MusicTags.Mode != config.MusicTagsOff
 
 	var (
 		rows     []db.AdoptAlbumFile
@@ -222,32 +230,13 @@ func (w *Worker) importAlbumFiles(
 		aside = append(aside, moved...)
 		replaced = append(replaced, old...)
 
-		if err := audiotags.Write(
-			imported.Path,
-			library.AlbumTrackTags(artist, alb, f.tr),
-			audiotags.DefaultStrip,
-		); err != nil {
-			slog.WarnContext(
-				ctx,
-				"album import: tag write failed, file imported with its own tags",
-				"file",
-				imported.Path,
-				"track.id",
-				f.tr.ID,
-				"error",
-				err,
-			)
-		}
-		size := imported.Size
-		if st, err := os.Stat(imported.Path); err == nil {
-			size = st.Size()
-		}
 		rows = append(rows, db.AdoptAlbumFile{
-			TrackID: f.tr.ID,
-			Path:    imported.Path,
-			Quality: tierName(f.q),
-			Format:  f.info.Format,
-			Size:    size,
+			TrackID:     f.tr.ID,
+			Path:        imported.Path,
+			Quality:     tierName(f.q),
+			Format:      f.info.Format,
+			Size:        imported.Size,
+			TagsPending: tagging,
 		})
 	}
 	if len(rows) == 0 {
@@ -272,6 +261,20 @@ func (w *Worker) importAlbumFiles(
 		)
 	}
 	dropAside(ctx, aside)
+	// Tagged before the media servers hear of the files, so they index them
+	// once. A file the torrent still shares is deferred to the job.
+	if tagging && w.tagger != nil {
+		if err := w.tagger.TagAlbum(ctx, alb.ID); err != nil {
+			slog.WarnContext(
+				ctx,
+				"album import: tagging the files failed, the job retries",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
+	}
 	if w.covers != nil {
 		w.covers.ResolveCoversInBackground(ctx, alb.ID)
 	}

@@ -20,6 +20,8 @@ const (
 	FieldUpdateTime = "update_time"
 	// FieldMbid holds the string denoting the mbid field in the database.
 	FieldMbid = "mbid"
+	// FieldReleaseTrackMbid holds the string denoting the release_track_mbid field in the database.
+	FieldReleaseTrackMbid = "release_track_mbid"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
 	// FieldDisc holds the string denoting the disc field in the database.
@@ -67,6 +69,7 @@ var Columns = []string{
 	FieldCreateTime,
 	FieldUpdateTime,
 	FieldMbid,
+	FieldReleaseTrackMbid,
 	FieldTitle,
 	FieldDisc,
 	FieldPosition,
@@ -133,6 +136,11 @@ func ByUpdateTime(opts ...sql.OrderTermOption) OrderOption {
 // ByMbid orders the results by the mbid field.
 func ByMbid(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMbid, opts...).ToFunc()
+}
+
+// ByReleaseTrackMbid orders the results by the release_track_mbid field.
+func ByReleaseTrackMbid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReleaseTrackMbid, opts...).ToFunc()
 }
 
 // ByTitle orders the results by the title field.

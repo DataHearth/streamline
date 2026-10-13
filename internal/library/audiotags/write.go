@@ -1,6 +1,8 @@
 package audiotags
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -52,26 +54,64 @@ var DefaultStrip = []string{
 	taglib.PublisherWebpage,
 }
 
+// Policy is what a write does beyond the keys it is given. Strip names keys
+// deleted from the file; Preserve names keys never written or deleted, and
+// wins over both Strip and the keys passed. An entry ending in * matches as a
+// prefix.
+type Policy struct {
+	Strip    []string
+	Preserve []string
+}
+
 // Write applies tags to the file at path, then deletes every existing key
-// that strip names (an entry ending in * matches as a prefix). Managed keys
-// win over strip. It never modifies the file in place: the write goes to a
-// copy beside it, which is read back and compared with tags, then renamed
+// the policy strips. It never modifies the file in place: the write goes to
+// a copy beside it, which is read back and compared with tags, then renamed
 // over the original. A failed write or check leaves the original untouched,
 // and a hard link to the original (a torrent still seeding it) keeps the old
 // bytes. A format TagLib is not used for here is ErrUnsupportedFormat, and
 // the caller imports without writing.
-func Write(path string, tags Tags, strip []string) error {
+func Write(path string, tags Tags, p Policy) error {
 	ext := strings.ToLower(filepath.Ext(path))
 	if _, ok := AudioExtensions[ext]; !ok {
 		return ErrUnsupportedFormat
 	}
-	if err := write(path, ext, tags, strip); err != nil {
+	if err := write(path, ext, p.apply(tags), p); err != nil {
 		return fmt.Errorf("audiotags: write %s: %w", filepath.Base(path), err)
 	}
 	return nil
 }
 
-func write(path, ext string, tags Tags, strip []string) error {
+// apply drops the keys the policy preserves.
+func (p Policy) apply(tags Tags) Tags {
+	out := make(Tags, len(tags))
+	for k, v := range tags {
+		if !matches(k, p.Preserve) {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// Hash identifies what a Write of tags under p would leave in a file: the
+// kept keys and their values in a canonical order, the policy, and extra
+// (the embedded cover's identity). Two equal hashes mean a second write would
+// change nothing Streamline owns.
+func Hash(tags Tags, p Policy, extra ...string) string {
+	kept := p.apply(tags)
+	var b strings.Builder
+	for _, k := range slices.Sorted(maps.Keys(kept)) {
+		b.WriteString(k + "\x1e" + strings.Join(clean(kept[k]), "\x1e") + "\x1f")
+	}
+	b.WriteString("strip\x1e" + strings.Join(p.Strip, "\x1e") + "\x1f")
+	b.WriteString("preserve\x1e" + strings.Join(p.Preserve, "\x1e") + "\x1f")
+	for _, e := range extra {
+		b.WriteString(e + "\x1f")
+	}
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:])
+}
+
+func write(path, ext string, tags Tags, p Policy) error {
 	tmp, err := siblingCopy(path, ext)
 	if err != nil {
 		return err
@@ -90,7 +130,7 @@ func write(path, ext string, tags Tags, strip []string) error {
 	want := fold(ext, tags)
 	update := map[string][]string{}
 	for k := range current {
-		if stripped(k, strip) {
+		if matches(k, p.Strip) && !matches(k, p.Preserve) {
 			update[k] = nil
 		}
 	}
@@ -121,13 +161,7 @@ func write(path, ext string, tags Tags, strip []string) error {
 func fold(ext string, tags Tags) map[string][]string {
 	out := make(map[string][]string, len(tags))
 	for k, vs := range tags {
-		var keep []string
-		for _, v := range vs {
-			if v = strings.TrimSpace(v); v != "" {
-				keep = append(keep, v)
-			}
-		}
-		out[k] = keep
+		out[k] = clean(vs)
 	}
 	if ext != ".mp3" && ext != ".m4a" {
 		return out
@@ -151,8 +185,23 @@ func fold(ext string, tags Tags) map[string][]string {
 	return out
 }
 
-func stripped(key string, patterns []string) bool {
+// clean trims each value and drops the empty ones.
+func clean(vs []string) []string {
+	var keep []string
+	for _, v := range vs {
+		if v = strings.TrimSpace(v); v != "" {
+			keep = append(keep, v)
+		}
+	}
+	return keep
+}
+
+// matches reports a key named by patterns, an entry ending in * matching as
+// a prefix. Keys are compared upper case, as TagLib reports them.
+func matches(key string, patterns []string) bool {
+	key = strings.ToUpper(key)
 	for _, p := range patterns {
+		p = strings.ToUpper(strings.TrimSpace(p))
 		if prefix, ok := strings.CutSuffix(p, "*"); ok {
 			if strings.HasPrefix(key, prefix) {
 				return true

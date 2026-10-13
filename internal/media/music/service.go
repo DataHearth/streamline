@@ -98,6 +98,9 @@ type Manager interface {
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error
 	DeleteTrackFile(ctx context.Context, trackID uint32) error
+
+	RetagLibrary(ctx context.Context) (int, error)
+	TagSettingsChanged(ctx context.Context, before, after config.MusicTagsConfig)
 }
 
 var _ Manager = (*Service)(nil)
@@ -529,6 +532,13 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	var albumIDs []uint32
+	for _, a := range updated.Edges.Albums {
+		albumIDs = append(albumIDs, a.ID)
+	}
+	// A title, date or type the refresh changed reaches the files under
+	// managed; the hash settles the albums where nothing did.
+	s.tagsChanged(ctx, albumIDs...)
 	var items []hydrateItem
 	retried := 0
 	for _, a := range updated.Edges.Albums {

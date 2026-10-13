@@ -891,6 +891,21 @@ export type LibraryConfig = {
 	series_path?: string;
 	download_path?: string;
 	probe?: ProbeConfig;
+	music_tags: MusicTagsConfig;
+};
+
+// library.music_tags: what Streamline writes into music files. Every field is
+// optional on a patch.
+export type MusicTagsMode = "off" | "import" | "managed";
+export type MusicTagsSeeding = "defer" | "copy";
+export type MusicTagsConfig = {
+	mode: MusicTagsMode;
+	seeding: MusicTagsSeeding;
+	embed_art: boolean;
+	art_max_px: number;
+	sidecar_art: boolean;
+	strip: string[];
+	preserve: string[];
 };
 
 export type DownloadConfig = {

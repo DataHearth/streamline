@@ -65,6 +65,20 @@ func (_c *TrackCreate) SetNillableMbid(v *string) *TrackCreate {
 	return _c
 }
 
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (_c *TrackCreate) SetReleaseTrackMbid(v string) *TrackCreate {
+	_c.mutation.SetReleaseTrackMbid(v)
+	return _c
+}
+
+// SetNillableReleaseTrackMbid sets the "release_track_mbid" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableReleaseTrackMbid(v *string) *TrackCreate {
+	if v != nil {
+		_c.SetReleaseTrackMbid(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *TrackCreate) SetTitle(v string) *TrackCreate {
 	_c.mutation.SetTitle(v)
@@ -294,6 +308,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Mbid(); ok {
 		_spec.SetField(track.FieldMbid, field.TypeString, value)
 		_node.Mbid = value
+	}
+	if value, ok := _c.mutation.ReleaseTrackMbid(); ok {
+		_spec.SetField(track.FieldReleaseTrackMbid, field.TypeString, value)
+		_node.ReleaseTrackMbid = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)

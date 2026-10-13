@@ -112,6 +112,7 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 		audiotags.KeyMBAlbumID:        nonEmpty(al.ReleaseMbid),
 		audiotags.KeyMBReleaseGroupID: nonEmpty(al.Mbid),
 		audiotags.KeyMBRecordingID:    nonEmpty(tr.Mbid),
+		audiotags.KeyMBReleaseTrackID: nonEmpty(tr.ReleaseTrackMbid),
 	}
 }
 

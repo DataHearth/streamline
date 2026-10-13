@@ -363,6 +363,7 @@ func (s *Service) hydrateAlbum(
 			fmt.Errorf("store album %d: %w", albumID, err),
 		)
 	}
+	s.tagsChanged(ctx, albumID)
 	outcome := hydrationOK
 	if !d.CreditsComplete {
 		outcome = hydrationLight
@@ -429,7 +430,8 @@ func (s *Service) hydrationParams(
 	}
 	for _, t := range d.Tracks {
 		p.Tracks = append(p.Tracks, db.TrackSeed{
-			MBID: t.MBID, Title: t.Title, Disc: t.Disc, Position: t.Position,
+			MBID: t.MBID, ReleaseTrackMBID: t.ReleaseTrackMBID,
+			Title: t.Title, Disc: t.Disc, Position: t.Position,
 			Duration: t.Duration, Bonus: t.Bonus,
 			Featuring: personSeeds(t.Featuring),
 			Writers:   personSeeds(t.Writers),

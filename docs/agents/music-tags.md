@@ -1,0 +1,50 @@
+# Music tags
+
+> **Read before touching** `internal/library/audiotags/`, `internal/library/music_tags.go`, `internal/media/music/tags.go`, `internal/download/seeding.go`, the album importer's tagging, `library.music_tags`, or the `music-tag-sync` job.
+>
+> **Covers** — the TagLib wrapper and its write contract, the key set and where each value comes from, the tag state on `MediaFile`, the job and what queues a file, the seeding guard, the modes, and the album dates and genres hydration keeps for them.
+>
+> **Load-bearing** — a file is never modified in place; the job is the only writer of a file after its import; a file a listed torrent serves is never written; preserve wins over everything.
+
+## The library: TagLib through go-taglib
+- `go.senan.xyz/taglib` is TagLib 2.x compiled to WebAssembly and run on wazero: CGO-free, so the static binaries, goreleaser's cross builds and the Nix package are unchanged. It replaced `dhowden/tag` (reading) and `bogem/id3v2` + `go-flac` (writing). **Nothing outside `internal/library/audiotags` imports it**; the package re-exports the property keys it writes as `audiotags.Key*` (`keys.go`).
+- The keys are TagLib property names, which are MusicBrainz Picard's. TagLib maps them onto ID3v2.4 frames, Vorbis comments and MP4 atoms itself — `MUSICBRAINZ_TRACKID` becomes the ID3 `UFID`, `RELEASETYPE` the `TXXX:MusicBrainz Album Type`, and so on — which is the reason to use it: no per-format writer to keep. Formats: `.mp3 .flac .m4a .ogg .opus` (`AudioExtensions`); TagLib picks the format from the **extension**, so a file is never written under another one.
+- It compiles the module once into `os.TempDir()/go-taglib-wasm-<uid>` (about 3 MB). The Helm chart's 64Mi `/tmp` emptyDir carries it; a read-only `/tmp` would fail every read.
+
+## The write contract (`audiotags.Write(path, Tags, Policy)`)
+- **Never in place.** It copies the file to a hidden sibling (`.streamline-tags-*<ext>`, same directory so the rename is atomic, the original's permission bits), writes the copy, reads it back and compares every key it wrote (`ErrVerify`), then renames it over the original. A failure leaves the original untouched; **a hard link to the original keeps the old bytes**, which is what lets a hardlinked library file be tagged without touching the torrent's copy.
+- It replaces only the keys it is given; a key mapped to no value is **deleted**. Without TagLib's `Clear` option every other property survives, and pictures are not properties at all, so embedded art survives a tag write. The writer before it called `DeleteAllFrames` on MP3s and swapped the whole Vorbis block on FLACs, dropping ReplayGain, lyrics and the cover — and with the cover the resolver's "embedded picture" source.
+- `Policy.Strip` deletes existing keys; `Policy.Preserve` keeps a key from being written **or** deleted and wins over both Strip and the keys passed. Patterns are upper-cased, an entry ending in `*` matches as a prefix.
+- `TRACKNUMBER`/`TRACKTOTAL` and `DISCNUMBER`/`DISCTOTAL` go in separately; for ID3 and MP4, which have no separate total, `fold` writes `n/total` and deletes any free-form total an earlier tagger left.
+- `audiotags.Hash(tags, policy, extra...)` is the SHA-256 of the kept keys in canonical order, the policy and `extra` (the cover's identity). Equal hashes mean a second write would change nothing Streamline owns.
+
+## The key set (`library.AlbumTrackTags`)
+- Pure, from the database: artist, album (with its tracks, for the totals) and track (with its credits, for the featured artists). **Every key it owns is present**, empty when unknown, so a stale value from an earlier tagger is deleted rather than surviving beside ours.
+- Artists: `ARTIST` is the album artist plus `feat. A, B & C`; `ARTISTS` the list; `MUSICBRAINZ_ARTISTID` the artist and the featured artists that have an MBID; `ARTISTSORT` only when there is no guest (no sort name is right for a credit with guests).
+- `DATE` is the edition (`Album.edition_date`), else the original; `ORIGINALDATE` is `Album.original_date`, else the **year** of `release_date` — a parsed date cannot tell `1991` from `1991-01-01`.
+- `GENRE`: `Album.genres` (up to five, most voted first), else the artist's genre.
+- `MEDIA` only when the album holds exactly one medium: the stored media are the union over every release of the group, so with several there is no telling which these files are. `RELEASETYPE` is Picard's spelling (`album; compilation`, `album; live`). `COMPILATION=1` **only under the Various Artists MBID** — players group a compilation-flagged album under Various Artists, which is wrong for one artist's best-of.
+- MusicBrainz ids: artist, album artist, release (`MUSICBRAINZ_ALBUMID` = `Album.release_mbid` — Jellyfin and Navidrome group editions by it, not by the release group), release group, recording, release track (`Track.release_track_mbid`, the track's id on the canonical release, read in hydration).
+
+## Album dates and genres (hydration)
+- `Album.original_date` and `Album.edition_date` are strings as MusicBrainz writes them (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`): the group's `first-release-date` and the canonical release's `date`. `release_date` stays the parsed one sorting and upcoming detection read.
+- `Album.genres` comes from `inc=…+genres` on the release-group call hydration already makes. **NULL marks an album hydrated before genres existed**; hydration always writes a list, `[]` when there are none. `HydrateAlbum` fetches such an album best effort (a failure logs and returns nil: the caller has its tracks), the sweep's `details` leg and the worker's idle refill backfill albums **holding files** (`ListAlbumsAwaitingDetails`), and a release group MusicBrainz no longer knows keeps its stored facts and gets `[]` (`storedDetails`) instead of being asked for forever.
+
+## Tag state on `MediaFile`
+- `tags_state`: NULL (never asked to write — adopted before tagging, or with tagging off), `pending`, `deferred` (a torrent owns or shares it), `written`, `failed` (after `maxTagFailures`, 5; a format TagLib is not used for fails at once). `tags_hash` is what was last written — **empty forces the next write** even when nothing changed. `tags_mtime`/`tags_size` are the file's after the write (and `size` is updated with them, since the file grew). `tags_checked_at` orders the outside-edit check.
+- `db.MarkAlbumTags(ids, mark)` / `MarkAllMusicTags(mark)`: `MarkStale` queues written, failed, pending and never-tagged files and keeps their hash, so the job settles a file whose hash still matches **without opening it**; `MarkForce` also empties the hash. A deferred file stays deferred either way (its tags are computed when it is finally written) but loses its hash on a force.
+
+## The job (`music-tag-sync`, `music.Service.SyncTags`)
+- **The only writer of a file after its import.** Everything else queues. It lists up to 500 waiting files (pending before deferred — note the **descending** order: `pending` sorts after `deferred`), all of them on a manual run, lists the torrents once, groups files by album so each album's tree is read once, and writes. A write that found the same hash records `unchanged`; anything written triggers one media-server refresh for the music root.
+- **The importer tags through the same path**: it records each new file `pending` (`AdoptAlbumFile.TagsPending`) and then calls `TagAlbum(albumID)` synchronously, *before* it refreshes the media servers, so a server indexes the files once, tagged. A file the guard holds is left deferred for the job.
+- What queues a file: an import (`pending`), and **under `managed` only** a hydration (tracks, credits, details), a `RefreshOne` (every album of the artist; the hash settles the unchanged ones), and a `library.music_tags` patch that changes mode, strip, preserve or the art settings (`TagSettingsChanged`). `POST /music/tags/retag` forces every file in either mode (`409 code: music_tags_off` under off).
+- Span `music.tag_sync`, one `music.write_tags` per file (outcome, and `tags.deferred_reason`), counter `streamline.music.tag_writes{outcome=written|unchanged|deferred|failed}`.
+
+## The seeding guard
+- Only the builtin engine reports a torrent that stopped seeding (`Torrent.SeedingStopped`); qBittorrent, Transmission and Deluge always report false. The signal every client gives is **its listing**: `download.SeedingTorrents` lists every enabled client once and returns the hashes and the content roots (the client's save path through `download.path_mappings`, and the convention path `<library.download_path>/<name>`). A client that cannot be listed makes the set incomplete.
+- A file is deferred when a listed torrent's content root contains it (the torrent serves that very path, and a rename over it changes what it serves), when the listing is incomplete and the file lies under the download path or has another hard link, and — under `seeding: defer` — when it has another hard link and a torrent of the album's records (its own grab or a pack that expected it) is still listed. Otherwise it is written: a hardlink whose torrent is gone is split by the write, which is free since the torrent's copy is now an orphan.
+- **A paused torrent still listed keeps its files deferred.** Resuming it serves whatever bytes are then at its path.
+- `albumImportMode`: `move` while seeding copies (it would pull the file out from under the torrent, tags or not); `hardlink` copies only under a writing mode with `seeding: copy`; with `defer`, or with tags off, a hardlink stays a hardlink — one copy on disk until the torrent goes.
+
+## Modes
+- `off` writes nothing (the job returns at once, the importer queues nothing). `import` writes each file once. `managed` re-queues on the triggers above and undoes outside edits to managed keys; keys Streamline does not manage are never compared.

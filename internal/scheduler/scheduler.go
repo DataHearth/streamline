@@ -162,6 +162,12 @@ func Manual(ctx context.Context) bool {
 	return manual
 }
 
+// WithManual marks ctx as a manual run, for the tests of a job that reads
+// Manual; the scheduler marks its own runs.
+func WithManual(ctx context.Context) context.Context {
+	return context.WithValue(ctx, manualKey{}, true)
+}
+
 // Progress records how far the current run has got, for the API to show
 // alongside Running. It only does anything on the ctx a job body receives
 // from the scheduler; anywhere else it is a no-op, so a service method can

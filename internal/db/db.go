@@ -128,6 +128,28 @@ type Store interface {
 	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsAwaitingDetails(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListMediaFilesForTagSync(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	ListAlbumTagFiles(ctx context.Context, albumID uint32) ([]*ent.MediaFile, error)
+	SetMediaFileTagsWritten(
+		ctx context.Context,
+		id uint32,
+		hash string,
+		mtime, size int64,
+		at time.Time,
+	) error
+	SetMediaFileTagsDeferred(ctx context.Context, id uint32) error
+	RecordMediaFileTagFailure(
+		ctx context.Context,
+		id uint32,
+		msg string,
+		maxFailures uint8,
+	) error
+	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
+	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
+	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)
 	ListAlbumsTrackless(
 		ctx context.Context,
 		staleBefore, releasedBefore time.Time,

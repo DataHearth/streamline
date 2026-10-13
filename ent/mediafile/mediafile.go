@@ -71,6 +71,22 @@ const (
 	FieldSizeBefore = "size_before"
 	// FieldBookKind holds the string denoting the book_kind field in the database.
 	FieldBookKind = "book_kind"
+	// FieldTagsState holds the string denoting the tags_state field in the database.
+	FieldTagsState = "tags_state"
+	// FieldTagsHash holds the string denoting the tags_hash field in the database.
+	FieldTagsHash = "tags_hash"
+	// FieldTaggedAt holds the string denoting the tagged_at field in the database.
+	FieldTaggedAt = "tagged_at"
+	// FieldTagsMtime holds the string denoting the tags_mtime field in the database.
+	FieldTagsMtime = "tags_mtime"
+	// FieldTagsSize holds the string denoting the tags_size field in the database.
+	FieldTagsSize = "tags_size"
+	// FieldTagsCheckedAt holds the string denoting the tags_checked_at field in the database.
+	FieldTagsCheckedAt = "tags_checked_at"
+	// FieldTagFailures holds the string denoting the tag_failures field in the database.
+	FieldTagFailures = "tag_failures"
+	// FieldTagsError holds the string denoting the tags_error field in the database.
+	FieldTagsError = "tags_error"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -151,6 +167,14 @@ var Columns = []string{
 	FieldTranscodedAt,
 	FieldSizeBefore,
 	FieldBookKind,
+	FieldTagsState,
+	FieldTagsHash,
+	FieldTaggedAt,
+	FieldTagsMtime,
+	FieldTagsSize,
+	FieldTagsCheckedAt,
+	FieldTagFailures,
+	FieldTagsError,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
@@ -188,6 +212,8 @@ var (
 	PathValidator func(string) error
 	// DefaultLastSeenAt holds the default value on creation for the "last_seen_at" field.
 	DefaultLastSeenAt func() time.Time
+	// DefaultTagFailures holds the default value on creation for the "tag_failures" field.
+	DefaultTagFailures uint8
 )
 
 // Source defines the type for the "source" enum field.
@@ -237,6 +263,31 @@ func BookKindValidator(bk BookKind) error {
 		return nil
 	default:
 		return fmt.Errorf("mediafile: invalid enum value for book_kind field: %q", bk)
+	}
+}
+
+// TagsState defines the type for the "tags_state" enum field.
+type TagsState string
+
+// TagsState values.
+const (
+	TagsStatePending  TagsState = "pending"
+	TagsStateDeferred TagsState = "deferred"
+	TagsStateWritten  TagsState = "written"
+	TagsStateFailed   TagsState = "failed"
+)
+
+func (ts TagsState) String() string {
+	return string(ts)
+}
+
+// TagsStateValidator is a validator for the "tags_state" field enum values. It is called by the builders before save.
+func TagsStateValidator(ts TagsState) error {
+	switch ts {
+	case TagsStatePending, TagsStateDeferred, TagsStateWritten, TagsStateFailed:
+		return nil
+	default:
+		return fmt.Errorf("mediafile: invalid enum value for tags_state field: %q", ts)
 	}
 }
 
@@ -386,6 +437,46 @@ func BySizeBefore(opts ...sql.OrderTermOption) OrderOption {
 // ByBookKind orders the results by the book_kind field.
 func ByBookKind(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBookKind, opts...).ToFunc()
+}
+
+// ByTagsState orders the results by the tags_state field.
+func ByTagsState(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsState, opts...).ToFunc()
+}
+
+// ByTagsHash orders the results by the tags_hash field.
+func ByTagsHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsHash, opts...).ToFunc()
+}
+
+// ByTaggedAt orders the results by the tagged_at field.
+func ByTaggedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTaggedAt, opts...).ToFunc()
+}
+
+// ByTagsMtime orders the results by the tags_mtime field.
+func ByTagsMtime(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsMtime, opts...).ToFunc()
+}
+
+// ByTagsSize orders the results by the tags_size field.
+func ByTagsSize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsSize, opts...).ToFunc()
+}
+
+// ByTagsCheckedAt orders the results by the tags_checked_at field.
+func ByTagsCheckedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsCheckedAt, opts...).ToFunc()
+}
+
+// ByTagFailures orders the results by the tag_failures field.
+func ByTagFailures(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagFailures, opts...).ToFunc()
+}
+
+// ByTagsError orders the results by the tags_error field.
+func ByTagsError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsError, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

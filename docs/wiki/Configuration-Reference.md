@@ -136,6 +136,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
 | `library.monitor_specials` | ✅ | Settings → Series |
 | `library.music_monitored_types` | ✅ | Settings → Music |
+| `library.music_tags.*` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.import_mode`, `keep_torrent_seeding`, `import_max_attempts`, `allowed_download_roots` | ✅ | Settings → Library |
@@ -260,6 +261,13 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.monitor_specials` | bool | `false` | Monitor season 0 on add/discovery. **Runtime-editable** |
 | `library.music_monitored_types` | list | `[album, ep]` | Release types an artist monitored for *all* or *future* releases monitors: any of `album`, `ep`, `single`, `live`, `compilation`, `other`. The rest are added unmonitored. Applies when a policy is applied (add, refresh, monitor change); Settings → Music can re-apply it to existing artists. **Runtime-editable** |
 | `library.probe.always_ask` | bool | `false` | Hold every import for manual approval instead of importing straight away. Needs no ffprobe. **Runtime-editable** |
+| `library.music_tags.mode` | string | `import` | `off` never writes into a music file; `import` writes each file once, when it is imported (or adopted with tagging on); `managed` also rewrites files whenever the library's data for them changes, and undoes edits made elsewhere to the tags Streamline owns. **Runtime-editable** |
+| `library.music_tags.seeding` | string | `defer` | What a hardlinked music import does while its torrent seeds. `defer` keeps the hardlink (one copy on disk) and tags the file once the torrent is removed from the client; `copy` imports a copy and tags it at once (two copies while seeding). A file a torrent still serves from its own path is never written either way. **Runtime-editable** |
+| `library.music_tags.embed_art` | bool | `true` | Write the album cover into each file as its front cover. **Runtime-editable** |
+| `library.music_tags.art_max_px` | int | `1000` | Longest edge of an embedded cover, 256 to 3000. **Runtime-editable** |
+| `library.music_tags.sidecar_art` | bool | `true` | Write `cover.jpg` into each album folder and `folder.jpg` into each artist folder, never replacing one Streamline did not write. **Runtime-editable** |
+| `library.music_tags.strip` | list | `[COMMENT, ENCODEDBY, URL, FILEWEBPAGE, AUDIOSOURCEWEBPAGE, PAYMENTWEBPAGE, PUBLISHERWEBPAGE]` | Tags removed from every file Streamline writes, by MusicBrainz Picard's names. An entry ending in `*` matches every tag starting with it. **Runtime-editable** |
+| `library.music_tags.preserve` | list | `[REPLAYGAIN_*, R128_*, LYRICS, UNSYNCEDLYRICS, ACOUSTID_*, BPM, INITIALKEY]` | Tags never written or removed, even when Streamline manages them or `strip` names them. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |
 | `library.max_grab_failures` | int | `3` | Consecutive failures before an item is marked failed |
@@ -316,6 +324,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `schedules.music_metadata_refresh` | duration | `24h` | |
 | `schedules.book_metadata_refresh` | duration | `24h` | |
 | `schedules.file_selection` | duration | `30s` | |
+| `schedules.music_tag_sync` | duration | `30m` | The music tag writer: writes every file waiting for its tags, and retries the ones waiting on a torrent |
 
 **Deprecated aliases**, still honoured with a warning at boot: `rss_sync` (→ `movie_rss_sync`), `orphan_scan` (→ both the `movie_*` and `tv_*` keys), `missing_search` and `metadata_refresh` (each → the `movie_*`, `tv_*`, `music_*` and `book_*` keys).
 

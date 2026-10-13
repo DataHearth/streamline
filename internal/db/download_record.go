@@ -942,6 +942,7 @@ func (db *DB) RecordAlbumImportSuccess(
 			SetFormat(f.Format).
 			SetSource(mediafile.SourceAuto).
 			SetTrackID(f.TrackID).
+			SetNillableTagsState(tagsPending(f.TagsPending)).
 			Exec(ctx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("create media file %s: %w", f.Path, err)

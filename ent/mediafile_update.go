@@ -598,6 +598,181 @@ func (_u *MediaFileUpdate) ClearBookKind() *MediaFileUpdate {
 	return _u
 }
 
+// SetTagsState sets the "tags_state" field.
+func (_u *MediaFileUpdate) SetTagsState(v mediafile.TagsState) *MediaFileUpdate {
+	_u.mutation.SetTagsState(v)
+	return _u
+}
+
+// SetNillableTagsState sets the "tags_state" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsState(v *mediafile.TagsState) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsState(*v)
+	}
+	return _u
+}
+
+// ClearTagsState clears the value of the "tags_state" field.
+func (_u *MediaFileUpdate) ClearTagsState() *MediaFileUpdate {
+	_u.mutation.ClearTagsState()
+	return _u
+}
+
+// SetTagsHash sets the "tags_hash" field.
+func (_u *MediaFileUpdate) SetTagsHash(v string) *MediaFileUpdate {
+	_u.mutation.SetTagsHash(v)
+	return _u
+}
+
+// SetNillableTagsHash sets the "tags_hash" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsHash(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsHash(*v)
+	}
+	return _u
+}
+
+// ClearTagsHash clears the value of the "tags_hash" field.
+func (_u *MediaFileUpdate) ClearTagsHash() *MediaFileUpdate {
+	_u.mutation.ClearTagsHash()
+	return _u
+}
+
+// SetTaggedAt sets the "tagged_at" field.
+func (_u *MediaFileUpdate) SetTaggedAt(v time.Time) *MediaFileUpdate {
+	_u.mutation.SetTaggedAt(v)
+	return _u
+}
+
+// SetNillableTaggedAt sets the "tagged_at" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTaggedAt(v *time.Time) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTaggedAt(*v)
+	}
+	return _u
+}
+
+// ClearTaggedAt clears the value of the "tagged_at" field.
+func (_u *MediaFileUpdate) ClearTaggedAt() *MediaFileUpdate {
+	_u.mutation.ClearTaggedAt()
+	return _u
+}
+
+// SetTagsMtime sets the "tags_mtime" field.
+func (_u *MediaFileUpdate) SetTagsMtime(v int64) *MediaFileUpdate {
+	_u.mutation.ResetTagsMtime()
+	_u.mutation.SetTagsMtime(v)
+	return _u
+}
+
+// SetNillableTagsMtime sets the "tags_mtime" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsMtime(v *int64) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsMtime(*v)
+	}
+	return _u
+}
+
+// AddTagsMtime adds value to the "tags_mtime" field.
+func (_u *MediaFileUpdate) AddTagsMtime(v int64) *MediaFileUpdate {
+	_u.mutation.AddTagsMtime(v)
+	return _u
+}
+
+// ClearTagsMtime clears the value of the "tags_mtime" field.
+func (_u *MediaFileUpdate) ClearTagsMtime() *MediaFileUpdate {
+	_u.mutation.ClearTagsMtime()
+	return _u
+}
+
+// SetTagsSize sets the "tags_size" field.
+func (_u *MediaFileUpdate) SetTagsSize(v int64) *MediaFileUpdate {
+	_u.mutation.ResetTagsSize()
+	_u.mutation.SetTagsSize(v)
+	return _u
+}
+
+// SetNillableTagsSize sets the "tags_size" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsSize(v *int64) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsSize(*v)
+	}
+	return _u
+}
+
+// AddTagsSize adds value to the "tags_size" field.
+func (_u *MediaFileUpdate) AddTagsSize(v int64) *MediaFileUpdate {
+	_u.mutation.AddTagsSize(v)
+	return _u
+}
+
+// ClearTagsSize clears the value of the "tags_size" field.
+func (_u *MediaFileUpdate) ClearTagsSize() *MediaFileUpdate {
+	_u.mutation.ClearTagsSize()
+	return _u
+}
+
+// SetTagsCheckedAt sets the "tags_checked_at" field.
+func (_u *MediaFileUpdate) SetTagsCheckedAt(v time.Time) *MediaFileUpdate {
+	_u.mutation.SetTagsCheckedAt(v)
+	return _u
+}
+
+// SetNillableTagsCheckedAt sets the "tags_checked_at" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsCheckedAt(v *time.Time) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsCheckedAt(*v)
+	}
+	return _u
+}
+
+// ClearTagsCheckedAt clears the value of the "tags_checked_at" field.
+func (_u *MediaFileUpdate) ClearTagsCheckedAt() *MediaFileUpdate {
+	_u.mutation.ClearTagsCheckedAt()
+	return _u
+}
+
+// SetTagFailures sets the "tag_failures" field.
+func (_u *MediaFileUpdate) SetTagFailures(v uint8) *MediaFileUpdate {
+	_u.mutation.ResetTagFailures()
+	_u.mutation.SetTagFailures(v)
+	return _u
+}
+
+// SetNillableTagFailures sets the "tag_failures" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagFailures(v *uint8) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagFailures(*v)
+	}
+	return _u
+}
+
+// AddTagFailures adds value to the "tag_failures" field.
+func (_u *MediaFileUpdate) AddTagFailures(v int8) *MediaFileUpdate {
+	_u.mutation.AddTagFailures(v)
+	return _u
+}
+
+// SetTagsError sets the "tags_error" field.
+func (_u *MediaFileUpdate) SetTagsError(v string) *MediaFileUpdate {
+	_u.mutation.SetTagsError(v)
+	return _u
+}
+
+// SetNillableTagsError sets the "tags_error" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsError(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsError(*v)
+	}
+	return _u
+}
+
+// ClearTagsError clears the value of the "tags_error" field.
+func (_u *MediaFileUpdate) ClearTagsError() *MediaFileUpdate {
+	_u.mutation.ClearTagsError()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -790,6 +965,11 @@ func (_u *MediaFileUpdate) check() error {
 	if v, ok := _u.mutation.BookKind(); ok {
 		if err := mediafile.BookKindValidator(v); err != nil {
 			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.TagsState(); ok {
+		if err := mediafile.TagsStateValidator(v); err != nil {
+			return &ValidationError{Name: "tags_state", err: fmt.Errorf(`ent: validator failed for field "MediaFile.tags_state": %w`, err)}
 		}
 	}
 	return nil
@@ -986,6 +1166,60 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.BookKindCleared() {
 		_spec.ClearField(mediafile.FieldBookKind, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.TagsState(); ok {
+		_spec.SetField(mediafile.FieldTagsState, field.TypeEnum, value)
+	}
+	if _u.mutation.TagsStateCleared() {
+		_spec.ClearField(mediafile.FieldTagsState, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.TagsHash(); ok {
+		_spec.SetField(mediafile.FieldTagsHash, field.TypeString, value)
+	}
+	if _u.mutation.TagsHashCleared() {
+		_spec.ClearField(mediafile.FieldTagsHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.TaggedAt(); ok {
+		_spec.SetField(mediafile.FieldTaggedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TaggedAtCleared() {
+		_spec.ClearField(mediafile.FieldTaggedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TagsMtime(); ok {
+		_spec.SetField(mediafile.FieldTagsMtime, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedTagsMtime(); ok {
+		_spec.AddField(mediafile.FieldTagsMtime, field.TypeInt64, value)
+	}
+	if _u.mutation.TagsMtimeCleared() {
+		_spec.ClearField(mediafile.FieldTagsMtime, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.TagsSize(); ok {
+		_spec.SetField(mediafile.FieldTagsSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedTagsSize(); ok {
+		_spec.AddField(mediafile.FieldTagsSize, field.TypeInt64, value)
+	}
+	if _u.mutation.TagsSizeCleared() {
+		_spec.ClearField(mediafile.FieldTagsSize, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.TagsCheckedAt(); ok {
+		_spec.SetField(mediafile.FieldTagsCheckedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TagsCheckedAtCleared() {
+		_spec.ClearField(mediafile.FieldTagsCheckedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TagFailures(); ok {
+		_spec.SetField(mediafile.FieldTagFailures, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedTagFailures(); ok {
+		_spec.AddField(mediafile.FieldTagFailures, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.TagsError(); ok {
+		_spec.SetField(mediafile.FieldTagsError, field.TypeString, value)
+	}
+	if _u.mutation.TagsErrorCleared() {
+		_spec.ClearField(mediafile.FieldTagsError, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1734,6 +1968,181 @@ func (_u *MediaFileUpdateOne) ClearBookKind() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetTagsState sets the "tags_state" field.
+func (_u *MediaFileUpdateOne) SetTagsState(v mediafile.TagsState) *MediaFileUpdateOne {
+	_u.mutation.SetTagsState(v)
+	return _u
+}
+
+// SetNillableTagsState sets the "tags_state" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsState(v *mediafile.TagsState) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsState(*v)
+	}
+	return _u
+}
+
+// ClearTagsState clears the value of the "tags_state" field.
+func (_u *MediaFileUpdateOne) ClearTagsState() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsState()
+	return _u
+}
+
+// SetTagsHash sets the "tags_hash" field.
+func (_u *MediaFileUpdateOne) SetTagsHash(v string) *MediaFileUpdateOne {
+	_u.mutation.SetTagsHash(v)
+	return _u
+}
+
+// SetNillableTagsHash sets the "tags_hash" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsHash(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsHash(*v)
+	}
+	return _u
+}
+
+// ClearTagsHash clears the value of the "tags_hash" field.
+func (_u *MediaFileUpdateOne) ClearTagsHash() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsHash()
+	return _u
+}
+
+// SetTaggedAt sets the "tagged_at" field.
+func (_u *MediaFileUpdateOne) SetTaggedAt(v time.Time) *MediaFileUpdateOne {
+	_u.mutation.SetTaggedAt(v)
+	return _u
+}
+
+// SetNillableTaggedAt sets the "tagged_at" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTaggedAt(v *time.Time) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTaggedAt(*v)
+	}
+	return _u
+}
+
+// ClearTaggedAt clears the value of the "tagged_at" field.
+func (_u *MediaFileUpdateOne) ClearTaggedAt() *MediaFileUpdateOne {
+	_u.mutation.ClearTaggedAt()
+	return _u
+}
+
+// SetTagsMtime sets the "tags_mtime" field.
+func (_u *MediaFileUpdateOne) SetTagsMtime(v int64) *MediaFileUpdateOne {
+	_u.mutation.ResetTagsMtime()
+	_u.mutation.SetTagsMtime(v)
+	return _u
+}
+
+// SetNillableTagsMtime sets the "tags_mtime" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsMtime(v *int64) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsMtime(*v)
+	}
+	return _u
+}
+
+// AddTagsMtime adds value to the "tags_mtime" field.
+func (_u *MediaFileUpdateOne) AddTagsMtime(v int64) *MediaFileUpdateOne {
+	_u.mutation.AddTagsMtime(v)
+	return _u
+}
+
+// ClearTagsMtime clears the value of the "tags_mtime" field.
+func (_u *MediaFileUpdateOne) ClearTagsMtime() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsMtime()
+	return _u
+}
+
+// SetTagsSize sets the "tags_size" field.
+func (_u *MediaFileUpdateOne) SetTagsSize(v int64) *MediaFileUpdateOne {
+	_u.mutation.ResetTagsSize()
+	_u.mutation.SetTagsSize(v)
+	return _u
+}
+
+// SetNillableTagsSize sets the "tags_size" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsSize(v *int64) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsSize(*v)
+	}
+	return _u
+}
+
+// AddTagsSize adds value to the "tags_size" field.
+func (_u *MediaFileUpdateOne) AddTagsSize(v int64) *MediaFileUpdateOne {
+	_u.mutation.AddTagsSize(v)
+	return _u
+}
+
+// ClearTagsSize clears the value of the "tags_size" field.
+func (_u *MediaFileUpdateOne) ClearTagsSize() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsSize()
+	return _u
+}
+
+// SetTagsCheckedAt sets the "tags_checked_at" field.
+func (_u *MediaFileUpdateOne) SetTagsCheckedAt(v time.Time) *MediaFileUpdateOne {
+	_u.mutation.SetTagsCheckedAt(v)
+	return _u
+}
+
+// SetNillableTagsCheckedAt sets the "tags_checked_at" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsCheckedAt(v *time.Time) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsCheckedAt(*v)
+	}
+	return _u
+}
+
+// ClearTagsCheckedAt clears the value of the "tags_checked_at" field.
+func (_u *MediaFileUpdateOne) ClearTagsCheckedAt() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsCheckedAt()
+	return _u
+}
+
+// SetTagFailures sets the "tag_failures" field.
+func (_u *MediaFileUpdateOne) SetTagFailures(v uint8) *MediaFileUpdateOne {
+	_u.mutation.ResetTagFailures()
+	_u.mutation.SetTagFailures(v)
+	return _u
+}
+
+// SetNillableTagFailures sets the "tag_failures" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagFailures(v *uint8) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagFailures(*v)
+	}
+	return _u
+}
+
+// AddTagFailures adds value to the "tag_failures" field.
+func (_u *MediaFileUpdateOne) AddTagFailures(v int8) *MediaFileUpdateOne {
+	_u.mutation.AddTagFailures(v)
+	return _u
+}
+
+// SetTagsError sets the "tags_error" field.
+func (_u *MediaFileUpdateOne) SetTagsError(v string) *MediaFileUpdateOne {
+	_u.mutation.SetTagsError(v)
+	return _u
+}
+
+// SetNillableTagsError sets the "tags_error" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsError(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsError(*v)
+	}
+	return _u
+}
+
+// ClearTagsError clears the value of the "tags_error" field.
+func (_u *MediaFileUpdateOne) ClearTagsError() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsError()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -1939,6 +2348,11 @@ func (_u *MediaFileUpdateOne) check() error {
 	if v, ok := _u.mutation.BookKind(); ok {
 		if err := mediafile.BookKindValidator(v); err != nil {
 			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.TagsState(); ok {
+		if err := mediafile.TagsStateValidator(v); err != nil {
+			return &ValidationError{Name: "tags_state", err: fmt.Errorf(`ent: validator failed for field "MediaFile.tags_state": %w`, err)}
 		}
 	}
 	return nil
@@ -2152,6 +2566,60 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.BookKindCleared() {
 		_spec.ClearField(mediafile.FieldBookKind, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.TagsState(); ok {
+		_spec.SetField(mediafile.FieldTagsState, field.TypeEnum, value)
+	}
+	if _u.mutation.TagsStateCleared() {
+		_spec.ClearField(mediafile.FieldTagsState, field.TypeEnum)
+	}
+	if value, ok := _u.mutation.TagsHash(); ok {
+		_spec.SetField(mediafile.FieldTagsHash, field.TypeString, value)
+	}
+	if _u.mutation.TagsHashCleared() {
+		_spec.ClearField(mediafile.FieldTagsHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.TaggedAt(); ok {
+		_spec.SetField(mediafile.FieldTaggedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TaggedAtCleared() {
+		_spec.ClearField(mediafile.FieldTaggedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TagsMtime(); ok {
+		_spec.SetField(mediafile.FieldTagsMtime, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedTagsMtime(); ok {
+		_spec.AddField(mediafile.FieldTagsMtime, field.TypeInt64, value)
+	}
+	if _u.mutation.TagsMtimeCleared() {
+		_spec.ClearField(mediafile.FieldTagsMtime, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.TagsSize(); ok {
+		_spec.SetField(mediafile.FieldTagsSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedTagsSize(); ok {
+		_spec.AddField(mediafile.FieldTagsSize, field.TypeInt64, value)
+	}
+	if _u.mutation.TagsSizeCleared() {
+		_spec.ClearField(mediafile.FieldTagsSize, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.TagsCheckedAt(); ok {
+		_spec.SetField(mediafile.FieldTagsCheckedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TagsCheckedAtCleared() {
+		_spec.ClearField(mediafile.FieldTagsCheckedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TagFailures(); ok {
+		_spec.SetField(mediafile.FieldTagFailures, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedTagFailures(); ok {
+		_spec.AddField(mediafile.FieldTagFailures, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.TagsError(); ok {
+		_spec.SetField(mediafile.FieldTagsError, field.TypeString, value)
+	}
+	if _u.mutation.TagsErrorCleared() {
+		_spec.ClearField(mediafile.FieldTagsError, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

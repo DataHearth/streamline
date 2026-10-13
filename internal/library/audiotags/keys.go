@@ -32,4 +32,5 @@ const (
 	KeyMBAlbumID        = taglib.MusicBrainzAlbumID
 	KeyMBReleaseGroupID = taglib.MusicBrainzReleaseGroupID
 	KeyMBRecordingID    = taglib.MusicBrainzTrackID
+	KeyMBReleaseTrackID = taglib.MusicBrainzReleaseTrackID
 )

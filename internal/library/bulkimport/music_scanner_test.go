@@ -35,7 +35,7 @@ func copyFixture(name, dst string) {
 func writeTrack(dst string, tags audiotags.Tags) {
 	GinkgoHelper()
 	copyFixture("untagged.mp3", dst)
-	Expect(audiotags.Write(dst, tags, nil)).To(Succeed())
+	Expect(audiotags.Write(dst, tags, audiotags.Policy{})).To(Succeed())
 }
 
 func searchHit(

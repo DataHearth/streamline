@@ -8,6 +8,7 @@ import (
 	"math"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/ffmpeg"
@@ -134,12 +135,14 @@ func (s *Server) UpdateConfigLibrary(
 		errLang = errors.New("book_language must be a two-letter ISO 639-1 code")
 	}
 	musicTypes, errTypes := musicMonitoredTypes(req.Body.MusicMonitoredTypes)
+	musicTags, errTags := musicTagsPatch(req.Body.MusicTags)
 	if err := errors.Join(
 		errGrab,
 		errAttempts,
 		errDrift,
 		errLang,
 		errTypes,
+		errTags,
 	); err != nil {
 		return UpdateConfigLibrary422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(err.Error()),
@@ -158,6 +161,7 @@ func (s *Server) UpdateConfigLibrary(
 		ImportMaxAttempts:    attempts,
 		DriftGraceTicks:      drift,
 		AllowedDownloadRoots: req.Body.AllowedDownloadRoots,
+		MusicTags:            musicTags,
 	}
 	if req.Body.ImportMode != nil {
 		v := string(*req.Body.ImportMode)
@@ -170,6 +174,7 @@ func (s *Server) UpdateConfigLibrary(
 		}
 	}
 
+	before := config.Get().Library.MusicTags
 	updated, err := config.UpdateLibrary(ctx, patch)
 	if configLocked(err) {
 		return UpdateConfigLibrary403JSONResponse{
@@ -184,7 +189,11 @@ func (s *Server) UpdateConfigLibrary(
 	slog.InfoContext(ctx, "library config updated",
 		"monitor_specials", updated.MonitorSpecials,
 		"music_monitored_types", updated.MusicMonitoredTypes,
+		"music_tags.mode", updated.MusicTags.Mode,
 	)
+	if s.music != nil {
+		s.music.TagSettingsChanged(ctx, before, updated.MusicTags)
+	}
 	return UpdateConfigLibrary200JSONResponse{
 		LibraryConfigJSONResponse: libraryConfigView(updated),
 	}, nil
@@ -770,6 +779,95 @@ func musicMonitoredTypes(in *[]MusicAlbumType) (*[]string, error) {
 	return &out, nil
 }
 
+// tagKeyRe is a tag property key as the strip and preserve lists take it:
+// Picard's names, optionally ending in * to match a prefix.
+var tagKeyRe = regexp.MustCompile(`^[A-Za-z0-9_ ]{1,63}\*?$`)
+
+// musicTagsPatch checks a music_tags patch: the enums and the cover size
+// before conversion (nothing validates a body against the spec), the key
+// lists against tagKeyRe, upper-cased and deduplicated as TagLib reports keys.
+func musicTagsPatch(in *MusicTagsConfig) (*config.MusicTagsPatch, error) {
+	if in == nil {
+		return nil, nil
+	}
+	p := &config.MusicTagsPatch{
+		EmbedArt:   in.EmbedArt,
+		SidecarArt: in.SidecarArt,
+	}
+	var errs []error
+	if in.Mode != nil {
+		if !in.Mode.Valid() {
+			errs = append(
+				errs,
+				fmt.Errorf("music_tags.mode: unknown mode %q", *in.Mode),
+			)
+		}
+		v := string(*in.Mode)
+		p.Mode = &v
+	}
+	if in.Seeding != nil {
+		if !in.Seeding.Valid() {
+			errs = append(
+				errs,
+				fmt.Errorf("music_tags.seeding: unknown policy %q", *in.Seeding),
+			)
+		}
+		v := string(*in.Seeding)
+		p.Seeding = &v
+	}
+	if in.ArtMaxPx != nil {
+		if *in.ArtMaxPx < 256 || *in.ArtMaxPx > 3000 {
+			errs = append(
+				errs,
+				errors.New("music_tags.art_max_px: must be between 256 and 3000"),
+			)
+		} else {
+			v := uint16(*in.ArtMaxPx)
+			p.ArtMaxPx = &v
+		}
+	}
+	keys := func(name string, in *[]string) *[]string {
+		if in == nil {
+			return nil
+		}
+		out := make([]string, 0, len(*in))
+		for _, k := range *in {
+			k = strings.ToUpper(strings.TrimSpace(k))
+			if !tagKeyRe.MatchString(k) {
+				errs = append(
+					errs,
+					fmt.Errorf("music_tags.%s: %q is not a tag key", name, k),
+				)
+				continue
+			}
+			if !slices.Contains(out, k) {
+				out = append(out, k)
+			}
+		}
+		return &out
+	}
+	p.Strip = keys("strip", in.Strip)
+	p.Preserve = keys("preserve", in.Preserve)
+	return p, errors.Join(errs...)
+}
+
+func musicTagsView(c config.MusicTagsConfig) MusicTagsConfig {
+	mode := MusicTagsConfigMode(c.Mode)
+	seeding := MusicTagsConfigSeeding(c.Seeding)
+	maxPx := int(c.ArtMaxPx)
+	strip := append([]string{}, c.Strip...)
+	preserve := append([]string{}, c.Preserve...)
+	return MusicTagsConfig{
+		Mode:       &mode,
+		Seeding:    &seeding,
+		EmbedArt:   &c.EmbedArt,
+		ArtMaxPx:   &maxPx,
+		SidecarArt: &c.SidecarArt,
+		Strip:      &strip,
+		Preserve:   &preserve,
+	}
+}
+
 // libraryConfigView maps config.LibraryConfig into the generated view. The
 // three roots ride along read-only: the settings page shows where the library
 // lives, and pathmigrate owns moving it. probe is always populated (never
@@ -786,6 +884,7 @@ func libraryConfigView(l config.LibraryConfig) LibraryConfigJSONResponse {
 	return LibraryConfigJSONResponse{
 		MonitorSpecials:      l.MonitorSpecials,
 		MusicMonitoredTypes:  musicAlbumTypes(l.MusicMonitoredTypes),
+		MusicTags:            musicTagsView(l.MusicTags),
 		BookLanguage:         l.BookLanguage,
 		MovieNaming:          l.MovieNaming,
 		SeriesNaming:         l.SeriesNaming,

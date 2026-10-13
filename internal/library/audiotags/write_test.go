@@ -62,7 +62,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 	DescribeTable("writes every managed key and reads back the basics",
 		func(fixture string) {
 			path := copyFixture(fixture)
-			Expect(Write(path, full, DefaultStrip)).To(Succeed())
+			Expect(Write(path, full, Policy{Strip: DefaultStrip})).To(Succeed())
 
 			info, err := Read(path)
 			Expect(err).NotTo(HaveOccurred())
@@ -100,14 +100,14 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		"folds the totals into the number for ID3 and keeps them apart for Vorbis comments",
 		func() {
 			mp3 := copyFixture("testdata/tagged.mp3")
-			Expect(Write(mp3, full, nil)).To(Succeed())
+			Expect(Write(mp3, full, Policy{})).To(Succeed())
 			raw := rawTags(mp3)
 			Expect(raw).To(HaveKeyWithValue(taglib.TrackNumber, []string{"5/12"}))
 			Expect(raw).To(HaveKeyWithValue(taglib.DiscNumber, []string{"1/1"}))
 			Expect(raw).NotTo(HaveKey(TrackTotal))
 
 			flac := copyFixture("testdata/tagged.flac")
-			Expect(Write(flac, full, nil)).To(Succeed())
+			Expect(Write(flac, full, Policy{})).To(Succeed())
 			raw = rawTags(flac)
 			Expect(raw).To(HaveKeyWithValue(taglib.TrackNumber, []string{"5"}))
 			Expect(raw).To(HaveKeyWithValue(TrackTotal, []string{"12"}))
@@ -122,7 +122,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 				taglib.Lyrics:           {"Light up, light up"},
 			}, 0)).To(Succeed())
 
-			Expect(Write(path, full, DefaultStrip)).To(Succeed())
+			Expect(Write(path, full, Policy{Strip: DefaultStrip})).To(Succeed())
 
 			raw := rawTags(path)
 			Expect(
@@ -138,7 +138,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 
 	It("keeps the embedded picture", func() {
 		path := copyFixture("testdata/withpicture.mp3")
-		Expect(Write(path, full, DefaultStrip)).To(Succeed())
+		Expect(Write(path, full, Policy{Strip: DefaultStrip})).To(Succeed())
 
 		data, mime, err := Picture(path)
 		Expect(err).NotTo(HaveOccurred())
@@ -160,7 +160,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 			Expect(Write(path, Tags{
 				taglib.Title:     {"Lithium"},
 				taglib.EncodedBy: {"kept on purpose"},
-			}, []string{taglib.Comment, taglib.EncodedBy, "RIPPER_*"})).To(Succeed())
+			}, Policy{Strip: []string{taglib.Comment, taglib.EncodedBy, "RIPPER_*"}})).To(Succeed())
 
 			raw := rawTags(path)
 			Expect(raw).NotTo(HaveKey(taglib.Comment))
@@ -174,9 +174,9 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 
 	It("deletes a managed key passed with no value", func() {
 		path := copyFixture("testdata/tagged.flac")
-		Expect(Write(path, full, nil)).To(Succeed())
+		Expect(Write(path, full, Policy{})).To(Succeed())
 		Expect(
-			Write(path, Tags{taglib.Label: nil, taglib.Genre: {" "}}, nil),
+			Write(path, Tags{taglib.Label: nil, taglib.Genre: {" "}}, Policy{}),
 		).To(Succeed())
 
 		raw := rawTags(path)
@@ -191,8 +191,8 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 			taglib.Title:               {"Breed"},
 			taglib.MusicBrainzArtistID: {"mbid-old"},
 		}
-		Expect(Write(path, first, nil)).To(Succeed())
-		Expect(Write(path, full, nil)).To(Succeed())
+		Expect(Write(path, first, Policy{})).To(Succeed())
+		Expect(Write(path, full, Policy{})).To(Succeed())
 
 		raw := rawTags(path)
 		Expect(raw).To(HaveKeyWithValue(taglib.Title, []string{"Lithium"}))
@@ -206,7 +206,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		seeding := filepath.Join(GinkgoT().TempDir(), "seeding.flac")
 		Expect(os.Link(path, seeding)).To(Succeed())
 
-		Expect(Write(path, full, nil)).To(Succeed())
+		Expect(Write(path, full, Policy{})).To(Succeed())
 
 		Expect(rawTags(path)).To(HaveKeyWithValue(taglib.Title, []string{"Lithium"}))
 		Expect(
@@ -218,7 +218,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		path := copyFixture("testdata/tagged.mp3")
 		Expect(os.Chmod(path, 0o640)).To(Succeed())
 
-		Expect(Write(path, full, nil)).To(Succeed())
+		Expect(Write(path, full, Policy{})).To(Succeed())
 
 		st, err := os.Stat(path)
 		Expect(err).NotTo(HaveOccurred())
@@ -230,7 +230,7 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		path := filepath.Join(GinkgoT().TempDir(), "broken.flac")
 		Expect(os.WriteFile(path, []byte("not audio"), 0o600)).To(Succeed())
 
-		Expect(Write(path, full, nil)).NotTo(Succeed())
+		Expect(Write(path, full, Policy{})).NotTo(Succeed())
 
 		data, err := os.ReadFile(path)
 		Expect(err).NotTo(HaveOccurred())
@@ -238,7 +238,64 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		Expect(dirEntries(path)).To(Equal([]string{"broken.flac"}))
 	})
 
+	It("never writes or deletes a preserved key, managed or stripped", func() {
+		path := copyFixture("testdata/tagged.flac")
+		Expect(taglib.WriteTags(path, map[string][]string{
+			"REPLAYGAIN_TRACK_GAIN": {"-7.20 dB"},
+			taglib.Genre:            {"My Own Genre"},
+		}, 0)).To(Succeed())
+
+		Expect(Write(path, Tags{
+			taglib.Title: {"Lithium"},
+			taglib.Genre: {"Grunge"},
+		}, Policy{
+			Strip:    []string{"REPLAYGAIN_*"},
+			Preserve: []string{"replaygain_*", taglib.Genre},
+		})).To(Succeed())
+
+		raw := rawTags(path)
+		Expect(raw).To(HaveKeyWithValue(taglib.Title, []string{"Lithium"}))
+		Expect(raw).To(HaveKeyWithValue(taglib.Genre, []string{"My Own Genre"}))
+		Expect(
+			raw,
+		).To(HaveKeyWithValue("REPLAYGAIN_TRACK_GAIN", []string{"-7.20 dB"}))
+	})
+
 	It("returns ErrUnsupportedFormat for other extensions", func() {
-		Expect(Write("x.wav", Tags{}, nil)).To(MatchError(ErrUnsupportedFormat))
+		Expect(Write("x.wav", Tags{}, Policy{})).To(MatchError(ErrUnsupportedFormat))
+	})
+})
+
+var _ = Describe("Hash", Label("unit", "audiotags"), func() {
+	tags := Tags{taglib.Title: {"Lithium"}, taglib.Genre: {"Grunge", "Rock"}}
+
+	It("is stable across map order and value padding", func() {
+		again := Tags{taglib.Genre: {" Grunge", "Rock "}, taglib.Title: {"Lithium"}}
+		Expect(Hash(again, Policy{})).To(Equal(Hash(tags, Policy{})))
+	})
+
+	It("moves with a value, the order of values, the policy and the extra", func() {
+		base := Hash(tags, Policy{})
+		Expect(
+			Hash(
+				Tags{taglib.Title: {"Breed"}, taglib.Genre: {"Grunge", "Rock"}},
+				Policy{},
+			),
+		).
+			NotTo(Equal(base))
+		Expect(
+			Hash(
+				Tags{taglib.Title: {"Lithium"}, taglib.Genre: {"Rock", "Grunge"}},
+				Policy{},
+			),
+		).
+			NotTo(Equal(base))
+		Expect(Hash(tags, Policy{Strip: []string{"COMMENT"}})).NotTo(Equal(base))
+		Expect(Hash(tags, Policy{}, "cover-1")).NotTo(Equal(base))
+	})
+
+	It("ignores a key the policy preserves, since it is never written", func() {
+		Expect(Hash(tags, Policy{Preserve: []string{"GENRE"}})).
+			To(Equal(Hash(Tags{taglib.Title: {"Lithium"}}, Policy{Preserve: []string{"GENRE"}})))
 	})
 })

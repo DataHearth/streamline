@@ -708,6 +708,50 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		})
 	})
 
+	Describe("RetagMusicLibrary", func() {
+		It("queues the library and answers how many files", func() {
+			app.music.EXPECT().RetagLibrary(mock.Anything).Return(42, nil).Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/tags/retag",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+			var got RetagMusicLibrary202JSONResponse
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Queued).To(Equal(42))
+		})
+
+		It("answers 409 with a code when tags are off", func() {
+			app.music.EXPECT().RetagLibrary(mock.Anything).
+				Return(0, music.ErrTagsOff).Once()
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/tags/retag",
+				app.adminKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+			var got Error
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(*got.Code).To(Equal("music_tags_off"))
+		})
+
+		It("refuses a member", func() {
+			resp := send(
+				http.MethodPost,
+				"/api/v1/music/tags/retag",
+				app.memberKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
 	Describe("PatchMusicArtist", func() {
 		patch := func(body string) *http.Response {
 			GinkgoHelper()

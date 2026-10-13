@@ -28046,6 +28046,17 @@ type MediaFileMutation struct {
 	size_before           *int64
 	addsize_before        *int64
 	book_kind             *mediafile.BookKind
+	tags_state            *mediafile.TagsState
+	tags_hash             *string
+	tagged_at             *time.Time
+	tags_mtime            *int64
+	addtags_mtime         *int64
+	tags_size             *int64
+	addtags_size          *int64
+	tags_checked_at       *time.Time
+	tag_failures          *uint8
+	addtag_failures       *int8
+	tags_error            *string
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
@@ -29641,6 +29652,447 @@ func (m *MediaFileMutation) ResetBookKind() {
 	delete(m.clearedFields, mediafile.FieldBookKind)
 }
 
+// SetTagsState sets the "tags_state" field.
+func (m *MediaFileMutation) SetTagsState(ms mediafile.TagsState) {
+	m.tags_state = &ms
+}
+
+// TagsState returns the value of the "tags_state" field in the mutation.
+func (m *MediaFileMutation) TagsState() (r mediafile.TagsState, exists bool) {
+	v := m.tags_state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsState returns the old "tags_state" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsState(ctx context.Context) (v *mediafile.TagsState, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsState: %w", err)
+	}
+	return oldValue.TagsState, nil
+}
+
+// ClearTagsState clears the value of the "tags_state" field.
+func (m *MediaFileMutation) ClearTagsState() {
+	m.tags_state = nil
+	m.clearedFields[mediafile.FieldTagsState] = struct{}{}
+}
+
+// TagsStateCleared returns if the "tags_state" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsStateCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsState]
+	return ok
+}
+
+// ResetTagsState resets all changes to the "tags_state" field.
+func (m *MediaFileMutation) ResetTagsState() {
+	m.tags_state = nil
+	delete(m.clearedFields, mediafile.FieldTagsState)
+}
+
+// SetTagsHash sets the "tags_hash" field.
+func (m *MediaFileMutation) SetTagsHash(s string) {
+	m.tags_hash = &s
+}
+
+// TagsHash returns the value of the "tags_hash" field in the mutation.
+func (m *MediaFileMutation) TagsHash() (r string, exists bool) {
+	v := m.tags_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsHash returns the old "tags_hash" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsHash: %w", err)
+	}
+	return oldValue.TagsHash, nil
+}
+
+// ClearTagsHash clears the value of the "tags_hash" field.
+func (m *MediaFileMutation) ClearTagsHash() {
+	m.tags_hash = nil
+	m.clearedFields[mediafile.FieldTagsHash] = struct{}{}
+}
+
+// TagsHashCleared returns if the "tags_hash" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsHashCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsHash]
+	return ok
+}
+
+// ResetTagsHash resets all changes to the "tags_hash" field.
+func (m *MediaFileMutation) ResetTagsHash() {
+	m.tags_hash = nil
+	delete(m.clearedFields, mediafile.FieldTagsHash)
+}
+
+// SetTaggedAt sets the "tagged_at" field.
+func (m *MediaFileMutation) SetTaggedAt(t time.Time) {
+	m.tagged_at = &t
+}
+
+// TaggedAt returns the value of the "tagged_at" field in the mutation.
+func (m *MediaFileMutation) TaggedAt() (r time.Time, exists bool) {
+	v := m.tagged_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaggedAt returns the old "tagged_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTaggedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaggedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaggedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaggedAt: %w", err)
+	}
+	return oldValue.TaggedAt, nil
+}
+
+// ClearTaggedAt clears the value of the "tagged_at" field.
+func (m *MediaFileMutation) ClearTaggedAt() {
+	m.tagged_at = nil
+	m.clearedFields[mediafile.FieldTaggedAt] = struct{}{}
+}
+
+// TaggedAtCleared returns if the "tagged_at" field was cleared in this mutation.
+func (m *MediaFileMutation) TaggedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTaggedAt]
+	return ok
+}
+
+// ResetTaggedAt resets all changes to the "tagged_at" field.
+func (m *MediaFileMutation) ResetTaggedAt() {
+	m.tagged_at = nil
+	delete(m.clearedFields, mediafile.FieldTaggedAt)
+}
+
+// SetTagsMtime sets the "tags_mtime" field.
+func (m *MediaFileMutation) SetTagsMtime(i int64) {
+	m.tags_mtime = &i
+	m.addtags_mtime = nil
+}
+
+// TagsMtime returns the value of the "tags_mtime" field in the mutation.
+func (m *MediaFileMutation) TagsMtime() (r int64, exists bool) {
+	v := m.tags_mtime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsMtime returns the old "tags_mtime" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsMtime(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsMtime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsMtime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsMtime: %w", err)
+	}
+	return oldValue.TagsMtime, nil
+}
+
+// AddTagsMtime adds i to the "tags_mtime" field.
+func (m *MediaFileMutation) AddTagsMtime(i int64) {
+	if m.addtags_mtime != nil {
+		*m.addtags_mtime += i
+	} else {
+		m.addtags_mtime = &i
+	}
+}
+
+// AddedTagsMtime returns the value that was added to the "tags_mtime" field in this mutation.
+func (m *MediaFileMutation) AddedTagsMtime() (r int64, exists bool) {
+	v := m.addtags_mtime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTagsMtime clears the value of the "tags_mtime" field.
+func (m *MediaFileMutation) ClearTagsMtime() {
+	m.tags_mtime = nil
+	m.addtags_mtime = nil
+	m.clearedFields[mediafile.FieldTagsMtime] = struct{}{}
+}
+
+// TagsMtimeCleared returns if the "tags_mtime" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsMtimeCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsMtime]
+	return ok
+}
+
+// ResetTagsMtime resets all changes to the "tags_mtime" field.
+func (m *MediaFileMutation) ResetTagsMtime() {
+	m.tags_mtime = nil
+	m.addtags_mtime = nil
+	delete(m.clearedFields, mediafile.FieldTagsMtime)
+}
+
+// SetTagsSize sets the "tags_size" field.
+func (m *MediaFileMutation) SetTagsSize(i int64) {
+	m.tags_size = &i
+	m.addtags_size = nil
+}
+
+// TagsSize returns the value of the "tags_size" field in the mutation.
+func (m *MediaFileMutation) TagsSize() (r int64, exists bool) {
+	v := m.tags_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsSize returns the old "tags_size" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsSize: %w", err)
+	}
+	return oldValue.TagsSize, nil
+}
+
+// AddTagsSize adds i to the "tags_size" field.
+func (m *MediaFileMutation) AddTagsSize(i int64) {
+	if m.addtags_size != nil {
+		*m.addtags_size += i
+	} else {
+		m.addtags_size = &i
+	}
+}
+
+// AddedTagsSize returns the value that was added to the "tags_size" field in this mutation.
+func (m *MediaFileMutation) AddedTagsSize() (r int64, exists bool) {
+	v := m.addtags_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTagsSize clears the value of the "tags_size" field.
+func (m *MediaFileMutation) ClearTagsSize() {
+	m.tags_size = nil
+	m.addtags_size = nil
+	m.clearedFields[mediafile.FieldTagsSize] = struct{}{}
+}
+
+// TagsSizeCleared returns if the "tags_size" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsSizeCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsSize]
+	return ok
+}
+
+// ResetTagsSize resets all changes to the "tags_size" field.
+func (m *MediaFileMutation) ResetTagsSize() {
+	m.tags_size = nil
+	m.addtags_size = nil
+	delete(m.clearedFields, mediafile.FieldTagsSize)
+}
+
+// SetTagsCheckedAt sets the "tags_checked_at" field.
+func (m *MediaFileMutation) SetTagsCheckedAt(t time.Time) {
+	m.tags_checked_at = &t
+}
+
+// TagsCheckedAt returns the value of the "tags_checked_at" field in the mutation.
+func (m *MediaFileMutation) TagsCheckedAt() (r time.Time, exists bool) {
+	v := m.tags_checked_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsCheckedAt returns the old "tags_checked_at" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsCheckedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsCheckedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsCheckedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsCheckedAt: %w", err)
+	}
+	return oldValue.TagsCheckedAt, nil
+}
+
+// ClearTagsCheckedAt clears the value of the "tags_checked_at" field.
+func (m *MediaFileMutation) ClearTagsCheckedAt() {
+	m.tags_checked_at = nil
+	m.clearedFields[mediafile.FieldTagsCheckedAt] = struct{}{}
+}
+
+// TagsCheckedAtCleared returns if the "tags_checked_at" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsCheckedAtCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsCheckedAt]
+	return ok
+}
+
+// ResetTagsCheckedAt resets all changes to the "tags_checked_at" field.
+func (m *MediaFileMutation) ResetTagsCheckedAt() {
+	m.tags_checked_at = nil
+	delete(m.clearedFields, mediafile.FieldTagsCheckedAt)
+}
+
+// SetTagFailures sets the "tag_failures" field.
+func (m *MediaFileMutation) SetTagFailures(u uint8) {
+	m.tag_failures = &u
+	m.addtag_failures = nil
+}
+
+// TagFailures returns the value of the "tag_failures" field in the mutation.
+func (m *MediaFileMutation) TagFailures() (r uint8, exists bool) {
+	v := m.tag_failures
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagFailures returns the old "tag_failures" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagFailures(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagFailures is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagFailures requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagFailures: %w", err)
+	}
+	return oldValue.TagFailures, nil
+}
+
+// AddTagFailures adds u to the "tag_failures" field.
+func (m *MediaFileMutation) AddTagFailures(u int8) {
+	if m.addtag_failures != nil {
+		*m.addtag_failures += u
+	} else {
+		m.addtag_failures = &u
+	}
+}
+
+// AddedTagFailures returns the value that was added to the "tag_failures" field in this mutation.
+func (m *MediaFileMutation) AddedTagFailures() (r int8, exists bool) {
+	v := m.addtag_failures
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTagFailures resets all changes to the "tag_failures" field.
+func (m *MediaFileMutation) ResetTagFailures() {
+	m.tag_failures = nil
+	m.addtag_failures = nil
+}
+
+// SetTagsError sets the "tags_error" field.
+func (m *MediaFileMutation) SetTagsError(s string) {
+	m.tags_error = &s
+}
+
+// TagsError returns the value of the "tags_error" field in the mutation.
+func (m *MediaFileMutation) TagsError() (r string, exists bool) {
+	v := m.tags_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsError returns the old "tags_error" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsError: %w", err)
+	}
+	return oldValue.TagsError, nil
+}
+
+// ClearTagsError clears the value of the "tags_error" field.
+func (m *MediaFileMutation) ClearTagsError() {
+	m.tags_error = nil
+	m.clearedFields[mediafile.FieldTagsError] = struct{}{}
+}
+
+// TagsErrorCleared returns if the "tags_error" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsErrorCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsError]
+	return ok
+}
+
+// ResetTagsError resets all changes to the "tags_error" field.
+func (m *MediaFileMutation) ResetTagsError() {
+	m.tags_error = nil
+	delete(m.clearedFields, mediafile.FieldTagsError)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -29885,7 +30337,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 36)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -29970,6 +30422,30 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.book_kind != nil {
 		fields = append(fields, mediafile.FieldBookKind)
 	}
+	if m.tags_state != nil {
+		fields = append(fields, mediafile.FieldTagsState)
+	}
+	if m.tags_hash != nil {
+		fields = append(fields, mediafile.FieldTagsHash)
+	}
+	if m.tagged_at != nil {
+		fields = append(fields, mediafile.FieldTaggedAt)
+	}
+	if m.tags_mtime != nil {
+		fields = append(fields, mediafile.FieldTagsMtime)
+	}
+	if m.tags_size != nil {
+		fields = append(fields, mediafile.FieldTagsSize)
+	}
+	if m.tags_checked_at != nil {
+		fields = append(fields, mediafile.FieldTagsCheckedAt)
+	}
+	if m.tag_failures != nil {
+		fields = append(fields, mediafile.FieldTagFailures)
+	}
+	if m.tags_error != nil {
+		fields = append(fields, mediafile.FieldTagsError)
+	}
 	return fields
 }
 
@@ -30034,6 +30510,22 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.SizeBefore()
 	case mediafile.FieldBookKind:
 		return m.BookKind()
+	case mediafile.FieldTagsState:
+		return m.TagsState()
+	case mediafile.FieldTagsHash:
+		return m.TagsHash()
+	case mediafile.FieldTaggedAt:
+		return m.TaggedAt()
+	case mediafile.FieldTagsMtime:
+		return m.TagsMtime()
+	case mediafile.FieldTagsSize:
+		return m.TagsSize()
+	case mediafile.FieldTagsCheckedAt:
+		return m.TagsCheckedAt()
+	case mediafile.FieldTagFailures:
+		return m.TagFailures()
+	case mediafile.FieldTagsError:
+		return m.TagsError()
 	}
 	return nil, false
 }
@@ -30099,6 +30591,22 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldSizeBefore(ctx)
 	case mediafile.FieldBookKind:
 		return m.OldBookKind(ctx)
+	case mediafile.FieldTagsState:
+		return m.OldTagsState(ctx)
+	case mediafile.FieldTagsHash:
+		return m.OldTagsHash(ctx)
+	case mediafile.FieldTaggedAt:
+		return m.OldTaggedAt(ctx)
+	case mediafile.FieldTagsMtime:
+		return m.OldTagsMtime(ctx)
+	case mediafile.FieldTagsSize:
+		return m.OldTagsSize(ctx)
+	case mediafile.FieldTagsCheckedAt:
+		return m.OldTagsCheckedAt(ctx)
+	case mediafile.FieldTagFailures:
+		return m.OldTagFailures(ctx)
+	case mediafile.FieldTagsError:
+		return m.OldTagsError(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -30304,6 +30812,62 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetBookKind(v)
 		return nil
+	case mediafile.FieldTagsState:
+		v, ok := value.(mediafile.TagsState)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsState(v)
+		return nil
+	case mediafile.FieldTagsHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsHash(v)
+		return nil
+	case mediafile.FieldTaggedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaggedAt(v)
+		return nil
+	case mediafile.FieldTagsMtime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsMtime(v)
+		return nil
+	case mediafile.FieldTagsSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsSize(v)
+		return nil
+	case mediafile.FieldTagsCheckedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsCheckedAt(v)
+		return nil
+	case mediafile.FieldTagFailures:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagFailures(v)
+		return nil
+	case mediafile.FieldTagsError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsError(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -30336,6 +30900,15 @@ func (m *MediaFileMutation) AddedFields() []string {
 	if m.addsize_before != nil {
 		fields = append(fields, mediafile.FieldSizeBefore)
 	}
+	if m.addtags_mtime != nil {
+		fields = append(fields, mediafile.FieldTagsMtime)
+	}
+	if m.addtags_size != nil {
+		fields = append(fields, mediafile.FieldTagsSize)
+	}
+	if m.addtag_failures != nil {
+		fields = append(fields, mediafile.FieldTagFailures)
+	}
 	return fields
 }
 
@@ -30360,6 +30933,12 @@ func (m *MediaFileMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedAudioTracks()
 	case mediafile.FieldSizeBefore:
 		return m.AddedSizeBefore()
+	case mediafile.FieldTagsMtime:
+		return m.AddedTagsMtime()
+	case mediafile.FieldTagsSize:
+		return m.AddedTagsSize()
+	case mediafile.FieldTagFailures:
+		return m.AddedTagFailures()
 	}
 	return nil, false
 }
@@ -30424,6 +31003,27 @@ func (m *MediaFileMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSizeBefore(v)
+		return nil
+	case mediafile.FieldTagsMtime:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTagsMtime(v)
+		return nil
+	case mediafile.FieldTagsSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTagsSize(v)
+		return nil
+	case mediafile.FieldTagFailures:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTagFailures(v)
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile numeric field %s", name)
@@ -30501,6 +31101,27 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediafile.FieldBookKind) {
 		fields = append(fields, mediafile.FieldBookKind)
+	}
+	if m.FieldCleared(mediafile.FieldTagsState) {
+		fields = append(fields, mediafile.FieldTagsState)
+	}
+	if m.FieldCleared(mediafile.FieldTagsHash) {
+		fields = append(fields, mediafile.FieldTagsHash)
+	}
+	if m.FieldCleared(mediafile.FieldTaggedAt) {
+		fields = append(fields, mediafile.FieldTaggedAt)
+	}
+	if m.FieldCleared(mediafile.FieldTagsMtime) {
+		fields = append(fields, mediafile.FieldTagsMtime)
+	}
+	if m.FieldCleared(mediafile.FieldTagsSize) {
+		fields = append(fields, mediafile.FieldTagsSize)
+	}
+	if m.FieldCleared(mediafile.FieldTagsCheckedAt) {
+		fields = append(fields, mediafile.FieldTagsCheckedAt)
+	}
+	if m.FieldCleared(mediafile.FieldTagsError) {
+		fields = append(fields, mediafile.FieldTagsError)
 	}
 	return fields
 }
@@ -30584,6 +31205,27 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldBookKind:
 		m.ClearBookKind()
+		return nil
+	case mediafile.FieldTagsState:
+		m.ClearTagsState()
+		return nil
+	case mediafile.FieldTagsHash:
+		m.ClearTagsHash()
+		return nil
+	case mediafile.FieldTaggedAt:
+		m.ClearTaggedAt()
+		return nil
+	case mediafile.FieldTagsMtime:
+		m.ClearTagsMtime()
+		return nil
+	case mediafile.FieldTagsSize:
+		m.ClearTagsSize()
+		return nil
+	case mediafile.FieldTagsCheckedAt:
+		m.ClearTagsCheckedAt()
+		return nil
+	case mediafile.FieldTagsError:
+		m.ClearTagsError()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -30676,6 +31318,30 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldBookKind:
 		m.ResetBookKind()
+		return nil
+	case mediafile.FieldTagsState:
+		m.ResetTagsState()
+		return nil
+	case mediafile.FieldTagsHash:
+		m.ResetTagsHash()
+		return nil
+	case mediafile.FieldTaggedAt:
+		m.ResetTaggedAt()
+		return nil
+	case mediafile.FieldTagsMtime:
+		m.ResetTagsMtime()
+		return nil
+	case mediafile.FieldTagsSize:
+		m.ResetTagsSize()
+		return nil
+	case mediafile.FieldTagsCheckedAt:
+		m.ResetTagsCheckedAt()
+		return nil
+	case mediafile.FieldTagFailures:
+		m.ResetTagFailures()
+		return nil
+	case mediafile.FieldTagsError:
+		m.ResetTagsError()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
@@ -42790,6 +43456,7 @@ type TrackMutation struct {
 	create_time        *time.Time
 	update_time        *time.Time
 	mbid               *string
+	release_track_mbid *string
 	title              *string
 	disc               *uint8
 	adddisc            *int8
@@ -43035,6 +43702,55 @@ func (m *TrackMutation) MbidCleared() bool {
 func (m *TrackMutation) ResetMbid() {
 	m.mbid = nil
 	delete(m.clearedFields, track.FieldMbid)
+}
+
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (m *TrackMutation) SetReleaseTrackMbid(s string) {
+	m.release_track_mbid = &s
+}
+
+// ReleaseTrackMbid returns the value of the "release_track_mbid" field in the mutation.
+func (m *TrackMutation) ReleaseTrackMbid() (r string, exists bool) {
+	v := m.release_track_mbid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleaseTrackMbid returns the old "release_track_mbid" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldReleaseTrackMbid(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleaseTrackMbid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleaseTrackMbid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleaseTrackMbid: %w", err)
+	}
+	return oldValue.ReleaseTrackMbid, nil
+}
+
+// ClearReleaseTrackMbid clears the value of the "release_track_mbid" field.
+func (m *TrackMutation) ClearReleaseTrackMbid() {
+	m.release_track_mbid = nil
+	m.clearedFields[track.FieldReleaseTrackMbid] = struct{}{}
+}
+
+// ReleaseTrackMbidCleared returns if the "release_track_mbid" field was cleared in this mutation.
+func (m *TrackMutation) ReleaseTrackMbidCleared() bool {
+	_, ok := m.clearedFields[track.FieldReleaseTrackMbid]
+	return ok
+}
+
+// ResetReleaseTrackMbid resets all changes to the "release_track_mbid" field.
+func (m *TrackMutation) ResetReleaseTrackMbid() {
+	m.release_track_mbid = nil
+	delete(m.clearedFields, track.FieldReleaseTrackMbid)
 }
 
 // SetTitle sets the "title" field.
@@ -43472,7 +44188,7 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.create_time != nil {
 		fields = append(fields, track.FieldCreateTime)
 	}
@@ -43481,6 +44197,9 @@ func (m *TrackMutation) Fields() []string {
 	}
 	if m.mbid != nil {
 		fields = append(fields, track.FieldMbid)
+	}
+	if m.release_track_mbid != nil {
+		fields = append(fields, track.FieldReleaseTrackMbid)
 	}
 	if m.title != nil {
 		fields = append(fields, track.FieldTitle)
@@ -43511,6 +44230,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdateTime()
 	case track.FieldMbid:
 		return m.Mbid()
+	case track.FieldReleaseTrackMbid:
+		return m.ReleaseTrackMbid()
 	case track.FieldTitle:
 		return m.Title()
 	case track.FieldDisc:
@@ -43536,6 +44257,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldUpdateTime(ctx)
 	case track.FieldMbid:
 		return m.OldMbid(ctx)
+	case track.FieldReleaseTrackMbid:
+		return m.OldReleaseTrackMbid(ctx)
 	case track.FieldTitle:
 		return m.OldTitle(ctx)
 	case track.FieldDisc:
@@ -43575,6 +44298,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMbid(v)
+		return nil
+	case track.FieldReleaseTrackMbid:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleaseTrackMbid(v)
 		return nil
 	case track.FieldTitle:
 		v, ok := value.(string)
@@ -43683,6 +44413,9 @@ func (m *TrackMutation) ClearedFields() []string {
 	if m.FieldCleared(track.FieldMbid) {
 		fields = append(fields, track.FieldMbid)
 	}
+	if m.FieldCleared(track.FieldReleaseTrackMbid) {
+		fields = append(fields, track.FieldReleaseTrackMbid)
+	}
 	if m.FieldCleared(track.FieldDuration) {
 		fields = append(fields, track.FieldDuration)
 	}
@@ -43703,6 +44436,9 @@ func (m *TrackMutation) ClearField(name string) error {
 	case track.FieldMbid:
 		m.ClearMbid()
 		return nil
+	case track.FieldReleaseTrackMbid:
+		m.ClearReleaseTrackMbid()
+		return nil
 	case track.FieldDuration:
 		m.ClearDuration()
 		return nil
@@ -43722,6 +44458,9 @@ func (m *TrackMutation) ResetField(name string) error {
 		return nil
 	case track.FieldMbid:
 		m.ResetMbid()
+		return nil
+	case track.FieldReleaseTrackMbid:
+		m.ResetReleaseTrackMbid()
 		return nil
 	case track.FieldTitle:
 		m.ResetTitle()

@@ -240,11 +240,13 @@ type PersonInfo struct {
 
 // TrackInfo is one track of the canonical release picked for a release-group.
 type TrackInfo struct {
-	MBID     string // recording MBID
-	Title    string
-	Disc     uint8
-	Position uint16
-	Duration uint32 // seconds, 0 when unknown
+	MBID string // recording MBID
+	// ReleaseTrackMBID is the track's own id on the canonical release.
+	ReleaseTrackMBID string
+	Title            string
+	Disc             uint8
+	Position         uint16
+	Duration         uint32 // seconds, 0 when unknown
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
 	// Writers are the writers, composers and lyricists of the recorded work.

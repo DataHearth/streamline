@@ -1938,6 +1938,45 @@ func (e MusicMonitor) Valid() bool {
 	}
 }
 
+// Defines values for MusicTagsConfigMode.
+const (
+	MusicTagsConfigModeImport  MusicTagsConfigMode = "import"
+	MusicTagsConfigModeManaged MusicTagsConfigMode = "managed"
+	MusicTagsConfigModeOff     MusicTagsConfigMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagsConfigMode enum.
+func (e MusicTagsConfigMode) Valid() bool {
+	switch e {
+	case MusicTagsConfigModeImport:
+		return true
+	case MusicTagsConfigModeManaged:
+		return true
+	case MusicTagsConfigModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagsConfigSeeding.
+const (
+	MusicTagsConfigSeedingCopy  MusicTagsConfigSeeding = "copy"
+	MusicTagsConfigSeedingDefer MusicTagsConfigSeeding = "defer"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagsConfigSeeding enum.
+func (e MusicTagsConfigSeeding) Valid() bool {
+	switch e {
+	case MusicTagsConfigSeedingCopy:
+		return true
+	case MusicTagsConfigSeedingDefer:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MusicTier.
 const (
 	MusicTierHigh     MusicTier = "high"
@@ -5558,6 +5597,13 @@ type LibraryConfigPatch struct {
 	MovieNaming          *string                       `json:"movie_naming,omitempty"`
 	MusicMonitoredTypes  *[]MusicAlbumType             `json:"music_monitored_types,omitempty"`
 
+	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
+	// The view always carries every field; when patched, only provided
+	// fields are applied, and a patch that changes what a file should carry
+	// (mode, strip, preserve, art) queues every managed file for the
+	// music-tag-sync job under `managed`.
+	MusicTags *MusicTagsConfig `json:"music_tags,omitempty"`
+
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown *string `json:"no_match_cooldown,omitempty"`
 
@@ -5597,6 +5643,13 @@ type LibraryConfigView struct {
 	// (add, refresh, monitor change); `POST /music/monitored-types/apply`
 	// catches existing artists up.
 	MusicMonitoredTypes []MusicAlbumType `json:"music_monitored_types"`
+
+	// MusicTags The tags Streamline writes into music files (`library.music_tags`).
+	// The view always carries every field; when patched, only provided
+	// fields are applied, and a patch that changes what a file should carry
+	// (mode, strip, preserve, art) queues every managed file for the
+	// music-tag-sync job under `managed`.
+	MusicTags MusicTagsConfig `json:"music_tags"`
 
 	// NoMatchCooldown Go duration string.
 	NoMatchCooldown string `json:"no_match_cooldown"`
@@ -6516,6 +6569,53 @@ type MusicRenamePlan struct {
 	ArtistId   uint32            `json:"artist_id"`
 	Operations []RenameOperation `json:"operations"`
 }
+
+// MusicTagsConfig The tags Streamline writes into music files (`library.music_tags`).
+// The view always carries every field; when patched, only provided
+// fields are applied, and a patch that changes what a file should carry
+// (mode, strip, preserve, art) queues every managed file for the
+// music-tag-sync job under `managed`.
+type MusicTagsConfig struct {
+	// ArtMaxPx Longest edge of an embedded cover, in pixels.
+	ArtMaxPx *int `json:"art_max_px,omitempty"`
+
+	// EmbedArt Write the album cover into each file as its front cover.
+	EmbedArt *bool `json:"embed_art,omitempty"`
+
+	// Mode `off` never writes. `import` writes each file once, when it is
+	// imported or adopted with tagging on. `managed` also rewrites a
+	// file whenever the library's data for it changes, and undoes edits
+	// made elsewhere to the keys Streamline owns.
+	Mode *MusicTagsConfigMode `json:"mode,omitempty"`
+
+	// Preserve Keys never written or deleted; wins over strip and over the keys
+	// Streamline manages. An entry ending in `*` matches as a prefix.
+	Preserve *[]string `json:"preserve,omitempty"`
+
+	// Seeding `defer` keeps a hardlinked import as one copy on disk and tags it
+	// once its torrent is gone; `copy` imports a copy and tags it at
+	// once. A file a torrent still serves is never written.
+	Seeding *MusicTagsConfigSeeding `json:"seeding,omitempty"`
+
+	// SidecarArt Write cover.jpg into each album folder and folder.jpg into each
+	// artist folder, never replacing one Streamline did not write.
+	SidecarArt *bool `json:"sidecar_art,omitempty"`
+
+	// Strip Keys deleted from every file written (Picard's names). An entry
+	// ending in `*` matches as a prefix.
+	Strip *[]string `json:"strip,omitempty"`
+}
+
+// MusicTagsConfigMode `off` never writes. `import` writes each file once, when it is
+// imported or adopted with tagging on. `managed` also rewrites a
+// file whenever the library's data for it changes, and undoes edits
+// made elsewhere to the keys Streamline owns.
+type MusicTagsConfigMode string
+
+// MusicTagsConfigSeeding `defer` keeps a hardlinked import as one copy on disk and tags it
+// once its torrent is gone; `copy` imports a copy and tags it at
+// once. A file a torrent still serves is never written.
+type MusicTagsConfigSeeding string
 
 // MusicTier Audio quality tier, best first. The canonical order everywhere.
 type MusicTier string
@@ -10419,6 +10519,9 @@ type ServerInterface interface {
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams)
+	// RetagMusicLibrary Rewrite every music file's tags (admin)
+	// (POST /music/tags/retag)
+	RetagMusicLibrary(w http.ResponseWriter, r *http.Request)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -11632,6 +11735,12 @@ func (_ Unimplemented) SearchMusicReleases(w http.ResponseWriter, r *http.Reques
 // GetMusicArtistLookup Look up one MusicBrainz artist
 // (GET /music/search/{mbid})
 func (_ Unimplemented) GetMusicArtistLookup(w http.ResponseWriter, r *http.Request, mbid MBIDParam, params GetMusicArtistLookupParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// RetagMusicLibrary Rewrite every music file's tags (admin)
+// (POST /music/tags/retag)
+func (_ Unimplemented) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16913,6 +17022,20 @@ func (siw *ServerInterfaceWrapper) GetMusicArtistLookup(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// RetagMusicLibrary operation middleware
+func (siw *ServerInterfaceWrapper) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetagMusicLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteMusicTrackFile operation middleware
 func (siw *ServerInterfaceWrapper) DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request) {
 
@@ -19330,6 +19453,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/music/tracks/{id}/file", wrapper.DeleteMusicTrackFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/tags/retag", wrapper.RetagMusicLibrary)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/monitored-types/apply", wrapper.ApplyMusicMonitoredTypes)
@@ -31350,6 +31476,71 @@ func (response GetMusicArtistLookup500JSONResponse) VisitGetMusicArtistLookupRes
 	return err
 }
 
+type RetagMusicLibraryRequestObject struct {
+}
+
+type RetagMusicLibraryResponseObject interface {
+	VisitRetagMusicLibraryResponse(w http.ResponseWriter) error
+}
+
+type RetagMusicLibrary202JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response RetagMusicLibrary202JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RetagMusicLibrary403JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RetagMusicLibrary409JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RetagMusicLibrary500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RetagMusicLibrary500JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteMusicTrackFileRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -36372,6 +36563,9 @@ type StrictServerInterface interface {
 	// GetMusicArtistLookup Look up one MusicBrainz artist
 	// (GET /music/search/{mbid})
 	GetMusicArtistLookup(ctx context.Context, request GetMusicArtistLookupRequestObject) (GetMusicArtistLookupResponseObject, error)
+	// RetagMusicLibrary Rewrite every music file's tags (admin)
+	// (POST /music/tags/retag)
+	RetagMusicLibrary(ctx context.Context, request RetagMusicLibraryRequestObject) (RetagMusicLibraryResponseObject, error)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(ctx context.Context, request DeleteMusicTrackFileRequestObject) (DeleteMusicTrackFileResponseObject, error)
@@ -41334,6 +41528,30 @@ func (sh *strictHandler) GetMusicArtistLookup(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMusicArtistLookupResponseObject); ok {
 		if err := validResponse.VisitGetMusicArtistLookupResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RetagMusicLibrary operation middleware
+func (sh *strictHandler) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+	var request RetagMusicLibraryRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RetagMusicLibrary(ctx, request.(RetagMusicLibraryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RetagMusicLibrary")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RetagMusicLibraryResponseObject); ok {
+		if err := validResponse.VisitRetagMusicLibraryResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
