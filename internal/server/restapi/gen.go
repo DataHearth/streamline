@@ -5193,6 +5193,11 @@ type ImportScanAlbum struct {
 	OutcomeMessage   *string                `json:"outcome_message,omitempty"`
 	ReleaseGroupMbid *string                `json:"release_group_mbid,omitempty"`
 
+	// SeedingFiles How many of the folder's audio files a torrent the download
+	// clients still list serves, read live. Tags are written to those
+	// only once the torrent is removed from its client.
+	SeedingFiles *int `json:"seeding_files,omitempty"`
+
 	// Size Bytes of the folder's audio files.
 	Size         int64   `json:"size"`
 	TaggedAlbum  *string `json:"tagged_album,omitempty"`
@@ -9344,6 +9349,19 @@ type ListImportBooksParams struct {
 // ListImportBooksParamsClassification defines parameters for ListImportBooks.
 type ListImportBooksParamsClassification string
 
+// CommitImportJSONBody defines parameters for CommitImport.
+type CommitImportJSONBody struct {
+	// WriteTags Music scans: queue the adopted files for the music tag
+	// writer and tag them as each album is committed, and mark
+	// the albums the commit brings in (those holding no file yet) as managed (re-tagged on
+	// their own under `managed`). Off leaves the files as they
+	// are and the new albums unmanaged; an album that already
+	// held files keeps its own setting. Defaults to on unless
+	// `library.music_tags.mode` is `off`. A file a torrent still
+	// serves is tagged once the torrent is gone.
+	WriteTags *bool `json:"write_tags,omitempty"`
+}
+
 // ListImportFilesParams defines parameters for ListImportFiles.
 type ListImportFilesParams struct {
 	Classification *ListImportFilesParamsClassification `form:"classification,omitempty" json:"classification,omitempty"`
@@ -9795,6 +9813,9 @@ type UpdateImportAlbumDecisionJSONRequestBody = ImportScanAlbumDecisionRequest
 
 // UpdateImportBookDecisionJSONRequestBody defines body for UpdateImportBookDecision for application/json ContentType.
 type UpdateImportBookDecisionJSONRequestBody = ImportScanBookDecisionRequest
+
+// CommitImportJSONRequestBody defines body for CommitImport for application/json ContentType.
+type CommitImportJSONRequestBody CommitImportJSONBody
 
 // BulkUpdateImportDecisionsJSONRequestBody defines body for BulkUpdateImportDecisions for application/json ContentType.
 type BulkUpdateImportDecisionsJSONRequestBody = ImportBulkDecisionRequest
@@ -27392,7 +27413,8 @@ func (response CancelImport422JSONResponse) VisitCancelImportResponse(w http.Res
 }
 
 type CommitImportRequestObject struct {
-	Id ResourceID `json:"id"`
+	Id   ResourceID `json:"id"`
+	Body *CommitImportJSONRequestBody
 }
 
 type CommitImportResponseObject interface {
@@ -39843,6 +39865,16 @@ func (sh *strictHandler) CommitImport(w http.ResponseWriter, r *http.Request, id
 	var request CommitImportRequestObject
 
 	request.Id = id
+
+	var body CommitImportJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.CommitImport(ctx, request.(CommitImportRequestObject))

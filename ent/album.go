@@ -45,6 +45,8 @@ type Album struct {
 	Monitored bool `json:"monitored,omitempty"`
 	// MonitorPinned holds the value of the "monitor_pinned" field.
 	MonitorPinned bool `json:"monitor_pinned,omitempty"`
+	// TagsManaged holds the value of the "tags_managed" field.
+	TagsManaged bool `json:"tags_managed,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
 	GrabFailures uint8 `json:"grab_failures,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -145,7 +147,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case album.FieldGenres:
 			values[i] = new([]byte)
-		case album.FieldMonitored, album.FieldMonitorPinned:
+		case album.FieldMonitored, album.FieldMonitorPinned, album.FieldTagsManaged:
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
@@ -256,6 +258,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field monitor_pinned", values[i])
 			} else if value.Valid {
 				_m.MonitorPinned = value.Bool
+			}
+		case album.FieldTagsManaged:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_managed", values[i])
+			} else if value.Valid {
+				_m.TagsManaged = value.Bool
 			}
 		case album.FieldGrabFailures:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -434,6 +442,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("monitor_pinned=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MonitorPinned))
+	builder.WriteString(", ")
+	builder.WriteString("tags_managed=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagsManaged))
 	builder.WriteString(", ")
 	builder.WriteString("grab_failures=")
 	builder.WriteString(fmt.Sprintf("%v", _m.GrabFailures))

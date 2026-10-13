@@ -112,6 +112,7 @@ type AlbumMutation struct {
 	appendgenres            []string
 	monitored               *bool
 	monitor_pinned          *bool
+	tags_managed            *bool
 	grab_failures           *uint8
 	addgrab_failures        *int8
 	last_search_at          *time.Time
@@ -808,6 +809,42 @@ func (m *AlbumMutation) OldMonitorPinned(ctx context.Context) (v bool, err error
 // ResetMonitorPinned resets all changes to the "monitor_pinned" field.
 func (m *AlbumMutation) ResetMonitorPinned() {
 	m.monitor_pinned = nil
+}
+
+// SetTagsManaged sets the "tags_managed" field.
+func (m *AlbumMutation) SetTagsManaged(b bool) {
+	m.tags_managed = &b
+}
+
+// TagsManaged returns the value of the "tags_managed" field in the mutation.
+func (m *AlbumMutation) TagsManaged() (r bool, exists bool) {
+	v := m.tags_managed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsManaged returns the old "tags_managed" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldTagsManaged(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsManaged is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsManaged requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsManaged: %w", err)
+	}
+	return oldValue.TagsManaged, nil
+}
+
+// ResetTagsManaged resets all changes to the "tags_managed" field.
+func (m *AlbumMutation) ResetTagsManaged() {
+	m.tags_managed = nil
 }
 
 // SetGrabFailures sets the "grab_failures" field.
@@ -1632,7 +1669,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 25)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1671,6 +1708,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.monitor_pinned != nil {
 		fields = append(fields, album.FieldMonitorPinned)
+	}
+	if m.tags_managed != nil {
+		fields = append(fields, album.FieldTagsManaged)
 	}
 	if m.grab_failures != nil {
 		fields = append(fields, album.FieldGrabFailures)
@@ -1739,6 +1779,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.Monitored()
 	case album.FieldMonitorPinned:
 		return m.MonitorPinned()
+	case album.FieldTagsManaged:
+		return m.TagsManaged()
 	case album.FieldGrabFailures:
 		return m.GrabFailures()
 	case album.FieldLastSearchAt:
@@ -1796,6 +1838,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMonitored(ctx)
 	case album.FieldMonitorPinned:
 		return m.OldMonitorPinned(ctx)
+	case album.FieldTagsManaged:
+		return m.OldTagsManaged(ctx)
 	case album.FieldGrabFailures:
 		return m.OldGrabFailures(ctx)
 	case album.FieldLastSearchAt:
@@ -1917,6 +1961,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMonitorPinned(v)
+		return nil
+	case album.FieldTagsManaged:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsManaged(v)
 		return nil
 	case album.FieldGrabFailures:
 		v, ok := value.(uint8)
@@ -2190,6 +2241,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldMonitorPinned:
 		m.ResetMonitorPinned()
+		return nil
+	case album.FieldTagsManaged:
+		m.ResetTagsManaged()
 		return nil
 	case album.FieldGrabFailures:
 		m.ResetGrabFailures()

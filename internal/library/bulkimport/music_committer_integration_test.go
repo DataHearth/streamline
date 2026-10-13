@@ -15,6 +15,7 @@ import (
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -36,10 +37,13 @@ var _ = Describe(
 			store  db.Store
 			mb     *metamocks.MockMusicProvider
 			svc    *Service
+			// writeTags is the import review's choice the commits run with.
+			writeTags bool
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
+			writeTags = false
 			root = GinkgoT().TempDir()
 			configtest.Setup(map[string]any{
 				"library": map[string]any{"music_path": root},
@@ -133,7 +137,7 @@ var _ = Describe(
 			Expect(
 				store.BulkCreateImportScanAlbums(ctx, scan.ID, rows),
 			).To(Succeed())
-			svc.runCommitMusic(ctx, scan)
+			svc.runCommitMusic(ctx, scan, writeTags)
 			scan, err = store.FindImportScan(ctx, scan.ID)
 			Expect(err).NotTo(HaveOccurred())
 			return scan
@@ -190,6 +194,50 @@ var _ = Describe(
 			Expect(row.Outcome).To(Equal(entimportscanalbum.OutcomeCreated))
 			Expect(row.CreatedAlbumID).To(HaveValue(Equal(alb.ID)))
 		})
+
+		It(
+			"tags the adopted files and manages the album when the review asks",
+			func() {
+				writeTags = true
+				expectDiscography("a-1", map[string][]string{"rg-1": {"Lithium"}})
+				dir := folder("Nirvana/Nevermind", "tagged.mp3")
+
+				commit(confirmed(dir, "rg-1", "a-1"))
+
+				alb, err := client.Album.Query().Where(album.Mbid("rg-1")).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(alb.TagsManaged).To(BeTrue())
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*mf.TagsState).To(Equal(mediafile.TagsStateWritten))
+				info, err := audiotags.Read(mf.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Title).To(Equal("Lithium"))
+			},
+		)
+
+		It(
+			"leaves the files as they are and the album unmanaged when it does not",
+			func() {
+				expectDiscography("a-1", map[string][]string{"rg-1": {"Lithium"}})
+				dir := folder("Nirvana/Nevermind", "tagged.mp3")
+
+				commit(confirmed(dir, "rg-1", "a-1"))
+
+				alb, err := client.Album.Query().Where(album.Mbid("rg-1")).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(alb.TagsManaged).To(BeFalse())
+				mf, err := client.MediaFile.Query().Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mf.TagsState).To(BeNil())
+				info, err := audiotags.Read(mf.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Title).To(Equal("Smells Like Teen Spirit"))
+				n, err := store.MarkAllMusicTags(ctx, db.MarkForce)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeZero())
+			},
+		)
 
 		It("adopts every disc of a multi-disc album into the one album", func() {
 			mb.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
@@ -299,7 +347,47 @@ var _ = Describe(
 			Expect(scan.CommitSuccessCount).To(Equal(uint32(1)))
 			Expect(outcomeOf(dir).Outcome).
 				To(Equal(entimportscanalbum.OutcomeAttached))
+			// The album held no file before: the commit brings it in, and
+			// it follows the review's choice (off here).
+			Expect(client.Album.GetX(ctx, albumID).TagsManaged).To(BeFalse())
 		})
+
+		It(
+			"leaves the tagging of an album that already held files to the album",
+			func() {
+				held, err := store.CreateArtist(ctx, db.CreateArtistParams{
+					MBID: "a-1",
+					Name: "Nirvana",
+					Albums: []db.AlbumSeed{
+						{MBID: "rg-1", Title: "Nevermind", Type: "album"},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				albumID := held.Edges.Albums[0].ID
+				Expect(store.SetAlbumHydration(ctx, albumID, db.HydrationParams{
+					Tracks: []db.TrackSeed{
+						{
+							MBID:     "t-1",
+							Title:    "Smells Like Teen Spirit",
+							Disc:     1,
+							Position: 1,
+						},
+						{MBID: "t-2", Title: "In Bloom", Disc: 1, Position: 2},
+					},
+				}, time.Now())).To(Succeed())
+				t2 := client.Track.Query().Where(track.Position(2)).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/elsewhere/02.mp3").SetSize(1).
+					SetTrack(t2).ExecX(ctx)
+				dir := folder("Nevermind", "tagged.mp3")
+				row := confirmed(dir, "rg-1", "a-1")
+				row.Classification = entimportscanalbum.ClassificationExisting
+				row.ExistingAlbumID = &albumID
+
+				commit(row)
+
+				Expect(client.Album.GetX(ctx, albumID).TagsManaged).To(BeTrue())
+			},
+		)
 
 		It("adds the artist once for several albums", func() {
 			expectDiscography("a-1", map[string][]string{
@@ -431,7 +519,7 @@ var _ = Describe(
 					[]uint32{outcomeOf(skipped).ID},
 				)
 				Expect(err).NotTo(HaveOccurred())
-				svc.runCommitMusic(ctx, scan)
+				svc.runCommitMusic(ctx, scan, writeTags)
 
 				done, err := store.FindImportScan(ctx, scan.ID)
 				Expect(err).NotTo(HaveOccurred())

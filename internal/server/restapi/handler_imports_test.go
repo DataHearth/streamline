@@ -3,6 +3,8 @@ package restapi
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,6 +17,7 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 )
 
@@ -208,6 +211,19 @@ var _ = Describe("Handler: Import scan albums",
 		BeforeEach(func() { app = newAPIKeyApp() })
 
 		It("GET /library/imports/{id}/albums lists album rows", func() {
+			// The first folder is on disk and a listed torrent serves one of
+			// its two files.
+			nevermind := filepath.Join(GinkgoT().TempDir(), "Nevermind")
+			Expect(os.MkdirAll(nevermind, 0o755)).To(Succeed())
+			for _, f := range []string{"01.mp3", "02.mp3"} {
+				Expect(
+					os.WriteFile(filepath.Join(nevermind, f), nil, 0o600),
+				).To(Succeed())
+			}
+			app.downloads.EXPECT().SeedingTorrents(mock.Anything).
+				Return(download.NewSeedingSet(
+					true, []string{filepath.Join(nevermind, "01.mp3")}, nil,
+				)).Once()
 			app.store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
 				Return(&ent.ImportScan{ID: 5}, nil).Once()
 			app.store.EXPECT().ListImportScanAlbums(mock.Anything,
@@ -215,7 +231,7 @@ var _ = Describe("Handler: Import scan albums",
 					return p.ScanID == 5
 				})).Return([]*ent.ImportScanAlbum{
 				{
-					ID: 1, FolderPath: "/music/Nirvana/Nevermind",
+					ID: 1, FolderPath: nevermind,
 					TaggedArtist:   "Nirvana",
 					TaggedAlbum:    "Nevermind",
 					TaggedYear:     1991,
@@ -246,7 +262,9 @@ var _ = Describe("Handler: Import scan albums",
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Total).To(Equal(uint32(2)))
 			Expect(body.Items).To(HaveLen(2))
-			Expect(body.Items[0].FolderPath).To(Equal("/music/Nirvana/Nevermind"))
+			Expect(body.Items[0].FolderPath).To(Equal(nevermind))
+			Expect(*body.Items[0].SeedingFiles).To(Equal(1))
+			Expect(*body.Items[1].SeedingFiles).To(BeZero())
 			Expect(*body.Items[0].TaggedAlbum).To(Equal("Nevermind"))
 			Expect(body.Items[0].TaggedYear).To(HaveValue(Equal(uint16(1991))))
 			Expect(body.Items[0].Format).To(HaveValue(Equal("FLAC 24/96")))
@@ -386,3 +404,63 @@ var _ = Describe("Handler: Import start for music",
 			Entry("unsupported kind", bulkimport.ErrUnsupportedKind),
 		)
 	})
+
+var _ = Describe(
+	"Handler: Import commit",
+	Label("unit", "server", "imports"),
+	func() {
+		var app *apiKeyApp
+		BeforeEach(func() { app = newAPIKeyApp() })
+
+		commit := func(body string) *http.Response {
+			var rd *strings.Reader
+			if body != "" {
+				rd = strings.NewReader(body)
+			}
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/library/imports/5/commit",
+				app.adminKey,
+				nil,
+			)
+			if rd != nil {
+				req = app.req(
+					http.MethodPost,
+					"/api/v1/library/imports/5/commit",
+					app.adminKey,
+					rd,
+				)
+				req.Header.Set("Content-Type", "application/json")
+			}
+			return app.do(req)
+		}
+
+		expectScan := func() {
+			app.bulkImports.EXPECT().Get(mock.Anything, uint32(5)).
+				Return(&ent.ImportScan{ID: 5, Kind: entimportscan.KindMusic}, nil).
+				Once()
+		}
+
+		It("hands the review's tagging choice to the commit", func() {
+			app.bulkImports.EXPECT().CommitWith(mock.Anything, uint32(5),
+				mock.MatchedBy(func(o bulkimport.CommitOptions) bool {
+					return o.WriteTags != nil && !*o.WriteTags
+				})).Return(nil).Once()
+			expectScan()
+
+			resp := commit(`{"write_tags":false}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+
+		It("leaves the choice to the default without a body", func() {
+			app.bulkImports.EXPECT().CommitWith(mock.Anything, uint32(5),
+				bulkimport.CommitOptions{}).Return(nil).Once()
+			expectScan()
+
+			resp := commit("")
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+		})
+	},
+)

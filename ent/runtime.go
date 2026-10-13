@@ -76,8 +76,12 @@ func init() {
 	albumDescMonitorPinned := albumFields[10].Descriptor()
 	// album.DefaultMonitorPinned holds the default value on creation for the monitor_pinned field.
 	album.DefaultMonitorPinned = albumDescMonitorPinned.Default.(bool)
+	// albumDescTagsManaged is the schema descriptor for tags_managed field.
+	albumDescTagsManaged := albumFields[11].Descriptor()
+	// album.DefaultTagsManaged holds the default value on creation for the tags_managed field.
+	album.DefaultTagsManaged = albumDescTagsManaged.Default.(bool)
 	// albumDescGrabFailures is the schema descriptor for grab_failures field.
-	albumDescGrabFailures := albumFields[11].Descriptor()
+	albumDescGrabFailures := albumFields[12].Descriptor()
 	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()

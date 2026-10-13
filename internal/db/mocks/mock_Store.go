@@ -19215,6 +19215,69 @@ func (_c *MockStore_SetAlbumStatus_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// SetAlbumTagsManaged provides a mock function for the type MockStore
+func (_mock *MockStore) SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error {
+	ret := _mock.Called(ctx, id, managed)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumTagsManaged")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, bool) error); ok {
+		r0 = returnFunc(ctx, id, managed)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetAlbumTagsManaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumTagsManaged'
+type MockStore_SetAlbumTagsManaged_Call struct {
+	*mock.Call
+}
+
+// SetAlbumTagsManaged is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - managed bool
+func (_e *MockStore_Expecter) SetAlbumTagsManaged(ctx any, id any, managed any) *MockStore_SetAlbumTagsManaged_Call {
+	return &MockStore_SetAlbumTagsManaged_Call{Call: _e.mock.On("SetAlbumTagsManaged", ctx, id, managed)}
+}
+
+func (_c *MockStore_SetAlbumTagsManaged_Call) Run(run func(ctx context.Context, id uint32, managed bool)) *MockStore_SetAlbumTagsManaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 bool
+		if args[2] != nil {
+			arg2 = args[2].(bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetAlbumTagsManaged_Call) Return(err error) *MockStore_SetAlbumTagsManaged_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetAlbumTagsManaged_Call) RunAndReturn(run func(ctx context.Context, id uint32, managed bool) error) *MockStore_SetAlbumTagsManaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetArtistDetails provides a mock function for the type MockStore
 func (_mock *MockStore) SetArtistDetails(ctx context.Context, id uint32, p db.ArtistDetailsParams, at time.Time) error {
 	ret := _mock.Called(ctx, id, p, at)

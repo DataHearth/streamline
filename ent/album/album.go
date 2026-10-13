@@ -41,6 +41,8 @@ const (
 	FieldMonitored = "monitored"
 	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
 	FieldMonitorPinned = "monitor_pinned"
+	// FieldTagsManaged holds the string denoting the tags_managed field in the database.
+	FieldTagsManaged = "tags_managed"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -126,6 +128,7 @@ var Columns = []string{
 	FieldGenres,
 	FieldMonitored,
 	FieldMonitorPinned,
+	FieldTagsManaged,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
@@ -181,6 +184,8 @@ var (
 	DefaultMonitored bool
 	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
 	DefaultMonitorPinned bool
+	// DefaultTagsManaged holds the default value on creation for the "tags_managed" field.
+	DefaultTagsManaged bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
 )
@@ -311,6 +316,11 @@ func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitorPinned orders the results by the monitor_pinned field.
 func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
+}
+
+// ByTagsManaged orders the results by the tags_managed field.
+func ByTagsManaged(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsManaged, opts...).ToFunc()
 }
 
 // ByGrabFailures orders the results by the grab_failures field.

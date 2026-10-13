@@ -11,6 +11,7 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/media/book"
 )
@@ -169,7 +170,11 @@ func (s *Server) CommitImport(
 	if err := requireAdmin(ctx); err != nil {
 		return CommitImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	if err := s.bulkImports.Commit(ctx, req.Id); err != nil {
+	var opts bulkimport.CommitOptions
+	if req.Body != nil {
+		opts.WriteTags = req.Body.WriteTags
+	}
+	if err := s.bulkImports.CommitWith(ctx, req.Id, opts); err != nil {
 		switch {
 		case errors.Is(err, bulkimport.ErrScanNotFound):
 			return CommitImport404JSONResponse{
@@ -482,8 +487,18 @@ func (s *Server) ListImportAlbums(
 		return nil, err
 	}
 	apiItems := make([]ImportScanAlbum, 0, len(items))
+	var seeding *download.SeedingSet
+	if len(items) > 0 && s.downloads != nil {
+		set := s.downloads.SeedingTorrents(ctx)
+		seeding = &set
+	}
 	for _, it := range items {
-		apiItems = append(apiItems, toAPIImportScanAlbum(it, artistIDs))
+		row := toAPIImportScanAlbum(it, artistIDs)
+		if seeding != nil {
+			n := bulkimport.SeedingFiles(*seeding, it.FolderPath)
+			row.SeedingFiles = &n
+		}
+		apiItems = append(apiItems, row)
 	}
 	return ListImportAlbums200JSONResponse{
 		Items: apiItems,

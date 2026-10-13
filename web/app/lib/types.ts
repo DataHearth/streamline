@@ -1596,6 +1596,9 @@ export type ImportScanAlbum = {
 	format?: string;
 	// Audio files in the folder, not MusicBrainz's track count.
 	file_count: number;
+	// Of those, the files a torrent the clients still list serves: tags reach
+	// them only once the torrent is removed. Read live.
+	seeding_files?: number;
 	size: number;
 	classification: ImportFileClassification;
 	release_group_mbid?: string;

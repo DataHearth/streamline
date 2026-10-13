@@ -39,12 +39,14 @@
 		ImportScanBook,
 		ImportScanFile,
 		ImportScanShow,
+		LibraryConfig,
 		SeriesLookupResult,
 		TMDBMovieResult,
 	} from "@lib/types";
 	import AddMovieModal from "@components/movies/AddMovieModal.svelte";
 	import AddSeriesModal from "@components/series/AddSeriesModal.svelte";
 	import Select from "@components/forms/Select.svelte";
+	import Checkbox from "@components/forms/Checkbox.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import DecisionStrip from "@components/library/DecisionStrip.svelte";
 	import ImportFileRow from "@components/library/ImportFileRow.svelte";
@@ -315,10 +317,23 @@
 		onError: (err) => toast.err(errorText(err)),
 	}));
 
+	// Music scans: whether the commit writes Streamline's tags into the adopted
+	// files. Defaults to on unless tagging is off; the choice is per commit.
+	const libraryCfg = createQuery<LibraryConfig>(() => ({
+		queryKey: ["config", "library"],
+		queryFn: () => api<LibraryConfig>("/config/library"),
+		enabled: kind === "music",
+	}));
+	let writeTagsChoice = $state<boolean | null>(null);
+	let writeTags = $derived(
+		writeTagsChoice ?? (libraryCfg.data ? libraryCfg.data.music_tags.mode !== "off" : true),
+	);
+
 	const commit = createMutation<ImportScan, Error, void>(() => ({
 		mutationFn: () =>
 			api<ImportScan>(`/library/imports/${importId}/commit`, {
 				method: "POST",
+				body: kind === "music" ? { write_tags: writeTags } : undefined,
 			}),
 		onSuccess: (resp) => {
 			qc.setQueryData(["import", importId], resp);
@@ -801,6 +816,19 @@
 						</a>
 					{/if}
 				</div>
+			</div>
+		{/if}
+
+		{#if isReviewing && kind === "music"}
+			<div class="mt-4 rounded-lg border border-border bg-bg-elevated px-4 py-3">
+				<Checkbox
+					checked={writeTags}
+					onChange={(v) => (writeTagsChoice = v)}
+					label={i18n.imports_write_tags()}
+					description={libraryCfg.data?.music_tags.mode === "off"
+						? i18n.imports_write_tags_off()
+						: i18n.imports_write_tags_help()}
+				/>
 			</div>
 		{/if}
 

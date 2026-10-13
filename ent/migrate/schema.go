@@ -25,6 +25,7 @@ var (
 		{Name: "genres", Type: field.TypeJSON, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
+		{Name: "tags_managed", Type: field.TypeBool, Default: true},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped", "failed"}, Default: "wanted"},
@@ -46,7 +47,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[25]},
+				Columns:    []*schema.Column{AlbumsColumns[26]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -55,17 +56,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[25]},
+				Columns: []*schema.Column{AlbumsColumns[26]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[16]},
+				Columns: []*schema.Column{AlbumsColumns[17]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[23]},
+				Columns: []*schema.Column{AlbumsColumns[24]},
 			},
 		},
 	}

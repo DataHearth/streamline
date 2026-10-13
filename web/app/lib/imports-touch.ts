@@ -148,6 +148,13 @@ export function showEntry(sh: ImportScanShow): TouchEntry {
 const trackCount = (n: number) =>
 	(n === 1 ? i18n.imports_track_count_one : i18n.imports_track_count_other)({ count: n });
 
+// seedingNote says how many of a folder's files a torrent still serves, which
+// the tag writer leaves alone until the torrent is gone.
+function seedingNote(n: number | undefined): string {
+	if (!n) return "";
+	return n === 1 ? i18n.imports_seeding_files_one({ count: n }) : i18n.imports_seeding_files_other({ count: n });
+}
+
 export function albumEntry(a: ImportScanAlbum): TouchEntry {
 	const chosen = a.decision_release_group_mbid ?? null;
 	const match = chosen != null ? (a.candidates ?? []).find((c) => c.release_group_mbid === chosen) : undefined;
@@ -156,7 +163,9 @@ export function albumEntry(a: ImportScanAlbum): TouchEntry {
 		heading: a.tagged_album || basename(a.folder_path),
 		headingWeak: !a.tagged_album,
 		path: a.folder_path,
-		sub: [a.tagged_artist, trackCount(a.file_count), a.format].filter(Boolean).join(" · "),
+		sub: [a.tagged_artist, trackCount(a.file_count), a.format, seedingNote(a.seeding_files)]
+			.filter(Boolean)
+			.join(" · "),
 		classification: a.classification,
 		decision: a.decision,
 		outcome: a.outcome,

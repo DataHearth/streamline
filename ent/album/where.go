@@ -110,6 +110,11 @@ func MonitorPinned(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitorPinned, v))
 }
 
+// TagsManaged applies equality check predicate on the "tags_managed" field. It's identical to TagsManagedEQ.
+func TagsManaged(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldTagsManaged, v))
+}
+
 // GrabFailures applies equality check predicate on the "grab_failures" field. It's identical to GrabFailuresEQ.
 func GrabFailures(v uint8) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldGrabFailures, v))
@@ -763,6 +768,16 @@ func MonitorPinnedEQ(v bool) predicate.Album {
 // MonitorPinnedNEQ applies the NEQ predicate on the "monitor_pinned" field.
 func MonitorPinnedNEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldNEQ(FieldMonitorPinned, v))
+}
+
+// TagsManagedEQ applies the EQ predicate on the "tags_managed" field.
+func TagsManagedEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldTagsManaged, v))
+}
+
+// TagsManagedNEQ applies the NEQ predicate on the "tags_managed" field.
+func TagsManagedNEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldTagsManaged, v))
 }
 
 // GrabFailuresEQ applies the EQ predicate on the "grab_failures" field.

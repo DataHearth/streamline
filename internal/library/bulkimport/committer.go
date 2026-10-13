@@ -29,7 +29,17 @@ import (
 
 const commitConcurrency = 4
 
+// Commit commits a reviewed scan with the default options.
 func (s *Service) Commit(ctx context.Context, id uint32) error {
+	return s.CommitWith(ctx, id, CommitOptions{})
+}
+
+// CommitWith commits a reviewed scan in the background.
+func (s *Service) CommitWith(
+	ctx context.Context,
+	id uint32,
+	opts CommitOptions,
+) error {
 	ctx, span := tracer.Start(ctx, "bulkimport.commit",
 		trace.WithAttributes(attribute.Int64("scan.id", int64(id))))
 	defer span.End()
@@ -72,7 +82,7 @@ func (s *Service) Commit(ctx context.Context, id uint32) error {
 	case entimportscan.KindSeries:
 		go s.runCommitSeries(bg, scan)
 	case entimportscan.KindMusic:
-		go s.runCommitMusic(bg, scan)
+		go s.runCommitMusic(bg, scan, opts.writeTags())
 	case entimportscan.KindBook:
 		go s.runCommitBooks(bg, scan)
 	default:

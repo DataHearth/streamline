@@ -149,6 +149,7 @@ type Store interface {
 	) error
 	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
 	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
+	SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error
 	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)
 	ListAlbumsTrackless(
 		ctx context.Context,

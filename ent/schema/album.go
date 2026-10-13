@@ -48,6 +48,12 @@ func (Album) Fields() []ent.Field {
 		// monitored-types catch-up leaves alone; changing the artist's policy
 		// clears it.
 		field.Bool("monitor_pinned").Default(false),
+		// tags_managed is whether the music tag writer re-queues this
+		// album's files on its own (a managed refresh, a settings change,
+		// Retag library). An album adopted from disk with tagging off at the
+		// import review is not; one Streamline downloaded is. A file queued
+		// explicitly, a new download's, is written either way.
+		field.Bool("tags_managed").Default(true),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").

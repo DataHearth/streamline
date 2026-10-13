@@ -10,6 +10,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -38,9 +39,26 @@ type Manager interface {
 	) (*ent.ImportScanFile, error)
 	Cancel(ctx context.Context, id uint32) error
 	Commit(ctx context.Context, id uint32) error
+	CommitWith(ctx context.Context, id uint32, opts CommitOptions) error
 	Delete(ctx context.Context, id uint32) error
 	BulkDecide(ctx context.Context, p BulkDecisionParams) (int, error)
 	AbortInflight(ctx context.Context) (uint32, error)
+}
+
+// CommitOptions are the import review's choices for a commit. WriteTags, on
+// a music scan, queues the adopted files for the music tag writer and marks
+// the albums the commit creates as managed; nil means "when tags are on".
+// Other kinds ignore it.
+type CommitOptions struct {
+	WriteTags *bool
+}
+
+// writeTags resolves WriteTags against library.music_tags.mode.
+func (o CommitOptions) writeTags() bool {
+	if o.WriteTags != nil {
+		return *o.WriteTags
+	}
+	return config.Get().Library.MusicTags.Mode != config.MusicTagsOff
 }
 
 // FilesParams is the input for Manager.Files.
@@ -69,6 +87,7 @@ type MusicAdder interface {
 	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
 	music.CoverResolver
 	music.AlbumHydrator
+	music.AlbumTagger
 }
 
 // BookAdder adds a book from a Hardcover id. Satisfied by *book.Service; used

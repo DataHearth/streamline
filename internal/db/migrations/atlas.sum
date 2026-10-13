@@ -1,4 +1,4 @@
-h1:JdwBEgkUXYXJV1g6gYkSVTLgfEW3vPEXpgNhmM2uY3g=
+h1:Zf2RuvAJ4O9wdiKK6DpBUjf2Ab2zBp4ljRJJl3oEHhQ=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -57,3 +57,4 @@ h1:JdwBEgkUXYXJV1g6gYkSVTLgfEW3vPEXpgNhmM2uY3g=
 20261012132227_book_series_slug.up.sql h1:FVORcUxPC7tigXu8xk7jExKZSpr6fkoem961FzT7XCE=
 20261013085754_album_dates_genres.up.sql h1:a/ZsQV/g9fs6LZgf9/Ey89uwFQrJT9+mpwjCfAOR6FU=
 20261013114835_music_tag_state.up.sql h1:WQLO8zdPgAVzwoPyhBGneyTEQ9D/u5n3pey3f2YwYPU=
+20261013122718_album_tags_managed.up.sql h1:Rg0JKHdy+vvmyoOWXf52eqZjE631JflOCashbZ97Hq4=

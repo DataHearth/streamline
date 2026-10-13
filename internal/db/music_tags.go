@@ -114,10 +114,10 @@ func (db *DB) RecordMediaFileTagFailure(
 }
 
 // MarkAlbumTags queues the track files of the given albums for the music tag
-// writer and returns how many it queued. A deferred file stays deferred: its
-// tags are computed when it is finally written. MarkStale reaches written,
-// failed and never-tagged files and keeps their hash; MarkForce also empties
-// it.
+// writer and returns how many it queued. Only albums whose tags are managed
+// (Album.tags_managed) are reached. A deferred file stays deferred: its tags
+// are computed when it is finally written. MarkStale reaches written, failed
+// and never-tagged files and keeps their hash; MarkForce also empties it.
 func (db *DB) MarkAlbumTags(
 	ctx context.Context,
 	albumIDs []uint32,
@@ -127,13 +127,28 @@ func (db *DB) MarkAlbumTags(
 		return 0, nil
 	}
 	return db.markTags(ctx, mark,
-		entmediafile.HasTrackWith(track.HasAlbumWith(album.IDIn(albumIDs...))),
+		entmediafile.HasTrackWith(track.HasAlbumWith(
+			album.IDIn(albumIDs...),
+			album.TagsManaged(true),
+		)),
 	)
 }
 
-// MarkAllMusicTags is MarkAlbumTags over every track file.
+// MarkAllMusicTags is MarkAlbumTags over every managed album.
 func (db *DB) MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error) {
-	return db.markTags(ctx, mark, entmediafile.HasTrack())
+	return db.markTags(ctx, mark,
+		entmediafile.HasTrackWith(track.HasAlbumWith(album.TagsManaged(true))),
+	)
+}
+
+// SetAlbumTagsManaged sets whether the tag writer re-queues the album's files
+// on its own.
+func (db *DB) SetAlbumTagsManaged(
+	ctx context.Context,
+	id uint32,
+	managed bool,
+) error {
+	return db.client.Album.UpdateOneID(id).SetTagsManaged(managed).Exec(ctx)
 }
 
 func (db *DB) markTags(

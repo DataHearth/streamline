@@ -46,5 +46,11 @@
 - **A paused torrent still listed keeps its files deferred.** Resuming it serves whatever bytes are then at its path.
 - `albumImportMode`: `move` while seeding copies (it would pull the file out from under the torrent, tags or not); `hardlink` copies only under a writing mode with `seeding: copy`; with `defer`, or with tags off, a hardlink stays a hardlink — one copy on disk until the torrent goes.
 
+## Managed albums and the import review
+- `Album.tags_managed` (default true) is whether the writer **re-queues** an album's files on its own: `MarkAlbumTags` and `MarkAllMusicTags` (managed triggers, settings changes, Retag) reach managed albums only. A file queued explicitly — a new download's `pending` — is written either way.
+- The music import review chooses per commit: `POST /library/imports/{id}/commit {write_tags}` (`bulkimport.CommitOptions`, nil = "unless the mode is off"). With it on, every adopted file is recorded `pending` and the album is tagged through `TagAlbum` as it is committed (before the commit's one media-server refresh); an album that held no file before the commit takes the choice as its `tags_managed` — including an `existing` stub of the artist's discography, which a commit adding the artist for another folder creates — and an album that already held files keeps its own. With it off the files keep `tags_state` NULL and the new album is unmanaged.
+- The migration that added the column set it false on every album whose files were all adoptions (`source` orphan or wizard): nobody chose to tag those. An album holding a downloaded (`auto`) file stays managed.
+- Review rows carry `seeding_files`, read live: the folder's audio files (disc subfolders included, `bulkimport.SeedingFiles`) that a listed torrent's content root contains — the ones the writer will defer.
+
 ## Modes
 - `off` writes nothing (the job returns at once, the importer queues nothing). `import` writes each file once. `managed` re-queues on the triggers above and undoes outside edits to managed keys; keys Streamline does not manage are never compared.

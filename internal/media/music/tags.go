@@ -86,7 +86,7 @@ func (s *Service) SyncTags(ctx context.Context) error {
 	if len(files) == 0 {
 		return nil
 	}
-	seeding := s.download.SeedingTorrents(ctx)
+	seeding := s.seedingTorrents(ctx)
 	res := s.tagFiles(ctx, files, seeding, cfg, func(done, total int) {
 		scheduler.Progress(ctx, done, total)
 	})
@@ -133,8 +133,17 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) error {
 	if len(files) == 0 {
 		return nil
 	}
-	s.tagFiles(ctx, files, s.download.SeedingTorrents(ctx), cfg, nil)
+	s.tagFiles(ctx, files, s.seedingTorrents(ctx), cfg, nil)
 	return nil
+}
+
+// seedingTorrents lists the clients' torrents; with no download manager
+// wired (a test, a tool) there are none.
+func (s *Service) seedingTorrents(ctx context.Context) download.SeedingSet {
+	if s.download == nil {
+		return download.NewSeedingSet(true, nil, nil)
+	}
+	return s.download.SeedingTorrents(ctx)
 }
 
 // RetagLibrary queues every track file for a full rewrite, whatever it

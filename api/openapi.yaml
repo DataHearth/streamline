@@ -4401,8 +4401,26 @@ paths:
       operationId: CommitImport
       description: |
         Answers 503 when a `book` scan is committed without a Hardcover API
-        key.
+        key. The body is optional; `write_tags` applies to music scans only.
       tags: [library]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                write_tags:
+                  type: boolean
+                  description: |
+                    Music scans: queue the adopted files for the music tag
+                    writer and tag them as each album is committed, and mark
+                    the albums the commit brings in (those holding no file yet) as managed (re-tagged on
+                    their own under `managed`). Off leaves the files as they
+                    are and the new albums unmanaged; an album that already
+                    held files keeps its own setting. Defaults to on unless
+                    `library.music_tags.mode` is `off`. A file a torrent still
+                    serves is tagged once the torrent is gone.
       responses:
         "202":
           $ref: "#/components/responses/ImportScan"
@@ -12943,6 +12961,12 @@ components:
         file_count:
           type: integer
           x-go-type: uint16
+        seeding_files:
+          type: integer
+          description: |
+            How many of the folder's audio files a torrent the download
+            clients still list serves, read live. Tags are written to those
+            only once the torrent is removed from its client.
         decision:
           type: string
           enum: [pending, accept, skip]
