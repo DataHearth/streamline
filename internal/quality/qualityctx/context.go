@@ -129,8 +129,8 @@ func ContextFromRow(f *ent.MediaFile) quality.ReleaseContext {
 		Codec:          f.ParsedCodec,
 		EmptyIsUnknown: true,
 	}
-	if w := quality.ResolutionFromWidth(int(f.Width)); w != "" {
-		r.Resolution = w
+	if res := quality.ResolutionFromDims(int(f.Width), int(f.Height)); res != "" {
+		r.Resolution = res
 	}
 	if f.VideoCodec != "" {
 		r.Codec = f.VideoCodec
@@ -161,7 +161,7 @@ func splitLangs(s string) []string {
 
 // ContextFromFile scores a file by its name — a file inside a torrent, which
 // has no row yet. For a file already in the library use ContextFromRow: its
-// name has been through the renamer. Probe data (width, codec) wins over the
+// name has been through the renamer. Probe data (dimensions, codec) wins over the
 // filename parse when present; seeder conditions can never match a file.
 func ContextFromFile(
 	basename string,
@@ -177,8 +177,8 @@ func ContextFromFile(
 	if info == nil {
 		return r
 	}
-	if w := quality.ResolutionFromWidth(int(info.Width)); w != "" {
-		r.Resolution = w
+	if res := quality.ResolutionFromDims(int(info.Width), int(info.Height)); res != "" {
+		r.Resolution = res
 	}
 	if info.VideoCodec != "" {
 		r.Codec = info.VideoCodec

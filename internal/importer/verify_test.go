@@ -70,6 +70,33 @@ var _ = Describe("verifyFile", Label("unit", "importer"), func() {
 		)).To(HaveLen(1))
 	})
 
+	It("does not hold a 4:3 1080p file whose width is cropped", func() {
+		Expect(verifyFile(
+			"f.mkv",
+			parsed1080,
+			&ffmpeg.Info{
+				Width:       1436,
+				Height:      1080,
+				DurationSec: 6000,
+				VideoCodec:  "hevc",
+			},
+			nil,
+			100,
+			nil,
+			0.5,
+		)).To(BeEmpty())
+	})
+
+	It("holds a claimed file with no video stream as 480p", func() {
+		rs := verifyFile(
+			"f.mkv", parsed1080,
+			&ffmpeg.Info{DurationSec: 6000, VideoCodec: "hevc"},
+			nil, 100, nil, 0.5,
+		)
+		Expect(rs).To(HaveLen(1))
+		Expect(rs[0].Actual).To(Equal("480p"))
+	})
+
 	It("skips the resolution check when nothing was claimed", func() {
 		Expect(verifyFile(
 			"f.mkv",
