@@ -151,7 +151,7 @@ From the **Episodes** tab, the season header has its own **Search season** butto
 
 Every name in a title's **Cast** tab is a link. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play there.
 
-Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the phone search screen and the tablet search panel all list matching people under the title hits, with the number of library titles each appears in.
+Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>, or the search bar at the top of the page) and the full-screen search on phones and tablets both list matching people under the title hits, with the number of library titles each appears in.
 
 There is no people database: a person exists exactly as long as a title crediting them does. Someone who appears in nothing you have is not findable, and delete their only title and their page goes with it.
 

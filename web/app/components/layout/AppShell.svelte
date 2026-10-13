@@ -21,9 +21,16 @@
 	let addArtistOpen = $state(false);
 	let addBookOpen = $state(false);
 	// Below md the add/request flow is a full-screen search rather than the split
-	// modal, and search itself is a screen rather than the centred palette —
-	// different components, not something CSS can pick.
+	// modal — different components, not something CSS can pick.
 	let compact = $state(false);
+	// Phones and tablets get the full-screen search, whose field and results sit
+	// above an on-screen keyboard; desktops (mouse or trackpad) get the centred
+	// command palette. A device counts as touch when touch is its primary input,
+	// so a tablet with a mouse attached keeps the full-screen search; any window
+	// below md gets it too. Width alone could not decide: a landscape tablet
+	// (≈1180px) is as wide as a laptop, and its keyboard covered most of the
+	// palette.
+	let touchSearch = $state(false);
 
 	onMount(() => {
 		const onOpenMovie = () => (addMovieOpen = true);
@@ -38,12 +45,17 @@
 		const syncCompact = () => (compact = mql.matches);
 		syncCompact();
 		mql.addEventListener("change", syncCompact);
+		const touch = window.matchMedia("(max-width: 767px), (hover: none) and (pointer: coarse)");
+		const syncTouch = () => (touchSearch = touch.matches);
+		syncTouch();
+		touch.addEventListener("change", syncTouch);
 		return () => {
 			window.removeEventListener("streamline:open-add-movie", onOpenMovie);
 			window.removeEventListener("streamline:open-add-series", onOpenSeries);
 			window.removeEventListener("streamline:open-add-artist", onOpenArtist);
 			window.removeEventListener("streamline:open-add-book", onOpenBook);
 			mql.removeEventListener("change", syncCompact);
+			touch.removeEventListener("change", syncTouch);
 		};
 	});
 </script>
@@ -74,7 +86,7 @@
 	<BottomNav />
 	<AddButton />
 </div>
-{#if compact}
+{#if touchSearch}
 	<SearchScreen />
 {:else}
 	<CommandPalette />

@@ -17,7 +17,6 @@
 	import { auth } from "@lib/auth.svelte";
 	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
-	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -358,12 +357,12 @@
 		type="button"
 		onclick={openPalette}
 		aria-label={i18n.palette_open()}
-		class="hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
+		class="hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted md:flex"
 	>
 		<Search size={14} aria-hidden="true" />
 		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
 		<kbd
-			class="rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint"
+			class="hidden rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint lg:pointer-fine:inline"
 		>
 			⌘ K
 		</kbd>
@@ -372,7 +371,6 @@
 	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
 	     a flex-1 here took half the header from the breadcrumbs. -->
 	<div class="flex flex-none items-center justify-end gap-2 lg:flex-1">
-		<SearchField />
 		<button
 			type="button"
 			onclick={openPalette}
