@@ -336,6 +336,7 @@ var _ = Describe(
 						},
 						Episodes: []metadata.EpisodeInfo{
 							{SeasonNumber: 1, Number: 1, Title: "Pilot"},
+							{SeasonNumber: 1, Number: 2, Title: "Cat's in the Bag"},
 						},
 					}, nil).Once()
 				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
@@ -384,6 +385,44 @@ var _ = Describe(
 				dstInfo, err := os.Stat(mf.Path)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(os.SameFile(srcInfo, dstInfo)).To(BeFalse())
+
+				// A destination collision must fail the show when no episode was
+				// imported, rather than reporting the reused show as attached.
+				failedSrcDir := filepath.Join(srcDir, "retry", "Breaking Bad")
+				failedSrc := filepath.Join(failedSrcDir, "Breaking Bad S01E02.mkv")
+				Expect(os.MkdirAll(failedSrcDir, 0o755)).To(Succeed())
+				Expect(os.WriteFile(failedSrc, make([]byte, 60*1024*1024), 0o644)).To(Succeed())
+				failedDst := filepath.Join(
+					libDir, "Breaking Bad", "Season 01", "Breaking Bad - S01E02.mkv",
+				)
+				Expect(os.WriteFile(failedDst, []byte("existing"), 0o644)).To(Succeed())
+				failedScan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
+					SourcePath: failedSrcDir,
+					Kind:       entimportscan.KindSeries,
+					Mode:       entimportscan.ModeRename,
+					ImportMode: entimportscan.ImportModeCopy,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(store.UpdateImportScanStatus(
+					ctx, failedScan.ID, entimportscan.StatusAwaitingReview,
+					db.UpdateScanStatusOpts{},
+				)).To(Succeed())
+				showID := show.ID
+				Expect(store.BulkCreateImportScanShows(ctx, failedScan.ID,
+					[]db.CreateImportScanShowParams{{
+						FolderPath: failedSrcDir, ParsedTitle: "Breaking Bad",
+						Classification:   entimportscanshow.ClassificationConfirmed,
+						ExistingTvshowID: &showID, FileCount: 1,
+					}},
+				)).To(Succeed())
+				svc.runCommitSeries(ctx, failedScan)
+				failedShow, err := client.ImportScanShow.Query().
+					Where(
+						entimportscanshow.OutcomeEQ(entimportscanshow.OutcomeFailed),
+						entimportscanshow.OutcomeMessageContains("no matched episode files"),
+					).Only(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(failedShow.Outcome).To(Equal(entimportscanshow.OutcomeFailed))
 			},
 		)
 	},

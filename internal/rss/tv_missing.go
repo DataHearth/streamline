@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -12,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
 	"github.com/datahearth/streamline/internal/quality/qualityctx"
@@ -27,6 +29,7 @@ type EpisodeMissingSearcher struct {
 	store     EligibleEpisodeLister
 	indexers  TVIndexerSearcher
 	downloads EpisodeGrabber
+	running   sync.Map
 }
 
 func NewEpisodeMissingSearcher(
@@ -72,8 +75,14 @@ func (s *EpisodeMissingSearcher) Run(ctx context.Context) error {
 	// future multi-season producer cannot re-search what it already covered.
 	grabbed := make(map[uint32]struct{})
 	for i, show := range shows {
-		scheduler.Progress(ctx, i, len(shows))
-		s.searchShow(ctx, show, grabbed)
+		if _, loaded := s.running.LoadOrStore(show.ID, struct{}{}); loaded {
+			continue
+		}
+		func() {
+			defer s.running.Delete(show.ID)
+			scheduler.Progress(ctx, i, len(shows))
+			s.searchShow(ctx, show, grabbed)
+		}()
 	}
 	return nil
 }
@@ -104,6 +113,25 @@ func (s *EpisodeMissingSearcher) SearchShow(
 		s.searchShow(ctx, show, grabbed)
 	}
 	return nil
+}
+
+// StartSearchShow accepts a series-scoped search without tying its lifetime to
+// the HTTP request. Repeated requests for a series already being searched are
+// harmless and do not start a second pass.
+func (s *EpisodeMissingSearcher) StartSearchShow(ctx context.Context, showID uint32) {
+	if _, loaded := s.running.LoadOrStore(showID, struct{}{}); loaded {
+		return
+	}
+
+	ctx = context.WithoutCancel(ctx)
+	go func() {
+		defer observability.RecoverPanic(ctx, "tv series search", nil)
+		defer s.running.Delete(showID)
+		if err := s.SearchShow(ctx, showID); err != nil {
+			slog.ErrorContext(ctx, "tv missing-search: manual search failed",
+				"tvshow.id", showID, "error", err)
+		}
+	}()
 }
 
 // searchTally is what one series-scoped search pass did, aggregated across the

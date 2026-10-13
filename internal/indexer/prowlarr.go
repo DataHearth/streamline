@@ -246,6 +246,8 @@ func (p *Prowlarr) get(
 	case resp.StatusCode == http.StatusUnauthorized,
 		resp.StatusCode == http.StatusForbidden:
 		return fmt.Errorf("%w: status %d", ErrUnauthorized, resp.StatusCode)
+	case resp.StatusCode == http.StatusBadRequest:
+		return fmt.Errorf("%w: status %d: %w", ErrUnexpectedStatus, resp.StatusCode, ErrBadRequest)
 	case resp.StatusCode != http.StatusOK:
 		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
 	}

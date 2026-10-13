@@ -457,7 +457,7 @@ Governs [selective file download](First-Run-Setup#selective-file-download) — g
 
 #### Path mappings
 
-Streamline never tells your download client where to save — it sets the torrent's category to `streamline` and nothing else. Where the files land is decided by that category's save path in the client, and Streamline expects to find them at `library.download_path/<torrent name>`.
+For qBittorrent, Streamline sends `library.download_path` as the torrent's explicit `savepath` and tags it with the `streamline` category. This keeps a Streamline-added torrent in the path the importer expects, even when qBittorrent uses Manual torrent management. For torrents added by hand, qBittorrent only applies a category's save path under Automatic Torrent Management; see [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found).
 
 That works as long as both processes see the same files at the same path. In Docker or Kubernetes they often don't: if qBittorrent mounts your media volume at `/data` and Streamline mounts it at `/srv`, every path qBittorrent reports is meaningless to Streamline. `path_mappings` closes that gap:
 

@@ -108,7 +108,7 @@ Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-
 
 You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows in **Activity → Needs attention** as a proposal reading `files not found — client reports /some/path`.
 
-**qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
+**This applies to torrents you add by hand.** qBittorrent only moves those to a category's save path under Automatic Torrent Management. A torrent added in Manual mode keeps whatever save path it was added with; setting its category changes the label and nothing else, so Streamline may look under `library.download_path/<torrent name>` and find nothing. Streamline passes that path explicitly when it adds a torrent itself.
 
 The proposal names both paths so you can compare them. Two fixes:
 
@@ -118,6 +118,12 @@ The proposal names both paths so you can compare them. Two fixes:
 Either way, the proposal re-resolves on the next monitor tick.
 
 > Before this check existed, an unlocatable torrent was auto-imported anyway, failed three times on a path that never existed, and landed in History as permanently failed.
+
+## A series search request stays pending
+
+`POST /api/v1/series/{id}/search` now returns `202 Accepted` as soon as the per-series search is queued in the running process. The search continues in the background; pressing it again while that series is already being searched does not start a duplicate pass. Episode and download statuses update as releases are found. A search failure is written to the Streamline service log.
+
+`GET /api/v1/transcoding/queue` returning `409` is separate: it means transcoding is disabled, and does not cancel or report the result of a series search.
 
 ---
 

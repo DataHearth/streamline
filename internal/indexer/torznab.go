@@ -16,12 +16,13 @@ import (
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-// Categorised torznab failures. Handlers map these to 422 with friendly
+// Categorised indexer failures. Handlers map these to 422 with friendly
 // messages; anything not matching is treated as a 500 internal error.
 var (
 	ErrUnreachable      = errors.New("indexer unreachable")
 	ErrUnauthorized     = errors.New("indexer credentials rejected")
 	ErrUnexpectedStatus = errors.New("indexer returned unexpected status")
+	ErrBadRequest       = errors.New("indexer rejected search parameters")
 	ErrBadResponse      = errors.New("indexer returned malformed response")
 
 	// ErrFeedUnsupported means the protocol has no forward-feed endpoint at
@@ -223,6 +224,8 @@ func (t *Torznab) get(ctx context.Context, params url.Values, out any) error {
 	case resp.StatusCode == http.StatusUnauthorized,
 		resp.StatusCode == http.StatusForbidden:
 		return fmt.Errorf("%w: status %d", ErrUnauthorized, resp.StatusCode)
+	case resp.StatusCode == http.StatusBadRequest:
+		return fmt.Errorf("%w: status %d: %w", ErrUnexpectedStatus, resp.StatusCode, ErrBadRequest)
 	case resp.StatusCode != http.StatusOK:
 		return fmt.Errorf("%w: status %d", ErrUnexpectedStatus, resp.StatusCode)
 	}

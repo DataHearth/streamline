@@ -234,6 +234,10 @@ func (s *Service) commitShow(
 	}
 	slog.InfoContext(ctx, "series adopted",
 		"tvshow.id", show.ID, "matched", matched, "files", len(files))
+	if matched == 0 {
+		return entimportscanshow.OutcomeFailed,
+			"no matched episode files could be imported; see service logs", show.ID
+	}
 	if matched > 0 {
 		seasons := make([]uint16, 0, len(touched))
 		for n := range touched {

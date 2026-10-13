@@ -15,6 +15,7 @@ import (
 
 	"github.com/anacrolix/torrent/metainfo"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
@@ -208,9 +209,9 @@ type qbAddEnvelope struct {
 // AddTorrent uploads the source to qBittorrent and returns the infohash.
 // .torrent bytes are sent as a multipart file part so qBittorrent never has
 // to reach the indexer itself — this is what unblocks deployments where the
-// client lives in a VPN/Docker network the indexer is not on. The save path
-// is intentionally left to qBittorrent's own configuration; streamline only
-// needs to know where to read completed downloads from (library.download_path).
+// client lives in a VPN/Docker network the indexer is not on. The explicit
+// save path keeps each torrent in the root the importer reads, regardless of
+// qBittorrent's category management mode.
 func (q *QBittorrent) AddTorrent(
 	ctx context.Context,
 	src TorrentSource,
@@ -225,6 +226,9 @@ func (q *QBittorrent) AddTorrent(
 	buildBody := func() (*bytes.Buffer, string, error) {
 		buf := &bytes.Buffer{}
 		mw := multipart.NewWriter(buf)
+		if err := mw.WriteField("savepath", config.Get().Library.DownloadPath); err != nil {
+			return nil, "", err
+		}
 		if err := mw.WriteField("category", managedCategory); err != nil {
 			return nil, "", err
 		}
