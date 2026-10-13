@@ -245,18 +245,18 @@ func resolutionRank(r string) uint8 {
 	}
 }
 
-// ResolutionFromWidth buckets by WIDTH, not height — scope aspect
-// ratios crop height (1920x800 is 1080p). Same thresholds as the
-// import verifier.
-func ResolutionFromWidth(w int) string {
+// ResolutionFromDims buckets probed dimensions: either side reaching a class
+// is enough, since scope films crop height (1920x800 is 1080p) and 4:3 films
+// crop width (1440x1080 is 1080p).
+func ResolutionFromDims(w, h int) string {
 	switch {
-	case w >= 3200:
+	case w >= 3200 || h >= 2000:
 		return "2160p"
-	case w >= 1800:
+	case w >= 1800 || h >= 1000:
 		return "1080p"
-	case w >= 1200:
+	case w >= 1200 || h >= 700:
 		return "720p"
-	case w > 0:
+	case w > 0 || h > 0:
 		return "480p"
 	default:
 		return ""

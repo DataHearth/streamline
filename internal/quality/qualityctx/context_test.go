@@ -105,14 +105,24 @@ var _ = Describe("ContextFromRow", Label("unit", "quality"), func() {
 	})
 })
 
-var _ = Describe("ResolutionFromWidth", Label("unit", "quality"), func() {
-	It("buckets by width", func() {
-		Expect(quality.ResolutionFromWidth(3200)).To(Equal("2160p"))
-		Expect(quality.ResolutionFromWidth(1920)).To(Equal("1080p"))
-		Expect(quality.ResolutionFromWidth(1280)).To(Equal("720p"))
-		Expect(quality.ResolutionFromWidth(640)).To(Equal("480p"))
-		Expect(quality.ResolutionFromWidth(0)).To(Equal(""))
-	})
+var _ = Describe("ResolutionFromDims", Label("unit", "quality"), func() {
+	DescribeTable("buckets by whichever dimension reaches the higher class",
+		func(w, h int, want string) {
+			Expect(quality.ResolutionFromDims(w, h)).To(Equal(want))
+		},
+		Entry("16:9 2160p", 3840, 2160, "2160p"),
+		Entry("scope 2160p", 3840, 1600, "2160p"),
+		Entry("4:3 2160p", 2880, 2160, "2160p"),
+		Entry("16:9 1080p", 1920, 1080, "1080p"),
+		Entry("scope 1080p", 1920, 800, "1080p"),
+		Entry("4:3 1080p", 1436, 1080, "1080p"),
+		Entry("16:9 720p", 1280, 720, "720p"),
+		Entry("scope 720p", 1280, 536, "720p"),
+		Entry("4:3 720p", 960, 720, "720p"),
+		Entry("PAL DVD", 720, 576, "480p"),
+		Entry("NTSC DVD", 720, 480, "480p"),
+		Entry("no video stream", 0, 0, ""),
+	)
 })
 
 var _ = Describe("stream fields", Label("unit", "quality"), func() {

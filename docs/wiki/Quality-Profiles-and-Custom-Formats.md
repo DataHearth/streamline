@@ -97,7 +97,7 @@ ffprobe records more than the conditions expose. These are stored and shown on t
 
 | Probed and shown | Matchable? |
 | --- | --- |
-| Width / height | ✅ via `resolution` (bucketed by **width**) |
+| Width / height | ✅ via `resolution` (bucketed by width or height, whichever reaches the higher class) |
 | Video codec | ✅ via `codec` |
 | Audio stream count | ✅ via `audio_tracks` |
 | Audio / subtitle languages | ✅ via `audio_language` / `subtitle_language` |

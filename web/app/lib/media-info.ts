@@ -40,30 +40,20 @@ export function isProbed(src: { media_info?: MediaInfo | null }): boolean {
 
 // ── single fields ─────────────────────────────────────────────────────────
 
-// ffprobe reports dimensions, not the bucket everyone names a file by. Width
-// alone decides it: a 2.39:1 2160p release is 3840×1600, so height would call
-// it 1600p. These thresholds must stay identical to the importer's verifier
-// (`widthBucket` in internal/importer/verify.go) — a file the backend held as
-// 720p and this labelled 1080p is an admin resolving a hold against two
-// contradictory numbers. Height is only consulted when there is no width.
+// ffprobe reports dimensions, not the bucket everyone names a file by. Must
+// match `quality.ResolutionFromDims` in internal/quality/quality.go, or an
+// admin resolves a 720p hold against a file labelled 1080p here.
 export function resolutionBucket(
 	width?: number,
 	height?: number,
 ): string | undefined {
 	const w = width ?? 0;
 	const h = height ?? 0;
-	if (w) {
-		if (w >= 3200) return "2160p";
-		if (w >= 1800) return "1080p";
-		if (w >= 1200) return "720p";
-		return "480p";
-	}
-	if (!h) return undefined;
-	if (h >= 1700) return "2160p";
-	if (h >= 900) return "1080p";
-	if (h >= 620) return "720p";
-	if (h >= 400) return "480p";
-	return `${h}p`;
+	if (w >= 3200 || h >= 2000) return "2160p";
+	if (w >= 1800 || h >= 1000) return "1080p";
+	if (w >= 1200 || h >= 700) return "720p";
+	if (w || h) return "480p";
+	return undefined;
 }
 
 // Labels are human; the values stored in a quality profile's `allowed_codecs`
