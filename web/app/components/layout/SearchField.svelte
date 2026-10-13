@@ -112,6 +112,18 @@
 			transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
 			class="absolute right-0 top-[calc(100%+8px)] z-50 max-h-[420px] w-[520px] overflow-y-auto overscroll-contain rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
 		>
+			{#if !model.matched}
+				<div
+					class="px-3 text-center text-[12.5px] text-fg-subtle {model.lookupShown
+						? 'pb-1 pt-4'
+						: 'py-7'}"
+				>
+					{model.lookupShown
+						? i18n.search_no_library_matches_for({ query: query.trim() })
+						: i18n.search_no_matches_for({ query: query.trim() })}
+				</div>
+			{/if}
+
 			{#each model.sections as section (section.id)}
 				<div
 					class="flex items-baseline justify-between px-2.5 pb-1 pt-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
@@ -130,12 +142,6 @@
 					<SearchResultRow {item} dense onpick={pick} />
 				{/each}
 			{/each}
-
-			{#if model.flat.length === 0}
-				<div class="px-3 py-7 text-center text-[12.5px] text-fg-subtle">
-					{i18n.search_no_matches_for({ query: query.trim() })}
-				</div>
-			{/if}
 		</div>
 	{/if}
 </div>

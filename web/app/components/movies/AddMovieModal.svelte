@@ -91,10 +91,10 @@
 			showPanelOnNarrow = false;
 			return;
 		}
-		// Seed pick-mode searches from the caller (e.g. the import file's
-		// parsed title) so the candidates surface immediately, skipping the
-		// debounce on first paint.
-		if (mode === "pick" && seedQuery) {
+		// Seed the search from the caller (the import file's parsed title in pick
+		// mode, what the global search had typed in add mode) so the candidates
+		// surface immediately, skipping the debounce on first paint.
+		if (seedQuery) {
 			query = seedQuery;
 			debounced = seedQuery.trim();
 		}

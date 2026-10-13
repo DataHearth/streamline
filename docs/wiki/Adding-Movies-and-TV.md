@@ -23,6 +23,8 @@ How a title gets from "I'd like to watch that" to a file on disk.
 
 Click the **+** button (or press it in the bottom bar on mobile) → **Movie**. Type a title. Results come from TMDB.
 
+You can also start from search: the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), the search icon on a phone or the search field on a tablet. Whatever in your library matches is listed first. Under it, once you have typed two characters, **Search movies for "…"** and **Search series for "…"** (and artists and books) open the add screen already searching what you typed. Those rows are there whether or not your library matched. Nothing is looked up outside your library until you pick one.
+
 Pick the right one — check the year, posters help — and you'll be asked for two things:
 
 - **Quality profile** — leave it on the default unless this particular film deserves different treatment

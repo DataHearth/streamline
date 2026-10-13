@@ -6,7 +6,8 @@
 // "Titles" group and lead the list, because on a phone what you came for is
 // almost always a title and three eyebrows above the first poster is three too
 // many. The palette keeps its own order (pages and actions first), where a
-// keyboard makes jumping the point.
+// keyboard makes jumping the point. Either way the rows that look a title up
+// outside the library come last.
 
 import { onMount, type Component } from "svelte";
 import { goto } from "@roxi/routify";
@@ -29,6 +30,7 @@ import {
 	LogOut,
 } from "@lucide/svelte";
 import { api, type Paginated } from "./api";
+import { openAdd, type AddKind } from "./add-flow";
 import { artistPosterUrl, bookPosterUrl } from "./posters";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
@@ -87,6 +89,16 @@ export type BookItem = {
 	// A series folds into one row, as it folds into one card on the shelf.
 	series: boolean;
 };
+// Opens one add/request flow already searching `query`. The flow does the
+// calling, never this list, and the row names the kind of title, not where it
+// is looked up: which provider answers is the backend's business and may change.
+export type LookupItem = {
+	kind: "lookup";
+	media: AddKind;
+	label: string;
+	query: string;
+	icon: Component;
+};
 export type SearchItem =
 	| PageItem
 	| ActionItem
@@ -94,7 +106,8 @@ export type SearchItem =
 	| SeriesItem
 	| ArtistItem
 	| BookItem
-	| PersonItem;
+	| PersonItem
+	| LookupItem;
 // The four kinds that lead to a title's own page.
 export const isTitleItem = (i: SearchItem): i is MovieItem | SeriesItem | ArtistItem | BookItem =>
 	i.kind === "movie" || i.kind === "series" || i.kind === "artist" || i.kind === "book";
@@ -106,7 +119,8 @@ export type SectionId =
 	| "books"
 	| "people"
 	| "pages"
-	| "actions";
+	| "actions"
+	| "lookup";
 export type SearchSection = {
 	id: SectionId;
 	label: string;
@@ -141,8 +155,31 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },
 ];
 
+const ADD_KINDS: AddKind[] = ["movie", "series", "artist", "book"];
+const MEDIA_ICON: Record<AddKind, Component> = {
+	movie: Film,
+	series: Tv,
+	artist: Music,
+	book: BookOpen,
+};
+
+function lookupLabel(media: AddKind, query: string): string {
+	if (media === "movie") return i18n.search_lookup_movie({ query });
+	if (media === "series") return i18n.search_lookup_series({ query });
+	if (media === "artist") return i18n.search_lookup_artist({ query });
+	return i18n.search_lookup_book({ query });
+}
+
+function mediaLabel(media: AddKind): string {
+	if (media === "movie") return i18n.common_movie();
+	if (media === "series") return i18n.settings_series();
+	if (media === "artist") return i18n.common_artist();
+	return i18n.common_book();
+}
+
 export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return i18n.search_kind_navigate();
+	if (item.kind === "lookup") return mediaLabel(item.media);
 	if (item.kind === "action") return i18n.common_action();
 	if (item.kind === "person") return i18n.common_person();
 	if (item.kind === "artist") return i18n.common_artist();
@@ -158,18 +195,6 @@ export function itemSubline(item: SearchItem): string {
 	return "";
 }
 
-function openAddMovie() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
-}
-function openAddSeries() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
-}
-function openAddArtist() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
-}
-function openAddBook() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
-}
 async function signOut() {
 	try {
 		await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -241,32 +266,49 @@ export function createSearchModel(
 				kind: "action",
 				label: direct ? i18n.search_add_movie() : i18n.search_request_movie(),
 				icon: Film,
-				run: openAddMovie,
+				run: () => openAdd("movie"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_series() : i18n.search_request_series(),
 				icon: Tv,
-				run: openAddSeries,
+				run: () => openAdd("series"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_artist() : i18n.search_request_artist(),
 				icon: Music,
-				run: openAddArtist,
+				run: () => openAdd("artist"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_book() : i18n.search_request_book(),
 				icon: BookOpen,
-				run: openAddBook,
+				run: () => openAdd("book"),
 			},
 			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
 	}
 
+	// The way out of the library, one row per add flow. Built from the live
+	// query rather than the debounced one: picking a row is what calls a
+	// provider, so there is no call per keystroke to save, and the row then
+	// names exactly what the flow will search. Present whether or not the
+	// library matched — a hit on one title says nothing about the one you meant.
+	function lookups(query: string): LookupItem[] {
+		if (query.length < TITLE_MIN) return [];
+		return ADD_KINDS.map((media) => ({
+			kind: "lookup",
+			media,
+			label: lookupLabel(media, query),
+			query,
+			icon: MEDIA_ICON[media],
+		}));
+	}
+
 	let sections = $derived.by<SearchSection[]>(() => {
-		const q = fold(getQuery().trim());
+		const typedNow = getQuery().trim();
+		const q = fold(typedNow);
 		const movieHits: MovieItem[] = enabled
 			? (moviesQuery.data?.items ?? []).map((m) => ({
 					kind: "movie",
@@ -345,11 +387,31 @@ export function createSearchModel(
 				items: matchedActions,
 			});
 
-		return opts.compact ? [...titles, ...rest] : [...rest, ...titles];
+		const lookup: SearchSection[] = [];
+		const lookupItems = lookups(typedNow);
+		if (lookupItems.length)
+			lookup.push({
+				id: "lookup",
+				// request_only users request rather than add, as the actions say.
+				label: auth.canAddDirectly ? i18n.search_lookup_add() : i18n.search_lookup_request(),
+				items: lookupItems,
+			});
+
+		return opts.compact
+			? [...titles, ...rest, ...lookup]
+			: [...rest, ...titles, ...lookup];
 	});
 
 	let flat = $derived(sections.flatMap((s) => s.items));
 	let titleHits = $derived(flat.filter(isTitleItem).length);
+	// Whether anything but the lookup rows answered. False is the empty state,
+	// which the surfaces draw above the lookup rows, since those are always there
+	// once the query is long enough.
+	let matched = $derived(flat.some((i) => i.kind !== "lookup"));
+	// Whether the lookup rows are on the list, which changes what the empty
+	// state says: "nothing in your library" with somewhere else to look, plain
+	// "no matches" for a query too short to look anywhere.
+	let lookupShown = $derived(sections.some((s) => s.id === "lookup"));
 	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
 	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
 	// absent rather than claiming zero while the panel is still closed.
@@ -371,6 +433,12 @@ export function createSearchModel(
 		get titleHits(): number {
 			return titleHits;
 		},
+		get matched(): boolean {
+			return matched;
+		},
+		get lookupShown(): boolean {
+			return lookupShown;
+		},
 		get searchable(): number | null {
 			return searchable;
 		},
@@ -386,6 +454,10 @@ export function searchNav() {
 	return function activate(item: SearchItem) {
 		if (item.kind === "action") {
 			item.run();
+			return;
+		}
+		if (item.kind === "lookup") {
+			openAdd(item.media, item.query);
 			return;
 		}
 		if (!navigate) return;

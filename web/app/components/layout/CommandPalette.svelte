@@ -54,18 +54,22 @@
 		queueMicrotask(() => prevFocus?.focus());
 	}
 
-	function hide() {
+	// `then` runs once the dialog has closed, in place of handing focus back to
+	// what had it before the palette opened.
+	function hide(then?: () => void) {
 		if (!open || closing) return;
 		const d = dialogEl;
+		const done = () => (then ? then() : restoreFocus());
 		if (!d?.open) {
 			open = false;
+			then?.();
 			return;
 		}
 		// Reduced motion: close immediately, no exit transition to wait on.
 		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			open = false;
 			d.close();
-			restoreFocus();
+			done();
 			return;
 		}
 		// Animate the exit by fading the box out (.is-closing) while the dialog
@@ -79,7 +83,7 @@
 			closing = false;
 			open = false;
 			d.close();
-			restoreFocus();
+			done();
 		};
 		const onEnd = (e: TransitionEvent) => {
 			if (e.target === d && e.propertyName === "opacity") finish();
@@ -96,6 +100,15 @@
 	}
 
 	function activate(item: SearchItem) {
+		// An action or a lookup row opens another dialog. While this modal
+		// <dialog> is open everything outside it is inert, so a dialog opened
+		// during the exit animation could not take focus, and restoring focus
+		// afterwards then left it on <body>: Escape and typing never reached the
+		// add modal. Open it once the palette has closed and let it take focus.
+		if (item.kind === "action" || item.kind === "lookup") {
+			hide(() => navigateTo(item));
+			return;
+		}
 		hide();
 		navigateTo(item);
 	}
@@ -116,7 +129,7 @@
 			return;
 		}
 		// Escape is left to the native <dialog>, which closes with the exit
-		// animation and fires `close` → onclose={hide} for state cleanup.
+		// animation and fires `close` → hide() for state cleanup.
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
 			if (flat.length === 0) return;
@@ -174,7 +187,7 @@
 	class:is-closing={closing}
 	onclick={onBackdropClick}
 	oncancel={onCancel}
-	onclose={hide}
+	onclose={() => hide()}
 >
 	<div class="flex flex-col max-h-[70dvh]">
 			<div
@@ -201,6 +214,19 @@
 			</div>
 
 			<div class="flex-1 overflow-y-auto p-1.5">
+				{#if !model.matched}
+					<div
+						class={cn(
+							"px-3 text-center text-[12.5px] text-fg-subtle",
+							model.lookupShown ? "pb-1 pt-5" : "py-8",
+						)}
+					>
+						{model.lookupShown
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
+					</div>
+				{/if}
+
 				{#each sections as section, sIdx (section.label)}
 					<div
 						class="px-3 pt-2.5 pb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
@@ -312,11 +338,14 @@
 									</div>
 								{/if}
 							</div>
-							<span
-								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
-							>
-								{itemKindLabel(item)}
-							</span>
+							<!-- A lookup row's label already names its kind. -->
+							{#if item.kind !== "lookup"}
+								<span
+									class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
+								>
+									{itemKindLabel(item)}
+								</span>
+							{/if}
 							{#if active}
 								<ArrowRight
 									size={12}
@@ -327,12 +356,6 @@
 						</button>
 					{/each}
 				{/each}
-
-				{#if flat.length === 0}
-					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
-					</div>
-				{/if}
 			</div>
 
 			<footer

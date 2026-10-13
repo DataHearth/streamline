@@ -130,6 +130,23 @@
 		<div
 			class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
 		>
+			<!-- Above the sections: when nothing matched, the only one left is the
+			     lookup rows, and the empty state is what introduces them. -->
+			{#if !model.matched}
+				<div
+					class="flex flex-col items-center gap-2.5 px-6 text-center {model.lookupShown
+						? 'pb-2 pt-8'
+						: 'py-14'}"
+				>
+					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
+					<p class="text-[13.5px] text-fg-subtle">
+						{model.lookupShown
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
+					</p>
+				</div>
+			{/if}
+
 			{#each model.sections as section (section.id)}
 				<div
 					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
@@ -148,15 +165,6 @@
 					<SearchResultRow {item} onpick={pick} />
 				{/each}
 			{/each}
-
-			{#if model.flat.length === 0}
-				<div class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
-					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
-					<p class="text-[13.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
-					</p>
-				</div>
-			{/if}
 		</div>
 	</div>
 {/if}

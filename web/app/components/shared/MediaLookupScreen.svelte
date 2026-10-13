@@ -52,8 +52,10 @@
 		kind: "movie" | "series";
 		open: boolean;
 		onClose: () => void;
+		// What the global search had typed; the screen opens already searching it.
+		seedQuery?: string;
 	};
-	let { kind, open, onClose }: Props = $props();
+	let { kind, open, onClose, seedQuery = "" }: Props = $props();
 
 	type Hit = {
 		id: number;
@@ -105,8 +107,15 @@
 			return;
 		}
 		lockScroll();
-		// The field is the whole point of the screen — open with the keyboard up.
-		tick().then(() => input?.focus());
+		if (seedQuery) {
+			// Arriving with a query, the results are the point: search it now,
+			// skipping the debounce, and leave the keyboard down over the grid.
+			query = seedQuery;
+			debounced = seedQuery.trim();
+		} else {
+			// The field is the whole point of the screen — open with the keyboard up.
+			tick().then(() => input?.focus());
+		}
 		return unlockScroll;
 	});
 
