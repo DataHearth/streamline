@@ -113,6 +113,7 @@ type AlbumMutation struct {
 	monitored               *bool
 	monitor_pinned          *bool
 	tags_managed            *bool
+	art_sidecar_hash        *string
 	grab_failures           *uint8
 	addgrab_failures        *int8
 	last_search_at          *time.Time
@@ -845,6 +846,55 @@ func (m *AlbumMutation) OldTagsManaged(ctx context.Context) (v bool, err error) 
 // ResetTagsManaged resets all changes to the "tags_managed" field.
 func (m *AlbumMutation) ResetTagsManaged() {
 	m.tags_managed = nil
+}
+
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (m *AlbumMutation) SetArtSidecarHash(s string) {
+	m.art_sidecar_hash = &s
+}
+
+// ArtSidecarHash returns the value of the "art_sidecar_hash" field in the mutation.
+func (m *AlbumMutation) ArtSidecarHash() (r string, exists bool) {
+	v := m.art_sidecar_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtSidecarHash returns the old "art_sidecar_hash" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldArtSidecarHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtSidecarHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtSidecarHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtSidecarHash: %w", err)
+	}
+	return oldValue.ArtSidecarHash, nil
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (m *AlbumMutation) ClearArtSidecarHash() {
+	m.art_sidecar_hash = nil
+	m.clearedFields[album.FieldArtSidecarHash] = struct{}{}
+}
+
+// ArtSidecarHashCleared returns if the "art_sidecar_hash" field was cleared in this mutation.
+func (m *AlbumMutation) ArtSidecarHashCleared() bool {
+	_, ok := m.clearedFields[album.FieldArtSidecarHash]
+	return ok
+}
+
+// ResetArtSidecarHash resets all changes to the "art_sidecar_hash" field.
+func (m *AlbumMutation) ResetArtSidecarHash() {
+	m.art_sidecar_hash = nil
+	delete(m.clearedFields, album.FieldArtSidecarHash)
 }
 
 // SetGrabFailures sets the "grab_failures" field.
@@ -1669,7 +1719,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 26)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1711,6 +1761,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.tags_managed != nil {
 		fields = append(fields, album.FieldTagsManaged)
+	}
+	if m.art_sidecar_hash != nil {
+		fields = append(fields, album.FieldArtSidecarHash)
 	}
 	if m.grab_failures != nil {
 		fields = append(fields, album.FieldGrabFailures)
@@ -1781,6 +1834,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.MonitorPinned()
 	case album.FieldTagsManaged:
 		return m.TagsManaged()
+	case album.FieldArtSidecarHash:
+		return m.ArtSidecarHash()
 	case album.FieldGrabFailures:
 		return m.GrabFailures()
 	case album.FieldLastSearchAt:
@@ -1840,6 +1895,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMonitorPinned(ctx)
 	case album.FieldTagsManaged:
 		return m.OldTagsManaged(ctx)
+	case album.FieldArtSidecarHash:
+		return m.OldArtSidecarHash(ctx)
 	case album.FieldGrabFailures:
 		return m.OldGrabFailures(ctx)
 	case album.FieldLastSearchAt:
@@ -1968,6 +2025,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTagsManaged(v)
+		return nil
+	case album.FieldArtSidecarHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtSidecarHash(v)
 		return nil
 	case album.FieldGrabFailures:
 		v, ok := value.(uint8)
@@ -2109,6 +2173,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldGenres) {
 		fields = append(fields, album.FieldGenres)
 	}
+	if m.FieldCleared(album.FieldArtSidecarHash) {
+		fields = append(fields, album.FieldArtSidecarHash)
+	}
 	if m.FieldCleared(album.FieldLastSearchAt) {
 		fields = append(fields, album.FieldLastSearchAt)
 	}
@@ -2167,6 +2234,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldGenres:
 		m.ClearGenres()
+		return nil
+	case album.FieldArtSidecarHash:
+		m.ClearArtSidecarHash()
 		return nil
 	case album.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -2244,6 +2314,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldTagsManaged:
 		m.ResetTagsManaged()
+		return nil
+	case album.FieldArtSidecarHash:
+		m.ResetArtSidecarHash()
 		return nil
 	case album.FieldGrabFailures:
 		m.ResetGrabFailures()
@@ -3127,6 +3200,7 @@ type ArtistMutation struct {
 	quality_profile         *string
 	last_refreshed_at       *time.Time
 	details_fetched_at      *time.Time
+	art_sidecar_hash        *string
 	clearedFields           map[string]struct{}
 	albums                  map[uint32]struct{}
 	removedalbums           map[uint32]struct{}
@@ -4203,6 +4277,55 @@ func (m *ArtistMutation) ResetDetailsFetchedAt() {
 	delete(m.clearedFields, artist.FieldDetailsFetchedAt)
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (m *ArtistMutation) SetArtSidecarHash(s string) {
+	m.art_sidecar_hash = &s
+}
+
+// ArtSidecarHash returns the value of the "art_sidecar_hash" field in the mutation.
+func (m *ArtistMutation) ArtSidecarHash() (r string, exists bool) {
+	v := m.art_sidecar_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldArtSidecarHash returns the old "art_sidecar_hash" field's value of the Artist entity.
+// If the Artist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtistMutation) OldArtSidecarHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldArtSidecarHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldArtSidecarHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldArtSidecarHash: %w", err)
+	}
+	return oldValue.ArtSidecarHash, nil
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (m *ArtistMutation) ClearArtSidecarHash() {
+	m.art_sidecar_hash = nil
+	m.clearedFields[artist.FieldArtSidecarHash] = struct{}{}
+}
+
+// ArtSidecarHashCleared returns if the "art_sidecar_hash" field was cleared in this mutation.
+func (m *ArtistMutation) ArtSidecarHashCleared() bool {
+	_, ok := m.clearedFields[artist.FieldArtSidecarHash]
+	return ok
+}
+
+// ResetArtSidecarHash resets all changes to the "art_sidecar_hash" field.
+func (m *ArtistMutation) ResetArtSidecarHash() {
+	m.art_sidecar_hash = nil
+	delete(m.clearedFields, artist.FieldArtSidecarHash)
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by ids.
 func (m *ArtistMutation) AddAlbumIDs(ids ...uint32) {
 	if m.albums == nil {
@@ -4399,7 +4522,7 @@ func (m *ArtistMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtistMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, artist.FieldCreateTime)
 	}
@@ -4460,6 +4583,9 @@ func (m *ArtistMutation) Fields() []string {
 	if m.details_fetched_at != nil {
 		fields = append(fields, artist.FieldDetailsFetchedAt)
 	}
+	if m.art_sidecar_hash != nil {
+		fields = append(fields, artist.FieldArtSidecarHash)
+	}
 	return fields
 }
 
@@ -4508,6 +4634,8 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 		return m.LastRefreshedAt()
 	case artist.FieldDetailsFetchedAt:
 		return m.DetailsFetchedAt()
+	case artist.FieldArtSidecarHash:
+		return m.ArtSidecarHash()
 	}
 	return nil, false
 }
@@ -4557,6 +4685,8 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldLastRefreshedAt(ctx)
 	case artist.FieldDetailsFetchedAt:
 		return m.OldDetailsFetchedAt(ctx)
+	case artist.FieldArtSidecarHash:
+		return m.OldArtSidecarHash(ctx)
 	}
 	return nil, fmt.Errorf("unknown Artist field %s", name)
 }
@@ -4706,6 +4836,13 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDetailsFetchedAt(v)
 		return nil
+	case artist.FieldArtSidecarHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetArtSidecarHash(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
 }
@@ -4808,6 +4945,9 @@ func (m *ArtistMutation) ClearedFields() []string {
 	if m.FieldCleared(artist.FieldDetailsFetchedAt) {
 		fields = append(fields, artist.FieldDetailsFetchedAt)
 	}
+	if m.FieldCleared(artist.FieldArtSidecarHash) {
+		fields = append(fields, artist.FieldArtSidecarHash)
+	}
 	return fields
 }
 
@@ -4866,6 +5006,9 @@ func (m *ArtistMutation) ClearField(name string) error {
 		return nil
 	case artist.FieldDetailsFetchedAt:
 		m.ClearDetailsFetchedAt()
+		return nil
+	case artist.FieldArtSidecarHash:
+		m.ClearArtSidecarHash()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist nullable field %s", name)
@@ -4934,6 +5077,9 @@ func (m *ArtistMutation) ResetField(name string) error {
 		return nil
 	case artist.FieldDetailsFetchedAt:
 		m.ResetDetailsFetchedAt()
+		return nil
+	case artist.FieldArtSidecarHash:
+		m.ResetArtSidecarHash()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist field %s", name)
@@ -28111,6 +28257,7 @@ type MediaFileMutation struct {
 	tag_failures          *uint8
 	addtag_failures       *int8
 	tags_error            *string
+	tags_art_hash         *string
 	clearedFields         map[string]struct{}
 	movie                 *uint32
 	clearedmovie          bool
@@ -30147,6 +30294,55 @@ func (m *MediaFileMutation) ResetTagsError() {
 	delete(m.clearedFields, mediafile.FieldTagsError)
 }
 
+// SetTagsArtHash sets the "tags_art_hash" field.
+func (m *MediaFileMutation) SetTagsArtHash(s string) {
+	m.tags_art_hash = &s
+}
+
+// TagsArtHash returns the value of the "tags_art_hash" field in the mutation.
+func (m *MediaFileMutation) TagsArtHash() (r string, exists bool) {
+	v := m.tags_art_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagsArtHash returns the old "tags_art_hash" field's value of the MediaFile entity.
+// If the MediaFile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaFileMutation) OldTagsArtHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagsArtHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagsArtHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagsArtHash: %w", err)
+	}
+	return oldValue.TagsArtHash, nil
+}
+
+// ClearTagsArtHash clears the value of the "tags_art_hash" field.
+func (m *MediaFileMutation) ClearTagsArtHash() {
+	m.tags_art_hash = nil
+	m.clearedFields[mediafile.FieldTagsArtHash] = struct{}{}
+}
+
+// TagsArtHashCleared returns if the "tags_art_hash" field was cleared in this mutation.
+func (m *MediaFileMutation) TagsArtHashCleared() bool {
+	_, ok := m.clearedFields[mediafile.FieldTagsArtHash]
+	return ok
+}
+
+// ResetTagsArtHash resets all changes to the "tags_art_hash" field.
+func (m *MediaFileMutation) ResetTagsArtHash() {
+	m.tags_art_hash = nil
+	delete(m.clearedFields, mediafile.FieldTagsArtHash)
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by id.
 func (m *MediaFileMutation) SetMovieID(id uint32) {
 	m.movie = &id
@@ -30391,7 +30587,7 @@ func (m *MediaFileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaFileMutation) Fields() []string {
-	fields := make([]string, 0, 36)
+	fields := make([]string, 0, 37)
 	if m.create_time != nil {
 		fields = append(fields, mediafile.FieldCreateTime)
 	}
@@ -30500,6 +30696,9 @@ func (m *MediaFileMutation) Fields() []string {
 	if m.tags_error != nil {
 		fields = append(fields, mediafile.FieldTagsError)
 	}
+	if m.tags_art_hash != nil {
+		fields = append(fields, mediafile.FieldTagsArtHash)
+	}
 	return fields
 }
 
@@ -30580,6 +30779,8 @@ func (m *MediaFileMutation) Field(name string) (ent.Value, bool) {
 		return m.TagFailures()
 	case mediafile.FieldTagsError:
 		return m.TagsError()
+	case mediafile.FieldTagsArtHash:
+		return m.TagsArtHash()
 	}
 	return nil, false
 }
@@ -30661,6 +30862,8 @@ func (m *MediaFileMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldTagFailures(ctx)
 	case mediafile.FieldTagsError:
 		return m.OldTagsError(ctx)
+	case mediafile.FieldTagsArtHash:
+		return m.OldTagsArtHash(ctx)
 	}
 	return nil, fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -30922,6 +31125,13 @@ func (m *MediaFileMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetTagsError(v)
 		return nil
+	case mediafile.FieldTagsArtHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagsArtHash(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)
 }
@@ -31177,6 +31387,9 @@ func (m *MediaFileMutation) ClearedFields() []string {
 	if m.FieldCleared(mediafile.FieldTagsError) {
 		fields = append(fields, mediafile.FieldTagsError)
 	}
+	if m.FieldCleared(mediafile.FieldTagsArtHash) {
+		fields = append(fields, mediafile.FieldTagsArtHash)
+	}
 	return fields
 }
 
@@ -31280,6 +31493,9 @@ func (m *MediaFileMutation) ClearField(name string) error {
 		return nil
 	case mediafile.FieldTagsError:
 		m.ClearTagsError()
+		return nil
+	case mediafile.FieldTagsArtHash:
+		m.ClearTagsArtHash()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile nullable field %s", name)
@@ -31396,6 +31612,9 @@ func (m *MediaFileMutation) ResetField(name string) error {
 		return nil
 	case mediafile.FieldTagsError:
 		m.ResetTagsError()
+		return nil
+	case mediafile.FieldTagsArtHash:
+		m.ResetTagsArtHash()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaFile field %s", name)

@@ -242,6 +242,26 @@ func (_u *AlbumUpdate) SetNillableTagsManaged(v *bool) *AlbumUpdate {
 	return _u
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *AlbumUpdate) SetArtSidecarHash(v string) *AlbumUpdate {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableArtSidecarHash(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *AlbumUpdate) ClearArtSidecarHash() *AlbumUpdate {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_u *AlbumUpdate) SetGrabFailures(v uint8) *AlbumUpdate {
 	_u.mutation.ResetGrabFailures()
@@ -767,6 +787,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.TagsManaged(); ok {
 		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
+	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
 	}
@@ -1266,6 +1292,26 @@ func (_u *AlbumUpdateOne) SetNillableTagsManaged(v *bool) *AlbumUpdateOne {
 	if v != nil {
 		_u.SetTagsManaged(*v)
 	}
+	return _u
+}
+
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *AlbumUpdateOne) SetArtSidecarHash(v string) *AlbumUpdateOne {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableArtSidecarHash(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *AlbumUpdateOne) ClearArtSidecarHash() *AlbumUpdateOne {
+	_u.mutation.ClearArtSidecarHash()
 	return _u
 }
 
@@ -1823,6 +1869,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if value, ok := _u.mutation.TagsManaged(); ok {
 		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
 	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

@@ -133,13 +133,7 @@ type Store interface {
 		limit int,
 	) ([]*ent.MediaFile, error)
 	ListAlbumTagFiles(ctx context.Context, albumID uint32) ([]*ent.MediaFile, error)
-	SetMediaFileTagsWritten(
-		ctx context.Context,
-		id uint32,
-		hash string,
-		mtime, size int64,
-		at time.Time,
-	) error
+	SetMediaFileTagsWritten(ctx context.Context, id uint32, w TagWrite) error
 	SetMediaFileTagsDeferred(ctx context.Context, id uint32) error
 	RecordMediaFileTagFailure(
 		ctx context.Context,
@@ -150,6 +144,8 @@ type Store interface {
 	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
 	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
 	SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error
+	SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error
+	SetArtistArtSidecar(ctx context.Context, id uint32, hash string) error
 	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)
 	ListAlbumsTrackless(
 		ctx context.Context,

@@ -19030,6 +19030,69 @@ func (_c *MockTx_SeasonEpisodeCounts_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// SetAlbumArtSidecar provides a mock function for the type MockTx
+func (_mock *MockTx) SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error {
+	ret := _mock.Called(ctx, id, hash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumArtSidecar")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, hash)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetAlbumArtSidecar_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumArtSidecar'
+type MockTx_SetAlbumArtSidecar_Call struct {
+	*mock.Call
+}
+
+// SetAlbumArtSidecar is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - hash string
+func (_e *MockTx_Expecter) SetAlbumArtSidecar(ctx any, id any, hash any) *MockTx_SetAlbumArtSidecar_Call {
+	return &MockTx_SetAlbumArtSidecar_Call{Call: _e.mock.On("SetAlbumArtSidecar", ctx, id, hash)}
+}
+
+func (_c *MockTx_SetAlbumArtSidecar_Call) Run(run func(ctx context.Context, id uint32, hash string)) *MockTx_SetAlbumArtSidecar_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetAlbumArtSidecar_Call) Return(err error) *MockTx_SetAlbumArtSidecar_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetAlbumArtSidecar_Call) RunAndReturn(run func(ctx context.Context, id uint32, hash string) error) *MockTx_SetAlbumArtSidecar_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumHydration provides a mock function for the type MockTx
 func (_mock *MockTx) SetAlbumHydration(ctx context.Context, albumID uint32, p db.HydrationParams, at time.Time) error {
 	ret := _mock.Called(ctx, albumID, p, at)
@@ -19362,6 +19425,69 @@ func (_c *MockTx_SetAlbumTagsManaged_Call) Return(err error) *MockTx_SetAlbumTag
 }
 
 func (_c *MockTx_SetAlbumTagsManaged_Call) RunAndReturn(run func(ctx context.Context, id uint32, managed bool) error) *MockTx_SetAlbumTagsManaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetArtistArtSidecar provides a mock function for the type MockTx
+func (_mock *MockTx) SetArtistArtSidecar(ctx context.Context, id uint32, hash string) error {
+	ret := _mock.Called(ctx, id, hash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetArtistArtSidecar")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) error); ok {
+		r0 = returnFunc(ctx, id, hash)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_SetArtistArtSidecar_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistArtSidecar'
+type MockTx_SetArtistArtSidecar_Call struct {
+	*mock.Call
+}
+
+// SetArtistArtSidecar is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - hash string
+func (_e *MockTx_Expecter) SetArtistArtSidecar(ctx any, id any, hash any) *MockTx_SetArtistArtSidecar_Call {
+	return &MockTx_SetArtistArtSidecar_Call{Call: _e.mock.On("SetArtistArtSidecar", ctx, id, hash)}
+}
+
+func (_c *MockTx_SetArtistArtSidecar_Call) Run(run func(ctx context.Context, id uint32, hash string)) *MockTx_SetArtistArtSidecar_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_SetArtistArtSidecar_Call) Return(err error) *MockTx_SetArtistArtSidecar_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_SetArtistArtSidecar_Call) RunAndReturn(run func(ctx context.Context, id uint32, hash string) error) *MockTx_SetArtistArtSidecar_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -20888,16 +21014,16 @@ func (_c *MockTx_SetMediaFileTagsDeferred_Call) RunAndReturn(run func(ctx contex
 }
 
 // SetMediaFileTagsWritten provides a mock function for the type MockTx
-func (_mock *MockTx) SetMediaFileTagsWritten(ctx context.Context, id uint32, hash string, mtime int64, size int64, at time.Time) error {
-	ret := _mock.Called(ctx, id, hash, mtime, size, at)
+func (_mock *MockTx) SetMediaFileTagsWritten(ctx context.Context, id uint32, w db.TagWrite) error {
+	ret := _mock.Called(ctx, id, w)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetMediaFileTagsWritten")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, int64, int64, time.Time) error); ok {
-		r0 = returnFunc(ctx, id, hash, mtime, size, at)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.TagWrite) error); ok {
+		r0 = returnFunc(ctx, id, w)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -20912,15 +21038,12 @@ type MockTx_SetMediaFileTagsWritten_Call struct {
 // SetMediaFileTagsWritten is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-//   - hash string
-//   - mtime int64
-//   - size int64
-//   - at time.Time
-func (_e *MockTx_Expecter) SetMediaFileTagsWritten(ctx any, id any, hash any, mtime any, size any, at any) *MockTx_SetMediaFileTagsWritten_Call {
-	return &MockTx_SetMediaFileTagsWritten_Call{Call: _e.mock.On("SetMediaFileTagsWritten", ctx, id, hash, mtime, size, at)}
+//   - w db.TagWrite
+func (_e *MockTx_Expecter) SetMediaFileTagsWritten(ctx any, id any, w any) *MockTx_SetMediaFileTagsWritten_Call {
+	return &MockTx_SetMediaFileTagsWritten_Call{Call: _e.mock.On("SetMediaFileTagsWritten", ctx, id, w)}
 }
 
-func (_c *MockTx_SetMediaFileTagsWritten_Call) Run(run func(ctx context.Context, id uint32, hash string, mtime int64, size int64, at time.Time)) *MockTx_SetMediaFileTagsWritten_Call {
+func (_c *MockTx_SetMediaFileTagsWritten_Call) Run(run func(ctx context.Context, id uint32, w db.TagWrite)) *MockTx_SetMediaFileTagsWritten_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -20930,29 +21053,14 @@ func (_c *MockTx_SetMediaFileTagsWritten_Call) Run(run func(ctx context.Context,
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 string
+		var arg2 db.TagWrite
 		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 int64
-		if args[3] != nil {
-			arg3 = args[3].(int64)
-		}
-		var arg4 int64
-		if args[4] != nil {
-			arg4 = args[4].(int64)
-		}
-		var arg5 time.Time
-		if args[5] != nil {
-			arg5 = args[5].(time.Time)
+			arg2 = args[2].(db.TagWrite)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
-			arg4,
-			arg5,
 		)
 	})
 	return _c
@@ -20963,7 +21071,7 @@ func (_c *MockTx_SetMediaFileTagsWritten_Call) Return(err error) *MockTx_SetMedi
 	return _c
 }
 
-func (_c *MockTx_SetMediaFileTagsWritten_Call) RunAndReturn(run func(ctx context.Context, id uint32, hash string, mtime int64, size int64, at time.Time) error) *MockTx_SetMediaFileTagsWritten_Call {
+func (_c *MockTx_SetMediaFileTagsWritten_Call) RunAndReturn(run func(ctx context.Context, id uint32, w db.TagWrite) error) *MockTx_SetMediaFileTagsWritten_Call {
 	_c.Call.Return(run)
 	return _c
 }

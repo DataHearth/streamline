@@ -93,6 +93,8 @@ type MediaFile struct {
 	TagFailures uint8 `json:"tag_failures,omitempty"`
 	// TagsError holds the value of the "tags_error" field.
 	TagsError string `json:"tags_error,omitempty"`
+	// TagsArtHash holds the value of the "tags_art_hash" field.
+	TagsArtHash string `json:"tags_art_hash,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaFileQuery when eager-loading is set.
 	Edges               MediaFileEdges `json:"edges"`
@@ -180,7 +182,7 @@ func (*MediaFile) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case mediafile.FieldID, mediafile.FieldSize, mediafile.FieldDurationSeconds, mediafile.FieldWidth, mediafile.FieldHeight, mediafile.FieldAudioChannels, mediafile.FieldBitrate, mediafile.FieldAudioTracks, mediafile.FieldSizeBefore, mediafile.FieldTagsMtime, mediafile.FieldTagsSize, mediafile.FieldTagFailures:
 			values[i] = new(sql.NullInt64)
-		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError:
+		case mediafile.FieldPath, mediafile.FieldQuality, mediafile.FieldFormat, mediafile.FieldReleaseGroup, mediafile.FieldSource, mediafile.FieldContainer, mediafile.FieldVideoCodec, mediafile.FieldAudioCodec, mediafile.FieldAudioLangs, mediafile.FieldSubLangs, mediafile.FieldParsedSource, mediafile.FieldParsedResolution, mediafile.FieldParsedCodec, mediafile.FieldBookKind, mediafile.FieldTagsState, mediafile.FieldTagsHash, mediafile.FieldTagsError, mediafile.FieldTagsArtHash:
 			values[i] = new(sql.NullString)
 		case mediafile.FieldCreateTime, mediafile.FieldUpdateTime, mediafile.FieldLastSeenAt, mediafile.FieldMissingSince, mediafile.FieldProbedAt, mediafile.FieldTranscodedAt, mediafile.FieldTaggedAt, mediafile.FieldTagsCheckedAt:
 			values[i] = new(sql.NullTime)
@@ -436,6 +438,12 @@ func (_m *MediaFile) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.TagsError = value.String
 			}
+		case mediafile.FieldTagsArtHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_art_hash", values[i])
+			} else if value.Valid {
+				_m.TagsArtHash = value.String
+			}
 		case mediafile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field book_media_files", value)
@@ -646,6 +654,9 @@ func (_m *MediaFile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tags_error=")
 	builder.WriteString(_m.TagsError)
+	builder.WriteString(", ")
+	builder.WriteString("tags_art_hash=")
+	builder.WriteString(_m.TagsArtHash)
 	builder.WriteByte(')')
 	return builder.String()
 }

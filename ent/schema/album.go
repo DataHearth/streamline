@@ -54,6 +54,11 @@ func (Album) Fields() []ent.Field {
 		// import review is not; one Streamline downloaded is. A file queued
 		// explicitly, a new download's, is written either way.
 		field.Bool("tags_managed").Default(true),
+		// art_sidecar_hash is the SHA-256 of the cover.jpg (or .png) the tag
+		// writer left beside the album's files: a cover file with any other
+		// content is someone else's and is never replaced, and the cover
+		// resolver never reads Streamline's own back as a source.
+		field.String("art_sidecar_hash").Optional(),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").

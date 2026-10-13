@@ -63,7 +63,14 @@ Books are never modified: an ebook is placed as one file named per `library.eboo
 
 Streamline writes what the library knows into each music file, so media servers and players that read files (Jellyfin, Navidrome, Plex with local metadata, a phone or a car stereo) show exactly that: title, artist and featured artists, album artist, track and disc numbers with their totals, the edition's release date and the original one, up to five genres, label, catalog number, barcode, country, release type, and the MusicBrainz ids of the artist, release, release group, recording and release track. MP3, FLAC, M4A, Ogg Vorbis and Opus are all tagged. A tag Streamline has no value for is removed rather than left stale.
 
-Everything else stays in the file. Under Settings → Music, **Tags to keep** lists tags Streamline never writes or removes (ReplayGain, lyrics, AcoustID, BPM and the musical key by default) and **Tags to remove** lists the ones it deletes (comments, encoded-by credits and the web links a release leaves behind). Pictures already in a file are kept.
+Everything else stays in the file. Under Settings → Music, **Tags to keep** lists tags Streamline never writes or removes (ReplayGain, lyrics, AcoustID, BPM and the musical key by default) and **Tags to remove** lists the ones it deletes (comments, encoded-by credits and the web links a release leaves behind).
+
+**Artwork** follows the album's cover (see [Album covers](#album-covers)):
+
+- *Embed the album cover* puts it in each file as the front picture, scaled down to *Embedded cover size* (1000 px on its long side by default; a cover already smaller goes in as it is). A front cover the release already carried is never replaced, and other pictures in a file (a back cover, booklet pages) are kept. Switching the setting off removes only the cover Streamline embedded.
+- *Write cover.jpg and folder.jpg* leaves the full-size cover beside each album's files as `cover.jpg` (or `cover.png`), and the artist's photo as `folder.jpg` in the artist's folder: the folder above the album's, when it is named after the artist, as the default naming pattern makes it. Where a `cover`, `folder` or `front` image Streamline did not write is already there, it is left alone and nothing is added beside it. Switching the setting off removes only the files Streamline wrote.
+
+Streamline tells its own copies apart from yours, so they are never mistaken for the album's own artwork. The images are written with the tags, by the job below. Under *Managed* a new cover is written into the files and beside them; under *On import*, **Retag library** brings them up to date. An artist photo is refreshed the next time one of the artist's albums is tagged.
 
 **When files are written** is the *Writing tags* setting:
 
@@ -97,8 +104,8 @@ When a finished download cannot be imported, the album is marked **Failed** and 
 
 Streamline stores one cover per album, taken from the first of these that has an image:
 
-1. A picture embedded in one of the album's audio files.
-2. A `cover`, `folder` or `front` image (`.jpg`, `.jpeg` or `.png`, any case) in the folder of the album's first file.
+1. A picture embedded in one of the album's audio files, other than the copy Streamline embedded itself.
+2. A `cover`, `folder` or `front` image (`.jpg`, `.jpeg` or `.png`, any case) in the folder of the album's first file, other than the `cover.jpg` Streamline wrote.
 3. Deezer, looked up by the album's barcode as MusicBrainz records it.
 4. Deezer, searched by artist and title; the result is used only when Deezer's artist matches yours.
 5. The Cover Art Archive front cover for the release group.

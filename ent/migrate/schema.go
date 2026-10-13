@@ -26,6 +26,7 @@ var (
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "tags_managed", Type: field.TypeBool, Default: true},
+		{Name: "art_sidecar_hash", Type: field.TypeString, Nullable: true},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped", "failed"}, Default: "wanted"},
@@ -47,7 +48,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[26]},
+				Columns:    []*schema.Column{AlbumsColumns[27]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -56,17 +57,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[26]},
+				Columns: []*schema.Column{AlbumsColumns[27]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[17]},
+				Columns: []*schema.Column{AlbumsColumns[18]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[24]},
+				Columns: []*schema.Column{AlbumsColumns[25]},
 			},
 		},
 	}
@@ -129,6 +130,7 @@ var (
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "details_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "art_sidecar_hash", Type: field.TypeString, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
@@ -1032,6 +1034,7 @@ var (
 		{Name: "tags_checked_at", Type: field.TypeTime, Nullable: true},
 		{Name: "tag_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "tags_error", Type: field.TypeString, Nullable: true},
+		{Name: "tags_art_hash", Type: field.TypeString, Nullable: true},
 		{Name: "book_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
@@ -1045,25 +1048,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_books_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[37]},
+				Columns:    []*schema.Column{MediaFilesColumns[38]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[38]},
+				Columns:    []*schema.Column{MediaFilesColumns[39]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[39]},
+				Columns:    []*schema.Column{MediaFilesColumns[40]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_tracks_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[40]},
+				Columns:    []*schema.Column{MediaFilesColumns[41]},
 				RefColumns: []*schema.Column{TracksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1072,22 +1075,22 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[38]},
+				Columns: []*schema.Column{MediaFilesColumns[39]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[39]},
+				Columns: []*schema.Column{MediaFilesColumns[40]},
 			},
 			{
 				Name:    "mediafile_track_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[40]},
+				Columns: []*schema.Column{MediaFilesColumns[41]},
 			},
 			{
 				Name:    "mediafile_book_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[37]},
+				Columns: []*schema.Column{MediaFilesColumns[38]},
 			},
 			{
 				Name:    "mediafile_tags_state",

@@ -1814,7 +1814,7 @@
 	"music_tags_seeding_copy": "Copier maintenant (deux copies pendant le partage)",
 	"music_tags_seeding_copy_hint": "Importer une copie et y écrire les tags tout de suite.",
 	"music_tags_embed_art": "Intégrer la pochette",
-	"music_tags_embed_art_help": "Chaque fichier contient la pochette comme image de face. Les autres images du fichier sont conservées.",
+	"music_tags_embed_art_help": "Chaque fichier contient la pochette comme image de face. Une pochette que la release contient déjà est conservée, comme les autres images du fichier.",
 	"music_tags_art_size": "Taille de la pochette intégrée (pixels)",
 	"music_tags_art_size_help": "Plus grand côté, entre 256 et 3000. Plus petit garde les fichiers légers.",
 	"music_tags_sidecar_art": "Écrire cover.jpg et folder.jpg",

@@ -47,6 +47,8 @@ type Album struct {
 	MonitorPinned bool `json:"monitor_pinned,omitempty"`
 	// TagsManaged holds the value of the "tags_managed" field.
 	TagsManaged bool `json:"tags_managed,omitempty"`
+	// ArtSidecarHash holds the value of the "art_sidecar_hash" field.
+	ArtSidecarHash string `json:"art_sidecar_hash,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
 	GrabFailures uint8 `json:"grab_failures,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -151,7 +153,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -264,6 +266,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field tags_managed", values[i])
 			} else if value.Valid {
 				_m.TagsManaged = value.Bool
+			}
+		case album.FieldArtSidecarHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field art_sidecar_hash", values[i])
+			} else if value.Valid {
+				_m.ArtSidecarHash = value.String
 			}
 		case album.FieldGrabFailures:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -445,6 +453,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tags_managed=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TagsManaged))
+	builder.WriteString(", ")
+	builder.WriteString("art_sidecar_hash=")
+	builder.WriteString(_m.ArtSidecarHash)
 	builder.WriteString(", ")
 	builder.WriteString("grab_failures=")
 	builder.WriteString(fmt.Sprintf("%v", _m.GrabFailures))

@@ -87,6 +87,8 @@ const (
 	FieldTagFailures = "tag_failures"
 	// FieldTagsError holds the string denoting the tags_error field in the database.
 	FieldTagsError = "tags_error"
+	// FieldTagsArtHash holds the string denoting the tags_art_hash field in the database.
+	FieldTagsArtHash = "tags_art_hash"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeEpisode holds the string denoting the episode edge name in mutations.
@@ -175,6 +177,7 @@ var Columns = []string{
 	FieldTagsCheckedAt,
 	FieldTagFailures,
 	FieldTagsError,
+	FieldTagsArtHash,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_files"
@@ -477,6 +480,11 @@ func ByTagFailures(opts ...sql.OrderTermOption) OrderOption {
 // ByTagsError orders the results by the tags_error field.
 func ByTagsError(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTagsError, opts...).ToFunc()
+}
+
+// ByTagsArtHash orders the results by the tags_art_hash field.
+func ByTagsArtHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsArtHash, opts...).ToFunc()
 }
 
 // ByMovieField orders the results by movie field.

@@ -101,7 +101,7 @@ func (s *Service) SyncTags(ctx context.Context) error {
 		"unchanged", res.counts[tagUnchanged],
 		"deferred", res.counts[tagDeferred],
 		"failed", res.counts[tagFailed])
-	if res.counts[tagWritten] > 0 && s.ms != nil {
+	if (res.counts[tagWritten] > 0 || res.sidecars) && s.ms != nil {
 		mediaserver.RefreshInBackground(
 			ctx, s.ms, mediaserver.KindMusic, config.Get().Library.MusicPath,
 		)
@@ -124,6 +124,14 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) error {
 	all, err := s.db.ListAlbumTagFiles(ctx, albumID)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
+	}
+	if (cfg.EmbedArt || cfg.SidecarArt) && s.posters != nil && len(all) > 0 {
+		// The cover first, so the files are written with it: an import's
+		// own art (embedded in its files, or a cover file beside them) is
+		// read now, and a remote cover fetched when none is cached.
+		if alb, err := s.db.FindAlbumByID(ctx, albumID); err == nil {
+			s.resolveCover(ctx, alb)
+		}
 	}
 	files := slices.DeleteFunc(all, func(mf *ent.MediaFile) bool {
 		return mf.TagsState == nil ||
@@ -210,6 +218,8 @@ func (s *Service) tagsChanged(ctx context.Context, albumIDs ...uint32) {
 type tagResult struct {
 	counts map[string]int
 	albums map[uint32]bool
+	// sidecars is whether a cover or folder image was written or removed.
+	sidecars bool
 }
 
 // tagFiles writes each file's tags, album by album so an album's tree is
@@ -236,6 +246,7 @@ func (s *Service) tagFiles(
 		byAlbum[id] = append(byAlbum[id], mf)
 	}
 	done := 0
+	artistsDone := map[uint32]bool{}
 	for _, albumID := range order {
 		alb, err := s.db.FindAlbumByID(ctx, albumID)
 		if err != nil || alb.Edges.Artist == nil {
@@ -245,8 +256,10 @@ func (s *Service) tagFiles(
 			continue
 		}
 		at := &albumTagging{svc: s, alb: alb, seeding: seeding, cfg: cfg}
+		reached := false
 		for _, mf := range byAlbum[albumID] {
 			outcome := at.tag(ctx, mf)
+			reached = reached || outcome == tagWritten || outcome == tagUnchanged
 			res.counts[outcome]++
 			tagWrites.Add(ctx, 1, metric.WithAttributes(
 				attribute.String("outcome", outcome)))
@@ -257,6 +270,11 @@ func (s *Service) tagFiles(
 			if progress != nil {
 				progress(done, len(files))
 			}
+		}
+		// The folder images follow the files: an album whose every file a
+		// torrent still holds waits for them.
+		if reached && at.sidecars(ctx, artistsDone) {
+			res.sidecars = true
 		}
 	}
 	return res
@@ -272,6 +290,68 @@ type albumTagging struct {
 
 	hashes     []string
 	hashesRead bool
+	art        *albumArt
+}
+
+// albumArt is the album's cover as one pass uses it, read once.
+type albumArt struct {
+	// cover is the cached cover as stored, nil when there is none.
+	cover []byte
+	// embed is what goes into each file, nil when nothing should: no
+	// cover, one no player decodes from a tag, or embedding is off.
+	embed []byte
+	// id is the art's part of each file's hash.
+	id string
+}
+
+// artwork reads the album's cover from the posters cache and prepares the
+// copy embedded in its files.
+func (a *albumTagging) artwork(ctx context.Context) albumArt {
+	if a.art != nil {
+		return *a.art
+	}
+	art := albumArt{id: "art:none"}
+	if a.svc.posters != nil {
+		data, err := os.ReadFile(a.svc.posters.Path(coverKind, a.alb.ID))
+		if err == nil && len(data) > 0 {
+			art.cover = data
+		}
+	}
+	switch {
+	case !a.cfg.EmbedArt:
+		art.id = "art:off"
+	case art.cover == nil:
+	default:
+		embed, err := embeddableCover(art.cover, int(a.cfg.ArtMaxPx))
+		if err != nil {
+			slog.WarnContext(ctx, "album cover not embeddable",
+				"album.id", a.alb.ID, "error", err)
+			art.id = "art:unusable"
+			break
+		}
+		art.embed = embed
+		art.id = "art:" + audiotags.ArtHash(embed)
+	}
+	a.art = &art
+	return art
+}
+
+// fileArt is what a write does to the file's front cover: embed the album's,
+// remove Streamline's own when embedding is off, and leave the pictures
+// alone when there is nothing to embed.
+func (a *albumTagging) fileArt(
+	ctx context.Context,
+	mf *ent.MediaFile,
+) audiotags.Art {
+	art := a.artwork(ctx)
+	switch {
+	case !a.cfg.EmbedArt:
+		return audiotags.Art{Manage: true, Ours: mf.TagsArtHash}
+	case art.embed != nil:
+		return audiotags.Art{Manage: true, Front: art.embed, Ours: mf.TagsArtHash}
+	default:
+		return audiotags.Art{Ours: mf.TagsArtHash}
+	}
 }
 
 func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
@@ -289,7 +369,7 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 	tr := a.alb.Edges.Tracks[idx]
 	tags := library.AlbumTrackTags(a.alb.Edges.Artist, a.alb, tr)
 	policy := TagPolicy(a.cfg)
-	hash := audiotags.Hash(tags, policy)
+	hash := audiotags.Hash(tags, policy, a.artwork(ctx).id)
 
 	if mf.TagsHash == hash {
 		// Nothing Streamline owns would change: settle it without opening
@@ -298,9 +378,10 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 		if err != nil {
 			return a.fail(ctx, span, mf, err)
 		}
-		if err := a.svc.db.SetMediaFileTagsWritten(
-			ctx, mf.ID, hash, st.ModTime().UnixNano(), st.Size(), time.Now(),
-		); err != nil {
+		if err := a.svc.db.SetMediaFileTagsWritten(ctx, mf.ID, db.TagWrite{
+			Hash: hash, ArtHash: mf.TagsArtHash,
+			Mtime: st.ModTime().UnixNano(), Size: st.Size(), At: time.Now(),
+		}); err != nil {
 			_ = otelx.RecordSpanError(span, err)
 		}
 		span.SetAttributes(attribute.String("outcome", tagUnchanged))
@@ -318,16 +399,18 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 		return tagDeferred
 	}
 
-	if err := audiotags.Write(mf.Path, tags, policy); err != nil {
+	artHash, err := audiotags.WriteWithArt(mf.Path, tags, policy, a.fileArt(ctx, mf))
+	if err != nil {
 		return a.fail(ctx, span, mf, err)
 	}
 	st, err := os.Stat(mf.Path)
 	if err != nil {
 		return a.fail(ctx, span, mf, err)
 	}
-	if err := a.svc.db.SetMediaFileTagsWritten(
-		ctx, mf.ID, hash, st.ModTime().UnixNano(), st.Size(), time.Now(),
-	); err != nil {
+	if err := a.svc.db.SetMediaFileTagsWritten(ctx, mf.ID, db.TagWrite{
+		Hash: hash, ArtHash: artHash,
+		Mtime: st.ModTime().UnixNano(), Size: st.Size(), At: time.Now(),
+	}); err != nil {
 		_ = otelx.RecordSpanError(span, err)
 	}
 	span.SetAttributes(attribute.String("outcome", tagWritten))

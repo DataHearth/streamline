@@ -196,6 +196,20 @@ func (_c *AlbumCreate) SetNillableTagsManaged(v *bool) *AlbumCreate {
 	return _c
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_c *AlbumCreate) SetArtSidecarHash(v string) *AlbumCreate {
+	_c.mutation.SetArtSidecarHash(v)
+	return _c
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableArtSidecarHash(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetArtSidecarHash(*v)
+	}
+	return _c
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_c *AlbumCreate) SetGrabFailures(v uint8) *AlbumCreate {
 	_c.mutation.SetGrabFailures(v)
@@ -638,6 +652,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TagsManaged(); ok {
 		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
 		_node.TagsManaged = value
+	}
+	if value, ok := _c.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+		_node.ArtSidecarHash = value
 	}
 	if value, ok := _c.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

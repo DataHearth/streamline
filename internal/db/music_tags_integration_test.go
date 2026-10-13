@@ -106,13 +106,16 @@ var _ = Describe("Music tag bookkeeping", Label("integration", "db"), func() {
 
 		at := time.Now()
 		Expect(
-			store.SetMediaFileTagsWritten(ctx, mf.ID, "h", 7, 99, at),
+			store.SetMediaFileTagsWritten(ctx, mf.ID, TagWrite{
+				Hash: "h", ArtHash: "a", Mtime: 7, Size: 99, At: at,
+			}),
 		).To(Succeed())
 		got := reload(mf)
 		Expect(*got.TagsState).To(Equal(entmediafile.TagsStateWritten))
 		Expect(got.TagFailures).To(BeZero())
 		Expect(got.TagsError).To(BeEmpty())
 		Expect(got.TagsHash).To(Equal("h"))
+		Expect(got.TagsArtHash).To(Equal("a"))
 		Expect(got.TagsMtime).To(Equal(int64(7)))
 		Expect(got.Size).To(Equal(int64(99)))
 	})

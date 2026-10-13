@@ -2,6 +2,7 @@ package music
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -80,6 +81,7 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 
 	BeforeEach(func() {
 		e = newEnv(false)
+		stubKindPaths(e.posters, artistKind)
 		musicDir = GinkgoT().TempDir()
 		dlDir = GinkgoT().TempDir()
 		tagConfig(map[string]any{"mode": config.MusicTagsImport})
@@ -433,6 +435,9 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 			SetTrackID(otherTrack.ID).SetTagsState(entmediafile.TagsStatePending).
 			SaveX(e.ctx)
 
+		// The cover is resolved first; there is none to fetch here.
+		e.posters.EXPECT().Fetch(mock.Anything, coverKind, alb.ID, mock.Anything).
+			Return(errors.New("no cover")).Maybe()
 		Expect(e.svc.TagAlbum(e.ctx, alb.ID)).To(Succeed())
 
 		Expect(*reload(mf).TagsState).To(Equal(entmediafile.TagsStateWritten))

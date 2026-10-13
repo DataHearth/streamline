@@ -287,6 +287,20 @@ func (_c *ArtistCreate) SetNillableDetailsFetchedAt(v *time.Time) *ArtistCreate 
 	return _c
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_c *ArtistCreate) SetArtSidecarHash(v string) *ArtistCreate {
+	_c.mutation.SetArtSidecarHash(v)
+	return _c
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_c *ArtistCreate) SetNillableArtSidecarHash(v *string) *ArtistCreate {
+	if v != nil {
+		_c.SetArtSidecarHash(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ArtistCreate) SetID(v uint32) *ArtistCreate {
 	_c.mutation.SetID(v)
@@ -535,6 +549,10 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DetailsFetchedAt(); ok {
 		_spec.SetField(artist.FieldDetailsFetchedAt, field.TypeTime, value)
 		_node.DetailsFetchedAt = &value
+	}
+	if value, ok := _c.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+		_node.ArtSidecarHash = value
 	}
 	if nodes := _c.mutation.AlbumsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

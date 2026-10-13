@@ -1814,7 +1814,7 @@
 	"music_tags_seeding_copy": "Copy now (two copies while seeding)",
 	"music_tags_seeding_copy_hint": "Import a copy and tag it at once.",
 	"music_tags_embed_art": "Embed the album cover",
-	"music_tags_embed_art_help": "Each file carries the cover as its front picture. Other pictures in the file are kept.",
+	"music_tags_embed_art_help": "Each file carries the cover as its front picture. A front cover the release already carries is kept, and so are the other pictures in the file.",
 	"music_tags_art_size": "Embedded cover size (pixels)",
 	"music_tags_art_size_help": "Longest edge, between 256 and 3000. Smaller keeps files light.",
 	"music_tags_sidecar_art": "Write cover.jpg and folder.jpg",

@@ -773,6 +773,26 @@ func (_u *MediaFileUpdate) ClearTagsError() *MediaFileUpdate {
 	return _u
 }
 
+// SetTagsArtHash sets the "tags_art_hash" field.
+func (_u *MediaFileUpdate) SetTagsArtHash(v string) *MediaFileUpdate {
+	_u.mutation.SetTagsArtHash(v)
+	return _u
+}
+
+// SetNillableTagsArtHash sets the "tags_art_hash" field if the given value is not nil.
+func (_u *MediaFileUpdate) SetNillableTagsArtHash(v *string) *MediaFileUpdate {
+	if v != nil {
+		_u.SetTagsArtHash(*v)
+	}
+	return _u
+}
+
+// ClearTagsArtHash clears the value of the "tags_art_hash" field.
+func (_u *MediaFileUpdate) ClearTagsArtHash() *MediaFileUpdate {
+	_u.mutation.ClearTagsArtHash()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdate) SetMovieID(id uint32) *MediaFileUpdate {
 	_u.mutation.SetMovieID(id)
@@ -1220,6 +1240,12 @@ func (_u *MediaFileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.TagsErrorCleared() {
 		_spec.ClearField(mediafile.FieldTagsError, field.TypeString)
+	}
+	if value, ok := _u.mutation.TagsArtHash(); ok {
+		_spec.SetField(mediafile.FieldTagsArtHash, field.TypeString, value)
+	}
+	if _u.mutation.TagsArtHashCleared() {
+		_spec.ClearField(mediafile.FieldTagsArtHash, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2143,6 +2169,26 @@ func (_u *MediaFileUpdateOne) ClearTagsError() *MediaFileUpdateOne {
 	return _u
 }
 
+// SetTagsArtHash sets the "tags_art_hash" field.
+func (_u *MediaFileUpdateOne) SetTagsArtHash(v string) *MediaFileUpdateOne {
+	_u.mutation.SetTagsArtHash(v)
+	return _u
+}
+
+// SetNillableTagsArtHash sets the "tags_art_hash" field if the given value is not nil.
+func (_u *MediaFileUpdateOne) SetNillableTagsArtHash(v *string) *MediaFileUpdateOne {
+	if v != nil {
+		_u.SetTagsArtHash(*v)
+	}
+	return _u
+}
+
+// ClearTagsArtHash clears the value of the "tags_art_hash" field.
+func (_u *MediaFileUpdateOne) ClearTagsArtHash() *MediaFileUpdateOne {
+	_u.mutation.ClearTagsArtHash()
+	return _u
+}
+
 // SetMovieID sets the "movie" edge to the Movie entity by ID.
 func (_u *MediaFileUpdateOne) SetMovieID(id uint32) *MediaFileUpdateOne {
 	_u.mutation.SetMovieID(id)
@@ -2620,6 +2666,12 @@ func (_u *MediaFileUpdateOne) sqlSave(ctx context.Context) (_node *MediaFile, er
 	}
 	if _u.mutation.TagsErrorCleared() {
 		_spec.ClearField(mediafile.FieldTagsError, field.TypeString)
+	}
+	if value, ok := _u.mutation.TagsArtHash(); ok {
+		_spec.SetField(mediafile.FieldTagsArtHash, field.TypeString, value)
+	}
+	if _u.mutation.TagsArtHashCleared() {
+		_spec.ClearField(mediafile.FieldTagsArtHash, field.TypeString)
 	}
 	if _u.mutation.MovieCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -394,6 +394,26 @@ func (_u *ArtistUpdate) ClearDetailsFetchedAt() *ArtistUpdate {
 	return _u
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *ArtistUpdate) SetArtSidecarHash(v string) *ArtistUpdate {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *ArtistUpdate) SetNillableArtSidecarHash(v *string) *ArtistUpdate {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *ArtistUpdate) ClearArtSidecarHash() *ArtistUpdate {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdate) AddAlbumIDs(ids ...uint32) *ArtistUpdate {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -693,6 +713,12 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DetailsFetchedAtCleared() {
 		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(artist.FieldArtSidecarHash, field.TypeString)
 	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1213,6 +1239,26 @@ func (_u *ArtistUpdateOne) ClearDetailsFetchedAt() *ArtistUpdateOne {
 	return _u
 }
 
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *ArtistUpdateOne) SetArtSidecarHash(v string) *ArtistUpdateOne {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *ArtistUpdateOne) SetNillableArtSidecarHash(v *string) *ArtistUpdateOne {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *ArtistUpdateOne) ClearArtSidecarHash() *ArtistUpdateOne {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
 // AddAlbumIDs adds the "albums" edge to the Album entity by IDs.
 func (_u *ArtistUpdateOne) AddAlbumIDs(ids ...uint32) *ArtistUpdateOne {
 	_u.mutation.AddAlbumIDs(ids...)
@@ -1542,6 +1588,12 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	}
 	if _u.mutation.DetailsFetchedAtCleared() {
 		_spec.ClearField(artist.FieldDetailsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(artist.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(artist.FieldArtSidecarHash, field.TypeString)
 	}
 	if _u.mutation.AlbumsCleared() {
 		edge := &sqlgraph.EdgeSpec{

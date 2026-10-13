@@ -115,6 +115,11 @@ func TagsManaged(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldTagsManaged, v))
 }
 
+// ArtSidecarHash applies equality check predicate on the "art_sidecar_hash" field. It's identical to ArtSidecarHashEQ.
+func ArtSidecarHash(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldArtSidecarHash, v))
+}
+
 // GrabFailures applies equality check predicate on the "grab_failures" field. It's identical to GrabFailuresEQ.
 func GrabFailures(v uint8) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldGrabFailures, v))
@@ -778,6 +783,81 @@ func TagsManagedEQ(v bool) predicate.Album {
 // TagsManagedNEQ applies the NEQ predicate on the "tags_managed" field.
 func TagsManagedNEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldNEQ(FieldTagsManaged, v))
+}
+
+// ArtSidecarHashEQ applies the EQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashNEQ applies the NEQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIn applies the In predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashNotIn applies the NotIn predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashGT applies the GT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashGTE applies the GTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLT applies the LT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLTE applies the LTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContains applies the Contains predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasPrefix applies the HasPrefix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasSuffix applies the HasSuffix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIsNil applies the IsNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashNotNil applies the NotNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashEqualFold applies the EqualFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContainsFold applies the ContainsFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldArtSidecarHash, v))
 }
 
 // GrabFailuresEQ applies the EQ predicate on the "grab_failures" field.

@@ -1,12 +1,14 @@
 package audiotags
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -71,14 +73,53 @@ type Policy struct {
 // bytes. A format TagLib is not used for here is ErrUnsupportedFormat, and
 // the caller imports without writing.
 func Write(path string, tags Tags, p Policy) error {
+	_, err := WriteWithArt(path, tags, p, Art{})
+	return err
+}
+
+// OwnArtDescription is the description Streamline gives the front cover it
+// embeds, in the formats that keep one. It is a courtesy to whoever reads the
+// file: MP4 keeps no description, so what identifies Streamline's picture is
+// the hash the caller records (Art.Ours), never this.
+const OwnArtDescription = "Streamline"
+
+// Art is what a write does to the embedded front cover. With Manage unset the
+// pictures are left exactly as they are. With it set, Front is embedded as
+// the front cover when the file has none or the one it has is Streamline's
+// (its SHA-256 is Ours), and a nil Front removes Streamline's; a front cover
+// Streamline did not embed — the release's own art — is never replaced or
+// removed, and every other picture (a back cover, a booklet page) is kept.
+type Art struct {
+	Manage bool
+	Front  []byte
+	Ours   string
+}
+
+// WriteWithArt is Write plus the front cover, in the same copy, check and
+// rename. It returns the hash of the front cover Streamline now owns in the
+// file, empty when there is none: the caller stores it as the next Art.Ours.
+// With Manage unset it returns Ours unchanged.
+func WriteWithArt(path string, tags Tags, p Policy, art Art) (string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	if _, ok := AudioExtensions[ext]; !ok {
-		return ErrUnsupportedFormat
+		return art.Ours, ErrUnsupportedFormat
 	}
-	if err := write(path, ext, p.apply(tags), p); err != nil {
-		return fmt.Errorf("audiotags: write %s: %w", filepath.Base(path), err)
+	ours, err := write(path, ext, p.apply(tags), p, art)
+	if err != nil {
+		return art.Ours, fmt.Errorf(
+			"audiotags: write %s: %w",
+			filepath.Base(path),
+			err,
+		)
 	}
-	return nil
+	return ours, nil
+}
+
+// ArtHash identifies a picture's bytes, as Art.Ours and WriteWithArt's
+// result do.
+func ArtHash(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 // apply drops the keys the policy preserves.
@@ -111,10 +152,10 @@ func Hash(tags Tags, p Policy, extra ...string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func write(path, ext string, tags Tags, p Policy) error {
+func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
 	tmp, err := siblingCopy(path, ext)
 	if err != nil {
-		return err
+		return "", err
 	}
 	committed := false
 	defer func() {
@@ -125,7 +166,7 @@ func write(path, ext string, tags Tags, p Policy) error {
 
 	current, err := taglib.ReadTags(tmp)
 	if err != nil {
-		return err
+		return "", err
 	}
 	want := fold(ext, tags)
 	update := map[string][]string{}
@@ -136,24 +177,106 @@ func write(path, ext string, tags Tags, p Policy) error {
 	}
 	maps.Copy(update, want)
 	if err := taglib.WriteTags(tmp, update, 0); err != nil {
-		return err
+		return "", err
 	}
 
 	got, err := taglib.ReadTags(tmp)
 	if err != nil {
-		return err
+		return "", err
 	}
 	for k, v := range want {
 		if !slices.Equal(got[k], v) {
-			return fmt.Errorf("%w: %s is %q, wrote %q", ErrVerify, k, got[k], v)
+			return "", fmt.Errorf("%w: %s is %q, wrote %q", ErrVerify, k, got[k], v)
+		}
+	}
+
+	ours := art.Ours
+	if art.Manage {
+		if ours, err = writeArt(tmp, ext, art); err != nil {
+			return "", err
 		}
 	}
 
 	if err := os.Rename(tmp, path); err != nil {
-		return err
+		return "", err
 	}
 	committed = true
-	return nil
+	return ours, nil
+}
+
+// writeArt applies art to the copy at path and checks it read back. It
+// returns the hash of the front cover Streamline owns afterwards.
+func writeArt(path, ext string, art Art) (string, error) {
+	idx, current, err := frontCover(path, ext)
+	if err != nil {
+		return "", err
+	}
+	foreign := current != nil && ArtHash(current) != art.Ours
+	if foreign {
+		// The release's own art: never ours to replace or remove.
+		return "", nil
+	}
+	if art.Front == nil {
+		if current == nil {
+			return "", nil
+		}
+		if err := taglib.WriteImageOptions(path, nil, idx, "", "", ""); err != nil {
+			return "", err
+		}
+		if _, left, err := frontCover(path, ext); err != nil || left != nil {
+			return "", errors.Join(ErrVerify, err)
+		}
+		return "", nil
+	}
+	want := ArtHash(art.Front)
+	if current != nil && want == art.Ours {
+		return want, nil
+	}
+	mime := http.DetectContentType(art.Front)
+	if err := taglib.WriteImageOptions(
+		path, art.Front, idx, frontCoverType, OwnArtDescription, mime,
+	); err != nil {
+		return "", err
+	}
+	if _, got, err := frontCover(
+		path,
+		ext,
+	); err != nil ||
+		!bytes.Equal(got, art.Front) {
+		return "", errors.Join(
+			fmt.Errorf("%w: the embedded front cover", ErrVerify), err)
+	}
+	return want, nil
+}
+
+const frontCoverType = "Front Cover"
+
+// frontCover finds the file's front cover: the picture typed so, or for MP4,
+// which types none, the first one. It returns the index to write it at (one
+// past the last picture when there is none, which appends) and its bytes,
+// nil when there is none.
+func frontCover(path, ext string) (int, []byte, error) {
+	props, err := taglib.ReadProperties(path)
+	if err != nil {
+		return 0, nil, err
+	}
+	idx := slices.IndexFunc(props.Images, func(d taglib.ImageDesc) bool {
+		return d.Type == frontCoverType
+	})
+	if idx < 0 && ext == ".m4a" && len(props.Images) > 0 {
+		idx = 0
+	}
+	if idx < 0 {
+		return len(props.Images), nil, nil
+	}
+	data, err := taglib.ReadImageOptions(path, idx)
+	if err != nil {
+		return 0, nil, err
+	}
+	if len(data) == 0 {
+		return idx, nil, nil
+	}
+	return idx, data, nil
 }
 
 // fold returns tags as the format stores them: values trimmed and emptied

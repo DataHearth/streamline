@@ -513,6 +513,20 @@ func (_c *MediaFileCreate) SetNillableTagsError(v *string) *MediaFileCreate {
 	return _c
 }
 
+// SetTagsArtHash sets the "tags_art_hash" field.
+func (_c *MediaFileCreate) SetTagsArtHash(v string) *MediaFileCreate {
+	_c.mutation.SetTagsArtHash(v)
+	return _c
+}
+
+// SetNillableTagsArtHash sets the "tags_art_hash" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsArtHash(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsArtHash(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -882,6 +896,10 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.TagsError(); ok {
 		_spec.SetField(mediafile.FieldTagsError, field.TypeString, value)
 		_node.TagsError = value
+	}
+	if value, ok := _c.mutation.TagsArtHash(); ok {
+		_spec.SetField(mediafile.FieldTagsArtHash, field.TypeString, value)
+		_node.TagsArtHash = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

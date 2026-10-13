@@ -81,7 +81,7 @@ func init() {
 	// album.DefaultTagsManaged holds the default value on creation for the tags_managed field.
 	album.DefaultTagsManaged = albumDescTagsManaged.Default.(bool)
 	// albumDescGrabFailures is the schema descriptor for grab_failures field.
-	albumDescGrabFailures := albumFields[12].Descriptor()
+	albumDescGrabFailures := albumFields[13].Descriptor()
 	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()

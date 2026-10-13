@@ -43,6 +43,8 @@ const (
 	FieldMonitorPinned = "monitor_pinned"
 	// FieldTagsManaged holds the string denoting the tags_managed field in the database.
 	FieldTagsManaged = "tags_managed"
+	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
+	FieldArtSidecarHash = "art_sidecar_hash"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -129,6 +131,7 @@ var Columns = []string{
 	FieldMonitored,
 	FieldMonitorPinned,
 	FieldTagsManaged,
+	FieldArtSidecarHash,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
@@ -321,6 +324,11 @@ func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
 // ByTagsManaged orders the results by the tags_managed field.
 func ByTagsManaged(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldTagsManaged, opts...).ToFunc()
+}
+
+// ByArtSidecarHash orders the results by the art_sidecar_hash field.
+func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
 }
 
 // ByGrabFailures orders the results by the grab_failures field.

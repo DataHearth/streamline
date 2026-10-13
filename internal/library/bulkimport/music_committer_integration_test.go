@@ -53,7 +53,7 @@ var _ = Describe(
 			store = db.New(client)
 			mb = metamocks.NewMockMusicProvider(GinkgoT())
 			covers := postersmocks.NewMockManager(GinkgoT())
-			covers.EXPECT().Path("albums", mock.Anything).
+			covers.EXPECT().Path(mock.Anything, mock.Anything).
 				Return(filepath.Join(root, "no-cover")).Maybe()
 			covers.EXPECT().
 				Put(mock.Anything, "albums", mock.Anything, mock.Anything).

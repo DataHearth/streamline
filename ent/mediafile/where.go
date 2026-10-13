@@ -220,6 +220,11 @@ func TagsError(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldTagsError, v))
 }
 
+// TagsArtHash applies equality check predicate on the "tags_art_hash" field. It's identical to TagsArtHashEQ.
+func TagsArtHash(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsArtHash, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldEQ(FieldCreateTime, v))
@@ -2248,6 +2253,81 @@ func TagsErrorEqualFold(v string) predicate.MediaFile {
 // TagsErrorContainsFold applies the ContainsFold predicate on the "tags_error" field.
 func TagsErrorContainsFold(v string) predicate.MediaFile {
 	return predicate.MediaFile(sql.FieldContainsFold(FieldTagsError, v))
+}
+
+// TagsArtHashEQ applies the EQ predicate on the "tags_art_hash" field.
+func TagsArtHashEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEQ(FieldTagsArtHash, v))
+}
+
+// TagsArtHashNEQ applies the NEQ predicate on the "tags_art_hash" field.
+func TagsArtHashNEQ(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNEQ(FieldTagsArtHash, v))
+}
+
+// TagsArtHashIn applies the In predicate on the "tags_art_hash" field.
+func TagsArtHashIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIn(FieldTagsArtHash, vs...))
+}
+
+// TagsArtHashNotIn applies the NotIn predicate on the "tags_art_hash" field.
+func TagsArtHashNotIn(vs ...string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotIn(FieldTagsArtHash, vs...))
+}
+
+// TagsArtHashGT applies the GT predicate on the "tags_art_hash" field.
+func TagsArtHashGT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGT(FieldTagsArtHash, v))
+}
+
+// TagsArtHashGTE applies the GTE predicate on the "tags_art_hash" field.
+func TagsArtHashGTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldGTE(FieldTagsArtHash, v))
+}
+
+// TagsArtHashLT applies the LT predicate on the "tags_art_hash" field.
+func TagsArtHashLT(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLT(FieldTagsArtHash, v))
+}
+
+// TagsArtHashLTE applies the LTE predicate on the "tags_art_hash" field.
+func TagsArtHashLTE(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldLTE(FieldTagsArtHash, v))
+}
+
+// TagsArtHashContains applies the Contains predicate on the "tags_art_hash" field.
+func TagsArtHashContains(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContains(FieldTagsArtHash, v))
+}
+
+// TagsArtHashHasPrefix applies the HasPrefix predicate on the "tags_art_hash" field.
+func TagsArtHashHasPrefix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasPrefix(FieldTagsArtHash, v))
+}
+
+// TagsArtHashHasSuffix applies the HasSuffix predicate on the "tags_art_hash" field.
+func TagsArtHashHasSuffix(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldHasSuffix(FieldTagsArtHash, v))
+}
+
+// TagsArtHashIsNil applies the IsNil predicate on the "tags_art_hash" field.
+func TagsArtHashIsNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldIsNull(FieldTagsArtHash))
+}
+
+// TagsArtHashNotNil applies the NotNil predicate on the "tags_art_hash" field.
+func TagsArtHashNotNil() predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldNotNull(FieldTagsArtHash))
+}
+
+// TagsArtHashEqualFold applies the EqualFold predicate on the "tags_art_hash" field.
+func TagsArtHashEqualFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldEqualFold(FieldTagsArtHash, v))
+}
+
+// TagsArtHashContainsFold applies the ContainsFold predicate on the "tags_art_hash" field.
+func TagsArtHashContainsFold(v string) predicate.MediaFile {
+	return predicate.MediaFile(sql.FieldContainsFold(FieldTagsArtHash, v))
 }
 
 // HasMovie applies the HasEdge predicate on the "movie" edge.

@@ -46,6 +46,10 @@ func (Artist) Fields() []ent.Field {
 		// Stamped once the overview and photo steps have run, so neither is
 		// repeated for an artist that simply has no article or no picture.
 		field.Time("details_fetched_at").Optional().Nillable(),
+		// art_sidecar_hash is the SHA-256 of the folder.jpg the tag writer
+		// left in the artist's folder, which it may replace; any other
+		// folder.jpg is someone else's.
+		field.String("art_sidecar_hash").Optional(),
 	}
 }
 

@@ -99,7 +99,8 @@ func isSidecar(name, stem string) bool {
 
 // externalMetadata names the media-server metadata files that sit beside a
 // library file without carrying its basename. Plex, Jellyfin and the *arr stack
-// write them; streamline never does. isSidecar keys on the media file's stem,
+// write them, and so does the music tag writer (cover.jpg or cover.png beside
+// an album, folder.jpg in its artist's folder). isSidecar keys on the media file's stem,
 // so none of these is a sidecar, and a directory holding one survived every
 // prune — on a library migrated from the *arr stack that is nearly every
 // directory (629 of 1003 on the homelab), so deleting a title left its folder
@@ -111,7 +112,8 @@ var externalMetadata = map[string]bool{
 	"banner.jpg": true, "banner.png": true,
 	"thumb.jpg": true, "thumb.png": true,
 	"landscape.jpg": true, "landscape.png": true,
-	"backdrop.jpg": true, "folder.jpg": true, "cover.jpg": true,
+	"backdrop.jpg": true, "folder.jpg": true, "folder.png": true,
+	"cover.jpg": true, "cover.png": true,
 	"clearlogo.png": true, "clearart.png": true, "logo.png": true,
 	"disc.png": true, "discart.png": true,
 	".ds_store": true, "thumbs.db": true,

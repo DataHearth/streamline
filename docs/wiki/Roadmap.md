@@ -14,7 +14,7 @@ Missing something you need? [Open an issue](https://github.com/datahearth/stream
 | Books | ✅ Shipped — a book-first library (books and series with volumes, editions per language and publisher, an ebook and an audiobook slot each), adoption of existing files, an OPDS catalog, searching and grabbing per slot, RSS and scheduled searches, and requests |
 | Send to e-reader by email (EPUB and PDF) | ✅ Shipped |
 | CBZ → PDF for send to e-reader | 📋 Planned |
-| Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | 🚧 In progress — full MusicBrainz tag set written on import, without losing ReplayGain, lyrics or art |
+| Music tag engine (Streamline keeps every file's tags and artwork in step with its library) | 🚧 In progress — full MusicBrainz tag set and the album cover written into each file, `cover.jpg` and the artist's `folder.jpg` beside them, without losing ReplayGain, lyrics or a release's own art |
 
 Music and books work like movies and TV: adopt your existing library, then let automatic searching, grabbing and requests fill the gaps. Music is reachable from Subsonic clients and books from OPDS readers; see [Music and Books](Music-and-Books).
 

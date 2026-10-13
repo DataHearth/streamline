@@ -83,7 +83,11 @@ func (MediaFile) Fields() []ent.Field {
 		// hash of what was last written (empty forces the next write even
 		// when nothing changed), tags_mtime the file's modification time and
 		// tags_size its size right after, which is how an edit made elsewhere
-		// is noticed; tags_checked_at orders that check.
+		// is noticed; tags_checked_at orders that check. tags_art_hash is
+		// the SHA-256 of the front cover the writer embedded, which is how
+		// it knows that picture for its own (MP4 keeps no description to
+		// mark it with): it replaces or removes only that one, and the cover
+		// resolver never takes it for the album's own art.
 		field.Enum("tags_state").
 			Values("pending", "deferred", "written", "failed").
 			Optional().Nillable(),
@@ -94,6 +98,7 @@ func (MediaFile) Fields() []ent.Field {
 		field.Time("tags_checked_at").Optional().Nillable(),
 		field.Uint8("tag_failures").Default(0),
 		field.String("tags_error").Optional(),
+		field.String("tags_art_hash").Optional(),
 	}
 }
 

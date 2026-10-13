@@ -62,24 +62,33 @@ func (db *DB) ListAlbumTagFiles(
 		All(ctx)
 }
 
-// SetMediaFileTagsWritten records a write (or a pass that found nothing to
-// change): the hash written, the file's modification time and size right
-// after, and a clean failure count.
+// TagWrite is what a tag write (or a pass that found nothing to change)
+// leaves recorded on the file.
+type TagWrite struct {
+	// Hash is what was written; ArtHash the front cover Streamline now owns
+	// in the file, empty when none.
+	Hash, ArtHash string
+	// Mtime (Unix nanoseconds) and Size are the file's right after.
+	Mtime, Size int64
+	At          time.Time
+}
+
+// SetMediaFileTagsWritten records a write: the hashes, the file's
+// modification time and size right after, and a clean failure count.
 func (db *DB) SetMediaFileTagsWritten(
 	ctx context.Context,
 	id uint32,
-	hash string,
-	mtime, size int64,
-	at time.Time,
+	w TagWrite,
 ) error {
 	return db.client.MediaFile.UpdateOneID(id).
 		SetTagsState(entmediafile.TagsStateWritten).
-		SetTagsHash(hash).
-		SetTagsMtime(mtime).
-		SetTagsSize(size).
-		SetSize(size).
-		SetTaggedAt(at).
-		SetTagsCheckedAt(at).
+		SetTagsHash(w.Hash).
+		SetTagsArtHash(w.ArtHash).
+		SetTagsMtime(w.Mtime).
+		SetTagsSize(w.Size).
+		SetSize(w.Size).
+		SetTaggedAt(w.At).
+		SetTagsCheckedAt(w.At).
 		SetTagFailures(0).
 		SetTagsError("").
 		Exec(ctx)
@@ -149,6 +158,22 @@ func (db *DB) SetAlbumTagsManaged(
 	managed bool,
 ) error {
 	return db.client.Album.UpdateOneID(id).SetTagsManaged(managed).Exec(ctx)
+}
+
+// SetAlbumArtSidecar records the hash of the cover file the tag writer left
+// beside the album's files, empty once it removed it.
+func (db *DB) SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error {
+	return db.client.Album.UpdateOneID(id).SetArtSidecarHash(hash).Exec(ctx)
+}
+
+// SetArtistArtSidecar records the hash of the folder.jpg the tag writer left
+// in the artist's folder, empty once it removed it.
+func (db *DB) SetArtistArtSidecar(
+	ctx context.Context,
+	id uint32,
+	hash string,
+) error {
+	return db.client.Artist.UpdateOneID(id).SetArtSidecarHash(hash).Exec(ctx)
 }
 
 func (db *DB) markTags(
