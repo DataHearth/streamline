@@ -453,6 +453,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		root := config.Get().Library.MusicPath
 		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 		for _, a := range row.Edges.Albums {
+			unlock := library.LockAlbumFiles(a.ID)
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
 					if err := library.RemoveMediaFile(
@@ -473,6 +474,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 					}
 				}
 			}
+			unlock()
 		}
 	}
 	if err := s.db.DeleteArtist(ctx, id); err != nil {

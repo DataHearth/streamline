@@ -5271,9 +5271,13 @@ type ImportScanAlbum struct {
 	OutcomeMessage   *string                `json:"outcome_message,omitempty"`
 	ReleaseGroupMbid *string                `json:"release_group_mbid,omitempty"`
 
-	// SeedingFiles How many of the folder's audio files a torrent the download
-	// clients still list serves, read live. Tags are written to those
-	// only once the torrent is removed from its client.
+	// SeedingFiles How many of the folder's audio files the tag writer will leave
+	// alone while a torrent the download clients still list holds them:
+	// files a torrent serves, and under `seeding: defer` files
+	// hardlinked to a listed torrent's. Tags are written to those only
+	// once the torrent is removed from its client. Read from a listing
+	// at most 30 seconds old, and only while the scan awaits review
+	// with tagging on; absent otherwise.
 	SeedingFiles *int `json:"seeding_files,omitempty"`
 
 	// Size Bytes of the folder's audio files.
@@ -9525,9 +9529,11 @@ type CommitImportJSONBody struct {
 	// the albums the commit brings in (those holding no file yet) as managed (re-tagged on
 	// their own under `managed`). Off leaves the files as they
 	// are and the new albums unmanaged; an album that already
-	// held files keeps its own setting. Defaults to on unless
-	// `library.music_tags.mode` is `off`. A file a torrent still
-	// serves is tagged once the torrent is gone.
+	// held files keeps its own setting. Defaults to off: a
+	// commit that does not ask leaves every adopted file byte for
+	// byte as it is. With `library.music_tags.mode` `off` the
+	// files are queued and written once it is switched on. A file
+	// a torrent still serves is tagged once the torrent is gone.
 	WriteTags *bool `json:"write_tags,omitempty"`
 }
 

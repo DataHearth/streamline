@@ -225,7 +225,9 @@ var _ = Describe("Handler: Import scan albums",
 					true, []string{filepath.Join(nevermind, "01.mp3")}, nil,
 				)).Once()
 			app.store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
-				Return(&ent.ImportScan{ID: 5}, nil).Once()
+				Return(&ent.ImportScan{
+					ID: 5, Status: entimportscan.StatusAwaitingReview,
+				}, nil).Once()
 			app.store.EXPECT().ListImportScanAlbums(mock.Anything,
 				mock.MatchedBy(func(p db.ListImportScanAlbumsParams) bool {
 					return p.ScanID == 5
@@ -274,6 +276,52 @@ var _ = Describe("Handler: Import scan albums",
 			).To(Equal(ImportScanAlbumOutcome("attached")))
 			Expect(body.Items[0].ArtistId).To(HaveValue(Equal(uint32(7))))
 			Expect(body.Items[1].ArtistId).To(BeNil())
+		})
+
+		Describe("seeding_files", func() {
+			row := func(folder string) []*ent.ImportScanAlbum {
+				return []*ent.ImportScanAlbum{{
+					ID: 1, FolderPath: folder, ArtistMbid: "artist-1",
+					Classification: entimportscanalbum.ClassificationConfirmed,
+					Decision:       entimportscanalbum.DecisionPending,
+					Outcome:        entimportscanalbum.OutcomePending,
+				}}
+			}
+			fetch := func(status entimportscan.Status) ImportScanAlbumList {
+				GinkgoHelper()
+				app.store.EXPECT().FindImportScan(mock.Anything, uint32(5)).
+					Return(&ent.ImportScan{ID: 5, Status: status}, nil).Once()
+				app.store.EXPECT().
+					ListImportScanAlbums(mock.Anything, mock.Anything).
+					Return(row("/music/A"), 1, nil).
+					Once()
+				app.store.EXPECT().ArtistIDsByMBID(mock.Anything, mock.Anything).
+					Return(map[string]uint32{}, nil).Once()
+				resp := app.do(app.req(http.MethodGet,
+					"/api/v1/library/imports/5/albums", app.adminKey, nil))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body ImportScanAlbumList
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				return body
+			}
+
+			It("lists the download clients once for a review paged through", func() {
+				app.downloads.EXPECT().SeedingTorrents(mock.Anything).
+					Return(download.NewSeedingSet(true, nil, nil)).Once()
+
+				for range 3 {
+					Expect(
+						fetch(entimportscan.StatusAwaitingReview).Items[0].SeedingFiles,
+					).
+						To(HaveValue(BeZero()))
+				}
+			})
+
+			It("lists nothing once the scan is committed", func() {
+				Expect(fetch(entimportscan.StatusCompleted).Items[0].SeedingFiles).
+					To(BeNil())
+			})
 		})
 
 		It("returns an empty page for a known, empty scan", func() {

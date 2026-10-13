@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"go.senan.xyz/taglib"
 )
@@ -154,7 +155,8 @@ func Hash(tags Tags, p Policy, extra ...string) string {
 }
 
 func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
-	tmp, err := siblingCopy(path, ext)
+	removeStaleCopies(filepath.Dir(path))
+	tmp, st, err := siblingCopy(path, ext)
 	if err != nil {
 		return "", err
 	}
@@ -191,11 +193,83 @@ func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
 		}
 	}
 
+	// The copy replaces the original under its name, so it takes on what
+	// the original carried beyond its bytes: its mode, its extended
+	// attributes (a POSIX ACL among them) and, last, its owner — chowning
+	// away first would leave the copy one Streamline can no longer change.
+	if err := keepAttributes(path, tmp, st); err != nil {
+		return "", err
+	}
 	if err := os.Rename(tmp, path); err != nil {
 		return "", err
 	}
 	committed = true
 	return ours, nil
+}
+
+// ErrOwnership is a write whose copy could not be given the original's owner,
+// group or extended attributes: renaming it over the original would change
+// who can read the file (a media server running as another user, a group the
+// library is shared through). The original is left untouched, and retrying
+// will not help until the permissions change.
+var ErrOwnership = errors.New(
+	"audiotags: the file's owner or attributes cannot be kept",
+)
+
+// keepAttributes gives the copy at tmp the original's permission bits,
+// extended attributes and owner.
+func keepAttributes(orig, tmp string, st os.FileInfo) error {
+	if err := os.Chmod(tmp, st.Mode().Perm()); err != nil {
+		return err
+	}
+	if err := copyXattrs(orig, tmp); err != nil {
+		return fmt.Errorf("%w: %w", ErrOwnership, err)
+	}
+	if err := keepOwner(tmp, st); err != nil {
+		return fmt.Errorf("%w: %w", ErrOwnership, err)
+	}
+	return nil
+}
+
+// TempPrefix starts the name of the hidden copy a write works on. A copy is
+// removed when the write ends, but one a killed process left behind keeps the
+// audio extension (TagLib picks the format from it): IsAudioFile never takes
+// it for a track, and the next write in its folder removes it once it is
+// older than staleCopyAge.
+const TempPrefix = ".streamline-tags-"
+
+// staleCopyAge is how old a leftover copy must be before a write removes it:
+// far longer than any write takes, so a copy another write is still working
+// on is never touched.
+const staleCopyAge = time.Hour
+
+// IsAudioFile reports a file the music scanners and importers treat as a
+// track: one with an audio extension whose name is not hidden. A hidden one
+// is a write's copy or a macOS resource fork (._01.flac), never a track.
+func IsAudioFile(path string) bool {
+	name := filepath.Base(path)
+	if strings.HasPrefix(name, ".") {
+		return false
+	}
+	_, ok := AudioExtensions[strings.ToLower(filepath.Ext(name))]
+	return ok
+}
+
+// removeStaleCopies deletes the copies a write killed mid-way left in dir.
+func removeStaleCopies(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	cutoff := time.Now().Add(-staleCopyAge)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), TempPrefix) {
+			continue
+		}
+		if info, err := e.Info(); err == nil && info.ModTime().Before(cutoff) {
+			_ = os.Remove(filepath.Join(dir, e.Name()))
+		}
+	}
 }
 
 // plan is a write of tags (already filtered by p.apply) over a file holding
@@ -350,10 +424,17 @@ func writeArt(path, ext string, art Art) (string, error) {
 
 const frontCoverType = "Front Cover"
 
-// frontCover finds the file's front cover: the picture typed so, or for MP4,
-// which types none, the first one. It returns the index to write it at (one
-// past the last picture when there is none, which appends) and its bytes,
-// nil when there is none.
+// otherPictureType is ID3's and FLAC's catch-all picture type, which many
+// rips give the release's cover.
+const otherPictureType = "Other"
+
+// frontCover finds the file's front cover: the picture typed so; else the
+// first one typed Other, which a rip that types nothing gives its cover (a
+// second, Streamline-typed front cover beside it would be the one players
+// show, and Picture would then return Streamline's copy instead of the
+// release's own art); else for MP4, which types none, the first one. It
+// returns the index to write it at (one past the last picture when there is
+// none, which appends) and its bytes, nil when there is none.
 func frontCover(path, ext string) (int, []byte, error) {
 	props, err := taglib.ReadProperties(path)
 	if err != nil {
@@ -362,6 +443,11 @@ func frontCover(path, ext string) (int, []byte, error) {
 	idx := slices.IndexFunc(props.Images, func(d taglib.ImageDesc) bool {
 		return d.Type == frontCoverType
 	})
+	if idx < 0 {
+		idx = slices.IndexFunc(props.Images, func(d taglib.ImageDesc) bool {
+			return d.Type == otherPictureType || d.Type == ""
+		})
+	}
 	if idx < 0 && ext == ".m4a" && len(props.Images) > 0 {
 		idx = 0
 	}
@@ -384,29 +470,56 @@ const performerPrefix = taglib.Performer + ":"
 var performerValue = regexp.MustCompile(`^(.+?) \(([^()]+)\)$`)
 
 // fold returns tags as the format stores them: values trimmed and emptied
-// out, the totals folded into the number for ID3 and MP4, and for ID3 the
-// performers moved to one PERFORMER:<INSTRUMENT> key per instrument.
+// out, the totals folded into the number for ID3 and MP4, and the performers
+// in the format's own form — for ID3 one PERFORMER:<INSTRUMENT> key per
+// instrument, elsewhere Picard's "Name (instrument)" under PERFORMER.
+//
+// A PERFORMER:<INSTRUMENT> key given explicitly (a hand-set override) names
+// every performer of that instrument: the PERFORMER list's entries for it
+// are dropped rather than merged in, so the override replaces them.
 func fold(ext string, tags Tags) map[string][]string {
 	out := make(map[string][]string, len(tags))
+	explicit := map[string]bool{}
 	for k, vs := range tags {
 		out[k] = clean(vs)
+		if strings.HasPrefix(strings.ToUpper(k), performerPrefix) {
+			explicit[strings.ToUpper(k)] = true
+		}
 	}
-	if ext == ".mp3" {
-		if vs, ok := out[taglib.Performer]; ok {
-			var plain []string
-			for _, v := range vs {
-				m := performerValue.FindStringSubmatch(v)
-				if m == nil {
-					plain = append(plain, v)
-					continue
-				}
-				key := performerPrefix + strings.ToUpper(m[2])
+	if vs, ok := out[taglib.Performer]; ok {
+		var plain []string
+		for _, v := range vs {
+			m := performerValue.FindStringSubmatch(v)
+			if m == nil {
+				plain = append(plain, v)
+				continue
+			}
+			key := performerPrefix + strings.ToUpper(m[2])
+			switch {
+			case explicit[key]:
+				// The override names this instrument's performers.
+			case ext == ".mp3":
 				if !slices.Contains(out[key], m[1]) {
 					out[key] = append(out[key], m[1])
 				}
+			default:
+				plain = append(plain, v)
 			}
-			out[taglib.Performer] = plain
 		}
+		if ext != ".mp3" {
+			// No per-instrument key outside ID3: the override's names go
+			// into the list in Picard's form, and the key is deleted.
+			for _, key := range slices.Sorted(maps.Keys(explicit)) {
+				in := strings.ToLower(strings.TrimPrefix(key, performerPrefix))
+				for _, name := range out[key] {
+					if v := name + " (" + in + ")"; !slices.Contains(plain, v) {
+						plain = append(plain, v)
+					}
+				}
+				out[key] = nil
+			}
+		}
+		out[taglib.Performer] = plain
 	}
 	if ext != ".mp3" && ext != ".m4a" {
 		return out
@@ -459,28 +572,28 @@ func matches(key string, patterns []string) bool {
 }
 
 // siblingCopy copies path to a new hidden file in the same directory, so the
-// final rename is atomic, with the original's permission bits. The copy keeps
-// the extension: TagLib picks the format from it.
-func siblingCopy(path, ext string) (string, error) {
+// final rename is atomic, and returns it with the original's file info. The
+// copy keeps the extension: TagLib picks the format from it.
+func siblingCopy(path, ext string) (string, os.FileInfo, error) {
 	//nolint:gosec // the caller supplies the path; this package rewrites library files by design
 	src, err := os.Open(path)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer src.Close()
 	st, err := src.Stat()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	dst, err := os.CreateTemp(filepath.Dir(path), ".streamline-tags-*"+ext)
+	dst, err := os.CreateTemp(filepath.Dir(path), TempPrefix+"*"+ext)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	_, err = io.Copy(dst, src)
-	err = errors.Join(err, dst.Chmod(st.Mode().Perm()), dst.Close())
+	err = errors.Join(err, dst.Close())
 	if err != nil {
 		_ = os.Remove(dst.Name())
-		return "", err
+		return "", nil, err
 	}
-	return dst.Name(), nil
+	return dst.Name(), st, nil
 }

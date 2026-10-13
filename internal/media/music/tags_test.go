@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/scheduler"
 )
@@ -309,7 +310,52 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 					*reload(mf).TagsState,
 				).To(Equal(entmediafile.TagsStateDeferred))
 			})
+
+			It(
+				"waits for a listed torrent no download record names, by the file it shares",
+				func() {
+					// Adopted from a library another tool hardlinked out of
+					// the client's downloads: no record, so no hash ties
+					// the album to the torrent.
+					e.client.DownloadRecord.Delete().ExecX(e.ctx)
+					e.dl.EXPECT().SeedingTorrents(mock.Anything).
+						Return(download.NewSeedingSet(
+							true, []string{filepath.Join(dlDir, "Nevermind")},
+							[]string{"def"},
+						)).Once()
+
+					Expect(e.svc.SyncTags(e.ctx)).To(Succeed())
+
+					Expect(
+						*reload(mf).TagsState,
+					).To(Equal(entmediafile.TagsStateDeferred))
+					Expect(titleOf(mf.Path)).To(Equal("Smells Like Teen Spirit"))
+				},
+			)
 		})
+	})
+
+	It("never puts back a file deleted while its write waited on the album", func() {
+		mf := placeFile("Nirvana/Nevermind/01.flac", pending())
+		listed := make(chan struct{})
+		e.dl.EXPECT().SeedingTorrents(mock.Anything).
+			RunAndReturn(func(context.Context) download.SeedingSet {
+				close(listed)
+				return download.NewSeedingSet(true, nil, nil)
+			}).Once()
+		unlock := library.LockAlbumFiles(alb.ID)
+		done := make(chan error)
+		go func() { done <- e.svc.SyncTags(e.ctx) }()
+
+		// The pass has listed the file; a track-file delete lands first.
+		Eventually(listed).Should(BeClosed())
+		Expect(os.Remove(mf.Path)).To(Succeed())
+		e.client.MediaFile.DeleteOneID(mf.ID).ExecX(e.ctx)
+		unlock()
+
+		Eventually(done).Should(Receive(BeNil()))
+		Expect(mf.Path).NotTo(BeAnExistingFile())
+		Expect(dirEntries(filepath.Dir(mf.Path))).To(BeEmpty())
 	})
 
 	Describe("failures", func() {
@@ -438,7 +484,8 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 		// The cover is resolved first; there is none to fetch here.
 		e.posters.EXPECT().Fetch(mock.Anything, coverKind, alb.ID, mock.Anything).
 			Return(errors.New("no cover")).Maybe()
-		Expect(e.svc.TagAlbum(e.ctx, alb.ID)).To(Succeed())
+		_, err := e.svc.TagAlbum(e.ctx, alb.ID)
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*reload(mf).TagsState).To(Equal(entmediafile.TagsStateWritten))
 		Expect(*reload(other).TagsState).To(Equal(entmediafile.TagsStatePending))
@@ -448,4 +495,15 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 // manualCtx marks ctx the way POST /schedules/{name}/run does.
 func manualCtx(ctx context.Context) context.Context {
 	return scheduler.WithManual(ctx)
+}
+
+func dirEntries(dir string) []string {
+	GinkgoHelper()
+	entries, err := os.ReadDir(dir)
+	Expect(err).NotTo(HaveOccurred())
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	return names
 }

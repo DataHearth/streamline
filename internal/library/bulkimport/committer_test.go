@@ -734,3 +734,13 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 		},
 	)
 })
+
+var _ = Describe("CommitOptions", Label("unit", "bulkimport"), func() {
+	It("leaves adopted files alone unless the commit asks for tags", func() {
+		on, off := true, false
+		Expect(CommitOptions{}.writeTags()).To(BeFalse(),
+			"a commit with no body never rewrites a collection's files")
+		Expect(CommitOptions{WriteTags: &off}.writeTags()).To(BeFalse())
+		Expect(CommitOptions{WriteTags: &on}.writeTags()).To(BeTrue())
+	})
+})

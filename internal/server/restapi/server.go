@@ -69,6 +69,8 @@ type Server struct {
 	// transcoder is nil in any composition that wired no worker; the
 	// /transcoding/* handlers read that as the feature being off.
 	transcoder *transcoding.Worker
+	// seeding caches the import review's torrent listing.
+	seeding seedingCache
 }
 
 // authRejecter is a provider that can report its credentials being refused.

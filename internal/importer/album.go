@@ -61,7 +61,7 @@ func listAudioFiles(path string) ([]string, error) {
 			if d.IsDir() {
 				return nil
 			}
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(p))]; ok {
+			if audiotags.IsAudioFile(p) {
 				out = append(out, p)
 			}
 			return nil
@@ -208,6 +208,11 @@ func (w *Worker) importAlbumFiles(
 		replaced []*ent.MediaFile
 		firstErr error
 	)
+	// The album's files change from here until the replaced ones are gone:
+	// a tag write must not rename a copy of an old file over its path in
+	// between. Released before the album is tagged, which takes it per file.
+	unlockFiles := library.LockAlbumFiles(alb.ID)
+	defer unlockFiles()
 	for _, f := range plan {
 		old := f.tr.Edges.MediaFiles
 		moved, err := setAside(ctx, old)
@@ -261,10 +266,13 @@ func (w *Worker) importAlbumFiles(
 		)
 	}
 	dropAside(ctx, aside)
+	unlockFiles()
 	// Tagged before the media servers hear of the files, so they index them
 	// once. A file the torrent still shares is deferred to the job.
+	coverResolved := false
 	if tagging && w.tagger != nil {
-		if err := w.tagger.TagAlbum(ctx, alb.ID); err != nil {
+		var err error
+		if coverResolved, err = w.tagger.TagAlbum(ctx, alb.ID); err != nil {
 			slog.WarnContext(
 				ctx,
 				"album import: tagging the files failed, the job retries",
@@ -275,7 +283,9 @@ func (w *Worker) importAlbumFiles(
 			)
 		}
 	}
-	if w.covers != nil {
+	// The tagger resolved the cover before writing the files; a second
+	// pass would read every file again for nothing.
+	if w.covers != nil && !coverResolved {
 		w.covers.ResolveCoversInBackground(ctx, alb.ID)
 	}
 

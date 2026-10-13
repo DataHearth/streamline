@@ -127,14 +127,18 @@ type Store interface {
 	) error
 	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
-	ListAlbumsAwaitingDetails(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingDetails(
+		ctx context.Context,
+		retryBefore time.Time,
+		limit int,
+	) ([]*ent.Album, error)
 	ListMediaFilesForTagSync(
 		ctx context.Context,
 		limit int,
 	) ([]*ent.MediaFile, error)
 	ListAlbumTagFiles(ctx context.Context, albumID uint32) ([]*ent.MediaFile, error)
 	SetMediaFileTagsWritten(ctx context.Context, id uint32, w TagWrite) error
-	SetMediaFileTagsDeferred(ctx context.Context, id uint32) error
+	SetMediaFileTagsDeferred(ctx context.Context, id uint32, at time.Time) error
 	RecordMediaFileTagFailure(
 		ctx context.Context,
 		id uint32,

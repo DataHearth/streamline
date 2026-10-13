@@ -1864,7 +1864,7 @@
 	"music_tags_retag_queued_one": "{count} file queued for retagging.",
 	"music_tags_retag_queued_other": "{count} files queued for retagging.",
 	"imports_write_tags": "Write Streamline's tags into these files",
-	"imports_write_tags_help": "Titles, artists, dates, genres and MusicBrainz ids from the library, so players and media servers show the same. Off leaves the files exactly as they are, and Streamline keeps off them until you switch the album on.",
+	"imports_write_tags_help": "Titles, artists, dates, genres and MusicBrainz ids from the library, so players and media servers show the same. Left off, the files stay exactly as they are, and Streamline keeps off them until you switch the album on.",
 	"imports_write_tags_off": "Writing tags is off in Settings → Music: the files are queued and written once you switch it on.",
 	"imports_seeding_files_one": "{count} file seeding, tagged once its torrent is gone",
 	"imports_seeding_files_other": "{count} files seeding, tagged once their torrent is gone",

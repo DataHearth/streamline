@@ -186,8 +186,10 @@ func (s *Service) commitAlbum(
 	}
 	// Tagged before the media servers are told (one refresh at the end of
 	// the commit); a file a torrent still serves is left for the job.
+	coverResolved := false
 	if writeTags && len(plan) > 0 {
-		if err := s.musicAdder.TagAlbum(ctx, alb.ID); err != nil {
+		var err error
+		if coverResolved, err = s.musicAdder.TagAlbum(ctx, alb.ID); err != nil {
 			slog.WarnContext(
 				ctx,
 				"music commit: tagging the adopted files failed, the job retries",
@@ -207,7 +209,9 @@ func (s *Service) commitAlbum(
 		notes = append(notes, fmt.Sprintf(
 			"%d of %d tracks have no file", uncovered, len(alb.Edges.Tracks)))
 	}
-	s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
+	if !coverResolved {
+		s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
+	}
 	slog.InfoContext(ctx, "album adopted",
 		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched,
 		"tags", writeTags)
@@ -287,17 +291,19 @@ func (s *Service) resolveArtist(
 }
 
 // SeedingFiles counts the audio files of an album folder, disc subfolders
-// included, that a torrent the clients still list serves: the files the tag
-// writer will leave alone until the torrent is gone. A folder that cannot be
-// read counts none.
+// included, that the tag writer will leave alone until a torrent is gone:
+// those a torrent the clients still list serves and, under seeding: defer,
+// those hardlinked to a listed torrent's file. A folder that cannot be read
+// counts none.
 func SeedingFiles(seeding download.SeedingSet, folder string) int {
 	files, err := albumFolderFiles(folder)
 	if err != nil {
 		return 0
 	}
+	deferLinks := config.Get().Library.MusicTags.Seeding == config.MusicTagsSeedingDefer
 	n := 0
 	for _, f := range files {
-		if seeding.Owns(f.path) {
+		if seeding.Owns(f.path) || (deferLinks && seeding.SharesData(f.path)) {
 			n++
 		}
 	}
@@ -316,7 +322,7 @@ func albumFolderFiles(folder string) ([]albumFile, error) {
 	for _, e := range entries {
 		path := filepath.Join(folder, e.Name())
 		if !e.IsDir() {
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(path))]; ok {
+			if audiotags.IsAudioFile(path) {
 				out = append(out, albumFile{path: path})
 			}
 			continue
@@ -334,7 +340,7 @@ func albumFolderFiles(folder string) ([]albumFile, error) {
 			if se.IsDir() {
 				continue
 			}
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(sp))]; ok {
+			if audiotags.IsAudioFile(sp) {
 				out = append(out, albumFile{path: sp, disc: disc})
 			}
 		}

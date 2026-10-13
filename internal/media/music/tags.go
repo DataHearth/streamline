@@ -45,6 +45,9 @@ const (
 	tagUnchanged = "unchanged"
 	tagDeferred  = "deferred"
 	tagFailed    = "failed"
+	// tagGone is a file deleted or replaced after the pass listed it; a
+	// replacement has its own row, queued in its own right.
+	tagGone = "gone"
 )
 
 // ErrTagsOff is a tag request on an instance whose library.music_tags.mode
@@ -57,9 +60,11 @@ var tagWrites = otelx.Must(meter.Int64Counter(
 ))
 
 // AlbumTagger is the slice of the service the importer tags an album's new
-// files through, before it refreshes the media servers.
+// files through, before it refreshes the media servers. TagAlbum reports
+// whether it resolved the album's cover on the way, so the caller does not
+// run the background resolve over the same files again.
 type AlbumTagger interface {
-	TagAlbum(ctx context.Context, albumID uint32) error
+	TagAlbum(ctx context.Context, albumID uint32) (coverResolved bool, err error)
 }
 
 var _ AlbumTagger = (*Service)(nil)
@@ -127,25 +132,30 @@ func (s *Service) SyncTags(ctx context.Context) error {
 // TagAlbum writes the album's files waiting for their tags now, under the
 // same rules as the job. The importer calls it once it has recorded the
 // files, so a media server indexes them tagged; it refreshes nothing itself.
-func (s *Service) TagAlbum(ctx context.Context, albumID uint32) error {
+// It reports whether it resolved the album's cover first, which it does
+// whenever either art setting is on: the caller's own background resolve
+// would then only read every file again.
+func (s *Service) TagAlbum(ctx context.Context, albumID uint32) (bool, error) {
 	ctx, span := tracer.Start(ctx, "music.tag_album",
 		withAlbumID(albumID))
 	defer span.End()
 
 	cfg := config.Get().Library.MusicTags
 	if cfg.Mode == config.MusicTagsOff {
-		return nil
+		return false, nil
 	}
 	all, err := s.db.ListAlbumTagFiles(ctx, albumID)
 	if err != nil {
-		return otelx.RecordSpanError(span, err)
+		return false, otelx.RecordSpanError(span, err)
 	}
+	resolved := false
 	if (cfg.EmbedArt || cfg.SidecarArt) && s.posters != nil && len(all) > 0 {
 		// The cover first, so the files are written with it: an import's
 		// own art (embedded in its files, or a cover file beside them) is
 		// read now, and a remote cover fetched when none is cached.
 		if alb, err := s.db.FindAlbumByID(ctx, albumID); err == nil {
 			s.resolveCover(ctx, alb)
+			resolved = true
 		}
 	}
 	files := slices.DeleteFunc(all, func(mf *ent.MediaFile) bool {
@@ -154,10 +164,10 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) error {
 				*mf.TagsState != entmediafile.TagsStateDeferred)
 	})
 	if len(files) == 0 {
-		return nil
+		return resolved, nil
 	}
 	s.tagFiles(ctx, files, s.seedingTorrents(ctx), cfg, nil)
-	return nil
+	return resolved, nil
 }
 
 // seedingTorrents lists the clients' torrents; with no download manager
@@ -375,6 +385,23 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 		withMediaFileID(mf.ID))
 	defer span.End()
 
+	// Held across the copy and the rename, and the row read again under
+	// it: the importer, the renamer and the deletes change this album's
+	// files under the same lock, so a file replaced, moved or removed since
+	// the pass listed it is seen as it is now.
+	unlock := library.LockAlbumFiles(a.alb.ID)
+	defer unlock()
+	cur, err := a.svc.db.FindMediaFileByID(ctx, mf.ID)
+	if ent.IsNotFound(err) {
+		span.SetAttributes(attribute.String("outcome", tagGone))
+		return tagGone
+	}
+	if err != nil {
+		return a.fail(ctx, span, mf, err)
+	}
+	cur.Edges.Track = mf.Edges.Track
+	mf = cur
+
 	idx := slices.IndexFunc(a.alb.Edges.Tracks, func(t *ent.Track) bool {
 		return t.ID == mf.Edges.Track.ID
 	})
@@ -408,7 +435,11 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 			attribute.String("outcome", tagDeferred),
 			attribute.String("tags.deferred_reason", reason),
 		)
-		if err := a.svc.db.SetMediaFileTagsDeferred(ctx, mf.ID); err != nil {
+		if err := a.svc.db.SetMediaFileTagsDeferred(
+			ctx,
+			mf.ID,
+			timeNow(),
+		); err != nil {
 			_ = otelx.RecordSpanError(span, err)
 		}
 		return tagDeferred
@@ -437,7 +468,9 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 // reaches another hard link's bytes; what it must not do is replace a file a
 // torrent serves from that very path, and under seeding: defer it does not
 // split a hardlink from a torrent still listed, which would cost a copy's
-// disk.
+// disk. That torrent is one of the album's download records, or — for a file
+// adopted from a folder hardlinked out of a client's downloads, which no
+// record names — any listed torrent whose content holds the same file.
 func (a *albumTagging) holdReason(ctx context.Context, mf *ent.MediaFile) string {
 	if a.seeding.Owns(mf.Path) {
 		return "a torrent serves this file"
@@ -472,6 +505,9 @@ func (a *albumTagging) holdReason(ctx context.Context, mf *ent.MediaFile) string
 			return "hardlinked to a torrent still seeding"
 		}
 	}
+	if a.seeding.SharesData(mf.Path) {
+		return "hardlinked to a listed torrent's file"
+	}
 	return ""
 }
 
@@ -482,7 +518,9 @@ func (a *albumTagging) fail(
 	err error,
 ) string {
 	max := maxTagFailures
-	if errors.Is(err, audiotags.ErrUnsupportedFormat) {
+	if errors.Is(err, audiotags.ErrUnsupportedFormat) ||
+		errors.Is(err, audiotags.ErrOwnership) {
+		// Retrying changes nothing until the file or its permissions do.
 		max = 1
 	}
 	_ = otelx.RecordSpanError(span, err)

@@ -201,24 +201,20 @@ func (s *Service) enqueueHydration(artistID uint32, items ...hydrateItem) {
 
 // hydrationWorker drains the queue one album at a time, then refills it from
 // the albums still waiting in the database (restart recovery) until nothing
-// new turns up. An album that failed in this run is not retried in it.
+// new turns up. An album that failed in this run is not retried in it; one
+// that succeeded leaves the lists on its own (see refillHydration).
 func (s *Service) hydrationWorker(ctx context.Context) {
-	// tried is every album this run already fetched, which a refill never
-	// queues again: a credits refetch that falls back to the light call
-	// succeeds without moving the album's credits version, and would be
-	// listed, and fetched, forever.
-	tried := map[uint32]struct{}{}
+	failed := map[uint32]struct{}{}
 	for {
 		it, ok := s.hydrate.pop()
 		if !ok {
-			if s.refillHydration(ctx, tried) || !s.hydrate.stop() {
+			if s.refillHydration(ctx, failed) || !s.hydrate.stop() {
 				continue
 			}
 			return
 		}
 		_, err := s.hydrateAlbum(ctx, it.albumID, true)
 		s.hydrate.done(it.albumID)
-		tried[it.albumID] = struct{}{}
 		var limited *metadata.RateLimitedError
 		switch {
 		case errors.As(err, &limited):
@@ -231,6 +227,8 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			// Not a failure of the album's: it goes back on the queue,
 			// which a refill would not do.
 			s.requeue(ctx, it)
+		case err != nil:
+			failed[it.albumID] = struct{}{}
 		}
 	}
 }
@@ -243,20 +241,27 @@ func (s *Service) requeue(ctx context.Context, it hydrateItem) {
 	s.hydrate.add(a.Edges.Artist.ID, []hydrateItem{it})
 }
 
+// detailsRetry is how long an album whose credits layout a refetch could not
+// bring up to date waits before it is listed for the details backfill again.
+const detailsRetry = 24 * time.Hour
+
 // refillHydration queues up to sweepBatch albums still waiting for their
-// tracks, minus the ones this run already fetched, and reports whether it
-// found any.
+// tracks, minus the ones that failed this run, and reports whether it found
+// any. A success leaves the lists by itself: it stamps the album's tracks and
+// genres, and its fetch time is now, which the details backfill's retry
+// cutoff excludes for detailsRetry — so the rows a refill reads stay bounded
+// by the failures, not by everything the run fetched.
 func (s *Service) refillHydration(
 	ctx context.Context,
-	tried map[uint32]struct{},
+	failed map[uint32]struct{},
 ) bool {
 	fresh := func(rows []*ent.Album) []*ent.Album {
 		return slices.DeleteFunc(rows, func(a *ent.Album) bool {
-			_, seen := tried[a.ID]
-			return seen || a.Edges.Artist == nil
+			_, bad := failed[a.ID]
+			return bad || a.Edges.Artist == nil
 		})
 	}
-	rows, err := s.db.ListAlbumsAwaitingHydration(ctx, sweepBatch+len(tried))
+	rows, err := s.db.ListAlbumsAwaitingHydration(ctx, sweepBatch+len(failed))
 	if err != nil {
 		slog.WarnContext(ctx, "music hydration refill failed", "error", err)
 		return false
@@ -267,7 +272,9 @@ func (s *Service) refillHydration(
 		// albums holding files fetched before the tag writer read it
 		// (genres, edition date, the current credits layout). Background
 		// class, so a lookup never queues behind it.
-		more, err := s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch+len(tried))
+		more, err := s.db.ListAlbumsAwaitingDetails(
+			ctx, time.Now().Add(-detailsRetry), sweepBatch+len(failed),
+		)
 		if err != nil {
 			slog.WarnContext(ctx, "music details refill failed", "error", err)
 		}
@@ -547,7 +554,9 @@ func (s *Service) sweepHydration(ctx context.Context) {
 			return s.db.ListAlbumsAwaitingCredits(ctx, sweepBatch)
 		}},
 		{"details", func() ([]*ent.Album, error) {
-			return s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch)
+			return s.db.ListAlbumsAwaitingDetails(
+				ctx, now.Add(-detailsRetry), sweepBatch,
+			)
 		}},
 		{"trackless", func() ([]*ent.Album, error) {
 			return s.db.ListAlbumsTrackless(

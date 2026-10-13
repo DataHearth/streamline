@@ -2,9 +2,13 @@ package download
 
 import (
 	"context"
+	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -25,12 +29,24 @@ type SeedingSet struct {
 	Complete bool
 	roots    []string
 	hashes   map[string]struct{}
+	links    *linkIndex
+}
+
+// linkIndex is every file inside the listed torrents' content that has more
+// than one hard link, by size, read on the first SharesData and kept for the
+// set's life.
+type linkIndex struct {
+	once   sync.Once
+	bySize map[int64][]os.FileInfo
 }
 
 // NewSeedingSet builds a set from content roots and torrent hashes, for the
 // callers' tests.
 func NewSeedingSet(complete bool, roots, hashes []string) SeedingSet {
-	s := SeedingSet{Complete: complete, roots: roots, hashes: map[string]struct{}{}}
+	s := SeedingSet{
+		Complete: complete, roots: roots,
+		hashes: map[string]struct{}{}, links: &linkIndex{},
+	}
 	for _, h := range hashes {
 		s.hashes[strings.ToLower(h)] = struct{}{}
 	}
@@ -48,6 +64,48 @@ func (s SeedingSet) Owns(path string) bool {
 	return false
 }
 
+// SharesData reports a file with another hard link inside a listed torrent's
+// content: the torrent seeds the same bytes from its own path. It is how a
+// hardlink is tied to its torrent when no download record names it — a file
+// adopted from a folder another tool hardlinked out of a client's downloads.
+// The torrents' content is walked once per set, and only when a caller asks
+// about a file that has another link at all.
+func (s SeedingSet) SharesData(path string) bool {
+	st, err := os.Stat(path)
+	if err != nil || library.LinksOf(st) <= 1 || s.links == nil {
+		return false
+	}
+	s.links.once.Do(func() { s.links.bySize = indexLinked(s.roots) })
+	return slices.ContainsFunc(s.links.bySize[st.Size()], func(fi os.FileInfo) bool {
+		return os.SameFile(st, fi)
+	})
+}
+
+// indexLinked lists the regular files under roots that have another hard
+// link, by size. A root that is not there (a client's own view of a path
+// streamline cannot open) adds nothing.
+func indexLinked(roots []string) map[int64][]os.FileInfo {
+	out := map[int64][]os.FileInfo{}
+	seen := map[string]bool{}
+	for _, root := range roots {
+		if seen[root] {
+			continue
+		}
+		seen[root] = true
+		_ = filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
+			if err != nil || !d.Type().IsRegular() {
+				return nil //nolint:nilerr // an unreadable entry holds nothing to match
+			}
+			fi, err := d.Info()
+			if err == nil && fi.Size() > 0 && library.LinksOf(fi) > 1 {
+				out[fi.Size()] = append(out[fi.Size()], fi)
+			}
+			return nil
+		})
+	}
+	return out
+}
+
 // Live reports a torrent hash some client still lists.
 func (s SeedingSet) Live(hash string) bool {
 	_, ok := s.hashes[strings.ToLower(hash)]
@@ -62,7 +120,9 @@ func (d *download) SeedingTorrents(ctx context.Context) SeedingSet {
 	ctx, span := tracer.Start(ctx, "download.seeding_torrents")
 	defer span.End()
 
-	set := SeedingSet{Complete: true, hashes: map[string]struct{}{}}
+	set := SeedingSet{
+		Complete: true, hashes: map[string]struct{}{}, links: &linkIndex{},
+	}
 	downloadRoot := config.Get().Library.DownloadPath
 	for _, dc := range config.EnabledDownloadClients() {
 		client, err := d.buildClient(dc)

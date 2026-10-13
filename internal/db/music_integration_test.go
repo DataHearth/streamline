@@ -669,7 +669,8 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
 					SetTrackID(tr.ID).ExecX(ctx)
 				waiting := func() []uint32 {
-					rows, err := store.ListAlbumsAwaitingDetails(ctx, 10)
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx, now.Add(time.Minute), 10)
 					Expect(err).NotTo(HaveOccurred())
 					ids := make([]uint32, len(rows))
 					for i, a := range rows {
@@ -686,6 +687,46 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				Expect(
 					waiting(),
 				).To(BeEmpty(), "a heavy call that never succeeded is the credits sweep's")
+			},
+		)
+
+		It(
+			"does not list an outdated credits layout again until its retry is due, nor one too large for the heavy call",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				client.Album.UpdateOneID(rg2.ID).SetCreditsVersion(0).ExecX(ctx)
+				list := func(retryBefore time.Time) []*ent.Album {
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx,
+						retryBefore,
+						10,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					return rows
+				}
+
+				// Fetched at now: a refetch that fell back to the light call
+				// leaves the version, and must not head the list again at once.
+				Expect(list(now.Add(-time.Hour))).To(BeEmpty())
+				Expect(list(now.Add(time.Minute))).To(HaveLen(1))
+
+				creates := make([]*ent.TrackCreate, MaxCreditsTracks)
+				for i := range creates {
+					creates[i] = client.Track.Create().SetTitle(fmt.Sprint(i)).
+						SetPosition(uint16(i + 2)).SetAlbumID(rg2.ID)
+				}
+				client.Track.CreateBulk(creates...).ExecX(ctx)
+				Expect(list(now.Add(time.Minute))).To(BeEmpty(),
+					"a release the heavy call cannot carry never moves its version")
+
+				client.Album.UpdateOneID(rg2.ID).ClearGenres().ExecX(ctx)
+				Expect(list(now.Add(-time.Hour))).To(HaveLen(1),
+					"missing genres come from the release-group call, whatever the size")
 			},
 		)
 

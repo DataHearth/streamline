@@ -117,7 +117,7 @@ func (s *Service) tagAlbumInBackground(ctx context.Context, albumID uint32) {
 	bg := context.WithoutCancel(ctx)
 	go func() {
 		defer observability.RecoverPanic(bg, "music.tag_album", nil)
-		if err := s.TagAlbum(bg, albumID); err != nil {
+		if _, err := s.TagAlbum(bg, albumID); err != nil {
 			slog.WarnContext(bg, "writing an album's tags failed, the job retries",
 				"album.id", albumID, "error", err)
 		}
@@ -251,20 +251,36 @@ func (s *Service) checkEdits(
 			_ = s.db.SetMediaFileTagsChecked(ctx, mf.ID, mtime, size, now)
 			continue
 		}
+		// A file that cannot be compared still had its turn: stamped as
+		// checked against what the writer recorded, so the change is seen
+		// again on its next turn, and the rotation (oldest check first) is
+		// not headed by the same unreadable rows on every pass.
+		skip := func() {
+			_ = s.db.SetMediaFileTagsChecked(
+				ctx, mf.ID, mf.TagsMtime, mf.TagsSize, now,
+			)
+		}
 		tr := mf.Edges.Track
 		if tr == nil || tr.Edges.Album == nil {
+			skip()
 			continue
 		}
 		alb, ok := albums[tr.Edges.Album.ID]
 		if !ok {
 			alb, err = s.db.FindAlbumByID(ctx, tr.Edges.Album.ID)
 			if err != nil {
-				continue
+				slog.WarnContext(ctx, "music edit check could not read an album",
+					"album.id", tr.Edges.Album.ID, "error", err)
+				alb = nil
 			}
-			albums[alb.ID] = alb
+			albums[tr.Edges.Album.ID] = alb
 		}
-		full := trackOf(alb, tr.ID)
+		var full *ent.Track
+		if alb != nil {
+			full = trackOf(alb, tr.ID)
+		}
 		if full == nil || alb.Edges.Artist == nil {
+			skip()
 			continue
 		}
 		states, err := audiotags.Compare(

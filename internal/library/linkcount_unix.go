@@ -14,8 +14,13 @@ func LinkCount(path string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	return LinksOf(st), nil
+}
+
+// LinksOf is LinkCount for a file already stat-ed.
+func LinksOf(st os.FileInfo) uint64 {
 	if sys, ok := st.Sys().(*syscall.Stat_t); ok {
-		return uint64(sys.Nlink), nil //nolint:unconvert // Nlink is uint16 on darwin
+		return uint64(sys.Nlink) //nolint:unconvert // Nlink is uint16 on darwin
 	}
-	return 1, nil
+	return 1
 }

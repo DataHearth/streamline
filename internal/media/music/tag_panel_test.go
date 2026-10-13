@@ -1,6 +1,8 @@
 package music
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 )
@@ -232,6 +235,26 @@ var _ = Describe(
 				},
 			)
 
+			It(
+				"gives a file it cannot compare its turn, so the rotation moves on",
+				func() {
+					edit(map[string][]string{"TITLE": {"Lithium (my edit)"}})
+					before := reload(mf)
+					turn := before.TagsCheckedAt.Add(time.Hour)
+					timeNow = func() time.Time { return turn }
+					DeferCleanup(func() { timeNow = time.Now })
+					e.svc.db = albumless{e.store}
+
+					Expect(e.svc.checkEdits(e.ctx,
+						config.Get().Library.MusicTags, 1)).To(BeZero())
+
+					got := reload(mf)
+					Expect(*got.TagsCheckedAt).To(BeTemporally("==", turn))
+					Expect(got.TagsMtime).To(Equal(before.TagsMtime),
+						"the change is still seen on its next turn")
+				},
+			)
+
 			It("checks nothing of an album it does not manage", func() {
 				e.client.Album.UpdateOneID(alb.ID).SetTagsManaged(false).ExecX(e.ctx)
 				edit(map[string][]string{"TITLE": {"Lithium (my edit)"}})
@@ -245,3 +268,11 @@ var _ = Describe(
 		})
 	},
 )
+
+// albumless is a store whose albums cannot be read: an album deleted under the
+// edit check, or a database error.
+type albumless struct{ db.Store }
+
+func (albumless) FindAlbumByID(context.Context, uint32) (*ent.Album, error) {
+	return nil, errors.New("album gone")
+}

@@ -87,6 +87,7 @@ func (r *Renamer) move(
 	op library.RenameOperation,
 	root string,
 ) error {
+	defer library.LockAlbumFiles(op.AlbumID)()
 	if to, err := os.Lstat(op.To); err == nil {
 		from, ferr := os.Lstat(op.From)
 		if ferr != nil || !os.SameFile(from, to) {
@@ -155,7 +156,7 @@ func (r *Renamer) buildPlan(
 					continue
 				}
 				plan.Operations = append(plan.Operations, library.RenameOperation{
-					MediaFileID: f.ID, From: f.Path, To: target,
+					MediaFileID: f.ID, From: f.Path, To: target, AlbumID: alb.ID,
 				})
 			}
 		}

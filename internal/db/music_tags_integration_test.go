@@ -97,6 +97,21 @@ var _ = Describe("Music tag bookkeeping", Label("integration", "db"), func() {
 		Expect(got[0].Edges.Track.Edges.Album.ID).To(Equal(alb.ID))
 	})
 
+	It("sends a file deferred again to the back of the deferred files", func() {
+		first := file(st(entmediafile.TagsStateDeferred), "d1")
+		second := file(st(entmediafile.TagsStateDeferred), "d2")
+
+		Expect(
+			store.SetMediaFileTagsDeferred(ctx, first.ID, time.Now()),
+		).To(Succeed())
+
+		got, err := store.ListMediaFilesForTagSync(ctx, 1)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(HaveLen(1))
+		Expect(got[0].ID).To(Equal(second.ID),
+			"a batch full of files still seeding would never reach the others")
+	})
+
 	It("fails a file at the cap and records the write that succeeds", func() {
 		mf := file(st(entmediafile.TagsStatePending), "")
 		Expect(store.RecordMediaFileTagFailure(ctx, mf.ID, "boom", 2)).To(Succeed())

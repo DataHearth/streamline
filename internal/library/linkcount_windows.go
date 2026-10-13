@@ -13,3 +13,6 @@ func LinkCount(path string) (uint64, error) {
 	}
 	return 1, nil
 }
+
+// LinksOf is LinkCount for a file already stat-ed: always one on Windows.
+func LinksOf(os.FileInfo) uint64 { return 1 }

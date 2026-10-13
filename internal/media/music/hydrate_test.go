@@ -492,6 +492,7 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 					)
 					alb = albums[0]
 					e.client.Album.UpdateOneID(alb.ID).
+						SetMetadataFetchedAt(time.Now().Add(-2 * detailsRetry)).
 						SetCreditsFetchedAt(time.Now()).SetGenres([]string{}).
 						SetCreditsVersion(0).ExecX(e.ctx)
 					e.addFile(
@@ -524,19 +525,27 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 					},
 				)
 
-				It("asks once per run when only the light call answers", func() {
-					d := hydrated("old", "A")
-					d.CreditsComplete = false
-					e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
-						Return(d, nil).Once()
+				It(
+					"asks once, not on every pass, when only the light call answers",
+					func() {
+						d := hydrated("old", "A")
+						d.CreditsComplete = false
+						e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
+							Return(d, nil).Once()
 
-					e.svc.sweepHydration(e.ctx)
-					Eventually(e.idle).Should(BeTrue())
+						e.svc.sweepHydration(e.ctx)
+						Eventually(e.idle).Should(BeTrue())
+						// The next sweep, and the worker's next run, leave it
+						// alone until its retry is due.
+						e.svc.sweepHydration(e.ctx)
+						Eventually(e.idle).Should(BeTrue())
+						e.svc.hydrationWorker(metadata.Background(e.ctx))
 
-					Expect(
-						e.client.Album.GetX(e.ctx, alb.ID).CreditsVersion,
-					).To(BeZero())
-				})
+						Expect(
+							e.client.Album.GetX(e.ctx, alb.ID).CreditsVersion,
+						).To(BeZero())
+					},
+				)
 
 				It("fetches it when someone needs the album", func() {
 					e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").

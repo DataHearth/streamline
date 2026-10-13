@@ -44,6 +44,10 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 	if len(t.Edges.MediaFiles) > 0 {
 		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 	}
+	if alb := t.Edges.Album; alb != nil {
+		// No tag write may rename a copy back over a file deleted here.
+		defer library.LockAlbumFiles(alb.ID)()
+	}
 	for _, f := range t.Edges.MediaFiles {
 		// A file already gone (or taken with a same-named sibling's sidecars)
 		// is what the delete wanted anyway; its row still has to go.

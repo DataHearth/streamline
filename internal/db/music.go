@@ -1189,8 +1189,16 @@ func (db *DB) ListAlbumsAwaitingCredits(
 // genres never fetched (hydrated before the genres and edition date were
 // part of hydration), or credits stored under an older layout than
 // library.MusicCreditsVersion. Albums without files wait for their import.
+//
+// An album waiting on its credits layout is listed only when its release is
+// small enough for the heavy call (the credits sweep's own cap) and its last
+// fetch is older than retryBefore: a refetch that falls back to the light
+// call succeeds without moving the version, and would otherwise head the list
+// on every pass. The longest-unfetched come first, so such an album goes to
+// the back once tried.
 func (db *DB) ListAlbumsAwaitingDetails(
 	ctx context.Context,
+	retryBefore time.Time,
 	limit int,
 ) ([]*ent.Album, error) {
 	return db.client.Album.Query().
@@ -1201,12 +1209,14 @@ func (db *DB) ListAlbumsAwaitingDetails(
 				album.And(
 					album.CreditsFetchedAtNotNil(),
 					album.CreditsVersionLT(library.MusicCreditsVersion),
+					album.MetadataFetchedAtLT(retryBefore),
+					smallRelease(),
 				),
 			),
 			album.HasTracksWith(track.HasMediaFiles()),
 		).
 		WithArtist().
-		Order(ent.Asc(album.FieldID)).
+		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
 		Limit(limit).
 		All(ctx)
 }

@@ -325,9 +325,9 @@
 		enabled: kind === "music",
 	}));
 	let writeTagsChoice = $state<boolean | null>(null);
-	let writeTags = $derived(
-		writeTagsChoice ?? (libraryCfg.data ? libraryCfg.data.music_tags.mode !== "off" : true),
-	);
+	// Off unless the admin ticks it: adopting a collection never rewrites
+	// its files on its own.
+	let writeTags = $derived(writeTagsChoice ?? false);
 
 	const commit = createMutation<ImportScan, Error, void>(() => ({
 		mutationFn: () =>

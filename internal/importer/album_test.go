@@ -228,6 +228,26 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
+	It("leaves the cover alone when tagging already resolved it", func() {
+		covers := musicmocks.NewMockCoverResolver(GinkgoT())
+		w.covers = covers
+		tagger.resolves = true
+		for i, t := range albumTracks {
+			seedTrackFile(
+				dlDir, string(rune('a'+i))+".mp3", "tagged.mp3", t.position, t.title,
+			)
+		}
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		storeMk.EXPECT().
+			RecordAlbumImportSuccess(mock.Anything, mock.Anything).Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(tagger.calls).To(Equal([]uint32{alb.ID}))
+		// The mock fails the spec on any ResolveCoversInBackground call.
+	})
+
 	It("imports a full album without reporting a gap", func() {
 		for i, t := range albumTracks {
 			seedTrackFile(
@@ -580,12 +600,14 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 type recordingTagger struct {
 	calls  []uint32
 	onCall func()
+	// resolves is what TagAlbum reports about the cover.
+	resolves bool
 }
 
-func (r *recordingTagger) TagAlbum(_ context.Context, albumID uint32) error {
+func (r *recordingTagger) TagAlbum(_ context.Context, albumID uint32) (bool, error) {
 	r.calls = append(r.calls, albumID)
 	if r.onCall != nil {
 		r.onCall()
 	}
-	return nil
+	return r.resolves, nil
 }

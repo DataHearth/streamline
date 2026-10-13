@@ -10,7 +10,6 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
-	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -47,18 +46,18 @@ type Manager interface {
 
 // CommitOptions are the import review's choices for a commit. WriteTags, on
 // a music scan, queues the adopted files for the music tag writer and marks
-// the albums the commit creates as managed; nil means "when tags are on".
-// Other kinds ignore it.
+// the albums the commit creates as managed; nil means off. Other kinds
+// ignore it.
 type CommitOptions struct {
 	WriteTags *bool
 }
 
-// writeTags resolves WriteTags against library.music_tags.mode.
+// writeTags resolves WriteTags. Adoption takes files already in someone's
+// collection, which it never wrote before tagging existed: a commit that does
+// not ask for tags (an API client or a script sending no body) leaves them
+// byte for byte as they are, comments and all.
 func (o CommitOptions) writeTags() bool {
-	if o.WriteTags != nil {
-		return *o.WriteTags
-	}
-	return config.Get().Library.MusicTags.Mode != config.MusicTagsOff
+	return o.WriteTags != nil && *o.WriteTags
 }
 
 // FilesParams is the input for Manager.Files.

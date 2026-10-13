@@ -383,7 +383,7 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` | `/library/recent?limit=` | What landed in the library, newest first (`limit` 1–100, default 24): one `items` entry per import of a movie (`resolution`), a show (`addition`, the episodes it added), an album (`artist_id`, `artist_name`, `release_type`) or one format of a book (`author`, `book_kind`, `format`, and `series_id`/`volume` for a volume). An import is a title's files that landed within an hour of the newest of them; `at` is that newest file's import time. Bulk-import adoptions count | Authenticated |
 | `GET` `POST` | `/library/imports` | List / start an import scan | 🔒 Admin |
 | `GET` `DELETE` | `/library/imports/{id}` | Fetch / delete a scan | 🔒 Admin |
-| `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan. A music commit takes an optional `{"write_tags": bool}` (default on unless `library.music_tags.mode` is `off`) | 🔒 Admin |
+| `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan. A music commit takes an optional `{"write_tags": bool}` (default off: without it the adopted files are left exactly as they are) | 🔒 Admin |
 | `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows; an album row carries `seeding_files`, its files a torrent still serves | 🔒 Admin |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |

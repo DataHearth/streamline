@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/datahearth/streamline/internal/library/audiotags"
 )
 
 // RemoveMediaFile deletes a media file together with its sidecars — the
@@ -150,6 +152,13 @@ func PruneEmptyDirs(ctx context.Context, dir, root string) int {
 	return pruned
 }
 
+// droppable is an entry that does not keep a folder alive: media-server
+// metadata, or a copy a tag write killed mid-way left behind.
+func droppable(name string) bool {
+	return externalMetadata[strings.ToLower(name)] ||
+		strings.HasPrefix(name, audiotags.TempPrefix)
+}
+
 // dropMetadataOnly empties dir when every entry left in it is externalMetadata,
 // and reports whether dir is now empty. A directory that already is empty, or
 // that holds anything worth keeping, is left exactly as it was.
@@ -159,7 +168,7 @@ func dropMetadataOnly(ctx context.Context, dir string) bool {
 		return err == nil
 	}
 	for _, e := range entries {
-		if e.IsDir() || !externalMetadata[strings.ToLower(e.Name())] {
+		if e.IsDir() || !droppable(e.Name()) {
 			return false
 		}
 	}

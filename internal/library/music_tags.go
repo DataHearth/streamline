@@ -46,6 +46,13 @@ var albumReleaseType = map[album.Type]string{
 // empty, which deletes it, so a value an earlier tagger left (a release
 // group's label, a wrong genre) does not survive next to ours. al must carry
 // its tracks (for the totals) and tr its credits (for the featured artists).
+//
+// The exception is a value the database does not know yet, as opposed to one
+// MusicBrainz has none for: the credits while they are not current
+// (creditTags), and the release details of an album hydrated before they
+// were fetched (NULL Album.genres marks it) — its genres, its dates as
+// MusicBrainz writes them and the release track ids. Those keys are left out,
+// so the file keeps what it carries until the backfill lands.
 func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags {
 	var featured []*ent.MusicCredit
 	for _, c := range tr.Edges.Credits {
@@ -121,6 +128,14 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 		audiotags.KeyMBReleaseGroupID: nonEmpty(al.Mbid),
 		audiotags.KeyMBRecordingID:    nonEmpty(tr.Mbid),
 		audiotags.KeyMBReleaseTrackID: nonEmpty(tr.ReleaseTrackMbid),
+	}
+	if al.Genres == nil {
+		for _, k := range []string{
+			audiotags.KeyDate, audiotags.KeyOriginalDate,
+			audiotags.KeyGenre, audiotags.KeyMBReleaseTrackID,
+		} {
+			delete(tags, k)
+		}
 	}
 	maps.Copy(tags, creditTags(al, tr))
 	return tags
@@ -215,8 +230,8 @@ func creditTags(al *ent.Album, tr *ent.Track) audiotags.Tags {
 }
 
 // originalDate is the release group's first release as MusicBrainz wrote it,
-// or the year alone for an album stored before that was kept: the parsed
-// release date cannot tell a year-only date from the first of January.
+// or the year alone when MusicBrainz gave no date string: the parsed release
+// date cannot tell a year-only date from the first of January.
 func originalDate(al *ent.Album) string {
 	if al.OriginalDate != "" {
 		return al.OriginalDate

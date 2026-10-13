@@ -10863,8 +10863,8 @@ func (_c *MockStore_ListAlbumsAwaitingCredits_Call) RunAndReturn(run func(ctx co
 }
 
 // ListAlbumsAwaitingDetails provides a mock function for the type MockStore
-func (_mock *MockStore) ListAlbumsAwaitingDetails(ctx context.Context, limit int) ([]*ent.Album, error) {
-	ret := _mock.Called(ctx, limit)
+func (_mock *MockStore) ListAlbumsAwaitingDetails(ctx context.Context, retryBefore time.Time, limit int) ([]*ent.Album, error) {
+	ret := _mock.Called(ctx, retryBefore, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListAlbumsAwaitingDetails")
@@ -10872,18 +10872,18 @@ func (_mock *MockStore) ListAlbumsAwaitingDetails(ctx context.Context, limit int
 
 	var r0 []*ent.Album
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*ent.Album, error)); ok {
-		return returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) ([]*ent.Album, error)); ok {
+		return returnFunc(ctx, retryBefore, limit)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*ent.Album); ok {
-		r0 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time, int) []*ent.Album); ok {
+		r0 = returnFunc(ctx, retryBefore, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.Album)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = returnFunc(ctx, limit)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time, int) error); ok {
+		r1 = returnFunc(ctx, retryBefore, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -10897,24 +10897,30 @@ type MockStore_ListAlbumsAwaitingDetails_Call struct {
 
 // ListAlbumsAwaitingDetails is a helper method to define mock.On call
 //   - ctx context.Context
+//   - retryBefore time.Time
 //   - limit int
-func (_e *MockStore_Expecter) ListAlbumsAwaitingDetails(ctx any, limit any) *MockStore_ListAlbumsAwaitingDetails_Call {
-	return &MockStore_ListAlbumsAwaitingDetails_Call{Call: _e.mock.On("ListAlbumsAwaitingDetails", ctx, limit)}
+func (_e *MockStore_Expecter) ListAlbumsAwaitingDetails(ctx any, retryBefore any, limit any) *MockStore_ListAlbumsAwaitingDetails_Call {
+	return &MockStore_ListAlbumsAwaitingDetails_Call{Call: _e.mock.On("ListAlbumsAwaitingDetails", ctx, retryBefore, limit)}
 }
 
-func (_c *MockStore_ListAlbumsAwaitingDetails_Call) Run(run func(ctx context.Context, limit int)) *MockStore_ListAlbumsAwaitingDetails_Call {
+func (_c *MockStore_ListAlbumsAwaitingDetails_Call) Run(run func(ctx context.Context, retryBefore time.Time, limit int)) *MockStore_ListAlbumsAwaitingDetails_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 int
+		var arg1 time.Time
 		if args[1] != nil {
-			arg1 = args[1].(int)
+			arg1 = args[1].(time.Time)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -10925,7 +10931,7 @@ func (_c *MockStore_ListAlbumsAwaitingDetails_Call) Return(albums []*ent.Album, 
 	return _c
 }
 
-func (_c *MockStore_ListAlbumsAwaitingDetails_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]*ent.Album, error)) *MockStore_ListAlbumsAwaitingDetails_Call {
+func (_c *MockStore_ListAlbumsAwaitingDetails_Call) RunAndReturn(run func(ctx context.Context, retryBefore time.Time, limit int) ([]*ent.Album, error)) *MockStore_ListAlbumsAwaitingDetails_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -21147,16 +21153,16 @@ func (_c *MockStore_SetMediaFileTagsChecked_Call) RunAndReturn(run func(ctx cont
 }
 
 // SetMediaFileTagsDeferred provides a mock function for the type MockStore
-func (_mock *MockStore) SetMediaFileTagsDeferred(ctx context.Context, id uint32) error {
-	ret := _mock.Called(ctx, id)
+func (_mock *MockStore) SetMediaFileTagsDeferred(ctx context.Context, id uint32, at time.Time) error {
+	ret := _mock.Called(ctx, id, at)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetMediaFileTagsDeferred")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, at)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -21171,11 +21177,12 @@ type MockStore_SetMediaFileTagsDeferred_Call struct {
 // SetMediaFileTagsDeferred is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uint32
-func (_e *MockStore_Expecter) SetMediaFileTagsDeferred(ctx any, id any) *MockStore_SetMediaFileTagsDeferred_Call {
-	return &MockStore_SetMediaFileTagsDeferred_Call{Call: _e.mock.On("SetMediaFileTagsDeferred", ctx, id)}
+//   - at time.Time
+func (_e *MockStore_Expecter) SetMediaFileTagsDeferred(ctx any, id any, at any) *MockStore_SetMediaFileTagsDeferred_Call {
+	return &MockStore_SetMediaFileTagsDeferred_Call{Call: _e.mock.On("SetMediaFileTagsDeferred", ctx, id, at)}
 }
 
-func (_c *MockStore_SetMediaFileTagsDeferred_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_SetMediaFileTagsDeferred_Call {
+func (_c *MockStore_SetMediaFileTagsDeferred_Call) Run(run func(ctx context.Context, id uint32, at time.Time)) *MockStore_SetMediaFileTagsDeferred_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -21185,9 +21192,14 @@ func (_c *MockStore_SetMediaFileTagsDeferred_Call) Run(run func(ctx context.Cont
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -21198,7 +21210,7 @@ func (_c *MockStore_SetMediaFileTagsDeferred_Call) Return(err error) *MockStore_
 	return _c
 }
 
-func (_c *MockStore_SetMediaFileTagsDeferred_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_SetMediaFileTagsDeferred_Call {
+func (_c *MockStore_SetMediaFileTagsDeferred_Call) RunAndReturn(run func(ctx context.Context, id uint32, at time.Time) error) *MockStore_SetMediaFileTagsDeferred_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -102,15 +102,42 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 	})
 
 	It(
-		"falls back to the first release's year and the artist genre for an album stored before them",
+		"leaves the release details out for an album hydrated before they were fetched",
 		func() {
+			// NULL genres marks an album whose genres, dates and release
+			// track ids were never fetched: writing what the row holds would
+			// delete the file's GENRE and cut its DATE to a year.
 			al.OriginalDate, al.EditionDate, al.Genres = "", "", nil
+			tr.ReleaseTrackMbid = ""
+
+			t := library.AlbumTrackTags(ar, al, tr)
+
+			for _, k := range []string{
+				audiotags.KeyDate, audiotags.KeyOriginalDate,
+				audiotags.KeyGenre, audiotags.KeyMBReleaseTrackID,
+			} {
+				Expect(t).NotTo(HaveKey(k), k)
+			}
+			Expect(t[audiotags.KeyAlbum]).To(Equal([]string{"Nevermind"}))
+		},
+	)
+
+	It("falls back to the artist genre when the release group has none", func() {
+		al.Genres = []string{}
+
+		Expect(library.AlbumTrackTags(ar, al, tr)[audiotags.KeyGenre]).
+			To(Equal([]string{"Grunge"}))
+	})
+
+	It(
+		"falls back to the first release's year when no date string is known",
+		func() {
+			al.OriginalDate, al.EditionDate = "", ""
 
 			t := library.AlbumTrackTags(ar, al, tr)
 
 			Expect(t[audiotags.KeyDate]).To(Equal([]string{"1991"}))
 			Expect(t[audiotags.KeyOriginalDate]).To(Equal([]string{"1991"}))
-			Expect(t[audiotags.KeyGenre]).To(Equal([]string{"Grunge"}))
 		},
 	)
 

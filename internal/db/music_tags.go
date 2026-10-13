@@ -24,8 +24,11 @@ const (
 )
 
 // ListMediaFilesForTagSync returns up to limit track files waiting for the
-// music tag writer, pending before deferred and oldest first, each with its
-// track. limit 0 is no limit.
+// music tag writer, pending before deferred, each with its track. Within a
+// state the file looked at longest ago (or never) comes first: a deferred
+// file deferred again goes to the back, so files still held by a seeding
+// torrent cannot fill every batch ahead of those whose torrent is gone.
+// limit 0 is no limit.
 func (db *DB) ListMediaFilesForTagSync(
 	ctx context.Context,
 	limit int,
@@ -43,7 +46,11 @@ func (db *DB) ListMediaFilesForTagSync(
 		}).
 		// Descending: "pending" sorts after "deferred", and a file waiting
 		// for its first write goes before one waiting on a torrent.
-		Order(ent.Desc(entmediafile.FieldTagsState), ent.Asc(entmediafile.FieldID))
+		Order(
+			ent.Desc(entmediafile.FieldTagsState),
+			ent.Asc(entmediafile.FieldTagsCheckedAt),
+			ent.Asc(entmediafile.FieldID),
+		)
 	if limit > 0 {
 		q = q.Limit(limit)
 	}
@@ -94,10 +101,17 @@ func (db *DB) SetMediaFileTagsWritten(
 		Exec(ctx)
 }
 
-// SetMediaFileTagsDeferred parks a file a torrent still owns or shares.
-func (db *DB) SetMediaFileTagsDeferred(ctx context.Context, id uint32) error {
+// SetMediaFileTagsDeferred parks a file a torrent still owns or shares, and
+// stamps when it was looked at, which sends it to the back of the deferred
+// files the next pass lists.
+func (db *DB) SetMediaFileTagsDeferred(
+	ctx context.Context,
+	id uint32,
+	at time.Time,
+) error {
 	return db.client.MediaFile.UpdateOneID(id).
 		SetTagsState(entmediafile.TagsStateDeferred).
+		SetTagsCheckedAt(at).
 		Exec(ctx)
 }
 

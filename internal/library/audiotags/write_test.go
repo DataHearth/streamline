@@ -3,6 +3,7 @@ package audiotags
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -226,6 +227,23 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 		Expect(dirEntries(path)).To(Equal([]string{"file.mp3"}))
 	})
 
+	It("removes a copy a killed write left behind, once it is old", func() {
+		path := copyFixture("testdata/tagged.flac")
+		dir := filepath.Dir(path)
+		stale := filepath.Join(dir, TempPrefix+"123.flac")
+		fresh := filepath.Join(dir, TempPrefix+"456.flac")
+		for _, p := range []string{stale, fresh} {
+			Expect(os.WriteFile(p, []byte("x"), 0o600)).To(Succeed())
+		}
+		old := time.Now().Add(-2 * staleCopyAge)
+		Expect(os.Chtimes(stale, old, old)).To(Succeed())
+
+		Expect(Write(path, full, Policy{})).To(Succeed())
+
+		Expect(dirEntries(path)).To(ConsistOf("file.flac", TempPrefix+"456.flac"),
+			"a copy another write may still be working on is kept")
+	})
+
 	It("leaves the original and no copy when the file is not audio", func() {
 		path := filepath.Join(GinkgoT().TempDir(), "broken.flac")
 		Expect(os.WriteFile(path, []byte("not audio"), 0o600)).To(Succeed())
@@ -339,6 +357,41 @@ var _ = Describe("Write performers", Label("unit", "audiotags"), func() {
 			Expect(raw).To(HaveKeyWithValue(KeyPerformer, []string{"Someone"}))
 			Expect(raw).NotTo(HaveKey("PERFORMER:BASS"))
 		},
+	)
+
+	DescribeTable(
+		"lets a hand-set PERFORMER:<INSTRUMENT> replace that instrument's performers",
+		func(fixture string, want map[string][]string, gone []string) {
+			path := copyFixture(fixture)
+			tags := Tags{
+				KeyPerformer:       {"Wrong Name (guitar)", "Dave Grohl (drums)"},
+				"PERFORMER:GUITAR": {"Kurt Cobain"},
+			}
+
+			Expect(Write(path, tags, Policy{})).To(Succeed())
+
+			raw := rawTags(path)
+			for k, v := range want {
+				Expect(raw).To(HaveKeyWithValue(k, v))
+			}
+			for _, k := range gone {
+				Expect(raw).NotTo(HaveKey(k))
+			}
+			states, err := Compare(path, tags, Policy{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(Edited(states)).To(BeFalse(), "the panel agrees with the write")
+		},
+		Entry("ID3, under the instrument's key", "testdata/tagged.mp3",
+			map[string][]string{
+				"PERFORMER:GUITAR": {"Kurt Cobain"},
+				"PERFORMER:DRUMS":  {"Dave Grohl"},
+			},
+			[]string{KeyPerformer}),
+		Entry("Vorbis comments, in Picard's form", "testdata/tagged.flac",
+			map[string][]string{
+				KeyPerformer: {"Dave Grohl (drums)", "Kurt Cobain (guitar)"},
+			},
+			[]string{"PERFORMER:GUITAR"}),
 	)
 
 	It("leaves the performers alone when it is not given them", func() {

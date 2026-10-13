@@ -79,3 +79,15 @@ var _ = Describe("Picture", Label("unit", "audiotags"), func() {
 		Expect(err).To(MatchError(os.ErrNotExist))
 	})
 })
+
+var _ = Describe("IsAudioFile", Label("unit", "audiotags"), func() {
+	DescribeTable("takes only a visible file with an audio extension for a track",
+		func(path string, want bool) {
+			Expect(IsAudioFile(path)).To(Equal(want))
+		},
+		Entry("a track", "/m/A/01 Song.FLAC", true),
+		Entry("a cover", "/m/A/cover.jpg", false),
+		Entry("a write's leftover copy", "/m/A/.streamline-tags-123.flac", false),
+		Entry("a macOS resource fork", "/m/A/._01 Song.flac", false),
+	)
+})
