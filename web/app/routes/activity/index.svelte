@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { slide } from "svelte/transition";
@@ -16,6 +17,8 @@
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
 	import { fold } from "@lib/text";
+	import { Selection } from "@lib/selection.svelte";
+	import { NOUN_DOWNLOAD } from "@lib/nouns";
 	import type {
 		ActivityList,
 		DownloadQueue,
@@ -39,6 +42,8 @@
 	import LiveStrip from "@components/activity/LiveStrip.svelte";
 	import PendingRow from "@components/pending/PendingRow.svelte";
 	import EventList from "@components/activity/EventList.svelte";
+	import DownloadBulkActions from "@components/activity/DownloadBulkActions.svelte";
+	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Torrents live on their own route (/torrents); this page is the
@@ -109,6 +114,7 @@
 		view = v;
 		statusFilter = [];
 		detailId = null;
+		selection.clear();
 	}
 
 	// Same shape as ActivityTable's: the sentinel mounts and unmounts with the
@@ -397,6 +403,30 @@
 		search = "";
 	}
 
+	// ── Selection ────────────────────────────────────────────────────────────
+	// Bulk pause / resume / cancel on the queue, bulk remove on the history.
+	// The table carries checkboxes; below md a press and hold on a row starts
+	// selecting, and the selection bar takes the toolbar's line.
+	const selection = new Selection<number>();
+	let selecting = $derived(auth.isAdmin && selection.selecting);
+	// A selection made under one filter is meaningless under the next, and the
+	// bar would keep acting on rows the user can no longer see. The view switch
+	// clears it itself.
+	$effect(() => {
+		statusFilter;
+		search;
+		untrack(() => selection.clear());
+	});
+	// A download that finishes or is cancelled elsewhere leaves the queue on the
+	// next poll; it leaves the selection with it.
+	$effect(() => {
+		const ids = source.map((i) => i.id);
+		untrack(() => selection.prune(ids));
+	});
+	function selectAllRows() {
+		selection.selectAll(rows.map((r) => r.id));
+	}
+
 	// A pull re-fetches everything the page shows, not just the view in front —
 	// the point of the gesture is "is all of this current?".
 	async function refreshAll() {
@@ -583,6 +613,20 @@
 			{/if}
 		</div>
 	{:else}
+	<!-- Below md an active selection takes the toolbar's line rather than
+	     stacking on it, so selecting costs no height. -->
+	{#if selecting}
+		<div class="sticky top-16 z-20 -mx-4 mb-1 md:hidden">
+			<SelectionTopBar
+				count={selection.size}
+				total={rows.length}
+				noun={NOUN_DOWNLOAD}
+				onClear={() => selection.clear()}
+				onSelectAll={selectAllRows}
+			/>
+		</div>
+	{/if}
+	<div class={selecting ? "hidden md:contents" : "contents"}>
 	<ActivityToolbar
 		view={tableView}
 		{statusFilter}
@@ -602,6 +646,7 @@
 			/>
 		{/snippet}
 	</ActivityToolbar>
+	</div>
 
 	{#if showPending}
 		<!-- Below md the section is one line, and it sits under the toolbar rather than
@@ -648,6 +693,9 @@
 		onRemove={(id) => removeHistory.mutate(id)}
 		onRetry={(id) => retryImport.mutate(id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
+		selected={auth.isAdmin ? selection.keys : undefined}
+		onToggle={(id, v) => selection.toggle(id, v)}
+		onToggleAll={(v) => (v ? selectAllRows() : selection.clear())}
 	/>
 
 	<ActivityTouchList
@@ -658,9 +706,23 @@
 		hasMore={view === "history" && (history.hasNextPage ?? false)}
 		loadingMore={history.isFetchingNextPage}
 		onLoadMore={() => history.fetchNextPage()}
+		selected={auth.isAdmin ? selection.keys : undefined}
+		{selecting}
+		onToggle={(id) => selection.toggle(id)}
+		onBeginSelect={auth.isAdmin ? (id) => selection.begin(id) : undefined}
 		onOpen={(item) => (detailId = item.id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
 	/>
+
+	{#if auth.isAdmin}
+		<DownloadBulkActions
+			view={tableView}
+			items={rows}
+			selected={selection.keys}
+			onSelectAll={selectAllRows}
+			onClear={() => selection.clear()}
+		/>
+	{/if}
 	{/if}
 </div>
 

@@ -2,6 +2,7 @@
 	import { ChevronRight } from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import { cn } from "@lib/cn";
 	import {
 		formatBytes,
@@ -15,10 +16,16 @@
 	let {
 		torrent,
 		selected = false,
+		checked,
+		onCheck,
 		onOpen,
 	}: {
 		torrent: Torrent;
+		// The drawer is open on this row.
 		selected?: boolean;
+		// Bulk selection; undefined when the table has no checkbox column.
+		checked?: boolean;
+		onCheck?: (hash: string, on: boolean) => void;
 		onOpen: (hash: string) => void;
 	} = $props();
 
@@ -38,10 +45,22 @@
 	class={cn(
 		"group cursor-pointer border-b border-border text-sm transition hover:bg-surface",
 		selected && "bg-bg-card",
+		checked && "bg-accent-soft",
 	)}
 	onclick={() => onOpen(torrent.hash)}
 >
-	<td class={cn("pl-4 pr-2", pad)}>
+	{#if checked !== undefined}
+		<td class={cn("pl-4 pr-1", pad)}>
+			<SelectBox
+				{checked}
+				onChange={(v) => onCheck?.(torrent.hash, v)}
+				label={checked
+					? i18n.a11y_deselect_item({ title: torrent.name || torrent.hash })
+					: i18n.a11y_select_item({ title: torrent.name || torrent.hash })}
+			/>
+		</td>
+	{/if}
+	<td class={cn(checked === undefined ? "pl-4 pr-2" : "px-2", pad)}>
 		<StatusPill status={torrent.status} size="sm" live={active} />
 	</td>
 

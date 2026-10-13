@@ -3,6 +3,7 @@
 	import { Activity, LoaderCircle, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import { cn } from "@lib/cn";
 	import { entryHeading } from "@lib/activity-touch";
 	import type { QueueEntry, HistoryEntry } from "@lib/types";
@@ -25,6 +26,9 @@
 		onRemove,
 		onRetry,
 		onResolve,
+		selected,
+		onToggle,
+		onToggleAll,
 	}: {
 		view: "queue" | "history";
 		rows: (QueueEntry | HistoryEntry)[];
@@ -41,9 +45,18 @@
 		onRemove: (id: number) => void;
 		onRetry: (id: number) => void;
 		onResolve?: (item: QueueEntry) => void;
+		// Bulk selection: given, the table grows a checkbox column.
+		selected?: Set<number>;
+		onToggle?: (id: number, on: boolean) => void;
+		onToggleAll?: (on: boolean) => void;
 	} = $props();
 
-	const COLSPAN = 6;
+	let selectable = $derived(!!onToggle && !!selected);
+	let pickedHere = $derived(
+		selected ? rows.filter((r) => selected.has(r.id)).length : 0,
+	);
+	let allPicked = $derived(rows.length > 0 && pickedHere === rows.length);
+	let colspan = $derived(selectable ? 7 : 6);
 	// Columns hide on the table's own container width, not the viewport's: at
 	// tablet the rail leaves it ~630px, where a viewport media query still counted
 	// the 88px it no longer has and kept a column that fell outside the box.
@@ -255,6 +268,19 @@
 				class="sticky top-0 z-10 text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 			>
 				<tr>
+					{#if selectable}
+						<th
+							scope="col"
+							class="w-px border-b border-border bg-bg-elevated py-2.5 pl-4 pr-1"
+						>
+							<SelectBox
+								checked={allPicked}
+								indeterminate={pickedHere > 0 && !allPicked}
+								onChange={(v) => onToggleAll?.(v)}
+								label={allPicked ? i18n.common_deselect_all() : i18n.common_select_all()}
+							/>
+						</th>
+					{/if}
 					{#each headers as h, i (i)}
 						<th
 							scope="col"
@@ -295,12 +321,14 @@
 						expanded={expandedId === row.id}
 						onToggle={toggle}
 						{onResolve}
+						checked={selectable ? (selected?.has(row.id) ?? false) : undefined}
+						onCheck={onToggle}
 					/>
 					{#if expandedId === row.id}
 						<ExpandedRowDetail
 							item={row}
 							{view}
-							colspan={COLSPAN}
+							{colspan}
 							busy={busyId === row.id}
 							{canControl}
 							{onCancel}

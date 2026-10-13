@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { ChevronRight } from "@lucide/svelte";
+	import { Check, ChevronRight } from "@lucide/svelte";
 	import ProgressRing from "./ProgressRing.svelte";
 	import { cn } from "@lib/cn";
+	import { longPress } from "@lib/long-press";
 	import type { MetaLine } from "@lib/activity-touch";
 	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
@@ -20,6 +21,8 @@
 		onOpen,
 		onResolve,
 		resolveLabel,
+		selected,
+		onLongPress,
 	}: {
 		status: StatusKind;
 		progress?: number;
@@ -42,7 +45,15 @@
 		// button, and tapping the text still opens the detail.
 		onResolve?: () => void;
 		resolveLabel?: string;
+		// Defined only while the list is selecting: the row is then a toggle (the
+		// page passes a toggling onOpen) and shows a check where the chevron was.
+		// Resolve and href stand down, so a tap mid-triage never leaves the set.
+		selected?: boolean;
+		// Press and hold: how a phone starts a selection.
+		onLongPress?: () => void;
 	} = $props();
+
+	let selecting = $derived(selected !== undefined);
 
 	const rowClass =
 		"flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 active:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring";
@@ -84,11 +95,37 @@
 
 {#snippet body()}
 	{@render lead()}
-	<ChevronRight size={15} class="shrink-0 text-fg-faint" aria-hidden="true" />
+	{#if selecting}
+		<span
+			class={cn(
+				"grid h-[18px] w-[18px] shrink-0 place-items-center rounded border",
+				selected
+					? "border-accent bg-accent text-fg-on-accent"
+					: "border-border-strong bg-bg text-transparent",
+			)}
+			aria-hidden="true"
+		>
+			<Check size={12} strokeWidth={3} />
+		</span>
+	{:else}
+		<ChevronRight size={15} class="shrink-0 text-fg-faint" aria-hidden="true" />
+	{/if}
 {/snippet}
 
-{#if onResolve}
-	<div class={rowClass}>
+{#if selecting}
+	<button
+		type="button"
+		onclick={onOpen}
+		aria-pressed={selected}
+		class={cn(rowClass, selected && "bg-accent-soft")}
+	>
+		{@render body()}
+	</button>
+{:else if onResolve}
+	<div
+		class={rowClass}
+		use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress }}
+	>
 		<button
 			type="button"
 			onclick={onOpen}
@@ -108,7 +145,12 @@
 {:else if href}
 	<a {href} class={rowClass}>{@render body()}</a>
 {:else}
-	<button type="button" onclick={onOpen} class={rowClass}>
+	<button
+		type="button"
+		onclick={onOpen}
+		class={rowClass}
+		use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress }}
+	>
 		{@render body()}
 	</button>
 {/if}

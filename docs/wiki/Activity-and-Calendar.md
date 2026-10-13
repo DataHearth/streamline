@@ -72,6 +72,8 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
 
+To act on several at once, tick their checkboxes (or the header box for every row the filters show) and use the bar that appears at the bottom: **Pause**, **Resume** or **Cancel download**. On a phone, press and hold a row to start selecting, then tap the others. Each action only touches the entries it applies to — Pause skips what is already paused, Resume takes only paused entries, and **held** entries are left out of all three, since resolving them is a decision per entry.
+
 A queue entry is in one of five states:
 
 | Status | Meaning |
@@ -98,6 +100,8 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 Filter by event type or by title, and page back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
 
 **Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie or episode comes back to *importing* with it.
+
+Select entries the same way as on the queue to **remove** several history records at once; the titles and their files are not touched.
 
 **Clear completed** tidies out successful entries and leaves the failures. Events also age out on their own after `events.retention` (default 90 days).
 
@@ -149,6 +153,8 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 **Activity → Torrents.** Only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`).
 
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
+
+Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted.
 
 If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
 
