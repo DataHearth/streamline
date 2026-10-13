@@ -29,7 +29,7 @@
 	let isTitle = $derived(isTitleItem(item));
 	// A person leads somewhere too, so the row ends in a chevron rather than a
 	// kind label — the same affordance the titles get.
-	let leadsAway = $derived(isTitle || item.kind === "person" || item.kind === "lookup");
+	let leadsAway = $derived(isTitle || item.kind === "person");
 </script>
 
 <button
@@ -101,7 +101,7 @@
 				</span>
 			{/if}
 		</div>
-	{:else if item.kind === "page" || item.kind === "action" || item.kind === "lookup"}
+	{:else if item.kind === "page" || item.kind === "action"}
 		{@const Icon = item.icon}
 		<div
 			class={cn(

@@ -9,6 +9,7 @@
 		type SearchItem,
 	} from "@lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
+	import LookupStrip from "./LookupStrip.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Phone only — AppShell renders this in place of CommandPalette below md,
@@ -127,24 +128,17 @@
 			</button>
 		</form>
 
+		<!-- Under the field, not at the bottom: the keyboard covers the bottom of
+		     the screen for as long as you type. -->
+		<LookupStrip
+			items={model.lookups}
+			onpick={pick}
+			class="flex-none border-b border-border px-4 pb-3 pt-1"
+		/>
+
 		<div
 			class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
 		>
-			{#if !model.matched}
-				<div
-					class="flex flex-col items-center gap-2.5 px-6 text-center {model.lookupShown
-						? 'pb-2 pt-8'
-						: 'py-14'}"
-				>
-					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
-					<p class="text-[13.5px] text-fg-subtle">
-						{model.lookupShown
-							? i18n.search_no_library_matches_for({ query: query.trim() })
-							: i18n.search_no_matches_for({ query: query.trim() })}
-					</p>
-				</div>
-			{/if}
-
 			{#each model.sections as section (section.id)}
 				<div
 					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
@@ -163,6 +157,17 @@
 					<SearchResultRow {item} onpick={pick} />
 				{/each}
 			{/each}
+
+			{#if !model.matched}
+				<div class="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
+					<SearchX size={26} class="text-fg-faint" aria-hidden="true" />
+					<p class="text-[13.5px] text-fg-subtle">
+						{model.lookups.length
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
+					</p>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

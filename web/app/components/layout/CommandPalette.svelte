@@ -7,6 +7,7 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
+	import LookupStrip from "./LookupStrip.svelte";
 	import {
 		createSearchModel,
 		itemKindLabel,
@@ -30,6 +31,8 @@
 	const navigateTo = searchNav();
 	let sections = $derived(model.sections);
 	let flat = $derived(model.flat);
+	// The lookup chips close `flat`, so their cursor stops start here.
+	let lookupBase = $derived(flat.length - model.lookups.length);
 
 	function indexOf(sectionIdx: number, itemIdx: number): number {
 		const before = sections
@@ -210,19 +213,6 @@
 			</div>
 
 			<div class="flex-1 overflow-y-auto p-1.5">
-				{#if !model.matched}
-					<div
-						class={cn(
-							"px-3 text-center text-[12.5px] text-fg-subtle",
-							model.lookupShown ? "pb-1 pt-5" : "py-8",
-						)}
-					>
-						{model.lookupShown
-							? i18n.search_no_library_matches_for({ query: query.trim() })
-							: i18n.search_no_matches_for({ query: query.trim() })}
-					</div>
-				{/if}
-
 				{#each sections as section, sIdx (section.label)}
 					<div
 						class="px-3 pt-2.5 pb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
@@ -334,13 +324,11 @@
 									</div>
 								{/if}
 							</div>
-							{#if item.kind !== "lookup"}
-								<span
-									class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
-								>
-									{itemKindLabel(item)}
-								</span>
-							{/if}
+							<span
+								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"
+							>
+								{itemKindLabel(item)}
+							</span>
 							{#if active}
 								<ArrowRight
 									size={12}
@@ -351,7 +339,23 @@
 						</button>
 					{/each}
 				{/each}
+
+				{#if !model.matched}
+					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
+						{model.lookups.length
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
+					</div>
+				{/if}
 			</div>
+
+			<LookupStrip
+				items={model.lookups}
+				active={cursor - lookupBase}
+				onhover={(i) => (cursor = lookupBase + i)}
+				onpick={activate}
+				class="border-t border-border"
+			/>
 
 			<footer
 				class="flex items-center gap-4 border-t border-border bg-bg-base px-4 py-2 font-mono text-[10.5px] text-fg-faint"

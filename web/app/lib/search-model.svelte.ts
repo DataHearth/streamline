@@ -89,10 +89,12 @@ export type BookItem = {
 	series: boolean;
 };
 // Names the kind of title, never the provider: that is the backend's to change.
+// `label` is the whole sentence, read out; `chip` the kind the strip shows.
 export type LookupItem = {
 	kind: "lookup";
 	media: AddKind;
 	label: string;
+	chip: string;
 	query: string;
 	icon: Component;
 };
@@ -116,8 +118,7 @@ export type SectionId =
 	| "books"
 	| "people"
 	| "pages"
-	| "actions"
-	| "lookup";
+	| "actions";
 export type SearchSection = {
 	id: SectionId;
 	label: string;
@@ -170,16 +171,16 @@ function lookupLabel(media: AddKind, query: string, direct: boolean): string {
 	return direct ? i18n.search_lookup_add_book({ query }) : i18n.search_lookup_request_book({ query });
 }
 
-function mediaLabel(media: AddKind): string {
-	if (media === "movie") return i18n.common_movie();
-	if (media === "series") return i18n.settings_series();
-	if (media === "artist") return i18n.common_artist();
-	return i18n.common_book();
+function chipLabel(media: AddKind): string {
+	if (media === "movie") return i18n.search_lookup_as_movie();
+	if (media === "series") return i18n.search_lookup_as_series();
+	if (media === "artist") return i18n.search_lookup_as_artist();
+	return i18n.search_lookup_as_book();
 }
 
 export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return i18n.search_kind_navigate();
-	if (item.kind === "lookup") return mediaLabel(item.media);
+	if (item.kind === "lookup") return item.chip;
 	if (item.kind === "action") return i18n.common_action();
 	if (item.kind === "person") return i18n.common_person();
 	if (item.kind === "artist") return i18n.common_artist();
@@ -297,14 +298,14 @@ export function createSearchModel(
 			kind: "lookup",
 			media,
 			label: lookupLabel(media, query, auth.canAddDirectly),
+			chip: chipLabel(media),
 			query,
 			icon: MEDIA_ICON[media],
 		}));
 	}
 
 	let sections = $derived.by<SearchSection[]>(() => {
-		const typedNow = getQuery().trim();
-		const q = fold(typedNow);
+		const q = fold(getQuery().trim());
 		const movieHits: MovieItem[] = enabled
 			? (moviesQuery.data?.items ?? []).map((m) => ({
 					kind: "movie",
@@ -383,24 +384,16 @@ export function createSearchModel(
 				items: matchedActions,
 			});
 
-		const lookup: SearchSection[] = [];
-		const lookupItems = lookups(typedNow);
-		if (lookupItems.length)
-			lookup.push({
-				id: "lookup",
-				label: i18n.search_lookup_section(),
-				items: lookupItems,
-			});
-
-		return opts.compact
-			? [...titles, ...rest, ...lookup]
-			: [...rest, ...titles, ...lookup];
+		return opts.compact ? [...titles, ...rest] : [...rest, ...titles];
 	});
 
-	let flat = $derived(sections.flatMap((s) => s.items));
+	// Not a section: each surface pins them outside its scrolling list, where a
+	// full library would otherwise push them out of sight. Last in `flat`, so
+	// the keyboard still reaches them.
+	let lookupItems = $derived(lookups(getQuery().trim()));
+	let flat = $derived([...sections.flatMap((s) => s.items), ...lookupItems]);
 	let titleHits = $derived(flat.filter(isTitleItem).length);
-	let matched = $derived(flat.some((i) => i.kind !== "lookup"));
-	let lookupShown = $derived(sections.some((s) => s.id === "lookup"));
+	let matched = $derived(sections.some((s) => s.items.length > 0));
 	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
 	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
 	// absent rather than claiming zero while the panel is still closed.
@@ -425,8 +418,8 @@ export function createSearchModel(
 		get matched(): boolean {
 			return matched;
 		},
-		get lookupShown(): boolean {
-			return lookupShown;
+		get lookups(): LookupItem[] {
+			return lookupItems;
 		},
 		get searchable(): number | null {
 			return searchable;
