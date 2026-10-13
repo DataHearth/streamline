@@ -354,7 +354,7 @@
 				active={cursor - lookupBase}
 				onhover={(i) => (cursor = lookupBase + i)}
 				onpick={activate}
-				class="border-t border-border"
+				class="border-t border-border px-4 py-2.5"
 			/>
 
 			<footer

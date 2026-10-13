@@ -145,7 +145,7 @@
 			<LookupStrip
 				items={model.lookups}
 				onpick={pick}
-				class="flex-none border-t border-border"
+				class="flex-none border-t border-border px-3 py-2"
 			/>
 		</div>
 	{/if}
