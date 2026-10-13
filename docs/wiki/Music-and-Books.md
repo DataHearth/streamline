@@ -84,7 +84,9 @@ Streamline tells its own copies apart from yours, so they are never mistaken for
 - *Keep these files in step* is the release's own switch: an album adopted without tagging starts off, and switching it on queues its files.
 - *Tags for every file* and *Tags for this track* set tags by hand, written over what the library knows (a genre you prefer, a mood, a corrected title). A tag with no value is removed from the files; *Tags to keep* in Settings → Music still wins.
 
-Under *Managed*, Streamline also notices edits made in another tool: each run of the job checks a share of the written files, and one whose Streamline tags were changed is rewritten. Tags it does not write, such as ReplayGain added by a player, are left alone.
+The panel, *Write tags now* and the hand-set tags are open to every member who can edit the library (the same people who can monitor or search a release), not to admins only. Account-wide tag settings and **Retag library** stay admin-only.
+
+Under *Managed*, Streamline also notices edits made in another tool: each run of the job checks up to 200 written files, the ones checked longest ago first, and one whose Streamline tags were changed is rewritten in that same run. On a large library a full round therefore takes several runs (every 30 minutes by default), so an edit can stay in place for a while before it is undone; running the job by hand checks every file at once. Tags it does not write, such as ReplayGain added by a player, are left alone.
 
 The writing itself happens in the `music-tag-sync` job ([Scheduled Jobs](Scheduled-Jobs), every 30 minutes by default; run it by hand to start at once). A file is written to a copy beside it and swapped in only once the new tags read back correctly, so a failed write leaves the file as it was; one that keeps failing is given up on after five attempts. **Retag library** queues every file for a full rewrite, which is how files written before a change in what Streamline writes, or under *On import*, are brought up to date.
 
@@ -118,7 +120,7 @@ Streamline stores one cover per album, taken from the first of these that has an
 4. Deezer, searched by artist and title; the result is used only when Deezer's artist matches yours.
 5. The Cover Art Archive front cover for the release group.
 
-Deezer needs no account or key. The first two sources apply once the album's files are on disk, after an adoption or an import, and they replace a cover fetched earlier, since your own artwork wins. The other three only run while an album has no cover, and an artist refresh retries the albums that still have none. Albums added before barcodes were stored skip step 3 and go straight to the search.
+Deezer needs no account or key. The first two sources apply once the album's files are on disk, after an adoption or an import, and they replace a cover fetched earlier, since your own artwork wins. They are read at those moments and when the album's tags are written: a `cover.jpg` you drop next to an album that already has a cover is **not** picked up by an artist refresh, which only looks for covers that are still missing. To have it read, use *Write tags now* in the release's Tags panel (with either artwork setting on). The cover Streamline itself writes beside the files and into them is never taken for yours. The other three only run while an album has no cover, and an artist refresh retries the albums that still have none. Albums added before barcodes were stored skip step 3 and go straight to the search.
 
 ## Automation
 
