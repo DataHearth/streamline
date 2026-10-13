@@ -163,11 +163,16 @@ const MEDIA_ICON: Record<AddKind, Component> = {
 	book: BookOpen,
 };
 
-function lookupLabel(media: AddKind, query: string): string {
-	if (media === "movie") return i18n.search_lookup_movie({ query });
-	if (media === "series") return i18n.search_lookup_series({ query });
-	if (media === "artist") return i18n.search_lookup_artist({ query });
-	return i18n.search_lookup_book({ query });
+// Worded like the "Add movie…" actions, with the query in it: the row opens
+// that same add (or request) flow, and the ellipsis says a dialog follows.
+function lookupLabel(media: AddKind, query: string, direct: boolean): string {
+	if (media === "movie")
+		return direct ? i18n.search_lookup_add_movie({ query }) : i18n.search_lookup_request_movie({ query });
+	if (media === "series")
+		return direct ? i18n.search_lookup_add_series({ query }) : i18n.search_lookup_request_series({ query });
+	if (media === "artist")
+		return direct ? i18n.search_lookup_add_artist({ query }) : i18n.search_lookup_request_artist({ query });
+	return direct ? i18n.search_lookup_add_book({ query }) : i18n.search_lookup_request_book({ query });
 }
 
 function mediaLabel(media: AddKind): string {
@@ -300,7 +305,7 @@ export function createSearchModel(
 		return ADD_KINDS.map((media) => ({
 			kind: "lookup",
 			media,
-			label: lookupLabel(media, query),
+			label: lookupLabel(media, query, auth.canAddDirectly),
 			query,
 			icon: MEDIA_ICON[media],
 		}));
@@ -392,8 +397,8 @@ export function createSearchModel(
 		if (lookupItems.length)
 			lookup.push({
 				id: "lookup",
-				// request_only users request rather than add, as the actions say.
-				label: auth.canAddDirectly ? i18n.search_lookup_add() : i18n.search_lookup_request(),
+				// The rows say add or request themselves.
+				label: i18n.search_lookup_section(),
 				items: lookupItems,
 			});
 
