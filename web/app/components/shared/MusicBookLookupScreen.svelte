@@ -45,7 +45,6 @@
 		kind: LookupKind;
 		open: boolean;
 		onClose: () => void;
-		// What the global search had typed; the screen opens already searching it.
 		seedQuery?: string;
 	};
 	let { kind, open, onClose, seedQuery = "" }: Props = $props();
@@ -99,8 +98,6 @@
 			return;
 		}
 		lockScroll();
-		// As in MediaLookupScreen: a seeded screen searches at once and keeps the
-		// keyboard down over the results; an empty one opens with it up.
 		if (seedQuery) {
 			query = seedQuery;
 			debounced = seedQuery.trim();

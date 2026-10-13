@@ -6,8 +6,7 @@
 // "Titles" group and lead the list, because on a phone what you came for is
 // almost always a title and three eyebrows above the first poster is three too
 // many. The palette keeps its own order (pages and actions first), where a
-// keyboard makes jumping the point. Either way the rows that look a title up
-// outside the library come last.
+// keyboard makes jumping the point.
 
 import { onMount, type Component } from "svelte";
 import { goto } from "@roxi/routify";
@@ -89,9 +88,7 @@ export type BookItem = {
 	// A series folds into one row, as it folds into one card on the shelf.
 	series: boolean;
 };
-// Opens one add/request flow already searching `query`. The flow does the
-// calling, never this list, and the row names the kind of title, not where it
-// is looked up: which provider answers is the backend's business and may change.
+// Names the kind of title, never the provider: that is the backend's to change.
 export type LookupItem = {
 	kind: "lookup";
 	media: AddKind;
@@ -163,8 +160,6 @@ const MEDIA_ICON: Record<AddKind, Component> = {
 	book: BookOpen,
 };
 
-// Worded like the "Add movie…" actions, with the query in it: the row opens
-// that same add (or request) flow, and the ellipsis says a dialog follows.
 function lookupLabel(media: AddKind, query: string, direct: boolean): string {
 	if (media === "movie")
 		return direct ? i18n.search_lookup_add_movie({ query }) : i18n.search_lookup_request_movie({ query });
@@ -295,11 +290,7 @@ export function createSearchModel(
 		];
 	}
 
-	// The way out of the library, one row per add flow. Built from the live
-	// query rather than the debounced one: picking a row is what calls a
-	// provider, so there is no call per keystroke to save, and the row then
-	// names exactly what the flow will search. Present whether or not the
-	// library matched — a hit on one title says nothing about the one you meant.
+	// The live query, not the debounced one: nothing is fetched until a pick.
 	function lookups(query: string): LookupItem[] {
 		if (query.length < TITLE_MIN) return [];
 		return ADD_KINDS.map((media) => ({
@@ -397,7 +388,6 @@ export function createSearchModel(
 		if (lookupItems.length)
 			lookup.push({
 				id: "lookup",
-				// The rows say add or request themselves.
 				label: i18n.search_lookup_section(),
 				items: lookupItems,
 			});
@@ -409,13 +399,7 @@ export function createSearchModel(
 
 	let flat = $derived(sections.flatMap((s) => s.items));
 	let titleHits = $derived(flat.filter(isTitleItem).length);
-	// Whether anything but the lookup rows answered. False is the empty state,
-	// which the surfaces draw above the lookup rows, since those are always there
-	// once the query is long enough.
 	let matched = $derived(flat.some((i) => i.kind !== "lookup"));
-	// Whether the lookup rows are on the list, which changes what the empty
-	// state says: "nothing in your library" with somewhere else to look, plain
-	// "no matches" for a query too short to look anywhere.
 	let lookupShown = $derived(sections.some((s) => s.id === "lookup"));
 	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
 	// until the query passes TITLE_MIN and the fetch lands, so the hint stays

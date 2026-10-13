@@ -100,9 +100,8 @@
 			showPanelOnNarrow = false;
 			return;
 		}
-		// Seed the search from the caller (the import folder's parsed title in
-		// pick mode, what the global search had typed in add mode) so candidates
-		// surface immediately, skipping the debounce.
+		// Seed the search from the caller (e.g. the import folder's parsed title)
+		// so candidates surface immediately, skipping the debounce.
 		if (seedQuery) {
 			query = seedQuery;
 			debounced = seedQuery.trim();

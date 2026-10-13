@@ -130,8 +130,6 @@
 		<div
 			class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-[max(env(safe-area-inset-bottom),16px)]"
 		>
-			<!-- Above the sections: when nothing matched, the only one left is the
-			     lookup rows, and the empty state is what introduces them. -->
 			{#if !model.matched}
 				<div
 					class="flex flex-col items-center gap-2.5 px-6 text-center {model.lookupShown

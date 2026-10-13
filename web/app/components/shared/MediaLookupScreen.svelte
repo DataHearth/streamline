@@ -52,7 +52,6 @@
 		kind: "movie" | "series";
 		open: boolean;
 		onClose: () => void;
-		// What the global search had typed; the screen opens already searching it.
 		seedQuery?: string;
 	};
 	let { kind, open, onClose, seedQuery = "" }: Props = $props();
@@ -108,8 +107,7 @@
 		}
 		lockScroll();
 		if (seedQuery) {
-			// Arriving with a query, the results are the point: search it now,
-			// skipping the debounce, and leave the keyboard down over the grid.
+			// Seeded, the results are the point: keep the keyboard off them.
 			query = seedQuery;
 			debounced = seedQuery.trim();
 		} else {

@@ -54,8 +54,7 @@
 		queueMicrotask(() => prevFocus?.focus());
 	}
 
-	// `then` runs once the dialog has closed, in place of handing focus back to
-	// what had it before the palette opened.
+	// `then` replaces the focus restore, once the dialog has closed.
 	function hide(then?: () => void) {
 		if (!open || closing) return;
 		const d = dialogEl;
@@ -100,11 +99,8 @@
 	}
 
 	function activate(item: SearchItem) {
-		// An action or a lookup row opens another dialog. While this modal
-		// <dialog> is open everything outside it is inert, so a dialog opened
-		// during the exit animation could not take focus, and restoring focus
-		// afterwards then left it on <body>: Escape and typing never reached the
-		// add modal. Open it once the palette has closed and let it take focus.
+		// These open another dialog, which can't take focus while this modal
+		// <dialog> still makes the rest of the page inert.
 		if (item.kind === "action" || item.kind === "lookup") {
 			hide(() => navigateTo(item));
 			return;
@@ -338,7 +334,6 @@
 									</div>
 								{/if}
 							</div>
-							<!-- A lookup row's label already names its kind. -->
 							{#if item.kind !== "lookup"}
 								<span
 									class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-faint"

@@ -28,8 +28,7 @@
 
 	let isTitle = $derived(isTitleItem(item));
 	// A person leads somewhere too, so the row ends in a chevron rather than a
-	// kind label — the same affordance the titles get. So does a lookup row: it
-	// opens the add screen, and its label already names the kind.
+	// kind label — the same affordance the titles get.
 	let leadsAway = $derived(isTitle || item.kind === "person" || item.kind === "lookup");
 </script>
 

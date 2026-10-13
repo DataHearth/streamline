@@ -49,7 +49,6 @@
 		kind: LookupKind;
 		open: boolean;
 		onClose: () => void;
-		// What the global search had typed; the modal opens already searching it.
 		seedQuery?: string;
 	};
 	let { kind, open, onClose, seedQuery = "" }: Props = $props();
@@ -97,7 +96,6 @@
 
 	$effect(() => {
 		if (open) {
-			// Skip the debounce so the hits are there on first paint.
 			if (seedQuery) {
 				query = seedQuery;
 				debounced = seedQuery.trim();

@@ -21,9 +21,7 @@
 	let addSeriesOpen = $state(false);
 	let addArtistOpen = $state(false);
 	let addBookOpen = $state(false);
-	// What the global search had typed when it opened a flow, which then opens
-	// already searching it. One for all four: only one flow is ever open, and
-	// every open sets it, so an opener sending nothing clears the last one.
+	// Set on every open, so an opener sending no query clears the last one.
 	let addQuery = $state("");
 	// Below md the add/request flow is a full-screen search rather than the split
 	// modal, and search itself is a screen rather than the centred palette —
