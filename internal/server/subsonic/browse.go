@@ -155,12 +155,18 @@ func kbpsOf(mf *ent.MediaFile, duration uint32) uint32 {
 	return uint32(kbps) //nolint:gosec // clamped above
 }
 
+// durationOf is the file's probed length, else the track's MusicBrainz one
+// (t may be nil); 0 when neither is known.
+func durationOf(mf *ent.MediaFile, t *ent.Track) uint32 {
+	if mf.DurationSeconds == 0 && t != nil {
+		return t.Duration
+	}
+	return mf.DurationSeconds
+}
+
 func toSong(t *ent.Track, al *ent.Album, ar *ent.Artist, mf *ent.MediaFile) child {
 	suffix := suffixOf(mf)
-	duration := mf.DurationSeconds
-	if duration == 0 {
-		duration = t.Duration
-	}
+	duration := durationOf(mf, t)
 	bitRate := kbpsOf(mf, duration)
 	return child{
 		ID:            trackID(t.ID),
@@ -427,6 +433,10 @@ func (h *Handler) getSong(
 		Only(r.Context())
 	if err != nil {
 		return lookupErr(err)
+	}
+	// The files load in a second query: one gone since the first leaves none.
+	if firstFile(t) == nil {
+		return errNotFoundErr
 	}
 	song := songOf(t)
 	return h.respond(w, r, u, &body{Song: &song})

@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/ent/user"
 	"github.com/datahearth/streamline/internal/appaccess"
 	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 )
@@ -205,5 +206,37 @@ var _ = g.Describe("shares", g.Label("integration"), func() {
 			errCode(f.callAs(admin.Email, "createShare", url.Values{"id": {pid}})),
 		).
 			To(BeEquivalentTo(50))
+	})
+
+	g.It("ends every link once its owner may no longer share", func() {
+		s := list(obj(okResp(f.call("createShare", url.Values{"id": {al(f.album)}})), "shares"), "share")[0]
+		token := tokenOf(s)
+		Expect(visit("/" + token).Code).To(Equal(http.StatusOK))
+
+		Expect(f.client.User.Update().
+			Where(user.EmailEQ("listener@example.com")).
+			SetSubsonicCanShare(false).
+			Exec(context.Background())).To(Succeed())
+		Expect(visit("/" + token).Code).To(Equal(http.StatusNotFound))
+		Expect(
+			visit("/" + token + "/stream/" + strconv.Itoa(int(f.withFile.ID))).Code,
+		).To(Equal(http.StatusNotFound))
+	})
+
+	g.It("serves no audio through a link whose owner may not stream", func() {
+		s := list(obj(okResp(f.call("createShare", url.Values{"id": {al(f.album)}})), "shares"), "share")[0]
+		token := tokenOf(s)
+		Expect(f.client.User.Update().
+			Where(user.EmailEQ("listener@example.com")).
+			SetSubsonicCanStream(false).
+			Exec(context.Background())).To(Succeed())
+
+		Expect(visit("/" + token).Code).To(Equal(http.StatusOK))
+		Expect(
+			visit("/" + token + "/stream/" + strconv.Itoa(int(f.withFile.ID))).Code,
+		).To(Equal(http.StatusNotFound))
+		Expect(
+			errCode(f.call("createShare", url.Values{"id": {al(f.album)}})),
+		).To(BeEquivalentTo(50))
 	})
 })

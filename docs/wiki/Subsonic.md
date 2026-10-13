@@ -41,6 +41,7 @@ Sharing creates a link like `https://your-host/share/AbCdEf…` that anyone can 
 
 - The link is the only protection, so share it the way you would share a file.
 - A link with an expiry date stops working on that date; deleting the share stops it at once.
+- A link plays with its owner's permissions: creating one needs both the stream and share permissions, an account whose share permission is switched off stops every link it handed out, and one whose stream permission is switched off leaves its links listing songs without playing them.
 - Your app's share list shows how often each link was opened and when it was last opened.
 - The page is built from the address your app used to reach Streamline, so make sure the app points at your public address if you want links that work outside your network.
 

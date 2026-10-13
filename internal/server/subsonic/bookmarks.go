@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/user"
+	"github.com/datahearth/streamline/internal/appaccess"
 )
 
 func (h *Handler) getBookmarks(
@@ -295,10 +296,7 @@ func (h *Handler) storeQueue(
 		}
 		pos = p
 	}
-	client := r.FormValue("c")
-	if len(client) > 64 {
-		client = client[:64]
-	}
+	client := appaccess.SanitizeClient(r.FormValue("c"))
 	err := h.withTx(ctx, func(c *ent.Client) error {
 		if _, err := c.PlayQueue.Delete().
 			Where(playqueue.HasUserWith(user.IDEQ(u.ID))).

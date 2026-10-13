@@ -80,6 +80,7 @@ func (h *Handler) trackFile(ctx context.Context, id uint32) (*ent.MediaFile, err
 			mediafile.HasTrackWith(track.IDEQ(id)),
 			mediafile.MissingSinceIsNil(),
 		).
+		WithTrack().
 		Order(mediafile.ByID()).
 		First(ctx)
 	return mf, lookupErr(err)
@@ -121,7 +122,9 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request, u *ent.User) er
 	format, maxKbps := streamLimits(r, u)
 	plan, convert := streamPlan(
 		suffixOf(mf),
-		kbpsOf(mf, mf.DurationSeconds),
+		// The same estimate the song listing reported, so an unprobed file
+		// is not taken for one of unknown bitrate and transcoded needlessly.
+		kbpsOf(mf, durationOf(mf, mf.Edges.Track)),
 		format,
 		maxKbps,
 	)

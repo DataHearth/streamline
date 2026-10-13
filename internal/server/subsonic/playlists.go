@@ -71,14 +71,6 @@ func (h *Handler) trackIDsParam(r *http.Request, name string) ([]uint32, error) 
 	return ids, nil
 }
 
-func trackIDsOf(ts []*ent.Track) []uint32 {
-	out := make([]uint32, 0, len(ts))
-	for _, t := range ts {
-		out = append(out, t.ID)
-	}
-	return out
-}
-
 // canSee is whether u may read p: its owner, anyone when public, an admin.
 func canSee(u *ent.User, p *ent.Playlist) bool {
 	return p.Public || p.Edges.Owner.ID == u.ID || isAdmin(u)
@@ -154,7 +146,8 @@ func (h *Handler) getPlaylists(
 		if !isAdmin(u) {
 			return errNotAuthorizedErr
 		}
-		q.Where(playlist.HasOwnerWith(user.EmailEQ(name)))
+		// Emails are stored lowercased; a client may send any case.
+		q.Where(playlist.HasOwnerWith(user.EmailEQ(strings.ToLower(name))))
 	} else {
 		q.Where(
 			playlist.Or(
@@ -167,13 +160,28 @@ func (h *Handler) getPlaylists(
 	if err != nil {
 		return err
 	}
+	// One read for every playlist's tracks, not one per playlist.
+	var all []uint32
+	for _, p := range ps {
+		all = append(all, p.TrackIds...)
+	}
+	ts, err := h.playableTracks(ctx, all)
+	if err != nil {
+		return err
+	}
+	byID := make(map[uint32]*ent.Track, len(ts))
+	for _, t := range ts {
+		byID[t.ID] = t
+	}
 	out := &playlists{Playlist: make([]playlistInfo, 0, len(ps))}
 	for _, p := range ps {
-		full, err := h.playlistWith(ctx, p)
-		if err != nil {
-			return err
+		mine := make([]*ent.Track, 0, len(p.TrackIds))
+		for _, id := range p.TrackIds {
+			if t, ok := byID[id]; ok {
+				mine = append(mine, t)
+			}
 		}
-		out.Playlist = append(out.Playlist, full.playlistInfo)
+		out.Playlist = append(out.Playlist, toPlaylist(p, songList(mine)))
 	}
 	writeOK(w, r, &body{Playlists: out})
 	return nil
@@ -309,27 +317,9 @@ func (h *Handler) updatePlaylist(
 		up.SetPublic(boolParam(r, "public", p.Public))
 	}
 	if remove := r.Form["songIndexToRemove"]; len(remove) > 0 || len(add) > 0 {
-		ts, err := h.playableTracks(ctx, p.TrackIds)
+		kept, err := h.removePlaylistEntries(ctx, p.TrackIds, remove)
 		if err != nil {
 			return err
-		}
-		ids := trackIDsOf(ts)
-		drop := map[int]bool{}
-		for _, s := range remove {
-			i, err := strconv.Atoi(s)
-			if err != nil || i < 0 || i >= len(ids) {
-				return &apiError{
-					Code:    errGeneric,
-					Message: "songIndexToRemove out of range",
-				}
-			}
-			drop[i] = true
-		}
-		kept := make([]uint32, 0, len(ids)+len(add))
-		for i, t := range ids {
-			if !drop[i] {
-				kept = append(kept, t)
-			}
 		}
 		up.SetTrackIds(append(kept, add...))
 	}
@@ -338,6 +328,52 @@ func (h *Handler) updatePlaylist(
 	}
 	writeOK(w, r, nil)
 	return nil
+}
+
+// removePlaylistEntries drops the entries at remove, indexes into the
+// playable list getPlaylist shows, from the stored ids. Entries whose file is
+// gone are invisible to those indexes but stay stored, so a song that comes
+// back is still in the playlist after an unrelated edit.
+func (h *Handler) removePlaylistEntries(
+	ctx context.Context,
+	stored []uint32,
+	remove []string,
+) ([]uint32, error) {
+	if len(remove) == 0 {
+		return slices.Clone(stored), nil
+	}
+	ts, err := h.playableTracks(ctx, stored)
+	if err != nil {
+		return nil, err
+	}
+	live := make(map[uint32]bool, len(ts))
+	for _, t := range ts {
+		live[t.ID] = true
+	}
+	drop := map[int]bool{}
+	for _, s := range remove {
+		i, err := strconv.Atoi(s)
+		if err != nil || i < 0 || i >= len(ts) {
+			return nil, &apiError{
+				Code:    errGeneric,
+				Message: "songIndexToRemove out of range",
+			}
+		}
+		drop[i] = true
+	}
+	kept := make([]uint32, 0, len(stored))
+	visible := 0
+	for _, id := range stored {
+		if live[id] {
+			i := visible
+			visible++
+			if drop[i] {
+				continue
+			}
+		}
+		kept = append(kept, id)
+	}
+	return kept, nil
 }
 
 func (h *Handler) deletePlaylist(

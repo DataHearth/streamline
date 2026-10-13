@@ -30,22 +30,6 @@ func newShareToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-// publicBase is the origin the client reached this server on, so a share
-// link opens on the same host the app is pointed at. X-Forwarded-Host is
-// believed only from a configured reverse proxy, as for the OIDC callback.
-func publicBase(r *http.Request) string {
-	scheme, host := "http", r.Host
-	if httputil.ServedOverTLS(r) {
-		scheme = "https"
-	}
-	if httputil.TrustedPeer(r) {
-		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
-			host = fwd
-		}
-	}
-	return scheme + "://" + host
-}
-
 // sharable is whether the user ownerID may publish p: theirs, or public.
 func sharable(p *ent.Playlist, ownerID uint32) bool {
 	return p.Public || p.Edges.Owner.ID == ownerID
@@ -160,9 +144,11 @@ func (h *Handler) toShare(r *http.Request, s *ent.Share) (shareInfo, error) {
 	if err != nil {
 		return shareInfo{}, err
 	}
+	// The link starts with the origin the client reached this server on, so
+	// it opens on the same host the app is pointed at.
 	return shareInfo{
 		ID:          shareID(s.ID),
-		URL:         publicBase(r) + "/share/" + s.Token,
+		URL:         httputil.RequestOrigin(r) + "/share/" + s.Token,
 		Description: s.Description,
 		Username:    s.Edges.Owner.Email,
 		Created:     timestamp(s.CreateTime),
@@ -203,6 +189,11 @@ func (h *Handler) createShare(
 	u *ent.User,
 ) error {
 	if err := require(u, permShare); err != nil {
+		return err
+	}
+	// A share link streams with the owner's rights, so one who may not
+	// stream may not hand out a link that does.
+	if err := require(u, permStream); err != nil {
 		return err
 	}
 	ctx := r.Context()

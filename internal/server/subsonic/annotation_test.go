@@ -174,4 +174,48 @@ var _ = g.Describe("annotations", g.Label("integration"), func() {
 		clock = clock.Add(5*time.Minute + nowPlayingTTL + time.Second)
 		Expect(f2.playing.list()).To(BeEmpty())
 	})
+
+	g.It("ranks only playable songs among the top songs", func() {
+		ctx := context.Background()
+		u := f.client.User.Query().FirstX(ctx)
+		f.giveFile(f.noFile, "/music/nirvana/02.flac")
+		for t, plays := range map[uint32]uint32{f.noFile.ID: 9, f.withFile.ID: 1} {
+			_, err := f.client.MusicAnnotation.Create().
+				SetUserID(u.ID).
+				SetTrackID(t).
+				SetPlayCount(plays).
+				Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		}
+		f.loseFile(f.noFile)
+
+		top := obj(okResp(f.call("getTopSongs", url.Values{
+			"artist": {"nirvana"}, "count": {"1"},
+		})), "topSongs")
+		Expect(ids(list(top, "song"))).To(Equal([]string{tr(f.withFile)}))
+	})
+
+	g.It("reads submission like every other boolean", func() {
+		okResp(f.call("scrobble", url.Values{
+			"id": {tr(f.withFile)}, "submission": {"0"}, "c": {"Symfonium"},
+		}))
+		Expect(
+			list(obj(okResp(f.call("getNowPlaying", nil)), "nowPlaying"), "entry"),
+		).To(HaveLen(1))
+		song := obj(
+			okResp(f.call("getSong", url.Values{"id": {tr(f.withFile)}})),
+			"song",
+		)
+		Expect(song).NotTo(HaveKey("playCount"))
+	})
+
+	g.It("skips a now-playing song whose file went between two queries", func() {
+		okResp(f.call("scrobble", url.Values{
+			"id": {tr(f.withFile)}, "submission": {"false"},
+		}))
+		f.beforeNextFileQuery(func() { f.loseFile(f.withFile) })
+		Expect(
+			list(obj(okResp(f.call("getNowPlaying", nil)), "nowPlaying"), "entry"),
+		).To(BeEmpty())
+	})
 })

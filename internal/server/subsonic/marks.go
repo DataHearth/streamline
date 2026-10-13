@@ -480,7 +480,7 @@ func (h *Handler) scrobble(
 		return missingParam("id")
 	}
 	times := r.Form["time"]
-	submission := r.FormValue("submission") != "false"
+	submission := boolParam(r, "submission", true)
 
 	type play struct {
 		t  *ent.Track

@@ -2,6 +2,7 @@ package subsonic
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"regexp"
 	"sort"
@@ -58,12 +59,11 @@ func readSidecar(path string) (string, bool) {
 		return "", false
 	}
 	defer f.Close()
-	buf := make([]byte, maxLyricsFile)
-	n, _ := f.Read(buf)
-	if n == 0 {
+	buf, err := io.ReadAll(io.LimitReader(f, maxLyricsFile))
+	if err != nil || len(buf) == 0 {
 		return "", false
 	}
-	return string(buf[:n]), true
+	return string(buf), true
 }
 
 var (

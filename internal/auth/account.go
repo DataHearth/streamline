@@ -242,7 +242,7 @@ func (s *auth) RotateSubsonicPassword(
 }
 
 // SetSubsonicPassword sets the user's Subsonic password to one the caller
-// chose (the Subsonic API's createUser, updateUser and changePassword). It is
+// chose (the Subsonic API's changePassword, for the caller's own account). It is
 // held to the login password policy but never becomes the login password:
 // it is stored recoverable, so it must not double as a web credential.
 // Returns ErrPasswordWeak or ErrUserNotFound.

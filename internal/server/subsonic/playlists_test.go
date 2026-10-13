@@ -165,4 +165,69 @@ var _ = g.Describe("playlists", g.Label("integration"), func() {
 		)
 		Expect(ids(list(got, "entry"))).To(Equal([]string{tr(f.withFile)}))
 	})
+
+	g.It("keeps an entry whose file is missing through an unrelated edit", func() {
+		p := create("Mix", tr(f.withFile), tr(f.noFile))
+		id := p["id"].(string)
+		f.loseFile(f.noFile)
+
+		okResp(f.call("updatePlaylist", url.Values{
+			"playlistId": {id}, "songIdToAdd": {tr(f.withFile)},
+		}))
+		f.restoreFile(f.noFile)
+
+		got := obj(okResp(f.call("getPlaylist", url.Values{"id": {id}})), "playlist")
+		Expect(ids(list(got, "entry"))).To(Equal([]string{
+			tr(f.withFile), tr(f.noFile), tr(f.withFile),
+		}))
+	})
+
+	g.It("removes by the index the client saw, past a missing entry", func() {
+		p := create("Mix", tr(f.noFile), tr(f.withFile), tr(f.noFile))
+		id := p["id"].(string)
+		f.loseFile(f.noFile)
+
+		// The client sees only withFile, at index 0.
+		okResp(f.call("updatePlaylist", url.Values{
+			"playlistId": {id}, "songIndexToRemove": {"0"},
+		}))
+		f.restoreFile(f.noFile)
+
+		got := obj(okResp(f.call("getPlaylist", url.Values{"id": {id}})), "playlist")
+		Expect(
+			ids(list(got, "entry")),
+		).To(Equal([]string{tr(f.noFile), tr(f.noFile)}))
+	})
+
+	g.It("lets an admin list another user's playlists in any case", func() {
+		admin := f.addUser("admin@example.com", "admin")
+		create("Mine", tr(f.withFile))
+		got := list(obj(okResp(f.callAs(admin.Email, "getPlaylists", url.Values{
+			"username": {"Listener@Example.COM"},
+		})), "playlists"), "playlist")
+		Expect(got).To(HaveLen(1))
+		Expect(got[0]["name"]).To(Equal("Mine"))
+	})
+
+	g.It("reads every playlist's songs in one query", func() {
+		create("One", tr(f.withFile))
+		create("Two", tr(f.withFile), tr(f.noFile))
+		create("Three", tr(f.noFile), tr(f.noFile), tr(f.withFile))
+		f.loseFile(f.noFile)
+
+		n := f.countTrackQueries()
+		all := list(
+			obj(okResp(f.call("getPlaylists", nil)), "playlists"),
+			"playlist",
+		)
+		Expect(n.Load()).To(BeEquivalentTo(1))
+
+		counts := map[string]any{}
+		for _, p := range all {
+			counts[p["name"].(string)] = p["songCount"]
+		}
+		Expect(counts).To(Equal(map[string]any{
+			"One": float64(1), "Two": float64(1), "Three": float64(1),
+		}))
+	})
 })

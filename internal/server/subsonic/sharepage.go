@@ -38,12 +38,15 @@ func (h *Handler) openShare(
 		Where(share.TokenEQ(chi.URLParam(r, "token"))).
 		WithOwner().
 		Only(ctx)
-	if err != nil || expired(s, time.Now()) {
-		if err != nil && !ent.IsNotFound(err) {
-			slog.ErrorContext(ctx, "load share", "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return nil, nil, false
-		}
+	if err != nil && !ent.IsNotFound(err) {
+		slog.ErrorContext(ctx, "load share", "error", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return nil, nil, false
+	}
+	// A share lives only while its owner may still share: an admin revoking
+	// shareRole ends every link the account handed out, not just new ones.
+	if err != nil || expired(s, time.Now()) ||
+		s.Edges.Owner == nil || !s.Edges.Owner.SubsonicCanShare {
 		http.NotFound(w, r)
 		return nil, nil, false
 	}
@@ -62,12 +65,14 @@ func pathID(r *http.Request, name string) (uint32, bool) {
 }
 
 func (h *Handler) serveSharedTrack(w http.ResponseWriter, r *http.Request) {
-	_, ts, ok := h.openShare(w, r)
+	s, ts, ok := h.openShare(w, r)
 	if !ok {
 		return
 	}
 	id, ok := pathID(r, "track")
-	if !ok {
+	// The link plays with its owner's rights: an account that may not stream
+	// must not reach the files through a share either.
+	if !ok || !s.Edges.Owner.SubsonicCanStream {
 		http.NotFound(w, r)
 		return
 	}

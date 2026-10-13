@@ -29,6 +29,11 @@ type searchHits struct {
 	tracks  []*ent.Track
 }
 
+// maxSearchSize bounds search2/search3 counts. Clients sync the whole library
+// by paging an empty query at their own count and stop at the first short
+// page, so a ceiling below the counts they send ends the sync early.
+const maxSearchSize = maxListSize
+
 // searchAll is the shared body of search2 and search3.
 func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 	ctx := r.Context()
@@ -38,7 +43,7 @@ func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 		return out, nil
 	}
 
-	if n := intParam(r, "artistCount", defaultPageSize, 0, maxPageSize); n > 0 {
+	if n := intParam(r, "artistCount", defaultPageSize, 0, maxSearchSize); n > 0 {
 		ars, err := h.ent.Artist.Query().
 			Where(artist.NameContainsFold(query)).
 			WithAlbums().
@@ -52,7 +57,7 @@ func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 		out.artists = ars
 	}
 
-	if n := intParam(r, "albumCount", defaultPageSize, 0, maxPageSize); n > 0 {
+	if n := intParam(r, "albumCount", defaultPageSize, 0, maxSearchSize); n > 0 {
 		als, err := h.ent.Album.Query().
 			Where(album.TitleContainsFold(query)).
 			WithArtist().
@@ -67,7 +72,7 @@ func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 		out.albums = als
 	}
 
-	if n := intParam(r, "songCount", defaultPageSize, 0, maxPageSize); n > 0 {
+	if n := intParam(r, "songCount", defaultPageSize, 0, maxSearchSize); n > 0 {
 		ts, err := songEdges(h.ent.Track.Query().Where(
 			track.TitleContainsFold(query),
 			playable(),

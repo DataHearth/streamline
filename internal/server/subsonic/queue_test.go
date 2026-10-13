@@ -3,6 +3,8 @@ package subsonic
 import (
 	"context"
 	"net/url"
+	"strings"
+	"unicode/utf8"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -282,3 +284,17 @@ var _ = g.Describe(
 		})
 	},
 )
+
+var _ = g.Describe("play queue client name", g.Label("integration"), func() {
+	g.It("never splits a character when it trims the client name", func() {
+		f := newFixture(context.Background())
+		name := strings.Repeat("a", 63) + "é"
+		okResp(f.call("savePlayQueue", url.Values{
+			"id": {tr(f.withFile)}, "c": {name},
+		}))
+		q := obj(okResp(f.call("getPlayQueue", nil)), "playQueue")
+		changedBy := q["changedBy"].(string)
+		Expect(utf8.ValidString(changedBy)).To(BeTrue(), "%q", changedBy)
+		Expect(len(changedBy)).To(BeNumerically("<=", 64))
+	})
+})

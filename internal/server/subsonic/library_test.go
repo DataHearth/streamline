@@ -3,12 +3,15 @@ package subsonic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/datahearth/streamline/ent"
 )
 
 var _ = g.Describe("library", g.Label("integration"), func() {
@@ -223,5 +226,29 @@ var _ = g.Describe("library", g.Label("integration"), func() {
 		)
 		Expect(list(res, "artist")).To(HaveLen(1))
 		Expect(list(res, "song")).To(HaveLen(1))
+	})
+
+	g.It("pages a search past 100 hits", func() {
+		ctx := context.Background()
+		bulk := make([]*ent.ArtistCreate, 0, 150)
+		for i := range 150 {
+			bulk = append(bulk, f.client.Artist.Create().
+				SetMbid(fmt.Sprintf("bulk-%03d", i)).
+				SetName(fmt.Sprintf("Bulk Band %03d", i)))
+		}
+		Expect(f.client.Artist.CreateBulk(bulk...).Exec(ctx)).To(Succeed())
+
+		res := obj(okResp(f.call("search3", url.Values{
+			"query": {"Bulk Band"}, "artistCount": {"150"},
+			"albumCount": {"0"}, "songCount": {"0"},
+		})), "searchResult3")
+		Expect(list(res, "artist")).To(HaveLen(150))
+	})
+
+	g.It("answers 70 for a song whose file went between two queries", func() {
+		f.beforeNextFileQuery(func() { f.loseFile(f.withFile) })
+		Expect(
+			errCode(f.call("getSong", url.Values{"id": {tr(f.withFile)}})),
+		).To(BeEquivalentTo(70))
 	})
 })

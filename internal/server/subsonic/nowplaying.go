@@ -102,6 +102,9 @@ func (h *Handler) getNowPlaying(
 		if err != nil {
 			return err
 		}
+		if firstFile(t) == nil {
+			continue
+		}
 		al := t.Edges.Album
 		out.Entry = append(out.Entry, nowPlayingEntry{
 			child:      toSong(t, al, al.Edges.Artist, firstFile(t)),

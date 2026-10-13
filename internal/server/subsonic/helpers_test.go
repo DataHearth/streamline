@@ -7,11 +7,16 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -105,4 +110,54 @@ func (f *fixture) addArtist(mbid, name, genre string) *ent.Artist {
 		Save(ctx)
 	Expect(err).NotTo(HaveOccurred())
 	return a
+}
+
+// beforeNextFileQuery runs fn once, just before the next MediaFile query:
+// the window between a track query and the eager load of its files.
+func (f *fixture) beforeNextFileQuery(fn func()) {
+	var once sync.Once
+	f.client.MediaFile.Intercept(
+		ent.InterceptFunc(func(next ent.Querier) ent.Querier {
+			return ent.QuerierFunc(
+				func(ctx context.Context, q ent.Query) (ent.Value, error) {
+					once.Do(fn)
+					return next.Query(ctx, q)
+				},
+			)
+		}),
+	)
+}
+
+// countTrackQueries counts the Track queries run from now on.
+func (f *fixture) countTrackQueries() *atomic.Int32 {
+	var n atomic.Int32
+	f.client.Track.Intercept(
+		ent.InterceptFunc(func(next ent.Querier) ent.Querier {
+			return ent.QuerierFunc(
+				func(ctx context.Context, q ent.Query) (ent.Value, error) {
+					n.Add(1)
+					return next.Query(ctx, q)
+				},
+			)
+		}),
+	)
+	return &n
+}
+
+// loseFile marks every file of t missing, as the drift check does.
+func (f *fixture) loseFile(t *ent.Track) {
+	g.GinkgoHelper()
+	Expect(f.client.MediaFile.Update().
+		Where(mediafile.HasTrackWith(track.IDEQ(t.ID))).
+		SetMissingSince(time.Now()).
+		Exec(context.Background())).To(Succeed())
+}
+
+// restoreFile clears the missing mark on every file of t.
+func (f *fixture) restoreFile(t *ent.Track) {
+	g.GinkgoHelper()
+	Expect(f.client.MediaFile.Update().
+		Where(mediafile.HasTrackWith(track.IDEQ(t.ID))).
+		ClearMissingSince().
+		Exec(context.Background())).To(Succeed())
 }

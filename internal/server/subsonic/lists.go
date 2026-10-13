@@ -355,7 +355,10 @@ func (h *Handler) topTracks(
 		Where(
 			musicannotation.TrackIDNotNil(),
 			musicannotation.PlayCountGT(0),
+			// Only playable tracks compete, or a removed favourite would
+			// take a slot getTopSongs then drops.
 			musicannotation.HasTrackWith(
+				playable(),
 				track.HasAlbumWith(album.HasArtistWith(artist.IDEQ(artistID))),
 			),
 		).

@@ -303,4 +303,24 @@ var _ = g.Describe("media", g.Label("integration"), func() {
 		).
 			To(BeEquivalentTo(70))
 	})
+
+	g.It("estimates an unprobed file's bitrate from the track length", func() {
+		ctx := context.Background()
+		// 3.2 MB over 200 s is 128 kbps, well under a 320 cap.
+		Expect(f.client.MediaFile.Update().
+			SetBitrate(0).
+			SetDurationSeconds(0).
+			SetSize(3_200_000).
+			Exec(ctx)).To(Succeed())
+		Expect(f.client.Track.UpdateOneID(f.withFile.ID).
+			SetDuration(200).
+			Exec(ctx)).To(Succeed())
+
+		rec := raw(
+			"stream",
+			url.Values{"id": {tr(f.withFile)}, "maxBitRate": {"320"}},
+		)
+		Expect(rec.Body.Bytes()).To(Equal(audio))
+		Expect(trans.calls).To(BeEmpty())
+	})
 })
