@@ -182,10 +182,7 @@ func configValidate(_ context.Context, cmd *cli.Command) error {
 }
 
 func run(ctx context.Context, cmd *cli.Command) error {
-	// The root command has an Action, so urfave/cli hands it any word that is
-	// not a subcommand as a positional argument. Without this check
-	// `streamline version` or a typo boots a second server on the defaults,
-	// whose relative data_dir resolves to the live /data volume in the image.
+	// Unknown subcommands arrive here as arguments; never boot on them.
 	if cmd.NArg() > 0 {
 		return fmt.Errorf("unknown command %q (see --help)", cmd.Args().First())
 	}
