@@ -288,9 +288,11 @@ func (s *Service) checkEdits(
 		)
 		switch {
 		case err != nil:
+			// Not read, so not seen: a transient failure (another tagger
+			// mid-write) must not accept the change.
 			slog.WarnContext(ctx, "music edit check could not read a file",
 				"media_file.id", mf.ID, "error", err)
-			_ = s.db.SetMediaFileTagsChecked(ctx, mf.ID, mtime, size, now)
+			skip()
 		case audiotags.Edited(states):
 			slog.InfoContext(
 				ctx,

@@ -140,6 +140,37 @@ var _ = Describe("WriteWithArt", Label("unit", "audiotags"), func() {
 		Entry("FLAC", "testdata/tagged.flac"),
 	)
 
+	It(
+		"reads the picture it takes for the front cover back as the file's art",
+		func() {
+			path := copyFixture("testdata/tagged.flac")
+			Expect(
+				taglib.WriteImageOptions(
+					path,
+					blue,
+					0,
+					"Back Cover",
+					"",
+					"image/jpeg",
+				),
+			).To(Succeed())
+			Expect(
+				taglib.WriteImageOptions(path, red, 1, "Other", "", "image/jpeg"),
+			).To(Succeed())
+
+			ours, err := WriteWithArt(
+				path,
+				tags,
+				Policy{},
+				Art{Manage: true, Front: blue},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ours).To(BeEmpty())
+			data, _, _ := Picture(path)
+			Expect(data).To(Equal(red), "the release's cover, never its back")
+		},
+	)
+
 	It("keeps the other pictures beside the front cover it replaces", func() {
 		path := copyFixture("testdata/tagged.flac")
 		Expect(

@@ -440,14 +440,7 @@ func frontCover(path, ext string) (int, []byte, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	idx := slices.IndexFunc(props.Images, func(d taglib.ImageDesc) bool {
-		return d.Type == frontCoverType
-	})
-	if idx < 0 {
-		idx = slices.IndexFunc(props.Images, func(d taglib.ImageDesc) bool {
-			return d.Type == otherPictureType || d.Type == ""
-		})
-	}
+	idx := frontIndex(props.Images)
 	if idx < 0 && ext == ".m4a" && len(props.Images) > 0 {
 		idx = 0
 	}
@@ -462,6 +455,22 @@ func frontCover(path, ext string) (int, []byte, error) {
 		return idx, nil, nil
 	}
 	return idx, data, nil
+}
+
+// frontIndex is the index of the picture taken for the front cover — typed
+// so, else the first typed Other or untyped — or -1. The writer and Picture
+// share it, so the picture the writer leaves alone as the release's own is
+// the one the cover resolver reads.
+func frontIndex(images []taglib.ImageDesc) int {
+	idx := slices.IndexFunc(images, func(d taglib.ImageDesc) bool {
+		return d.Type == frontCoverType
+	})
+	if idx < 0 {
+		idx = slices.IndexFunc(images, func(d taglib.ImageDesc) bool {
+			return d.Type == otherPictureType || d.Type == ""
+		})
+	}
+	return idx
 }
 
 const performerPrefix = taglib.Performer + ":"

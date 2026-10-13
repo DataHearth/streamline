@@ -132,6 +132,7 @@ type Service struct {
 	lookups         *memo[*lookupBody]
 	releaseSearches *memo[[]metadata.ReleaseGroupSearchResult]
 	hydrate         hydrator
+	seeding         seedingCache
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
@@ -454,6 +455,11 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 		for _, a := range row.Edges.Albums {
 			unlock := library.LockAlbumFiles(a.ID)
+			// Read again under the lock: the renamer may have moved a
+			// file since the artist was loaded.
+			if fresh, err := s.db.FindAlbumByID(ctx, a.ID); err == nil {
+				a = fresh
+			}
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
 					if err := library.RemoveMediaFile(

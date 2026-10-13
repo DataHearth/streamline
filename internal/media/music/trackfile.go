@@ -28,6 +28,13 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 	defer span.End()
 
 	t, err := s.db.FindTrackByID(ctx, trackID)
+	if err == nil && t.Edges.Album != nil {
+		// No tag write may rename a copy back over a file deleted here, and
+		// the paths are read again under the lock: the renamer may have
+		// moved a file since.
+		defer library.LockAlbumFiles(t.Edges.Album.ID)()
+		t, err = s.db.FindTrackByID(ctx, trackID)
+	}
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return otelx.RecordSpanError(span, ErrTrackNotFound)
@@ -43,10 +50,6 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 	}
 	if len(t.Edges.MediaFiles) > 0 {
 		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
-	}
-	if alb := t.Edges.Album; alb != nil {
-		// No tag write may rename a copy back over a file deleted here.
-		defer library.LockAlbumFiles(alb.ID)()
 	}
 	for _, f := range t.Edges.MediaFiles {
 		// A file already gone (or taken with a same-named sibling's sidecars)

@@ -490,6 +490,34 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 		Expect(*reload(mf).TagsState).To(Equal(entmediafile.TagsStateWritten))
 		Expect(*reload(other).TagsState).To(Equal(entmediafile.TagsStatePending))
 	})
+
+	It("lists the download clients once for albums tagged back to back", func() {
+		// A bulk-import commit tags album after album.
+		e.dl.EXPECT().SeedingTorrents(mock.Anything).
+			Return(download.NewSeedingSet(true, nil, nil)).Once()
+		e.posters.EXPECT().
+			Fetch(mock.Anything, coverKind, mock.Anything, mock.Anything).
+			Return(errors.New("no cover")).
+			Maybe()
+		_, others := e.seedArtist("Hole", albumSeed{
+			mbid: "rg-2", title: "Live Through This", tracks: []string{"Doll Parts"},
+		})
+		first := placeFile("Nirvana/Nevermind/01.flac", pending())
+		second := e.client.MediaFile.Create().
+			SetPath(filepath.Join(musicDir, "Hole", "01.flac")).SetSize(1).
+			SetTrackID(others[0].QueryTracks().OnlyX(e.ctx).ID).
+			SetTagsState(entmediafile.TagsStatePending).SaveX(e.ctx)
+
+		for _, id := range []uint32{alb.ID, others[0].ID} {
+			_, err := e.svc.TagAlbum(e.ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		Expect(*reload(first).TagsState).To(Equal(entmediafile.TagsStateWritten))
+		Expect(
+			reload(second).TagFailures,
+		).To(Equal(uint8(1)), "the second album was reached")
+	})
 })
 
 // manualCtx marks ctx the way POST /schedules/{name}/run does.

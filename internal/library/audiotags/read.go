@@ -79,7 +79,8 @@ func ReadTags(path string) (map[string][]string, error) {
 }
 
 // Picture returns the artwork embedded in the file and its MIME type: the
-// front cover when the file marks one, else its first picture. A file
+// picture the writer takes for the front cover (the one typed so, else the
+// first typed Other or untyped), else the file's first picture. A file
 // carrying none, or whose tags cannot be parsed, yields nil data and a nil
 // error, like Read: only a failure to open is an error.
 func Picture(path string) ([]byte, string, error) {
@@ -90,13 +91,7 @@ func Picture(path string) ([]byte, string, error) {
 	if err != nil || len(props.Images) == 0 {
 		return nil, "", nil
 	}
-	idx := 0
-	for i, img := range props.Images {
-		if img.Type == "Front Cover" {
-			idx = i
-			break
-		}
-	}
+	idx := max(frontIndex(props.Images), 0)
 	data, err := taglib.ReadImageOptions(path, idx)
 	if err != nil || len(data) == 0 {
 		return nil, "", nil

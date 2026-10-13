@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -106,7 +107,8 @@ func (s *Service) SyncTags(ctx context.Context) error {
 	if len(files) == 0 {
 		return nil
 	}
-	seeding := s.seedingTorrents(ctx)
+	// The pass lists afresh: it is the one that notices a torrent gone.
+	seeding := s.seedingTorrents(ctx, true)
 	res := s.tagFiles(ctx, files, seeding, cfg, func(done, total int) {
 		scheduler.Progress(ctx, done, total)
 	})
@@ -166,17 +168,45 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) (bool, error) {
 	if len(files) == 0 {
 		return resolved, nil
 	}
-	s.tagFiles(ctx, files, s.seedingTorrents(ctx), cfg, nil)
+	s.tagFiles(ctx, files, s.seedingTorrents(ctx, false), cfg, nil)
 	return resolved, nil
 }
 
+// seedingTTL is how long TagAlbum reuses a listing of the clients' torrents.
+// A bulk-import commit tags album after album, and listing every client and
+// walking the torrents' content for hard links once per album made a large
+// adoption take minutes.
+const seedingTTL = 30 * time.Second
+
+// seedingCache is the last complete listing of the clients' torrents.
+type seedingCache struct {
+	mu  sync.Mutex
+	at  time.Time
+	set download.SeedingSet
+}
+
 // seedingTorrents lists the clients' torrents; with no download manager
-// wired (a test, a tool) there are none.
-func (s *Service) seedingTorrents(ctx context.Context) download.SeedingSet {
+// wired (a test, a tool) there are none. Unless fresh, a complete listing
+// at most seedingTTL old is reused; a fresh one replaces it. An incomplete
+// listing is never kept.
+func (s *Service) seedingTorrents(
+	ctx context.Context,
+	fresh bool,
+) download.SeedingSet {
 	if s.download == nil {
 		return download.NewSeedingSet(true, nil, nil)
 	}
-	return s.download.SeedingTorrents(ctx)
+	s.seeding.mu.Lock()
+	defer s.seeding.mu.Unlock()
+	if !fresh && !s.seeding.at.IsZero() && timeNow().Sub(s.seeding.at) < seedingTTL {
+		return s.seeding.set
+	}
+	set := s.download.SeedingTorrents(ctx)
+	s.seeding.set, s.seeding.at = set, time.Time{}
+	if set.Complete {
+		s.seeding.at = timeNow()
+	}
+	return set
 }
 
 // RetagLibrary queues every track file for a full rewrite, whatever it

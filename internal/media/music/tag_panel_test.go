@@ -255,6 +255,21 @@ var _ = Describe(
 				},
 			)
 
+			It("does not take a change it could not read for seen", func() {
+				before := reload(mf)
+				Expect(
+					os.WriteFile(mf.Path, []byte("mid-write"), 0o644),
+				).To(Succeed())
+
+				Expect(e.svc.checkEdits(e.ctx,
+					config.Get().Library.MusicTags, 1)).To(BeZero())
+
+				got := reload(mf)
+				Expect(got.TagsMtime).To(Equal(before.TagsMtime))
+				Expect(got.TagsSize).To(Equal(before.TagsSize),
+					"the next turn compares the file again")
+			})
+
 			It("checks nothing of an album it does not manage", func() {
 				e.client.Album.UpdateOneID(alb.ID).SetTagsManaged(false).ExecX(e.ctx)
 				edit(map[string][]string{"TITLE": {"Lithium (my edit)"}})
