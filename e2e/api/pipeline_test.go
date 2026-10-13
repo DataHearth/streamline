@@ -110,9 +110,12 @@ var _ = Describe(
 			Expect(results).To(HaveLen(1))
 			release := results[0]
 			Expect(release).To(HaveKeyWithValue("title", fakes.ReleaseTitle))
+			// The indexer's link carries its API key, so search hands out a
+			// sealed handle instead; the grab below opens it.
 			Expect(release).To(HaveKeyWithValue(
-				"download_url", tz.URL+fakes.DownloadPath,
+				"download_url", HavePrefix("slr1."),
 			))
+			Expect(release["download_url"]).NotTo(ContainSubstring(tz.URL))
 
 			By("dispatching the release the search returned, verbatim")
 			grabbed := post(
@@ -146,6 +149,20 @@ var _ = Describe(
 		})
 
 		It("imports the release once qBittorrent reports it complete", func() {
+			// The payload is fake bytes, not media: a runner with ffprobe (the
+			// devshell ships it) probes it, fails, and holds the import as
+			// corrupt. holds_test.go pins the same outcome the same way.
+			setFFmpeg := func(on bool) {
+				GinkgoHelper()
+				resp := patch("/api/v1/config/ffmpeg", adminAuth, map[string]any{
+					"enabled": on,
+				})
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			}
+			setFFmpeg(false)
+			DeferCleanup(func() { setFFmpeg(true) })
+
 			torrents := qb.Torrents(managedCategory)
 			Expect(torrents).To(HaveLen(1), "the grab never reached the client")
 			torrent := torrents[0]
