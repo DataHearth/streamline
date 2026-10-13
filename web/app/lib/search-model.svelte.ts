@@ -260,7 +260,7 @@ export function createSearchModel(
 	}
 
 	// request_only users request rather than add, so the labels adapt.
-	function actions(): ActionItem[] {
+	function addActions(): ActionItem[] {
 		const direct = auth.canAddDirectly;
 		return [
 			{
@@ -287,6 +287,12 @@ export function createSearchModel(
 				icon: BookOpen,
 				run: () => openAdd("book"),
 			},
+		];
+	}
+
+	function actions(): ActionItem[] {
+		return [
+			...addActions(),
 			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
 	}
@@ -294,6 +300,11 @@ export function createSearchModel(
 	// The live query, not the debounced one: nothing is fetched until a pick.
 	function lookups(query: string): LookupItem[] {
 		if (query.length < TITLE_MIN) return [];
+		// Typing the start of "Add movie…" is asking for that action, not for a
+		// title named "add movie" — the strip would offer to add one. The start
+		// only, so a title called "Movie" still gets the strip.
+		const q = fold(query);
+		if (addActions().some((a) => fold(a.label).startsWith(q))) return [];
 		return ADD_KINDS.map((media) => ({
 			kind: "lookup",
 			media,
