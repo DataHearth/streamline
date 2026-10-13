@@ -2615,5 +2615,19 @@
 	"books_send_series_started": "Sending {emails} email(s) ({volumes} volumes)",
 	"books_send_series_skipped": "{n} skipped",
 	"books_send_series_details": "Details",
-	"books_send_series_skipped_title": "Volumes not sent"
+	"books_send_series_skipped_title": "Volumes not sent",
+	"users_subsonic_title": "Subsonic apps",
+	"users_subsonic_desc": "What this account may do from a Subsonic music app.",
+	"users_subsonic_help": "These never limit the web UI. Browsing, searching, starring and scrobbling stay allowed.",
+	"users_subsonic_stream": "Stream music",
+	"users_subsonic_download": "Download files",
+	"users_subsonic_playlists": "Create and edit playlists",
+	"users_subsonic_share": "Create public share links",
+	"users_subsonic_rate": "Rate songs, albums and artists",
+	"users_subsonic_change_password": "Change their own Subsonic password",
+	"users_subsonic_max_bitrate": "Maximum bitrate",
+	"users_subsonic_max_bitrate_help": "Streams above it are converted, even when the app asks for the original file. Needs ffmpeg.",
+	"users_subsonic_no_limit": "No limit",
+	"users_subsonic_kbps": "{kbps} kbps",
+	"users_subsonic_permissions": "Permissions"
 }

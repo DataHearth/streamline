@@ -15,7 +15,6 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/appaccess"
-	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -32,15 +31,9 @@ type Transcoder interface {
 	) error
 }
 
-// Accounts is the slice of the account service user management drives, so
-// every account and role write takes the admin API's own path.
+// Accounts sets a Subsonic password through the account service, which
+// applies the login password policy. *auth.Manager implements it.
 type Accounts interface {
-	CreateUserDirect(
-		ctx context.Context,
-		email, password, role, displayName string,
-	) (*ent.User, error)
-	UpdateUser(ctx context.Context, id uint32, p auth.UserPatch) error
-	DeleteUser(ctx context.Context, id, requesterID uint32) error
 	SetSubsonicPassword(ctx context.Context, userID uint32, password string) error
 }
 
@@ -70,7 +63,7 @@ type Deps struct {
 	// Jobs is optional: without it startScan is refused and getScanStatus
 	// never reports a scan.
 	Jobs Jobs
-	// Accounts is optional: without it user management is refused.
+	// Accounts is optional: without it changePassword is refused.
 	Accounts Accounts
 }
 
@@ -162,9 +155,9 @@ func (h *Handler) endpoints() map[string]endpoint {
 		// User management
 		"getUser":        h.getUser,
 		"getUsers":       h.getUsers,
-		"createUser":     h.createUser,
-		"updateUser":     h.updateUser,
-		"deleteUser":     h.deleteUser,
+		"createUser":     h.managedInStreamline,
+		"updateUser":     h.managedInStreamline,
+		"deleteUser":     h.managedInStreamline,
 		"changePassword": h.changePassword,
 
 		// Bookmarks and the play queue

@@ -239,7 +239,16 @@ func toAPIUser(u *ent.User) User {
 		AuthMethod:  UserAuthMethod(u.AuthMethod),
 		DisplayName: dn,
 		DeviceEmail: &u.DeviceEmail,
-		CreatedAt:   u.CreateTime,
+		Subsonic: &SubsonicAccess{
+			CanStream:          u.SubsonicCanStream,
+			CanDownload:        u.SubsonicCanDownload,
+			CanManagePlaylists: u.SubsonicCanManagePlaylists,
+			CanShare:           u.SubsonicCanShare,
+			CanRate:            u.SubsonicCanRate,
+			CanChangePassword:  u.SubsonicCanChangePassword,
+			MaxBitRate:         u.SubsonicMaxBitRate,
+		},
+		CreatedAt: u.CreateTime,
 	}
 }
 

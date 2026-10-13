@@ -76,6 +76,8 @@ type UserPatch struct {
 	Role        *string
 	DisplayName *string
 	AuthMethod  *string
+	// Subsonic patches what the user may do through the Subsonic API.
+	Subsonic db.SubsonicAccessParams
 }
 
 // ListUsers returns a filtered, paginated slice of users plus the total count
@@ -176,8 +178,8 @@ func (s *auth) GetUserDetail(
 	return u, keys, sessions, nil
 }
 
-// UpdateUser applies a partial patch (role, display name, auth method) to the
-// target user. Demoting the sole remaining admin is rejected with
+// UpdateUser applies a partial patch (role, display name, auth method,
+// Subsonic permissions) to the target user. Demoting the sole remaining admin is rejected with
 // ErrLastAdmin.
 //
 // A role that actually changes (in either direction) revokes every session the
@@ -222,6 +224,7 @@ func (s *auth) UpdateUser(
 		dn := strings.TrimSpace(*p.DisplayName)
 		params.DisplayName = &dn
 	}
+	params.Subsonic = p.Subsonic
 	if p.Email != nil {
 		email := strings.ToLower(strings.TrimSpace(*p.Email))
 		if email != strings.ToLower(current.Email) {

@@ -2615,5 +2615,19 @@
 	"books_send_series_started": "Envoi de {emails} courriel(s) ({volumes} tomes)",
 	"books_send_series_skipped": "{n} ignoré(s)",
 	"books_send_series_details": "Détails",
-	"books_send_series_skipped_title": "Tomes non envoyés"
+	"books_send_series_skipped_title": "Tomes non envoyés",
+	"users_subsonic_title": "Applications Subsonic",
+	"users_subsonic_desc": "Ce que ce compte peut faire depuis une application musicale Subsonic.",
+	"users_subsonic_help": "Rien de ceci ne limite l'interface web. Parcourir, rechercher, mettre en favori et enregistrer les écoutes restent permis.",
+	"users_subsonic_stream": "Écouter la musique",
+	"users_subsonic_download": "Télécharger les fichiers",
+	"users_subsonic_playlists": "Créer et modifier des playlists",
+	"users_subsonic_share": "Créer des liens de partage publics",
+	"users_subsonic_rate": "Noter les titres, albums et artistes",
+	"users_subsonic_change_password": "Changer son propre mot de passe Subsonic",
+	"users_subsonic_max_bitrate": "Débit maximal",
+	"users_subsonic_max_bitrate_help": "Les flux au-delà sont convertis, même quand l'application demande le fichier d'origine. Nécessite ffmpeg.",
+	"users_subsonic_no_limit": "Sans limite",
+	"users_subsonic_kbps": "{kbps} kb/s",
+	"users_subsonic_permissions": "Autorisations"
 }

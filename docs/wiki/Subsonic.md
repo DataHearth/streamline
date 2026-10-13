@@ -21,7 +21,7 @@ Apps such as Symfonium, DSub, Ultrasonic, Tempo, play:Sub, Feishin and Sublime M
 | Downloads | The original file, for offline listening |
 | Internet radio | A shared list of radio streams; any user can listen, only admins can add, edit or remove stations |
 | Library scan | "Rescan" in an app checks every file Streamline tracks and marks missing ones (admins only) |
-| Users | Admins create, edit and delete accounts and set what each may do through Subsonic; everyone can see their own account and change their own Subsonic password |
+| Users | Read your own account and change your own Subsonic password; admins can list accounts. Accounts and their Subsonic permissions are managed in the web UI |
 
 Not available: podcasts, chat, jukebox mode, video and avatars.
 
@@ -59,17 +59,12 @@ Put a `.lrc` file with the same name next to the song (`01 - Song.flac` and `01 
 
 ## Users
 
-An admin can manage accounts from a Subsonic app's admin screen, and every change goes through the same checks as the Users page of the web UI: the last admin can be neither demoted nor deleted, and nobody can delete themselves.
+Accounts are managed by an admin in Streamline's web UI (Settings → Users), never from a Subsonic app. An app's admin screen can list accounts (admins only), but creating, editing or deleting one is refused with a message pointing to the web UI. Anyone can read their own account.
 
-- **The user name is the email.** An app asks for a user name, an email and a password. The email becomes the login. A user name that differs from it becomes the account's display name.
-- **The password is a Subsonic password.** It is what the new account signs in to apps with, and it never becomes the web login password, because Subsonic passwords are stored in a form the server can read back. An account created from an app therefore cannot sign in to the web UI until an admin sets a password on the Users page. Changing a password from an app (yours, or anyone's as an admin) changes the Subsonic password only.
-- **Admin.** The app's admin switch makes the account a Streamline admin, with full rights in the web UI too, and turning it off makes it a member. Either change signs the account out of the web UI.
-- **Permissions.** Each account has Subsonic-only switches: may stream, may download, may manage playlists, may share, may rate songs, may change their own password. A new account from an app follows the Subsonic defaults (streaming and password changes on, the rest off). Accounts created any other way have every switch on. The switches never limit what the account can do in the web UI. Browsing, searching, starring and scrobbling are always allowed.
-- **Maximum bitrate.** An admin can cap an account's streams at 32 to 320 kbps. Every stream above the cap is converted, even when the app asks for the original file. The cap needs ffmpeg: without it, or when the eight conversion slots are busy, the original file is sent.
-
-Only admins can create, edit or delete accounts, list all accounts, or read someone else's. An admin's Subsonic password can do all of that, so keep it as safe as the admin login.
-
-The permissions and the bitrate cap are only editable from a Subsonic app for now; the web UI does not show them.
+- **The user name is the email** you sign in with.
+- **Changing your password from an app** changes your own Subsonic password only, never your web login password, and only if your account allows it. Nobody can change another account's password from an app, admins included.
+- **Permissions.** On a user's page in the web UI, the **Subsonic apps** card has switches for what the account may do from an app: stream, download, create and edit playlists, create share links, rate, and change their own Subsonic password. Every account starts with all of them on. They never limit the web UI, and browsing, searching, starring and scrobbling are always allowed.
+- **Maximum bitrate.** The same card caps the account's streams (64 to 320 kbps, or no limit). Every stream above the cap is converted, even when the app asks for the original file. The cap needs ffmpeg: without it, or when the eight conversion slots are busy, the original file is sent.
 
 ## Library scan
 

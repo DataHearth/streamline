@@ -804,9 +804,22 @@ export type User = {
 	device_email?: string;
 	// Only /auth/me fills this; admin user lists leave it out.
 	send?: { configured: boolean; from: string };
+	// What the account may do through the Subsonic API; gates /rest only.
+	subsonic?: SubsonicAccess;
 	created_at: string;
 	failed_login_count?: number;
 	locked_until?: string | null;
+};
+
+export type SubsonicAccess = {
+	can_stream: boolean;
+	can_download: boolean;
+	can_manage_playlists: boolean;
+	can_share: boolean;
+	can_rate: boolean;
+	can_change_password: boolean;
+	// Kbps ceiling on every stream; 0 is none.
+	max_bit_rate: number;
 };
 
 export type ApiKey = {
