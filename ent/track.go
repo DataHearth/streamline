@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -36,6 +37,8 @@ type Track struct {
 	Duration uint32 `json:"duration,omitempty"`
 	// Bonus holds the value of the "bonus" field.
 	Bonus bool `json:"bonus,omitempty"`
+	// TagOverrides holds the value of the "tag_overrides" field.
+	TagOverrides map[string][]string `json:"tag_overrides,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TrackQuery when eager-loading is set.
 	Edges        TrackEdges `json:"edges"`
@@ -90,6 +93,8 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case track.FieldTagOverrides:
+			values[i] = new([]byte)
 		case track.FieldBonus:
 			values[i] = new(sql.NullBool)
 		case track.FieldID, track.FieldDisc, track.FieldPosition, track.FieldDuration:
@@ -175,6 +180,14 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Bonus = value.Bool
 			}
+		case track.FieldTagOverrides:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field tag_overrides", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.TagOverrides); err != nil {
+					return fmt.Errorf("unmarshal field tag_overrides: %w", err)
+				}
+			}
 		case track.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field album_tracks", value)
@@ -259,6 +272,9 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("bonus=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Bonus))
+	builder.WriteString(", ")
+	builder.WriteString("tag_overrides=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagOverrides))
 	builder.WriteByte(')')
 	return builder.String()
 }

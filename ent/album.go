@@ -49,6 +49,8 @@ type Album struct {
 	TagsManaged bool `json:"tags_managed,omitempty"`
 	// ArtSidecarHash holds the value of the "art_sidecar_hash" field.
 	ArtSidecarHash string `json:"art_sidecar_hash,omitempty"`
+	// TagOverrides holds the value of the "tag_overrides" field.
+	TagOverrides map[string][]string `json:"tag_overrides,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
 	GrabFailures uint8 `json:"grab_failures,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -149,7 +151,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case album.FieldGenres:
+		case album.FieldGenres, album.FieldTagOverrides:
 			values[i] = new([]byte)
 		case album.FieldMonitored, album.FieldMonitorPinned, album.FieldTagsManaged:
 			values[i] = new(sql.NullBool)
@@ -274,6 +276,14 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field art_sidecar_hash", values[i])
 			} else if value.Valid {
 				_m.ArtSidecarHash = value.String
+			}
+		case album.FieldTagOverrides:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field tag_overrides", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.TagOverrides); err != nil {
+					return fmt.Errorf("unmarshal field tag_overrides: %w", err)
+				}
 			}
 		case album.FieldGrabFailures:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -464,6 +474,9 @@ func (_m *Album) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("art_sidecar_hash=")
 	builder.WriteString(_m.ArtSidecarHash)
+	builder.WriteString(", ")
+	builder.WriteString("tag_overrides=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagOverrides))
 	builder.WriteString(", ")
 	builder.WriteString("grab_failures=")
 	builder.WriteString(fmt.Sprintf("%v", _m.GrabFailures))

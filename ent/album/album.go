@@ -45,6 +45,8 @@ const (
 	FieldTagsManaged = "tags_managed"
 	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
 	FieldArtSidecarHash = "art_sidecar_hash"
+	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
+	FieldTagOverrides = "tag_overrides"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -134,6 +136,7 @@ var Columns = []string{
 	FieldMonitorPinned,
 	FieldTagsManaged,
 	FieldArtSidecarHash,
+	FieldTagOverrides,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,

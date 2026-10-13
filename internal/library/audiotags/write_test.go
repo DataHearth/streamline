@@ -351,3 +351,65 @@ var _ = Describe("Write performers", Label("unit", "audiotags"), func() {
 		Expect(rawTags(path)).To(HaveKey("PERFORMER:BASS"))
 	})
 })
+
+var _ = Describe("Compare", Label("unit", "audiotags"), func() {
+	tags := Tags{
+		taglib.Title:       {"Lithium"},
+		taglib.TrackNumber: {"5"},
+		TrackTotal:         {"12"},
+		taglib.Label:       nil,
+		KeyPerformer:       {"Kurt Cobain (guitar)"},
+	}
+	policy := Policy{
+		Strip:    []string{taglib.Comment},
+		Preserve: []string{"REPLAYGAIN_*"},
+	}
+
+	status := func(states []KeyState) map[string]KeyStatus {
+		out := map[string]KeyStatus{}
+		for _, s := range states {
+			out[s.Key] = s.Status
+		}
+		return out
+	}
+
+	DescribeTable("finds nothing to change right after a write",
+		func(fixture string) {
+			path := copyFixture(fixture)
+			Expect(Write(path, tags, policy)).To(Succeed())
+			states, err := Compare(path, tags, policy)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(Edited(states)).To(BeFalse(), "%+v", states)
+		},
+		Entry("MP3", "testdata/tagged.mp3"),
+		Entry("FLAC", "testdata/tagged.flac"),
+		Entry("M4A", "testdata/tagged.m4a"),
+		Entry("Opus", "testdata/tagged.opus"),
+	)
+
+	It(
+		"reports an owned key edited elsewhere, a stripped one, and keeps the rest",
+		func() {
+			path := copyFixture("testdata/tagged.mp3")
+			Expect(Write(path, tags, policy)).To(Succeed())
+			Expect(taglib.WriteTags(path, map[string][]string{
+				taglib.Title:            {"Lithium (edited)"},
+				taglib.Comment:          {"ripped by"},
+				"REPLAYGAIN_TRACK_GAIN": {"-7 dB"},
+				"MOOD":                  {"calm"},
+			}, 0)).To(Succeed())
+
+			states, err := Compare(path, tags, policy)
+			Expect(err).NotTo(HaveOccurred())
+			got := status(states)
+			Expect(got).To(HaveKeyWithValue(taglib.Title, KeyDiffers))
+			Expect(got).To(HaveKeyWithValue(taglib.Comment, KeyDiffers))
+			Expect(got).To(HaveKeyWithValue("REPLAYGAIN_TRACK_GAIN", KeyKept))
+			Expect(got).To(HaveKeyWithValue("MOOD", KeyKept))
+			Expect(got).To(HaveKeyWithValue("PERFORMER:GUITAR", KeySame))
+			Expect(got).To(HaveKeyWithValue(taglib.TrackNumber, KeySame))
+			Expect(got).NotTo(HaveKey(taglib.Label), "absent and set to nothing")
+			Expect(Edited(states)).To(BeTrue())
+		},
+	)
+})

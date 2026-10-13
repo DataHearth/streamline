@@ -143,6 +143,109 @@ func (db *DB) MarkAlbumTags(
 	)
 }
 
+// QueueAlbumTags queues one album's files whether or not the album is
+// managed: the request of someone looking at it (Write tags now, an override
+// saved, the album taken back under management), not a re-queue of the
+// writer's own.
+func (db *DB) QueueAlbumTags(
+	ctx context.Context,
+	albumID uint32,
+	mark TagMark,
+) (int, error) {
+	return db.markTags(ctx, mark,
+		entmediafile.HasTrackWith(track.HasAlbumWith(album.IDEQ(albumID))),
+	)
+}
+
+// ListMediaFilesForEditCheck returns up to limit written files of managed
+// albums, the ones checked longest ago (or never) first, each with its
+// track: the outside-edit check's rotation. limit 0 is no limit.
+func (db *DB) ListMediaFilesForEditCheck(
+	ctx context.Context,
+	limit int,
+) ([]*ent.MediaFile, error) {
+	q := db.client.MediaFile.Query().
+		Where(
+			entmediafile.TagsStateEQ(entmediafile.TagsStateWritten),
+			entmediafile.HasTrackWith(track.HasAlbumWith(album.TagsManaged(true))),
+		).
+		WithTrack(func(tq *ent.TrackQuery) { tq.WithAlbum() }).
+		Order(
+			ent.Asc(entmediafile.FieldTagsCheckedAt),
+			ent.Asc(entmediafile.FieldID),
+		)
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	return q.All(ctx)
+}
+
+// SetMediaFileTagsChecked records a check that found nothing Streamline owns
+// changed: the file's modification time and size as it found them, which is
+// what the next check compares against.
+func (db *DB) SetMediaFileTagsChecked(
+	ctx context.Context,
+	id uint32,
+	mtime, size int64,
+	at time.Time,
+) error {
+	return db.client.MediaFile.UpdateOneID(id).
+		SetTagsMtime(mtime).
+		SetTagsSize(size).
+		SetSize(size).
+		SetTagsCheckedAt(at).
+		Exec(ctx)
+}
+
+// SetMediaFileTagsEdited queues a written file whose owned tags were changed
+// elsewhere, with its hash emptied: the hash still matches what the library
+// wants, and would settle it without a write.
+func (db *DB) SetMediaFileTagsEdited(
+	ctx context.Context,
+	id uint32,
+	at time.Time,
+) error {
+	return db.client.MediaFile.UpdateOneID(id).
+		Where(entmediafile.TagsStateEQ(entmediafile.TagsStateWritten)).
+		SetTagsState(entmediafile.TagsStatePending).
+		SetTagsHash("").
+		SetTagsCheckedAt(at).
+		Exec(ctx)
+}
+
+// SetAlbumTagOverrides replaces the album's hand-set tags; an empty map
+// clears them.
+func (db *DB) SetAlbumTagOverrides(
+	ctx context.Context,
+	id uint32,
+	overrides map[string][]string,
+) error {
+	u := db.client.Album.UpdateOneID(id)
+	if len(overrides) == 0 {
+		return u.ClearTagOverrides().Exec(ctx)
+	}
+	return u.SetTagOverrides(overrides).Exec(ctx)
+}
+
+// SetTrackTagOverrides replaces the track's hand-set tags (an empty map
+// clears them) and returns its album's id.
+func (db *DB) SetTrackTagOverrides(
+	ctx context.Context,
+	id uint32,
+	overrides map[string][]string,
+) (uint32, error) {
+	u := db.client.Track.UpdateOneID(id)
+	if len(overrides) == 0 {
+		u = u.ClearTagOverrides()
+	} else {
+		u = u.SetTagOverrides(overrides)
+	}
+	if err := u.Exec(ctx); err != nil {
+		return 0, err
+	}
+	return db.client.Track.Query().Where(track.IDEQ(id)).QueryAlbum().OnlyID(ctx)
+}
+
 // MarkAllMusicTags is MarkAlbumTags over every managed album.
 func (db *DB) MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error) {
 	return db.markTags(ctx, mark,

@@ -1794,6 +1794,27 @@ func (e MusicAlbumStatus) Valid() bool {
 	}
 }
 
+// Defines values for MusicAlbumTagsMode.
+const (
+	MusicAlbumTagsModeImport  MusicAlbumTagsMode = "import"
+	MusicAlbumTagsModeManaged MusicAlbumTagsMode = "managed"
+	MusicAlbumTagsModeOff     MusicAlbumTagsMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the MusicAlbumTagsMode enum.
+func (e MusicAlbumTagsMode) Valid() bool {
+	switch e {
+	case MusicAlbumTagsModeImport:
+		return true
+	case MusicAlbumTagsModeManaged:
+		return true
+	case MusicAlbumTagsModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MusicAlbumType.
 const (
 	MusicAlbumTypeAlbum       MusicAlbumType = "album"
@@ -1941,6 +1962,54 @@ func (e MusicMonitor) Valid() bool {
 	case MusicMonitorManual:
 		return true
 	case MusicMonitorNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagFileState.
+const (
+	MusicTagFileStateDeferred MusicTagFileState = "deferred"
+	MusicTagFileStateFailed   MusicTagFileState = "failed"
+	MusicTagFileStatePending  MusicTagFileState = "pending"
+	MusicTagFileStateUntagged MusicTagFileState = "untagged"
+	MusicTagFileStateWritten  MusicTagFileState = "written"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagFileState enum.
+func (e MusicTagFileState) Valid() bool {
+	switch e {
+	case MusicTagFileStateDeferred:
+		return true
+	case MusicTagFileStateFailed:
+		return true
+	case MusicTagFileStatePending:
+		return true
+	case MusicTagFileStateUntagged:
+		return true
+	case MusicTagFileStateWritten:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MusicTagKeyStatus.
+const (
+	MusicTagKeyStatusDiffers MusicTagKeyStatus = "differs"
+	MusicTagKeyStatusKept    MusicTagKeyStatus = "kept"
+	MusicTagKeyStatusSame    MusicTagKeyStatus = "same"
+)
+
+// Valid indicates whether the value is a known member of the MusicTagKeyStatus enum.
+func (e MusicTagKeyStatus) Valid() bool {
+	switch e {
+	case MusicTagKeyStatusDiffers:
+		return true
+	case MusicTagKeyStatusKept:
+		return true
+	case MusicTagKeyStatusSame:
 		return true
 	default:
 		return false
@@ -6164,6 +6233,27 @@ type MusicAlbumSummary struct {
 	Type          MusicAlbumType `json:"type"`
 }
 
+// MusicAlbumTags defines model for MusicAlbumTags.
+type MusicAlbumTags struct {
+	AlbumId uint32         `json:"album_id"`
+	Files   []MusicTagFile `json:"files"`
+
+	// Managed The album's `tags_managed`.
+	Managed bool `json:"managed"`
+
+	// Mode The instance's `library.music_tags.mode`.
+	Mode MusicAlbumTagsMode `json:"mode"`
+
+	// Overrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	Overrides TagOverrides `json:"overrides"`
+}
+
+// MusicAlbumTagsMode The instance's `library.music_tags.mode`.
+type MusicAlbumTagsMode string
+
 // MusicAlbumType defines model for MusicAlbumType.
 type MusicAlbumType string
 
@@ -6584,6 +6674,51 @@ type MusicRenamePlan struct {
 	Operations []RenameOperation `json:"operations"`
 }
 
+// MusicTagFile defines model for MusicTagFile.
+type MusicTagFile struct {
+	Disc int `json:"disc"`
+
+	// Error The last write's failure.
+	Error       *string       `json:"error,omitempty"`
+	FileName    string        `json:"file_name"`
+	Format      string        `json:"format"`
+	Keys        []MusicTagKey `json:"keys"`
+	MediaFileId uint32        `json:"media_file_id"`
+
+	// Overrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	Overrides TagOverrides `json:"overrides"`
+	Position  int          `json:"position"`
+
+	// ReadError Why the file could not be read; `keys` is empty then.
+	ReadError *string `json:"read_error,omitempty"`
+
+	// State The writer's state; `untagged` is a file it was never asked to write.
+	State    MusicTagFileState `json:"state"`
+	TaggedAt *time.Time        `json:"tagged_at,omitempty"`
+	Title    string            `json:"title"`
+	TrackId  uint32            `json:"track_id"`
+}
+
+// MusicTagFileState The writer's state; `untagged` is a file it was never asked to write.
+type MusicTagFileState string
+
+// MusicTagKey defines model for MusicTagKey.
+type MusicTagKey struct {
+	Current []string `json:"current"`
+	Desired []string `json:"desired"`
+	Key     string   `json:"key"`
+
+	// Overridden The desired value comes from an album or track override.
+	Overridden bool              `json:"overridden"`
+	Status     MusicTagKeyStatus `json:"status"`
+}
+
+// MusicTagKeyStatus defines model for MusicTagKey.Status.
+type MusicTagKeyStatus string
+
 // MusicTagsConfig The tags Streamline writes into music files (`library.music_tags`).
 // The view always carries every field; when patched, only provided
 // fields are applied, and a patch that changes what a file should carry
@@ -6766,6 +6901,16 @@ type PatchBookSeriesRequest struct {
 // PatchMusicAlbumRequest defines model for PatchMusicAlbumRequest.
 type PatchMusicAlbumRequest struct {
 	Monitored *bool `json:"monitored,omitempty"`
+
+	// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	TagOverrides *TagOverrides `json:"tag_overrides,omitempty"`
+
+	// TagsManaged Whether the tag writer re-queues the album's files on its own (managed triggers,
+	// settings changes, Retag library). A file queued explicitly is written either way.
+	TagsManaged *bool `json:"tags_managed,omitempty"`
 }
 
 // PatchMusicArtistRequest defines model for PatchMusicArtistRequest.
@@ -6779,6 +6924,15 @@ type PatchMusicArtistRequest struct {
 
 	// QualityProfile Empty clears to the default; an unknown name answers 422.
 	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
+// PatchMusicTrackRequest defines model for PatchMusicTrackRequest.
+type PatchMusicTrackRequest struct {
+	// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+	// written over what the library would write; an empty list removes the key from the files.
+	// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+	// still wins.
+	TagOverrides TagOverrides `json:"tag_overrides"`
 }
 
 // PatchSeriesRequest defines model for PatchSeriesRequest.
@@ -7977,6 +8131,12 @@ type TVShowCounts struct {
 	// filters.
 	WantedEpisodes int `json:"wanted_episodes"`
 }
+
+// TagOverrides Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+// written over what the library would write; an empty list removes the key from the files.
+// At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+// still wins.
+type TagOverrides map[string][]string
 
 // TorrentAddResult defines model for TorrentAddResult.
 type TorrentAddResult struct {
@@ -9889,6 +10049,9 @@ type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 // UpdateMusicQualityProfileJSONRequestBody defines body for UpdateMusicQualityProfile for application/json ContentType.
 type UpdateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
+// PatchMusicTrackJSONRequestBody defines body for PatchMusicTrack for application/json ContentType.
+type PatchMusicTrackJSONRequestBody = PatchMusicTrackRequest
+
 // CreateQualityProfileJSONRequestBody defines body for CreateQualityProfile for application/json ContentType.
 type CreateQualityProfileJSONRequestBody = QualityProfileCreate
 
@@ -10489,6 +10652,12 @@ type ServerInterface interface {
 	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
 	// (POST /music/albums/{id}/search-now)
 	SearchMusicAlbumNow(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+	// (GET /music/albums/{id}/tags)
+	GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// ApplyMusicAlbumTags Write an album's tags now
+	// (POST /music/albums/{id}/tags/apply)
+	ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams)
@@ -10552,6 +10721,9 @@ type ServerInterface interface {
 	// RetagMusicLibrary Rewrite every music file's tags (admin)
 	// (POST /music/tags/retag)
 	RetagMusicLibrary(w http.ResponseWriter, r *http.Request)
+	// PatchMusicTrack Set a track's own tags
+	// (PATCH /music/tracks/{id})
+	PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -11648,6 +11820,18 @@ func (_ Unimplemented) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+// (GET /music/albums/{id}/tags)
+func (_ Unimplemented) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ApplyMusicAlbumTags Write an album's tags now
+// (POST /music/albums/{id}/tags/apply)
+func (_ Unimplemented) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ListMusicArtists List music artists
 // (GET /music/artists)
 func (_ Unimplemented) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
@@ -11771,6 +11955,12 @@ func (_ Unimplemented) GetMusicArtistLookup(w http.ResponseWriter, r *http.Reque
 // RetagMusicLibrary Rewrite every music file's tags (admin)
 // (POST /music/tags/retag)
 func (_ Unimplemented) RetagMusicLibrary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// PatchMusicTrack Set a track's own tags
+// (PATCH /music/tracks/{id})
+func (_ Unimplemented) PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16326,6 +16516,58 @@ func (siw *ServerInterfaceWrapper) SearchMusicAlbumNow(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicAlbumTags operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicAlbumTags(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyMusicAlbumTags operation middleware
+func (siw *ServerInterfaceWrapper) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyMusicAlbumTags(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMusicArtists operation middleware
 func (siw *ServerInterfaceWrapper) ListMusicArtists(w http.ResponseWriter, r *http.Request) {
 
@@ -17057,6 +17299,32 @@ func (siw *ServerInterfaceWrapper) RetagMusicLibrary(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RetagMusicLibrary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMusicTrack operation middleware
+func (siw *ServerInterfaceWrapper) PatchMusicTrack(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMusicTrack(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19470,6 +19738,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/music/albums/{id}", wrapper.PatchMusicAlbum)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/music/albums/{id}/tags", wrapper.GetMusicAlbumTags)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/tags/apply", wrapper.ApplyMusicAlbumTags)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/search", wrapper.SearchMusicAlbumReleases)
 	})
 	r.Group(func(r chi.Router) {
@@ -19480,6 +19754,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/tracks/{id}/search-now", wrapper.SearchMusicTrackNow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/music/tracks/{id}", wrapper.PatchMusicTrack)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/music/tracks/{id}/file", wrapper.DeleteMusicTrackFile)
@@ -29893,6 +30170,22 @@ func (response PatchMusicAlbum413JSONResponse) VisitPatchMusicAlbumResponse(w ht
 	return err
 }
 
+type PatchMusicAlbum422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchMusicAlbum422JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PatchMusicAlbum500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response PatchMusicAlbum500JSONResponse) VisitPatchMusicAlbumResponse(w http.ResponseWriter) error {
@@ -30121,6 +30414,150 @@ func (response SearchMusicAlbumNow404JSONResponse) VisitSearchMusicAlbumNowRespo
 type SearchMusicAlbumNow500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response SearchMusicAlbumNow500JSONResponse) VisitSearchMusicAlbumNowResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTagsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type GetMusicAlbumTagsResponseObject interface {
+	VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error
+}
+
+type GetMusicAlbumTags200JSONResponse MusicAlbumTags
+
+func (response GetMusicAlbumTags200JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicAlbumTags403JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicAlbumTags404JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumTags500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicAlbumTags500JSONResponse) VisitGetMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTagsRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type ApplyMusicAlbumTagsResponseObject interface {
+	VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error
+}
+
+type ApplyMusicAlbumTags202JSONResponse struct {
+	Queued int `json:"queued"`
+}
+
+func (response ApplyMusicAlbumTags202JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ApplyMusicAlbumTags403JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ApplyMusicAlbumTags404JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ApplyMusicAlbumTags409JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ApplyMusicAlbumTags500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ApplyMusicAlbumTags500JSONResponse) VisitApplyMusicAlbumTagsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -31561,6 +31998,95 @@ func (response RetagMusicLibrary409JSONResponse) VisitRetagMusicLibraryResponse(
 type RetagMusicLibrary500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response RetagMusicLibrary500JSONResponse) VisitRetagMusicLibraryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrackRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *PatchMusicTrackJSONRequestBody
+}
+
+type PatchMusicTrackResponseObject interface {
+	VisitPatchMusicTrackResponse(w http.ResponseWriter) error
+}
+
+type PatchMusicTrack204Response struct {
+}
+
+func (response PatchMusicTrack204Response) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PatchMusicTrack403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response PatchMusicTrack403JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PatchMusicTrack404JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response PatchMusicTrack413JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response PatchMusicTrack422JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PatchMusicTrack500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PatchMusicTrack500JSONResponse) VisitPatchMusicTrackResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -36534,6 +37060,12 @@ type StrictServerInterface interface {
 	// SearchMusicAlbumNow Dispatch an indexer search and grab for a single album
 	// (POST /music/albums/{id}/search-now)
 	SearchMusicAlbumNow(ctx context.Context, request SearchMusicAlbumNowRequestObject) (SearchMusicAlbumNowResponseObject, error)
+	// GetMusicAlbumTags Compare an album's files with the tags Streamline writes
+	// (GET /music/albums/{id}/tags)
+	GetMusicAlbumTags(ctx context.Context, request GetMusicAlbumTagsRequestObject) (GetMusicAlbumTagsResponseObject, error)
+	// ApplyMusicAlbumTags Write an album's tags now
+	// (POST /music/albums/{id}/tags/apply)
+	ApplyMusicAlbumTags(ctx context.Context, request ApplyMusicAlbumTagsRequestObject) (ApplyMusicAlbumTagsResponseObject, error)
 	// ListMusicArtists List music artists
 	// (GET /music/artists)
 	ListMusicArtists(ctx context.Context, request ListMusicArtistsRequestObject) (ListMusicArtistsResponseObject, error)
@@ -36597,6 +37129,9 @@ type StrictServerInterface interface {
 	// RetagMusicLibrary Rewrite every music file's tags (admin)
 	// (POST /music/tags/retag)
 	RetagMusicLibrary(ctx context.Context, request RetagMusicLibraryRequestObject) (RetagMusicLibraryResponseObject, error)
+	// PatchMusicTrack Set a track's own tags
+	// (PATCH /music/tracks/{id})
+	PatchMusicTrack(ctx context.Context, request PatchMusicTrackRequestObject) (PatchMusicTrackResponseObject, error)
 	// DeleteMusicTrackFile Delete a track's media file
 	// (DELETE /music/tracks/{id}/file)
 	DeleteMusicTrackFile(ctx context.Context, request DeleteMusicTrackFileRequestObject) (DeleteMusicTrackFileResponseObject, error)
@@ -41023,6 +41558,58 @@ func (sh *strictHandler) SearchMusicAlbumNow(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// GetMusicAlbumTags operation middleware
+func (sh *strictHandler) GetMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicAlbumTagsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicAlbumTags(ctx, request.(GetMusicAlbumTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicAlbumTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicAlbumTagsResponseObject); ok {
+		if err := validResponse.VisitGetMusicAlbumTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ApplyMusicAlbumTags operation middleware
+func (sh *strictHandler) ApplyMusicAlbumTags(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request ApplyMusicAlbumTagsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplyMusicAlbumTags(ctx, request.(ApplyMusicAlbumTagsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplyMusicAlbumTags")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ApplyMusicAlbumTagsResponseObject); ok {
+		if err := validResponse.VisitApplyMusicAlbumTagsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListMusicArtists operation middleware
 func (sh *strictHandler) ListMusicArtists(w http.ResponseWriter, r *http.Request, params ListMusicArtistsParams) {
 	var request ListMusicArtistsRequestObject
@@ -41593,6 +42180,39 @@ func (sh *strictHandler) RetagMusicLibrary(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RetagMusicLibraryResponseObject); ok {
 		if err := validResponse.VisitRetagMusicLibraryResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchMusicTrack operation middleware
+func (sh *strictHandler) PatchMusicTrack(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request PatchMusicTrackRequestObject
+
+	request.Id = id
+
+	var body PatchMusicTrackJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchMusicTrack(ctx, request.(PatchMusicTrackRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchMusicTrack")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchMusicTrackResponseObject); ok {
+		if err := validResponse.VisitPatchMusicTrackResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

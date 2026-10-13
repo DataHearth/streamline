@@ -144,6 +144,28 @@ type Store interface {
 	MarkAlbumTags(ctx context.Context, albumIDs []uint32, mark TagMark) (int, error)
 	MarkAllMusicTags(ctx context.Context, mark TagMark) (int, error)
 	SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error
+	QueueAlbumTags(ctx context.Context, albumID uint32, mark TagMark) (int, error)
+	ListMediaFilesForEditCheck(
+		ctx context.Context,
+		limit int,
+	) ([]*ent.MediaFile, error)
+	SetMediaFileTagsChecked(
+		ctx context.Context,
+		id uint32,
+		mtime, size int64,
+		at time.Time,
+	) error
+	SetMediaFileTagsEdited(ctx context.Context, id uint32, at time.Time) error
+	SetAlbumTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		id uint32,
+		overrides map[string][]string,
+	) (uint32, error)
 	SetAlbumArtSidecar(ctx context.Context, id uint32, hash string) error
 	SetArtistArtSidecar(ctx context.Context, id uint32, hash string) error
 	AlbumTorrentHashes(ctx context.Context, albumID uint32) ([]string, error)

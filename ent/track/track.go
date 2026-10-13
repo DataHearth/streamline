@@ -32,6 +32,8 @@ const (
 	FieldDuration = "duration"
 	// FieldBonus holds the string denoting the bonus field in the database.
 	FieldBonus = "bonus"
+	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
+	FieldTagOverrides = "tag_overrides"
 	// EdgeAlbum holds the string denoting the album edge name in mutations.
 	EdgeAlbum = "album"
 	// EdgeMediaFiles holds the string denoting the media_files edge name in mutations.
@@ -75,6 +77,7 @@ var Columns = []string{
 	FieldPosition,
 	FieldDuration,
 	FieldBonus,
+	FieldTagOverrides,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "tracks"

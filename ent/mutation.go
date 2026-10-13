@@ -114,6 +114,7 @@ type AlbumMutation struct {
 	monitor_pinned          *bool
 	tags_managed            *bool
 	art_sidecar_hash        *string
+	tag_overrides           *map[string][]string
 	grab_failures           *uint8
 	addgrab_failures        *int8
 	last_search_at          *time.Time
@@ -897,6 +898,55 @@ func (m *AlbumMutation) ArtSidecarHashCleared() bool {
 func (m *AlbumMutation) ResetArtSidecarHash() {
 	m.art_sidecar_hash = nil
 	delete(m.clearedFields, album.FieldArtSidecarHash)
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (m *AlbumMutation) SetTagOverrides(value map[string][]string) {
+	m.tag_overrides = &value
+}
+
+// TagOverrides returns the value of the "tag_overrides" field in the mutation.
+func (m *AlbumMutation) TagOverrides() (r map[string][]string, exists bool) {
+	v := m.tag_overrides
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagOverrides returns the old "tag_overrides" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldTagOverrides(ctx context.Context) (v map[string][]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagOverrides is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagOverrides requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagOverrides: %w", err)
+	}
+	return oldValue.TagOverrides, nil
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (m *AlbumMutation) ClearTagOverrides() {
+	m.tag_overrides = nil
+	m.clearedFields[album.FieldTagOverrides] = struct{}{}
+}
+
+// TagOverridesCleared returns if the "tag_overrides" field was cleared in this mutation.
+func (m *AlbumMutation) TagOverridesCleared() bool {
+	_, ok := m.clearedFields[album.FieldTagOverrides]
+	return ok
+}
+
+// ResetTagOverrides resets all changes to the "tag_overrides" field.
+func (m *AlbumMutation) ResetTagOverrides() {
+	m.tag_overrides = nil
+	delete(m.clearedFields, album.FieldTagOverrides)
 }
 
 // SetGrabFailures sets the "grab_failures" field.
@@ -1777,7 +1827,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 27)
+	fields := make([]string, 0, 28)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1822,6 +1872,9 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.art_sidecar_hash != nil {
 		fields = append(fields, album.FieldArtSidecarHash)
+	}
+	if m.tag_overrides != nil {
+		fields = append(fields, album.FieldTagOverrides)
 	}
 	if m.grab_failures != nil {
 		fields = append(fields, album.FieldGrabFailures)
@@ -1897,6 +1950,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.TagsManaged()
 	case album.FieldArtSidecarHash:
 		return m.ArtSidecarHash()
+	case album.FieldTagOverrides:
+		return m.TagOverrides()
 	case album.FieldGrabFailures:
 		return m.GrabFailures()
 	case album.FieldLastSearchAt:
@@ -1960,6 +2015,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTagsManaged(ctx)
 	case album.FieldArtSidecarHash:
 		return m.OldArtSidecarHash(ctx)
+	case album.FieldTagOverrides:
+		return m.OldTagOverrides(ctx)
 	case album.FieldGrabFailures:
 		return m.OldGrabFailures(ctx)
 	case album.FieldLastSearchAt:
@@ -2097,6 +2154,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetArtSidecarHash(v)
+		return nil
+	case album.FieldTagOverrides:
+		v, ok := value.(map[string][]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagOverrides(v)
 		return nil
 	case album.FieldGrabFailures:
 		v, ok := value.(uint8)
@@ -2260,6 +2324,9 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldArtSidecarHash) {
 		fields = append(fields, album.FieldArtSidecarHash)
 	}
+	if m.FieldCleared(album.FieldTagOverrides) {
+		fields = append(fields, album.FieldTagOverrides)
+	}
 	if m.FieldCleared(album.FieldLastSearchAt) {
 		fields = append(fields, album.FieldLastSearchAt)
 	}
@@ -2321,6 +2388,9 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldArtSidecarHash:
 		m.ClearArtSidecarHash()
+		return nil
+	case album.FieldTagOverrides:
+		m.ClearTagOverrides()
 		return nil
 	case album.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -2401,6 +2471,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldArtSidecarHash:
 		m.ResetArtSidecarHash()
+		return nil
+	case album.FieldTagOverrides:
+		m.ResetTagOverrides()
 		return nil
 	case album.FieldGrabFailures:
 		m.ResetGrabFailures()
@@ -43825,6 +43898,7 @@ type TrackMutation struct {
 	duration           *uint32
 	addduration        *int32
 	bonus              *bool
+	tag_overrides      *map[string][]string
 	clearedFields      map[string]struct{}
 	album              *uint32
 	clearedalbum       bool
@@ -44367,6 +44441,55 @@ func (m *TrackMutation) ResetBonus() {
 	m.bonus = nil
 }
 
+// SetTagOverrides sets the "tag_overrides" field.
+func (m *TrackMutation) SetTagOverrides(value map[string][]string) {
+	m.tag_overrides = &value
+}
+
+// TagOverrides returns the value of the "tag_overrides" field in the mutation.
+func (m *TrackMutation) TagOverrides() (r map[string][]string, exists bool) {
+	v := m.tag_overrides
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTagOverrides returns the old "tag_overrides" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldTagOverrides(ctx context.Context) (v map[string][]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTagOverrides is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTagOverrides requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTagOverrides: %w", err)
+	}
+	return oldValue.TagOverrides, nil
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (m *TrackMutation) ClearTagOverrides() {
+	m.tag_overrides = nil
+	m.clearedFields[track.FieldTagOverrides] = struct{}{}
+}
+
+// TagOverridesCleared returns if the "tag_overrides" field was cleared in this mutation.
+func (m *TrackMutation) TagOverridesCleared() bool {
+	_, ok := m.clearedFields[track.FieldTagOverrides]
+	return ok
+}
+
+// ResetTagOverrides resets all changes to the "tag_overrides" field.
+func (m *TrackMutation) ResetTagOverrides() {
+	m.tag_overrides = nil
+	delete(m.clearedFields, track.FieldTagOverrides)
+}
+
 // SetAlbumID sets the "album" edge to the Album entity by id.
 func (m *TrackMutation) SetAlbumID(id uint32) {
 	m.album = &id
@@ -44548,7 +44671,7 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.create_time != nil {
 		fields = append(fields, track.FieldCreateTime)
 	}
@@ -44576,6 +44699,9 @@ func (m *TrackMutation) Fields() []string {
 	if m.bonus != nil {
 		fields = append(fields, track.FieldBonus)
 	}
+	if m.tag_overrides != nil {
+		fields = append(fields, track.FieldTagOverrides)
+	}
 	return fields
 }
 
@@ -44602,6 +44728,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 		return m.Duration()
 	case track.FieldBonus:
 		return m.Bonus()
+	case track.FieldTagOverrides:
+		return m.TagOverrides()
 	}
 	return nil, false
 }
@@ -44629,6 +44757,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDuration(ctx)
 	case track.FieldBonus:
 		return m.OldBonus(ctx)
+	case track.FieldTagOverrides:
+		return m.OldTagOverrides(ctx)
 	}
 	return nil, fmt.Errorf("unknown Track field %s", name)
 }
@@ -44700,6 +44830,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBonus(v)
+		return nil
+	case track.FieldTagOverrides:
+		v, ok := value.(map[string][]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTagOverrides(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Track field %s", name)
@@ -44779,6 +44916,9 @@ func (m *TrackMutation) ClearedFields() []string {
 	if m.FieldCleared(track.FieldDuration) {
 		fields = append(fields, track.FieldDuration)
 	}
+	if m.FieldCleared(track.FieldTagOverrides) {
+		fields = append(fields, track.FieldTagOverrides)
+	}
 	return fields
 }
 
@@ -44801,6 +44941,9 @@ func (m *TrackMutation) ClearField(name string) error {
 		return nil
 	case track.FieldDuration:
 		m.ClearDuration()
+		return nil
+	case track.FieldTagOverrides:
+		m.ClearTagOverrides()
 		return nil
 	}
 	return fmt.Errorf("unknown Track nullable field %s", name)
@@ -44836,6 +44979,9 @@ func (m *TrackMutation) ResetField(name string) error {
 		return nil
 	case track.FieldBonus:
 		m.ResetBonus()
+		return nil
+	case track.FieldTagOverrides:
+		m.ResetTagOverrides()
 		return nil
 	}
 	return fmt.Errorf("unknown Track field %s", name)

@@ -27,6 +27,7 @@ var (
 		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
 		{Name: "tags_managed", Type: field.TypeBool, Default: true},
 		{Name: "art_sidecar_hash", Type: field.TypeString, Nullable: true},
+		{Name: "tag_overrides", Type: field.TypeJSON, Nullable: true},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped", "failed"}, Default: "wanted"},
@@ -49,7 +50,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[28]},
+				Columns:    []*schema.Column{AlbumsColumns[29]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -58,17 +59,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[28]},
+				Columns: []*schema.Column{AlbumsColumns[29]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[18]},
+				Columns: []*schema.Column{AlbumsColumns[19]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[25]},
+				Columns: []*schema.Column{AlbumsColumns[26]},
 			},
 		},
 	}
@@ -1515,6 +1516,7 @@ var (
 		{Name: "position", Type: field.TypeUint16},
 		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
 		{Name: "bonus", Type: field.TypeBool, Default: false},
+		{Name: "tag_overrides", Type: field.TypeJSON, Nullable: true},
 		{Name: "album_tracks", Type: field.TypeUint32},
 	}
 	// TracksTable holds the schema information for the "tracks" table.
@@ -1525,7 +1527,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[10]},
+				Columns:    []*schema.Column{TracksColumns[11]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1534,7 +1536,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[10]},
+				Columns: []*schema.Column{TracksColumns[11]},
 			},
 		},
 	}

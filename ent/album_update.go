@@ -262,6 +262,18 @@ func (_u *AlbumUpdate) ClearArtSidecarHash() *AlbumUpdate {
 	return _u
 }
 
+// SetTagOverrides sets the "tag_overrides" field.
+func (_u *AlbumUpdate) SetTagOverrides(v map[string][]string) *AlbumUpdate {
+	_u.mutation.SetTagOverrides(v)
+	return _u
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (_u *AlbumUpdate) ClearTagOverrides() *AlbumUpdate {
+	_u.mutation.ClearTagOverrides()
+	return _u
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_u *AlbumUpdate) SetGrabFailures(v uint8) *AlbumUpdate {
 	_u.mutation.ResetGrabFailures()
@@ -814,6 +826,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ArtSidecarHashCleared() {
 		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
 	}
+	if value, ok := _u.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+	}
+	if _u.mutation.TagOverridesCleared() {
+		_spec.ClearField(album.FieldTagOverrides, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
 	}
@@ -1339,6 +1357,18 @@ func (_u *AlbumUpdateOne) SetNillableArtSidecarHash(v *string) *AlbumUpdateOne {
 // ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
 func (_u *AlbumUpdateOne) ClearArtSidecarHash() *AlbumUpdateOne {
 	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_u *AlbumUpdateOne) SetTagOverrides(v map[string][]string) *AlbumUpdateOne {
+	_u.mutation.SetTagOverrides(v)
+	return _u
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (_u *AlbumUpdateOne) ClearTagOverrides() *AlbumUpdateOne {
+	_u.mutation.ClearTagOverrides()
 	return _u
 }
 
@@ -1923,6 +1953,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.ArtSidecarHashCleared() {
 		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+	}
+	if _u.mutation.TagOverridesCleared() {
+		_spec.ClearField(album.FieldTagOverrides, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

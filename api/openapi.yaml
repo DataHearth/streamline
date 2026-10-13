@@ -1430,6 +1430,11 @@ paths:
         Sets the album's monitored flag by hand: `POST /music/monitored-types/apply` leaves it alone
         from then on, until the artist's monitor is next changed. Never changes the artist's monitor
         policy or the album's status.
+
+        `tags_managed` and `tag_overrides` are the album's own tag settings (see
+        `GET /music/albums/{id}/tags`). Saving overrides, or setting `tags_managed: true`, queues the
+        album's files for the `music-tag-sync` job unless tagging is off. A key that is not a tag
+        name answers 422.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicAlbum"
@@ -1442,6 +1447,66 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicAlbumTags
+      summary: Compare an album's files with the tags Streamline writes
+      description: |
+        Reads every file of the album and compares it, key by key, with what the tag writer would
+        leave in it: the library's tags, the album's `tag_overrides`, the track's over those, under
+        `library.music_tags`' strip and preserve lists. Keys are the format's own (an MP3's
+        performers are `PERFORMER:<INSTRUMENT>`). `same` and `differs` are keys Streamline writes;
+        `kept` is one it leaves alone. Reads files; writes nothing.
+      tags: [music]
+      responses:
+        "200":
+          description: The album's tag panel.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicAlbumTags"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags/apply:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: applyMusicAlbumTags
+      summary: Write an album's tags now
+      description: |
+        Queues every file of the album for a full rewrite, whether or not the album is managed, and
+        writes them in the background at once, under the job's rules: a file a torrent still holds
+        stays deferred. Answers 409 `code: music_tags_off` when tagging is off.
+      tags: [music]
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1544,6 +1609,37 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tracks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    patch:
+      operationId: patchMusicTrack
+      summary: Set a track's own tags
+      description: |
+        Replaces the track's `tag_overrides`, written over the album's and the library's tags for
+        the track's files (an empty object clears them), and queues the album's files unless tagging
+        is off. A key that is not a tag name answers 422.
+      tags: [music]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMusicTrackRequest"
+      responses:
+        "204":
+          description: Saved.
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -9015,6 +9111,114 @@ components:
       properties:
         monitored:
           type: boolean
+        tags_managed:
+          type: boolean
+          description: |
+            Whether the tag writer re-queues the album's files on its own (managed triggers,
+            settings changes, Retag library). A file queued explicitly is written either way.
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    PatchMusicTrackRequest:
+      type: object
+      required: [tag_overrides]
+      properties:
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    TagOverrides:
+      type: object
+      description: |
+        Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+        written over what the library would write; an empty list removes the key from the files.
+        At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+        still wins.
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    MusicAlbumTags:
+      type: object
+      required: [album_id, mode, managed, overrides, files]
+      properties:
+        album_id:
+          type: integer
+          x-go-type: uint32
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: The instance's `library.music_tags.mode`.
+        managed:
+          type: boolean
+          description: The album's `tags_managed`.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagFile"
+
+    MusicTagFile:
+      type: object
+      required: [media_file_id, track_id, disc, position, title, file_name, format, state, overrides, keys]
+      properties:
+        media_file_id:
+          type: integer
+          x-go-type: uint32
+        track_id:
+          type: integer
+          x-go-type: uint32
+        disc:
+          type: integer
+        position:
+          type: integer
+        title:
+          type: string
+        file_name:
+          type: string
+        format:
+          type: string
+        state:
+          type: string
+          enum: [untagged, pending, deferred, written, failed]
+          description: The writer's state; `untagged` is a file it was never asked to write.
+        error:
+          type: string
+          description: The last write's failure.
+        tagged_at:
+          type: string
+          format: date-time
+        read_error:
+          type: string
+          description: Why the file could not be read; `keys` is empty then.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagKey"
+
+    MusicTagKey:
+      type: object
+      required: [key, current, desired, status, overridden]
+      properties:
+        key:
+          type: string
+        current:
+          type: array
+          items:
+            type: string
+        desired:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [same, differs, kept]
+        overridden:
+          type: boolean
+          description: The desired value comes from an album or track override.
 
     MusicRenamePlan:
       type: object

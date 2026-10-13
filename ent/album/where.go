@@ -865,6 +865,16 @@ func ArtSidecarHashContainsFold(v string) predicate.Album {
 	return predicate.Album(sql.FieldContainsFold(FieldArtSidecarHash, v))
 }
 
+// TagOverridesIsNil applies the IsNil predicate on the "tag_overrides" field.
+func TagOverridesIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldTagOverrides))
+}
+
+// TagOverridesNotNil applies the NotNil predicate on the "tag_overrides" field.
+func TagOverridesNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldTagOverrides))
+}
+
 // GrabFailuresEQ applies the EQ predicate on the "grab_failures" field.
 func GrabFailuresEQ(v uint8) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldGrabFailures, v))

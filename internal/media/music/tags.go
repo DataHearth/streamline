@@ -25,9 +25,18 @@ import (
 	"github.com/datahearth/streamline/internal/scheduler"
 )
 
+// Seams for the edit check's specs.
+var (
+	timeNow  = time.Now
+	statFile = os.Stat
+)
+
 const (
 	// tagSyncBatch bounds one scheduled pass; a manual run takes everything.
 	tagSyncBatch = 500
+	// tagCheckBatch bounds how many written files one scheduled pass checks
+	// for edits made elsewhere; a manual run checks every one.
+	tagCheckBatch = 200
 	// maxTagFailures is how many writes of one file may fail before it is
 	// failed and left for someone to ask again.
 	maxTagFailures uint8 = 5
@@ -74,9 +83,15 @@ func (s *Service) SyncTags(ctx context.Context) error {
 		span.SetAttributes(attribute.Bool("tags.off", true))
 		return nil
 	}
-	limit := tagSyncBatch
+	limit, checks := tagSyncBatch, tagCheckBatch
 	if scheduler.Manual(ctx) {
-		limit = 0
+		limit, checks = 0, 0
+	}
+	// Edits first, so a file found edited is rewritten in this same pass.
+	if cfg.Mode == config.MusicTagsManaged {
+		span.SetAttributes(
+			attribute.Int("tags.edited", s.checkEdits(ctx, cfg, checks)),
+		)
 	}
 	files, err := s.db.ListMediaFilesForTagSync(ctx, limit)
 	if err != nil {
@@ -367,7 +382,7 @@ func (a *albumTagging) tag(ctx context.Context, mf *ent.MediaFile) string {
 		return a.fail(ctx, span, mf, errors.New("track not on the album"))
 	}
 	tr := a.alb.Edges.Tracks[idx]
-	tags := library.AlbumTrackTags(a.alb.Edges.Artist, a.alb, tr)
+	tags := desiredTags(a.alb.Edges.Artist, a.alb, tr)
 	policy := TagPolicy(a.cfg)
 	hash := audiotags.Hash(tags, policy, a.artwork(ctx).id)
 

@@ -137,4 +137,60 @@ var _ = Describe("Music tag bookkeeping", Label("integration", "db"), func() {
 			Expect(got).To(ConsistOf("own", "pack"))
 		},
 	)
+	It("queues an unmanaged album's files when someone asks for that album", func() {
+		client.Album.UpdateOneID(alb.ID).SetTagsManaged(false).ExecX(ctx)
+		written := file(st(entmediafile.TagsStateWritten), "w")
+
+		n, err := store.MarkAlbumTags(ctx, []uint32{alb.ID}, MarkStale)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(BeZero(), "the writer's own re-queue skips it")
+
+		n, err = store.QueueAlbumTags(ctx, alb.ID, MarkForce)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(n).To(Equal(1))
+		Expect(*reload(written).TagsState).To(Equal(entmediafile.TagsStatePending))
+		Expect(reload(written).TagsHash).To(BeEmpty())
+	})
+
+	It(
+		"rotates the edit check over written files of managed albums, never checked first",
+		func() {
+			old := file(st(entmediafile.TagsStateWritten), "old")
+			client.MediaFile.UpdateOne(old).
+				SetTagsCheckedAt(time.Now().Add(-time.Hour)).
+				ExecX(ctx)
+			never := file(st(entmediafile.TagsStateWritten), "never")
+			file(st(entmediafile.TagsStatePending), "p")
+
+			got, err := store.ListMediaFilesForEditCheck(ctx, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(2))
+			Expect(got[0].ID).To(Equal(never.ID))
+			Expect(got[1].ID).To(Equal(old.ID))
+
+			client.Album.UpdateOneID(alb.ID).SetTagsManaged(false).ExecX(ctx)
+			got, err = store.ListMediaFilesForEditCheck(ctx, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(BeEmpty())
+		},
+	)
+
+	It(
+		"stores a track's overrides and names its album; an empty set clears them",
+		func() {
+			id, err := store.SetTrackTagOverrides(
+				ctx,
+				tr.ID,
+				map[string][]string{"MOOD": {"Calm"}},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(id).To(Equal(alb.ID))
+			Expect(client.Track.GetX(ctx, tr.ID).TagOverrides).
+				To(Equal(map[string][]string{"MOOD": {"Calm"}}))
+
+			_, err = store.SetTrackTagOverrides(ctx, tr.ID, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(client.Track.GetX(ctx, tr.ID).TagOverrides).To(BeNil())
+		},
+	)
 })

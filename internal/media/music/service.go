@@ -101,6 +101,18 @@ type Manager interface {
 
 	RetagLibrary(ctx context.Context) (int, error)
 	TagSettingsChanged(ctx context.Context, before, after config.MusicTagsConfig)
+	AlbumTags(ctx context.Context, albumID uint32) (*AlbumTagsView, error)
+	ApplyAlbumTags(ctx context.Context, albumID uint32) (int, error)
+	SetAlbumTagSettings(
+		ctx context.Context,
+		albumID uint32,
+		s AlbumTagSettings,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		trackID uint32,
+		overrides map[string][]string,
+	) error
 }
 
 var _ Manager = (*Service)(nil)

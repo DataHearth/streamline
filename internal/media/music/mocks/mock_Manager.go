@@ -187,6 +187,140 @@ func (_c *MockManager_AlbumDetail_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// AlbumTags provides a mock function for the type MockManager
+func (_mock *MockManager) AlbumTags(ctx context.Context, albumID uint32) (*music.AlbumTagsView, error) {
+	ret := _mock.Called(ctx, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumTags")
+	}
+
+	var r0 *music.AlbumTagsView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*music.AlbumTagsView, error)); ok {
+		return returnFunc(ctx, albumID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *music.AlbumTagsView); ok {
+		r0 = returnFunc(ctx, albumID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.AlbumTagsView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, albumID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_AlbumTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumTags'
+type MockManager_AlbumTags_Call struct {
+	*mock.Call
+}
+
+// AlbumTags is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+func (_e *MockManager_Expecter) AlbumTags(ctx any, albumID any) *MockManager_AlbumTags_Call {
+	return &MockManager_AlbumTags_Call{Call: _e.mock.On("AlbumTags", ctx, albumID)}
+}
+
+func (_c *MockManager_AlbumTags_Call) Run(run func(ctx context.Context, albumID uint32)) *MockManager_AlbumTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_AlbumTags_Call) Return(albumTagsView *music.AlbumTagsView, err error) *MockManager_AlbumTags_Call {
+	_c.Call.Return(albumTagsView, err)
+	return _c
+}
+
+func (_c *MockManager_AlbumTags_Call) RunAndReturn(run func(ctx context.Context, albumID uint32) (*music.AlbumTagsView, error)) *MockManager_AlbumTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ApplyAlbumTags provides a mock function for the type MockManager
+func (_mock *MockManager) ApplyAlbumTags(ctx context.Context, albumID uint32) (int, error) {
+	ret := _mock.Called(ctx, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAlbumTags")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (int, error)); ok {
+		return returnFunc(ctx, albumID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) int); ok {
+		r0 = returnFunc(ctx, albumID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, albumID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_ApplyAlbumTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAlbumTags'
+type MockManager_ApplyAlbumTags_Call struct {
+	*mock.Call
+}
+
+// ApplyAlbumTags is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+func (_e *MockManager_Expecter) ApplyAlbumTags(ctx any, albumID any) *MockManager_ApplyAlbumTags_Call {
+	return &MockManager_ApplyAlbumTags_Call{Call: _e.mock.On("ApplyAlbumTags", ctx, albumID)}
+}
+
+func (_c *MockManager_ApplyAlbumTags_Call) Run(run func(ctx context.Context, albumID uint32)) *MockManager_ApplyAlbumTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_ApplyAlbumTags_Call) Return(n int, err error) *MockManager_ApplyAlbumTags_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockManager_ApplyAlbumTags_Call) RunAndReturn(run func(ctx context.Context, albumID uint32) (int, error)) *MockManager_ApplyAlbumTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ApplyMonitoredTypes provides a mock function for the type MockManager
 func (_mock *MockManager) ApplyMonitoredTypes(ctx context.Context) (int, int, error) {
 	ret := _mock.Called(ctx)
@@ -1488,6 +1622,69 @@ func (_c *MockManager_SetAlbumMonitored_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// SetAlbumTagSettings provides a mock function for the type MockManager
+func (_mock *MockManager) SetAlbumTagSettings(ctx context.Context, albumID uint32, s music.AlbumTagSettings) error {
+	ret := _mock.Called(ctx, albumID, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumTagSettings")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, music.AlbumTagSettings) error); ok {
+		r0 = returnFunc(ctx, albumID, s)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SetAlbumTagSettings_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumTagSettings'
+type MockManager_SetAlbumTagSettings_Call struct {
+	*mock.Call
+}
+
+// SetAlbumTagSettings is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - s music.AlbumTagSettings
+func (_e *MockManager_Expecter) SetAlbumTagSettings(ctx any, albumID any, s any) *MockManager_SetAlbumTagSettings_Call {
+	return &MockManager_SetAlbumTagSettings_Call{Call: _e.mock.On("SetAlbumTagSettings", ctx, albumID, s)}
+}
+
+func (_c *MockManager_SetAlbumTagSettings_Call) Run(run func(ctx context.Context, albumID uint32, s music.AlbumTagSettings)) *MockManager_SetAlbumTagSettings_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 music.AlbumTagSettings
+		if args[2] != nil {
+			arg2 = args[2].(music.AlbumTagSettings)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SetAlbumTagSettings_Call) Return(err error) *MockManager_SetAlbumTagSettings_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SetAlbumTagSettings_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, s music.AlbumTagSettings) error) *MockManager_SetAlbumTagSettings_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetArtistMonitor provides a mock function for the type MockManager
 func (_mock *MockManager) SetArtistMonitor(ctx context.Context, id uint32, monitor string) error {
 	ret := _mock.Called(ctx, id, monitor)
@@ -1610,6 +1807,69 @@ func (_c *MockManager_SetArtistQualityProfile_Call) Return(err error) *MockManag
 }
 
 func (_c *MockManager_SetArtistQualityProfile_Call) RunAndReturn(run func(ctx context.Context, id uint32, profile string) error) *MockManager_SetArtistQualityProfile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTrackTagOverrides provides a mock function for the type MockManager
+func (_mock *MockManager) SetTrackTagOverrides(ctx context.Context, trackID uint32, overrides map[string][]string) error {
+	ret := _mock.Called(ctx, trackID, overrides)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTrackTagOverrides")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string][]string) error); ok {
+		r0 = returnFunc(ctx, trackID, overrides)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_SetTrackTagOverrides_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTrackTagOverrides'
+type MockManager_SetTrackTagOverrides_Call struct {
+	*mock.Call
+}
+
+// SetTrackTagOverrides is a helper method to define mock.On call
+//   - ctx context.Context
+//   - trackID uint32
+//   - overrides map[string][]string
+func (_e *MockManager_Expecter) SetTrackTagOverrides(ctx any, trackID any, overrides any) *MockManager_SetTrackTagOverrides_Call {
+	return &MockManager_SetTrackTagOverrides_Call{Call: _e.mock.On("SetTrackTagOverrides", ctx, trackID, overrides)}
+}
+
+func (_c *MockManager_SetTrackTagOverrides_Call) Run(run func(ctx context.Context, trackID uint32, overrides map[string][]string)) *MockManager_SetTrackTagOverrides_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 map[string][]string
+		if args[2] != nil {
+			arg2 = args[2].(map[string][]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_SetTrackTagOverrides_Call) Return(err error) *MockManager_SetTrackTagOverrides_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_SetTrackTagOverrides_Call) RunAndReturn(run func(ctx context.Context, trackID uint32, overrides map[string][]string) error) *MockManager_SetTrackTagOverrides_Call {
 	_c.Call.Return(run)
 	return _c
 }

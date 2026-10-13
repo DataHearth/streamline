@@ -169,25 +169,7 @@ func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	want := fold(ext, tags)
-	_, performers := tags[taglib.Performer]
-	update := map[string][]string{}
-	for k := range current {
-		if matches(k, p.Preserve) {
-			continue
-		}
-		_, kept := want[k]
-		switch {
-		case matches(k, p.Strip):
-			update[k] = nil
-		case performers && !kept && strings.HasPrefix(k, performerPrefix):
-			// The performers are owned as a family: an instrument no
-			// longer credited, or one an earlier tagger spelled
-			// differently, goes.
-			update[k] = nil
-		}
-	}
-	maps.Copy(update, want)
+	want, update := plan(ext, current, tags, p)
 	if err := taglib.WriteTags(tmp, update, 0); err != nil {
 		return "", err
 	}
@@ -214,6 +196,111 @@ func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
 	}
 	committed = true
 	return ours, nil
+}
+
+// plan is a write of tags (already filtered by p.apply) over a file holding
+// current: want, the keys the write sets as the format stores them, and
+// update, what TagLib is handed — want plus a deletion for every existing key
+// the policy strips and, when the performers are passed, every PERFORMER:*
+// key want does not carry.
+func plan(
+	ext string,
+	current map[string][]string,
+	tags Tags,
+	p Policy,
+) (want, update map[string][]string) {
+	want = fold(ext, tags)
+	_, performers := tags[taglib.Performer]
+	update = map[string][]string{}
+	for k := range current {
+		if matches(k, p.Preserve) {
+			continue
+		}
+		_, kept := want[k]
+		switch {
+		case matches(k, p.Strip):
+			update[k] = nil
+		case performers && !kept && strings.HasPrefix(k, performerPrefix):
+			// The performers are owned as a family: an instrument no
+			// longer credited, or one an earlier tagger spelled
+			// differently, goes.
+			update[k] = nil
+		}
+	}
+	maps.Copy(update, want)
+	return want, update
+}
+
+// KeyStatus is how one key of a file stands against a write.
+type KeyStatus string
+
+const (
+	// KeySame is a key the write sets to what the file already holds.
+	KeySame KeyStatus = "same"
+	// KeyDiffers is a key the write would change or remove.
+	KeyDiffers KeyStatus = "differs"
+	// KeyKept is a key the write leaves alone: not one it is given, or one
+	// the policy preserves.
+	KeyKept KeyStatus = "kept"
+)
+
+// KeyState is one key of a file, as Compare reads it.
+type KeyState struct {
+	Key     string
+	Current []string
+	// Desired is what the key holds after the write; Current for a kept key.
+	Desired []string
+	Status  KeyStatus
+}
+
+// Compare reads the file at path and reports, key by key, what a Write of
+// tags under p would change, in the format's own keys (an MP3's performers
+// as PERFORMER:<INSTRUMENT>). A key neither in the file nor set by the write
+// is left out. It never writes.
+func Compare(path string, tags Tags, p Policy) ([]KeyState, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if _, ok := AudioExtensions[ext]; !ok {
+		return nil, ErrUnsupportedFormat
+	}
+	if err := openable(path); err != nil {
+		return nil, err
+	}
+	current, err := taglib.ReadTags(path)
+	if err != nil {
+		return nil, fmt.Errorf("audiotags: read %s: %w", filepath.Base(path), err)
+	}
+	_, update := plan(ext, current, p.apply(tags), p)
+	keys := map[string]bool{}
+	for k := range current {
+		keys[k] = true
+	}
+	for k := range update {
+		keys[k] = true
+	}
+	out := make([]KeyState, 0, len(keys))
+	for _, k := range slices.Sorted(maps.Keys(keys)) {
+		cur := clean(current[k])
+		st := KeyState{Key: k, Current: cur, Desired: cur, Status: KeyKept}
+		if want, owned := update[k]; owned {
+			if len(cur) == 0 && len(want) == 0 {
+				continue
+			}
+			st.Desired = want
+			st.Status = KeySame
+			if !slices.Equal(cur, want) {
+				st.Status = KeyDiffers
+			}
+		}
+		out = append(out, st)
+	}
+	return out, nil
+}
+
+// Edited reports whether any key Compare returned would change.
+func Edited(states []KeyState) bool {
+	return slices.ContainsFunc(states, func(s KeyState) bool {
+		return s.Status == KeyDiffers
+	})
 }
 
 // writeArt applies art to the copy at path and checks it read back. It

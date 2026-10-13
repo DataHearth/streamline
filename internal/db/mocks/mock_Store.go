@@ -13048,6 +13048,74 @@ func (_c *MockStore_ListMediaFilesForDrift_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ListMediaFilesForEditCheck provides a mock function for the type MockStore
+func (_mock *MockStore) ListMediaFilesForEditCheck(ctx context.Context, limit int) ([]*ent.MediaFile, error) {
+	ret := _mock.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMediaFilesForEditCheck")
+	}
+
+	var r0 []*ent.MediaFile
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) ([]*ent.MediaFile, error)); ok {
+		return returnFunc(ctx, limit)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int) []*ent.MediaFile); ok {
+		r0 = returnFunc(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MediaFile)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = returnFunc(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_ListMediaFilesForEditCheck_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMediaFilesForEditCheck'
+type MockStore_ListMediaFilesForEditCheck_Call struct {
+	*mock.Call
+}
+
+// ListMediaFilesForEditCheck is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+func (_e *MockStore_Expecter) ListMediaFilesForEditCheck(ctx any, limit any) *MockStore_ListMediaFilesForEditCheck_Call {
+	return &MockStore_ListMediaFilesForEditCheck_Call{Call: _e.mock.On("ListMediaFilesForEditCheck", ctx, limit)}
+}
+
+func (_c *MockStore_ListMediaFilesForEditCheck_Call) Run(run func(ctx context.Context, limit int)) *MockStore_ListMediaFilesForEditCheck_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesForEditCheck_Call) Return(mediaFiles []*ent.MediaFile, err error) *MockStore_ListMediaFilesForEditCheck_Call {
+	_c.Call.Return(mediaFiles, err)
+	return _c
+}
+
+func (_c *MockStore_ListMediaFilesForEditCheck_Call) RunAndReturn(run func(ctx context.Context, limit int) ([]*ent.MediaFile, error)) *MockStore_ListMediaFilesForEditCheck_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListMediaFilesForTagSync provides a mock function for the type MockStore
 func (_mock *MockStore) ListMediaFilesForTagSync(ctx context.Context, limit int) ([]*ent.MediaFile, error) {
 	ret := _mock.Called(ctx, limit)
@@ -16859,6 +16927,78 @@ func (_c *MockStore_PurgeExpiredSessions_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// QueueAlbumTags provides a mock function for the type MockStore
+func (_mock *MockStore) QueueAlbumTags(ctx context.Context, albumID uint32, mark db.TagMark) (int, error) {
+	ret := _mock.Called(ctx, albumID, mark)
+
+	if len(ret) == 0 {
+		panic("no return value specified for QueueAlbumTags")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.TagMark) (int, error)); ok {
+		return returnFunc(ctx, albumID, mark)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.TagMark) int); ok {
+		r0 = returnFunc(ctx, albumID, mark)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.TagMark) error); ok {
+		r1 = returnFunc(ctx, albumID, mark)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_QueueAlbumTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'QueueAlbumTags'
+type MockStore_QueueAlbumTags_Call struct {
+	*mock.Call
+}
+
+// QueueAlbumTags is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - mark db.TagMark
+func (_e *MockStore_Expecter) QueueAlbumTags(ctx any, albumID any, mark any) *MockStore_QueueAlbumTags_Call {
+	return &MockStore_QueueAlbumTags_Call{Call: _e.mock.On("QueueAlbumTags", ctx, albumID, mark)}
+}
+
+func (_c *MockStore_QueueAlbumTags_Call) Run(run func(ctx context.Context, albumID uint32, mark db.TagMark)) *MockStore_QueueAlbumTags_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 db.TagMark
+		if args[2] != nil {
+			arg2 = args[2].(db.TagMark)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_QueueAlbumTags_Call) Return(n int, err error) *MockStore_QueueAlbumTags_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockStore_QueueAlbumTags_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, mark db.TagMark) (int, error)) *MockStore_QueueAlbumTags_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReapplyMonitorPolicies provides a mock function for the type MockStore
 func (_mock *MockStore) ReapplyMonitorPolicies(ctx context.Context, types []string, now time.Time) (int, int, error) {
 	ret := _mock.Called(ctx, types, now)
@@ -19278,6 +19418,69 @@ func (_c *MockStore_SetAlbumStatus_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// SetAlbumTagOverrides provides a mock function for the type MockStore
+func (_mock *MockStore) SetAlbumTagOverrides(ctx context.Context, id uint32, overrides map[string][]string) error {
+	ret := _mock.Called(ctx, id, overrides)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAlbumTagOverrides")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string][]string) error); ok {
+		r0 = returnFunc(ctx, id, overrides)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetAlbumTagOverrides_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAlbumTagOverrides'
+type MockStore_SetAlbumTagOverrides_Call struct {
+	*mock.Call
+}
+
+// SetAlbumTagOverrides is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - overrides map[string][]string
+func (_e *MockStore_Expecter) SetAlbumTagOverrides(ctx any, id any, overrides any) *MockStore_SetAlbumTagOverrides_Call {
+	return &MockStore_SetAlbumTagOverrides_Call{Call: _e.mock.On("SetAlbumTagOverrides", ctx, id, overrides)}
+}
+
+func (_c *MockStore_SetAlbumTagOverrides_Call) Run(run func(ctx context.Context, id uint32, overrides map[string][]string)) *MockStore_SetAlbumTagOverrides_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 map[string][]string
+		if args[2] != nil {
+			arg2 = args[2].(map[string][]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetAlbumTagOverrides_Call) Return(err error) *MockStore_SetAlbumTagOverrides_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetAlbumTagOverrides_Call) RunAndReturn(run func(ctx context.Context, id uint32, overrides map[string][]string) error) *MockStore_SetAlbumTagOverrides_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetAlbumTagsManaged provides a mock function for the type MockStore
 func (_mock *MockStore) SetAlbumTagsManaged(ctx context.Context, id uint32, managed bool) error {
 	ret := _mock.Called(ctx, id, managed)
@@ -20868,6 +21071,81 @@ func (_c *MockStore_SetLiveBookRecordReplaceMode_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// SetMediaFileTagsChecked provides a mock function for the type MockStore
+func (_mock *MockStore) SetMediaFileTagsChecked(ctx context.Context, id uint32, mtime int64, size int64, at time.Time) error {
+	ret := _mock.Called(ctx, id, mtime, size, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetMediaFileTagsChecked")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, int64, int64, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, mtime, size, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetMediaFileTagsChecked_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMediaFileTagsChecked'
+type MockStore_SetMediaFileTagsChecked_Call struct {
+	*mock.Call
+}
+
+// SetMediaFileTagsChecked is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - mtime int64
+//   - size int64
+//   - at time.Time
+func (_e *MockStore_Expecter) SetMediaFileTagsChecked(ctx any, id any, mtime any, size any, at any) *MockStore_SetMediaFileTagsChecked_Call {
+	return &MockStore_SetMediaFileTagsChecked_Call{Call: _e.mock.On("SetMediaFileTagsChecked", ctx, id, mtime, size, at)}
+}
+
+func (_c *MockStore_SetMediaFileTagsChecked_Call) Run(run func(ctx context.Context, id uint32, mtime int64, size int64, at time.Time)) *MockStore_SetMediaFileTagsChecked_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 int64
+		if args[3] != nil {
+			arg3 = args[3].(int64)
+		}
+		var arg4 time.Time
+		if args[4] != nil {
+			arg4 = args[4].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetMediaFileTagsChecked_Call) Return(err error) *MockStore_SetMediaFileTagsChecked_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetMediaFileTagsChecked_Call) RunAndReturn(run func(ctx context.Context, id uint32, mtime int64, size int64, at time.Time) error) *MockStore_SetMediaFileTagsChecked_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetMediaFileTagsDeferred provides a mock function for the type MockStore
 func (_mock *MockStore) SetMediaFileTagsDeferred(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)
@@ -20921,6 +21199,69 @@ func (_c *MockStore_SetMediaFileTagsDeferred_Call) Return(err error) *MockStore_
 }
 
 func (_c *MockStore_SetMediaFileTagsDeferred_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_SetMediaFileTagsDeferred_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetMediaFileTagsEdited provides a mock function for the type MockStore
+func (_mock *MockStore) SetMediaFileTagsEdited(ctx context.Context, id uint32, at time.Time) error {
+	ret := _mock.Called(ctx, id, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetMediaFileTagsEdited")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, time.Time) error); ok {
+		r0 = returnFunc(ctx, id, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetMediaFileTagsEdited_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMediaFileTagsEdited'
+type MockStore_SetMediaFileTagsEdited_Call struct {
+	*mock.Call
+}
+
+// SetMediaFileTagsEdited is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - at time.Time
+func (_e *MockStore_Expecter) SetMediaFileTagsEdited(ctx any, id any, at any) *MockStore_SetMediaFileTagsEdited_Call {
+	return &MockStore_SetMediaFileTagsEdited_Call{Call: _e.mock.On("SetMediaFileTagsEdited", ctx, id, at)}
+}
+
+func (_c *MockStore_SetMediaFileTagsEdited_Call) Run(run func(ctx context.Context, id uint32, at time.Time)) *MockStore_SetMediaFileTagsEdited_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetMediaFileTagsEdited_Call) Return(err error) *MockStore_SetMediaFileTagsEdited_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetMediaFileTagsEdited_Call) RunAndReturn(run func(ctx context.Context, id uint32, at time.Time) error) *MockStore_SetMediaFileTagsEdited_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -22073,6 +22414,78 @@ func (_c *MockStore_SetTorrentSessionUploaded_Call) Return(err error) *MockStore
 }
 
 func (_c *MockStore_SetTorrentSessionUploaded_Call) RunAndReturn(run func(ctx context.Context, infoHash string, uploaded int64) error) *MockStore_SetTorrentSessionUploaded_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetTrackTagOverrides provides a mock function for the type MockStore
+func (_mock *MockStore) SetTrackTagOverrides(ctx context.Context, id uint32, overrides map[string][]string) (uint32, error) {
+	ret := _mock.Called(ctx, id, overrides)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetTrackTagOverrides")
+	}
+
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string][]string) (uint32, error)); ok {
+		return returnFunc(ctx, id, overrides)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, map[string][]string) uint32); ok {
+		r0 = returnFunc(ctx, id, overrides)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, map[string][]string) error); ok {
+		r1 = returnFunc(ctx, id, overrides)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_SetTrackTagOverrides_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetTrackTagOverrides'
+type MockStore_SetTrackTagOverrides_Call struct {
+	*mock.Call
+}
+
+// SetTrackTagOverrides is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - overrides map[string][]string
+func (_e *MockStore_Expecter) SetTrackTagOverrides(ctx any, id any, overrides any) *MockStore_SetTrackTagOverrides_Call {
+	return &MockStore_SetTrackTagOverrides_Call{Call: _e.mock.On("SetTrackTagOverrides", ctx, id, overrides)}
+}
+
+func (_c *MockStore_SetTrackTagOverrides_Call) Run(run func(ctx context.Context, id uint32, overrides map[string][]string)) *MockStore_SetTrackTagOverrides_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 map[string][]string
+		if args[2] != nil {
+			arg2 = args[2].(map[string][]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetTrackTagOverrides_Call) Return(v uint32, err error) *MockStore_SetTrackTagOverrides_Call {
+	_c.Call.Return(v, err)
+	return _c
+}
+
+func (_c *MockStore_SetTrackTagOverrides_Call) RunAndReturn(run func(ctx context.Context, id uint32, overrides map[string][]string) (uint32, error)) *MockStore_SetTrackTagOverrides_Call {
 	_c.Call.Return(run)
 	return _c
 }

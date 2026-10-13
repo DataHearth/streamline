@@ -24,6 +24,7 @@
 	import ReleasePanel from "@components/music/ReleasePanel.svelte";
 	import ReleaseAccordion from "@components/music/ReleaseAccordion.svelte";
 	import ReleaseSearchModal from "@components/music/ReleaseSearchModal.svelte";
+	import ReleaseTagsModal from "@components/music/ReleaseTagsModal.svelte";
 	import {
 		artistPeople,
 		artistTally,
@@ -139,6 +140,7 @@
 	}
 	const searchRelease = (r: Release) => searchNow.mutate({ path: `/music/albums/${r.id}/search-now`, title: r.title });
 	let deletingTrack = $state<Track | null>(null);
+	let tagsRelease = $state<Release | null>(null);
 	const delTrack = createAction<Track>(() => ({
 		run: (t) => api(`/music/tracks/${t.id}/file`, { method: "DELETE" }),
 		refresh: MUSIC,
@@ -389,6 +391,7 @@
 					monitorPending={monitorRelease.isPending}
 					onManualSearchTrack={(r) => openManual(String(r.id))}
 					onDeleteTrack={(t) => (deletingTrack = t)}
+					onTags={(r) => (tagsRelease = r)}
 				/>
 			</div>
 			<!-- 1fr, not minmax(0,1fr): the browser Tailwind build hangs the tab on
@@ -406,6 +409,7 @@
 						monitorPending={monitorRelease.isPending}
 						onManualSearchTrack={() => openManual(String(selected.id))}
 						onDeleteTrack={(t) => (deletingTrack = t)}
+						onTags={() => (tagsRelease = selected)}
 					/>
 				{/if}
 			</div>
@@ -481,6 +485,7 @@
 
 		{#if canEdit}
 			<ReleaseSearchModal open={manualOpen} {artist} initialScope={manualScope} onClose={() => (manualOpen = false)} />
+			<ReleaseTagsModal release={tagsRelease} onClose={() => (tagsRelease = null)} />
 		{/if}
 
 		<Dialog

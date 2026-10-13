@@ -535,6 +535,16 @@ func BonusNEQ(v bool) predicate.Track {
 	return predicate.Track(sql.FieldNEQ(FieldBonus, v))
 }
 
+// TagOverridesIsNil applies the IsNil predicate on the "tag_overrides" field.
+func TagOverridesIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldTagOverrides))
+}
+
+// TagOverridesNotNil applies the NotNil predicate on the "tag_overrides" field.
+func TagOverridesNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldTagOverrides))
+}
+
 // HasAlbum applies the HasEdge predicate on the "album" edge.
 func HasAlbum() predicate.Track {
 	return predicate.Track(func(s *sql.Selector) {

@@ -59,6 +59,11 @@ func (Album) Fields() []ent.Field {
 		// content is someone else's and is never replaced, and the cover
 		// resolver never reads Streamline's own back as a source.
 		field.String("art_sidecar_hash").Optional(),
+		// tag_overrides are tags set by hand for every file of the album,
+		// key to values, written over what the library would write (an
+		// empty list removes the key). A track's own overrides win over
+		// these; library.music_tags.preserve wins over both. NULL is none.
+		field.JSON("tag_overrides", map[string][]string{}).Optional(),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
 		field.Enum("status").

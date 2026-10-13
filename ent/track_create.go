@@ -133,6 +133,12 @@ func (_c *TrackCreate) SetNillableBonus(v *bool) *TrackCreate {
 	return _c
 }
 
+// SetTagOverrides sets the "tag_overrides" field.
+func (_c *TrackCreate) SetTagOverrides(v map[string][]string) *TrackCreate {
+	_c.mutation.SetTagOverrides(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *TrackCreate) SetID(v uint32) *TrackCreate {
 	_c.mutation.SetID(v)
@@ -332,6 +338,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
 		_node.Bonus = value
+	}
+	if value, ok := _c.mutation.TagOverrides(); ok {
+		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)
+		_node.TagOverrides = value
 	}
 	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

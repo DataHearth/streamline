@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronRight, Radar, Search } from "@lucide/svelte";
+	import { ChevronRight, Radar, Search, Tags } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -29,6 +29,7 @@
 		monitorPending = false,
 		onManualSearchTrack,
 		onDeleteTrack,
+		onTags,
 	}: {
 		releases: Release[];
 		openId: number | undefined;
@@ -43,6 +44,7 @@
 		// releases of its album.
 		onManualSearchTrack?: (r: Release) => void;
 		onDeleteTrack?: (t: Track) => void;
+		onTags?: (r: Release) => void;
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
@@ -118,6 +120,17 @@
 							</button>
 						{/if}
 						<MonitorToggle monitored={r.monitored} onToggle={() => onMonitor(r)} pending={monitorPending} />
+						{#if onTags && r.tracks_have > 0}
+							<button
+								type="button"
+								onclick={() => onTags(r)}
+								aria-label={i18n.music_tags_panel_button()}
+								title={i18n.music_tags_panel_button()}
+								class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg-muted transition active:bg-surface"
+							>
+								<Tags size={16} aria-hidden="true" />
+							</button>
+						{/if}
 						{#if up}
 							<p class="self-center text-[12.5px] leading-snug text-fg-muted">
 								{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}

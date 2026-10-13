@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -752,6 +753,133 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 		})
 	})
 
+	Describe("music tag panel", func() {
+		It("answers the album's files compared with their desired tags", func() {
+			now := time.Now()
+			app.music.EXPECT().
+				AlbumTags(mock.Anything, uint32(5)).
+				Return(&music.AlbumTagsView{
+					Mode: "managed", Managed: true,
+					Overrides: map[string][]string{"GENRE": {"Grunge"}},
+					Files: []music.TagFileView{
+						{
+							File: &ent.MediaFile{
+								ID:       9,
+								Path:     "/music/Nirvana/Nevermind/05.flac",
+								Format:   "flac",
+								TaggedAt: &now,
+							},
+							Track: &ent.Track{
+								ID:       3,
+								Disc:     1,
+								Position: 5,
+								Title:    "Lithium",
+							},
+							State: "written",
+							Keys: []audiotags.KeyState{
+								{
+									Key:     "GENRE",
+									Current: []string{"Rock"},
+									Desired: []string{"Grunge"},
+									Status:  audiotags.KeyDiffers,
+								},
+								{
+									Key:     "REPLAYGAIN_TRACK_GAIN",
+									Current: []string{"-7 dB"},
+									Desired: []string{
+										"-7 dB",
+									},
+									Status: audiotags.KeyKept,
+								},
+							},
+						},
+					},
+				}, nil).
+				Once()
+			resp := send(
+				http.MethodGet,
+				"/api/v1/music/albums/5/tags",
+				app.memberKey,
+				"",
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var got MusicAlbumTags
+			Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+			Expect(got.Mode).To(Equal(MusicAlbumTagsMode("managed")))
+			Expect(got.Files).To(HaveLen(1))
+			f := got.Files[0]
+			Expect(f.FileName).To(Equal("05.flac"))
+			Expect(f.State).To(Equal(MusicTagFileState("written")))
+			Expect(f.Overrides).To(BeEmpty())
+			Expect(f.Keys[0].Overridden).To(BeTrue())
+			Expect(f.Keys[1].Overridden).To(BeFalse())
+			Expect(f.Keys[1].Status).To(Equal(MusicTagKeyStatus("kept")))
+		})
+
+		It(
+			"writes an album now, and answers 409 with a code when tags are off",
+			func() {
+				app.music.EXPECT().
+					ApplyAlbumTags(mock.Anything, uint32(5)).
+					Return(12, nil).
+					Once()
+				resp := send(
+					http.MethodPost,
+					"/api/v1/music/albums/5/tags/apply",
+					app.memberKey,
+					"",
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusAccepted))
+				var got ApplyMusicAlbumTags202JSONResponse
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				resp.Body.Close()
+				Expect(got.Queued).To(Equal(12))
+
+				app.music.EXPECT().ApplyAlbumTags(mock.Anything, uint32(5)).
+					Return(0, music.ErrTagsOff).Once()
+				resp = send(
+					http.MethodPost,
+					"/api/v1/music/albums/5/tags/apply",
+					app.memberKey,
+					"",
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+				var e Error
+				Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+				Expect(*e.Code).To(Equal("music_tags_off"))
+			},
+		)
+
+		It("sets a track's own tags, and refuses a request-only caller", func() {
+			app.music.EXPECT().SetTrackTagOverrides(mock.Anything, uint32(3),
+				map[string][]string{"MOOD": {"Calm"}}).Return(nil).Once()
+			resp := send(http.MethodPatch, "/api/v1/music/tracks/3", app.memberKey,
+				`{"tag_overrides":{"mood":["Calm",""]}}`)
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+			resp.Body.Close()
+
+			app.music.EXPECT().
+				SetTrackTagOverrides(mock.Anything, uint32(4), mock.Anything).
+				Return(music.ErrTrackNotFound).
+				Once()
+			resp = send(http.MethodPatch, "/api/v1/music/tracks/4", app.memberKey,
+				`{"tag_overrides":{}}`)
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+			resp.Body.Close()
+
+			resp = send(
+				http.MethodPatch,
+				"/api/v1/music/tracks/3",
+				app.requestOnlyKey,
+				`{"tag_overrides":{}}`,
+			)
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+			resp.Body.Close()
+		})
+	})
+
 	Describe("PatchMusicArtist", func() {
 		patch := func(body string) *http.Response {
 			GinkgoHelper()
@@ -1471,6 +1599,49 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 				resp.Body.Close()
 			},
 		)
+
+		It("PatchMusicAlbum stores the tag settings, keys upper-cased", func() {
+			v := detail().Albums[0]
+			app.music.EXPECT().SetAlbumTagSettings(mock.Anything, uint32(5),
+				mock.MatchedBy(func(set music.AlbumTagSettings) bool {
+					return set.Managed != nil && !*set.Managed &&
+						set.Overrides != nil &&
+						len((*set.Overrides)["GENRE"]) == 1 &&
+						(*set.Overrides)["GENRE"][0] == "Grunge" &&
+						len((*set.Overrides)["COMMENT"]) == 0
+				})).Return(nil).Once()
+			app.music.EXPECT().
+				AlbumDetail(mock.Anything, uint32(5)).
+				Return(&v, nil).
+				Once()
+			resp := send(
+				http.MethodPatch,
+				"/api/v1/music/albums/5",
+				app.memberKey,
+				`{"tags_managed":false,"tag_overrides":{"genre":[" Grunge "],"Comment":[]}}`,
+			)
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			resp.Body.Close()
+		})
+
+		It("PatchMusicAlbum refuses an override that is not a tag name", func() {
+			for _, body := range []string{
+				`{"tag_overrides":{"GEN*RE":["x"]}}`,
+				`{"tag_overrides":{"":["x"]}}`,
+				`{"tag_overrides":{"genre":["a"],"GENRE":["b"]}}`,
+			} {
+				resp := send(
+					http.MethodPatch,
+					"/api/v1/music/albums/5",
+					app.memberKey,
+					body,
+				)
+				Expect(
+					resp.StatusCode,
+				).To(Equal(http.StatusUnprocessableEntity), body)
+				resp.Body.Close()
+			}
+		})
 	})
 
 	Describe("DeleteMusicTrackFile", func() {

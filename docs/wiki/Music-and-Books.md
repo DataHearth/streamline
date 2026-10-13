@@ -78,6 +78,14 @@ Streamline tells its own copies apart from yours, so they are never mistaken for
 - *On import* writes each file once, when it is imported, or adopted with tagging switched on. After that the file is left alone.
 - *Managed* keeps files in step with the library: when a refresh, MusicBrainz's track and credit data, or a setting changes what a file should carry, the file is rewritten. Edits made to those tags in another tool are undone; tags Streamline does not manage are never touched.
 
+**Each release's Tags panel** (the tag button beside a release's searches, shown once it has files) reads every file and lists what Streamline would change: the tag, what the file holds, and what Streamline writes, with *Show unchanged tags* for the rest, including the ones it leaves as they are. From there:
+
+- *Write tags now* rewrites the release's files at once, whatever the mode.
+- *Keep these files in step* is the release's own switch: an album adopted without tagging starts off, and switching it on queues its files.
+- *Tags for every file* and *Tags for this track* set tags by hand, written over what the library knows (a genre you prefer, a mood, a corrected title). A tag with no value is removed from the files; *Tags to keep* in Settings → Music still wins.
+
+Under *Managed*, Streamline also notices edits made in another tool: each run of the job checks a share of the written files, and one whose Streamline tags were changed is rewritten. Tags it does not write, such as ReplayGain added by a player, are left alone.
+
 The writing itself happens in the `music-tag-sync` job ([Scheduled Jobs](Scheduled-Jobs), every 30 minutes by default; run it by hand to start at once). A file is written to a copy beside it and swapped in only once the new tags read back correctly, so a failed write leaves the file as it was; one that keeps failing is given up on after five attempts. **Retag library** queues every file for a full rewrite, which is how files written before a change in what Streamline writes, or under *On import*, are brought up to date.
 
 **Seeding torrents are never written to.** A file a torrent still serves from its own path waits until the torrent is removed from the client. A hardlinked import shares its bytes with the torrent's copy: the *While a torrent seeds* setting decides whether it waits for the torrent too (*Wait*, one copy on disk, the default) or is copied and tagged at once (*Copy now*, two copies while the torrent seeds). Streamline only knows a torrent is gone when the client stops listing it, so a torrent kept paused in the client keeps its files waiting.

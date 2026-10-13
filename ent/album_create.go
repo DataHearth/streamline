@@ -210,6 +210,12 @@ func (_c *AlbumCreate) SetNillableArtSidecarHash(v *string) *AlbumCreate {
 	return _c
 }
 
+// SetTagOverrides sets the "tag_overrides" field.
+func (_c *AlbumCreate) SetTagOverrides(v map[string][]string) *AlbumCreate {
+	_c.mutation.SetTagOverrides(v)
+	return _c
+}
+
 // SetGrabFailures sets the "grab_failures" field.
 func (_c *AlbumCreate) SetGrabFailures(v uint8) *AlbumCreate {
 	_c.mutation.SetGrabFailures(v)
@@ -677,6 +683,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ArtSidecarHash(); ok {
 		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
 		_node.ArtSidecarHash = value
+	}
+	if value, ok := _c.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+		_node.TagOverrides = value
 	}
 	if value, ok := _c.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)

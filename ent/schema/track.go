@@ -30,6 +30,9 @@ func (Track) Fields() []ent.Field {
 		field.Uint16("position"),
 		field.Uint32("duration").Optional().Default(0),
 		field.Bool("bonus").Default(false),
+		// tag_overrides are tags set by hand for this track's files, written
+		// over the album's overrides and what the library would write.
+		field.JSON("tag_overrides", map[string][]string{}).Optional(),
 	}
 }
 
