@@ -6,8 +6,9 @@ info:
   description: |
     REST API for Streamline, a unified media management platform that replaces
     the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Provides
-    endpoints for managing movies, TV shows, indexers, download clients, media
-    servers, quality profiles, user authentication, and media requests.
+    endpoints for managing movies, TV shows, music, books, indexers, download
+    clients, media servers, quality profiles, user authentication, and media
+    requests.
 
 tags:
   - name: auth
