@@ -19,7 +19,8 @@ https://github.com/user-attachments/assets/318e94d2-7571-4dda-96f6-f62bb4af8a46
 
 ## Features
 
-- Unified movie & TV library (music & books planned — see the [roadmap](docs/wiki/Roadmap.md))
+- Unified movie, TV, music and book library — see the [roadmap](docs/wiki/Roadmap.md) for what is shipped and what is next
+- Music reachable from Subsonic clients, books from OPDS readers
 - Adopt an existing library: scan untracked files and import them under review
 - Monitoring, RSS auto-grab, manual search, and a calendar of upcoming releases
 - Quality profiles, activity queue and history
