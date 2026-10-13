@@ -127,6 +127,7 @@ type Store interface {
 	) error
 	ListAlbumsAwaitingHydration(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsAwaitingCredits(ctx context.Context, limit int) ([]*ent.Album, error)
+	ListAlbumsAwaitingDetails(ctx context.Context, limit int) ([]*ent.Album, error)
 	ListAlbumsTrackless(
 		ctx context.Context,
 		staleBefore, releasedBefore time.Time,

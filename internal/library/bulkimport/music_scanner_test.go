@@ -32,10 +32,10 @@ func copyFixture(name, dst string) {
 	Expect(os.WriteFile(dst, raw, 0o600)).To(Succeed())
 }
 
-func writeTrack(dst string, tags audiotags.WriteTags) {
+func writeTrack(dst string, tags audiotags.Tags) {
 	GinkgoHelper()
 	copyFixture("untagged.mp3", dst)
-	Expect(audiotags.Write(dst, tags)).To(Succeed())
+	Expect(audiotags.Write(dst, tags, nil)).To(Succeed())
 }
 
 func searchHit(
@@ -275,9 +275,11 @@ var _ = Describe("Music scan", Label("integration", "bulkimport"), func() {
 		for disc, dir := range map[string]string{"1": "CD1", "2": "CD 2"} {
 			writeTrack(
 				filepath.Join(root, "Pink Floyd", "The Wall", dir, "01.mp3"),
-				audiotags.WriteTags{
-					AlbumArtist: "Pink Floyd", Album: "The Wall",
-					Title: "Track " + disc, Track: 1,
+				audiotags.Tags{
+					audiotags.KeyAlbumArtist: {"Pink Floyd"},
+					audiotags.KeyAlbum:       {"The Wall"},
+					audiotags.KeyTitle:       {"Track " + disc},
+					audiotags.KeyTrackNumber: {"1"},
 				},
 			)
 		}

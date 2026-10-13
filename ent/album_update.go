@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
@@ -138,6 +139,64 @@ func (_u *AlbumUpdate) SetNillableReleaseDate(v *time.Time) *AlbumUpdate {
 // ClearReleaseDate clears the value of the "release_date" field.
 func (_u *AlbumUpdate) ClearReleaseDate() *AlbumUpdate {
 	_u.mutation.ClearReleaseDate()
+	return _u
+}
+
+// SetOriginalDate sets the "original_date" field.
+func (_u *AlbumUpdate) SetOriginalDate(v string) *AlbumUpdate {
+	_u.mutation.SetOriginalDate(v)
+	return _u
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableOriginalDate(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetOriginalDate(*v)
+	}
+	return _u
+}
+
+// ClearOriginalDate clears the value of the "original_date" field.
+func (_u *AlbumUpdate) ClearOriginalDate() *AlbumUpdate {
+	_u.mutation.ClearOriginalDate()
+	return _u
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_u *AlbumUpdate) SetEditionDate(v string) *AlbumUpdate {
+	_u.mutation.SetEditionDate(v)
+	return _u
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableEditionDate(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetEditionDate(*v)
+	}
+	return _u
+}
+
+// ClearEditionDate clears the value of the "edition_date" field.
+func (_u *AlbumUpdate) ClearEditionDate() *AlbumUpdate {
+	_u.mutation.ClearEditionDate()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *AlbumUpdate) SetGenres(v []string) *AlbumUpdate {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *AlbumUpdate) AppendGenres(v []string) *AlbumUpdate {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *AlbumUpdate) ClearGenres() *AlbumUpdate {
+	_u.mutation.ClearGenres()
 	return _u
 }
 
@@ -662,6 +721,29 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ReleaseDateCleared() {
 		_spec.ClearField(album.FieldReleaseDate, field.TypeTime)
 	}
+	if value, ok := _u.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+	}
+	if _u.mutation.OriginalDateCleared() {
+		_spec.ClearField(album.FieldOriginalDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+	}
+	if _u.mutation.EditionDateCleared() {
+		_spec.ClearField(album.FieldEditionDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(album.FieldGenres, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 	}
@@ -1067,6 +1149,64 @@ func (_u *AlbumUpdateOne) SetNillableReleaseDate(v *time.Time) *AlbumUpdateOne {
 // ClearReleaseDate clears the value of the "release_date" field.
 func (_u *AlbumUpdateOne) ClearReleaseDate() *AlbumUpdateOne {
 	_u.mutation.ClearReleaseDate()
+	return _u
+}
+
+// SetOriginalDate sets the "original_date" field.
+func (_u *AlbumUpdateOne) SetOriginalDate(v string) *AlbumUpdateOne {
+	_u.mutation.SetOriginalDate(v)
+	return _u
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableOriginalDate(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetOriginalDate(*v)
+	}
+	return _u
+}
+
+// ClearOriginalDate clears the value of the "original_date" field.
+func (_u *AlbumUpdateOne) ClearOriginalDate() *AlbumUpdateOne {
+	_u.mutation.ClearOriginalDate()
+	return _u
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_u *AlbumUpdateOne) SetEditionDate(v string) *AlbumUpdateOne {
+	_u.mutation.SetEditionDate(v)
+	return _u
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableEditionDate(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetEditionDate(*v)
+	}
+	return _u
+}
+
+// ClearEditionDate clears the value of the "edition_date" field.
+func (_u *AlbumUpdateOne) ClearEditionDate() *AlbumUpdateOne {
+	_u.mutation.ClearEditionDate()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *AlbumUpdateOne) SetGenres(v []string) *AlbumUpdateOne {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *AlbumUpdateOne) AppendGenres(v []string) *AlbumUpdateOne {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *AlbumUpdateOne) ClearGenres() *AlbumUpdateOne {
+	_u.mutation.ClearGenres()
 	return _u
 }
 
@@ -1620,6 +1760,29 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.ReleaseDateCleared() {
 		_spec.ClearField(album.FieldReleaseDate, field.TypeTime)
+	}
+	if value, ok := _u.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+	}
+	if _u.mutation.OriginalDateCleared() {
+		_spec.ClearField(album.FieldOriginalDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+	}
+	if _u.mutation.EditionDateCleared() {
+		_spec.ClearField(album.FieldEditionDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(album.FieldGenres, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)

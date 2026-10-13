@@ -217,6 +217,9 @@ type ReleaseGroupInfo struct {
 	Title       string
 	Type        AlbumType
 	ReleaseDate *time.Time // nil when MusicBrainz has no first-release-date
+	// OriginalDate is the same first-release-date as MusicBrainz wrote it,
+	// YYYY, YYYY-MM or YYYY-MM-DD; empty when it has none.
+	OriginalDate string
 }
 
 // ReleaseGroupSearchResult is a MusicBrainz release-group search hit with its
@@ -281,6 +284,11 @@ type ReleaseGroupDetails struct {
 	CatalogNumber string
 	// Country is a two-letter region; XW, XE and the like are dropped.
 	Country string
+	// EditionDate is the canonical release's own date as MusicBrainz wrote
+	// it, which can differ from the release group's first-release-date.
+	EditionDate string
+	// Genres are the release group's top genres by vote, at most five.
+	Genres []string
 	// Media is the union of the release group's physical media: cd, vinyl,
 	// digital, cassette.
 	Media  []string

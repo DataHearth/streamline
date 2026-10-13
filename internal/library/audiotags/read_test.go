@@ -26,6 +26,27 @@ var _ = Describe("Read", Label("unit", "audiotags"), func() {
 		Expect(info.Format).To(Equal("flac"))
 	})
 
+	DescribeTable("reads the other formats TagLib handles",
+		func(fixture, format string) {
+			info, err := Read(fixture)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.AlbumArtist).To(Equal("Nirvana"))
+			Expect(info.Album).To(Equal("Nevermind"))
+			Expect(info.Title).To(Equal("Smells Like Teen Spirit"))
+			Expect(info.Track).To(Equal(uint16(1)))
+			Expect(info.Year).To(Equal(uint16(1991)))
+			Expect(info.Format).To(Equal(format))
+		},
+		Entry("M4A", "testdata/tagged.m4a", "m4a"),
+		Entry("Ogg Vorbis", "testdata/tagged.ogg", "ogg"),
+		Entry("Opus", "testdata/tagged.opus", "opus"),
+	)
+
+	It("errors when the file cannot be opened", func() {
+		_, err := Read("testdata/missing.mp3")
+		Expect(err).To(MatchError(os.ErrNotExist))
+	})
+
 	It("returns zero values, not an error, for untagged files", func() {
 		info, err := Read("testdata/untagged.mp3")
 		Expect(err).NotTo(HaveOccurred())

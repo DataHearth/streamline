@@ -90,6 +90,16 @@ func ReleaseDate(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldReleaseDate, v))
 }
 
+// OriginalDate applies equality check predicate on the "original_date" field. It's identical to OriginalDateEQ.
+func OriginalDate(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldOriginalDate, v))
+}
+
+// EditionDate applies equality check predicate on the "edition_date" field. It's identical to EditionDateEQ.
+func EditionDate(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionDate, v))
+}
+
 // Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
 func Monitored(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitored, v))
@@ -573,6 +583,166 @@ func ReleaseDateIsNil() predicate.Album {
 // ReleaseDateNotNil applies the NotNil predicate on the "release_date" field.
 func ReleaseDateNotNil() predicate.Album {
 	return predicate.Album(sql.FieldNotNull(FieldReleaseDate))
+}
+
+// OriginalDateEQ applies the EQ predicate on the "original_date" field.
+func OriginalDateEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldOriginalDate, v))
+}
+
+// OriginalDateNEQ applies the NEQ predicate on the "original_date" field.
+func OriginalDateNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldOriginalDate, v))
+}
+
+// OriginalDateIn applies the In predicate on the "original_date" field.
+func OriginalDateIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldOriginalDate, vs...))
+}
+
+// OriginalDateNotIn applies the NotIn predicate on the "original_date" field.
+func OriginalDateNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldOriginalDate, vs...))
+}
+
+// OriginalDateGT applies the GT predicate on the "original_date" field.
+func OriginalDateGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldOriginalDate, v))
+}
+
+// OriginalDateGTE applies the GTE predicate on the "original_date" field.
+func OriginalDateGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldOriginalDate, v))
+}
+
+// OriginalDateLT applies the LT predicate on the "original_date" field.
+func OriginalDateLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldOriginalDate, v))
+}
+
+// OriginalDateLTE applies the LTE predicate on the "original_date" field.
+func OriginalDateLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldOriginalDate, v))
+}
+
+// OriginalDateContains applies the Contains predicate on the "original_date" field.
+func OriginalDateContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldOriginalDate, v))
+}
+
+// OriginalDateHasPrefix applies the HasPrefix predicate on the "original_date" field.
+func OriginalDateHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldOriginalDate, v))
+}
+
+// OriginalDateHasSuffix applies the HasSuffix predicate on the "original_date" field.
+func OriginalDateHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldOriginalDate, v))
+}
+
+// OriginalDateIsNil applies the IsNil predicate on the "original_date" field.
+func OriginalDateIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldOriginalDate))
+}
+
+// OriginalDateNotNil applies the NotNil predicate on the "original_date" field.
+func OriginalDateNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldOriginalDate))
+}
+
+// OriginalDateEqualFold applies the EqualFold predicate on the "original_date" field.
+func OriginalDateEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldOriginalDate, v))
+}
+
+// OriginalDateContainsFold applies the ContainsFold predicate on the "original_date" field.
+func OriginalDateContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldOriginalDate, v))
+}
+
+// EditionDateEQ applies the EQ predicate on the "edition_date" field.
+func EditionDateEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionDate, v))
+}
+
+// EditionDateNEQ applies the NEQ predicate on the "edition_date" field.
+func EditionDateNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldEditionDate, v))
+}
+
+// EditionDateIn applies the In predicate on the "edition_date" field.
+func EditionDateIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldEditionDate, vs...))
+}
+
+// EditionDateNotIn applies the NotIn predicate on the "edition_date" field.
+func EditionDateNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldEditionDate, vs...))
+}
+
+// EditionDateGT applies the GT predicate on the "edition_date" field.
+func EditionDateGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldEditionDate, v))
+}
+
+// EditionDateGTE applies the GTE predicate on the "edition_date" field.
+func EditionDateGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldEditionDate, v))
+}
+
+// EditionDateLT applies the LT predicate on the "edition_date" field.
+func EditionDateLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldEditionDate, v))
+}
+
+// EditionDateLTE applies the LTE predicate on the "edition_date" field.
+func EditionDateLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldEditionDate, v))
+}
+
+// EditionDateContains applies the Contains predicate on the "edition_date" field.
+func EditionDateContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldEditionDate, v))
+}
+
+// EditionDateHasPrefix applies the HasPrefix predicate on the "edition_date" field.
+func EditionDateHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldEditionDate, v))
+}
+
+// EditionDateHasSuffix applies the HasSuffix predicate on the "edition_date" field.
+func EditionDateHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldEditionDate, v))
+}
+
+// EditionDateIsNil applies the IsNil predicate on the "edition_date" field.
+func EditionDateIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldEditionDate))
+}
+
+// EditionDateNotNil applies the NotNil predicate on the "edition_date" field.
+func EditionDateNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldEditionDate))
+}
+
+// EditionDateEqualFold applies the EqualFold predicate on the "edition_date" field.
+func EditionDateEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldEditionDate, v))
+}
+
+// EditionDateContainsFold applies the ContainsFold predicate on the "edition_date" field.
+func EditionDateContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldEditionDate, v))
+}
+
+// GenresIsNil applies the IsNil predicate on the "genres" field.
+func GenresIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldGenres))
+}
+
+// GenresNotNil applies the NotNil predicate on the "genres" field.
+func GenresNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldGenres))
 }
 
 // MonitoredEQ applies the EQ predicate on the "monitored" field.

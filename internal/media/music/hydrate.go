@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -210,7 +211,7 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			}
 			return
 		}
-		err := s.hydrateAlbum(ctx, it.albumID, true)
+		_, err := s.hydrateAlbum(ctx, it.albumID, true)
 		s.hydrate.done(it.albumID)
 		var limited *metadata.RateLimitedError
 		switch {
@@ -248,6 +249,16 @@ func (s *Service) refillHydration(
 		slog.WarnContext(ctx, "music hydration refill failed", "error", err)
 		return false
 	}
+	if len(rows) <= len(failed) {
+		// Nothing new waits for its tracks: backfill the genres and edition
+		// date of albums holding files, hydrated before those were fetched.
+		// Background class, so a lookup never queues behind it.
+		more, err := s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch+len(failed))
+		if err != nil {
+			slog.WarnContext(ctx, "music details refill failed", "error", err)
+		}
+		rows = append(rows, more...)
+	}
 	found := false
 	for _, a := range rows {
 		if _, bad := failed[a.ID]; bad || a.Edges.Artist == nil {
@@ -276,7 +287,10 @@ func sleep(ctx context.Context, d time.Duration) error {
 // they match files to tracks: an album added as a stub has none.
 type AlbumHydrator interface {
 	// HydrateAlbum fetches the album's tracks when it has not been fetched,
-	// synchronously and at interactive priority, and is a no-op otherwise.
+	// synchronously and at interactive priority. An album whose tracks are
+	// stored but whose genres and edition date predate them is fetched too,
+	// best effort: that failing is logged, never returned, since the caller
+	// has the tracks it needs. Otherwise it is a no-op.
 	HydrateAlbum(ctx context.Context, albumID uint32) error
 }
 
@@ -284,25 +298,34 @@ var _ AlbumHydrator = (*Service)(nil)
 
 func (s *Service) HydrateAlbum(ctx context.Context, albumID uint32) error {
 	s.hydrate.remove(albumID)
-	return s.hydrateAlbum(ctx, albumID, false)
+	detailsOnly, err := s.hydrateAlbum(ctx, albumID, false)
+	if err != nil && detailsOnly {
+		slog.WarnContext(ctx, "album details backfill failed, kept the stored album",
+			"album.id", albumID, "error", err)
+		return nil
+	}
+	return err
 }
 
 // hydrateAlbum fetches an album's release data and stores it. Without force it
-// does nothing for an album whose tracks are already stored.
+// does nothing for an album whose tracks are already stored, unless its
+// genres were never fetched. detailsOnly reports that case: the album already
+// had its tracks.
 func (s *Service) hydrateAlbum(
 	ctx context.Context,
 	albumID uint32,
 	force bool,
-) error {
+) (detailsOnly bool, _ error) {
 	a, err := s.db.FindAlbumByID(ctx, albumID)
 	if ent.IsNotFound(err) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
-	if !force && a.MetadataFetchedAt != nil {
-		return nil
+	detailsOnly = a.MetadataFetchedAt != nil
+	if !force && detailsOnly && a.Genres != nil {
+		return false, nil
 	}
 	ctx, span := tracer.Start(ctx, "music.hydrate_album",
 		trace.WithAttributes(attribute.Int64("album.id", int64(albumID))))
@@ -310,14 +333,18 @@ func (s *Service) hydrateAlbum(
 
 	d, err := s.metadata.GetReleaseGroup(ctx, a.Mbid)
 	switch {
+	case errors.Is(err, metadata.ErrNotFound) && detailsOnly:
+		// MusicBrainz no longer has the release group: keep what is stored
+		// and record that there are no genres, or the backfill would ask for
+		// it forever.
+		d = storedDetails(a)
 	case errors.Is(err, metadata.ErrNotFound):
-		// MusicBrainz no longer has the release group: stamp it, or the sweep
-		// would ask for it forever.
+		// Stamp it, or the sweep would ask for it forever.
 		d = &metadata.ReleaseGroupDetails{}
 	case err != nil:
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
 		span.SetAttributes(attribute.String("outcome", hydrationFailed))
-		return otelx.RecordSpanError(
+		return detailsOnly, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("hydrate album %d: %w", albumID, err),
 		)
@@ -326,12 +353,12 @@ func (s *Service) hydrateAlbum(
 	params, err := s.hydrationParams(ctx, a, d)
 	if err != nil {
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
-		return otelx.RecordSpanError(span, err)
+		return detailsOnly, otelx.RecordSpanError(span, err)
 	}
 	if err := s.db.SetAlbumHydration(ctx, albumID, params, time.Now()); err != nil {
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
 		span.SetAttributes(attribute.String("outcome", hydrationFailed))
-		return otelx.RecordSpanError(
+		return detailsOnly, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("store album %d: %w", albumID, err),
 		)
@@ -350,7 +377,28 @@ func (s *Service) hydrateAlbum(
 			s.resolveCover(ctx, full)
 		}
 	}
-	return nil
+	return detailsOnly, nil
+}
+
+// storedDetails is the album-level part of a release call rebuilt from what
+// the album already holds, with no genres, for a release group MusicBrainz no
+// longer knows: storing it changes nothing but the genres marker.
+func storedDetails(a *ent.Album) *metadata.ReleaseGroupDetails {
+	var media []string
+	if a.Media != "" {
+		media = strings.Split(a.Media, ",")
+	}
+	return &metadata.ReleaseGroupDetails{
+		OriginalDate:  a.OriginalDate,
+		ReleaseMBID:   a.ReleaseMbid,
+		Barcode:       a.Barcode,
+		Label:         a.Label,
+		CatalogNumber: a.CatalogNumber,
+		Country:       a.Country,
+		EditionDate:   a.EditionDate,
+		Genres:        []string{},
+		Media:         media,
+	}
 }
 
 func outcomeAttr(outcome string) metric.AddOption {
@@ -368,6 +416,9 @@ func (s *Service) hydrationParams(
 ) (db.HydrationParams, error) {
 	p := db.HydrationParams{
 		ReleaseMBID:     d.ReleaseMBID,
+		OriginalDate:    d.OriginalDate,
+		EditionDate:     d.EditionDate,
+		Genres:          d.Genres,
 		Barcode:         d.Barcode,
 		Label:           d.Label,
 		CatalogNumber:   d.CatalogNumber,
@@ -447,6 +498,9 @@ func (s *Service) sweepHydration(ctx context.Context) {
 		}},
 		{"credits", func() ([]*ent.Album, error) {
 			return s.db.ListAlbumsAwaitingCredits(ctx, sweepBatch)
+		}},
+		{"details", func() ([]*ent.Album, error) {
+			return s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch)
 		}},
 		{"trackless", func() ([]*ent.Album, error) {
 			return s.db.ListAlbumsTrackless(

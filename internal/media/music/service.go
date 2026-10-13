@@ -202,11 +202,12 @@ func albumSeeds(
 	seeds := make([]db.AlbumSeed, len(groups))
 	for i, rg := range groups {
 		seeds[i] = db.AlbumSeed{
-			MBID:        rg.MBID,
-			Title:       rg.Title,
-			Type:        string(rg.Type),
-			ReleaseDate: rg.ReleaseDate,
-			Monitored:   monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
+			MBID:         rg.MBID,
+			Title:        rg.Title,
+			Type:         string(rg.Type),
+			ReleaseDate:  rg.ReleaseDate,
+			OriginalDate: rg.OriginalDate,
+			Monitored:    monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
 		}
 	}
 	return seeds

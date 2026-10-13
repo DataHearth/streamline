@@ -209,11 +209,16 @@ var _ = Describe(
 					},
 				}, nil).Once()
 			dir := filepath.Join(root, "Double")
-			writeTrack(filepath.Join(dir, "CD1", "a.mp3"), audiotags.WriteTags{
-				Album: "Double", Title: "Unrelated", Track: 1, Disc: 1,
+			writeTrack(filepath.Join(dir, "CD1", "a.mp3"), audiotags.Tags{
+				audiotags.KeyAlbum:       {"Double"},
+				audiotags.KeyTitle:       {"Unrelated"},
+				audiotags.KeyTrackNumber: {"1"},
+				audiotags.KeyDiscNumber:  {"1"},
 			})
-			writeTrack(filepath.Join(dir, "Disc 2", "a.mp3"), audiotags.WriteTags{
-				Album: "Double", Title: "Unrelated too", Track: 1,
+			writeTrack(filepath.Join(dir, "Disc 2", "a.mp3"), audiotags.Tags{
+				audiotags.KeyAlbum:       {"Double"},
+				audiotags.KeyTitle:       {"Unrelated too"},
+				audiotags.KeyTrackNumber: {"1"},
 			})
 
 			scan := commit(confirmed(dir, "rg-1", "a-1"))

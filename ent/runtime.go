@@ -69,15 +69,15 @@ func init() {
 	// album.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	album.TitleValidator = albumDescTitle.Validators[0].(func(string) error)
 	// albumDescMonitored is the schema descriptor for monitored field.
-	albumDescMonitored := albumFields[6].Descriptor()
+	albumDescMonitored := albumFields[9].Descriptor()
 	// album.DefaultMonitored holds the default value on creation for the monitored field.
 	album.DefaultMonitored = albumDescMonitored.Default.(bool)
 	// albumDescMonitorPinned is the schema descriptor for monitor_pinned field.
-	albumDescMonitorPinned := albumFields[7].Descriptor()
+	albumDescMonitorPinned := albumFields[10].Descriptor()
 	// album.DefaultMonitorPinned holds the default value on creation for the monitor_pinned field.
 	album.DefaultMonitorPinned = albumDescMonitorPinned.Default.(bool)
 	// albumDescGrabFailures is the schema descriptor for grab_failures field.
-	albumDescGrabFailures := albumFields[8].Descriptor()
+	albumDescGrabFailures := albumFields[11].Descriptor()
 	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()

@@ -309,7 +309,8 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				{"position":2,"title":"Bonus disc","format":"CD","tracks":[
 					{"position":1,"title":"Curse","recording":{"id":"rec-3"}}]}]}`
 
-		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24",
+		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09",
+			"genres":[{"name":"alternative rock","count":4},{"name":"grunge","count":9}],
 			"artist-credit":[{"name":"Nirvana","artist":{"id":"a-n","name":"Nirvana"}}],"releases":[
 			{"id":"rel-2","status":"Official","date":"1992-01-01","media":[{"format":"12\" Vinyl"},{"format":"Digital Media"}]},
 			{"id":"rel-1","status":"Official","date":"1991-09-24","media":[{"format":"CD"}]},
@@ -323,7 +324,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					case "/ws/2/release-group/rg-1":
 						Expect(
 							r.URL.Query().Get("inc"),
-						).To(Equal("releases+media+artist-credits"))
+						).To(Equal("releases+media+artist-credits+genres"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -376,6 +377,35 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				rg.Media,
 			).To(Equal([]string{"cd", "vinyl", "digital", "cassette"}))
 			Expect(rg.CreditsComplete).To(BeTrue())
+		})
+
+		It(
+			"keeps both dates as MusicBrainz wrote them, and the genres most voted first",
+			func() {
+				serve(
+					func(string) *http.Response { return jsonResponse(200, heavyRelease) },
+				)
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.OriginalDate).To(Equal("1991-09"))
+				Expect(
+					*rg.ReleaseDate,
+				).To(Equal(time.Date(1991, 9, 1, 0, 0, 0, 0, time.UTC)))
+				Expect(rg.EditionDate).To(Equal("1991-09-24"))
+				Expect(rg.Genres).To(Equal([]string{"Grunge", "Alternative Rock"}))
+			},
+		)
+
+		It("reads no edition date from a date MusicBrainz did not write", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","date":"someday","media":[]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.EditionDate).To(BeEmpty())
 		})
 
 		It("drops a country that is not a region", func() {

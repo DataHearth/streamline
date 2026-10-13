@@ -31,6 +31,12 @@ const (
 	FieldType = "type"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
 	FieldReleaseDate = "release_date"
+	// FieldOriginalDate holds the string denoting the original_date field in the database.
+	FieldOriginalDate = "original_date"
+	// FieldEditionDate holds the string denoting the edition_date field in the database.
+	FieldEditionDate = "edition_date"
+	// FieldGenres holds the string denoting the genres field in the database.
+	FieldGenres = "genres"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
 	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
@@ -115,6 +121,9 @@ var Columns = []string{
 	FieldTitle,
 	FieldType,
 	FieldReleaseDate,
+	FieldOriginalDate,
+	FieldEditionDate,
+	FieldGenres,
 	FieldMonitored,
 	FieldMonitorPinned,
 	FieldGrabFailures,
@@ -282,6 +291,16 @@ func ByType(opts ...sql.OrderTermOption) OrderOption {
 // ByReleaseDate orders the results by the release_date field.
 func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReleaseDate, opts...).ToFunc()
+}
+
+// ByOriginalDate orders the results by the original_date field.
+func ByOriginalDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOriginalDate, opts...).ToFunc()
+}
+
+// ByEditionDate orders the results by the edition_date field.
+func ByEditionDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEditionDate, opts...).ToFunc()
 }
 
 // ByMonitored orders the results by the monitored field.

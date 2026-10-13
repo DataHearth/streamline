@@ -49,7 +49,6 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 
 	"github.com/datahearth/streamline/internal/library/audiotags"
-	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
 //go:embed testdata/track.mp3
@@ -447,14 +446,14 @@ func (p *pack) writeTrack(dir, name string, n int) error {
 	if err := os.WriteFile(path, trackMP3, 0o644); err != nil {
 		return fmt.Errorf("write track: %w", err)
 	}
-	return audiotags.Write(path, audiotags.WriteTags{
-		Artist:      p.creator,
-		AlbumArtist: p.creator,
-		Album:       p.title,
-		Title:       fmt.Sprintf("Track %02d", n),
-		Track:       numeric.SaturateU16(n),
-		Disc:        1,
-	})
+	return audiotags.Write(path, audiotags.Tags{
+		audiotags.KeyArtist:      {p.creator},
+		audiotags.KeyAlbumArtist: {p.creator},
+		audiotags.KeyAlbum:       {p.title},
+		audiotags.KeyTitle:       {fmt.Sprintf("Track %02d", n)},
+		audiotags.KeyTrackNumber: {strconv.Itoa(n)},
+		audiotags.KeyDiscNumber:  {"1"},
+	}, nil)
 }
 
 func (p *pack) writeAlbum(dir string) error {

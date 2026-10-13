@@ -106,6 +106,10 @@ type AlbumMutation struct {
 	title                   *string
 	_type                   *album.Type
 	release_date            *time.Time
+	original_date           *string
+	edition_date            *string
+	genres                  *[]string
+	appendgenres            []string
 	monitored               *bool
 	monitor_pinned          *bool
 	grab_failures           *uint8
@@ -569,6 +573,169 @@ func (m *AlbumMutation) ReleaseDateCleared() bool {
 func (m *AlbumMutation) ResetReleaseDate() {
 	m.release_date = nil
 	delete(m.clearedFields, album.FieldReleaseDate)
+}
+
+// SetOriginalDate sets the "original_date" field.
+func (m *AlbumMutation) SetOriginalDate(s string) {
+	m.original_date = &s
+}
+
+// OriginalDate returns the value of the "original_date" field in the mutation.
+func (m *AlbumMutation) OriginalDate() (r string, exists bool) {
+	v := m.original_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOriginalDate returns the old "original_date" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldOriginalDate(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOriginalDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOriginalDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOriginalDate: %w", err)
+	}
+	return oldValue.OriginalDate, nil
+}
+
+// ClearOriginalDate clears the value of the "original_date" field.
+func (m *AlbumMutation) ClearOriginalDate() {
+	m.original_date = nil
+	m.clearedFields[album.FieldOriginalDate] = struct{}{}
+}
+
+// OriginalDateCleared returns if the "original_date" field was cleared in this mutation.
+func (m *AlbumMutation) OriginalDateCleared() bool {
+	_, ok := m.clearedFields[album.FieldOriginalDate]
+	return ok
+}
+
+// ResetOriginalDate resets all changes to the "original_date" field.
+func (m *AlbumMutation) ResetOriginalDate() {
+	m.original_date = nil
+	delete(m.clearedFields, album.FieldOriginalDate)
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (m *AlbumMutation) SetEditionDate(s string) {
+	m.edition_date = &s
+}
+
+// EditionDate returns the value of the "edition_date" field in the mutation.
+func (m *AlbumMutation) EditionDate() (r string, exists bool) {
+	v := m.edition_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEditionDate returns the old "edition_date" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldEditionDate(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEditionDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEditionDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEditionDate: %w", err)
+	}
+	return oldValue.EditionDate, nil
+}
+
+// ClearEditionDate clears the value of the "edition_date" field.
+func (m *AlbumMutation) ClearEditionDate() {
+	m.edition_date = nil
+	m.clearedFields[album.FieldEditionDate] = struct{}{}
+}
+
+// EditionDateCleared returns if the "edition_date" field was cleared in this mutation.
+func (m *AlbumMutation) EditionDateCleared() bool {
+	_, ok := m.clearedFields[album.FieldEditionDate]
+	return ok
+}
+
+// ResetEditionDate resets all changes to the "edition_date" field.
+func (m *AlbumMutation) ResetEditionDate() {
+	m.edition_date = nil
+	delete(m.clearedFields, album.FieldEditionDate)
+}
+
+// SetGenres sets the "genres" field.
+func (m *AlbumMutation) SetGenres(s []string) {
+	m.genres = &s
+	m.appendgenres = nil
+}
+
+// Genres returns the value of the "genres" field in the mutation.
+func (m *AlbumMutation) Genres() (r []string, exists bool) {
+	v := m.genres
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGenres returns the old "genres" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldGenres(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGenres is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGenres requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGenres: %w", err)
+	}
+	return oldValue.Genres, nil
+}
+
+// AppendGenres adds s to the "genres" field.
+func (m *AlbumMutation) AppendGenres(s []string) {
+	m.appendgenres = append(m.appendgenres, s...)
+}
+
+// AppendedGenres returns the list of values that were appended to the "genres" field in this mutation.
+func (m *AlbumMutation) AppendedGenres() ([]string, bool) {
+	if len(m.appendgenres) == 0 {
+		return nil, false
+	}
+	return m.appendgenres, true
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (m *AlbumMutation) ClearGenres() {
+	m.genres = nil
+	m.appendgenres = nil
+	m.clearedFields[album.FieldGenres] = struct{}{}
+}
+
+// GenresCleared returns if the "genres" field was cleared in this mutation.
+func (m *AlbumMutation) GenresCleared() bool {
+	_, ok := m.clearedFields[album.FieldGenres]
+	return ok
+}
+
+// ResetGenres resets all changes to the "genres" field.
+func (m *AlbumMutation) ResetGenres() {
+	m.genres = nil
+	m.appendgenres = nil
+	delete(m.clearedFields, album.FieldGenres)
 }
 
 // SetMonitored sets the "monitored" field.
@@ -1465,7 +1632,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 24)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1489,6 +1656,15 @@ func (m *AlbumMutation) Fields() []string {
 	}
 	if m.release_date != nil {
 		fields = append(fields, album.FieldReleaseDate)
+	}
+	if m.original_date != nil {
+		fields = append(fields, album.FieldOriginalDate)
+	}
+	if m.edition_date != nil {
+		fields = append(fields, album.FieldEditionDate)
+	}
+	if m.genres != nil {
+		fields = append(fields, album.FieldGenres)
 	}
 	if m.monitored != nil {
 		fields = append(fields, album.FieldMonitored)
@@ -1553,6 +1729,12 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.GetType()
 	case album.FieldReleaseDate:
 		return m.ReleaseDate()
+	case album.FieldOriginalDate:
+		return m.OriginalDate()
+	case album.FieldEditionDate:
+		return m.EditionDate()
+	case album.FieldGenres:
+		return m.Genres()
 	case album.FieldMonitored:
 		return m.Monitored()
 	case album.FieldMonitorPinned:
@@ -1604,6 +1786,12 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldType(ctx)
 	case album.FieldReleaseDate:
 		return m.OldReleaseDate(ctx)
+	case album.FieldOriginalDate:
+		return m.OldOriginalDate(ctx)
+	case album.FieldEditionDate:
+		return m.OldEditionDate(ctx)
+	case album.FieldGenres:
+		return m.OldGenres(ctx)
 	case album.FieldMonitored:
 		return m.OldMonitored(ctx)
 	case album.FieldMonitorPinned:
@@ -1694,6 +1882,27 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetReleaseDate(v)
+		return nil
+	case album.FieldOriginalDate:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOriginalDate(v)
+		return nil
+	case album.FieldEditionDate:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEditionDate(v)
+		return nil
+	case album.FieldGenres:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGenres(v)
 		return nil
 	case album.FieldMonitored:
 		v, ok := value.(bool)
@@ -1840,6 +2049,15 @@ func (m *AlbumMutation) ClearedFields() []string {
 	if m.FieldCleared(album.FieldReleaseDate) {
 		fields = append(fields, album.FieldReleaseDate)
 	}
+	if m.FieldCleared(album.FieldOriginalDate) {
+		fields = append(fields, album.FieldOriginalDate)
+	}
+	if m.FieldCleared(album.FieldEditionDate) {
+		fields = append(fields, album.FieldEditionDate)
+	}
+	if m.FieldCleared(album.FieldGenres) {
+		fields = append(fields, album.FieldGenres)
+	}
 	if m.FieldCleared(album.FieldLastSearchAt) {
 		fields = append(fields, album.FieldLastSearchAt)
 	}
@@ -1889,6 +2107,15 @@ func (m *AlbumMutation) ClearField(name string) error {
 		return nil
 	case album.FieldReleaseDate:
 		m.ClearReleaseDate()
+		return nil
+	case album.FieldOriginalDate:
+		m.ClearOriginalDate()
+		return nil
+	case album.FieldEditionDate:
+		m.ClearEditionDate()
+		return nil
+	case album.FieldGenres:
+		m.ClearGenres()
 		return nil
 	case album.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -1948,6 +2175,15 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldReleaseDate:
 		m.ResetReleaseDate()
+		return nil
+	case album.FieldOriginalDate:
+		m.ResetOriginalDate()
+		return nil
+	case album.FieldEditionDate:
+		m.ResetEditionDate()
+		return nil
+	case album.FieldGenres:
+		m.ResetGenres()
 		return nil
 	case album.FieldMonitored:
 		m.ResetMonitored()

@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/ent/season"
@@ -53,7 +54,13 @@ func withBookContext(q *ent.BookQuery) {
 func withAlbumContext(q *ent.AlbumQuery) {
 	q.WithArtist().WithTracks(func(tq *ent.TrackQuery) {
 		tq.Order(ent.Asc(track.FieldDisc), ent.Asc(track.FieldPosition)).
-			WithMediaFiles()
+			WithMediaFiles().
+			// The featured artists, which the album importer writes into
+			// each track's tags.
+			WithCredits(func(cq *ent.MusicCreditQuery) {
+				cq.Where(musiccredit.KindEQ(musiccredit.KindFeaturing)).
+					Order(ent.Asc(musiccredit.FieldOrdinal))
+			})
 	})
 }
 

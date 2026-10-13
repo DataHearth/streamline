@@ -316,18 +316,41 @@ type mbReleaseGroup struct {
 	PrimaryType      string   `json:"primary-type"`
 	SecondaryTypes   []string `json:"secondary-types"`
 	FirstReleaseDate string   `json:"first-release-date"`
+	Genres           []mbTag  `json:"genres"`
 }
 
 func (rg mbReleaseGroup) toInfo() ReleaseGroupInfo {
 	info := ReleaseGroupInfo{MBID: rg.ID, Title: rg.Title, Type: mapAlbumType(rg)}
-	// MusicBrainz dates may be YYYY, YYYY-MM, or YYYY-MM-DD.
-	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
-		if t, err := time.Parse(layout, rg.FirstReleaseDate); err == nil {
-			info.ReleaseDate = &t
-			break
-		}
+	if t, ok := parseMBDate(rg.FirstReleaseDate); ok {
+		info.ReleaseDate = &t
+		info.OriginalDate = rg.FirstReleaseDate
 	}
 	return info
+}
+
+// parseMBDate reads a MusicBrainz date, which may be YYYY, YYYY-MM or
+// YYYY-MM-DD.
+func parseMBDate(s string) (time.Time, bool) {
+	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+// topGenres returns at most maxLookupGenres genre names, most voted first.
+func topGenres(tags []mbTag) []string {
+	sorted := slices.Clone(tags)
+	slices.SortStableFunc(sorted, func(a, b mbTag) int { return b.Count - a.Count })
+	out := []string{}
+	for _, g := range sorted {
+		if len(out) == maxLookupGenres {
+			break
+		}
+		out = append(out, titleCase(g.Name))
+	}
+	return out
 }
 
 func luceneQuote(s string) string {
@@ -486,14 +509,8 @@ func (m *MusicBrainz) GetArtist(
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
 	}
-	slices.SortStableFunc(artist.Genres, func(a, b mbTag) int {
-		return b.Count - a.Count
-	})
-	for _, g := range artist.Genres {
-		if len(details.Genres) == maxLookupGenres {
-			break
-		}
-		details.Genres = append(details.Genres, titleCase(g.Name))
+	if g := topGenres(artist.Genres); len(g) > 0 {
+		details.Genres = g
 	}
 	if len(details.Genres) > 0 {
 		details.Genre = details.Genres[0]
@@ -682,13 +699,20 @@ func (m *MusicBrainz) GetReleaseGroup(
 		Releases     []mbRelease `json:"releases"`
 		ArtistCredit []mbCredit  `json:"artist-credit"`
 	}
-	if err := m.get(ctx, "/release-group/"+url.PathEscape(mbid),
-		url.Values{"inc": {"releases+media+artist-credits"}}, &rg); err != nil {
+	if err := m.get(
+		ctx,
+		"/release-group/"+url.PathEscape(mbid),
+		url.Values{
+			"inc": {"releases+media+artist-credits+genres"},
+		},
+		&rg,
+	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      canonicalRelease(rg.Releases),
+		Genres:           topGenres(rg.Genres),
 	}
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
@@ -802,6 +826,9 @@ var roleByType = map[string]string{
 var writerTypes = []string{"writer", "composer", "lyricist"}
 
 func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
+	if _, ok := parseMBDate(rel.Date); ok {
+		d.EditionDate = rel.Date
+	}
 	d.Barcode = rel.Barcode
 	d.Country = validCountry(rel.Country)
 	if len(rel.LabelInfo) > 0 {

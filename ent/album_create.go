@@ -120,6 +120,40 @@ func (_c *AlbumCreate) SetNillableReleaseDate(v *time.Time) *AlbumCreate {
 	return _c
 }
 
+// SetOriginalDate sets the "original_date" field.
+func (_c *AlbumCreate) SetOriginalDate(v string) *AlbumCreate {
+	_c.mutation.SetOriginalDate(v)
+	return _c
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableOriginalDate(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetOriginalDate(*v)
+	}
+	return _c
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_c *AlbumCreate) SetEditionDate(v string) *AlbumCreate {
+	_c.mutation.SetEditionDate(v)
+	return _c
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableEditionDate(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetEditionDate(*v)
+	}
+	return _c
+}
+
+// SetGenres sets the "genres" field.
+func (_c *AlbumCreate) SetGenres(v []string) *AlbumCreate {
+	_c.mutation.SetGenres(v)
+	return _c
+}
+
 // SetMonitored sets the "monitored" field.
 func (_c *AlbumCreate) SetMonitored(v bool) *AlbumCreate {
 	_c.mutation.SetMonitored(v)
@@ -559,6 +593,18 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ReleaseDate(); ok {
 		_spec.SetField(album.FieldReleaseDate, field.TypeTime, value)
 		_node.ReleaseDate = &value
+	}
+	if value, ok := _c.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+		_node.OriginalDate = value
+	}
+	if value, ok := _c.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+		_node.EditionDate = value
+	}
+	if value, ok := _c.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+		_node.Genres = value
 	}
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)

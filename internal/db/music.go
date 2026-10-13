@@ -65,11 +65,12 @@ type PerformerSeed struct {
 // AlbumSeed is a release group as the artist's discography lists it. The
 // tracks arrive later, through SetAlbumHydration.
 type AlbumSeed struct {
-	MBID        string
-	Title       string
-	Type        string
-	ReleaseDate *time.Time
-	Monitored   bool
+	MBID         string
+	Title        string
+	Type         string
+	ReleaseDate  *time.Time
+	OriginalDate string
+	Monitored    bool
 }
 
 type MemberSeed struct {
@@ -129,6 +130,9 @@ type ArtistDetailsParams struct {
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
 	ReleaseMBID     string
+	OriginalDate    string
+	EditionDate     string
+	Genres          []string
 	Barcode         string
 	Label           string
 	CatalogNumber   string
@@ -154,7 +158,8 @@ func createAlbum(
 		SetTitle(a.Title).
 		SetMonitored(a.Monitored).
 		SetArtistID(artistID).
-		SetNillableReleaseDate(a.ReleaseDate)
+		SetNillableReleaseDate(a.ReleaseDate).
+		SetOriginalDate(a.OriginalDate)
 	if a.Type != "" {
 		b = b.SetType(album.Type(a.Type))
 	}
@@ -734,6 +739,9 @@ func (db *DB) RefreshArtist(
 			u := c.Album.UpdateOne(cur).
 				SetTitle(a.Title).
 				SetNillableReleaseDate(a.ReleaseDate)
+			if a.OriginalDate != "" {
+				u = u.SetOriginalDate(a.OriginalDate)
+			}
 			if a.Type != "" {
 				u = u.SetType(album.Type(a.Type))
 			}
@@ -969,7 +977,13 @@ func (db *DB) SetAlbumHydration(
 		SetCatalogNumber(p.CatalogNumber).
 		SetCountry(p.Country).
 		SetMedia(joinCSV(p.Media)).
+		SetEditionDate(p.EditionDate).
+		// Never NULL once hydrated: NULL is the marker the backfill reads.
+		SetGenres(append([]string{}, p.Genres...)).
 		SetMetadataFetchedAt(at)
+	if p.OriginalDate != "" {
+		u = u.SetOriginalDate(p.OriginalDate)
+	}
 	if p.ReleaseMBID != "" {
 		u = u.SetReleaseMbid(p.ReleaseMBID)
 	}
@@ -1128,6 +1142,26 @@ func (db *DB) ListAlbumsAwaitingCredits(
 		).
 		WithArtist().
 		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
+// least one file whose genres were never fetched: albums hydrated before the
+// genres and edition date were part of hydration. Those are what the tag
+// writer reads, so albums without files wait for their import.
+func (db *DB) ListAlbumsAwaitingDetails(
+	ctx context.Context,
+	limit int,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.MetadataFetchedAtNotNil(),
+			album.GenresIsNil(),
+			album.HasTracksWith(track.HasMediaFiles()),
+		).
+		WithArtist().
+		Order(ent.Asc(album.FieldID)).
 		Limit(limit).
 		All(ctx)
 }

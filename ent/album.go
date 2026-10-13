@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,6 +35,12 @@ type Album struct {
 	Type album.Type `json:"type,omitempty"`
 	// ReleaseDate holds the value of the "release_date" field.
 	ReleaseDate *time.Time `json:"release_date,omitempty"`
+	// OriginalDate holds the value of the "original_date" field.
+	OriginalDate string `json:"original_date,omitempty"`
+	// EditionDate holds the value of the "edition_date" field.
+	EditionDate string `json:"edition_date,omitempty"`
+	// Genres holds the value of the "genres" field.
+	Genres []string `json:"genres,omitempty"`
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
 	// MonitorPinned holds the value of the "monitor_pinned" field.
@@ -136,11 +143,13 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case album.FieldGenres:
+			values[i] = new([]byte)
 		case album.FieldMonitored, album.FieldMonitorPinned:
 			values[i] = new(sql.NullBool)
 		case album.FieldID, album.FieldGrabFailures:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -215,6 +224,26 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ReleaseDate = new(time.Time)
 				*_m.ReleaseDate = value.Time
+			}
+		case album.FieldOriginalDate:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field original_date", values[i])
+			} else if value.Valid {
+				_m.OriginalDate = value.String
+			}
+		case album.FieldEditionDate:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field edition_date", values[i])
+			} else if value.Valid {
+				_m.EditionDate = value.String
+			}
+		case album.FieldGenres:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field genres", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Genres); err != nil {
+					return fmt.Errorf("unmarshal field genres: %w", err)
+				}
 			}
 		case album.FieldMonitored:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -390,6 +419,15 @@ func (_m *Album) String() string {
 		builder.WriteString("release_date=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("original_date=")
+	builder.WriteString(_m.OriginalDate)
+	builder.WriteString(", ")
+	builder.WriteString("edition_date=")
+	builder.WriteString(_m.EditionDate)
+	builder.WriteString(", ")
+	builder.WriteString("genres=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
 	builder.WriteString(", ")
 	builder.WriteString("monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))

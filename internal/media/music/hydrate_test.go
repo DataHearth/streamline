@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -210,6 +211,95 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 			Expect(e.svc.HydrateAlbum(e.ctx, 999)).To(Succeed())
 		})
 
+		It("stores both dates as MusicBrainz wrote them, and the genres", func() {
+			_, albums := e.seedArtist("Nirvana",
+				albumSeed{mbid: "rg-1", title: "Nevermind"})
+			d := hydrated("rg-1", "Lithium")
+			d.OriginalDate, d.EditionDate = "1991-09", "2011-09-26"
+			d.Genres = []string{"Grunge", "Alternative Rock"}
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(d, nil).Once()
+
+			Expect(e.svc.HydrateAlbum(e.ctx, albums[0].ID)).To(Succeed())
+
+			got := e.client.Album.GetX(e.ctx, albums[0].ID)
+			Expect(got.OriginalDate).To(Equal("1991-09"))
+			Expect(got.EditionDate).To(Equal("2011-09-26"))
+			Expect(got.Genres).To(Equal([]string{"Grunge", "Alternative Rock"}))
+		})
+
+		It("records an empty genre list rather than none", func() {
+			_, albums := e.seedArtist("Nirvana",
+				albumSeed{mbid: "rg-1", title: "Nevermind"})
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+				Return(hydrated("rg-1", "Lithium"), nil).Once()
+
+			Expect(e.svc.HydrateAlbum(e.ctx, albums[0].ID)).To(Succeed())
+
+			got := e.client.Album.GetX(e.ctx, albums[0].ID)
+			Expect(got.Genres).NotTo(BeNil())
+			Expect(got.Genres).To(BeEmpty())
+		})
+
+		Describe("an album hydrated before genres were fetched", func() {
+			var alb *ent.Album
+
+			BeforeEach(func() {
+				_, albums := e.seedArtist(
+					"Nirvana",
+					albumSeed{
+						mbid:   "rg-1",
+						title:  "Nevermind",
+						tracks: []string{"Lithium"},
+					},
+				)
+				alb = albums[0]
+				e.client.Album.UpdateOneID(alb.ID).
+					SetLabel("DGC").SetCountry("US").SetMedia("cd,vinyl").
+					ClearGenres().ExecX(e.ctx)
+			})
+
+			It("fetches them when someone needs the album", func() {
+				d := hydrated("rg-1", "Lithium")
+				d.Genres = []string{"Grunge"}
+				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+					Return(d, nil).Once()
+
+				Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+				Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+
+				Expect(e.client.Album.GetX(e.ctx, alb.ID).Genres).
+					To(Equal([]string{"Grunge"}))
+			})
+
+			It("keeps the album and reports nothing when the fetch fails", func() {
+				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+					Return(nil, errors.New("musicbrainz down")).Once()
+
+				Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+
+				got := e.client.Album.GetX(e.ctx, alb.ID)
+				Expect(got.Genres).To(BeNil())
+				Expect(got.Label).To(Equal("DGC"))
+				Expect(got.QueryTracks().CountX(e.ctx)).To(Equal(1))
+			})
+
+			It("keeps what it holds when MusicBrainz no longer has it", func() {
+				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+					Return(nil, metadata.ErrNotFound).Once()
+
+				Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+
+				got := e.client.Album.GetX(e.ctx, alb.ID)
+				Expect(got.Genres).NotTo(BeNil())
+				Expect(got.Genres).To(BeEmpty())
+				Expect(got.Label).To(Equal("DGC"))
+				Expect(got.Country).To(Equal("US"))
+				Expect(got.Media).To(Equal("cd,vinyl"))
+				Expect(got.QueryTracks().CountX(e.ctx)).To(Equal(1))
+			})
+		})
+
 		It("marks as guests only the performers nobody expects", func() {
 			a, albums := e.seedArtist(
 				"Nirvana",
@@ -362,6 +452,32 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 	})
 
 	Describe("the sweep", func() {
+		It("backfills the genres of albums holding files, and only those", func() {
+			e.setConfig(nil)
+			_, albums := e.seedArtist(
+				"Alpha",
+				albumSeed{mbid: "held", title: "Held", tracks: []string{"A"}},
+				albumSeed{mbid: "bare", title: "Bare", tracks: []string{"A"}},
+			)
+			for _, a := range albums {
+				e.client.Album.UpdateOneID(a.ID).
+					SetCreditsFetchedAt(time.Now()).ClearGenres().ExecX(e.ctx)
+			}
+			t := albums[0].QueryTracks().OnlyX(e.ctx)
+			e.addFile(t, "/music/Alpha/Held/01.flac", "lossless")
+			d := hydrated("held", "A")
+			d.Genres = []string{"Rock"}
+			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "held").
+				Return(d, nil).Once()
+
+			e.svc.sweepHydration(e.ctx)
+			Eventually(e.idle).Should(BeTrue())
+
+			Expect(e.client.Album.GetX(e.ctx, albums[0].ID).Genres).
+				To(Equal([]string{"Rock"}))
+			Expect(e.client.Album.GetX(e.ctx, albums[1].ID).Genres).To(BeNil())
+		})
+
 		It(
 			"queues unfinished albums, credit-less ones and old trackless ones",
 			func() {

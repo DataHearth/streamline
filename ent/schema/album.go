@@ -31,6 +31,18 @@ func (Album) Fields() []ent.Field {
 			Values("album", "ep", "single", "compilation", "live", "other").
 			Default("album"),
 		field.Time("release_date").Optional().Nillable(),
+		// original_date is the release group's first-release-date and
+		// edition_date the canonical release's own date, both as MusicBrainz
+		// writes them (YYYY, YYYY-MM or YYYY-MM-DD): they are what the tag
+		// writer puts in ORIGINALDATE and DATE, and a parsed time would turn
+		// a year-only date into the first of January.
+		field.String("original_date").Optional(),
+		field.String("edition_date").Optional(),
+		// genres are the release group's top genres by vote. NULL is an album
+		// hydrated before genres were fetched, which the hydration worker
+		// backfills; hydration always writes a list, empty when MusicBrainz
+		// has none.
+		field.JSON("genres", []string{}).Optional(),
 		field.Bool("monitored").Default(true),
 		// monitor_pinned marks a monitored flag set by hand, which the
 		// monitored-types catch-up leaves alone; changing the artist's policy

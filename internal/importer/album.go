@@ -22,13 +22,13 @@ import (
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
-// albumImportMode is the transfer mode an album import uses. A hardlink shares
-// its inode with the seeding source, and tag writing rewrites the file in
-// place; a moved file is the seeding source itself. Either would corrupt what
-// the torrent is still serving, so those combinations copy.
+// albumImportMode is the transfer mode an album import uses. A moved file is
+// the seeding source itself, and tagging it would corrupt what the torrent is
+// still serving. A hardlink is safe from the write (audiotags renames a fresh
+// copy over the file), but that first write splits it from the torrent's
+// anyway, so it costs a copy's disk regardless and copies outright.
 func albumImportMode(libCfg config.LibraryConfig) string {
 	if libCfg.ImportMode == "hardlink" ||
 		(libCfg.KeepTorrentSeeding && libCfg.ImportMode == "move") {
@@ -118,12 +118,13 @@ func cueImage(files []string) bool {
 
 // hydratedAlbum returns the album with its tracks: one added as a stub has
 // none until its release data is fetched, and a download for it cannot be
-// matched before that.
+// matched before that. One hydrated before genres were fetched (NULL) gets
+// them now, best effort, since the tags written below carry them.
 func (w *Worker) hydratedAlbum(
 	ctx context.Context,
 	alb *ent.Album,
 ) (*ent.Album, error) {
-	if alb.MetadataFetchedAt != nil || w.albums == nil {
+	if (alb.MetadataFetchedAt != nil && alb.Genres != nil) || w.albums == nil {
 		return alb, nil
 	}
 	if err := w.albums.HydrateAlbum(ctx, alb.ID); err != nil {
@@ -192,10 +193,6 @@ func (w *Worker) importAlbumFiles(
 		return t.Disc > 1
 	})
 	mode := albumImportMode(libCfg)
-	var year uint16
-	if alb.ReleaseDate != nil {
-		year = numeric.SaturateU16(alb.ReleaseDate.Year())
-	}
 
 	var (
 		rows     []db.AdoptAlbumFile
@@ -225,21 +222,14 @@ func (w *Worker) importAlbumFiles(
 		aside = append(aside, moved...)
 		replaced = append(replaced, old...)
 
-		if err := audiotags.Write(imported.Path, audiotags.WriteTags{
-			Artist:           artist.Name,
-			AlbumArtist:      artist.Name,
-			Album:            alb.Title,
-			Title:            f.tr.Title,
-			Track:            f.tr.Position,
-			Disc:             f.tr.Disc,
-			Year:             year,
-			MBArtistID:       artist.Mbid,
-			MBReleaseGroupID: alb.Mbid,
-			MBRecordingID:    f.tr.Mbid,
-		}); err != nil {
+		if err := audiotags.Write(
+			imported.Path,
+			library.AlbumTrackTags(artist, alb, f.tr),
+			audiotags.DefaultStrip,
+		); err != nil {
 			slog.WarnContext(
 				ctx,
-				"album import: tag write failed, file imported untagged",
+				"album import: tag write failed, file imported with its own tags",
 				"file",
 				imported.Path,
 				"track.id",

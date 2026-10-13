@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/internal/db"
 	mockdb "github.com/datahearth/streamline/internal/db/mocks"
 	mockdl "github.com/datahearth/streamline/internal/download/mocks"
@@ -38,8 +40,9 @@ var albumTracks = []struct {
 }
 
 // seedTrackFile writes a tagged copy of a testdata fixture into dir, tagged as
-// the given track so the importer can match it. A fixture is renamed to ext
-// after tagging: Read sniffs content, Write dispatches on the extension.
+// the given track so the importer can match it, with the fixture's album,
+// album artist and date cleared: the album checks compare against those. name
+// keeps the fixture's extension: TagLib picks the format from it.
 func seedTrackFile(dir, name, fixture string, position uint16, title string) string {
 	GinkgoHelper()
 	data, err := os.ReadFile(
@@ -49,10 +52,15 @@ func seedTrackFile(dir, name, fixture string, position uint16, title string) str
 	path := filepath.Join(dir, name)
 	//nolint:gosec // path is a fresh temp dir joined with a fixed name
 	Expect(os.WriteFile(path, data, 0o600)).To(Succeed())
-	Expect(audiotags.Write(path, audiotags.WriteTags{
-		Artist: "Source Artist", Title: title,
-		Track: position, Disc: 1,
-	})).To(Succeed())
+	Expect(audiotags.Write(path, audiotags.Tags{
+		audiotags.KeyArtist:      {"Source Artist"},
+		audiotags.KeyTitle:       {title},
+		audiotags.KeyTrackNumber: {strconv.Itoa(int(position))},
+		audiotags.KeyDiscNumber:  {"1"},
+		audiotags.KeyAlbum:       nil,
+		audiotags.KeyAlbumArtist: nil,
+		audiotags.KeyDate:        nil,
+	}, nil)).To(Succeed())
 	return path
 }
 
@@ -339,16 +347,82 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		})
 	})
 
-	It("imports an untaggable format untagged and only warns", func() {
-		tagged := seedTrackFile(
-			dlDir,
-			"a.mp3",
-			"tagged.mp3",
-			1,
-			albumTracks[0].title,
-		)
-		opus := filepath.Join(dlDir, "a.opus")
-		Expect(os.Rename(tagged, opus)).To(Succeed())
+	It(
+		"writes the full tag set, keeps what it does not own and drops the tracker comment",
+		func() {
+			src := seedTrackFile(
+				dlDir,
+				"a.flac",
+				"tagged.flac",
+				1,
+				albumTracks[0].title,
+			)
+			Expect(audiotags.Write(src, audiotags.Tags{
+				"REPLAYGAIN_TRACK_GAIN": {"-7.20 dB"},
+				"COMMENT":               {"seeded at tracker.example"},
+				audiotags.KeyLabel:      {"Some Bootleg Label"},
+			}, nil)).To(Succeed())
+			alb.ReleaseMbid, alb.OriginalDate, alb.EditionDate = "rel-5", "1991-09-24", "2011-09-26"
+			alb.Genres, alb.Label, alb.Barcode = []string{
+				"Grunge",
+			}, "", "720642442524"
+			alb.Edges.Tracks[0].Edges.Credits = []*ent.MusicCredit{
+				{Kind: musiccredit.KindFeaturing, Name: "A Guest", Mbid: "g-1"},
+			}
+			rec := fixtureAlbumRecord(dlDir, alb)
+			expectFind(rec)
+			var got db.RecordAlbumImportSuccessParams
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(got.Files).To(HaveLen(1))
+			tags, err := audiotags.ReadTags(got.Files[0].Path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyArtist, []string{"Nirvana feat. A Guest"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyAlbumArtist, []string{"Nirvana"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyMBAlbumID, []string{"rel-5"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyMBReleaseGroupID, []string{"rg-5"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyMBArtistID, []string{"artist-4", "g-1"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyDate, []string{"2011-09-26"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyOriginalDate, []string{"1991-09-24"}))
+			Expect(tags).To(HaveKeyWithValue(audiotags.KeyGenre, []string{"Grunge"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue(audiotags.KeyBarcode, []string{"720642442524"}))
+			Expect(tags).To(HaveKeyWithValue(audiotags.KeyTrackTotal, []string{"3"}))
+			Expect(
+				tags,
+			).To(HaveKeyWithValue("REPLAYGAIN_TRACK_GAIN", []string{"-7.20 dB"}))
+			Expect(tags).NotTo(HaveKey("COMMENT"))
+			Expect(tags).NotTo(HaveKey(audiotags.KeyLabel))
+			Expect(audiotags.ReadTags(src)).To(HaveKey("COMMENT"))
+		},
+	)
+
+	It("tags the formats beyond MP3 and FLAC", func() {
+		seedTrackFile(dlDir, "a.opus", "tagged.opus", 1, albumTracks[0].title)
 		rec := fixtureAlbumRecord(dlDir, alb)
 		expectFind(rec)
 		var got db.RecordAlbumImportSuccessParams
@@ -362,8 +436,11 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 
 		Expect(got.Files).To(HaveLen(1))
 		Expect(got.Files[0].Path).To(Equal(destOf(1, albumTracks[0].title, "opus")))
-		Expect(got.Files[0].Path).To(BeAnExistingFile())
-		Expect(logs.String()).To(ContainSubstring("tag write failed"))
+		info, err := audiotags.Read(got.Files[0].Path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.Artist).To(Equal("Nirvana"))
+		Expect(info.Album).To(Equal("Nevermind"))
+		Expect(logs.String()).NotTo(ContainSubstring("tag write failed"))
 	})
 
 	Describe("an existing library file", func() {
