@@ -177,7 +177,8 @@ func ContextFromFile(
 	if info == nil {
 		return r
 	}
-	if res := quality.ResolutionFromDims(int(info.Width), int(info.Height)); res != "" {
+	res := quality.ResolutionFromDims(int(info.Width), int(info.Height))
+	if res != "" {
 		r.Resolution = res
 	}
 	if info.VideoCodec != "" {
