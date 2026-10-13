@@ -126,6 +126,8 @@ type AlbumMutation struct {
 	studio                  *string
 	metadata_fetched_at     *time.Time
 	credits_fetched_at      *time.Time
+	credits_version         *uint8
+	addcredits_version      *int8
 	clearedFields           map[string]struct{}
 	artist                  *uint32
 	clearedartist           bool
@@ -1430,6 +1432,62 @@ func (m *AlbumMutation) ResetCreditsFetchedAt() {
 	delete(m.clearedFields, album.FieldCreditsFetchedAt)
 }
 
+// SetCreditsVersion sets the "credits_version" field.
+func (m *AlbumMutation) SetCreditsVersion(u uint8) {
+	m.credits_version = &u
+	m.addcredits_version = nil
+}
+
+// CreditsVersion returns the value of the "credits_version" field in the mutation.
+func (m *AlbumMutation) CreditsVersion() (r uint8, exists bool) {
+	v := m.credits_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreditsVersion returns the old "credits_version" field's value of the Album entity.
+// If the Album object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AlbumMutation) OldCreditsVersion(ctx context.Context) (v uint8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreditsVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreditsVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreditsVersion: %w", err)
+	}
+	return oldValue.CreditsVersion, nil
+}
+
+// AddCreditsVersion adds u to the "credits_version" field.
+func (m *AlbumMutation) AddCreditsVersion(u int8) {
+	if m.addcredits_version != nil {
+		*m.addcredits_version += u
+	} else {
+		m.addcredits_version = &u
+	}
+}
+
+// AddedCreditsVersion returns the value that was added to the "credits_version" field in this mutation.
+func (m *AlbumMutation) AddedCreditsVersion() (r int8, exists bool) {
+	v := m.addcredits_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreditsVersion resets all changes to the "credits_version" field.
+func (m *AlbumMutation) ResetCreditsVersion() {
+	m.credits_version = nil
+	m.addcredits_version = nil
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by id.
 func (m *AlbumMutation) SetArtistID(id uint32) {
 	m.artist = &id
@@ -1719,7 +1777,7 @@ func (m *AlbumMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AlbumMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 27)
 	if m.create_time != nil {
 		fields = append(fields, album.FieldCreateTime)
 	}
@@ -1798,6 +1856,9 @@ func (m *AlbumMutation) Fields() []string {
 	if m.credits_fetched_at != nil {
 		fields = append(fields, album.FieldCreditsFetchedAt)
 	}
+	if m.credits_version != nil {
+		fields = append(fields, album.FieldCreditsVersion)
+	}
 	return fields
 }
 
@@ -1858,6 +1919,8 @@ func (m *AlbumMutation) Field(name string) (ent.Value, bool) {
 		return m.MetadataFetchedAt()
 	case album.FieldCreditsFetchedAt:
 		return m.CreditsFetchedAt()
+	case album.FieldCreditsVersion:
+		return m.CreditsVersion()
 	}
 	return nil, false
 }
@@ -1919,6 +1982,8 @@ func (m *AlbumMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMetadataFetchedAt(ctx)
 	case album.FieldCreditsFetchedAt:
 		return m.OldCreditsFetchedAt(ctx)
+	case album.FieldCreditsVersion:
+		return m.OldCreditsVersion(ctx)
 	}
 	return nil, fmt.Errorf("unknown Album field %s", name)
 }
@@ -2110,6 +2175,13 @@ func (m *AlbumMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCreditsFetchedAt(v)
 		return nil
+	case album.FieldCreditsVersion:
+		v, ok := value.(uint8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreditsVersion(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Album field %s", name)
 }
@@ -2121,6 +2193,9 @@ func (m *AlbumMutation) AddedFields() []string {
 	if m.addgrab_failures != nil {
 		fields = append(fields, album.FieldGrabFailures)
 	}
+	if m.addcredits_version != nil {
+		fields = append(fields, album.FieldCreditsVersion)
+	}
 	return fields
 }
 
@@ -2131,6 +2206,8 @@ func (m *AlbumMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case album.FieldGrabFailures:
 		return m.AddedGrabFailures()
+	case album.FieldCreditsVersion:
+		return m.AddedCreditsVersion()
 	}
 	return nil, false
 }
@@ -2146,6 +2223,13 @@ func (m *AlbumMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddGrabFailures(v)
+		return nil
+	case album.FieldCreditsVersion:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreditsVersion(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Album numeric field %s", name)
@@ -2350,6 +2434,9 @@ func (m *AlbumMutation) ResetField(name string) error {
 		return nil
 	case album.FieldCreditsFetchedAt:
 		m.ResetCreditsFetchedAt()
+		return nil
+	case album.FieldCreditsVersion:
+		m.ResetCreditsVersion()
 		return nil
 	}
 	return fmt.Errorf("unknown Album field %s", name)

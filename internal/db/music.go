@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -47,12 +48,16 @@ type TrackSeed struct {
 	Duration         uint32
 	Bonus            bool
 	Featuring        []PersonSeed
-	Writers          []PersonSeed
+	// Writers, Credits and Performers are stored only when the release
+	// call's credits are complete.
+	Writers    []MusicCreditSeed
+	Credits    []MusicCreditSeed
+	Performers []PerformerSeed
 }
 
-// AlbumCreditSeed is one production credit of an album; Role is one of the
+// MusicCreditSeed is one credit of an album or a track; Role is one of the
 // musiccredit role values.
-type AlbumCreditSeed struct {
+type MusicCreditSeed struct {
 	PersonSeed
 	Role string
 }
@@ -141,12 +146,21 @@ type HydrationParams struct {
 	Media           []string
 	Studio          string
 	Tracks          []TrackSeed
-	Credits         []AlbumCreditSeed
+	Credits         []MusicCreditSeed
 	Performers      []PerformerSeed
 	CreditsComplete bool
 }
 
 func joinCSV(s []string) string { return strings.Join(s, ",") }
+
+// creditRole is a seed's role as the column stores it, nil for none.
+func creditRole(r string) *musiccredit.Role {
+	if r == "" {
+		return nil
+	}
+	role := musiccredit.Role(r)
+	return &role
+}
 
 func createAlbum(
 	ctx context.Context,
@@ -992,7 +1006,8 @@ func (db *DB) SetAlbumHydration(
 		u = u.SetBarcode(p.Barcode)
 	}
 	if p.CreditsComplete {
-		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at)
+		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at).
+			SetCreditsVersion(library.MusicCreditsVersion)
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
@@ -1047,7 +1062,12 @@ func (db *DB) SetAlbumHydration(
 		}
 		kinds := []musiccredit.Kind{musiccredit.KindFeaturing}
 		if p.CreditsComplete {
-			kinds = append(kinds, musiccredit.KindWriter)
+			kinds = append(
+				kinds,
+				musiccredit.KindWriter,
+				musiccredit.KindCredit,
+				musiccredit.KindPerformer,
+			)
 		}
 		if _, err := c.MusicCredit.Delete().Where(
 			musiccredit.HasTrackWith(track.IDEQ(id)),
@@ -1067,7 +1087,22 @@ func (db *DB) SetAlbumHydration(
 			for i, w := range t.Writers {
 				creates = append(creates, c.MusicCredit.Create().
 					SetKind(musiccredit.KindWriter).
+					SetNillableRole(creditRole(w.Role)).
 					SetName(w.Name).SetMbid(w.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, cr := range t.Credits {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindCredit).
+					SetRole(musiccredit.Role(cr.Role)).
+					SetName(cr.Name).SetMbid(cr.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, pf := range t.Performers {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindPerformer).
+					SetName(pf.Name).SetMbid(pf.MBID).
+					SetInstruments(joinCSV(pf.Instruments)).
 					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
 			}
 		}
@@ -1150,9 +1185,10 @@ func (db *DB) ListAlbumsAwaitingCredits(
 }
 
 // ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
-// least one file whose genres were never fetched: albums hydrated before the
-// genres and edition date were part of hydration. Those are what the tag
-// writer reads, so albums without files wait for their import.
+// least one file whose release data predates what the tag writer reads:
+// genres never fetched (hydrated before the genres and edition date were
+// part of hydration), or credits stored under an older layout than
+// library.MusicCreditsVersion. Albums without files wait for their import.
 func (db *DB) ListAlbumsAwaitingDetails(
 	ctx context.Context,
 	limit int,
@@ -1160,7 +1196,13 @@ func (db *DB) ListAlbumsAwaitingDetails(
 	return db.client.Album.Query().
 		Where(
 			album.MetadataFetchedAtNotNil(),
-			album.GenresIsNil(),
+			album.Or(
+				album.GenresIsNil(),
+				album.And(
+					album.CreditsFetchedAtNotNil(),
+					album.CreditsVersionLT(library.MusicCreditsVersion),
+				),
+			),
 			album.HasTracksWith(track.HasMediaFiles()),
 		).
 		WithArtist().

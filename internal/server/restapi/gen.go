@@ -1865,17 +1865,24 @@ func (e MusicArtistStatus) Valid() bool {
 
 // Defines values for MusicCreditRole.
 const (
+	MusicCreditRoleArranger  MusicCreditRole = "arranger"
 	MusicCreditRoleArtwork   MusicCreditRole = "artwork"
+	MusicCreditRoleConductor MusicCreditRole = "conductor"
 	MusicCreditRoleMastering MusicCreditRole = "mastering"
 	MusicCreditRoleMix       MusicCreditRole = "mix"
 	MusicCreditRoleProducer  MusicCreditRole = "producer"
 	MusicCreditRoleRecording MusicCreditRole = "recording"
+	MusicCreditRoleRemixer   MusicCreditRole = "remixer"
 )
 
 // Valid indicates whether the value is a known member of the MusicCreditRole enum.
 func (e MusicCreditRole) Valid() bool {
 	switch e {
+	case MusicCreditRoleArranger:
+		return true
 	case MusicCreditRoleArtwork:
+		return true
+	case MusicCreditRoleConductor:
 		return true
 	case MusicCreditRoleMastering:
 		return true
@@ -1884,6 +1891,8 @@ func (e MusicCreditRole) Valid() bool {
 	case MusicCreditRoleProducer:
 		return true
 	case MusicCreditRoleRecording:
+		return true
+	case MusicCreditRoleRemixer:
 		return true
 	default:
 		return false

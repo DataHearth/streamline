@@ -38,6 +38,7 @@ var (
 		{Name: "studio", Type: field.TypeString, Nullable: true},
 		{Name: "metadata_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "credits_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "credits_version", Type: field.TypeUint8, Default: 0},
 		{Name: "artist_albums", Type: field.TypeUint32},
 	}
 	// AlbumsTable holds the schema information for the "albums" table.
@@ -48,7 +49,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[27]},
+				Columns:    []*schema.Column{AlbumsColumns[28]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -57,7 +58,7 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[27]},
+				Columns: []*schema.Column{AlbumsColumns[28]},
 			},
 			{
 				Name:    "album_status",
@@ -1165,7 +1166,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"credit", "performer", "featuring", "writer"}},
-		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork"}},
+		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork", "conductor", "remixer", "arranger", "composer", "lyricist", "writer"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
 		{Name: "instruments", Type: field.TypeString, Nullable: true},

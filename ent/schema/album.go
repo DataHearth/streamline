@@ -81,6 +81,11 @@ func (Album) Fields() []ent.Field {
 		// the light fallback did.
 		field.Time("metadata_fetched_at").Optional().Nillable(),
 		field.Time("credits_fetched_at").Optional().Nillable(),
+		// credits_version is the layout the credits were stored under
+		// (library.MusicCreditsVersion when current). An album holding files
+		// whose credits are older is fetched again in the background, and
+		// until then the tag writer leaves the credit tags alone.
+		field.Uint8("credits_version").Default(0),
 	}
 }
 

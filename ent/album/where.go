@@ -165,6 +165,11 @@ func CreditsFetchedAt(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldCreditsFetchedAt, v))
 }
 
+// CreditsVersion applies equality check predicate on the "credits_version" field. It's identical to CreditsVersionEQ.
+func CreditsVersion(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldCreditsVersion, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldCreateTime, v))
@@ -1518,6 +1523,46 @@ func CreditsFetchedAtIsNil() predicate.Album {
 // CreditsFetchedAtNotNil applies the NotNil predicate on the "credits_fetched_at" field.
 func CreditsFetchedAtNotNil() predicate.Album {
 	return predicate.Album(sql.FieldNotNull(FieldCreditsFetchedAt))
+}
+
+// CreditsVersionEQ applies the EQ predicate on the "credits_version" field.
+func CreditsVersionEQ(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldCreditsVersion, v))
+}
+
+// CreditsVersionNEQ applies the NEQ predicate on the "credits_version" field.
+func CreditsVersionNEQ(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldCreditsVersion, v))
+}
+
+// CreditsVersionIn applies the In predicate on the "credits_version" field.
+func CreditsVersionIn(vs ...uint8) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldCreditsVersion, vs...))
+}
+
+// CreditsVersionNotIn applies the NotIn predicate on the "credits_version" field.
+func CreditsVersionNotIn(vs ...uint8) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldCreditsVersion, vs...))
+}
+
+// CreditsVersionGT applies the GT predicate on the "credits_version" field.
+func CreditsVersionGT(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldCreditsVersion, v))
+}
+
+// CreditsVersionGTE applies the GTE predicate on the "credits_version" field.
+func CreditsVersionGTE(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldCreditsVersion, v))
+}
+
+// CreditsVersionLT applies the LT predicate on the "credits_version" field.
+func CreditsVersionLT(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldCreditsVersion, v))
+}
+
+// CreditsVersionLTE applies the LTE predicate on the "credits_version" field.
+func CreditsVersionLTE(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldCreditsVersion, v))
 }
 
 // HasArtist applies the HasEdge predicate on the "artist" edge.

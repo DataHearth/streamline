@@ -164,4 +164,147 @@ var _ = Describe("AlbumTrackTags", Label("unit", "library"), func() {
 		Expect(library.AlbumTrackTags(ar, al, tr)[audiotags.KeyCompilation]).
 			To(Equal([]string{"1"}))
 	})
+	Context("credits", func() {
+		BeforeEach(func() {
+			at := time.Now()
+			al.CreditsFetchedAt, al.CreditsVersion = &at, library.MusicCreditsVersion
+			other := al.Edges.Tracks[0]
+			other.Edges.Credits = []*ent.MusicCredit{
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleRemixer,
+					Name: "Remixer Of Track One",
+				},
+			}
+			al.Edges.Credits = []*ent.MusicCredit{
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleProducer,
+					Name: "Butch Vig",
+					Mbid: "a-butch",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleMastering,
+					Name: "Howie Weinberg",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleArtwork,
+					Name: "Robert Fisher",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleMix,
+					Name: "Andy Wallace",
+					Mbid: "a-andy",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleRemixer,
+					Name: "Remixer Of Track One",
+				},
+				{
+					Kind:        musiccredit.KindPerformer,
+					Name:        "Album Personnel",
+					Instruments: "drums",
+				},
+			}
+			tr.Edges.Credits = []*ent.MusicCredit{
+				{
+					Kind: musiccredit.KindWriter,
+					Role: musiccredit.RoleComposer,
+					Name: "Kurt Cobain",
+				},
+				{
+					Kind: musiccredit.KindWriter,
+					Role: musiccredit.RoleComposer,
+					Name: "Krist Novoselic",
+				},
+				{
+					Kind: musiccredit.KindWriter,
+					Role: musiccredit.RoleLyricist,
+					Name: "Kurt Cobain",
+				},
+				{Kind: musiccredit.KindWriter, Name: "An Old Writer Row"},
+				{
+					Kind: musiccredit.KindWriter,
+					Role: musiccredit.RoleArranger,
+					Name: "An Orchestrator",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleMix,
+					Name: "Andy Wallace",
+					Mbid: "a-andy",
+				},
+				{
+					Kind: musiccredit.KindCredit,
+					Role: musiccredit.RoleConductor,
+					Name: "A Conductor",
+				},
+				{
+					Kind:        musiccredit.KindPerformer,
+					Name:        "Kurt Cobain",
+					Instruments: "guitar,lead vocals",
+				},
+				{
+					Kind:        musiccredit.KindPerformer,
+					Name:        "Dave Grohl",
+					Instruments: "drums",
+				},
+				{Kind: musiccredit.KindPerformer, Name: "Someone"},
+			}
+		})
+
+		It(
+			"writes the track's writers, its recording's credits and the release's",
+			func() {
+				t := library.AlbumTrackTags(ar, al, tr)
+
+				Expect(
+					t[audiotags.KeyComposer],
+				).To(Equal([]string{"Kurt Cobain", "Krist Novoselic"}))
+				Expect(t[audiotags.KeyLyricist]).To(Equal([]string{"Kurt Cobain"}))
+				Expect(
+					t[audiotags.KeyWriter],
+				).To(Equal([]string{"An Old Writer Row"}))
+				Expect(
+					t[audiotags.KeyArranger],
+				).To(Equal([]string{"An Orchestrator"}))
+				Expect(t[audiotags.KeyMixer]).To(Equal([]string{"Andy Wallace"}))
+				Expect(t[audiotags.KeyConductor]).To(Equal([]string{"A Conductor"}))
+				Expect(t[audiotags.KeyProducer]).To(Equal([]string{"Butch Vig"}))
+				Expect(
+					t[audiotags.KeyEngineer],
+				).To(Equal([]string{"Howie Weinberg"}))
+				Expect(t[audiotags.KeyPerformer]).To(Equal([]string{
+					"Kurt Cobain (guitar)",
+					"Kurt Cobain (lead vocals)",
+					"Dave Grohl (drums)",
+					"Someone",
+				}))
+				Expect(t).To(HaveKeyWithValue(audiotags.KeyRemixer, BeNil()),
+					"another recording's credit is not the release's")
+			},
+		)
+
+		It(
+			"leaves the credit tags alone until the album's credits are current",
+			func() {
+				al.CreditsVersion = 0
+				t := library.AlbumTrackTags(ar, al, tr)
+				for _, k := range []string{
+					audiotags.KeyComposer, audiotags.KeyPerformer, audiotags.KeyProducer,
+				} {
+					Expect(t).NotTo(HaveKey(k))
+				}
+
+				al.CreditsVersion, al.CreditsFetchedAt = library.MusicCreditsVersion, nil
+				Expect(
+					library.AlbumTrackTags(ar, al, tr),
+				).NotTo(HaveKey(audiotags.KeyComposer))
+			},
+		)
+	})
 })

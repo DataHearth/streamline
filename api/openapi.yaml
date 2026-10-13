@@ -8492,7 +8492,7 @@ components:
 
     MusicCreditRole:
       type: string
-      enum: [producer, recording, mix, mastering, artwork]
+      enum: [producer, recording, mix, mastering, artwork, conductor, remixer, arranger]
 
     MusicArtistCore:
       type: object

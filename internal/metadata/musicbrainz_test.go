@@ -303,7 +303,10 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 						{"type":"performance","target-type":"work","work":{"relations":[
 							{"type":"writer","target-type":"artist","artist":{"id":"a-kurt","name":"Kurt Cobain"}},
 							{"type":"lyricist","target-type":"artist","artist":{"id":"a-kurt","name":"Kurt Cobain"}},
-							{"type":"composer","target-type":"artist","artist":{"id":"a-krist","name":"Krist Novoselic"}}]}},
+							{"type":"composer","target-type":"artist","artist":{"id":"a-krist","name":"Krist Novoselic"}},
+							{"type":"orchestrator","target-type":"artist","artist":{"id":"a-orc","name":"An Orchestrator"}}]}},
+						{"type":"conductor","target-type":"artist","artist":{"id":"a-cond","name":"A Conductor"}},
+						{"type":"mix","target-type":"artist","artist":{"id":"a-andy","name":"Andy Wallace"}},
 						{"type":"mix","target-type":"artist","artist":{"id":"a-andy","name":"Andy Wallace"}}]}},
 					{"position":2,"title":"In Bloom (Bonus Track)","length":254000,"recording":{"id":"rec-2"}}]},
 				{"position":2,"title":"Bonus disc","format":"CD","tracks":[
@@ -453,16 +456,59 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				To(Equal([]bool{false, true, true}))
 		})
 
-		It("reads writers, deduped per track", func() {
+		It(
+			"reads writers with their part in the work, deduped per person and part",
+			func() {
+				serve(
+					func(string) *http.Response { return jsonResponse(200, heavyRelease) },
+				)
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.Tracks[0].Writers).To(Equal([]CreditInfo{
+					{
+						Name: "Kurt Cobain", MBID: "a-kurt",
+						Role: "writer",
+					},
+					{
+						Name: "Kurt Cobain", MBID: "a-kurt",
+						Role: "lyricist",
+					},
+					{
+						Name: "Krist Novoselic",
+						MBID: "a-krist",
+						Role: "composer",
+					},
+					{
+						Name: "An Orchestrator",
+						MBID: "a-orc",
+						Role: "arranger",
+					},
+				}))
+			},
+		)
+
+		It("keeps each recording's own credits and performers on its track", func() {
 			serve(
 				func(string) *http.Response { return jsonResponse(200, heavyRelease) },
 			)
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rg.Tracks[0].Writers).To(Equal([]PersonInfo{
-				{Name: "Kurt Cobain", MBID: "a-kurt"},
-				{Name: "Krist Novoselic", MBID: "a-krist"},
+			Expect(rg.Tracks[0].Credits).To(Equal([]CreditInfo{
+				{
+					Name: "A Conductor", MBID: "a-cond",
+					Role: "conductor",
+				},
+				{
+					Name: "Andy Wallace", MBID: "a-andy",
+					Role: "mix",
+				},
 			}))
+			Expect(rg.Tracks[0].Performers).To(Equal([]PerformerInfo{{
+				Name: "Kurt Cobain", MBID: "a-kurt",
+				Instruments: []string{"guitar", "lead vocals"},
+			}}))
+			Expect(rg.Tracks[1].Credits).To(BeEmpty())
+			Expect(rg.Tracks[1].Performers).To(BeEmpty())
 		})
 
 		It("reads production credits, deduped on person and role", func() {
@@ -483,6 +529,10 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				CreditInfo{
 					Name: "Andy Wallace", MBID: "a-andy",
 					Role: "mix",
+				},
+				CreditInfo{
+					Name: "A Conductor", MBID: "a-cond",
+					Role: "conductor",
 				},
 			))
 		})

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -169,9 +170,20 @@ func write(path, ext string, tags Tags, p Policy, art Art) (string, error) {
 		return "", err
 	}
 	want := fold(ext, tags)
+	_, performers := tags[taglib.Performer]
 	update := map[string][]string{}
 	for k := range current {
-		if matches(k, p.Strip) && !matches(k, p.Preserve) {
+		if matches(k, p.Preserve) {
+			continue
+		}
+		_, kept := want[k]
+		switch {
+		case matches(k, p.Strip):
+			update[k] = nil
+		case performers && !kept && strings.HasPrefix(k, performerPrefix):
+			// The performers are owned as a family: an instrument no
+			// longer credited, or one an earlier tagger spelled
+			// differently, goes.
 			update[k] = nil
 		}
 	}
@@ -279,12 +291,35 @@ func frontCover(path, ext string) (int, []byte, error) {
 	return idx, data, nil
 }
 
+const performerPrefix = taglib.Performer + ":"
+
+// performerValue splits Picard's "Name (instrument)".
+var performerValue = regexp.MustCompile(`^(.+?) \(([^()]+)\)$`)
+
 // fold returns tags as the format stores them: values trimmed and emptied
-// out, and the totals folded into the number for ID3 and MP4.
+// out, the totals folded into the number for ID3 and MP4, and for ID3 the
+// performers moved to one PERFORMER:<INSTRUMENT> key per instrument.
 func fold(ext string, tags Tags) map[string][]string {
 	out := make(map[string][]string, len(tags))
 	for k, vs := range tags {
 		out[k] = clean(vs)
+	}
+	if ext == ".mp3" {
+		if vs, ok := out[taglib.Performer]; ok {
+			var plain []string
+			for _, v := range vs {
+				m := performerValue.FindStringSubmatch(v)
+				if m == nil {
+					plain = append(plain, v)
+					continue
+				}
+				key := performerPrefix + strings.ToUpper(m[2])
+				if !slices.Contains(out[key], m[1]) {
+					out[key] = append(out[key], m[1])
+				}
+			}
+			out[taglib.Performer] = plain
+		}
 	}
 	if ext != ".mp3" && ext != ".m4a" {
 		return out

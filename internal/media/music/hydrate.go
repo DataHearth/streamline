@@ -17,6 +17,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -202,17 +203,22 @@ func (s *Service) enqueueHydration(artistID uint32, items ...hydrateItem) {
 // the albums still waiting in the database (restart recovery) until nothing
 // new turns up. An album that failed in this run is not retried in it.
 func (s *Service) hydrationWorker(ctx context.Context) {
-	failed := map[uint32]struct{}{}
+	// tried is every album this run already fetched, which a refill never
+	// queues again: a credits refetch that falls back to the light call
+	// succeeds without moving the album's credits version, and would be
+	// listed, and fetched, forever.
+	tried := map[uint32]struct{}{}
 	for {
 		it, ok := s.hydrate.pop()
 		if !ok {
-			if s.refillHydration(ctx, failed) || !s.hydrate.stop() {
+			if s.refillHydration(ctx, tried) || !s.hydrate.stop() {
 				continue
 			}
 			return
 		}
 		_, err := s.hydrateAlbum(ctx, it.albumID, true)
 		s.hydrate.done(it.albumID)
+		tried[it.albumID] = struct{}{}
 		var limited *metadata.RateLimitedError
 		switch {
 		case errors.As(err, &limited):
@@ -222,9 +228,9 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			if serr := sleep(ctx, pause); serr != nil {
 				return
 			}
+			// Not a failure of the album's: it goes back on the queue,
+			// which a refill would not do.
 			s.requeue(ctx, it)
-		case err != nil:
-			failed[it.albumID] = struct{}{}
 		}
 	}
 }
@@ -238,32 +244,37 @@ func (s *Service) requeue(ctx context.Context, it hydrateItem) {
 }
 
 // refillHydration queues up to sweepBatch albums still waiting for their
-// tracks, minus the ones that failed this run, and reports whether it found
-// any.
+// tracks, minus the ones this run already fetched, and reports whether it
+// found any.
 func (s *Service) refillHydration(
 	ctx context.Context,
-	failed map[uint32]struct{},
+	tried map[uint32]struct{},
 ) bool {
-	rows, err := s.db.ListAlbumsAwaitingHydration(ctx, sweepBatch+len(failed))
+	fresh := func(rows []*ent.Album) []*ent.Album {
+		return slices.DeleteFunc(rows, func(a *ent.Album) bool {
+			_, seen := tried[a.ID]
+			return seen || a.Edges.Artist == nil
+		})
+	}
+	rows, err := s.db.ListAlbumsAwaitingHydration(ctx, sweepBatch+len(tried))
 	if err != nil {
 		slog.WarnContext(ctx, "music hydration refill failed", "error", err)
 		return false
 	}
-	if len(rows) <= len(failed) {
-		// Nothing new waits for its tracks: backfill the genres and edition
-		// date of albums holding files, hydrated before those were fetched.
-		// Background class, so a lookup never queues behind it.
-		more, err := s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch+len(failed))
+	rows = fresh(rows)
+	if len(rows) == 0 {
+		// Nothing new waits for its tracks: backfill the release data of
+		// albums holding files fetched before the tag writer read it
+		// (genres, edition date, the current credits layout). Background
+		// class, so a lookup never queues behind it.
+		more, err := s.db.ListAlbumsAwaitingDetails(ctx, sweepBatch+len(tried))
 		if err != nil {
 			slog.WarnContext(ctx, "music details refill failed", "error", err)
 		}
-		rows = append(rows, more...)
+		rows = fresh(more)
 	}
 	found := false
 	for _, a := range rows {
-		if _, bad := failed[a.ID]; bad || a.Edges.Artist == nil {
-			continue
-		}
 		s.hydrate.add(a.Edges.Artist.ID, []hydrateItem{{
 			albumID: a.ID, monitored: a.Monitored, date: a.ReleaseDate,
 		}})
@@ -324,7 +335,7 @@ func (s *Service) hydrateAlbum(
 		return false, err
 	}
 	detailsOnly = a.MetadataFetchedAt != nil
-	if !force && detailsOnly && a.Genres != nil {
+	if !force && detailsOnly && !detailsStale(a) {
 		return false, nil
 	}
 	ctx, span := tracer.Start(ctx, "music.hydrate_album",
@@ -381,6 +392,14 @@ func (s *Service) hydrateAlbum(
 	return detailsOnly, nil
 }
 
+// detailsStale reports a hydrated album whose release data predates what the
+// tag writer reads: genres never fetched, or credits stored under an older
+// layout. ListAlbumsAwaitingDetails is its query twin.
+func detailsStale(a *ent.Album) bool {
+	return a.Genres == nil ||
+		(a.CreditsFetchedAt != nil && a.CreditsVersion < library.MusicCreditsVersion)
+}
+
 // storedDetails is the album-level part of a release call rebuilt from what
 // the album already holds, with no genres, for a release group MusicBrainz no
 // longer knows: storing it changes nothing but the genres marker.
@@ -433,15 +452,17 @@ func (s *Service) hydrationParams(
 			MBID: t.MBID, ReleaseTrackMBID: t.ReleaseTrackMBID,
 			Title: t.Title, Disc: t.Disc, Position: t.Position,
 			Duration: t.Duration, Bonus: t.Bonus,
-			Featuring: personSeeds(t.Featuring),
-			Writers:   personSeeds(t.Writers),
+			Featuring:  personSeeds(t.Featuring),
+			Writers:    creditSeeds(t.Writers),
+			Credits:    creditSeeds(t.Credits),
+			Performers: performerSeeds(t.Performers),
 		})
 	}
 	if !d.CreditsComplete {
 		return p, nil
 	}
 	for _, c := range d.Credits {
-		p.Credits = append(p.Credits, db.AlbumCreditSeed{
+		p.Credits = append(p.Credits, db.MusicCreditSeed{
 			Name: c.Name, MBID: c.MBID,
 			Role: c.Role,
 		})
@@ -475,6 +496,30 @@ func personSeeds(in []metadata.PersonInfo) []db.PersonSeed {
 	out := make([]db.PersonSeed, len(in))
 	for i, p := range in {
 		out[i] = db.PersonSeed{Name: p.Name, MBID: p.MBID}
+	}
+	return out
+}
+
+func creditSeeds(in []metadata.CreditInfo) []db.MusicCreditSeed {
+	out := make([]db.MusicCreditSeed, len(in))
+	for i, c := range in {
+		out[i] = db.MusicCreditSeed{
+			Name: c.Name, MBID: c.MBID,
+			Role: c.Role,
+		}
+	}
+	return out
+}
+
+// performerSeeds are a track's performers; the guest flag is the album's
+// call, made over all its tracks.
+func performerSeeds(in []metadata.PerformerInfo) []db.PerformerSeed {
+	out := make([]db.PerformerSeed, len(in))
+	for i, p := range in {
+		out[i] = db.PerformerSeed{
+			Name: p.Name, MBID: p.MBID,
+			Instruments: p.Instruments,
+		}
 	}
 	return out
 }

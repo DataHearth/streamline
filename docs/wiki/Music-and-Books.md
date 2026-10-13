@@ -61,7 +61,7 @@ Books are never modified: an ebook is placed as one file named per `library.eboo
 
 ## Tags and artwork
 
-Streamline writes what the library knows into each music file, so media servers and players that read files (Jellyfin, Navidrome, Plex with local metadata, a phone or a car stereo) show exactly that: title, artist and featured artists, album artist, track and disc numbers with their totals, the edition's release date and the original one, up to five genres, label, catalog number, barcode, country, release type, and the MusicBrainz ids of the artist, release, release group, recording and release track. MP3, FLAC, M4A, Ogg Vorbis and Opus are all tagged. A tag Streamline has no value for is removed rather than left stale.
+Streamline writes what the library knows into each music file, so media servers and players that read files (Jellyfin, Navidrome, Plex with local metadata, a phone or a car stereo) show exactly that: title, artist and featured artists, album artist, track and disc numbers with their totals, the edition's release date and the original one, up to five genres, label, catalog number, barcode, country, release type, the MusicBrainz ids of the artist, release, release group, recording and release track, and the credits: composers, lyricists, writers and arrangers of the song, the recording's performers with their instruments, and its producers, engineers, mixers, conductor and remixer. MP3, FLAC, M4A, Ogg Vorbis and Opus are all tagged. A tag Streamline has no value for is removed rather than left stale.
 
 Everything else stays in the file. Under Settings → Music, **Tags to keep** lists tags Streamline never writes or removes (ReplayGain, lyrics, AcoustID, BPM and the musical key by default) and **Tags to remove** lists the ones it deletes (comments, encoded-by credits and the web links a release leaves behind).
 
@@ -82,7 +82,7 @@ The writing itself happens in the `music-tag-sync` job ([Scheduled Jobs](Schedul
 
 **Seeding torrents are never written to.** A file a torrent still serves from its own path waits until the torrent is removed from the client. A hardlinked import shares its bytes with the torrent's copy: the *While a torrent seeds* setting decides whether it waits for the torrent too (*Wait*, one copy on disk, the default) or is copied and tagged at once (*Copy now*, two copies while the torrent seeds). Streamline only knows a torrent is gone when the client stops listing it, so a torrent kept paused in the client keeps its files waiting.
 
-Albums added before this version get their genres and edition dates fetched in the background, at MusicBrainz's slow background pace, starting with the albums you hold files for.
+Albums added before this version get their genres, edition dates and per-track credits fetched again in the background, at MusicBrainz's slow background pace, starting with the albums you hold files for. Until an album's credits are in, the credit tags already in its files are left as they are.
 
 ## Adding an artist
 

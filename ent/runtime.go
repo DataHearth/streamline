@@ -84,6 +84,10 @@ func init() {
 	albumDescGrabFailures := albumFields[13].Descriptor()
 	// album.DefaultGrabFailures holds the default value on creation for the grab_failures field.
 	album.DefaultGrabFailures = albumDescGrabFailures.Default.(uint8)
+	// albumDescCreditsVersion is the schema descriptor for credits_version field.
+	albumDescCreditsVersion := albumFields[24].Descriptor()
+	// album.DefaultCreditsVersion holds the default value on creation for the credits_version field.
+	album.DefaultCreditsVersion = albumDescCreditsVersion.Default.(uint8)
 	apikeyMixin := schema.ApiKey{}.Mixin()
 	apikeyMixinFields1 := apikeyMixin[1].Fields()
 	_ = apikeyMixinFields1

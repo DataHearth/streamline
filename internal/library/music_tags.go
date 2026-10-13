@@ -1,6 +1,8 @@
 package library
 
 import (
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -9,6 +11,12 @@ import (
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 )
+
+// MusicCreditsVersion is the layout an album's credits are stored under
+// today: writer roles, and each track's own production credits and
+// performers. An album stamped with an older one is fetched again in the
+// background, and until then its credit tags are left as the file has them.
+const MusicCreditsVersion uint8 = 1
 
 // VariousArtistsMBID is MusicBrainz's special "Various Artists" artist, the
 // album artist of a multi-artist compilation.
@@ -85,7 +93,7 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 		compilation = []string{"1"}
 	}
 
-	return audiotags.Tags{
+	tags := audiotags.Tags{
 		audiotags.KeyTitle:            nonEmpty(tr.Title),
 		audiotags.KeyArtist:           nonEmpty(artist),
 		audiotags.KeyArtists:          artists,
@@ -114,6 +122,96 @@ func AlbumTrackTags(ar *ent.Artist, al *ent.Album, tr *ent.Track) audiotags.Tags
 		audiotags.KeyMBRecordingID:    nonEmpty(tr.Mbid),
 		audiotags.KeyMBReleaseTrackID: nonEmpty(tr.ReleaseTrackMbid),
 	}
+	maps.Copy(tags, creditTags(al, tr))
+	return tags
+}
+
+// creditTagKey is the tag each production role is written under, grouped as
+// Picard groups them; artwork has none.
+var creditTagKey = map[musiccredit.Role]string{
+	musiccredit.RoleProducer:  audiotags.KeyProducer,
+	musiccredit.RoleRecording: audiotags.KeyEngineer,
+	musiccredit.RoleMastering: audiotags.KeyEngineer,
+	musiccredit.RoleMix:       audiotags.KeyMixer,
+	musiccredit.RoleConductor: audiotags.KeyConductor,
+	musiccredit.RoleRemixer:   audiotags.KeyRemixer,
+	musiccredit.RoleArranger:  audiotags.KeyArranger,
+}
+
+// writerTagKey is the tag each writer role is written under; a writer stored
+// before writers had roles is a plain writer.
+var writerTagKey = map[musiccredit.Role]string{
+	musiccredit.RoleComposer: audiotags.KeyComposer,
+	musiccredit.RoleLyricist: audiotags.KeyLyricist,
+	musiccredit.RoleWriter:   audiotags.KeyWriter,
+	musiccredit.RoleArranger: audiotags.KeyArranger,
+	"":                       audiotags.KeyWriter,
+}
+
+// creditTags is one track's credit keys: its writers, its recording's own
+// production credits and performers, and the album's release-level
+// credits — the album's rows no track carries, since the album folds the
+// recordings' credits in with its own. Nil, so the file keeps what it has,
+// while the album's credits are missing or stored under an older layout:
+// deleting a performer list an earlier tagger wrote, in favour of nothing,
+// would lose it.
+func creditTags(al *ent.Album, tr *ent.Track) audiotags.Tags {
+	if al.CreditsFetchedAt == nil || al.CreditsVersion < MusicCreditsVersion {
+		return nil
+	}
+	tags := audiotags.Tags{}
+	for _, k := range creditTagKey {
+		tags[k] = nil
+	}
+	for _, k := range writerTagKey {
+		tags[k] = nil
+	}
+	tags[audiotags.KeyPerformer] = nil
+	add := func(key, value string) {
+		if key != "" && !slices.Contains(tags[key], value) {
+			tags[key] = append(tags[key], value)
+		}
+	}
+	credit := func(c *ent.MusicCredit) string {
+		id := c.Mbid
+		if id == "" {
+			id = strings.ToLower(c.Name)
+		}
+		return id + "|" + string(c.Role)
+	}
+
+	onTracks := map[string]bool{}
+	for _, t := range al.Edges.Tracks {
+		for _, c := range t.Edges.Credits {
+			if c.Kind == musiccredit.KindCredit {
+				onTracks[credit(c)] = true
+			}
+		}
+	}
+	for _, c := range tr.Edges.Credits {
+		switch c.Kind {
+		case musiccredit.KindWriter:
+			add(writerTagKey[c.Role], c.Name)
+		case musiccredit.KindCredit:
+			add(creditTagKey[c.Role], c.Name)
+		case musiccredit.KindPerformer:
+			instruments := strings.Split(c.Instruments, ",")
+			for _, in := range instruments {
+				if in = strings.TrimSpace(in); in != "" {
+					add(audiotags.KeyPerformer, c.Name+" ("+in+")")
+				} else if len(instruments) == 1 {
+					add(audiotags.KeyPerformer, c.Name)
+				}
+			}
+		case musiccredit.KindFeaturing:
+		}
+	}
+	for _, c := range al.Edges.Credits {
+		if c.Kind == musiccredit.KindCredit && !onTracks[credit(c)] {
+			add(creditTagKey[c.Role], c.Name)
+		}
+	}
+	return tags
 }
 
 // originalDate is the release group's first release as MusicBrainz wrote it,

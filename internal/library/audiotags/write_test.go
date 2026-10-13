@@ -299,3 +299,55 @@ var _ = Describe("Hash", Label("unit", "audiotags"), func() {
 			To(Equal(Hash(Tags{taglib.Title: {"Lithium"}}, Policy{Preserve: []string{"GENRE"}})))
 	})
 })
+
+var _ = Describe("Write performers", Label("unit", "audiotags"), func() {
+	performers := Tags{KeyPerformer: {
+		"Kurt Cobain (guitar)",
+		"Kurt Cobain (lead vocals)",
+		"Dave Grohl (drums)",
+		"Someone",
+	}}
+
+	It("keeps Picard's Name (instrument) in Vorbis comments", func() {
+		path := copyFixture("testdata/tagged.flac")
+		Expect(Write(path, performers, Policy{})).To(Succeed())
+		Expect(
+			rawTags(path),
+		).To(HaveKeyWithValue(KeyPerformer, performers[KeyPerformer]))
+	})
+
+	It(
+		"files ID3 performers under their instrument and drops one no longer credited",
+		func() {
+			path := copyFixture("testdata/tagged.mp3")
+			Expect(taglib.WriteTags(path, map[string][]string{
+				"PERFORMER:BASS": {"Krist Novoselic"},
+			}, 0)).To(Succeed())
+
+			Expect(Write(path, performers, Policy{})).To(Succeed())
+
+			raw := rawTags(path)
+			Expect(
+				raw,
+			).To(HaveKeyWithValue("PERFORMER:GUITAR", []string{"Kurt Cobain"}))
+			Expect(
+				raw,
+			).To(HaveKeyWithValue("PERFORMER:LEAD VOCALS", []string{"Kurt Cobain"}))
+			Expect(
+				raw,
+			).To(HaveKeyWithValue("PERFORMER:DRUMS", []string{"Dave Grohl"}))
+			Expect(raw).To(HaveKeyWithValue(KeyPerformer, []string{"Someone"}))
+			Expect(raw).NotTo(HaveKey("PERFORMER:BASS"))
+		},
+	)
+
+	It("leaves the performers alone when it is not given them", func() {
+		path := copyFixture("testdata/tagged.mp3")
+		Expect(taglib.WriteTags(path, map[string][]string{
+			"PERFORMER:BASS": {"Krist Novoselic"},
+		}, 0)).To(Succeed())
+
+		Expect(Write(path, Tags{KeyTitle: {"Lithium"}}, Policy{})).To(Succeed())
+		Expect(rawTags(path)).To(HaveKey("PERFORMER:BASS"))
+	})
+})

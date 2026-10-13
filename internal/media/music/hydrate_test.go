@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/musiccredit"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
@@ -477,6 +478,75 @@ var _ = Describe("Album hydration", Label("unit", "integration", "music"), func(
 				To(Equal([]string{"Rock"}))
 			Expect(e.client.Album.GetX(e.ctx, albums[1].ID).Genres).To(BeNil())
 		})
+
+		Describe(
+			"an album holding files whose credits predate the current layout",
+			func() {
+				var alb *ent.Album
+
+				BeforeEach(func() {
+					e.setConfig(nil)
+					_, albums := e.seedArtist(
+						"Alpha",
+						albumSeed{mbid: "old", title: "Old", tracks: []string{"A"}},
+					)
+					alb = albums[0]
+					e.client.Album.UpdateOneID(alb.ID).
+						SetCreditsFetchedAt(time.Now()).SetGenres([]string{}).
+						SetCreditsVersion(0).ExecX(e.ctx)
+					e.addFile(
+						alb.QueryTracks().OnlyX(e.ctx),
+						"/music/Alpha/Old/01.flac",
+						"lossless",
+					)
+				})
+
+				It(
+					"fetches it again in the background and stamps the current layout",
+					func() {
+						d := hydrated("old", "A")
+						d.Tracks[0].Writers = []metadata.CreditInfo{
+							{
+								Name: "W",
+								Role: "composer",
+							},
+						}
+						e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
+							Return(d, nil).Once()
+
+						e.svc.sweepHydration(e.ctx)
+						Eventually(e.idle).Should(BeTrue())
+
+						Expect(e.client.Album.GetX(e.ctx, alb.ID).CreditsVersion).
+							To(Equal(library.MusicCreditsVersion))
+						Expect(e.client.MusicCredit.Query().OnlyX(e.ctx).Role).
+							To(Equal(musiccredit.RoleComposer))
+					},
+				)
+
+				It("asks once per run when only the light call answers", func() {
+					d := hydrated("old", "A")
+					d.CreditsComplete = false
+					e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
+						Return(d, nil).Once()
+
+					e.svc.sweepHydration(e.ctx)
+					Eventually(e.idle).Should(BeTrue())
+
+					Expect(
+						e.client.Album.GetX(e.ctx, alb.ID).CreditsVersion,
+					).To(BeZero())
+				})
+
+				It("fetches it when someone needs the album", func() {
+					e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
+						Return(hydrated("old", "A"), nil).Once()
+
+					Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+					Expect(e.svc.HydrateAlbum(e.ctx, alb.ID)).To(Succeed())
+				})
+			},
+		)
 
 		It(
 			"queues unfinished albums, credit-less ones and old trackless ones",

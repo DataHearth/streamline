@@ -71,6 +71,8 @@ type Album struct {
 	MetadataFetchedAt *time.Time `json:"metadata_fetched_at,omitempty"`
 	// CreditsFetchedAt holds the value of the "credits_fetched_at" field.
 	CreditsFetchedAt *time.Time `json:"credits_fetched_at,omitempty"`
+	// CreditsVersion holds the value of the "credits_version" field.
+	CreditsVersion uint8 `json:"credits_version,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AlbumQuery when eager-loading is set.
 	Edges         AlbumEdges `json:"edges"`
@@ -151,7 +153,7 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case album.FieldMonitored, album.FieldMonitorPinned, album.FieldTagsManaged:
 			values[i] = new(sql.NullBool)
-		case album.FieldID, album.FieldGrabFailures:
+		case album.FieldID, album.FieldGrabFailures, album.FieldCreditsVersion:
 			values[i] = new(sql.NullInt64)
 		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
@@ -342,6 +344,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				_m.CreditsFetchedAt = new(time.Time)
 				*_m.CreditsFetchedAt = value.Time
 			}
+		case album.FieldCreditsVersion:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credits_version", values[i])
+			} else if value.Valid {
+				_m.CreditsVersion = uint8(value.Int64)
+			}
 		case album.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field artist_albums", value)
@@ -495,6 +503,9 @@ func (_m *Album) String() string {
 		builder.WriteString("credits_fetched_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("credits_version=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CreditsVersion))
 	builder.WriteByte(')')
 	return builder.String()
 }

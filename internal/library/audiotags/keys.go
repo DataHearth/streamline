@@ -33,4 +33,18 @@ const (
 	KeyMBReleaseGroupID = taglib.MusicBrainzReleaseGroupID
 	KeyMBRecordingID    = taglib.MusicBrainzTrackID
 	KeyMBReleaseTrackID = taglib.MusicBrainzReleaseTrackID
+
+	KeyComposer  = taglib.Composer
+	KeyLyricist  = taglib.Lyricist
+	KeyWriter    = "WRITER"
+	KeyArranger  = taglib.Arranger
+	KeyConductor = taglib.Conductor
+	KeyRemixer   = taglib.Remixer
+	KeyProducer  = taglib.Producer
+	KeyEngineer  = taglib.Engineer
+	KeyMixer     = taglib.Mixer
+	// KeyPerformer takes "Name (instrument)" values, Picard's Vorbis
+	// convention; Write folds them into one PERFORMER:<INSTRUMENT> key per
+	// instrument for ID3, which stores performers in TMCL.
+	KeyPerformer = taglib.Performer
 )

@@ -265,10 +265,12 @@ var _ = Describe(
 										Featuring: []db.PersonSeed{
 											{Name: "Kurt", MBID: otherMBID},
 										},
-										Writers: []db.PersonSeed{{Name: "Nobody"}},
+										Writers: []db.MusicCreditSeed{
+											{Name: "Nobody"},
+										},
 									},
 								},
-								Credits: []db.AlbumCreditSeed{
+								Credits: []db.MusicCreditSeed{
 									{
 										Name: "Producer",
 										MBID: otherMBID,

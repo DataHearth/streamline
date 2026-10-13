@@ -249,17 +249,27 @@ type TrackInfo struct {
 	Duration         uint32 // seconds, 0 when unknown
 	// Featuring are the artists credited after a "feat." join phrase.
 	Featuring []PersonInfo
-	// Writers are the writers, composers and lyricists of the recorded work.
-	Writers []PersonInfo
+	// Writers are the people credited on the recorded work, each under one
+	// role: composer, lyricist, writer or arranger. A person both composer
+	// and lyricist appears twice.
+	Writers []CreditInfo
+	// Credits are the production credits of this recording itself, the
+	// recording-level relations also folded into the album's Credits; and
+	// Performers its performers, with the instruments played on it. Both come
+	// from the heavy release call only.
+	Credits    []CreditInfo
+	Performers []PerformerInfo
 	// Bonus is set only when MusicBrainz says so: a medium titled "bonus" or a
 	// track titled "(bonus track)".
 	Bonus bool
 }
 
-// CreditInfo is one production credit of an album.
+// CreditInfo is one credit of an album or a track.
 type CreditInfo struct {
 	PersonInfo
-	// Role is producer, recording, mix, mastering or artwork.
+	// Role is producer, recording, mix, mastering, artwork, conductor,
+	// remixer or arranger for a production credit, and composer, lyricist,
+	// writer or arranger for a writer of the work.
 	Role string
 }
 

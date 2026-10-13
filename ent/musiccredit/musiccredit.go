@@ -139,6 +139,12 @@ const (
 	RoleMix       Role = "mix"
 	RoleMastering Role = "mastering"
 	RoleArtwork   Role = "artwork"
+	RoleConductor Role = "conductor"
+	RoleRemixer   Role = "remixer"
+	RoleArranger  Role = "arranger"
+	RoleComposer  Role = "composer"
+	RoleLyricist  Role = "lyricist"
+	RoleWriter    Role = "writer"
 )
 
 func (r Role) String() string {
@@ -148,7 +154,7 @@ func (r Role) String() string {
 // RoleValidator is a validator for the "role" field enum values. It is called by the builders before save.
 func RoleValidator(r Role) error {
 	switch r {
-	case RoleProducer, RoleRecording, RoleMix, RoleMastering, RoleArtwork:
+	case RoleProducer, RoleRecording, RoleMix, RoleMastering, RoleArtwork, RoleConductor, RoleRemixer, RoleArranger, RoleComposer, RoleLyricist, RoleWriter:
 		return nil
 	default:
 		return fmt.Errorf("musiccredit: invalid enum value for role field: %q", r)

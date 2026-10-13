@@ -364,6 +364,20 @@ func (_c *AlbumCreate) SetNillableCreditsFetchedAt(v *time.Time) *AlbumCreate {
 	return _c
 }
 
+// SetCreditsVersion sets the "credits_version" field.
+func (_c *AlbumCreate) SetCreditsVersion(v uint8) *AlbumCreate {
+	_c.mutation.SetCreditsVersion(v)
+	return _c
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableCreditsVersion(v *uint8) *AlbumCreate {
+	if v != nil {
+		_c.SetCreditsVersion(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AlbumCreate) SetID(v uint32) *AlbumCreate {
 	_c.mutation.SetID(v)
@@ -508,6 +522,10 @@ func (_c *AlbumCreate) defaults() {
 		v := album.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.CreditsVersion(); !ok {
+		v := album.DefaultCreditsVersion
+		_c.mutation.SetCreditsVersion(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -561,6 +579,9 @@ func (_c *AlbumCreate) check() error {
 		if err := album.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Album.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.CreditsVersion(); !ok {
+		return &ValidationError{Name: "credits_version", err: errors.New(`ent: missing required field "Album.credits_version"`)}
 	}
 	if len(_c.mutation.ArtistIDs()) == 0 {
 		return &ValidationError{Name: "artist", err: errors.New(`ent: missing required edge "Album.artist"`)}
@@ -700,6 +721,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreditsFetchedAt(); ok {
 		_spec.SetField(album.FieldCreditsFetchedAt, field.TypeTime, value)
 		_node.CreditsFetchedAt = &value
+	}
+	if value, ok := _c.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+		_node.CreditsVersion = value
 	}
 	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

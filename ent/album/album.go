@@ -67,6 +67,8 @@ const (
 	FieldMetadataFetchedAt = "metadata_fetched_at"
 	// FieldCreditsFetchedAt holds the string denoting the credits_fetched_at field in the database.
 	FieldCreditsFetchedAt = "credits_fetched_at"
+	// FieldCreditsVersion holds the string denoting the credits_version field in the database.
+	FieldCreditsVersion = "credits_version"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
 	EdgeArtist = "artist"
 	// EdgeTracks holds the string denoting the tracks edge name in mutations.
@@ -143,6 +145,7 @@ var Columns = []string{
 	FieldStudio,
 	FieldMetadataFetchedAt,
 	FieldCreditsFetchedAt,
+	FieldCreditsVersion,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "albums"
@@ -191,6 +194,8 @@ var (
 	DefaultTagsManaged bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
+	// DefaultCreditsVersion holds the default value on creation for the "credits_version" field.
+	DefaultCreditsVersion uint8
 )
 
 // Type defines the type for the "type" enum field.
@@ -384,6 +389,11 @@ func ByMetadataFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByCreditsFetchedAt orders the results by the credits_fetched_at field.
 func ByCreditsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreditsFetchedAt, opts...).ToFunc()
+}
+
+// ByCreditsVersion orders the results by the credits_version field.
+func ByCreditsVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsVersion, opts...).ToFunc()
 }
 
 // ByArtistField orders the results by artist field.

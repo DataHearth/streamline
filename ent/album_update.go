@@ -477,6 +477,27 @@ func (_u *AlbumUpdate) ClearCreditsFetchedAt() *AlbumUpdate {
 	return _u
 }
 
+// SetCreditsVersion sets the "credits_version" field.
+func (_u *AlbumUpdate) SetCreditsVersion(v uint8) *AlbumUpdate {
+	_u.mutation.ResetCreditsVersion()
+	_u.mutation.SetCreditsVersion(v)
+	return _u
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableCreditsVersion(v *uint8) *AlbumUpdate {
+	if v != nil {
+		_u.SetCreditsVersion(*v)
+	}
+	return _u
+}
+
+// AddCreditsVersion adds value to the "credits_version" field.
+func (_u *AlbumUpdate) AddCreditsVersion(v int8) *AlbumUpdate {
+	_u.mutation.AddCreditsVersion(v)
+	return _u
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdate) SetArtistID(id uint32) *AlbumUpdate {
 	_u.mutation.SetArtistID(id)
@@ -855,6 +876,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CreditsFetchedAtCleared() {
 		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
+		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1530,6 +1557,27 @@ func (_u *AlbumUpdateOne) ClearCreditsFetchedAt() *AlbumUpdateOne {
 	return _u
 }
 
+// SetCreditsVersion sets the "credits_version" field.
+func (_u *AlbumUpdateOne) SetCreditsVersion(v uint8) *AlbumUpdateOne {
+	_u.mutation.ResetCreditsVersion()
+	_u.mutation.SetCreditsVersion(v)
+	return _u
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableCreditsVersion(v *uint8) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetCreditsVersion(*v)
+	}
+	return _u
+}
+
+// AddCreditsVersion adds value to the "credits_version" field.
+func (_u *AlbumUpdateOne) AddCreditsVersion(v int8) *AlbumUpdateOne {
+	_u.mutation.AddCreditsVersion(v)
+	return _u
+}
+
 // SetArtistID sets the "artist" edge to the Artist entity by ID.
 func (_u *AlbumUpdateOne) SetArtistID(id uint32) *AlbumUpdateOne {
 	_u.mutation.SetArtistID(id)
@@ -1938,6 +1986,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.CreditsFetchedAtCleared() {
 		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
+		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{

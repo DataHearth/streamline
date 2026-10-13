@@ -811,20 +811,41 @@ func validCountry(c string) string {
 	return c
 }
 
+// roleByType maps a release or recording relationship to a production role,
+// grouped the way Picard groups them into tags.
 var roleByType = map[string]string{
 	"producer":            "producer",
 	"recording":           "recording",
 	"engineer":            "recording",
 	"recording engineer":  "recording",
+	"audio":               "recording",
+	"sound":               "recording",
 	"mix":                 "mix",
 	"mastering":           "mastering",
 	"design/illustration": "artwork",
 	"graphic design":      "artwork",
 	"art direction":       "artwork",
 	"photography":         "artwork",
+	"conductor":           "conductor",
+	"remixer":             "remixer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
 }
 
-var writerTypes = []string{"writer", "composer", "lyricist"}
+// writerRoleByType maps a work relationship to the role its person is
+// credited under on the recording.
+var writerRoleByType = map[string]string{
+	"composer":            "composer",
+	"lyricist":            "lyricist",
+	"librettist":          "lyricist",
+	"writer":              "writer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
+}
 
 func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 	if _, ok := parseMBDate(rel.Date); ok {
@@ -843,20 +864,23 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 	performers := map[string]*PerformerInfo{}
 	var performerOrder []string
 	creditSeen := map[string]bool{}
-	addCredit := func(rel mbRel) {
+	// addCredit records a production credit on the album and returns it,
+	// nil when the relation is none.
+	addCredit := func(rel mbRel) *CreditInfo {
 		role, ok := roleByType[rel.Type]
 		if !ok || rel.TargetType != "artist" || rel.Artist == nil {
-			return
+			return nil
 		}
-		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
-		if creditSeen[key] {
-			return
-		}
-		creditSeen[key] = true
-		d.Credits = append(d.Credits, CreditInfo{
+		c := CreditInfo{
 			Name: rel.Artist.Name, MBID: rel.Artist.ID,
 			Role: role,
-		})
+		}
+		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
+		if !creditSeen[key] {
+			creditSeen[key] = true
+			d.Credits = append(d.Credits, c)
+		}
+		return &c
 	}
 	placeCount := map[string]int{}
 
@@ -883,9 +907,17 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 			}
 			seenOnRecording := map[string]bool{}
 			writerSeen := map[string]bool{}
+			trackCreditSeen := map[string]bool{}
+			trackPerformers := map[string]int{}
 			performerBearing := false
 			for _, rr := range t.Recording.Relations {
-				addCredit(rr)
+				if c := addCredit(rr); c != nil && heavy {
+					key := creditKey(c.MBID, c.Name) + "|" + c.Role
+					if !trackCreditSeen[key] {
+						trackCreditSeen[key] = true
+						ti.Credits = append(ti.Credits, *c)
+					}
+				}
 				switch {
 				case rr.Type == "recording" && rr.TargetType == "place" &&
 					rr.Place != nil:
@@ -915,19 +947,37 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 							p.Instruments = append(p.Instruments, in)
 						}
 					}
+					if !heavy {
+						break
+					}
+					idx, ok := trackPerformers[key]
+					if !ok {
+						idx = len(ti.Performers)
+						trackPerformers[key] = idx
+						ti.Performers = append(ti.Performers, PerformerInfo{
+							Name: rr.Artist.Name, MBID: rr.Artist.ID,
+						})
+					}
+					tp := &ti.Performers[idx]
+					for _, in := range instruments {
+						if !slices.Contains(tp.Instruments, in) {
+							tp.Instruments = append(tp.Instruments, in)
+						}
+					}
 				case rr.Type == "performance" && rr.Work != nil:
 					for _, wr := range rr.Work.Relations {
-						if !slices.Contains(writerTypes, wr.Type) ||
-							wr.Artist == nil {
+						role, ok := writerRoleByType[wr.Type]
+						if !ok || wr.Artist == nil {
 							continue
 						}
-						key := creditKey(wr.Artist.ID, wr.Artist.Name)
+						key := creditKey(wr.Artist.ID, wr.Artist.Name) + "|" + role
 						if writerSeen[key] {
 							continue
 						}
 						writerSeen[key] = true
-						ti.Writers = append(ti.Writers, PersonInfo{
+						ti.Writers = append(ti.Writers, CreditInfo{
 							Name: wr.Artist.Name, MBID: wr.Artist.ID,
+							Role: role,
 						})
 					}
 				}
