@@ -87,6 +87,16 @@ var _ = Describe("RemoveMediaFile", Label("unit", "library"), func() {
 		Expect(dir).NotTo(BeADirectory())
 	})
 
+	It("takes a copy a killed tag write left behind with the folder", func() {
+		dir := filepath.Join(root, "Nirvana", "Nevermind")
+		media := touch(filepath.Join(dir, "01 Smells Like Teen Spirit.flac"))
+		touch(filepath.Join(dir, ".streamline-tags-123.flac"))
+
+		Expect(RemoveMediaFile(context.Background(), media, root)).To(Succeed())
+
+		Expect(dir).NotTo(BeADirectory())
+	})
+
 	It("keeps a season's artwork while another episode is still on disk", func() {
 		dir := filepath.Join(root, "Show", "Season 01")
 		media := touch(filepath.Join(dir, "Show - S01E01.mkv"))

@@ -20,8 +20,14 @@ var (
 		{Name: "title", Type: field.TypeString},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"album", "ep", "single", "compilation", "live", "other"}, Default: "album"},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
+		{Name: "original_date", Type: field.TypeString, Nullable: true},
+		{Name: "edition_date", Type: field.TypeString, Nullable: true},
+		{Name: "genres", Type: field.TypeJSON, Nullable: true},
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "monitor_pinned", Type: field.TypeBool, Default: false},
+		{Name: "tags_managed", Type: field.TypeBool, Default: true},
+		{Name: "art_sidecar_hash", Type: field.TypeString, Nullable: true},
+		{Name: "tag_overrides", Type: field.TypeJSON, Nullable: true},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "paused", "available", "skipped", "failed"}, Default: "wanted"},
@@ -33,6 +39,7 @@ var (
 		{Name: "studio", Type: field.TypeString, Nullable: true},
 		{Name: "metadata_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "credits_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "credits_version", Type: field.TypeUint8, Default: 0},
 		{Name: "artist_albums", Type: field.TypeUint32},
 	}
 	// AlbumsTable holds the schema information for the "albums" table.
@@ -43,7 +50,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "albums_artists_albums",
-				Columns:    []*schema.Column{AlbumsColumns[22]},
+				Columns:    []*schema.Column{AlbumsColumns[29]},
 				RefColumns: []*schema.Column{ArtistsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -52,17 +59,17 @@ var (
 			{
 				Name:    "album_artist_albums",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[22]},
+				Columns: []*schema.Column{AlbumsColumns[29]},
 			},
 			{
 				Name:    "album_status",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[13]},
+				Columns: []*schema.Column{AlbumsColumns[19]},
 			},
 			{
 				Name:    "album_metadata_fetched_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlbumsColumns[20]},
+				Columns: []*schema.Column{AlbumsColumns[26]},
 			},
 		},
 	}
@@ -125,6 +132,7 @@ var (
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "details_fetched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "art_sidecar_hash", Type: field.TypeString, Nullable: true},
 	}
 	// ArtistsTable holds the schema information for the "artists" table.
 	ArtistsTable = &schema.Table{
@@ -1057,6 +1065,15 @@ var (
 		{Name: "transcoded_at", Type: field.TypeTime, Nullable: true},
 		{Name: "size_before", Type: field.TypeInt64, Nullable: true},
 		{Name: "book_kind", Type: field.TypeEnum, Nullable: true, Enums: []string{"ebook", "audiobook"}},
+		{Name: "tags_state", Type: field.TypeEnum, Nullable: true, Enums: []string{"pending", "deferred", "written", "failed"}},
+		{Name: "tags_hash", Type: field.TypeString, Nullable: true},
+		{Name: "tagged_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tags_mtime", Type: field.TypeInt64, Nullable: true},
+		{Name: "tags_size", Type: field.TypeInt64, Nullable: true},
+		{Name: "tags_checked_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tag_failures", Type: field.TypeUint8, Default: 0},
+		{Name: "tags_error", Type: field.TypeString, Nullable: true},
+		{Name: "tags_art_hash", Type: field.TypeString, Nullable: true},
 		{Name: "book_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_media_files", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_media_files", Type: field.TypeUint32, Nullable: true},
@@ -1070,25 +1087,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "media_files_books_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[29]},
+				Columns:    []*schema.Column{MediaFilesColumns[38]},
 				RefColumns: []*schema.Column{BooksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_episodes_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[30]},
+				Columns:    []*schema.Column{MediaFilesColumns[39]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_movies_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[31]},
+				Columns:    []*schema.Column{MediaFilesColumns[40]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_files_tracks_media_files",
-				Columns:    []*schema.Column{MediaFilesColumns[32]},
+				Columns:    []*schema.Column{MediaFilesColumns[41]},
 				RefColumns: []*schema.Column{TracksColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1097,20 +1114,25 @@ var (
 			{
 				Name:    "mediafile_episode_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[30]},
+				Columns: []*schema.Column{MediaFilesColumns[39]},
 			},
 			{
 				Name:    "mediafile_movie_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[31]},
+				Columns: []*schema.Column{MediaFilesColumns[40]},
 			},
 			{
 				Name:    "mediafile_track_media_files",
 				Unique:  false,
-				Columns: []*schema.Column{MediaFilesColumns[32]},
+				Columns: []*schema.Column{MediaFilesColumns[41]},
 			},
 			{
 				Name:    "mediafile_book_media_files",
+				Unique:  false,
+				Columns: []*schema.Column{MediaFilesColumns[38]},
+			},
+			{
+				Name:    "mediafile_tags_state",
 				Unique:  false,
 				Columns: []*schema.Column{MediaFilesColumns[29]},
 			},
@@ -1245,7 +1267,7 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"credit", "performer", "featuring", "writer"}},
-		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork"}},
+		{Name: "role", Type: field.TypeEnum, Nullable: true, Enums: []string{"producer", "recording", "mix", "mastering", "artwork", "conductor", "remixer", "arranger", "composer", "lyricist", "writer"}},
 		{Name: "name", Type: field.TypeString},
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
 		{Name: "instruments", Type: field.TypeString, Nullable: true},
@@ -1699,11 +1721,13 @@ var (
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
+		{Name: "release_track_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString},
 		{Name: "disc", Type: field.TypeUint8, Default: 1},
 		{Name: "position", Type: field.TypeUint16},
 		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
 		{Name: "bonus", Type: field.TypeBool, Default: false},
+		{Name: "tag_overrides", Type: field.TypeJSON, Nullable: true},
 		{Name: "album_tracks", Type: field.TypeUint32},
 	}
 	// TracksTable holds the schema information for the "tracks" table.
@@ -1714,7 +1738,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[9]},
+				Columns:    []*schema.Column{TracksColumns[11]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1723,7 +1747,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[9]},
+				Columns: []*schema.Column{TracksColumns[11]},
 			},
 		},
 	}

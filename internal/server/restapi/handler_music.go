@@ -333,6 +333,32 @@ func (s *Server) ApplyMusicMonitoredTypes(
 	}, nil
 }
 
+// RetagMusicLibrary queues every track file for a full rewrite by the
+// music-tag-sync job. Admin only — a library-wide bulk action driven from the
+// settings page.
+func (s *Server) RetagMusicLibrary(
+	ctx context.Context,
+	_ RetagMusicLibraryRequestObject,
+) (RetagMusicLibraryResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return RetagMusicLibrary403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	n, err := s.music.RetagLibrary(ctx)
+	if errors.Is(err, music.ErrTagsOff) {
+		return RetagMusicLibrary409JSONResponse{
+			ConflictJSONResponse: conflictResp("music_tags_off", err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return RetagMusicLibrary500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return RetagMusicLibrary202JSONResponse{Queued: n}, nil
+}
+
 func musicAlbumTypes(types []string) []MusicAlbumType {
 	out := make([]MusicAlbumType, len(types))
 	for i, t := range types {
@@ -663,8 +689,24 @@ func (s *Server) PatchMusicAlbum(
 		}, nil
 	}
 	var err error
-	if request.Body != nil && request.Body.Monitored != nil {
-		err = s.music.SetAlbumMonitored(ctx, request.Id, *request.Body.Monitored)
+	var tags music.AlbumTagSettings
+	if b := request.Body; b != nil {
+		tags.Managed = b.TagsManaged
+		if b.TagOverrides != nil {
+			overrides, verr := tagOverrides(*b.TagOverrides)
+			if verr != nil {
+				return PatchMusicAlbum422JSONResponse{
+					UnprocessableEntityJSONResponse: errUnprocessable(verr.Error()),
+				}, nil
+			}
+			tags.Overrides = &overrides
+		}
+		if b.Monitored != nil {
+			err = s.music.SetAlbumMonitored(ctx, request.Id, *b.Monitored)
+		}
+	}
+	if err == nil && (tags.Managed != nil || tags.Overrides != nil) {
+		err = s.music.SetAlbumTagSettings(ctx, request.Id, tags)
 	}
 	var view *music.AlbumView
 	if err == nil {

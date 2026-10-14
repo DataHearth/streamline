@@ -90,6 +90,16 @@ func ReleaseDate(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldReleaseDate, v))
 }
 
+// OriginalDate applies equality check predicate on the "original_date" field. It's identical to OriginalDateEQ.
+func OriginalDate(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldOriginalDate, v))
+}
+
+// EditionDate applies equality check predicate on the "edition_date" field. It's identical to EditionDateEQ.
+func EditionDate(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionDate, v))
+}
+
 // Monitored applies equality check predicate on the "monitored" field. It's identical to MonitoredEQ.
 func Monitored(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitored, v))
@@ -98,6 +108,16 @@ func Monitored(v bool) predicate.Album {
 // MonitorPinned applies equality check predicate on the "monitor_pinned" field. It's identical to MonitorPinnedEQ.
 func MonitorPinned(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitorPinned, v))
+}
+
+// TagsManaged applies equality check predicate on the "tags_managed" field. It's identical to TagsManagedEQ.
+func TagsManaged(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldTagsManaged, v))
+}
+
+// ArtSidecarHash applies equality check predicate on the "art_sidecar_hash" field. It's identical to ArtSidecarHashEQ.
+func ArtSidecarHash(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldArtSidecarHash, v))
 }
 
 // GrabFailures applies equality check predicate on the "grab_failures" field. It's identical to GrabFailuresEQ.
@@ -143,6 +163,11 @@ func MetadataFetchedAt(v time.Time) predicate.Album {
 // CreditsFetchedAt applies equality check predicate on the "credits_fetched_at" field. It's identical to CreditsFetchedAtEQ.
 func CreditsFetchedAt(v time.Time) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldCreditsFetchedAt, v))
+}
+
+// CreditsVersion applies equality check predicate on the "credits_version" field. It's identical to CreditsVersionEQ.
+func CreditsVersion(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldCreditsVersion, v))
 }
 
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
@@ -575,6 +600,166 @@ func ReleaseDateNotNil() predicate.Album {
 	return predicate.Album(sql.FieldNotNull(FieldReleaseDate))
 }
 
+// OriginalDateEQ applies the EQ predicate on the "original_date" field.
+func OriginalDateEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldOriginalDate, v))
+}
+
+// OriginalDateNEQ applies the NEQ predicate on the "original_date" field.
+func OriginalDateNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldOriginalDate, v))
+}
+
+// OriginalDateIn applies the In predicate on the "original_date" field.
+func OriginalDateIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldOriginalDate, vs...))
+}
+
+// OriginalDateNotIn applies the NotIn predicate on the "original_date" field.
+func OriginalDateNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldOriginalDate, vs...))
+}
+
+// OriginalDateGT applies the GT predicate on the "original_date" field.
+func OriginalDateGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldOriginalDate, v))
+}
+
+// OriginalDateGTE applies the GTE predicate on the "original_date" field.
+func OriginalDateGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldOriginalDate, v))
+}
+
+// OriginalDateLT applies the LT predicate on the "original_date" field.
+func OriginalDateLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldOriginalDate, v))
+}
+
+// OriginalDateLTE applies the LTE predicate on the "original_date" field.
+func OriginalDateLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldOriginalDate, v))
+}
+
+// OriginalDateContains applies the Contains predicate on the "original_date" field.
+func OriginalDateContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldOriginalDate, v))
+}
+
+// OriginalDateHasPrefix applies the HasPrefix predicate on the "original_date" field.
+func OriginalDateHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldOriginalDate, v))
+}
+
+// OriginalDateHasSuffix applies the HasSuffix predicate on the "original_date" field.
+func OriginalDateHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldOriginalDate, v))
+}
+
+// OriginalDateIsNil applies the IsNil predicate on the "original_date" field.
+func OriginalDateIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldOriginalDate))
+}
+
+// OriginalDateNotNil applies the NotNil predicate on the "original_date" field.
+func OriginalDateNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldOriginalDate))
+}
+
+// OriginalDateEqualFold applies the EqualFold predicate on the "original_date" field.
+func OriginalDateEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldOriginalDate, v))
+}
+
+// OriginalDateContainsFold applies the ContainsFold predicate on the "original_date" field.
+func OriginalDateContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldOriginalDate, v))
+}
+
+// EditionDateEQ applies the EQ predicate on the "edition_date" field.
+func EditionDateEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldEditionDate, v))
+}
+
+// EditionDateNEQ applies the NEQ predicate on the "edition_date" field.
+func EditionDateNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldEditionDate, v))
+}
+
+// EditionDateIn applies the In predicate on the "edition_date" field.
+func EditionDateIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldEditionDate, vs...))
+}
+
+// EditionDateNotIn applies the NotIn predicate on the "edition_date" field.
+func EditionDateNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldEditionDate, vs...))
+}
+
+// EditionDateGT applies the GT predicate on the "edition_date" field.
+func EditionDateGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldEditionDate, v))
+}
+
+// EditionDateGTE applies the GTE predicate on the "edition_date" field.
+func EditionDateGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldEditionDate, v))
+}
+
+// EditionDateLT applies the LT predicate on the "edition_date" field.
+func EditionDateLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldEditionDate, v))
+}
+
+// EditionDateLTE applies the LTE predicate on the "edition_date" field.
+func EditionDateLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldEditionDate, v))
+}
+
+// EditionDateContains applies the Contains predicate on the "edition_date" field.
+func EditionDateContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldEditionDate, v))
+}
+
+// EditionDateHasPrefix applies the HasPrefix predicate on the "edition_date" field.
+func EditionDateHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldEditionDate, v))
+}
+
+// EditionDateHasSuffix applies the HasSuffix predicate on the "edition_date" field.
+func EditionDateHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldEditionDate, v))
+}
+
+// EditionDateIsNil applies the IsNil predicate on the "edition_date" field.
+func EditionDateIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldEditionDate))
+}
+
+// EditionDateNotNil applies the NotNil predicate on the "edition_date" field.
+func EditionDateNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldEditionDate))
+}
+
+// EditionDateEqualFold applies the EqualFold predicate on the "edition_date" field.
+func EditionDateEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldEditionDate, v))
+}
+
+// EditionDateContainsFold applies the ContainsFold predicate on the "edition_date" field.
+func EditionDateContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldEditionDate, v))
+}
+
+// GenresIsNil applies the IsNil predicate on the "genres" field.
+func GenresIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldGenres))
+}
+
+// GenresNotNil applies the NotNil predicate on the "genres" field.
+func GenresNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldGenres))
+}
+
 // MonitoredEQ applies the EQ predicate on the "monitored" field.
 func MonitoredEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldEQ(FieldMonitored, v))
@@ -593,6 +778,101 @@ func MonitorPinnedEQ(v bool) predicate.Album {
 // MonitorPinnedNEQ applies the NEQ predicate on the "monitor_pinned" field.
 func MonitorPinnedNEQ(v bool) predicate.Album {
 	return predicate.Album(sql.FieldNEQ(FieldMonitorPinned, v))
+}
+
+// TagsManagedEQ applies the EQ predicate on the "tags_managed" field.
+func TagsManagedEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldTagsManaged, v))
+}
+
+// TagsManagedNEQ applies the NEQ predicate on the "tags_managed" field.
+func TagsManagedNEQ(v bool) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldTagsManaged, v))
+}
+
+// ArtSidecarHashEQ applies the EQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashNEQ applies the NEQ predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNEQ(v string) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIn applies the In predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashNotIn applies the NotIn predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotIn(vs ...string) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldArtSidecarHash, vs...))
+}
+
+// ArtSidecarHashGT applies the GT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGT(v string) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashGTE applies the GTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashGTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLT applies the LT predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLT(v string) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashLTE applies the LTE predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashLTE(v string) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContains applies the Contains predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContains(v string) predicate.Album {
+	return predicate.Album(sql.FieldContains(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasPrefix applies the HasPrefix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasPrefix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasPrefix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashHasSuffix applies the HasSuffix predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashHasSuffix(v string) predicate.Album {
+	return predicate.Album(sql.FieldHasSuffix(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashIsNil applies the IsNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashNotNil applies the NotNil predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldArtSidecarHash))
+}
+
+// ArtSidecarHashEqualFold applies the EqualFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashEqualFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldEqualFold(FieldArtSidecarHash, v))
+}
+
+// ArtSidecarHashContainsFold applies the ContainsFold predicate on the "art_sidecar_hash" field.
+func ArtSidecarHashContainsFold(v string) predicate.Album {
+	return predicate.Album(sql.FieldContainsFold(FieldArtSidecarHash, v))
+}
+
+// TagOverridesIsNil applies the IsNil predicate on the "tag_overrides" field.
+func TagOverridesIsNil() predicate.Album {
+	return predicate.Album(sql.FieldIsNull(FieldTagOverrides))
+}
+
+// TagOverridesNotNil applies the NotNil predicate on the "tag_overrides" field.
+func TagOverridesNotNil() predicate.Album {
+	return predicate.Album(sql.FieldNotNull(FieldTagOverrides))
 }
 
 // GrabFailuresEQ applies the EQ predicate on the "grab_failures" field.
@@ -1253,6 +1533,46 @@ func CreditsFetchedAtIsNil() predicate.Album {
 // CreditsFetchedAtNotNil applies the NotNil predicate on the "credits_fetched_at" field.
 func CreditsFetchedAtNotNil() predicate.Album {
 	return predicate.Album(sql.FieldNotNull(FieldCreditsFetchedAt))
+}
+
+// CreditsVersionEQ applies the EQ predicate on the "credits_version" field.
+func CreditsVersionEQ(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldEQ(FieldCreditsVersion, v))
+}
+
+// CreditsVersionNEQ applies the NEQ predicate on the "credits_version" field.
+func CreditsVersionNEQ(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldNEQ(FieldCreditsVersion, v))
+}
+
+// CreditsVersionIn applies the In predicate on the "credits_version" field.
+func CreditsVersionIn(vs ...uint8) predicate.Album {
+	return predicate.Album(sql.FieldIn(FieldCreditsVersion, vs...))
+}
+
+// CreditsVersionNotIn applies the NotIn predicate on the "credits_version" field.
+func CreditsVersionNotIn(vs ...uint8) predicate.Album {
+	return predicate.Album(sql.FieldNotIn(FieldCreditsVersion, vs...))
+}
+
+// CreditsVersionGT applies the GT predicate on the "credits_version" field.
+func CreditsVersionGT(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldGT(FieldCreditsVersion, v))
+}
+
+// CreditsVersionGTE applies the GTE predicate on the "credits_version" field.
+func CreditsVersionGTE(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldGTE(FieldCreditsVersion, v))
+}
+
+// CreditsVersionLT applies the LT predicate on the "credits_version" field.
+func CreditsVersionLT(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldLT(FieldCreditsVersion, v))
+}
+
+// CreditsVersionLTE applies the LTE predicate on the "credits_version" field.
+func CreditsVersionLTE(v uint8) predicate.Album {
+	return predicate.Album(sql.FieldLTE(FieldCreditsVersion, v))
 }
 
 // HasArtist applies the HasEdge predicate on the "artist" edge.

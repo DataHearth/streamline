@@ -28,6 +28,13 @@ func (s *Service) DeleteTrackFile(ctx context.Context, trackID uint32) error {
 	defer span.End()
 
 	t, err := s.db.FindTrackByID(ctx, trackID)
+	if err == nil && t.Edges.Album != nil {
+		// No tag write may rename a copy back over a file deleted here, and
+		// the paths are read again under the lock: the renamer may have
+		// moved a file since.
+		defer library.LockAlbumFiles(t.Edges.Album.ID)()
+		t, err = s.db.FindTrackByID(ctx, trackID)
+	}
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return otelx.RecordSpanError(span, ErrTrackNotFound)

@@ -281,6 +281,46 @@ type LibraryConfig struct {
 	// Probe governs import-time verification against ffprobe results, read by
 	// the importer's verifier before a transfer.
 	Probe ProbeConfig `koanf:"probe"`
+	// MusicTags governs the tags Streamline writes into music files.
+	MusicTags MusicTagsConfig `koanf:"music_tags"`
+}
+
+// Music tag modes and seeding policies.
+const (
+	MusicTagsOff     = "off"
+	MusicTagsImport  = "import"
+	MusicTagsManaged = "managed"
+
+	MusicTagsSeedingDefer = "defer"
+	MusicTagsSeedingCopy  = "copy"
+)
+
+// MusicTagsConfig governs the tags Streamline writes into music files, all of
+// it runtime-editable. The music-tag-sync job is the writer; the importer
+// tags a file it copied itself inline.
+type MusicTagsConfig struct {
+	// Mode is off (never write), import (write each file once, when it is
+	// imported or adopted with tagging on) or managed (also rewrite whenever
+	// the library's data for it changes, and undo edits made elsewhere to
+	// the keys Streamline owns).
+	Mode string `koanf:"mode" validate:"required,oneof=off import managed"`
+	// Seeding decides a hardlinked import: defer keeps the hardlink, one copy
+	// on disk, and tags the file once its torrent is gone; copy imports a
+	// copy and tags it at once, two copies while the torrent seeds. A file a
+	// torrent itself still serves is never written either way.
+	Seeding string `koanf:"seeding" validate:"required,oneof=defer copy"`
+	// EmbedArt writes the album cover into each file as its front cover,
+	// resized to ArtMaxPx on its longest edge.
+	EmbedArt bool   `koanf:"embed_art"`
+	ArtMaxPx uint16 `koanf:"art_max_px" validate:"required,min=256,max=3000"`
+	// SidecarArt writes cover.jpg into each album folder and folder.jpg into
+	// each artist folder, never replacing one Streamline did not write.
+	SidecarArt bool `koanf:"sidecar_art"`
+	// Strip names keys deleted from every file written; Preserve names keys
+	// never written or deleted, which wins over both Strip and the keys
+	// Streamline manages. An entry ending in * matches as a prefix.
+	Strip    []string `koanf:"strip"    validate:"dive,required,max=64"`
+	Preserve []string `koanf:"preserve" validate:"dive,required,max=64"`
 }
 
 // ProbeConfig governs import-time verification against ffprobe results.
@@ -316,6 +356,7 @@ type ScheduleConfig struct {
 	DriftCheck           string `koanf:"drift_check"            validate:"required"`
 	MediaProbe           string `koanf:"media_probe"            validate:"required"`
 	FileSelection        string `koanf:"file_selection"         validate:"required"`
+	MusicTagSync         string `koanf:"music_tag_sync"         validate:"required"`
 }
 
 type MetadataConfig struct {
@@ -937,25 +978,39 @@ func defaults() map[string]any {
 		"schedules.drift_check":            "15m",
 		"schedules.media_probe":            "15m",
 		"schedules.file_selection":         "30s",
+		"schedules.music_tag_sync":         "30m",
 		"library.drift_grace_ticks":        3,
 		"library.probe.always_ask":         false,
 		"library.probe.min_duration_ratio": 0.5,
-		"metadata.tmdb_api_key":            "",
-		"metadata.tmdb_api_key_file":       "",
-		"metadata.tvdb_api_key":            "",
-		"metadata.tvdb_api_key_file":       "",
-		"metadata.hardcover_api_key":       "",
-		"metadata.hardcover_api_key_file":  "",
-		"metadata.language":                "en",
-		"metadata.tmdb_region":             "FR",
-		"otel.endpoint":                    "",
-		"otel.insecure":                    false,
-		"otel.sample_ratio":                0.05,
-		"otel.environment":                 "",
-		"media_server.plex_client_id":      "",
-		"media_server.servers":             []any{},
-		"download_clients":                 []any{},
-		"indexers":                         []any{},
+		"library.music_tags.mode":          MusicTagsImport,
+		"library.music_tags.seeding":       MusicTagsSeedingDefer,
+		"library.music_tags.embed_art":     true,
+		"library.music_tags.art_max_px":    1000,
+		"library.music_tags.sidecar_art":   true,
+		"library.music_tags.strip": []string{
+			"COMMENT", "ENCODEDBY", "URL", "FILEWEBPAGE",
+			"AUDIOSOURCEWEBPAGE", "PAYMENTWEBPAGE", "PUBLISHERWEBPAGE",
+		},
+		"library.music_tags.preserve": []string{
+			"REPLAYGAIN_*", "R128_*", "LYRICS", "UNSYNCEDLYRICS",
+			"ACOUSTID_*", "BPM", "INITIALKEY",
+		},
+		"metadata.tmdb_api_key":           "",
+		"metadata.tmdb_api_key_file":      "",
+		"metadata.tvdb_api_key":           "",
+		"metadata.tvdb_api_key_file":      "",
+		"metadata.hardcover_api_key":      "",
+		"metadata.hardcover_api_key_file": "",
+		"metadata.language":               "en",
+		"metadata.tmdb_region":            "FR",
+		"otel.endpoint":                   "",
+		"otel.insecure":                   false,
+		"otel.sample_ratio":               0.05,
+		"otel.environment":                "",
+		"media_server.plex_client_id":     "",
+		"media_server.servers":            []any{},
+		"download_clients":                []any{},
+		"indexers":                        []any{},
 		"quality_profiles": []map[string]any{
 			{
 				"name":                 "default",

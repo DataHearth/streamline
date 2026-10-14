@@ -401,6 +401,132 @@ func (_c *MediaFileCreate) SetNillableBookKind(v *mediafile.BookKind) *MediaFile
 	return _c
 }
 
+// SetTagsState sets the "tags_state" field.
+func (_c *MediaFileCreate) SetTagsState(v mediafile.TagsState) *MediaFileCreate {
+	_c.mutation.SetTagsState(v)
+	return _c
+}
+
+// SetNillableTagsState sets the "tags_state" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsState(v *mediafile.TagsState) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsState(*v)
+	}
+	return _c
+}
+
+// SetTagsHash sets the "tags_hash" field.
+func (_c *MediaFileCreate) SetTagsHash(v string) *MediaFileCreate {
+	_c.mutation.SetTagsHash(v)
+	return _c
+}
+
+// SetNillableTagsHash sets the "tags_hash" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsHash(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsHash(*v)
+	}
+	return _c
+}
+
+// SetTaggedAt sets the "tagged_at" field.
+func (_c *MediaFileCreate) SetTaggedAt(v time.Time) *MediaFileCreate {
+	_c.mutation.SetTaggedAt(v)
+	return _c
+}
+
+// SetNillableTaggedAt sets the "tagged_at" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTaggedAt(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetTaggedAt(*v)
+	}
+	return _c
+}
+
+// SetTagsMtime sets the "tags_mtime" field.
+func (_c *MediaFileCreate) SetTagsMtime(v int64) *MediaFileCreate {
+	_c.mutation.SetTagsMtime(v)
+	return _c
+}
+
+// SetNillableTagsMtime sets the "tags_mtime" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsMtime(v *int64) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsMtime(*v)
+	}
+	return _c
+}
+
+// SetTagsSize sets the "tags_size" field.
+func (_c *MediaFileCreate) SetTagsSize(v int64) *MediaFileCreate {
+	_c.mutation.SetTagsSize(v)
+	return _c
+}
+
+// SetNillableTagsSize sets the "tags_size" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsSize(v *int64) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsSize(*v)
+	}
+	return _c
+}
+
+// SetTagsCheckedAt sets the "tags_checked_at" field.
+func (_c *MediaFileCreate) SetTagsCheckedAt(v time.Time) *MediaFileCreate {
+	_c.mutation.SetTagsCheckedAt(v)
+	return _c
+}
+
+// SetNillableTagsCheckedAt sets the "tags_checked_at" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsCheckedAt(v *time.Time) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsCheckedAt(*v)
+	}
+	return _c
+}
+
+// SetTagFailures sets the "tag_failures" field.
+func (_c *MediaFileCreate) SetTagFailures(v uint8) *MediaFileCreate {
+	_c.mutation.SetTagFailures(v)
+	return _c
+}
+
+// SetNillableTagFailures sets the "tag_failures" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagFailures(v *uint8) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagFailures(*v)
+	}
+	return _c
+}
+
+// SetTagsError sets the "tags_error" field.
+func (_c *MediaFileCreate) SetTagsError(v string) *MediaFileCreate {
+	_c.mutation.SetTagsError(v)
+	return _c
+}
+
+// SetNillableTagsError sets the "tags_error" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsError(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsError(*v)
+	}
+	return _c
+}
+
+// SetTagsArtHash sets the "tags_art_hash" field.
+func (_c *MediaFileCreate) SetTagsArtHash(v string) *MediaFileCreate {
+	_c.mutation.SetTagsArtHash(v)
+	return _c
+}
+
+// SetNillableTagsArtHash sets the "tags_art_hash" field if the given value is not nil.
+func (_c *MediaFileCreate) SetNillableTagsArtHash(v *string) *MediaFileCreate {
+	if v != nil {
+		_c.SetTagsArtHash(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MediaFileCreate) SetID(v uint32) *MediaFileCreate {
 	_c.mutation.SetID(v)
@@ -549,6 +675,10 @@ func (_c *MediaFileCreate) defaults() {
 		v := mediafile.DefaultLastSeenAt()
 		_c.mutation.SetLastSeenAt(v)
 	}
+	if _, ok := _c.mutation.TagFailures(); !ok {
+		v := mediafile.DefaultTagFailures
+		_c.mutation.SetTagFailures(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -582,6 +712,14 @@ func (_c *MediaFileCreate) check() error {
 		if err := mediafile.BookKindValidator(v); err != nil {
 			return &ValidationError{Name: "book_kind", err: fmt.Errorf(`ent: validator failed for field "MediaFile.book_kind": %w`, err)}
 		}
+	}
+	if v, ok := _c.mutation.TagsState(); ok {
+		if err := mediafile.TagsStateValidator(v); err != nil {
+			return &ValidationError{Name: "tags_state", err: fmt.Errorf(`ent: validator failed for field "MediaFile.tags_state": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.TagFailures(); !ok {
+		return &ValidationError{Name: "tag_failures", err: errors.New(`ent: missing required field "MediaFile.tag_failures"`)}
 	}
 	return nil
 }
@@ -726,6 +864,42 @@ func (_c *MediaFileCreate) createSpec() (*MediaFile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.BookKind(); ok {
 		_spec.SetField(mediafile.FieldBookKind, field.TypeEnum, value)
 		_node.BookKind = value
+	}
+	if value, ok := _c.mutation.TagsState(); ok {
+		_spec.SetField(mediafile.FieldTagsState, field.TypeEnum, value)
+		_node.TagsState = &value
+	}
+	if value, ok := _c.mutation.TagsHash(); ok {
+		_spec.SetField(mediafile.FieldTagsHash, field.TypeString, value)
+		_node.TagsHash = value
+	}
+	if value, ok := _c.mutation.TaggedAt(); ok {
+		_spec.SetField(mediafile.FieldTaggedAt, field.TypeTime, value)
+		_node.TaggedAt = &value
+	}
+	if value, ok := _c.mutation.TagsMtime(); ok {
+		_spec.SetField(mediafile.FieldTagsMtime, field.TypeInt64, value)
+		_node.TagsMtime = value
+	}
+	if value, ok := _c.mutation.TagsSize(); ok {
+		_spec.SetField(mediafile.FieldTagsSize, field.TypeInt64, value)
+		_node.TagsSize = value
+	}
+	if value, ok := _c.mutation.TagsCheckedAt(); ok {
+		_spec.SetField(mediafile.FieldTagsCheckedAt, field.TypeTime, value)
+		_node.TagsCheckedAt = &value
+	}
+	if value, ok := _c.mutation.TagFailures(); ok {
+		_spec.SetField(mediafile.FieldTagFailures, field.TypeUint8, value)
+		_node.TagFailures = value
+	}
+	if value, ok := _c.mutation.TagsError(); ok {
+		_spec.SetField(mediafile.FieldTagsError, field.TypeString, value)
+		_node.TagsError = value
+	}
+	if value, ok := _c.mutation.TagsArtHash(); ok {
+		_spec.SetField(mediafile.FieldTagsArtHash, field.TypeString, value)
+		_node.TagsArtHash = value
 	}
 	if nodes := _c.mutation.MovieIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

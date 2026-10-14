@@ -301,6 +301,9 @@ type Downloader interface {
 		torrentHash string,
 	) (TorrentStatus, error)
 	Queue(ctx context.Context) (QueueSnapshot, error)
+	// SeedingTorrents is every torrent the enabled clients still list, which
+	// the music tag writer must not write through.
+	SeedingTorrents(ctx context.Context) SeedingSet
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
 	ResumeQueueItem(ctx context.Context, recordID uint32) error

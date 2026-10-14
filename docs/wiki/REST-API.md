@@ -184,6 +184,7 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
 | `GET` | `/music/artists/{id}` | Fetch an artist with its full tree: members, and every album with tracks, credits and personnel (`?lang=en\|fr` picks the overview) | Authenticated |
 | `PATCH` | `/music/artists/{id}` | Update `monitor` (`all`, `future`, `manual`, `none`; re-applied to the existing albums, never touching their status; `all` and `future` monitor only the types in `library.music_monitored_types`) and `quality_profile` (`422` for an unknown name; empty clears to the default) | Member |
+| `POST` | `/music/tags/retag` | Queue every music file for a full rewrite of its tags by the `music-tag-sync` job (`202 {queued}`); `409 code: music_tags_off` when `library.music_tags.mode` is `off` | 🔒 Admin |
 | `POST` | `/music/monitored-types/apply` | Re-apply every `all`/`future` artist's monitor policy under the current `library.music_monitored_types`, skipping albums whose flag was set by hand; answers `monitored`, `unmonitored` (albums changed) and `types` | 🔒 Admin |
 | `DELETE` | `/music/artists/{id}` | Remove an artist; `?delete_files=true` also deletes files from disk | Member |
 | `POST` | `/music/artists/{id}/refresh-metadata` | Re-fetch the artist and its discography from MusicBrainz; new release groups follow the monitor policy and are hydrated in the background | Member |
@@ -192,7 +193,10 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/artists/{id}/browse` | Search the indexers for the artist's discography packs; items are plain search results | Member |
 | `POST` | `/music/artists/{id}/grab` | Grab a discography pack: the item of a browse, unchanged. `202`; `422 grab_rejected` when no album of the artist can take it | Member |
 | `GET` | `/music/albums/{id}` | Fetch an album with its tracks, credits and personnel (the object an artist detail embeds) | Authenticated |
-| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed | Member |
+| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed. Also the album's tag settings: `tags_managed`, and `tag_overrides` (tag name to values, written over the library's tags in every file; an empty list removes the tag; `422` for a key that is not a tag name), either of which queues the album's files | Member |
+| `GET` | `/music/albums/{id}/tags` | Read every file of the album and compare it, key by key, with what Streamline would write (`same`, `differs`, or `kept` for a key it leaves alone), in the format's own keys; with the file's writer state, the album's and track's overrides, and the instance's mode | Member |
+| `POST` | `/music/albums/{id}/tags/apply` | Rewrite every file of the album now, managed or not (`202 {queued}`; a file a torrent still holds waits); `409 code: music_tags_off` when tagging is off | Member |
+| `PATCH` | `/music/tracks/{id}` | Replace the track's `tag_overrides`, written over the album's and the library's tags for its files (`204`) | Member |
 | `POST` | `/music/albums/{id}/search` | Search the indexers for one album; plain search results, ranked, with the releases the profile rejects, and those whose name reads as another album or artist, kept at the end flagged `rejected` and `reject_reason` | Member |
 | `POST` | `/music/albums/{id}/grab` | Grab a chosen release: an item of a search, unchanged. `202` with no body | Member |
 | `POST` | `/music/albums/{id}/search-now` · `/music/tracks/{id}/search-now` | Run one search-and-grab pass for the album (a track searches its album). `202`; a no-op for an album that is available, upcoming or already downloading | Member |
@@ -379,8 +383,8 @@ All four answer `409` while `transcoding.enabled` is false.
 | `GET` | `/library/recent?limit=` | What landed in the library, newest first (`limit` 1–100, default 24): one `items` entry per import of a movie (`resolution`), a show (`addition`, the episodes it added), an album (`artist_id`, `artist_name`, `release_type`) or one format of a book (`author`, `book_kind`, `format`, and `series_id`/`volume` for a volume). An import is a title's files that landed within an hour of the newest of them; `at` is that newest file's import time. Bulk-import adoptions count | Authenticated |
 | `GET` `POST` | `/library/imports` | List / start an import scan | 🔒 Admin |
 | `GET` `DELETE` | `/library/imports/{id}` | Fetch / delete a scan | 🔒 Admin |
-| `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan | 🔒 Admin |
-| `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows | 🔒 Admin |
+| `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan. A music commit takes an optional `{"write_tags": bool}` (default off: without it the adopted files are left exactly as they are) | 🔒 Admin |
+| `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows; an album row carries `seeding_files`, its files a torrent still serves | 🔒 Admin |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
 | `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |

@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
@@ -142,6 +143,64 @@ func (_u *AlbumUpdate) ClearReleaseDate() *AlbumUpdate {
 	return _u
 }
 
+// SetOriginalDate sets the "original_date" field.
+func (_u *AlbumUpdate) SetOriginalDate(v string) *AlbumUpdate {
+	_u.mutation.SetOriginalDate(v)
+	return _u
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableOriginalDate(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetOriginalDate(*v)
+	}
+	return _u
+}
+
+// ClearOriginalDate clears the value of the "original_date" field.
+func (_u *AlbumUpdate) ClearOriginalDate() *AlbumUpdate {
+	_u.mutation.ClearOriginalDate()
+	return _u
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_u *AlbumUpdate) SetEditionDate(v string) *AlbumUpdate {
+	_u.mutation.SetEditionDate(v)
+	return _u
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableEditionDate(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetEditionDate(*v)
+	}
+	return _u
+}
+
+// ClearEditionDate clears the value of the "edition_date" field.
+func (_u *AlbumUpdate) ClearEditionDate() *AlbumUpdate {
+	_u.mutation.ClearEditionDate()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *AlbumUpdate) SetGenres(v []string) *AlbumUpdate {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *AlbumUpdate) AppendGenres(v []string) *AlbumUpdate {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *AlbumUpdate) ClearGenres() *AlbumUpdate {
+	_u.mutation.ClearGenres()
+	return _u
+}
+
 // SetMonitored sets the "monitored" field.
 func (_u *AlbumUpdate) SetMonitored(v bool) *AlbumUpdate {
 	_u.mutation.SetMonitored(v)
@@ -167,6 +226,52 @@ func (_u *AlbumUpdate) SetNillableMonitorPinned(v *bool) *AlbumUpdate {
 	if v != nil {
 		_u.SetMonitorPinned(*v)
 	}
+	return _u
+}
+
+// SetTagsManaged sets the "tags_managed" field.
+func (_u *AlbumUpdate) SetTagsManaged(v bool) *AlbumUpdate {
+	_u.mutation.SetTagsManaged(v)
+	return _u
+}
+
+// SetNillableTagsManaged sets the "tags_managed" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableTagsManaged(v *bool) *AlbumUpdate {
+	if v != nil {
+		_u.SetTagsManaged(*v)
+	}
+	return _u
+}
+
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *AlbumUpdate) SetArtSidecarHash(v string) *AlbumUpdate {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableArtSidecarHash(v *string) *AlbumUpdate {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *AlbumUpdate) ClearArtSidecarHash() *AlbumUpdate {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_u *AlbumUpdate) SetTagOverrides(v map[string][]string) *AlbumUpdate {
+	_u.mutation.SetTagOverrides(v)
+	return _u
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (_u *AlbumUpdate) ClearTagOverrides() *AlbumUpdate {
+	_u.mutation.ClearTagOverrides()
 	return _u
 }
 
@@ -382,6 +487,27 @@ func (_u *AlbumUpdate) SetNillableCreditsFetchedAt(v *time.Time) *AlbumUpdate {
 // ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
 func (_u *AlbumUpdate) ClearCreditsFetchedAt() *AlbumUpdate {
 	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
+// SetCreditsVersion sets the "credits_version" field.
+func (_u *AlbumUpdate) SetCreditsVersion(v uint8) *AlbumUpdate {
+	_u.mutation.ResetCreditsVersion()
+	_u.mutation.SetCreditsVersion(v)
+	return _u
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_u *AlbumUpdate) SetNillableCreditsVersion(v *uint8) *AlbumUpdate {
+	if v != nil {
+		_u.SetCreditsVersion(*v)
+	}
+	return _u
+}
+
+// AddCreditsVersion adds value to the "credits_version" field.
+func (_u *AlbumUpdate) AddCreditsVersion(v int8) *AlbumUpdate {
+	_u.mutation.AddCreditsVersion(v)
 	return _u
 }
 
@@ -699,11 +825,49 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ReleaseDateCleared() {
 		_spec.ClearField(album.FieldReleaseDate, field.TypeTime)
 	}
+	if value, ok := _u.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+	}
+	if _u.mutation.OriginalDateCleared() {
+		_spec.ClearField(album.FieldOriginalDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+	}
+	if _u.mutation.EditionDateCleared() {
+		_spec.ClearField(album.FieldEditionDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(album.FieldGenres, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.MonitorPinned(); ok {
 		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TagsManaged(); ok {
+		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+	}
+	if _u.mutation.TagOverridesCleared() {
+		_spec.ClearField(album.FieldTagOverrides, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
@@ -767,6 +931,12 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CreditsFetchedAtCleared() {
 		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
+		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1152,6 +1322,64 @@ func (_u *AlbumUpdateOne) ClearReleaseDate() *AlbumUpdateOne {
 	return _u
 }
 
+// SetOriginalDate sets the "original_date" field.
+func (_u *AlbumUpdateOne) SetOriginalDate(v string) *AlbumUpdateOne {
+	_u.mutation.SetOriginalDate(v)
+	return _u
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableOriginalDate(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetOriginalDate(*v)
+	}
+	return _u
+}
+
+// ClearOriginalDate clears the value of the "original_date" field.
+func (_u *AlbumUpdateOne) ClearOriginalDate() *AlbumUpdateOne {
+	_u.mutation.ClearOriginalDate()
+	return _u
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_u *AlbumUpdateOne) SetEditionDate(v string) *AlbumUpdateOne {
+	_u.mutation.SetEditionDate(v)
+	return _u
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableEditionDate(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetEditionDate(*v)
+	}
+	return _u
+}
+
+// ClearEditionDate clears the value of the "edition_date" field.
+func (_u *AlbumUpdateOne) ClearEditionDate() *AlbumUpdateOne {
+	_u.mutation.ClearEditionDate()
+	return _u
+}
+
+// SetGenres sets the "genres" field.
+func (_u *AlbumUpdateOne) SetGenres(v []string) *AlbumUpdateOne {
+	_u.mutation.SetGenres(v)
+	return _u
+}
+
+// AppendGenres appends value to the "genres" field.
+func (_u *AlbumUpdateOne) AppendGenres(v []string) *AlbumUpdateOne {
+	_u.mutation.AppendGenres(v)
+	return _u
+}
+
+// ClearGenres clears the value of the "genres" field.
+func (_u *AlbumUpdateOne) ClearGenres() *AlbumUpdateOne {
+	_u.mutation.ClearGenres()
+	return _u
+}
+
 // SetMonitored sets the "monitored" field.
 func (_u *AlbumUpdateOne) SetMonitored(v bool) *AlbumUpdateOne {
 	_u.mutation.SetMonitored(v)
@@ -1177,6 +1405,52 @@ func (_u *AlbumUpdateOne) SetNillableMonitorPinned(v *bool) *AlbumUpdateOne {
 	if v != nil {
 		_u.SetMonitorPinned(*v)
 	}
+	return _u
+}
+
+// SetTagsManaged sets the "tags_managed" field.
+func (_u *AlbumUpdateOne) SetTagsManaged(v bool) *AlbumUpdateOne {
+	_u.mutation.SetTagsManaged(v)
+	return _u
+}
+
+// SetNillableTagsManaged sets the "tags_managed" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableTagsManaged(v *bool) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetTagsManaged(*v)
+	}
+	return _u
+}
+
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_u *AlbumUpdateOne) SetArtSidecarHash(v string) *AlbumUpdateOne {
+	_u.mutation.SetArtSidecarHash(v)
+	return _u
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableArtSidecarHash(v *string) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetArtSidecarHash(*v)
+	}
+	return _u
+}
+
+// ClearArtSidecarHash clears the value of the "art_sidecar_hash" field.
+func (_u *AlbumUpdateOne) ClearArtSidecarHash() *AlbumUpdateOne {
+	_u.mutation.ClearArtSidecarHash()
+	return _u
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_u *AlbumUpdateOne) SetTagOverrides(v map[string][]string) *AlbumUpdateOne {
+	_u.mutation.SetTagOverrides(v)
+	return _u
+}
+
+// ClearTagOverrides clears the value of the "tag_overrides" field.
+func (_u *AlbumUpdateOne) ClearTagOverrides() *AlbumUpdateOne {
+	_u.mutation.ClearTagOverrides()
 	return _u
 }
 
@@ -1392,6 +1666,27 @@ func (_u *AlbumUpdateOne) SetNillableCreditsFetchedAt(v *time.Time) *AlbumUpdate
 // ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
 func (_u *AlbumUpdateOne) ClearCreditsFetchedAt() *AlbumUpdateOne {
 	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
+// SetCreditsVersion sets the "credits_version" field.
+func (_u *AlbumUpdateOne) SetCreditsVersion(v uint8) *AlbumUpdateOne {
+	_u.mutation.ResetCreditsVersion()
+	_u.mutation.SetCreditsVersion(v)
+	return _u
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_u *AlbumUpdateOne) SetNillableCreditsVersion(v *uint8) *AlbumUpdateOne {
+	if v != nil {
+		_u.SetCreditsVersion(*v)
+	}
+	return _u
+}
+
+// AddCreditsVersion adds value to the "credits_version" field.
+func (_u *AlbumUpdateOne) AddCreditsVersion(v int8) *AlbumUpdateOne {
+	_u.mutation.AddCreditsVersion(v)
 	return _u
 }
 
@@ -1739,11 +2034,49 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	if _u.mutation.ReleaseDateCleared() {
 		_spec.ClearField(album.FieldReleaseDate, field.TypeTime)
 	}
+	if value, ok := _u.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+	}
+	if _u.mutation.OriginalDateCleared() {
+		_spec.ClearField(album.FieldOriginalDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+	}
+	if _u.mutation.EditionDateCleared() {
+		_spec.ClearField(album.FieldEditionDate, field.TypeString)
+	}
+	if value, ok := _u.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedGenres(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, album.FieldGenres, value)
+		})
+	}
+	if _u.mutation.GenresCleared() {
+		_spec.ClearField(album.FieldGenres, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.MonitorPinned(); ok {
 		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TagsManaged(); ok {
+		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+	}
+	if _u.mutation.ArtSidecarHashCleared() {
+		_spec.ClearField(album.FieldArtSidecarHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+	}
+	if _u.mutation.TagOverridesCleared() {
+		_spec.ClearField(album.FieldTagOverrides, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
@@ -1807,6 +2140,12 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 	}
 	if _u.mutation.CreditsFetchedAtCleared() {
 		_spec.ClearField(album.FieldCreditsFetchedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsVersion(); ok {
+		_spec.AddField(album.FieldCreditsVersion, field.TypeUint8, value)
 	}
 	if _u.mutation.ArtistCleared() {
 		edge := &sqlgraph.EdgeSpec{

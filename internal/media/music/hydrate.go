@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -199,7 +201,8 @@ func (s *Service) enqueueHydration(artistID uint32, items ...hydrateItem) {
 
 // hydrationWorker drains the queue one album at a time, then refills it from
 // the albums still waiting in the database (restart recovery) until nothing
-// new turns up. An album that failed in this run is not retried in it.
+// new turns up. An album that failed in this run is not retried in it; one
+// that succeeded leaves the lists on its own (see refillHydration).
 func (s *Service) hydrationWorker(ctx context.Context) {
 	failed := map[uint32]struct{}{}
 	for {
@@ -210,7 +213,7 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			}
 			return
 		}
-		err := s.hydrateAlbum(ctx, it.albumID, true)
+		_, err := s.hydrateAlbum(ctx, it.albumID, true)
 		s.hydrate.done(it.albumID)
 		var limited *metadata.RateLimitedError
 		switch {
@@ -221,6 +224,8 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			if serr := sleep(ctx, pause); serr != nil {
 				return
 			}
+			// Not a failure of the album's: it goes back on the queue,
+			// which a refill would not do.
 			s.requeue(ctx, it)
 		case err != nil:
 			failed[it.albumID] = struct{}{}
@@ -236,23 +241,47 @@ func (s *Service) requeue(ctx context.Context, it hydrateItem) {
 	s.hydrate.add(a.Edges.Artist.ID, []hydrateItem{it})
 }
 
+// detailsRetry is how long an album whose credits layout a refetch could not
+// bring up to date waits before it is listed for the details backfill again.
+const detailsRetry = 24 * time.Hour
+
 // refillHydration queues up to sweepBatch albums still waiting for their
 // tracks, minus the ones that failed this run, and reports whether it found
-// any.
+// any. A success leaves the lists by itself: it stamps the album's tracks and
+// genres, and its fetch time is now, which the details backfill's retry
+// cutoff excludes for detailsRetry — so the rows a refill reads stay bounded
+// by the failures, not by everything the run fetched.
 func (s *Service) refillHydration(
 	ctx context.Context,
 	failed map[uint32]struct{},
 ) bool {
+	fresh := func(rows []*ent.Album) []*ent.Album {
+		return slices.DeleteFunc(rows, func(a *ent.Album) bool {
+			_, bad := failed[a.ID]
+			return bad || a.Edges.Artist == nil
+		})
+	}
 	rows, err := s.db.ListAlbumsAwaitingHydration(ctx, sweepBatch+len(failed))
 	if err != nil {
 		slog.WarnContext(ctx, "music hydration refill failed", "error", err)
 		return false
 	}
+	rows = fresh(rows)
+	if len(rows) == 0 {
+		// Nothing new waits for its tracks: backfill the release data of
+		// albums holding files fetched before the tag writer read it
+		// (genres, edition date, the current credits layout). Background
+		// class, so a lookup never queues behind it.
+		more, err := s.db.ListAlbumsAwaitingDetails(
+			ctx, time.Now().Add(-detailsRetry), sweepBatch+len(failed),
+		)
+		if err != nil {
+			slog.WarnContext(ctx, "music details refill failed", "error", err)
+		}
+		rows = fresh(more)
+	}
 	found := false
 	for _, a := range rows {
-		if _, bad := failed[a.ID]; bad || a.Edges.Artist == nil {
-			continue
-		}
 		s.hydrate.add(a.Edges.Artist.ID, []hydrateItem{{
 			albumID: a.ID, monitored: a.Monitored, date: a.ReleaseDate,
 		}})
@@ -276,7 +305,10 @@ func sleep(ctx context.Context, d time.Duration) error {
 // they match files to tracks: an album added as a stub has none.
 type AlbumHydrator interface {
 	// HydrateAlbum fetches the album's tracks when it has not been fetched,
-	// synchronously and at interactive priority, and is a no-op otherwise.
+	// synchronously and at interactive priority. An album whose tracks are
+	// stored but whose genres and edition date predate them is fetched too,
+	// best effort: that failing is logged, never returned, since the caller
+	// has the tracks it needs. Otherwise it is a no-op.
 	HydrateAlbum(ctx context.Context, albumID uint32) error
 }
 
@@ -284,25 +316,34 @@ var _ AlbumHydrator = (*Service)(nil)
 
 func (s *Service) HydrateAlbum(ctx context.Context, albumID uint32) error {
 	s.hydrate.remove(albumID)
-	return s.hydrateAlbum(ctx, albumID, false)
+	detailsOnly, err := s.hydrateAlbum(ctx, albumID, false)
+	if err != nil && detailsOnly {
+		slog.WarnContext(ctx, "album details backfill failed, kept the stored album",
+			"album.id", albumID, "error", err)
+		return nil
+	}
+	return err
 }
 
 // hydrateAlbum fetches an album's release data and stores it. Without force it
-// does nothing for an album whose tracks are already stored.
+// does nothing for an album whose tracks are already stored, unless its
+// genres were never fetched. detailsOnly reports that case: the album already
+// had its tracks.
 func (s *Service) hydrateAlbum(
 	ctx context.Context,
 	albumID uint32,
 	force bool,
-) error {
+) (detailsOnly bool, _ error) {
 	a, err := s.db.FindAlbumByID(ctx, albumID)
 	if ent.IsNotFound(err) {
-		return nil
+		return false, nil
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
-	if !force && a.MetadataFetchedAt != nil {
-		return nil
+	detailsOnly = a.MetadataFetchedAt != nil
+	if !force && detailsOnly && !detailsStale(a) {
+		return false, nil
 	}
 	ctx, span := tracer.Start(ctx, "music.hydrate_album",
 		trace.WithAttributes(attribute.Int64("album.id", int64(albumID))))
@@ -310,14 +351,18 @@ func (s *Service) hydrateAlbum(
 
 	d, err := s.metadata.GetReleaseGroup(ctx, a.Mbid)
 	switch {
+	case errors.Is(err, metadata.ErrNotFound) && detailsOnly:
+		// MusicBrainz no longer has the release group: keep what is stored
+		// and record that there are no genres, or the backfill would ask for
+		// it forever.
+		d = storedDetails(a)
 	case errors.Is(err, metadata.ErrNotFound):
-		// MusicBrainz no longer has the release group: stamp it, or the sweep
-		// would ask for it forever.
+		// Stamp it, or the sweep would ask for it forever.
 		d = &metadata.ReleaseGroupDetails{}
 	case err != nil:
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
 		span.SetAttributes(attribute.String("outcome", hydrationFailed))
-		return otelx.RecordSpanError(
+		return detailsOnly, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("hydrate album %d: %w", albumID, err),
 		)
@@ -326,16 +371,17 @@ func (s *Service) hydrateAlbum(
 	params, err := s.hydrationParams(ctx, a, d)
 	if err != nil {
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
-		return otelx.RecordSpanError(span, err)
+		return detailsOnly, otelx.RecordSpanError(span, err)
 	}
 	if err := s.db.SetAlbumHydration(ctx, albumID, params, time.Now()); err != nil {
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
 		span.SetAttributes(attribute.String("outcome", hydrationFailed))
-		return otelx.RecordSpanError(
+		return detailsOnly, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("store album %d: %w", albumID, err),
 		)
 	}
+	s.tagsChanged(ctx, albumID)
 	outcome := hydrationOK
 	if !d.CreditsComplete {
 		outcome = hydrationLight
@@ -350,7 +396,36 @@ func (s *Service) hydrateAlbum(
 			s.resolveCover(ctx, full)
 		}
 	}
-	return nil
+	return detailsOnly, nil
+}
+
+// detailsStale reports a hydrated album whose release data predates what the
+// tag writer reads: genres never fetched, or credits stored under an older
+// layout. ListAlbumsAwaitingDetails is its query twin.
+func detailsStale(a *ent.Album) bool {
+	return a.Genres == nil ||
+		(a.CreditsFetchedAt != nil && a.CreditsVersion < library.MusicCreditsVersion)
+}
+
+// storedDetails is the album-level part of a release call rebuilt from what
+// the album already holds, with no genres, for a release group MusicBrainz no
+// longer knows: storing it changes nothing but the genres marker.
+func storedDetails(a *ent.Album) *metadata.ReleaseGroupDetails {
+	var media []string
+	if a.Media != "" {
+		media = strings.Split(a.Media, ",")
+	}
+	return &metadata.ReleaseGroupDetails{
+		OriginalDate:  a.OriginalDate,
+		ReleaseMBID:   a.ReleaseMbid,
+		Barcode:       a.Barcode,
+		Label:         a.Label,
+		CatalogNumber: a.CatalogNumber,
+		Country:       a.Country,
+		EditionDate:   a.EditionDate,
+		Genres:        []string{},
+		Media:         media,
+	}
 }
 
 func outcomeAttr(outcome string) metric.AddOption {
@@ -368,6 +443,9 @@ func (s *Service) hydrationParams(
 ) (db.HydrationParams, error) {
 	p := db.HydrationParams{
 		ReleaseMBID:     d.ReleaseMBID,
+		OriginalDate:    d.OriginalDate,
+		EditionDate:     d.EditionDate,
+		Genres:          d.Genres,
 		Barcode:         d.Barcode,
 		Label:           d.Label,
 		CatalogNumber:   d.CatalogNumber,
@@ -378,17 +456,20 @@ func (s *Service) hydrationParams(
 	}
 	for _, t := range d.Tracks {
 		p.Tracks = append(p.Tracks, db.TrackSeed{
-			MBID: t.MBID, Title: t.Title, Disc: t.Disc, Position: t.Position,
+			MBID: t.MBID, ReleaseTrackMBID: t.ReleaseTrackMBID,
+			Title: t.Title, Disc: t.Disc, Position: t.Position,
 			Duration: t.Duration, Bonus: t.Bonus,
-			Featuring: personSeeds(t.Featuring),
-			Writers:   personSeeds(t.Writers),
+			Featuring:  personSeeds(t.Featuring),
+			Writers:    creditSeeds(t.Writers),
+			Credits:    creditSeeds(t.Credits),
+			Performers: performerSeeds(t.Performers),
 		})
 	}
 	if !d.CreditsComplete {
 		return p, nil
 	}
 	for _, c := range d.Credits {
-		p.Credits = append(p.Credits, db.AlbumCreditSeed{
+		p.Credits = append(p.Credits, db.MusicCreditSeed{
 			Name: c.Name, MBID: c.MBID,
 			Role: c.Role,
 		})
@@ -426,6 +507,30 @@ func personSeeds(in []metadata.PersonInfo) []db.PersonSeed {
 	return out
 }
 
+func creditSeeds(in []metadata.CreditInfo) []db.MusicCreditSeed {
+	out := make([]db.MusicCreditSeed, len(in))
+	for i, c := range in {
+		out[i] = db.MusicCreditSeed{
+			Name: c.Name, MBID: c.MBID,
+			Role: c.Role,
+		}
+	}
+	return out
+}
+
+// performerSeeds are a track's performers; the guest flag is the album's
+// call, made over all its tracks.
+func performerSeeds(in []metadata.PerformerInfo) []db.PerformerSeed {
+	out := make([]db.PerformerSeed, len(in))
+	for i, p := range in {
+		out[i] = db.PerformerSeed{
+			Name: p.Name, MBID: p.MBID,
+			Instruments: p.Instruments,
+		}
+	}
+	return out
+}
+
 // ResumeHydration queues the albums left unfinished by a previous run, so a
 // restart does not wait for the next metadata refresh to carry on. It returns
 // at once; the worker does the fetching.
@@ -447,6 +552,11 @@ func (s *Service) sweepHydration(ctx context.Context) {
 		}},
 		{"credits", func() ([]*ent.Album, error) {
 			return s.db.ListAlbumsAwaitingCredits(ctx, sweepBatch)
+		}},
+		{"details", func() ([]*ent.Album, error) {
+			return s.db.ListAlbumsAwaitingDetails(
+				ctx, now.Add(-detailsRetry), sweepBatch,
+			)
 		}},
 		{"trackless", func() ([]*ent.Album, error) {
 			return s.db.ListAlbumsTrackless(

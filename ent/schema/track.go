@@ -21,12 +21,18 @@ func (Track) Mixin() []ent.Mixin {
 
 func (Track) Fields() []ent.Field {
 	return []ent.Field{
+		// mbid is the recording; release_track_mbid the track of the
+		// canonical release, which is what MUSICBRAINZ_RELEASETRACKID names.
 		field.String("mbid").Optional(),
+		field.String("release_track_mbid").Optional(),
 		field.String("title").NotEmpty(),
 		field.Uint8("disc").Default(1),
 		field.Uint16("position"),
 		field.Uint32("duration").Optional().Default(0),
 		field.Bool("bonus").Default(false),
+		// tag_overrides are tags set by hand for this track's files, written
+		// over the album's overrides and what the library would write.
+		field.JSON("tag_overrides", map[string][]string{}).Optional(),
 	}
 }
 

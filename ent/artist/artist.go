@@ -55,6 +55,8 @@ const (
 	FieldLastRefreshedAt = "last_refreshed_at"
 	// FieldDetailsFetchedAt holds the string denoting the details_fetched_at field in the database.
 	FieldDetailsFetchedAt = "details_fetched_at"
+	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
+	FieldArtSidecarHash = "art_sidecar_hash"
 	// EdgeAlbums holds the string denoting the albums edge name in mutations.
 	EdgeAlbums = "albums"
 	// EdgeMembers holds the string denoting the members edge name in mutations.
@@ -118,6 +120,7 @@ var Columns = []string{
 	FieldQualityProfile,
 	FieldLastRefreshedAt,
 	FieldDetailsFetchedAt,
+	FieldArtSidecarHash,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -300,6 +303,11 @@ func ByLastRefreshedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByDetailsFetchedAt orders the results by the details_fetched_at field.
 func ByDetailsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDetailsFetchedAt, opts...).ToFunc()
+}
+
+// ByArtSidecarHash orders the results by the art_sidecar_hash field.
+func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
 }
 
 // ByAlbumsCount orders the results by albums count.

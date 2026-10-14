@@ -265,10 +265,27 @@ var _ = Describe(
 										Featuring: []db.PersonSeed{
 											{Name: "Kurt", MBID: otherMBID},
 										},
-										Writers: []db.PersonSeed{{Name: "Nobody"}},
+										Writers: []db.MusicCreditSeed{
+											{Name: "Nobody"},
+											{
+												Name: "Kurt Cobain",
+												MBID: "w-kurt",
+												Role: "composer",
+											},
+											{
+												Name: "Kurt Cobain",
+												MBID: "w-kurt",
+												Role: "lyricist",
+											},
+											{
+												Name: "Butch Vig",
+												MBID: "w-butch",
+												Role: "arranger",
+											},
+										},
 									},
 								},
-								Credits: []db.AlbumCreditSeed{
+								Credits: []db.MusicCreditSeed{
 									{
 										Name: "Producer",
 										MBID: otherMBID,
@@ -312,6 +329,12 @@ var _ = Describe(
 						nevermind.Tracks[0].Featuring[0].ArtistID,
 					).To(Equal(otherID))
 					Expect(nevermind.Tracks[0].Writers[0].ArtistID).To(BeZero())
+					written := make([]string, 0, len(nevermind.Tracks[0].Writers))
+					for _, w := range nevermind.Tracks[0].Writers {
+						written = append(written, w.Name)
+					}
+					Expect(written).To(Equal([]string{"Nobody", "Kurt Cobain"}),
+						"each person once, whatever their roles, and no arranger")
 				},
 			)
 

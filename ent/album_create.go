@@ -121,6 +121,40 @@ func (_c *AlbumCreate) SetNillableReleaseDate(v *time.Time) *AlbumCreate {
 	return _c
 }
 
+// SetOriginalDate sets the "original_date" field.
+func (_c *AlbumCreate) SetOriginalDate(v string) *AlbumCreate {
+	_c.mutation.SetOriginalDate(v)
+	return _c
+}
+
+// SetNillableOriginalDate sets the "original_date" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableOriginalDate(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetOriginalDate(*v)
+	}
+	return _c
+}
+
+// SetEditionDate sets the "edition_date" field.
+func (_c *AlbumCreate) SetEditionDate(v string) *AlbumCreate {
+	_c.mutation.SetEditionDate(v)
+	return _c
+}
+
+// SetNillableEditionDate sets the "edition_date" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableEditionDate(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetEditionDate(*v)
+	}
+	return _c
+}
+
+// SetGenres sets the "genres" field.
+func (_c *AlbumCreate) SetGenres(v []string) *AlbumCreate {
+	_c.mutation.SetGenres(v)
+	return _c
+}
+
 // SetMonitored sets the "monitored" field.
 func (_c *AlbumCreate) SetMonitored(v bool) *AlbumCreate {
 	_c.mutation.SetMonitored(v)
@@ -146,6 +180,40 @@ func (_c *AlbumCreate) SetNillableMonitorPinned(v *bool) *AlbumCreate {
 	if v != nil {
 		_c.SetMonitorPinned(*v)
 	}
+	return _c
+}
+
+// SetTagsManaged sets the "tags_managed" field.
+func (_c *AlbumCreate) SetTagsManaged(v bool) *AlbumCreate {
+	_c.mutation.SetTagsManaged(v)
+	return _c
+}
+
+// SetNillableTagsManaged sets the "tags_managed" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableTagsManaged(v *bool) *AlbumCreate {
+	if v != nil {
+		_c.SetTagsManaged(*v)
+	}
+	return _c
+}
+
+// SetArtSidecarHash sets the "art_sidecar_hash" field.
+func (_c *AlbumCreate) SetArtSidecarHash(v string) *AlbumCreate {
+	_c.mutation.SetArtSidecarHash(v)
+	return _c
+}
+
+// SetNillableArtSidecarHash sets the "art_sidecar_hash" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableArtSidecarHash(v *string) *AlbumCreate {
+	if v != nil {
+		_c.SetArtSidecarHash(*v)
+	}
+	return _c
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_c *AlbumCreate) SetTagOverrides(v map[string][]string) *AlbumCreate {
+	_c.mutation.SetTagOverrides(v)
 	return _c
 }
 
@@ -303,6 +371,20 @@ func (_c *AlbumCreate) SetNillableCreditsFetchedAt(v *time.Time) *AlbumCreate {
 	return _c
 }
 
+// SetCreditsVersion sets the "credits_version" field.
+func (_c *AlbumCreate) SetCreditsVersion(v uint8) *AlbumCreate {
+	_c.mutation.SetCreditsVersion(v)
+	return _c
+}
+
+// SetNillableCreditsVersion sets the "credits_version" field if the given value is not nil.
+func (_c *AlbumCreate) SetNillableCreditsVersion(v *uint8) *AlbumCreate {
+	if v != nil {
+		_c.SetCreditsVersion(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AlbumCreate) SetID(v uint32) *AlbumCreate {
 	_c.mutation.SetID(v)
@@ -450,6 +532,10 @@ func (_c *AlbumCreate) defaults() {
 		v := album.DefaultMonitorPinned
 		_c.mutation.SetMonitorPinned(v)
 	}
+	if _, ok := _c.mutation.TagsManaged(); !ok {
+		v := album.DefaultTagsManaged
+		_c.mutation.SetTagsManaged(v)
+	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		v := album.DefaultGrabFailures
 		_c.mutation.SetGrabFailures(v)
@@ -457,6 +543,10 @@ func (_c *AlbumCreate) defaults() {
 	if _, ok := _c.mutation.Status(); !ok {
 		v := album.DefaultStatus
 		_c.mutation.SetStatus(v)
+	}
+	if _, ok := _c.mutation.CreditsVersion(); !ok {
+		v := album.DefaultCreditsVersion
+		_c.mutation.SetCreditsVersion(v)
 	}
 }
 
@@ -498,6 +588,9 @@ func (_c *AlbumCreate) check() error {
 	if _, ok := _c.mutation.MonitorPinned(); !ok {
 		return &ValidationError{Name: "monitor_pinned", err: errors.New(`ent: missing required field "Album.monitor_pinned"`)}
 	}
+	if _, ok := _c.mutation.TagsManaged(); !ok {
+		return &ValidationError{Name: "tags_managed", err: errors.New(`ent: missing required field "Album.tags_managed"`)}
+	}
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		return &ValidationError{Name: "grab_failures", err: errors.New(`ent: missing required field "Album.grab_failures"`)}
 	}
@@ -508,6 +601,9 @@ func (_c *AlbumCreate) check() error {
 		if err := album.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Album.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.CreditsVersion(); !ok {
+		return &ValidationError{Name: "credits_version", err: errors.New(`ent: missing required field "Album.credits_version"`)}
 	}
 	if len(_c.mutation.ArtistIDs()) == 0 {
 		return &ValidationError{Name: "artist", err: errors.New(`ent: missing required edge "Album.artist"`)}
@@ -576,6 +672,18 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 		_spec.SetField(album.FieldReleaseDate, field.TypeTime, value)
 		_node.ReleaseDate = &value
 	}
+	if value, ok := _c.mutation.OriginalDate(); ok {
+		_spec.SetField(album.FieldOriginalDate, field.TypeString, value)
+		_node.OriginalDate = value
+	}
+	if value, ok := _c.mutation.EditionDate(); ok {
+		_spec.SetField(album.FieldEditionDate, field.TypeString, value)
+		_node.EditionDate = value
+	}
+	if value, ok := _c.mutation.Genres(); ok {
+		_spec.SetField(album.FieldGenres, field.TypeJSON, value)
+		_node.Genres = value
+	}
 	if value, ok := _c.mutation.Monitored(); ok {
 		_spec.SetField(album.FieldMonitored, field.TypeBool, value)
 		_node.Monitored = value
@@ -583,6 +691,18 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MonitorPinned(); ok {
 		_spec.SetField(album.FieldMonitorPinned, field.TypeBool, value)
 		_node.MonitorPinned = value
+	}
+	if value, ok := _c.mutation.TagsManaged(); ok {
+		_spec.SetField(album.FieldTagsManaged, field.TypeBool, value)
+		_node.TagsManaged = value
+	}
+	if value, ok := _c.mutation.ArtSidecarHash(); ok {
+		_spec.SetField(album.FieldArtSidecarHash, field.TypeString, value)
+		_node.ArtSidecarHash = value
+	}
+	if value, ok := _c.mutation.TagOverrides(); ok {
+		_spec.SetField(album.FieldTagOverrides, field.TypeJSON, value)
+		_node.TagOverrides = value
 	}
 	if value, ok := _c.mutation.GrabFailures(); ok {
 		_spec.SetField(album.FieldGrabFailures, field.TypeUint8, value)
@@ -627,6 +747,10 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreditsFetchedAt(); ok {
 		_spec.SetField(album.FieldCreditsFetchedAt, field.TypeTime, value)
 		_node.CreditsFetchedAt = &value
+	}
+	if value, ok := _c.mutation.CreditsVersion(); ok {
+		_spec.SetField(album.FieldCreditsVersion, field.TypeUint8, value)
+		_node.CreditsVersion = value
 	}
 	if nodes := _c.mutation.ArtistIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

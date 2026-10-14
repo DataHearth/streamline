@@ -67,6 +67,20 @@ func (_c *TrackCreate) SetNillableMbid(v *string) *TrackCreate {
 	return _c
 }
 
+// SetReleaseTrackMbid sets the "release_track_mbid" field.
+func (_c *TrackCreate) SetReleaseTrackMbid(v string) *TrackCreate {
+	_c.mutation.SetReleaseTrackMbid(v)
+	return _c
+}
+
+// SetNillableReleaseTrackMbid sets the "release_track_mbid" field if the given value is not nil.
+func (_c *TrackCreate) SetNillableReleaseTrackMbid(v *string) *TrackCreate {
+	if v != nil {
+		_c.SetReleaseTrackMbid(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *TrackCreate) SetTitle(v string) *TrackCreate {
 	_c.mutation.SetTitle(v)
@@ -118,6 +132,12 @@ func (_c *TrackCreate) SetNillableBonus(v *bool) *TrackCreate {
 	if v != nil {
 		_c.SetBonus(*v)
 	}
+	return _c
+}
+
+// SetTagOverrides sets the "tag_overrides" field.
+func (_c *TrackCreate) SetTagOverrides(v map[string][]string) *TrackCreate {
+	_c.mutation.SetTagOverrides(v)
 	return _c
 }
 
@@ -327,6 +347,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 		_spec.SetField(track.FieldMbid, field.TypeString, value)
 		_node.Mbid = value
 	}
+	if value, ok := _c.mutation.ReleaseTrackMbid(); ok {
+		_spec.SetField(track.FieldReleaseTrackMbid, field.TypeString, value)
+		_node.ReleaseTrackMbid = value
+	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 		_node.Title = value
@@ -346,6 +370,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Bonus(); ok {
 		_spec.SetField(track.FieldBonus, field.TypeBool, value)
 		_node.Bonus = value
+	}
+	if value, ok := _c.mutation.TagOverrides(); ok {
+		_spec.SetField(track.FieldTagOverrides, field.TypeJSON, value)
+		_node.TagOverrides = value
 	}
 	if nodes := _c.mutation.AlbumIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

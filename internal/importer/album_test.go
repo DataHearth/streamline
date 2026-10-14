@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -38,8 +39,9 @@ var albumTracks = []struct {
 }
 
 // seedTrackFile writes a tagged copy of a testdata fixture into dir, tagged as
-// the given track so the importer can match it. A fixture is renamed to ext
-// after tagging: Read sniffs content, Write dispatches on the extension.
+// the given track so the importer can match it, with the fixture's album,
+// album artist and date cleared: the album checks compare against those. name
+// keeps the fixture's extension: TagLib picks the format from it.
 func seedTrackFile(dir, name, fixture string, position uint16, title string) string {
 	GinkgoHelper()
 	data, err := os.ReadFile(
@@ -49,10 +51,15 @@ func seedTrackFile(dir, name, fixture string, position uint16, title string) str
 	path := filepath.Join(dir, name)
 	//nolint:gosec // path is a fresh temp dir joined with a fixed name
 	Expect(os.WriteFile(path, data, 0o600)).To(Succeed())
-	Expect(audiotags.Write(path, audiotags.WriteTags{
-		Artist: "Source Artist", Title: title,
-		Track: position, Disc: 1,
-	})).To(Succeed())
+	Expect(audiotags.Write(path, audiotags.Tags{
+		audiotags.KeyArtist:      {"Source Artist"},
+		audiotags.KeyTitle:       {title},
+		audiotags.KeyTrackNumber: {strconv.Itoa(int(position))},
+		audiotags.KeyDiscNumber:  {"1"},
+		audiotags.KeyAlbum:       nil,
+		audiotags.KeyAlbumArtist: nil,
+		audiotags.KeyDate:        nil,
+	}, audiotags.Policy{})).To(Succeed())
 	return path
 }
 
@@ -94,23 +101,28 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		musicDir string
 		logs     *bytes.Buffer
 		alb      *ent.Album
+		tagger   *recordingTagger
 	)
 
-	setup := func(mode string, keepSeeding bool) {
-		configtest.Setup(map[string]any{
-			"library": map[string]any{
-				"music_path":           musicDir,
-				"music_naming":         albumNaming,
-				"import_mode":          mode,
-				"import_max_attempts":  3,
-				"keep_torrent_seeding": keepSeeding,
-			},
-		})
+	setup := func(mode string, keepSeeding bool, tags ...map[string]any) {
+		lib := map[string]any{
+			"music_path":           musicDir,
+			"music_naming":         albumNaming,
+			"import_mode":          mode,
+			"import_max_attempts":  3,
+			"keep_torrent_seeding": keepSeeding,
+		}
+		if len(tags) > 0 {
+			lib["music_tags"] = tags[0]
+		}
+		configtest.Setup(map[string]any{"library": lib})
+		tagger = &recordingTagger{}
 		w = NewWorker(Deps{
 			DB:          storeMk,
 			Library:     library.NewImportService(),
 			MediaServer: msMk,
 			Download:    dlMk,
+			Tagger:      tagger,
 		})
 	}
 
@@ -149,52 +161,54 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			Return(nil).Maybe()
 	})
 
-	It("imports matched tracks, tags the library copies and leaves the gap", func() {
-		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
-		seedTrackFile(dlDir, "b.flac", "tagged.flac", 2, albumTracks[1].title)
-		rec := fixtureAlbumRecord(dlDir, alb)
+	It(
+		"imports matched tracks, queues them for their tags and leaves the gap",
+		func() {
+			seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
+			seedTrackFile(dlDir, "b.flac", "tagged.flac", 2, albumTracks[1].title)
+			rec := fixtureAlbumRecord(dlDir, alb)
 
-		expectFind(rec)
-		var got db.RecordAlbumImportSuccessParams
-		storeMk.EXPECT().
-			RecordAlbumImportSuccess(mock.Anything, mock.Anything).
-			Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
-			Return(nil).Once()
-		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+			expectFind(rec)
+			var got db.RecordAlbumImportSuccessParams
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+				Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir).
+				Return(nil).
+				Once()
 
-		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
 
-		Expect(got.RecordID).To(Equal(uint32(1)))
-		Expect(got.AlbumID).To(Equal(uint32(5)))
-		Expect(got.Files).To(ConsistOf(
-			HaveField("TrackID", uint32(11)),
-			HaveField("TrackID", uint32(12)),
-		))
-		for _, f := range got.Files {
-			// No probe here: a flac reads as lossless off its extension, an
-			// mp3 with no claim in the release title stays unknown.
-			if f.Format == "flac" {
-				Expect(f.Quality).To(Equal("lossless"))
-			} else {
-				Expect(f.Quality).To(BeEmpty())
+			Expect(got.RecordID).To(Equal(uint32(1)))
+			Expect(got.AlbumID).To(Equal(uint32(5)))
+			Expect(got.Files).To(ConsistOf(
+				HaveField("TrackID", uint32(11)),
+				HaveField("TrackID", uint32(12)),
+			))
+			for _, f := range got.Files {
+				// No probe here: a flac reads as lossless off its extension, an
+				// mp3 with no claim in the release title stays unknown.
+				if f.Format == "flac" {
+					Expect(f.Quality).To(Equal("lossless"))
+				} else {
+					Expect(f.Quality).To(BeEmpty())
+				}
+				Expect(f.Path).To(HaveSuffix("." + f.Format))
+				Expect(f.Path).To(HavePrefix(musicDir))
+				Expect(f.Size).To(BeNumerically(">", 0))
+				Expect(f.TagsPending).To(BeTrue())
 			}
-			Expect(f.Path).To(HaveSuffix("." + f.Format))
-			Expect(f.Path).To(HavePrefix(musicDir))
-			Expect(f.Size).To(BeNumerically(">", 0))
-			info, err := audiotags.Read(f.Path)
+			Expect(tagger.calls).To(Equal([]uint32{alb.ID}))
+			first := got.Files[0]
+			info, err := audiotags.Read(first.Path)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(info.Artist).To(Equal("Nirvana"))
-			Expect(info.Album).To(Equal("Nevermind"))
-			Expect(info.Year).To(Equal(uint16(1991)))
-			Expect(info.Disc).To(Equal(uint8(1)))
-		}
-		first := got.Files[0]
-		info, err := audiotags.Read(first.Path)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(info.Title).To(Equal(albumTracks[0].title))
-		Expect(info.Track).To(Equal(uint16(1)))
-		Expect(logs.String()).To(ContainSubstring("tracks still missing"))
-	})
+			Expect(info.Title).To(Equal(albumTracks[0].title))
+			Expect(info.Track).To(Equal(uint16(1)))
+			Expect(logs.String()).To(ContainSubstring("tracks still missing"))
+		},
+	)
 
 	It("resolves the album's cover once its files are recorded", func() {
 		covers := musicmocks.NewMockCoverResolver(GinkgoT())
@@ -212,6 +226,26 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		covers.EXPECT().ResolveCoversInBackground(mock.Anything, uint32(5)).Once()
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
+	It("leaves the cover alone when tagging already resolved it", func() {
+		covers := musicmocks.NewMockCoverResolver(GinkgoT())
+		w.covers = covers
+		tagger.resolves = true
+		for i, t := range albumTracks {
+			seedTrackFile(
+				dlDir, string(rune('a'+i))+".mp3", "tagged.mp3", t.position, t.title,
+			)
+		}
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		storeMk.EXPECT().
+			RecordAlbumImportSuccess(mock.Anything, mock.Anything).Return(nil).Once()
+		msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).Return(nil).Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(tagger.calls).To(Equal([]uint32{alb.ID}))
+		// The mock fails the spec on any ResolveCoversInBackground call.
 	})
 
 	It("imports a full album without reporting a gap", func() {
@@ -255,37 +289,78 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			return b
 		}
 
-		It("copies instead of hardlinking so tagging cannot touch the seed", func() {
-			setup("hardlink", true)
-			src := seedTrackFile(
-				dlDir,
-				"a.mp3",
-				"tagged.mp3",
-				1,
-				albumTracks[0].title,
-			)
-			before := sum(src)
-			rec := fixtureAlbumRecord(dlDir, alb)
-			expectFind(rec)
-			var got db.RecordAlbumImportSuccessParams
-			storeMk.EXPECT().
-				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
-				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
-				Return(nil).Once()
-			msMk.EXPECT().
-				RefreshAll(mock.Anything, "music", musicDir).
-				Return(nil).
-				Once()
+		It(
+			"keeps a hardlink under seeding: defer, for the job to tag once the torrent is gone",
+			func() {
+				setup("hardlink", true)
+				src := seedTrackFile(
+					dlDir,
+					"a.mp3",
+					"tagged.mp3",
+					1,
+					albumTracks[0].title,
+				)
+				rec := fixtureAlbumRecord(dlDir, alb)
+				expectFind(rec)
+				var got db.RecordAlbumImportSuccessParams
+				storeMk.EXPECT().
+					RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+					Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, "music", musicDir).
+					Return(nil).
+					Once()
 
-			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+				Expect(w.runImport(context.Background(), 1)).To(Succeed())
 
-			Expect(sum(src)).To(Equal(before))
-			srcInfo, err := os.Stat(src)
-			Expect(err).NotTo(HaveOccurred())
-			dstInfo, err := os.Stat(got.Files[0].Path)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(os.SameFile(srcInfo, dstInfo)).To(BeFalse())
-		})
+				srcInfo, err := os.Stat(src)
+				Expect(err).NotTo(HaveOccurred())
+				dstInfo, err := os.Stat(got.Files[0].Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.SameFile(srcInfo, dstInfo)).To(BeTrue())
+				Expect(got.Files[0].TagsPending).To(BeTrue())
+			},
+		)
+
+		It(
+			"copies instead of hardlinking under seeding: copy, so the tags land at once",
+			func() {
+				setup(
+					"hardlink",
+					true,
+					map[string]any{"mode": "import", "seeding": "copy"},
+				)
+				src := seedTrackFile(
+					dlDir,
+					"a.mp3",
+					"tagged.mp3",
+					1,
+					albumTracks[0].title,
+				)
+				before := sum(src)
+				rec := fixtureAlbumRecord(dlDir, alb)
+				expectFind(rec)
+				var got db.RecordAlbumImportSuccessParams
+				storeMk.EXPECT().
+					RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+					Return(nil).Once()
+				msMk.EXPECT().
+					RefreshAll(mock.Anything, "music", musicDir).
+					Return(nil).
+					Once()
+
+				Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+				Expect(sum(src)).To(Equal(before))
+				srcInfo, err := os.Stat(src)
+				Expect(err).NotTo(HaveOccurred())
+				dstInfo, err := os.Stat(got.Files[0].Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(os.SameFile(srcInfo, dstInfo)).To(BeFalse())
+			},
+		)
 
 		It("copies instead of moving while the torrent keeps seeding", func() {
 			setup("move", true)
@@ -339,16 +414,37 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		})
 	})
 
-	It("imports an untaggable format untagged and only warns", func() {
-		tagged := seedTrackFile(
-			dlDir,
-			"a.mp3",
-			"tagged.mp3",
-			1,
-			albumTracks[0].title,
-		)
-		opus := filepath.Join(dlDir, "a.opus")
-		Expect(os.Rename(tagged, opus)).To(Succeed())
+	It(
+		"queues every file for the tag writer and tags the album before the media servers hear of it",
+		func() {
+			seedTrackFile(dlDir, "a.opus", "tagged.opus", 1, albumTracks[0].title)
+			rec := fixtureAlbumRecord(dlDir, alb)
+			expectFind(rec)
+			var got db.RecordAlbumImportSuccessParams
+			storeMk.EXPECT().
+				RecordAlbumImportSuccess(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.RecordAlbumImportSuccessParams) { got = p }).
+				Return(nil).Once()
+			refreshed := false
+			msMk.EXPECT().RefreshAll(mock.Anything, "music", musicDir).
+				Run(func(context.Context, string, string) { refreshed = true }).
+				Return(nil).Once()
+			tagger.onCall = func() { Expect(refreshed).To(BeFalse()) }
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+
+			Expect(got.Files).To(HaveLen(1))
+			Expect(
+				got.Files[0].Path,
+			).To(Equal(destOf(1, albumTracks[0].title, "opus")))
+			Expect(got.Files[0].TagsPending).To(BeTrue())
+			Expect(tagger.calls).To(Equal([]uint32{alb.ID}))
+		},
+	)
+
+	It("neither queues nor tags with tags off", func() {
+		setup("copy", true, map[string]any{"mode": "off"})
+		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		rec := fixtureAlbumRecord(dlDir, alb)
 		expectFind(rec)
 		var got db.RecordAlbumImportSuccessParams
@@ -360,10 +456,8 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 
-		Expect(got.Files).To(HaveLen(1))
-		Expect(got.Files[0].Path).To(Equal(destOf(1, albumTracks[0].title, "opus")))
-		Expect(got.Files[0].Path).To(BeAnExistingFile())
-		Expect(logs.String()).To(ContainSubstring("tag write failed"))
+		Expect(got.Files[0].TagsPending).To(BeFalse())
+		Expect(tagger.calls).To(BeEmpty())
 	})
 
 	Describe("an existing library file", func() {
@@ -500,3 +594,20 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		w.handleOutcome(context.Background(), 1, ErrNoAlbumTracks)
 	})
 })
+
+// recordingTagger stands in for the music service's tag writer: the importer
+// owes it a call per album, before the media servers are told.
+type recordingTagger struct {
+	calls  []uint32
+	onCall func()
+	// resolves is what TagAlbum reports about the cover.
+	resolves bool
+}
+
+func (r *recordingTagger) TagAlbum(_ context.Context, albumID uint32) (bool, error) {
+	r.calls = append(r.calls, albumID)
+	if r.onCall != nil {
+		r.onCall()
+	}
+	return r.resolves, nil
+}

@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/datahearth/streamline/internal/library/audiotags"
 )
 
 // RemoveMediaFile deletes a media file together with its sidecars — the
@@ -99,7 +101,8 @@ func isSidecar(name, stem string) bool {
 
 // externalMetadata names the media-server metadata files that sit beside a
 // library file without carrying its basename. Plex, Jellyfin and the *arr stack
-// write them; streamline never does. isSidecar keys on the media file's stem,
+// write them, and so does the music tag writer (cover.jpg or cover.png beside
+// an album, folder.jpg in its artist's folder). isSidecar keys on the media file's stem,
 // so none of these is a sidecar, and a directory holding one survived every
 // prune — on a library migrated from the *arr stack that is nearly every
 // directory (629 of 1003 on the homelab), so deleting a title left its folder
@@ -111,7 +114,8 @@ var externalMetadata = map[string]bool{
 	"banner.jpg": true, "banner.png": true,
 	"thumb.jpg": true, "thumb.png": true,
 	"landscape.jpg": true, "landscape.png": true,
-	"backdrop.jpg": true, "folder.jpg": true, "cover.jpg": true,
+	"backdrop.jpg": true, "folder.jpg": true, "folder.png": true,
+	"cover.jpg": true, "cover.png": true,
 	"clearlogo.png": true, "clearart.png": true, "logo.png": true,
 	"disc.png": true, "discart.png": true,
 	".ds_store": true, "thumbs.db": true,
@@ -148,6 +152,13 @@ func PruneEmptyDirs(ctx context.Context, dir, root string) int {
 	return pruned
 }
 
+// droppable is an entry that does not keep a folder alive: media-server
+// metadata, or a copy a tag write killed mid-way left behind.
+func droppable(name string) bool {
+	return externalMetadata[strings.ToLower(name)] ||
+		strings.HasPrefix(name, audiotags.TempPrefix)
+}
+
 // dropMetadataOnly empties dir when every entry left in it is externalMetadata,
 // and reports whether dir is now empty. A directory that already is empty, or
 // that holds anything worth keeping, is left exactly as it was.
@@ -157,7 +168,7 @@ func dropMetadataOnly(ctx context.Context, dir string) bool {
 		return err == nil
 	}
 	for _, e := range entries {
-		if e.IsDir() || !externalMetadata[strings.ToLower(e.Name())] {
+		if e.IsDir() || !droppable(e.Name()) {
 			return false
 		}
 	}

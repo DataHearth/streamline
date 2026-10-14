@@ -316,18 +316,41 @@ type mbReleaseGroup struct {
 	PrimaryType      string   `json:"primary-type"`
 	SecondaryTypes   []string `json:"secondary-types"`
 	FirstReleaseDate string   `json:"first-release-date"`
+	Genres           []mbTag  `json:"genres"`
 }
 
 func (rg mbReleaseGroup) toInfo() ReleaseGroupInfo {
 	info := ReleaseGroupInfo{MBID: rg.ID, Title: rg.Title, Type: mapAlbumType(rg)}
-	// MusicBrainz dates may be YYYY, YYYY-MM, or YYYY-MM-DD.
-	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
-		if t, err := time.Parse(layout, rg.FirstReleaseDate); err == nil {
-			info.ReleaseDate = &t
-			break
-		}
+	if t, ok := parseMBDate(rg.FirstReleaseDate); ok {
+		info.ReleaseDate = &t
+		info.OriginalDate = rg.FirstReleaseDate
 	}
 	return info
+}
+
+// parseMBDate reads a MusicBrainz date, which may be YYYY, YYYY-MM or
+// YYYY-MM-DD.
+func parseMBDate(s string) (time.Time, bool) {
+	for _, layout := range []string{"2006-01-02", "2006-01", "2006"} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+// topGenres returns at most maxLookupGenres genre names, most voted first.
+func topGenres(tags []mbTag) []string {
+	sorted := slices.Clone(tags)
+	slices.SortStableFunc(sorted, func(a, b mbTag) int { return b.Count - a.Count })
+	out := []string{}
+	for _, g := range sorted {
+		if len(out) == maxLookupGenres {
+			break
+		}
+		out = append(out, titleCase(g.Name))
+	}
+	return out
 }
 
 func luceneQuote(s string) string {
@@ -486,14 +509,8 @@ func (m *MusicBrainz) GetArtist(
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
 	}
-	slices.SortStableFunc(artist.Genres, func(a, b mbTag) int {
-		return b.Count - a.Count
-	})
-	for _, g := range artist.Genres {
-		if len(details.Genres) == maxLookupGenres {
-			break
-		}
-		details.Genres = append(details.Genres, titleCase(g.Name))
+	if g := topGenres(artist.Genres); len(g) > 0 {
+		details.Genres = g
 	}
 	if len(details.Genres) > 0 {
 		details.Genre = details.Genres[0]
@@ -619,6 +636,7 @@ type mbMedium struct {
 }
 
 type mbTrack struct {
+	ID           string     `json:"id"`
 	Position     uint16     `json:"position"`
 	Title        string     `json:"title"`
 	Length       uint32     `json:"length"`
@@ -682,13 +700,20 @@ func (m *MusicBrainz) GetReleaseGroup(
 		Releases     []mbRelease `json:"releases"`
 		ArtistCredit []mbCredit  `json:"artist-credit"`
 	}
-	if err := m.get(ctx, "/release-group/"+url.PathEscape(mbid),
-		url.Values{"inc": {"releases+media+artist-credits"}}, &rg); err != nil {
+	if err := m.get(
+		ctx,
+		"/release-group/"+url.PathEscape(mbid),
+		url.Values{
+			"inc": {"releases+media+artist-credits+genres"},
+		},
+		&rg,
+	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      canonicalRelease(rg.Releases),
+		Genres:           topGenres(rg.Genres),
 	}
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
@@ -786,22 +811,46 @@ func validCountry(c string) string {
 	return c
 }
 
+// roleByType maps a release or recording relationship to a production role,
+// grouped the way Picard groups them into tags.
 var roleByType = map[string]string{
 	"producer":            "producer",
 	"recording":           "recording",
 	"engineer":            "recording",
 	"recording engineer":  "recording",
+	"audio":               "recording",
+	"sound":               "recording",
 	"mix":                 "mix",
 	"mastering":           "mastering",
 	"design/illustration": "artwork",
 	"graphic design":      "artwork",
 	"art direction":       "artwork",
 	"photography":         "artwork",
+	"conductor":           "conductor",
+	"remixer":             "remixer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
 }
 
-var writerTypes = []string{"writer", "composer", "lyricist"}
+// writerRoleByType maps a work relationship to the role its person is
+// credited under on the recording.
+var writerRoleByType = map[string]string{
+	"composer":            "composer",
+	"lyricist":            "lyricist",
+	"librettist":          "lyricist",
+	"writer":              "writer",
+	"arranger":            "arranger",
+	"instrument arranger": "arranger",
+	"vocal arranger":      "arranger",
+	"orchestrator":        "arranger",
+}
 
 func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
+	if _, ok := parseMBDate(rel.Date); ok {
+		d.EditionDate = rel.Date
+	}
 	d.Barcode = rel.Barcode
 	d.Country = validCountry(rel.Country)
 	if len(rel.LabelInfo) > 0 {
@@ -815,20 +864,23 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 	performers := map[string]*PerformerInfo{}
 	var performerOrder []string
 	creditSeen := map[string]bool{}
-	addCredit := func(rel mbRel) {
+	// addCredit records a production credit on the album and returns it,
+	// nil when the relation is none.
+	addCredit := func(rel mbRel) *CreditInfo {
 		role, ok := roleByType[rel.Type]
 		if !ok || rel.TargetType != "artist" || rel.Artist == nil {
-			return
+			return nil
 		}
-		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
-		if creditSeen[key] {
-			return
-		}
-		creditSeen[key] = true
-		d.Credits = append(d.Credits, CreditInfo{
+		c := CreditInfo{
 			Name: rel.Artist.Name, MBID: rel.Artist.ID,
 			Role: role,
-		})
+		}
+		key := creditKey(rel.Artist.ID, rel.Artist.Name) + "|" + role
+		if !creditSeen[key] {
+			creditSeen[key] = true
+			d.Credits = append(d.Credits, c)
+		}
+		return &c
 	}
 	placeCount := map[string]int{}
 
@@ -843,20 +895,29 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 		mediumBonus := strings.Contains(strings.ToLower(md.Title), "bonus")
 		for _, t := range md.Tracks {
 			ti := TrackInfo{
-				MBID:      t.Recording.ID,
-				Title:     t.Title,
-				Disc:      disc,
-				Position:  t.Position,
-				Duration:  t.Length / 1000,
-				Featuring: featuring(t.ArtistCredit),
+				MBID:             t.Recording.ID,
+				ReleaseTrackMBID: t.ID,
+				Title:            t.Title,
+				Disc:             disc,
+				Position:         t.Position,
+				Duration:         t.Length / 1000,
+				Featuring:        featuring(t.ArtistCredit),
 				Bonus: mediumBonus || strings.HasSuffix(
 					strings.ToLower(strings.TrimSpace(t.Title)), "(bonus track)"),
 			}
 			seenOnRecording := map[string]bool{}
 			writerSeen := map[string]bool{}
+			trackCreditSeen := map[string]bool{}
+			trackPerformers := map[string]int{}
 			performerBearing := false
 			for _, rr := range t.Recording.Relations {
-				addCredit(rr)
+				if c := addCredit(rr); c != nil && heavy {
+					key := creditKey(c.MBID, c.Name) + "|" + c.Role
+					if !trackCreditSeen[key] {
+						trackCreditSeen[key] = true
+						ti.Credits = append(ti.Credits, *c)
+					}
+				}
 				switch {
 				case rr.Type == "recording" && rr.TargetType == "place" &&
 					rr.Place != nil:
@@ -886,19 +947,37 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 							p.Instruments = append(p.Instruments, in)
 						}
 					}
+					if !heavy {
+						break
+					}
+					idx, ok := trackPerformers[key]
+					if !ok {
+						idx = len(ti.Performers)
+						trackPerformers[key] = idx
+						ti.Performers = append(ti.Performers, PerformerInfo{
+							Name: rr.Artist.Name, MBID: rr.Artist.ID,
+						})
+					}
+					tp := &ti.Performers[idx]
+					for _, in := range instruments {
+						if !slices.Contains(tp.Instruments, in) {
+							tp.Instruments = append(tp.Instruments, in)
+						}
+					}
 				case rr.Type == "performance" && rr.Work != nil:
 					for _, wr := range rr.Work.Relations {
-						if !slices.Contains(writerTypes, wr.Type) ||
-							wr.Artist == nil {
+						role, ok := writerRoleByType[wr.Type]
+						if !ok || wr.Artist == nil {
 							continue
 						}
-						key := creditKey(wr.Artist.ID, wr.Artist.Name)
+						key := creditKey(wr.Artist.ID, wr.Artist.Name) + "|" + role
 						if writerSeen[key] {
 							continue
 						}
 						writerSeen[key] = true
-						ti.Writers = append(ti.Writers, PersonInfo{
+						ti.Writers = append(ti.Writers, CreditInfo{
 							Name: wr.Artist.Name, MBID: wr.Artist.ID,
+							Role: role,
 						})
 					}
 				}

@@ -303,13 +303,17 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 						{"type":"performance","target-type":"work","work":{"relations":[
 							{"type":"writer","target-type":"artist","artist":{"id":"a-kurt","name":"Kurt Cobain"}},
 							{"type":"lyricist","target-type":"artist","artist":{"id":"a-kurt","name":"Kurt Cobain"}},
-							{"type":"composer","target-type":"artist","artist":{"id":"a-krist","name":"Krist Novoselic"}}]}},
+							{"type":"composer","target-type":"artist","artist":{"id":"a-krist","name":"Krist Novoselic"}},
+							{"type":"orchestrator","target-type":"artist","artist":{"id":"a-orc","name":"An Orchestrator"}}]}},
+						{"type":"conductor","target-type":"artist","artist":{"id":"a-cond","name":"A Conductor"}},
+						{"type":"mix","target-type":"artist","artist":{"id":"a-andy","name":"Andy Wallace"}},
 						{"type":"mix","target-type":"artist","artist":{"id":"a-andy","name":"Andy Wallace"}}]}},
 					{"position":2,"title":"In Bloom (Bonus Track)","length":254000,"recording":{"id":"rec-2"}}]},
 				{"position":2,"title":"Bonus disc","format":"CD","tracks":[
 					{"position":1,"title":"Curse","recording":{"id":"rec-3"}}]}]}`
 
-		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09-24",
+		const releaseGroupJSON = `{"id":"rg-1","title":"Nevermind","primary-type":"Album","first-release-date":"1991-09",
+			"genres":[{"name":"alternative rock","count":4},{"name":"grunge","count":9}],
 			"artist-credit":[{"name":"Nirvana","artist":{"id":"a-n","name":"Nirvana"}}],"releases":[
 			{"id":"rel-2","status":"Official","date":"1992-01-01","media":[{"format":"12\" Vinyl"},{"format":"Digital Media"}]},
 			{"id":"rel-1","status":"Official","date":"1991-09-24","media":[{"format":"CD"}]},
@@ -323,7 +327,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					case "/ws/2/release-group/rg-1":
 						Expect(
 							r.URL.Query().Get("inc"),
-						).To(Equal("releases+media+artist-credits"))
+						).To(Equal("releases+media+artist-credits+genres"))
 						return jsonResponse(200, releaseGroupJSON), nil
 					case "/ws/2/release/rel-1":
 						inc := r.URL.Query().Get("inc")
@@ -378,6 +382,35 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.CreditsComplete).To(BeTrue())
 		})
 
+		It(
+			"keeps both dates as MusicBrainz wrote them, and the genres most voted first",
+			func() {
+				serve(
+					func(string) *http.Response { return jsonResponse(200, heavyRelease) },
+				)
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.OriginalDate).To(Equal("1991-09"))
+				Expect(
+					*rg.ReleaseDate,
+				).To(Equal(time.Date(1991, 9, 1, 0, 0, 0, 0, time.UTC)))
+				Expect(rg.EditionDate).To(Equal("1991-09-24"))
+				Expect(rg.Genres).To(Equal([]string{"Grunge", "Alternative Rock"}))
+			},
+		)
+
+		It("reads no edition date from a date MusicBrainz did not write", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(
+					200,
+					`{"id":"rel-1","date":"someday","media":[]}`,
+				)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.EditionDate).To(BeEmpty())
+		})
+
 		It("drops a country that is not a region", func() {
 			serve(func(string) *http.Response {
 				return jsonResponse(200, `{"id":"rel-1","country":"XW","media":[]}`)
@@ -423,16 +456,59 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				To(Equal([]bool{false, true, true}))
 		})
 
-		It("reads writers, deduped per track", func() {
+		It(
+			"reads writers with their part in the work, deduped per person and part",
+			func() {
+				serve(
+					func(string) *http.Response { return jsonResponse(200, heavyRelease) },
+				)
+				rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rg.Tracks[0].Writers).To(Equal([]CreditInfo{
+					{
+						Name: "Kurt Cobain", MBID: "a-kurt",
+						Role: "writer",
+					},
+					{
+						Name: "Kurt Cobain", MBID: "a-kurt",
+						Role: "lyricist",
+					},
+					{
+						Name: "Krist Novoselic",
+						MBID: "a-krist",
+						Role: "composer",
+					},
+					{
+						Name: "An Orchestrator",
+						MBID: "a-orc",
+						Role: "arranger",
+					},
+				}))
+			},
+		)
+
+		It("keeps each recording's own credits and performers on its track", func() {
 			serve(
 				func(string) *http.Response { return jsonResponse(200, heavyRelease) },
 			)
 			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rg.Tracks[0].Writers).To(Equal([]PersonInfo{
-				{Name: "Kurt Cobain", MBID: "a-kurt"},
-				{Name: "Krist Novoselic", MBID: "a-krist"},
+			Expect(rg.Tracks[0].Credits).To(Equal([]CreditInfo{
+				{
+					Name: "A Conductor", MBID: "a-cond",
+					Role: "conductor",
+				},
+				{
+					Name: "Andy Wallace", MBID: "a-andy",
+					Role: "mix",
+				},
 			}))
+			Expect(rg.Tracks[0].Performers).To(Equal([]PerformerInfo{{
+				Name: "Kurt Cobain", MBID: "a-kurt",
+				Instruments: []string{"guitar", "lead vocals"},
+			}}))
+			Expect(rg.Tracks[1].Credits).To(BeEmpty())
+			Expect(rg.Tracks[1].Performers).To(BeEmpty())
 		})
 
 		It("reads production credits, deduped on person and role", func() {
@@ -453,6 +529,10 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				CreditInfo{
 					Name: "Andy Wallace", MBID: "a-andy",
 					Role: "mix",
+				},
+				CreditInfo{
+					Name: "A Conductor", MBID: "a-cond",
+					Role: "conductor",
 				},
 			))
 		})

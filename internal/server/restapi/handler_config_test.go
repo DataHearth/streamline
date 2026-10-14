@@ -143,6 +143,55 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 				To(Equal([]string{"album", "live"}))
 		})
 
+		It(
+			"round-trips music_tags, upper-casing and deduplicating the key lists",
+			func() {
+				body := strings.NewReader(
+					`{"music_tags":{"mode":"managed","seeding":"copy",` +
+						`"art_max_px":600,"strip":["comment","ripper_*","COMMENT"]}}`,
+				)
+				resp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/library", body),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var got LibraryConfigView
+				Expect(json.NewDecoder(resp.Body).Decode(&got)).To(Succeed())
+				Expect(*got.MusicTags.Mode).To(Equal(MusicTagsConfigModeManaged))
+				Expect(*got.MusicTags.Seeding).To(Equal(MusicTagsConfigSeedingCopy))
+				Expect(*got.MusicTags.ArtMaxPx).To(Equal(600))
+				Expect(
+					*got.MusicTags.Strip,
+				).To(Equal([]string{"COMMENT", "RIPPER_*"}))
+				tags := config.Get().Library.MusicTags
+				Expect(tags.Mode).To(Equal("managed"))
+				Expect(tags.Strip).To(Equal([]string{"COMMENT", "RIPPER_*"}))
+				Expect(tags.Preserve).NotTo(BeEmpty())
+			},
+		)
+
+		DescribeTable(
+			"refuses a bad music_tags value with 422, changing nothing",
+			func(body string) {
+				before := config.Get().Library.MusicTags
+				resp := app.do(
+					jsonReq(app, http.MethodPatch, "/api/v1/config/library",
+						strings.NewReader(body)),
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+				Expect(config.Get().Library.MusicTags).To(Equal(before))
+			},
+			Entry("an unknown mode", `{"music_tags":{"mode":"always"}}`),
+			Entry("an unknown seeding policy", `{"music_tags":{"seeding":"wait"}}`),
+			Entry("a cover too large", `{"music_tags":{"art_max_px":4000}}`),
+			Entry("a cover past uint16", `{"music_tags":{"art_max_px":70000}}`),
+			Entry(
+				"a key that is not one",
+				`{"music_tags":{"strip":["COM MENT/*"]}}`,
+			),
+		)
+
 		It("accepts an empty music_monitored_types", func() {
 			body := strings.NewReader(`{"music_monitored_types":[]}`)
 			resp := app.do(

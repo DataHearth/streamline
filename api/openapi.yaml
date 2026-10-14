@@ -1431,6 +1431,11 @@ paths:
         Sets the album's monitored flag by hand: `POST /music/monitored-types/apply` leaves it alone
         from then on, until the artist's monitor is next changed. Never changes the artist's monitor
         policy or the album's status.
+
+        `tags_managed` and `tag_overrides` are the album's own tag settings (see
+        `GET /music/albums/{id}/tags`). Saving overrides, or setting `tags_managed: true`, queues the
+        album's files for the `music-tag-sync` job unless tagging is off. A key that is not a tag
+        name answers 422.
       tags: [music]
       requestBody:
         $ref: "#/components/requestBodies/PatchMusicAlbum"
@@ -1443,6 +1448,66 @@ paths:
           $ref: "#/components/responses/NotFound"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    get:
+      operationId: getMusicAlbumTags
+      summary: Compare an album's files with the tags Streamline writes
+      description: |
+        Reads every file of the album and compares it, key by key, with what the tag writer would
+        leave in it: the library's tags, the album's `tag_overrides`, the track's over those, under
+        `library.music_tags`' strip and preserve lists. Keys are the format's own (an MP3's
+        performers are `PERFORMER:<INSTRUMENT>`). `same` and `differs` are keys Streamline writes;
+        `kept` is one it leaves alone. Reads files; writes nothing.
+      tags: [music]
+      responses:
+        "200":
+          description: The album's tag panel.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicAlbumTags"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/albums/{id}/tags/apply:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: applyMusicAlbumTags
+      summary: Write an album's tags now
+      description: |
+        Queues every file of the album for a full rewrite, whether or not the album is managed, and
+        writes them in the background at once, under the job's rules: a file a torrent still holds
+        stays deferred. Answers 409 `code: music_tags_off` when tagging is off.
+      tags: [music]
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -1548,6 +1613,37 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/tracks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    patch:
+      operationId: patchMusicTrack
+      summary: Set a track's own tags
+      description: |
+        Replaces the track's `tag_overrides`, written over the album's and the library's tags for
+        the track's files (an empty object clears them), and queues the album's files unless tagging
+        is off. A key that is not a tag name answers 422.
+      tags: [music]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMusicTrackRequest"
+      responses:
+        "204":
+          description: Saved.
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/tracks/{id}/file:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -1566,6 +1662,41 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /music/tags/retag:
+    post:
+      operationId: retagMusicLibrary
+      summary: Rewrite every music file's tags (admin)
+      description: |
+        Queues every track file for the `music-tag-sync` job and empties its
+        stored tag hash, so the next pass rewrites each one with what
+        Streamline writes now, whatever it carries. This is how files tagged
+        before a change in what Streamline writes are brought up to date under
+        `library.music_tags.mode: import`, which writes each file once;
+        `managed` queues files on its own. A file a torrent still owns stays
+        deferred. Answers 409 when the mode is `off`. Run the job by hand
+        (`POST /schedules/music-tag-sync/run`) to start at once.
+      tags: [music, admin]
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        "202":
+          description: How many files were queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued:
+                    type: integer
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
         "500":
@@ -4371,8 +4502,28 @@ paths:
       operationId: CommitImport
       description: |
         Answers 503 when a `book` scan is committed without a Hardcover API
-        key.
+        key. The body is optional; `write_tags` applies to music scans only.
       tags: [library]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                write_tags:
+                  type: boolean
+                  description: |
+                    Music scans: queue the adopted files for the music tag
+                    writer and tag them as each album is committed, and mark
+                    the albums the commit brings in (those holding no file yet) as managed (re-tagged on
+                    their own under `managed`). Off leaves the files as they
+                    are and the new albums unmanaged; an album that already
+                    held files keeps its own setting. Defaults to off: a
+                    commit that does not ask leaves every adopted file byte for
+                    byte as it is. With `library.music_tags.mode` `off` the
+                    files are queued and written once it is switched on. A file
+                    a torrent still serves is tagged once the torrent is gone.
       responses:
         "202":
           $ref: "#/components/responses/ImportScan"
@@ -8444,7 +8595,7 @@ components:
 
     MusicCreditRole:
       type: string
-      enum: [producer, recording, mix, mastering, artwork]
+      enum: [producer, recording, mix, mastering, artwork, conductor, remixer, arranger]
 
     MusicArtistCore:
       type: object
@@ -8967,6 +9118,114 @@ components:
       properties:
         monitored:
           type: boolean
+        tags_managed:
+          type: boolean
+          description: |
+            Whether the tag writer re-queues the album's files on its own (managed triggers,
+            settings changes, Retag library). A file queued explicitly is written either way.
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    PatchMusicTrackRequest:
+      type: object
+      required: [tag_overrides]
+      properties:
+        tag_overrides:
+          $ref: "#/components/schemas/TagOverrides"
+
+    TagOverrides:
+      type: object
+      description: |
+        Tags set by hand, tag name (upper case, Picard's names: `GENRE`, `MOOD`, …) to values,
+        written over what the library would write; an empty list removes the key from the files.
+        At most 64 keys, 32 values a key, 1024 characters a value. `library.music_tags.preserve`
+        still wins.
+      additionalProperties:
+        type: array
+        items:
+          type: string
+
+    MusicAlbumTags:
+      type: object
+      required: [album_id, mode, managed, overrides, files]
+      properties:
+        album_id:
+          type: integer
+          x-go-type: uint32
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: The instance's `library.music_tags.mode`.
+        managed:
+          type: boolean
+          description: The album's `tags_managed`.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagFile"
+
+    MusicTagFile:
+      type: object
+      required: [media_file_id, track_id, disc, position, title, file_name, format, state, overrides, keys]
+      properties:
+        media_file_id:
+          type: integer
+          x-go-type: uint32
+        track_id:
+          type: integer
+          x-go-type: uint32
+        disc:
+          type: integer
+        position:
+          type: integer
+        title:
+          type: string
+        file_name:
+          type: string
+        format:
+          type: string
+        state:
+          type: string
+          enum: [untagged, pending, deferred, written, failed]
+          description: The writer's state; `untagged` is a file it was never asked to write.
+        error:
+          type: string
+          description: The last write's failure.
+        tagged_at:
+          type: string
+          format: date-time
+        read_error:
+          type: string
+          description: Why the file could not be read; `keys` is empty then.
+        overrides:
+          $ref: "#/components/schemas/TagOverrides"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/MusicTagKey"
+
+    MusicTagKey:
+      type: object
+      required: [key, current, desired, status, overridden]
+      properties:
+        key:
+          type: string
+        current:
+          type: array
+          items:
+            type: string
+        desired:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [same, differs, kept]
+        overridden:
+          type: boolean
+          description: The desired value comes from an album or track override.
 
     MusicRenamePlan:
       type: object
@@ -11417,6 +11676,7 @@ components:
         - movie_path
         - series_path
         - download_path
+        - music_tags
       properties:
         monitor_specials:
           type: boolean
@@ -11484,6 +11744,8 @@ components:
           readOnly: true
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     LibraryConfigPatch:
       type: object
@@ -11532,6 +11794,8 @@ components:
             type: string
         probe:
           $ref: "#/components/schemas/ProbeConfig"
+        music_tags:
+          $ref: "#/components/schemas/MusicTagsConfig"
 
     DownloadConfigView:
       type: object
@@ -11755,6 +12019,60 @@ components:
           description: |
             A file shorter than this share of the expected runtime fails the
             duration check.
+
+    MusicTagsConfig:
+      type: object
+      description: |
+        The tags Streamline writes into music files (`library.music_tags`).
+        The view always carries every field; when patched, only provided
+        fields are applied, and a patch that changes what a file should carry
+        (mode, strip, preserve, art) queues every managed file for the
+        music-tag-sync job under `managed`.
+      properties:
+        mode:
+          type: string
+          enum: ["off", import, managed]
+          description: |
+            `off` never writes. `import` writes each file once, when it is
+            imported or adopted with tagging on. `managed` also rewrites a
+            file whenever the library's data for it changes, and undoes edits
+            made elsewhere to the keys Streamline owns.
+        seeding:
+          type: string
+          enum: [defer, copy]
+          description: |
+            `defer` keeps a hardlinked import as one copy on disk and tags it
+            once its torrent is gone; `copy` imports a copy and tags it at
+            once. A file a torrent still serves is never written.
+        embed_art:
+          type: boolean
+          description: Write the album cover into each file as its front cover.
+        art_max_px:
+          type: integer
+          minimum: 256
+          maximum: 3000
+          description: Longest edge of an embedded cover, in pixels.
+        sidecar_art:
+          type: boolean
+          description: |
+            Write cover.jpg into each album folder and folder.jpg into each
+            artist folder, never replacing one Streamline did not write.
+        strip:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys deleted from every file written (Picard's names). An entry
+            ending in `*` matches as a prefix.
+        preserve:
+          type: array
+          items:
+            type: string
+            maxLength: 64
+          description: |
+            Keys never written or deleted; wins over strip and over the keys
+            Streamline manages. An entry ending in `*` matches as a prefix.
 
     FFmpegConfigView:
       type: object
@@ -12915,6 +13233,16 @@ components:
         file_count:
           type: integer
           x-go-type: uint16
+        seeding_files:
+          type: integer
+          description: |
+            How many of the folder's audio files the tag writer will leave
+            alone while a torrent the download clients still list holds them:
+            files a torrent serves, and under `seeding: defer` files
+            hardlinked to a listed torrent's. Tags are written to those only
+            once the torrent is removed from its client. Read from a listing
+            at most 30 seconds old, and only while the scan awaits review
+            with tagging on; absent otherwise.
         decision:
           type: string
           enum: [pending, accept, skip]

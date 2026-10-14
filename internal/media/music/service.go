@@ -98,6 +98,21 @@ type Manager interface {
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error
 	DeleteTrackFile(ctx context.Context, trackID uint32) error
+
+	RetagLibrary(ctx context.Context) (int, error)
+	TagSettingsChanged(ctx context.Context, before, after config.MusicTagsConfig)
+	AlbumTags(ctx context.Context, albumID uint32) (*AlbumTagsView, error)
+	ApplyAlbumTags(ctx context.Context, albumID uint32) (int, error)
+	SetAlbumTagSettings(
+		ctx context.Context,
+		albumID uint32,
+		s AlbumTagSettings,
+	) error
+	SetTrackTagOverrides(
+		ctx context.Context,
+		trackID uint32,
+		overrides map[string][]string,
+	) error
 }
 
 var _ Manager = (*Service)(nil)
@@ -117,6 +132,7 @@ type Service struct {
 	lookups         *memo[*lookupBody]
 	releaseSearches *memo[[]metadata.ReleaseGroupSearchResult]
 	hydrate         hydrator
+	seeding         seedingCache
 }
 
 // NewService wires the music service. overviews and photos may be nil, which
@@ -202,11 +218,12 @@ func albumSeeds(
 	seeds := make([]db.AlbumSeed, len(groups))
 	for i, rg := range groups {
 		seeds[i] = db.AlbumSeed{
-			MBID:        rg.MBID,
-			Title:       rg.Title,
-			Type:        string(rg.Type),
-			ReleaseDate: rg.ReleaseDate,
-			Monitored:   monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
+			MBID:         rg.MBID,
+			Title:        rg.Title,
+			Type:         string(rg.Type),
+			ReleaseDate:  rg.ReleaseDate,
+			OriginalDate: rg.OriginalDate,
+			Monitored:    monitoredFor(policy, rg.Type, rg.ReleaseDate, now, types),
 		}
 	}
 	return seeds
@@ -437,6 +454,12 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		root := config.Get().Library.MusicPath
 		defer mediaserver.RefreshInBackground(ctx, s.ms, mediaserver.KindMusic, root)
 		for _, a := range row.Edges.Albums {
+			unlock := library.LockAlbumFiles(a.ID)
+			// Read again under the lock: the renamer may have moved a
+			// file since the artist was loaded.
+			if fresh, err := s.db.FindAlbumByID(ctx, a.ID); err == nil {
+				a = fresh
+			}
 			for _, t := range a.Edges.Tracks {
 				for _, f := range t.Edges.MediaFiles {
 					if err := library.RemoveMediaFile(
@@ -457,6 +480,7 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 					}
 				}
 			}
+			unlock()
 		}
 	}
 	if err := s.db.DeleteArtist(ctx, id); err != nil {
@@ -528,6 +552,13 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
+	var albumIDs []uint32
+	for _, a := range updated.Edges.Albums {
+		albumIDs = append(albumIDs, a.ID)
+	}
+	// A title, date or type the refresh changed reaches the files under
+	// managed; the hash settles the albums where nothing did.
+	s.tagsChanged(ctx, albumIDs...)
 	var items []hydrateItem
 	retried := 0
 	for _, a := range updated.Edges.Albums {

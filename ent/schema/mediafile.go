@@ -75,6 +75,30 @@ func (MediaFile) Fields() []ent.Field {
 		// book_kind discriminates which slot a book file belongs to. Only set
 		// on files with a book edge.
 		field.Enum("book_kind").Values("ebook", "audiobook").Optional(),
+		// The music tag writer's bookkeeping, set on track files only. NULL
+		// tags_state is a file it has never been asked to write (adopted
+		// before tagging existed, or with tagging off); pending waits for
+		// the music-tag-sync job, deferred waits for a torrent that still
+		// owns the file, failed gave up after max attempts. tags_hash is the
+		// hash of what was last written (empty forces the next write even
+		// when nothing changed), tags_mtime the file's modification time and
+		// tags_size its size right after, which is how an edit made elsewhere
+		// is noticed; tags_checked_at orders that check. tags_art_hash is
+		// the SHA-256 of the front cover the writer embedded, which is how
+		// it knows that picture for its own (MP4 keeps no description to
+		// mark it with): it replaces or removes only that one, and the cover
+		// resolver never takes it for the album's own art.
+		field.Enum("tags_state").
+			Values("pending", "deferred", "written", "failed").
+			Optional().Nillable(),
+		field.String("tags_hash").Optional(),
+		field.Time("tagged_at").Optional().Nillable(),
+		field.Int64("tags_mtime").Optional(),
+		field.Int64("tags_size").Optional(),
+		field.Time("tags_checked_at").Optional().Nillable(),
+		field.Uint8("tag_failures").Default(0),
+		field.String("tags_error").Optional(),
+		field.String("tags_art_hash").Optional(),
 	}
 }
 
@@ -98,6 +122,7 @@ func (MediaFile) Indexes() []ent.Index {
 		index.Edges("movie"),
 		index.Edges("track"),
 		index.Edges("book"),
+		index.Fields("tags_state"),
 		// Partial: the media-probe backfill asks for the oldest rows that were
 		// never probed, so once the backfill drains, the index is empty and
 		// the 15-minute job stops scanning the whole table forever.

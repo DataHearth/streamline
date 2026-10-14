@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/library"
 )
 
 var _ = Describe("Music persistence", Label("integration", "db"), func() {
@@ -519,7 +520,16 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						Duration:  217,
 						Bonus:     true,
 						Featuring: []PersonSeed{{Name: "A Guest", MBID: "g-1"}},
-						Writers:   []PersonSeed{{Name: "Kurt Cobain", MBID: "m-1"}},
+						Writers: []MusicCreditSeed{
+							{Name: "Kurt Cobain", MBID: "m-1", Role: "composer"},
+						},
+						Credits: []MusicCreditSeed{
+							{Name: "Andy Wallace", Role: "mix"},
+						},
+						Performers: []PerformerSeed{{
+							Name: "Kurt Cobain", MBID: "m-1",
+							Instruments: []string{"guitar", "lead vocals"},
+						}},
 					},
 					{
 						MBID:     "r-2",
@@ -528,7 +538,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						Position: 2,
 					},
 				},
-				Credits: []AlbumCreditSeed{
+				Credits: []MusicCreditSeed{
 					{
 						Name: "Steve Albini", MBID: "p-1",
 						Role: "producer",
@@ -555,23 +565,31 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(got.ReleaseMbid).To(Equal("rel-1"))
 			Expect(got.MetadataFetchedAt).NotTo(BeNil())
 			Expect(got.CreditsFetchedAt).NotTo(BeNil())
+			Expect(got.CreditsVersion).To(Equal(library.MusicCreditsVersion))
 			Expect(got.Edges.Tracks).To(HaveLen(2))
 
 			first := got.Edges.Tracks[0]
 			Expect(first.Bonus).To(BeTrue())
 			Expect(first.Duration).To(Equal(uint32(217)))
-			Expect(first.Edges.Credits).To(HaveLen(2))
-			kinds := []musiccredit.Kind{
-				first.Edges.Credits[0].Kind,
-				first.Edges.Credits[1].Kind,
+			byKind := map[musiccredit.Kind]*ent.MusicCredit{}
+			for _, c := range first.Edges.Credits {
+				byKind[c.Kind] = c
 			}
+			Expect(byKind).To(HaveLen(4))
 			Expect(
-				kinds,
-			).To(ConsistOf(musiccredit.KindFeaturing, musiccredit.KindWriter))
+				byKind[musiccredit.KindWriter].Role,
+			).To(Equal(musiccredit.RoleComposer))
+			Expect(
+				byKind[musiccredit.KindCredit].Role,
+			).To(Equal(musiccredit.RoleMix))
+			Expect(byKind[musiccredit.KindPerformer].Instruments).
+				To(Equal("guitar,lead vocals"))
 
 			Expect(got.Edges.Credits).To(HaveLen(3))
-			perf := client.MusicCredit.Query().
-				Where(musiccredit.KindEQ(musiccredit.KindPerformer)).OnlyX(ctx)
+			perf := client.MusicCredit.Query().Where(
+				musiccredit.KindEQ(musiccredit.KindPerformer),
+				musiccredit.HasAlbum(),
+			).OnlyX(ctx)
 			Expect(perf.Guest).To(BeTrue())
 			Expect(perf.Instruments).To(Equal("guitar"))
 		})
@@ -634,7 +652,83 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			Expect(client.MusicCredit.Query().Where(
 				musiccredit.KindEQ(musiccredit.KindFeaturing),
 			).CountX(ctx)).To(BeZero(), "featuring comes from the light call too")
+			Expect(client.MusicCredit.Query().Where(
+				musiccredit.HasTrack(),
+				musiccredit.KindIn(musiccredit.KindCredit, musiccredit.KindPerformer),
+			).
+				CountX(ctx)).To(Equal(2))
 		})
+
+		It(
+			"backfills the albums holding files whose details predate the tag writer",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				waiting := func() []uint32 {
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx, now.Add(time.Minute), 10)
+					Expect(err).NotTo(HaveOccurred())
+					ids := make([]uint32, len(rows))
+					for i, a := range rows {
+						ids[i] = a.ID
+					}
+					return ids
+				}
+				Expect(waiting()).To(BeEmpty())
+
+				client.Album.UpdateOneID(rg2.ID).SetCreditsVersion(0).ExecX(ctx)
+				Expect(waiting()).To(ConsistOf(rg2.ID))
+
+				client.Album.UpdateOneID(rg2.ID).ClearCreditsFetchedAt().ExecX(ctx)
+				Expect(
+					waiting(),
+				).To(BeEmpty(), "a heavy call that never succeeded is the credits sweep's")
+			},
+		)
+
+		It(
+			"does not list an outdated credits layout again until its retry is due, nor one too large for the heavy call",
+			func() {
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				tr := client.Track.Query().Where(track.MbidEQ("r-1")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/1.flac").SetSize(10).
+					SetTrackID(tr.ID).ExecX(ctx)
+				client.Album.UpdateOneID(rg2.ID).SetCreditsVersion(0).ExecX(ctx)
+				list := func(retryBefore time.Time) []*ent.Album {
+					rows, err := store.ListAlbumsAwaitingDetails(
+						ctx,
+						retryBefore,
+						10,
+					)
+					Expect(err).NotTo(HaveOccurred())
+					return rows
+				}
+
+				// Fetched at now: a refetch that fell back to the light call
+				// leaves the version, and must not head the list again at once.
+				Expect(list(now.Add(-time.Hour))).To(BeEmpty())
+				Expect(list(now.Add(time.Minute))).To(HaveLen(1))
+
+				creates := make([]*ent.TrackCreate, MaxCreditsTracks)
+				for i := range creates {
+					creates[i] = client.Track.Create().SetTitle(fmt.Sprint(i)).
+						SetPosition(uint16(i + 2)).SetAlbumID(rg2.ID)
+				}
+				client.Track.CreateBulk(creates...).ExecX(ctx)
+				Expect(list(now.Add(time.Minute))).To(BeEmpty(),
+					"a release the heavy call cannot carry never moves its version")
+
+				client.Album.UpdateOneID(rg2.ID).ClearGenres().ExecX(ctx)
+				Expect(list(now.Add(-time.Hour))).To(HaveLen(1),
+					"missing genres come from the release-group call, whatever the size")
+			},
+		)
 
 		It("leaves credits_fetched_at empty after a light call", func() {
 			light := HydrationParams{
@@ -1257,7 +1351,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		a := seed()
 		Expect(store.SetAlbumHydration(ctx, albumByMBID("rg-1").ID, HydrationParams{
 			CreditsComplete: true,
-			Credits: []AlbumCreditSeed{
+			Credits: []MusicCreditSeed{
 				{Name: "P", Role: "mix"},
 			},
 			Tracks: []TrackSeed{{

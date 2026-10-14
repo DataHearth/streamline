@@ -13,6 +13,9 @@ type RenameOperation struct {
 	// Season is the season number the episode belongs to, for series plans.
 	// Zero (and meaningless) for a movie plan.
 	Season uint16
+	// AlbumID names the album the file belongs to, for music plans: the move
+	// takes its file lock (LockAlbumFiles).
+	AlbumID uint32
 }
 
 // RenamePlan is the set of file moves needed to bring a title's media files in

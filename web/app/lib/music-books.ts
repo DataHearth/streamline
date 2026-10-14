@@ -30,7 +30,15 @@ export type Member = Person & { instruments: string[]; from?: number; to?: numbe
 // Who played on a release. `guest` marks a player from outside a group.
 export type Performer = Person & { instruments: string[]; guest?: boolean };
 // MusicBrainz relationship types, folded to the five liner notes carry.
-export type CreditRole = "producer" | "recording" | "mix" | "mastering" | "artwork";
+export type CreditRole =
+	| "producer"
+	| "recording"
+	| "mix"
+	| "mastering"
+	| "artwork"
+	| "conductor"
+	| "remixer"
+	| "arranger";
 export type Credit = Person & { role: CreditRole };
 export type MediumFormat = "cd" | "vinyl" | "digital" | "cassette";
 
@@ -432,12 +440,24 @@ export function peopleList(ps: Person[]): string {
 export const memberYears = (m: Member) =>
 	m.to ? (m.from ? `${m.from}–${m.to}` : `–${m.to}`) : m.from ? i18n.music_since({ year: String(m.from) }) : "";
 
-export const CREDIT_ROLES: CreditRole[] = ["producer", "recording", "mix", "mastering", "artwork"];
+export const CREDIT_ROLES: CreditRole[] = [
+	"producer",
+	"recording",
+	"mix",
+	"mastering",
+	"conductor",
+	"arranger",
+	"remixer",
+	"artwork",
+];
 export function creditRoleLabel(r: CreditRole): string {
 	if (r === "producer") return i18n.music_role_producer();
 	if (r === "recording") return i18n.music_role_recording();
 	if (r === "mix") return i18n.music_role_mix();
 	if (r === "mastering") return i18n.music_role_mastering();
+	if (r === "conductor") return i18n.music_role_conductor();
+	if (r === "remixer") return i18n.music_role_remixer();
+	if (r === "arranger") return i18n.music_role_arranger();
 	return i18n.music_role_artwork();
 }
 

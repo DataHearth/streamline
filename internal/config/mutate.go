@@ -55,6 +55,8 @@ type LibraryPatch struct {
 	ImportMaxAttempts    *uint8
 	DriftGraceTicks      *uint8
 	AllowedDownloadRoots *[]string
+	// MusicTags is optional-partial like Probe.
+	MusicTags *MusicTagsPatch
 	// Probe is itself optional-partial: a nil Probe leaves the whole section
 	// untouched, and a non-nil Probe with only one field set leaves the
 	// other alone.
@@ -276,6 +278,42 @@ func UpdateAuth(ctx context.Context, patch AuthPatch) (AuthConfig, error) {
 	return out, nil
 }
 
+// MusicTagsPatch carries optional field updates to library.music_tags. Nil
+// fields are left untouched.
+type MusicTagsPatch struct {
+	Mode       *string
+	Seeding    *string
+	EmbedArt   *bool
+	ArtMaxPx   *uint16
+	SidecarArt *bool
+	Strip      *[]string
+	Preserve   *[]string
+}
+
+func (p *MusicTagsPatch) apply(c *MusicTagsConfig) {
+	if p.Mode != nil {
+		c.Mode = *p.Mode
+	}
+	if p.Seeding != nil {
+		c.Seeding = *p.Seeding
+	}
+	if p.EmbedArt != nil {
+		c.EmbedArt = *p.EmbedArt
+	}
+	if p.ArtMaxPx != nil {
+		c.ArtMaxPx = *p.ArtMaxPx
+	}
+	if p.SidecarArt != nil {
+		c.SidecarArt = *p.SidecarArt
+	}
+	if p.Strip != nil {
+		c.Strip = *p.Strip
+	}
+	if p.Preserve != nil {
+		c.Preserve = *p.Preserve
+	}
+}
+
 // UpdateLibrary merges the patch into the library section and persists it.
 // Returns the resulting LibraryConfig so callers can echo the new state back.
 func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, error) {
@@ -331,6 +369,9 @@ func UpdateLibrary(ctx context.Context, patch LibraryPatch) (LibraryConfig, erro
 		}
 		if patch.AllowedDownloadRoots != nil {
 			c.Library.AllowedDownloadRoots = *patch.AllowedDownloadRoots
+		}
+		if patch.MusicTags != nil {
+			patch.MusicTags.apply(&c.Library.MusicTags)
 		}
 		if patch.Probe != nil {
 			if patch.Probe.AlwaysAsk != nil {

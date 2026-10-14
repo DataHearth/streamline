@@ -9,12 +9,8 @@ require (
 	github.com/XSAM/otelsql v0.44.0
 	github.com/anacrolix/log v0.17.1-0.20251118025802-918f1157b7bb
 	github.com/anacrolix/torrent v1.61.1-0.20260823125848-7e8d40966b7c
-	github.com/bogem/id3v2/v2 v2.1.4
 	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-flac/flacvorbis/v2 v2.0.2
-	github.com/go-flac/go-flac/v2 v2.0.4
 	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/go-rod/rod v0.116.2
@@ -47,6 +43,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
+	go.senan.xyz/taglib v0.15.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.24.0
@@ -364,6 +361,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tdewolff/parse/v2 v2.8.12 // indirect
 	github.com/tetafro/godot v1.5.6 // indirect
+	github.com/tetratelabs/wazero v1.12.0 // indirect
 	github.com/tidwall/btree v1.8.1 // indirect
 	github.com/timakin/bodyclose v0.0.0-20260723120731-857993a2939c // indirect
 	github.com/timonwong/loggercheck v0.12.0 // indirect

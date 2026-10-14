@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Radar, Search } from "@lucide/svelte";
+	import { Radar, Search, Tags } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
@@ -22,6 +22,7 @@
 		monitorPending = false,
 		onManualSearchTrack,
 		onDeleteTrack,
+		onTags,
 	}: {
 		release: Release;
 		canEdit?: boolean;
@@ -34,6 +35,8 @@
 		// releases of its album.
 		onManualSearchTrack?: () => void;
 		onDeleteTrack?: (t: Track) => void;
+		// The release's tag panel, for a release holding files.
+		onTags?: () => void;
 	} = $props();
 
 	let up = $derived(r.status === "upcoming");
@@ -108,6 +111,18 @@
 						</button>
 					{/if}
 					<MonitorToggle monitored={r.monitored} onToggle={onMonitor} pending={monitorPending} size="sm" />
+					{#if onTags && r.tracks_have > 0}
+						<button
+							type="button"
+							onclick={onTags}
+							aria-label={i18n.music_tags_panel_button()}
+							title={i18n.music_tags_panel_button()}
+							class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.06] px-2 text-[13px] font-medium text-fg transition hover:bg-white/[0.12] lg:h-9 lg:min-w-9 @md:px-3"
+						>
+							<Tags size={15} aria-hidden="true" />
+							<span class="hidden @md:inline">{i18n.music_tags_panel_button()}</span>
+						</button>
+					{/if}
 					{#if up}
 						<span class="text-[13px] text-fg-muted">
 							{r.monitored ? i18n.music_upcoming_monitored() : i18n.music_upcoming_unmonitored()}

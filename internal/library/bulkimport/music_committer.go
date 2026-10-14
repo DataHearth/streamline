@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	entimportscanalbum "github.com/datahearth/streamline/ent/importscanalbum"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -30,9 +32,16 @@ import (
 // the artist is seeded from MusicBrainz when new, then the files already on
 // disk are recorded against the album's tracks. Sequential, since MusicBrainz
 // serializes behind a 1 req/s limiter anyway.
-func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
+func (s *Service) runCommitMusic(
+	ctx context.Context,
+	scan *ent.ImportScan,
+	writeTags bool,
+) {
 	ctx, span := tracer.Start(ctx, "bulkimport.run_commit_music",
-		trace.WithAttributes(attribute.Int64("scan.id", int64(scan.ID))))
+		trace.WithAttributes(
+			attribute.Int64("scan.id", int64(scan.ID)),
+			attribute.Bool("commit.write_tags", writeTags),
+		))
 	defer span.End()
 
 	defer func() {
@@ -52,7 +61,7 @@ func (s *Service) runCommitMusic(ctx context.Context, scan *ent.ImportScan) {
 	artists := map[string]struct{}{}
 	var success, failed uint32
 	for _, sc := range albums {
-		outcome, msg, createdID := s.commitAlbum(ctx, sc, artists)
+		outcome, msg, createdID := s.commitAlbum(ctx, sc, artists, writeTags)
 		if uerr := s.store.UpdateImportScanAlbumOutcome(
 			ctx,
 			sc.ID,
@@ -102,6 +111,7 @@ func (s *Service) commitAlbum(
 	ctx context.Context,
 	sc *ent.ImportScanAlbum,
 	artists map[string]struct{},
+	writeTags bool,
 ) (entimportscanalbum.Outcome, string, uint32) {
 	ctx, span := tracer.Start(ctx, "bulkimport.commit_album",
 		trace.WithAttributes(
@@ -144,8 +154,51 @@ func (s *Service) commitAlbum(
 			alb.ID,
 		)
 	}
+	for i := range plan {
+		plan[i].TagsPending = writeTags
+	}
+	// An album holding no file yet (a stub of the artist's discography, the
+	// commit's own or one the library already had) is brought in by this
+	// commit and follows the review's choice; one already holding files
+	// keeps its own.
+	heldFiles := slices.ContainsFunc(alb.Edges.Tracks, func(t *ent.Track) bool {
+		return len(t.Edges.MediaFiles) > 0
+	})
 	if err := s.store.AdoptAlbumFiles(ctx, alb.ID, plan); err != nil {
 		return commitAlbumFail(span, "adopt files", err, alb.ID)
+	}
+	outcome := entimportscanalbum.OutcomeCreated
+	if sc.Classification == entimportscanalbum.ClassificationExisting &&
+		sc.DecisionReleaseGroupMbid == "" {
+		outcome = entimportscanalbum.OutcomeAttached
+	}
+	if !heldFiles {
+		if err := s.store.SetAlbumTagsManaged(ctx, alb.ID, writeTags); err != nil {
+			slog.WarnContext(
+				ctx,
+				"music commit: recording the album's tagging failed",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
+	}
+	// Tagged before the media servers are told (one refresh at the end of
+	// the commit); a file a torrent still serves is left for the job.
+	coverResolved := false
+	if writeTags && len(plan) > 0 {
+		var err error
+		if coverResolved, err = s.musicAdder.TagAlbum(ctx, alb.ID); err != nil {
+			slog.WarnContext(
+				ctx,
+				"music commit: tagging the adopted files failed, the job retries",
+				"album.id",
+				alb.ID,
+				"error",
+				err,
+			)
+		}
 	}
 
 	var notes []string
@@ -156,14 +209,12 @@ func (s *Service) commitAlbum(
 		notes = append(notes, fmt.Sprintf(
 			"%d of %d tracks have no file", uncovered, len(alb.Edges.Tracks)))
 	}
-	s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
-	slog.InfoContext(ctx, "album adopted",
-		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched)
-	outcome := entimportscanalbum.OutcomeCreated
-	if sc.Classification == entimportscanalbum.ClassificationExisting &&
-		sc.DecisionReleaseGroupMbid == "" {
-		outcome = entimportscanalbum.OutcomeAttached
+	if !coverResolved {
+		s.musicAdder.ResolveCoversInBackground(ctx, alb.ID)
 	}
+	slog.InfoContext(ctx, "album adopted",
+		"album.id", alb.ID, "files", len(plan), "unmatched", unmatched,
+		"tags", writeTags)
 	return outcome, strings.Join(notes, "; "), alb.ID
 }
 
@@ -239,6 +290,26 @@ func (s *Service) resolveArtist(
 	return nil
 }
 
+// SeedingFiles counts the audio files of an album folder, disc subfolders
+// included, that the tag writer will leave alone until a torrent is gone:
+// those a torrent the clients still list serves and, under seeding: defer,
+// those hardlinked to a listed torrent's file. A folder that cannot be read
+// counts none.
+func SeedingFiles(seeding download.SeedingSet, folder string) int {
+	files, err := albumFolderFiles(folder)
+	if err != nil {
+		return 0
+	}
+	deferLinks := config.Get().Library.MusicTags.Seeding == config.MusicTagsSeedingDefer
+	n := 0
+	for _, f := range files {
+		if seeding.Owns(f.path) || (deferLinks && seeding.SharesData(f.path)) {
+			n++
+		}
+	}
+	return n
+}
+
 // albumFolderFiles lists the audio files of an album folder: those directly in
 // it and those in its disc subfolders, each with the disc number its folder
 // names (0 for a file outside one).
@@ -251,7 +322,7 @@ func albumFolderFiles(folder string) ([]albumFile, error) {
 	for _, e := range entries {
 		path := filepath.Join(folder, e.Name())
 		if !e.IsDir() {
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(path))]; ok {
+			if audiotags.IsAudioFile(path) {
 				out = append(out, albumFile{path: path})
 			}
 			continue
@@ -269,7 +340,7 @@ func albumFolderFiles(folder string) ([]albumFile, error) {
 			if se.IsDir() {
 				continue
 			}
-			if _, ok := audiotags.AudioExtensions[strings.ToLower(filepath.Ext(sp))]; ok {
+			if audiotags.IsAudioFile(sp) {
 				out = append(out, albumFile{path: sp, disc: disc})
 			}
 		}

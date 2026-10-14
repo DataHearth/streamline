@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
 
@@ -39,19 +40,24 @@ type PersonSeed struct {
 }
 
 type TrackSeed struct {
-	MBID      string
-	Title     string
-	Disc      uint8
-	Position  uint16
-	Duration  uint32
-	Bonus     bool
-	Featuring []PersonSeed
-	Writers   []PersonSeed
+	MBID             string
+	ReleaseTrackMBID string
+	Title            string
+	Disc             uint8
+	Position         uint16
+	Duration         uint32
+	Bonus            bool
+	Featuring        []PersonSeed
+	// Writers, Credits and Performers are stored only when the release
+	// call's credits are complete.
+	Writers    []MusicCreditSeed
+	Credits    []MusicCreditSeed
+	Performers []PerformerSeed
 }
 
-// AlbumCreditSeed is one production credit of an album; Role is one of the
+// MusicCreditSeed is one credit of an album or a track; Role is one of the
 // musiccredit role values.
-type AlbumCreditSeed struct {
+type MusicCreditSeed struct {
 	PersonSeed
 	Role string
 }
@@ -65,11 +71,12 @@ type PerformerSeed struct {
 // AlbumSeed is a release group as the artist's discography lists it. The
 // tracks arrive later, through SetAlbumHydration.
 type AlbumSeed struct {
-	MBID        string
-	Title       string
-	Type        string
-	ReleaseDate *time.Time
-	Monitored   bool
+	MBID         string
+	Title        string
+	Type         string
+	ReleaseDate  *time.Time
+	OriginalDate string
+	Monitored    bool
 }
 
 type MemberSeed struct {
@@ -129,6 +136,9 @@ type ArtistDetailsParams struct {
 // relationships and must not erase what an earlier heavy call stored.
 type HydrationParams struct {
 	ReleaseMBID     string
+	OriginalDate    string
+	EditionDate     string
+	Genres          []string
 	Barcode         string
 	Label           string
 	CatalogNumber   string
@@ -136,12 +146,21 @@ type HydrationParams struct {
 	Media           []string
 	Studio          string
 	Tracks          []TrackSeed
-	Credits         []AlbumCreditSeed
+	Credits         []MusicCreditSeed
 	Performers      []PerformerSeed
 	CreditsComplete bool
 }
 
 func joinCSV(s []string) string { return strings.Join(s, ",") }
+
+// creditRole is a seed's role as the column stores it, nil for none.
+func creditRole(r string) *musiccredit.Role {
+	if r == "" {
+		return nil
+	}
+	role := musiccredit.Role(r)
+	return &role
+}
 
 func createAlbum(
 	ctx context.Context,
@@ -154,7 +173,8 @@ func createAlbum(
 		SetTitle(a.Title).
 		SetMonitored(a.Monitored).
 		SetArtistID(artistID).
-		SetNillableReleaseDate(a.ReleaseDate)
+		SetNillableReleaseDate(a.ReleaseDate).
+		SetOriginalDate(a.OriginalDate)
 	if a.Type != "" {
 		b = b.SetType(album.Type(a.Type))
 	}
@@ -734,6 +754,9 @@ func (db *DB) RefreshArtist(
 			u := c.Album.UpdateOne(cur).
 				SetTitle(a.Title).
 				SetNillableReleaseDate(a.ReleaseDate)
+			if a.OriginalDate != "" {
+				u = u.SetOriginalDate(a.OriginalDate)
+			}
 			if a.Type != "" {
 				u = u.SetType(album.Type(a.Type))
 			}
@@ -969,7 +992,13 @@ func (db *DB) SetAlbumHydration(
 		SetCatalogNumber(p.CatalogNumber).
 		SetCountry(p.Country).
 		SetMedia(joinCSV(p.Media)).
+		SetEditionDate(p.EditionDate).
+		// Never NULL once hydrated: NULL is the marker the backfill reads.
+		SetGenres(append([]string{}, p.Genres...)).
 		SetMetadataFetchedAt(at)
+	if p.OriginalDate != "" {
+		u = u.SetOriginalDate(p.OriginalDate)
+	}
 	if p.ReleaseMBID != "" {
 		u = u.SetReleaseMbid(p.ReleaseMBID)
 	}
@@ -977,7 +1006,8 @@ func (db *DB) SetAlbumHydration(
 		u = u.SetBarcode(p.Barcode)
 	}
 	if p.CreditsComplete {
-		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at)
+		u = u.SetStudio(p.Studio).SetCreditsFetchedAt(at).
+			SetCreditsVersion(library.MusicCreditsVersion)
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
@@ -1005,6 +1035,7 @@ func (db *DB) SetAlbumHydration(
 			id = cur.ID
 			if err := c.Track.UpdateOneID(id).
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDuration(t.Duration).
 				SetBonus(t.Bonus).
@@ -1015,6 +1046,7 @@ func (db *DB) SetAlbumHydration(
 		} else {
 			row, err := c.Track.Create().
 				SetMbid(t.MBID).
+				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
 				SetDisc(t.Disc).
 				SetPosition(t.Position).
@@ -1030,7 +1062,12 @@ func (db *DB) SetAlbumHydration(
 		}
 		kinds := []musiccredit.Kind{musiccredit.KindFeaturing}
 		if p.CreditsComplete {
-			kinds = append(kinds, musiccredit.KindWriter)
+			kinds = append(
+				kinds,
+				musiccredit.KindWriter,
+				musiccredit.KindCredit,
+				musiccredit.KindPerformer,
+			)
 		}
 		if _, err := c.MusicCredit.Delete().Where(
 			musiccredit.HasTrackWith(track.IDEQ(id)),
@@ -1050,7 +1087,22 @@ func (db *DB) SetAlbumHydration(
 			for i, w := range t.Writers {
 				creates = append(creates, c.MusicCredit.Create().
 					SetKind(musiccredit.KindWriter).
+					SetNillableRole(creditRole(w.Role)).
 					SetName(w.Name).SetMbid(w.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, cr := range t.Credits {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindCredit).
+					SetRole(musiccredit.Role(cr.Role)).
+					SetName(cr.Name).SetMbid(cr.MBID).
+					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
+			}
+			for i, pf := range t.Performers {
+				creates = append(creates, c.MusicCredit.Create().
+					SetKind(musiccredit.KindPerformer).
+					SetName(pf.Name).SetMbid(pf.MBID).
+					SetInstruments(joinCSV(pf.Instruments)).
 					SetOrdinal(numeric.SaturateU16(i)).SetTrackID(id))
 			}
 		}
@@ -1125,6 +1177,43 @@ func (db *DB) ListAlbumsAwaitingCredits(
 			album.CreditsFetchedAtIsNil(),
 			album.HasTracks(),
 			smallRelease(),
+		).
+		WithArtist().
+		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).
+		Limit(limit).
+		All(ctx)
+}
+
+// ListAlbumsAwaitingDetails returns up to limit hydrated albums holding at
+// least one file whose release data predates what the tag writer reads:
+// genres never fetched (hydrated before the genres and edition date were
+// part of hydration), or credits stored under an older layout than
+// library.MusicCreditsVersion. Albums without files wait for their import.
+//
+// An album waiting on its credits layout is listed only when its release is
+// small enough for the heavy call (the credits sweep's own cap) and its last
+// fetch is older than retryBefore: a refetch that falls back to the light
+// call succeeds without moving the version, and would otherwise head the list
+// on every pass. The longest-unfetched come first, so such an album goes to
+// the back once tried.
+func (db *DB) ListAlbumsAwaitingDetails(
+	ctx context.Context,
+	retryBefore time.Time,
+	limit int,
+) ([]*ent.Album, error) {
+	return db.client.Album.Query().
+		Where(
+			album.MetadataFetchedAtNotNil(),
+			album.Or(
+				album.GenresIsNil(),
+				album.And(
+					album.CreditsFetchedAtNotNil(),
+					album.CreditsVersionLT(library.MusicCreditsVersion),
+					album.MetadataFetchedAtLT(retryBefore),
+					smallRelease(),
+				),
+			),
+			album.HasTracksWith(track.HasMediaFiles()),
 		).
 		WithArtist().
 		Order(ent.Asc(album.FieldMetadataFetchedAt), ent.Asc(album.FieldID)).

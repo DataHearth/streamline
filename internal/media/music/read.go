@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -281,9 +282,7 @@ func fullAlbum(
 		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindFeaturing) {
 			tv.Featuring = append(tv.Featuring, people.person(c.Name, c.Mbid))
 		}
-		for _, c := range creditsOf(t.Edges.Credits, musiccredit.KindWriter) {
-			tv.Writers = append(tv.Writers, people.person(c.Name, c.Mbid))
-		}
+		tv.Writers = trackWriters(t.Edges.Credits, people)
 		v.Tracks = append(v.Tracks, tv)
 	}
 	files := albumFiles(a)
@@ -305,4 +304,33 @@ func fullAlbum(
 		})
 	}
 	return v
+}
+
+// writtenByRoles are the writer roles "written by" names: a writer row is
+// stored once per role, for the tags, and an arranger is not one who wrote
+// the work. A row stored before writers had roles has none.
+var writtenByRoles = []musiccredit.Role{
+	musiccredit.RoleWriter, musiccredit.RoleComposer, musiccredit.RoleLyricist, "",
+}
+
+// trackWriters is the track's "written by": each person once, whatever roles
+// they hold, in credit order.
+func trackWriters(credits []*ent.MusicCredit, people peopleIndex) []PersonView {
+	var out []PersonView
+	seen := map[string]bool{}
+	for _, c := range creditsOf(credits, musiccredit.KindWriter) {
+		if !slices.Contains(writtenByRoles, c.Role) {
+			continue
+		}
+		key := c.Mbid
+		if key == "" {
+			key = "name:" + strings.ToLower(c.Name)
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, people.person(c.Name, c.Mbid))
+	}
+	return out
 }

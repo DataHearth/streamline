@@ -904,6 +904,21 @@ export type LibraryConfig = {
 	series_path?: string;
 	download_path?: string;
 	probe?: ProbeConfig;
+	music_tags: MusicTagsConfig;
+};
+
+// library.music_tags: what Streamline writes into music files. Every field is
+// optional on a patch.
+export type MusicTagsMode = "off" | "import" | "managed";
+export type MusicTagsSeeding = "defer" | "copy";
+export type MusicTagsConfig = {
+	mode: MusicTagsMode;
+	seeding: MusicTagsSeeding;
+	embed_art: boolean;
+	art_max_px: number;
+	sidecar_art: boolean;
+	strip: string[];
+	preserve: string[];
 };
 
 export type DownloadConfig = {
@@ -1594,6 +1609,9 @@ export type ImportScanAlbum = {
 	format?: string;
 	// Audio files in the folder, not MusicBrainz's track count.
 	file_count: number;
+	// Of those, the files a torrent the clients still list serves: tags reach
+	// them only once the torrent is removed. Read live.
+	seeding_files?: number;
 	size: number;
 	classification: ImportFileClassification;
 	release_group_mbid?: string;

@@ -3,6 +3,8 @@ package restapi
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
@@ -10,7 +12,9 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
 	"github.com/datahearth/streamline/internal/media/book"
 )
@@ -169,7 +173,11 @@ func (s *Server) CommitImport(
 	if err := requireAdmin(ctx); err != nil {
 		return CommitImport403JSONResponse{ForbiddenJSONResponse: notAdminResp}, nil
 	}
-	if err := s.bulkImports.Commit(ctx, req.Id); err != nil {
+	var opts bulkimport.CommitOptions
+	if req.Body != nil {
+		opts.WriteTags = req.Body.WriteTags
+	}
+	if err := s.bulkImports.CommitWith(ctx, req.Id, opts); err != nil {
 		switch {
 		case errors.Is(err, bulkimport.ErrScanNotFound):
 			return CommitImport404JSONResponse{
@@ -448,7 +456,8 @@ func (s *Server) ListImportAlbums(
 			BadRequestJSONResponse: errBadRequest(limitRangeMsg(importMaxLimit)),
 		}, nil
 	}
-	if _, err := s.store.FindImportScan(ctx, req.Id); err != nil {
+	scan, err := s.store.FindImportScan(ctx, req.Id)
+	if err != nil {
 		if ent.IsNotFound(err) {
 			return ListImportAlbums404JSONResponse{
 				NotFoundJSONResponse: errNotFound("scan not found"),
@@ -482,8 +491,22 @@ func (s *Server) ListImportAlbums(
 		return nil, err
 	}
 	apiItems := make([]ImportScanAlbum, 0, len(items))
+	// seeding_files is only worth a listing while the review is open and
+	// something will be tagged: a committed scan, or tagging off, gets none.
+	var seeding *download.SeedingSet
+	if len(items) > 0 && s.downloads != nil &&
+		scan.Status == entimportscan.StatusAwaitingReview &&
+		config.Get().Library.MusicTags.Mode != config.MusicTagsOff {
+		set := s.seedingSnapshot(ctx)
+		seeding = &set
+	}
 	for _, it := range items {
-		apiItems = append(apiItems, toAPIImportScanAlbum(it, artistIDs))
+		row := toAPIImportScanAlbum(it, artistIDs)
+		if seeding != nil {
+			n := bulkimport.SeedingFiles(*seeding, it.FolderPath)
+			row.SeedingFiles = &n
+		}
+		apiItems = append(apiItems, row)
 	}
 	return ListImportAlbums200JSONResponse{
 		Items: apiItems,
@@ -659,4 +682,33 @@ func (s *Server) UpdateImportBookDecision(
 			toAPIImportScanBook(row),
 		),
 	}, nil
+}
+
+// seedingTTL is how long one listing of the download clients serves the
+// import review's seeding_files: the page is fetched again as the admin pages
+// and decides, and every client listed on each fetch stalls the page on the
+// slowest of them.
+const seedingTTL = 30 * time.Second
+
+// seedingCache is the last listing of the download clients' torrents.
+type seedingCache struct {
+	mu  sync.Mutex
+	at  time.Time
+	set download.SeedingSet
+}
+
+// seedingSnapshot returns the clients' torrents as listed at most seedingTTL
+// ago. An incomplete listing is not kept: the next fetch asks again.
+func (s *Server) seedingSnapshot(ctx context.Context) download.SeedingSet {
+	s.seeding.mu.Lock()
+	defer s.seeding.mu.Unlock()
+	if !s.seeding.at.IsZero() && time.Since(s.seeding.at) < seedingTTL {
+		return s.seeding.set
+	}
+	set := s.downloads.SeedingTorrents(ctx)
+	s.seeding.set, s.seeding.at = set, time.Time{}
+	if set.Complete {
+		s.seeding.at = time.Now()
+	}
+	return set
 }

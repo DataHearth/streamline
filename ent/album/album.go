@@ -31,10 +31,22 @@ const (
 	FieldType = "type"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
 	FieldReleaseDate = "release_date"
+	// FieldOriginalDate holds the string denoting the original_date field in the database.
+	FieldOriginalDate = "original_date"
+	// FieldEditionDate holds the string denoting the edition_date field in the database.
+	FieldEditionDate = "edition_date"
+	// FieldGenres holds the string denoting the genres field in the database.
+	FieldGenres = "genres"
 	// FieldMonitored holds the string denoting the monitored field in the database.
 	FieldMonitored = "monitored"
 	// FieldMonitorPinned holds the string denoting the monitor_pinned field in the database.
 	FieldMonitorPinned = "monitor_pinned"
+	// FieldTagsManaged holds the string denoting the tags_managed field in the database.
+	FieldTagsManaged = "tags_managed"
+	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
+	FieldArtSidecarHash = "art_sidecar_hash"
+	// FieldTagOverrides holds the string denoting the tag_overrides field in the database.
+	FieldTagOverrides = "tag_overrides"
 	// FieldGrabFailures holds the string denoting the grab_failures field in the database.
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
@@ -57,6 +69,8 @@ const (
 	FieldMetadataFetchedAt = "metadata_fetched_at"
 	// FieldCreditsFetchedAt holds the string denoting the credits_fetched_at field in the database.
 	FieldCreditsFetchedAt = "credits_fetched_at"
+	// FieldCreditsVersion holds the string denoting the credits_version field in the database.
+	FieldCreditsVersion = "credits_version"
 	// EdgeArtist holds the string denoting the artist edge name in mutations.
 	EdgeArtist = "artist"
 	// EdgeTracks holds the string denoting the tracks edge name in mutations.
@@ -124,8 +138,14 @@ var Columns = []string{
 	FieldTitle,
 	FieldType,
 	FieldReleaseDate,
+	FieldOriginalDate,
+	FieldEditionDate,
+	FieldGenres,
 	FieldMonitored,
 	FieldMonitorPinned,
+	FieldTagsManaged,
+	FieldArtSidecarHash,
+	FieldTagOverrides,
 	FieldGrabFailures,
 	FieldLastSearchAt,
 	FieldStatus,
@@ -137,6 +157,7 @@ var Columns = []string{
 	FieldStudio,
 	FieldMetadataFetchedAt,
 	FieldCreditsFetchedAt,
+	FieldCreditsVersion,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "albums"
@@ -181,8 +202,12 @@ var (
 	DefaultMonitored bool
 	// DefaultMonitorPinned holds the default value on creation for the "monitor_pinned" field.
 	DefaultMonitorPinned bool
+	// DefaultTagsManaged holds the default value on creation for the "tags_managed" field.
+	DefaultTagsManaged bool
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
+	// DefaultCreditsVersion holds the default value on creation for the "credits_version" field.
+	DefaultCreditsVersion uint8
 )
 
 // Type defines the type for the "type" enum field.
@@ -293,6 +318,16 @@ func ByReleaseDate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReleaseDate, opts...).ToFunc()
 }
 
+// ByOriginalDate orders the results by the original_date field.
+func ByOriginalDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOriginalDate, opts...).ToFunc()
+}
+
+// ByEditionDate orders the results by the edition_date field.
+func ByEditionDate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEditionDate, opts...).ToFunc()
+}
+
 // ByMonitored orders the results by the monitored field.
 func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitored, opts...).ToFunc()
@@ -301,6 +336,16 @@ func ByMonitored(opts ...sql.OrderTermOption) OrderOption {
 // ByMonitorPinned orders the results by the monitor_pinned field.
 func ByMonitorPinned(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonitorPinned, opts...).ToFunc()
+}
+
+// ByTagsManaged orders the results by the tags_managed field.
+func ByTagsManaged(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTagsManaged, opts...).ToFunc()
+}
+
+// ByArtSidecarHash orders the results by the art_sidecar_hash field.
+func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
 }
 
 // ByGrabFailures orders the results by the grab_failures field.
@@ -356,6 +401,11 @@ func ByMetadataFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByCreditsFetchedAt orders the results by the credits_fetched_at field.
 func ByCreditsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreditsFetchedAt, opts...).ToFunc()
+}
+
+// ByCreditsVersion orders the results by the credits_version field.
+func ByCreditsVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsVersion, opts...).ToFunc()
 }
 
 // ByArtistField orders the results by artist field.

@@ -38,9 +38,26 @@ type Manager interface {
 	) (*ent.ImportScanFile, error)
 	Cancel(ctx context.Context, id uint32) error
 	Commit(ctx context.Context, id uint32) error
+	CommitWith(ctx context.Context, id uint32, opts CommitOptions) error
 	Delete(ctx context.Context, id uint32) error
 	BulkDecide(ctx context.Context, p BulkDecisionParams) (int, error)
 	AbortInflight(ctx context.Context) (uint32, error)
+}
+
+// CommitOptions are the import review's choices for a commit. WriteTags, on
+// a music scan, queues the adopted files for the music tag writer and marks
+// the albums the commit creates as managed; nil means off. Other kinds
+// ignore it.
+type CommitOptions struct {
+	WriteTags *bool
+}
+
+// writeTags resolves WriteTags. Adoption takes files already in someone's
+// collection, which it never wrote before tagging existed: a commit that does
+// not ask for tags (an API client or a script sending no body) leaves them
+// byte for byte as they are, comments and all.
+func (o CommitOptions) writeTags() bool {
+	return o.WriteTags != nil && *o.WriteTags
 }
 
 // FilesParams is the input for Manager.Files.
@@ -69,6 +86,7 @@ type MusicAdder interface {
 	Add(ctx context.Context, p music.AddParams) (*ent.Artist, error)
 	music.CoverResolver
 	music.AlbumHydrator
+	music.AlbumTagger
 }
 
 // BookAdder adds a book from a Hardcover id. Satisfied by *book.Service; used

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -590,5 +591,93 @@ var _ = Describe("replace_mode migration", Label("integration", "db"), func() {
 		}
 		Expect(rows.Err()).NotTo(HaveOccurred())
 		Expect(got).To(Equal(map[int]bool{1: true, 2: false, 3: false}))
+	})
+})
+
+const albumTagsManagedVersion = 20261013122718
+
+var _ = Describe("album tags_managed backfill", Label("integration", "db"), func() {
+	var (
+		sqlDB *sql.DB
+		m     *migrate.Migrate
+	)
+
+	BeforeEach(func() {
+		var err error
+		sqlDB, err = sql.Open(
+			"sqlite",
+			"file:"+filepath.Join(GinkgoT().TempDir(), "tags.db"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(sqlDB.Close()).To(Succeed()) })
+		src, err := iofs.New(migrationsFS, "migrations")
+		Expect(err).NotTo(HaveOccurred())
+		previous, err := src.Prev(albumTagsManagedVersion)
+		Expect(err).NotTo(HaveOccurred())
+		drv, err := sqlite.WithInstance(sqlDB, &sqlite.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		m, err = migrate.NewWithInstance("iofs", src, "sqlite", drv)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(m.Migrate(previous)).To(Succeed())
+	})
+
+	exec := func(q string, args ...any) {
+		GinkgoHelper()
+		_, err := sqlDB.Exec(q, args...)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	// album seeds an album with one track per file source given.
+	album := func(id int, sources ...string) {
+		GinkgoHelper()
+		exec(
+			"INSERT INTO albums (id, create_time, update_time, mbid, title, artist_albums)"+
+				" VALUES (?, datetime('now'), datetime('now'), ?, 'A', 1)",
+			id,
+			fmt.Sprint("rg-", id),
+		)
+		for i, src := range sources {
+			tid := id*10 + i
+			exec(
+				"INSERT INTO tracks (id, create_time, update_time, title, disc, position,"+
+					" album_tracks) VALUES (?, datetime('now'), datetime('now'), 'T', 1, ?, ?)",
+				tid,
+				i+1,
+				id,
+			)
+			exec(
+				"INSERT INTO media_files (create_time, update_time, path, size, source,"+
+					" track_media_files) VALUES (datetime('now'), datetime('now'), ?, 1, ?, ?)",
+				fmt.Sprint("/m/", tid),
+				src,
+				tid,
+			)
+		}
+	}
+
+	managed := func(id int) bool {
+		GinkgoHelper()
+		var v bool
+		Expect(sqlDB.QueryRow("SELECT tags_managed FROM albums WHERE id = ?", id).
+			Scan(&v)).To(Succeed())
+		return v
+	}
+
+	It("leaves only albums made entirely of adopted files unmanaged", func() {
+		exec(
+			"INSERT INTO artists (id, create_time, update_time, mbid, name, monitor)" +
+				" VALUES (1, datetime('now'), datetime('now'), 'art', 'X', 'all')",
+		)
+		album(1, "orphan", "wizard")
+		album(2, "orphan", "auto")
+		album(3, "auto")
+		album(4)
+
+		Expect(m.Migrate(albumTagsManagedVersion)).To(Succeed())
+
+		Expect(managed(1)).To(BeFalse())
+		Expect(managed(2)).To(BeTrue())
+		Expect(managed(3)).To(BeTrue())
+		Expect(managed(4)).To(BeTrue())
 	})
 })

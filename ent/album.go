@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -34,10 +35,22 @@ type Album struct {
 	Type album.Type `json:"type,omitempty"`
 	// ReleaseDate holds the value of the "release_date" field.
 	ReleaseDate *time.Time `json:"release_date,omitempty"`
+	// OriginalDate holds the value of the "original_date" field.
+	OriginalDate string `json:"original_date,omitempty"`
+	// EditionDate holds the value of the "edition_date" field.
+	EditionDate string `json:"edition_date,omitempty"`
+	// Genres holds the value of the "genres" field.
+	Genres []string `json:"genres,omitempty"`
 	// Monitored holds the value of the "monitored" field.
 	Monitored bool `json:"monitored,omitempty"`
 	// MonitorPinned holds the value of the "monitor_pinned" field.
 	MonitorPinned bool `json:"monitor_pinned,omitempty"`
+	// TagsManaged holds the value of the "tags_managed" field.
+	TagsManaged bool `json:"tags_managed,omitempty"`
+	// ArtSidecarHash holds the value of the "art_sidecar_hash" field.
+	ArtSidecarHash string `json:"art_sidecar_hash,omitempty"`
+	// TagOverrides holds the value of the "tag_overrides" field.
+	TagOverrides map[string][]string `json:"tag_overrides,omitempty"`
 	// GrabFailures holds the value of the "grab_failures" field.
 	GrabFailures uint8 `json:"grab_failures,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
@@ -60,6 +73,8 @@ type Album struct {
 	MetadataFetchedAt *time.Time `json:"metadata_fetched_at,omitempty"`
 	// CreditsFetchedAt holds the value of the "credits_fetched_at" field.
 	CreditsFetchedAt *time.Time `json:"credits_fetched_at,omitempty"`
+	// CreditsVersion holds the value of the "credits_version" field.
+	CreditsVersion uint8 `json:"credits_version,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AlbumQuery when eager-loading is set.
 	Edges         AlbumEdges `json:"edges"`
@@ -147,11 +162,13 @@ func (*Album) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case album.FieldMonitored, album.FieldMonitorPinned:
+		case album.FieldGenres, album.FieldTagOverrides:
+			values[i] = new([]byte)
+		case album.FieldMonitored, album.FieldMonitorPinned, album.FieldTagsManaged:
 			values[i] = new(sql.NullBool)
-		case album.FieldID, album.FieldGrabFailures:
+		case album.FieldID, album.FieldGrabFailures, album.FieldCreditsVersion:
 			values[i] = new(sql.NullInt64)
-		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
+		case album.FieldMbid, album.FieldReleaseMbid, album.FieldBarcode, album.FieldTitle, album.FieldType, album.FieldOriginalDate, album.FieldEditionDate, album.FieldArtSidecarHash, album.FieldStatus, album.FieldFailureReason, album.FieldLabel, album.FieldCatalogNumber, album.FieldCountry, album.FieldMedia, album.FieldStudio:
 			values[i] = new(sql.NullString)
 		case album.FieldCreateTime, album.FieldUpdateTime, album.FieldReleaseDate, album.FieldLastSearchAt, album.FieldMetadataFetchedAt, album.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -227,6 +244,26 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				_m.ReleaseDate = new(time.Time)
 				*_m.ReleaseDate = value.Time
 			}
+		case album.FieldOriginalDate:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field original_date", values[i])
+			} else if value.Valid {
+				_m.OriginalDate = value.String
+			}
+		case album.FieldEditionDate:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field edition_date", values[i])
+			} else if value.Valid {
+				_m.EditionDate = value.String
+			}
+		case album.FieldGenres:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field genres", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Genres); err != nil {
+					return fmt.Errorf("unmarshal field genres: %w", err)
+				}
+			}
 		case album.FieldMonitored:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field monitored", values[i])
@@ -238,6 +275,26 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field monitor_pinned", values[i])
 			} else if value.Valid {
 				_m.MonitorPinned = value.Bool
+			}
+		case album.FieldTagsManaged:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field tags_managed", values[i])
+			} else if value.Valid {
+				_m.TagsManaged = value.Bool
+			}
+		case album.FieldArtSidecarHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field art_sidecar_hash", values[i])
+			} else if value.Valid {
+				_m.ArtSidecarHash = value.String
+			}
+		case album.FieldTagOverrides:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field tag_overrides", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.TagOverrides); err != nil {
+					return fmt.Errorf("unmarshal field tag_overrides: %w", err)
+				}
 			}
 		case album.FieldGrabFailures:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -307,6 +364,12 @@ func (_m *Album) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreditsFetchedAt = new(time.Time)
 				*_m.CreditsFetchedAt = value.Time
+			}
+		case album.FieldCreditsVersion:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credits_version", values[i])
+			} else if value.Valid {
+				_m.CreditsVersion = uint8(value.Int64)
 			}
 		case album.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -407,11 +470,29 @@ func (_m *Album) String() string {
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
+	builder.WriteString("original_date=")
+	builder.WriteString(_m.OriginalDate)
+	builder.WriteString(", ")
+	builder.WriteString("edition_date=")
+	builder.WriteString(_m.EditionDate)
+	builder.WriteString(", ")
+	builder.WriteString("genres=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Genres))
+	builder.WriteString(", ")
 	builder.WriteString("monitored=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Monitored))
 	builder.WriteString(", ")
 	builder.WriteString("monitor_pinned=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MonitorPinned))
+	builder.WriteString(", ")
+	builder.WriteString("tags_managed=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagsManaged))
+	builder.WriteString(", ")
+	builder.WriteString("art_sidecar_hash=")
+	builder.WriteString(_m.ArtSidecarHash)
+	builder.WriteString(", ")
+	builder.WriteString("tag_overrides=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TagOverrides))
 	builder.WriteString(", ")
 	builder.WriteString("grab_failures=")
 	builder.WriteString(fmt.Sprintf("%v", _m.GrabFailures))
@@ -451,6 +532,9 @@ func (_m *Album) String() string {
 		builder.WriteString("credits_fetched_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("credits_version=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CreditsVersion))
 	builder.WriteByte(')')
 	return builder.String()
 }
