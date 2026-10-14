@@ -79,6 +79,8 @@ const (
 	EdgeDownloadRecords = "download_records"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
 	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
 	EdgePackRecords = "pack_records"
 	// Table holds the table name of the album in the database.
@@ -111,6 +113,13 @@ const (
 	CreditsInverseTable = "music_credits"
 	// CreditsColumn is the table column denoting the credits relation/edge.
 	CreditsColumn = "album_credits"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "music_annotations"
+	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	AnnotationsInverseTable = "music_annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "album_id"
 	// PackRecordsTable is the table that holds the pack_records relation/edge. The primary key declared below.
 	PackRecordsTable = "download_record_albums"
 	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
@@ -448,6 +457,20 @@ func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPackRecordsCount orders the results by pack_records count.
 func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -487,6 +510,13 @@ func newCreditsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CreditsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+	)
+}
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
 	)
 }
 func newPackRecordsStep() *sqlgraph.Step {

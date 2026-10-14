@@ -2,6 +2,7 @@
 	import { Magnet, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import TorrentRow from "./TorrentRow.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import type { SortOrder, TorrentSortKey } from "@lib/activity-touch";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -21,6 +22,9 @@
 		order,
 		onSortChange,
 		onOpen,
+		selected,
+		onToggle,
+		onToggleAll,
 	}: {
 		rows: Torrent[];
 		loading: boolean;
@@ -31,7 +35,18 @@
 		order: SortOrder;
 		onSortChange: (sort: TorrentSortKey, order: SortOrder) => void;
 		onOpen: (hash: string) => void;
+		// Bulk selection: given, the table grows a checkbox column. Only an
+		// admin gets one — nobody else can act on a torrent.
+		selected?: Set<string>;
+		onToggle?: (hash: string, on: boolean) => void;
+		onToggleAll?: (on: boolean) => void;
 	} = $props();
+
+	let selectable = $derived(!!onToggle && !!selected);
+	let pickedHere = $derived(
+		selected ? rows.filter((t) => selected.has(t.hash)).length : 0,
+	);
+	let allPicked = $derived(rows.length > 0 && pickedHere === rows.length);
 
 	// `grow` marks the column that absorbs the leftover width. Paired with
 	// `max-w-0` on the cell it lets the name truncate instead of forcing the
@@ -137,6 +152,16 @@
 				class="sticky top-0 z-10 bg-surface text-[10px] uppercase tracking-[0.12em] text-fg-faint"
 			>
 				<tr>
+					{#if selectable}
+						<th scope="col" class="w-px py-2.5 pl-4 pr-1">
+							<SelectBox
+								checked={allPicked}
+								indeterminate={pickedHere > 0 && !allPicked}
+								onChange={(v) => onToggleAll?.(v)}
+								label={allPicked ? i18n.common_deselect_all() : i18n.common_select_all()}
+							/>
+						</th>
+					{/if}
 					{#each HEADERS as h, i (i)}
 						<th
 							scope="col"
@@ -181,7 +206,13 @@
 			</thead>
 			<tbody>
 				{#each rows as t (t.hash)}
-					<TorrentRow torrent={t} selected={selectedHash === t.hash} {onOpen} />
+					<TorrentRow
+						torrent={t}
+						selected={selectedHash === t.hash}
+						checked={selectable ? (selected?.has(t.hash) ?? false) : undefined}
+						onCheck={onToggle}
+						{onOpen}
+					/>
 				{/each}
 			</tbody>
 		</table>

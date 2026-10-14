@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.senan.xyz/taglib"
 )
 
 var _ = Describe("Read", Label("unit", "audiotags"), func() {
@@ -89,5 +90,41 @@ var _ = Describe("IsAudioFile", Label("unit", "audiotags"), func() {
 		Entry("a cover", "/m/A/cover.jpg", false),
 		Entry("a write's leftover copy", "/m/A/.streamline-tags-123.flac", false),
 		Entry("a macOS resource fork", "/m/A/._01 Song.flac", false),
+	)
+})
+
+var _ = Describe("Lyrics", Label("unit", "audiotags"), func() {
+	DescribeTable(
+		"reads the embedded lyrics, unsynced or LRC-timed",
+		func(fixture, key string) {
+			path := copyFixture(fixture)
+			Expect(taglib.WriteTags(path, map[string][]string{
+				key: {"[00:01.00]Come as you are"},
+			}, 0)).To(Succeed())
+
+			text, err := Lyrics(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(text).To(Equal("[00:01.00]Come as you are"))
+		},
+		Entry("an ID3 USLT frame", "testdata/tagged.mp3", taglib.Lyrics),
+		Entry("an MP4 ©lyr atom", "testdata/tagged.m4a", taglib.Lyrics),
+		Entry("a Vorbis LYRICS comment", "testdata/tagged.flac", taglib.Lyrics),
+		Entry(
+			"a Vorbis UNSYNCEDLYRICS comment",
+			"testdata/tagged.ogg",
+			"UNSYNCEDLYRICS",
+		),
+	)
+
+	It(
+		"answers nothing for a file with no lyrics, and an error only when it cannot open",
+		func() {
+			text, err := Lyrics(copyFixture("testdata/tagged.flac"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(text).To(BeEmpty())
+
+			_, err = Lyrics("testdata/missing.flac")
+			Expect(err).To(HaveOccurred())
+		},
 	)
 })

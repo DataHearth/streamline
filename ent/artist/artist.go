@@ -63,6 +63,8 @@ const (
 	EdgeMembers = "members"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
+	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
+	EdgeAnnotations = "annotations"
 	// Table holds the table name of the artist in the database.
 	Table = "artists"
 	// AlbumsTable is the table that holds the albums relation/edge.
@@ -86,6 +88,13 @@ const (
 	DownloadRecordsInverseTable = "download_records"
 	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
 	DownloadRecordsColumn = "artist_download_records"
+	// AnnotationsTable is the table that holds the annotations relation/edge.
+	AnnotationsTable = "music_annotations"
+	// AnnotationsInverseTable is the table name for the MusicAnnotation entity.
+	// It exists in this package in order to avoid circular dependency with the "musicannotation" package.
+	AnnotationsInverseTable = "music_annotations"
+	// AnnotationsColumn is the table column denoting the annotations relation/edge.
+	AnnotationsColumn = "artist_id"
 )
 
 // Columns holds all SQL columns for artist fields.
@@ -342,6 +351,20 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAnnotationsCount orders the results by annotations count.
+func ByAnnotationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAnnotationsStep(), opts...)
+	}
+}
+
+// ByAnnotations orders the results by annotations terms.
+func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAnnotationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newAlbumsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -361,5 +384,12 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+	)
+}
+func newAnnotationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AnnotationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
 	)
 }

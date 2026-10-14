@@ -13,7 +13,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/bookmark"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
@@ -22,15 +24,17 @@ import (
 // TrackQuery is the builder for querying Track entities.
 type TrackQuery struct {
 	config
-	ctx            *QueryContext
-	order          []track.OrderOption
-	inters         []Interceptor
-	predicates     []predicate.Track
-	withAlbum      *AlbumQuery
-	withMediaFiles *MediaFileQuery
-	withCredits    *MusicCreditQuery
-	withFKs        bool
-	modifiers      []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []track.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.Track
+	withAlbum       *AlbumQuery
+	withMediaFiles  *MediaFileQuery
+	withCredits     *MusicCreditQuery
+	withAnnotations *MusicAnnotationQuery
+	withBookmarks   *BookmarkQuery
+	withFKs         bool
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -126,6 +130,50 @@ func (_q *TrackQuery) QueryCredits() *MusicCreditQuery {
 			sqlgraph.From(track.Table, track.FieldID, selector),
 			sqlgraph.To(musiccredit.Table, musiccredit.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, track.CreditsTable, track.CreditsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAnnotations chains the current query on the "annotations" edge.
+func (_q *TrackQuery) QueryAnnotations() *MusicAnnotationQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, selector),
+			sqlgraph.To(musicannotation.Table, musicannotation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.AnnotationsTable, track.AnnotationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBookmarks chains the current query on the "bookmarks" edge.
+func (_q *TrackQuery) QueryBookmarks() *BookmarkQuery {
+	query := (&BookmarkClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(track.Table, track.FieldID, selector),
+			sqlgraph.To(bookmark.Table, bookmark.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, track.BookmarksTable, track.BookmarksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -320,14 +368,16 @@ func (_q *TrackQuery) Clone() *TrackQuery {
 		return nil
 	}
 	return &TrackQuery{
-		config:         _q.config,
-		ctx:            _q.ctx.Clone(),
-		order:          append([]track.OrderOption{}, _q.order...),
-		inters:         append([]Interceptor{}, _q.inters...),
-		predicates:     append([]predicate.Track{}, _q.predicates...),
-		withAlbum:      _q.withAlbum.Clone(),
-		withMediaFiles: _q.withMediaFiles.Clone(),
-		withCredits:    _q.withCredits.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]track.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.Track{}, _q.predicates...),
+		withAlbum:       _q.withAlbum.Clone(),
+		withMediaFiles:  _q.withMediaFiles.Clone(),
+		withCredits:     _q.withCredits.Clone(),
+		withAnnotations: _q.withAnnotations.Clone(),
+		withBookmarks:   _q.withBookmarks.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -365,6 +415,28 @@ func (_q *TrackQuery) WithCredits(opts ...func(*MusicCreditQuery)) *TrackQuery {
 		opt(query)
 	}
 	_q.withCredits = query
+	return _q
+}
+
+// WithAnnotations tells the query-builder to eager-load the nodes that are connected to
+// the "annotations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TrackQuery) WithAnnotations(opts ...func(*MusicAnnotationQuery)) *TrackQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAnnotations = query
+	return _q
+}
+
+// WithBookmarks tells the query-builder to eager-load the nodes that are connected to
+// the "bookmarks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TrackQuery) WithBookmarks(opts ...func(*BookmarkQuery)) *TrackQuery {
+	query := (&BookmarkClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBookmarks = query
 	return _q
 }
 
@@ -447,10 +519,12 @@ func (_q *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track,
 		nodes       = []*Track{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [5]bool{
 			_q.withAlbum != nil,
 			_q.withMediaFiles != nil,
 			_q.withCredits != nil,
+			_q.withAnnotations != nil,
+			_q.withBookmarks != nil,
 		}
 	)
 	if _q.withAlbum != nil {
@@ -497,6 +571,20 @@ func (_q *TrackQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Track,
 		if err := _q.loadCredits(ctx, query, nodes,
 			func(n *Track) { n.Edges.Credits = []*MusicCredit{} },
 			func(n *Track, e *MusicCredit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAnnotations; query != nil {
+		if err := _q.loadAnnotations(ctx, query, nodes,
+			func(n *Track) { n.Edges.Annotations = []*MusicAnnotation{} },
+			func(n *Track, e *MusicAnnotation) { n.Edges.Annotations = append(n.Edges.Annotations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBookmarks; query != nil {
+		if err := _q.loadBookmarks(ctx, query, nodes,
+			func(n *Track) { n.Edges.Bookmarks = []*Bookmark{} },
+			func(n *Track, e *Bookmark) { n.Edges.Bookmarks = append(n.Edges.Bookmarks, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -592,6 +680,69 @@ func (_q *TrackQuery) loadCredits(ctx context.Context, query *MusicCreditQuery, 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "track_credits" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TrackQuery) loadAnnotations(ctx context.Context, query *MusicAnnotationQuery, nodes []*Track, init func(*Track), assign func(*Track, *MusicAnnotation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Track)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(musicannotation.FieldTrackID)
+	}
+	query.Where(predicate.MusicAnnotation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(track.AnnotationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TrackID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "track_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "track_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TrackQuery) loadBookmarks(ctx context.Context, query *BookmarkQuery, nodes []*Track, init func(*Track), assign func(*Track, *Bookmark)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Track)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(bookmark.FieldTrackID)
+	}
+	query.Where(predicate.Bookmark(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(track.BookmarksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TrackID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "track_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

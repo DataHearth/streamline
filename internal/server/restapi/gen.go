@@ -7873,6 +7873,35 @@ type SpecialsMonitoredResult struct {
 	SeasonsUpdated int `json:"seasons_updated"`
 }
 
+// SubsonicAccess What the user may do through the Subsonic API (`/rest`). These gate
+// Subsonic calls only, never the web UI or the REST API. Browsing,
+// searching, starring and scrobbling are always allowed.
+type SubsonicAccess struct {
+	// CanChangePassword Whether the user may change their own Subsonic password from an app.
+	CanChangePassword  bool `json:"can_change_password"`
+	CanDownload        bool `json:"can_download"`
+	CanManagePlaylists bool `json:"can_manage_playlists"`
+	CanRate            bool `json:"can_rate"`
+	CanShare           bool `json:"can_share"`
+	CanStream          bool `json:"can_stream"`
+
+	// MaxBitRate Kbps ceiling on every stream, 0 for none; a stream above it is transcoded.
+	MaxBitRate uint16 `json:"max_bit_rate"`
+}
+
+// SubsonicAccessPatch Only provided fields are applied.
+type SubsonicAccessPatch struct {
+	CanChangePassword  *bool `json:"can_change_password,omitempty"`
+	CanDownload        *bool `json:"can_download,omitempty"`
+	CanManagePlaylists *bool `json:"can_manage_playlists,omitempty"`
+	CanRate            *bool `json:"can_rate,omitempty"`
+	CanShare           *bool `json:"can_share,omitempty"`
+	CanStream          *bool `json:"can_stream,omitempty"`
+
+	// MaxBitRate 0 for no cap, else 32-320.
+	MaxBitRate *int `json:"max_bit_rate,omitempty"`
+}
+
 // SystemConfigPatch Only provided fields are applied, nested objects included.
 type SystemConfigPatch struct {
 	EventsRetention *string `json:"events_retention,omitempty"`
@@ -8630,6 +8659,9 @@ type UpdateUserRequest struct {
 	// Email New email address. Must be unique across users.
 	Email *openapi_types.Email   `json:"email,omitempty"`
 	Role  *UpdateUserRequestRole `json:"role,omitempty"`
+
+	// Subsonic Only provided fields are applied.
+	Subsonic *SubsonicAccessPatch `json:"subsonic,omitempty"`
 }
 
 // UpdateUserRequestAuthMethod defines model for UpdateUserRequest.AuthMethod.
@@ -8652,6 +8684,11 @@ type User struct {
 	LockedUntil      *time.Time          `json:"locked_until,omitempty"`
 	Role             UserRole            `json:"role"`
 	Send             *UserSend           `json:"send,omitempty"`
+
+	// Subsonic What the user may do through the Subsonic API (`/rest`). These gate
+	// Subsonic calls only, never the web UI or the REST API. Browsing,
+	// searching, starring and scrobbling are always allowed.
+	Subsonic *SubsonicAccess `json:"subsonic,omitempty"`
 }
 
 // UserAuthMethod defines model for User.AuthMethod.
@@ -36408,6 +36445,22 @@ func (response UpdateUser413JSONResponse) VisitUpdateUserResponse(w http.Respons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateUser422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response UpdateUser422JSONResponse) VisitUpdateUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }

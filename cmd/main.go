@@ -41,8 +41,8 @@ func versionString() string {
 	return fmt.Sprintf("%s (commit %s, built %s)", v, c, d)
 }
 
-func main() {
-	cmd := &cli.Command{
+func rootCommand() *cli.Command {
+	return &cli.Command{
 		Name:        "streamline",
 		Usage:       "unified media management platform",
 		Description: "Self-hosted unified media manager. Replaces the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr with a single binary.",
@@ -137,8 +137,10 @@ func main() {
 			},
 		},
 	}
+}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+func main() {
+	if err := rootCommand().Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
@@ -180,6 +182,11 @@ func configValidate(_ context.Context, cmd *cli.Command) error {
 }
 
 func run(ctx context.Context, cmd *cli.Command) error {
+	// Unknown subcommands arrive here as arguments; never boot on them.
+	if cmd.NArg() > 0 {
+		return fmt.Errorf("unknown command %q (see --help)", cmd.Args().First())
+	}
+
 	// 1. Load configuration
 	cfg, err := config.Load(cmd.String("config"))
 	if err != nil {

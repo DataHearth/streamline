@@ -136,3 +136,23 @@ func leadingNumber(s string) int {
 	}
 	return n
 }
+
+// Lyrics returns the lyrics embedded in the file (an ID3 USLT frame, an MP4
+// ©lyr atom, a Vorbis LYRICS or UNSYNCEDLYRICS comment), possibly LRC-timed.
+// A file carrying none, or whose tags cannot be parsed, yields "" and a nil
+// error, like Read: only a failure to open is an error.
+func Lyrics(path string) (string, error) {
+	if err := openable(path); err != nil {
+		return "", err
+	}
+	tags, err := taglib.ReadTags(path)
+	if err != nil {
+		return "", nil
+	}
+	for _, key := range []string{taglib.Lyrics, "UNSYNCEDLYRICS"} {
+		if text := strings.TrimSpace(strings.Join(tags[key], "\n")); text != "" {
+			return text, nil
+		}
+	}
+	return "", nil
+}

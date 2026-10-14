@@ -407,7 +407,7 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |
 | `GET` `POST` | `/users` | List / create users | 🔒 Admin |
-| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user | 🔒 Admin |
+| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user; `subsonic` carries what they may do through the Subsonic API (`can_stream`, `can_download`, `can_manage_playlists`, `can_share`, `can_rate`, `can_change_password`, `max_bit_rate` 0 or 32-320) and a `PATCH` may send any subset of it | 🔒 Admin |
 | `POST` | `/users/{uid}/password-reset` · `/unlock` | Reset a password or clear a lockout | 🔒 Admin |
 | `DELETE` | `/users/{uid}/api-keys/{kid}` · `/sessions/{sid}` | Revoke another user's key or session | 🔒 Admin |
 

@@ -8,22 +8,8 @@ import (
 	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
+	"github.com/datahearth/streamline/internal/quality"
 )
-
-// widthBucket classifies by width, not height: scope aspect ratios crop
-// height (1920×800 is 1080p), so height under-reports the class.
-func widthBucket(w uint16) string {
-	switch {
-	case w >= 3200:
-		return "2160p"
-	case w >= 1800:
-		return "1080p"
-	case w >= 1200:
-		return "720p"
-	default:
-		return "480p"
-	}
-}
 
 var bucketRank = map[string]int{"480p": 0, "720p": 1, "1080p": 2, "2160p": 3}
 
@@ -67,7 +53,11 @@ func verifyFile(
 
 	var out []schema.HoldReason
 	if claimed, ok := claimedBucket(parsed.Resolution); ok {
-		actual := widthBucket(info.Width)
+		actual := quality.ResolutionFromDims(int(info.Width), int(info.Height))
+		// No video stream reads as the lowest bucket, so a claim still holds it.
+		if actual == "" {
+			actual = "480p"
+		}
 		if bucketRank[actual] < claimed {
 			out = append(out, schema.HoldReason{
 				File:     file,

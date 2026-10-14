@@ -30,6 +30,8 @@ type Tx struct {
 	BookEdition *BookEditionClient
 	// BookSeries is the client for interacting with the BookSeries builders.
 	BookSeries *BookSeriesClient
+	// Bookmark is the client for interacting with the Bookmark builders.
+	Bookmark *BookmarkClient
 	// Credit is the client for interacting with the Credit builders.
 	Credit *CreditClient
 	// DownloadRecord is the client for interacting with the DownloadRecord builders.
@@ -54,12 +56,20 @@ type Tx struct {
 	MediaFile *MediaFileClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
+	// MusicAnnotation is the client for interacting with the MusicAnnotation builders.
+	MusicAnnotation *MusicAnnotationClient
 	// MusicCredit is the client for interacting with the MusicCredit builders.
 	MusicCredit *MusicCreditClient
 	// OIDCIdentity is the client for interacting with the OIDCIdentity builders.
 	OIDCIdentity *OIDCIdentityClient
 	// Person is the client for interacting with the Person builders.
 	Person *PersonClient
+	// PlayQueue is the client for interacting with the PlayQueue builders.
+	PlayQueue *PlayQueueClient
+	// Playlist is the client for interacting with the Playlist builders.
+	Playlist *PlaylistClient
+	// RadioStation is the client for interacting with the RadioStation builders.
+	RadioStation *RadioStationClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
 	// ScheduledJob is the client for interacting with the ScheduledJob builders.
@@ -68,6 +78,8 @@ type Tx struct {
 	Season *SeasonClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
+	// Share is the client for interacting with the Share builders.
+	Share *ShareClient
 	// TVShow is the client for interacting with the TVShow builders.
 	TVShow *TVShowClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
@@ -218,6 +230,7 @@ func (tx *Tx) init() {
 	tx.BookContribution = NewBookContributionClient(tx.config)
 	tx.BookEdition = NewBookEditionClient(tx.config)
 	tx.BookSeries = NewBookSeriesClient(tx.config)
+	tx.Bookmark = NewBookmarkClient(tx.config)
 	tx.Credit = NewCreditClient(tx.config)
 	tx.DownloadRecord = NewDownloadRecordClient(tx.config)
 	tx.Episode = NewEpisodeClient(tx.config)
@@ -230,13 +243,18 @@ func (tx *Tx) init() {
 	tx.MediaEvent = NewMediaEventClient(tx.config)
 	tx.MediaFile = NewMediaFileClient(tx.config)
 	tx.Movie = NewMovieClient(tx.config)
+	tx.MusicAnnotation = NewMusicAnnotationClient(tx.config)
 	tx.MusicCredit = NewMusicCreditClient(tx.config)
 	tx.OIDCIdentity = NewOIDCIdentityClient(tx.config)
 	tx.Person = NewPersonClient(tx.config)
+	tx.PlayQueue = NewPlayQueueClient(tx.config)
+	tx.Playlist = NewPlaylistClient(tx.config)
+	tx.RadioStation = NewRadioStationClient(tx.config)
 	tx.Request = NewRequestClient(tx.config)
 	tx.ScheduledJob = NewScheduledJobClient(tx.config)
 	tx.Season = NewSeasonClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
+	tx.Share = NewShareClient(tx.config)
 	tx.TVShow = NewTVShowClient(tx.config)
 	tx.TorrentSession = NewTorrentSessionClient(tx.config)
 	tx.Track = NewTrackClient(tx.config)

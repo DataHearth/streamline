@@ -287,7 +287,7 @@ check.
 | Check | Holds when |
 | --- | --- |
 | `corrupt` | ffprobe cannot read the file (reported alone — nothing else is knowable) |
-| `resolution` | The probed resolution is *below* what the release name claimed. Classified by width, so a 1920×800 scope film still counts as 1080p. Higher than claimed never holds |
+| `resolution` | The probed resolution is *below* what the release name claimed. Either dimension can reach a class, so a 1920×800 scope film and a 1440×1080 4:3 film both count as 1080p. Higher than claimed never holds |
 | `duration` | Probed duration is under `library.probe.min_duration_ratio` × the title's runtime. Skipped when the runtime is unknown |
 | `codec` | The profile's `allowed_codecs` is non-empty and the probed video codec is not in it |
 | `always_ask` | `library.probe.always_ask` is on and nothing else objected |

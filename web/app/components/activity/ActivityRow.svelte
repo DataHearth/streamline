@@ -2,6 +2,7 @@
 	import { ChevronRight } from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
+	import SelectBox from "@components/shared/SelectBox.svelte";
 	import { cn } from "@lib/cn";
 	import { entryHeading, holdSummary } from "@lib/activity-touch";
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "@lib/format";
@@ -15,12 +16,17 @@
 		expanded,
 		onToggle,
 		onResolve,
+		checked,
+		onCheck,
 	}: {
 		item: QueueEntry | HistoryEntry;
 		view: "queue" | "history";
 		expanded: boolean;
 		onToggle: (id: number) => void;
 		onResolve?: (item: QueueEntry) => void;
+		// Bulk selection; undefined when the table has no checkbox column.
+		checked?: boolean;
+		onCheck?: (id: number, on: boolean) => void;
 	} = $props();
 
 	const pad = "py-3";
@@ -48,11 +54,23 @@
 	class={cn(
 		"group cursor-pointer border-b border-border text-sm transition hover:bg-surface",
 		expanded && "bg-bg-card",
+		checked && "bg-accent-soft",
 	)}
 	aria-expanded={expanded}
 	onclick={() => onToggle(item.id)}
 >
-	<td class={cn("pl-4 pr-2", tight, pad)}>
+	{#if checked !== undefined}
+		<td class={cn("pl-4 pr-1", tight, pad)}>
+			<SelectBox
+				{checked}
+				onChange={(v) => onCheck?.(item.id, v)}
+				label={checked
+					? i18n.a11y_deselect_item({ title: heading })
+					: i18n.a11y_select_item({ title: heading })}
+			/>
+		</td>
+	{/if}
+	<td class={cn(checked === undefined ? "pl-4 pr-2" : "px-2", tight, pad)}>
 		<StatusPill
 			status={pillStatus(item.status)}
 			size="sm"

@@ -614,6 +614,52 @@ func HasCreditsWith(preds ...predicate.MusicCredit) predicate.Track {
 	})
 }
 
+// HasAnnotations applies the HasEdge predicate on the "annotations" edge.
+func HasAnnotations() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAnnotationsWith applies the HasEdge predicate on the "annotations" edge with a given conditions (other predicates).
+func HasAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newAnnotationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBookmarks applies the HasEdge predicate on the "bookmarks" edge.
+func HasBookmarks() predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookmarksWith applies the HasEdge predicate on the "bookmarks" edge with a given conditions (other predicates).
+func HasBookmarksWith(preds ...predicate.Bookmark) predicate.Track {
+	return predicate.Track(func(s *sql.Selector) {
+		step := newBookmarksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Track) predicate.Track {
 	return predicate.Track(sql.AndPredicates(predicates...))

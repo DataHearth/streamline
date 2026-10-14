@@ -53,6 +53,17 @@ export const NOUN_EPISODE: Noun = {
 	items: i18n.noun_episode_items(),
 };
 
+export const NOUN_TORRENT: Noun = {
+	count: counted(i18n.noun_torrent_one, i18n.noun_torrent_other),
+	items: i18n.noun_torrent_items(),
+};
+
+// A download record — a queue or history row on the Activity page.
+export const NOUN_DOWNLOAD: Noun = {
+	count: counted(i18n.noun_download_one, i18n.noun_download_other),
+	items: i18n.noun_download_items(),
+};
+
 // Status tallies for the season and show lines ("3 wanted · 1 missing").
 export const countWanted = counted(i18n.count_wanted_one, i18n.count_wanted_other);
 export const countMissing = counted(i18n.count_missing_one, i18n.count_missing_other);

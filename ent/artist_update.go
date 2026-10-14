@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -459,6 +460,21 @@ func (_u *ArtistUpdate) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdate {
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *ArtistUpdate) AddAnnotationIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdate) AddAnnotations(v ...*MusicAnnotation) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (_u *ArtistUpdate) Mutation() *ArtistMutation {
 	return _u.mutation
@@ -525,6 +541,27 @@ func (_u *ArtistUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUpdat
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdate) ClearAnnotations() *ArtistUpdate {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *ArtistUpdate) RemoveAnnotationIDs(ids ...uint32) *ArtistUpdate {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *ArtistUpdate) RemoveAnnotations(v ...*MusicAnnotation) *ArtistUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -848,6 +885,51 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1304,6 +1386,21 @@ func (_u *ArtistUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *ArtistUpdat
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *ArtistUpdateOne) AddAnnotationIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdateOne) AddAnnotations(v ...*MusicAnnotation) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (_u *ArtistUpdateOne) Mutation() *ArtistMutation {
 	return _u.mutation
@@ -1370,6 +1467,27 @@ func (_u *ArtistUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *ArtistUp
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *ArtistUpdateOne) ClearAnnotations() *ArtistUpdateOne {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *ArtistUpdateOne) RemoveAnnotationIDs(ids ...uint32) *ArtistUpdateOne {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *ArtistUpdateOne) RemoveAnnotations(v ...*MusicAnnotation) *ArtistUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
 }
 
 // Where appends a list predicates to the ArtistUpdate builder.
@@ -1723,6 +1841,51 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.AnnotationsTable,
+			Columns: []string{artist.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

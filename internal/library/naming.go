@@ -216,7 +216,7 @@ func ParsedFromMediaFile(f *ent.MediaFile) ParseResult {
 		p.Group = f.ReleaseGroup
 	}
 
-	if r := quality.ResolutionFromWidth(int(f.Width)); r != "" {
+	if r := quality.ResolutionFromDims(int(f.Width), int(f.Height)); r != "" {
 		p.Resolution = r
 	}
 	if p.Codec == "" {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { onMount, untrack } from "svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -12,6 +12,8 @@
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { fold } from "@lib/text";
+	import { Selection } from "@lib/selection.svelte";
+	import { NOUN_TORRENT } from "@lib/nouns";
 	import {
 		TORRENT_SORT_CHIPS,
 		sortTorrents,
@@ -44,6 +46,8 @@
 	import TorrentDrawer from "@components/activity/TorrentDrawer.svelte";
 	import AddTorrentModal from "@components/activity/AddTorrentModal.svelte";
 	import AddTorrentSheet from "@components/activity/AddTorrentSheet.svelte";
+	import TorrentBulkActions from "@components/activity/TorrentBulkActions.svelte";
+	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import { formatSpeed } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -243,6 +247,26 @@
 		search = "";
 	}
 
+	// ── Selection ────────────────────────────────────────────────────────────
+	// Bulk pause / resume / remove. The table carries checkboxes; below md a
+	// press and hold on a row starts selecting, and the selection bar takes the
+	// toolbar's line.
+	const selection = new Selection<string>();
+	let selecting = $derived(auth.isAdmin && selection.selecting);
+	// A selection made under one filter is meaningless under the next, and the
+	// bar would keep acting on rows the user can no longer see.
+	$effect(() => {
+		statusFilter;
+		search;
+		untrack(() => selection.clear());
+	});
+	// A torrent removed elsewhere leaves the list on the next poll; it leaves
+	// the selection with it.
+	$effect(() => {
+		const hashes = torrentItems.map((t) => t.hash);
+		untrack(() => selection.prune(hashes));
+	});
+
 	function pickSortChip(key: string) {
 		const chip = TORRENT_SORT_CHIPS.find((c) => c.key === key);
 		if (!chip) return;
@@ -262,7 +286,7 @@
 	// list like any corner action: `main`'s pb-16 keeps content clear of the bar,
 	// and reserving a second band for the pill on top of that left a visibly empty
 	// strip at the bottom of every scroll.
-	let showAddPill = $derived(compact && !torrentsNotConfigured);
+	let showAddPill = $derived(compact && !torrentsNotConfigured && !selecting);
 </script>
 
 <div
@@ -435,17 +459,32 @@
 			</div>
 		</div>
 
-		<ActivityToolbar
-			view="torrents"
-			{statusFilter}
-			{search}
-			{activeFilters}
-			onOpenFilters={() => (filtersOpen = true)}
-			onStatusFilterChange={(s) => (statusFilter = s)}
-			onSearchChange={(q) => (search = q)}
-			onAddTorrent={() => (addOpen = true)}
-			canAddTorrent={auth.isAdmin}
-		/>
+		<!-- Below md an active selection takes the toolbar's line rather than
+		     stacking on it, so selecting costs no height. -->
+		{#if selecting}
+			<div class="sticky top-16 z-20 -mx-4 mb-1 md:hidden">
+				<SelectionTopBar
+					count={selection.size}
+					total={torrentRows.length}
+					noun={NOUN_TORRENT}
+					onClear={() => selection.clear()}
+					onSelectAll={() => selection.selectAll(torrentRows.map((t) => t.hash))}
+				/>
+			</div>
+		{/if}
+		<div class={selecting ? "hidden md:contents" : "contents"}>
+			<ActivityToolbar
+				view="torrents"
+				{statusFilter}
+				{search}
+				{activeFilters}
+				onOpenFilters={() => (filtersOpen = true)}
+				onStatusFilterChange={(s) => (statusFilter = s)}
+				onSearchChange={(q) => (search = q)}
+				onAddTorrent={() => (addOpen = true)}
+				canAddTorrent={auth.isAdmin}
+			/>
+		</div>
 
 		<TorrentTable
 			rows={torrentRows}
@@ -460,6 +499,12 @@
 				order = o;
 			}}
 			onOpen={(h) => (selectedHash = h)}
+			selected={auth.isAdmin ? selection.keys : undefined}
+			onToggle={(h, v) => selection.toggle(h, v)}
+			onToggleAll={(v) =>
+				v
+					? selection.selectAll(torrentRows.map((t) => t.hash))
+					: selection.clear()}
 		/>
 
 		<TorrentTouchList
@@ -467,8 +512,21 @@
 			loading={torrents.isPending}
 			error={torrents.error ?? null}
 			canControl={auth.isAdmin}
+			selected={auth.isAdmin ? selection.keys : undefined}
+			{selecting}
+			onToggle={(h) => selection.toggle(h)}
+			onBeginSelect={auth.isAdmin ? (h) => selection.begin(h) : undefined}
 			onOpen={(h) => (selectedHash = h)}
 		/>
+
+		{#if auth.isAdmin}
+			<TorrentBulkActions
+				torrents={torrentRows}
+				selected={selection.keys}
+				onSelectAll={() => selection.selectAll(torrentRows.map((t) => t.hash))}
+				onClear={() => selection.clear()}
+			/>
+		{/if}
 	{/if}
 </div>
 

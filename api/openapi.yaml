@@ -6,8 +6,9 @@ info:
   description: |
     REST API for Streamline, a unified media management platform that replaces
     the *arr stack (Radarr, Sonarr, Lidarr, Readarr) and Seerr. Provides
-    endpoints for managing movies, TV shows, indexers, download clients, media
-    servers, quality profiles, user authentication, and media requests.
+    endpoints for managing movies, TV shows, music, books, indexers, download
+    clients, media servers, quality profiles, user authentication, and media
+    requests.
 
 tags:
   - name: auth
@@ -4126,8 +4127,10 @@ paths:
       operationId: updateUser
       summary: Patch user (admin)
       description: |
-        Updates a target user's role, display_name, or auth_method. Demoting
-        the last remaining admin is rejected with 409 last_admin.
+        Updates a target user's role, display_name, auth_method, or what
+        they may do through the Subsonic API (`subsonic`). Demoting the last
+        remaining admin is rejected with 409 last_admin; a `max_bit_rate`
+        that is neither 0 nor 32-320 with 422.
       tags: [users, admin]
       security:
         - BearerAuth: []
@@ -4147,6 +4150,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
     delete:
       operationId: deleteUser
       summary: Delete user (admin)
@@ -11213,6 +11218,8 @@ components:
           description: Address of the user's e-reader; empty when unset.
         send:
           $ref: "#/components/schemas/UserSend"
+        subsonic:
+          $ref: "#/components/schemas/SubsonicAccess"
         created_at:
           type: string
           format: date-time
@@ -11497,6 +11504,65 @@ components:
         auth_method:
           type: string
           enum: [local, oidc, both]
+        subsonic:
+          $ref: "#/components/schemas/SubsonicAccessPatch"
+
+    SubsonicAccess:
+      type: object
+      description: |
+        What the user may do through the Subsonic API (`/rest`). These gate
+        Subsonic calls only, never the web UI or the REST API. Browsing,
+        searching, starring and scrobbling are always allowed.
+      required:
+        - can_stream
+        - can_download
+        - can_manage_playlists
+        - can_share
+        - can_rate
+        - can_change_password
+        - max_bit_rate
+      properties:
+        can_stream:
+          type: boolean
+        can_download:
+          type: boolean
+        can_manage_playlists:
+          type: boolean
+        can_share:
+          type: boolean
+        can_rate:
+          type: boolean
+        can_change_password:
+          type: boolean
+          description: Whether the user may change their own Subsonic password from an app.
+        max_bit_rate:
+          type: integer
+          x-go-type: uint16
+          minimum: 0
+          maximum: 320
+          description: Kbps ceiling on every stream, 0 for none; a stream above it is transcoded.
+
+    SubsonicAccessPatch:
+      type: object
+      description: Only provided fields are applied.
+      properties:
+        can_stream:
+          type: boolean
+        can_download:
+          type: boolean
+        can_manage_playlists:
+          type: boolean
+        can_share:
+          type: boolean
+        can_rate:
+          type: boolean
+        can_change_password:
+          type: boolean
+        max_bit_rate:
+          type: integer
+          minimum: 0
+          maximum: 320
+          description: 0 for no cap, else 32-320.
 
     ResetPasswordRequest:
       type: object

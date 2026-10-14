@@ -20,6 +20,7 @@
 	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
+	import { modKey } from "@lib/platform";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Routify's `activeRoute` only emits once a navigation has resolved, so
@@ -365,7 +366,7 @@
 		<kbd
 			class="rounded border border-border bg-surface px-1.5 py-px font-mono text-[10.5px] text-fg-faint"
 		>
-			⌘ K
+			{modKey} K
 		</kbd>
 	</button>
 

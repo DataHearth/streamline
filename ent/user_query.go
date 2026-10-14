@@ -13,25 +13,35 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/user"
 )
 
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx                *QueryContext
-	order              []user.OrderOption
-	inters             []Interceptor
-	predicates         []predicate.User
-	withAPIKeys        *ApiKeyQuery
-	withOidcIdentities *OIDCIdentityQuery
-	withRequests       *RequestQuery
-	withSessions       *SessionQuery
-	modifiers          []func(*sql.Selector)
+	ctx                  *QueryContext
+	order                []user.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.User
+	withAPIKeys          *ApiKeyQuery
+	withOidcIdentities   *OIDCIdentityQuery
+	withRequests         *RequestQuery
+	withSessions         *SessionQuery
+	withMusicAnnotations *MusicAnnotationQuery
+	withPlaylists        *PlaylistQuery
+	withShares           *ShareQuery
+	withBookmarks        *BookmarkQuery
+	withPlayQueue        *PlayQueueQuery
+	modifiers            []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -149,6 +159,116 @@ func (_q *UserQuery) QuerySessions() *SessionQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(session.Table, session.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.SessionsTable, user.SessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMusicAnnotations chains the current query on the "music_annotations" edge.
+func (_q *UserQuery) QueryMusicAnnotations() *MusicAnnotationQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(musicannotation.Table, musicannotation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.MusicAnnotationsTable, user.MusicAnnotationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPlaylists chains the current query on the "playlists" edge.
+func (_q *UserQuery) QueryPlaylists() *PlaylistQuery {
+	query := (&PlaylistClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(playlist.Table, playlist.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PlaylistsTable, user.PlaylistsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryShares chains the current query on the "shares" edge.
+func (_q *UserQuery) QueryShares() *ShareQuery {
+	query := (&ShareClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(share.Table, share.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SharesTable, user.SharesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBookmarks chains the current query on the "bookmarks" edge.
+func (_q *UserQuery) QueryBookmarks() *BookmarkQuery {
+	query := (&BookmarkClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(bookmark.Table, bookmark.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.BookmarksTable, user.BookmarksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPlayQueue chains the current query on the "play_queue" edge.
+func (_q *UserQuery) QueryPlayQueue() *PlayQueueQuery {
+	query := (&PlayQueueClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(playqueue.Table, playqueue.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.PlayQueueTable, user.PlayQueueColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -343,15 +463,20 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:             _q.config,
-		ctx:                _q.ctx.Clone(),
-		order:              append([]user.OrderOption{}, _q.order...),
-		inters:             append([]Interceptor{}, _q.inters...),
-		predicates:         append([]predicate.User{}, _q.predicates...),
-		withAPIKeys:        _q.withAPIKeys.Clone(),
-		withOidcIdentities: _q.withOidcIdentities.Clone(),
-		withRequests:       _q.withRequests.Clone(),
-		withSessions:       _q.withSessions.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]user.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.User{}, _q.predicates...),
+		withAPIKeys:          _q.withAPIKeys.Clone(),
+		withOidcIdentities:   _q.withOidcIdentities.Clone(),
+		withRequests:         _q.withRequests.Clone(),
+		withSessions:         _q.withSessions.Clone(),
+		withMusicAnnotations: _q.withMusicAnnotations.Clone(),
+		withPlaylists:        _q.withPlaylists.Clone(),
+		withShares:           _q.withShares.Clone(),
+		withBookmarks:        _q.withBookmarks.Clone(),
+		withPlayQueue:        _q.withPlayQueue.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -400,6 +525,61 @@ func (_q *UserQuery) WithSessions(opts ...func(*SessionQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withSessions = query
+	return _q
+}
+
+// WithMusicAnnotations tells the query-builder to eager-load the nodes that are connected to
+// the "music_annotations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithMusicAnnotations(opts ...func(*MusicAnnotationQuery)) *UserQuery {
+	query := (&MusicAnnotationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMusicAnnotations = query
+	return _q
+}
+
+// WithPlaylists tells the query-builder to eager-load the nodes that are connected to
+// the "playlists" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithPlaylists(opts ...func(*PlaylistQuery)) *UserQuery {
+	query := (&PlaylistClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPlaylists = query
+	return _q
+}
+
+// WithShares tells the query-builder to eager-load the nodes that are connected to
+// the "shares" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithShares(opts ...func(*ShareQuery)) *UserQuery {
+	query := (&ShareClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withShares = query
+	return _q
+}
+
+// WithBookmarks tells the query-builder to eager-load the nodes that are connected to
+// the "bookmarks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithBookmarks(opts ...func(*BookmarkQuery)) *UserQuery {
+	query := (&BookmarkClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBookmarks = query
+	return _q
+}
+
+// WithPlayQueue tells the query-builder to eager-load the nodes that are connected to
+// the "play_queue" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithPlayQueue(opts ...func(*PlayQueueQuery)) *UserQuery {
+	query := (&PlayQueueClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPlayQueue = query
 	return _q
 }
 
@@ -481,11 +661,16 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [9]bool{
 			_q.withAPIKeys != nil,
 			_q.withOidcIdentities != nil,
 			_q.withRequests != nil,
 			_q.withSessions != nil,
+			_q.withMusicAnnotations != nil,
+			_q.withPlaylists != nil,
+			_q.withShares != nil,
+			_q.withBookmarks != nil,
+			_q.withPlayQueue != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -534,6 +719,40 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadSessions(ctx, query, nodes,
 			func(n *User) { n.Edges.Sessions = []*Session{} },
 			func(n *User, e *Session) { n.Edges.Sessions = append(n.Edges.Sessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withMusicAnnotations; query != nil {
+		if err := _q.loadMusicAnnotations(ctx, query, nodes,
+			func(n *User) { n.Edges.MusicAnnotations = []*MusicAnnotation{} },
+			func(n *User, e *MusicAnnotation) { n.Edges.MusicAnnotations = append(n.Edges.MusicAnnotations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPlaylists; query != nil {
+		if err := _q.loadPlaylists(ctx, query, nodes,
+			func(n *User) { n.Edges.Playlists = []*Playlist{} },
+			func(n *User, e *Playlist) { n.Edges.Playlists = append(n.Edges.Playlists, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withShares; query != nil {
+		if err := _q.loadShares(ctx, query, nodes,
+			func(n *User) { n.Edges.Shares = []*Share{} },
+			func(n *User, e *Share) { n.Edges.Shares = append(n.Edges.Shares, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBookmarks; query != nil {
+		if err := _q.loadBookmarks(ctx, query, nodes,
+			func(n *User) { n.Edges.Bookmarks = []*Bookmark{} },
+			func(n *User, e *Bookmark) { n.Edges.Bookmarks = append(n.Edges.Bookmarks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPlayQueue; query != nil {
+		if err := _q.loadPlayQueue(ctx, query, nodes, nil,
+			func(n *User, e *PlayQueue) { n.Edges.PlayQueue = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -659,6 +878,156 @@ func (_q *UserQuery) loadSessions(ctx context.Context, query *SessionQuery, node
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_sessions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadMusicAnnotations(ctx context.Context, query *MusicAnnotationQuery, nodes []*User, init func(*User), assign func(*User, *MusicAnnotation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(musicannotation.FieldUserID)
+	}
+	query.Where(predicate.MusicAnnotation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.MusicAnnotationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadPlaylists(ctx context.Context, query *PlaylistQuery, nodes []*User, init func(*User), assign func(*User, *Playlist)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Playlist(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.PlaylistsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_playlists
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_playlists" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_playlists" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadShares(ctx context.Context, query *ShareQuery, nodes []*User, init func(*User), assign func(*User, *Share)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Share(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SharesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_shares
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_shares" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_shares" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadBookmarks(ctx context.Context, query *BookmarkQuery, nodes []*User, init func(*User), assign func(*User, *Bookmark)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(bookmark.FieldUserID)
+	}
+	query.Where(predicate.Bookmark(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.BookmarksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadPlayQueue(ctx context.Context, query *PlayQueueQuery, nodes []*User, init func(*User), assign func(*User, *PlayQueue)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.PlayQueue(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.PlayQueueColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_play_queue
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_play_queue" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_play_queue" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -14,12 +14,22 @@
 		loading,
 		error = null,
 		canControl = false,
+		selected,
+		selecting = false,
+		onToggle,
+		onBeginSelect,
 		onOpen,
 	}: {
 		rows: Torrent[];
 		loading: boolean;
 		error?: Error | null;
 		canControl?: boolean;
+		// Bulk selection, given only to someone who may act on it. While
+		// `selecting` a tap toggles the row rather than opening the drawer.
+		selected?: Set<string>;
+		selecting?: boolean;
+		onToggle?: (hash: string) => void;
+		onBeginSelect?: (hash: string) => void;
 		onOpen: (hash: string) => void;
 	} = $props();
 
@@ -73,7 +83,10 @@
 					release={`${t.hash.slice(0, 24)}…`}
 					badge={t.tracked ? undefined : "untracked"}
 					meta={torrentMeta(t)}
-					onOpen={() => onOpen(t.hash)}
+					selected={selecting ? (selected?.has(t.hash) ?? false) : undefined}
+					onLongPress={onBeginSelect ? () => onBeginSelect(t.hash) : undefined}
+					onOpen={() =>
+						selecting && onToggle ? onToggle(t.hash) : onOpen(t.hash)}
 				/>
 			{/each}
 		</div>

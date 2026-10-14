@@ -14,7 +14,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: "`streamline version`, the image tag, or the chart version."
+      description: "`streamline --version`, the image tag, or the chart version."
       placeholder: v1.2.0
     validations:
       required: true

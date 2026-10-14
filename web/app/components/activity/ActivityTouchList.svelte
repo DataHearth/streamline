@@ -19,6 +19,10 @@
 		hasMore = false,
 		loadingMore = false,
 		onLoadMore,
+		selected,
+		selecting = false,
+		onToggle,
+		onBeginSelect,
 		onOpen,
 		onResolve,
 	}: {
@@ -29,6 +33,12 @@
 		hasMore?: boolean;
 		loadingMore?: boolean;
 		onLoadMore: () => void;
+		// Bulk selection, given only to someone who may act on it. While
+		// `selecting` a tap toggles the row rather than opening its sheet.
+		selected?: Set<number>;
+		selecting?: boolean;
+		onToggle?: (id: number) => void;
+		onBeginSelect?: (id: number) => void;
 		onOpen: (item: QueueEntry | HistoryEntry) => void;
 		onResolve?: (item: QueueEntry) => void;
 	} = $props();
@@ -99,7 +109,10 @@
 					meta={view === "queue"
 						? queueMeta(row as QueueEntry)
 						: historyMeta(row as HistoryEntry)}
-					onOpen={() => onOpen(row)}
+					selected={selecting ? (selected?.has(row.id) ?? false) : undefined}
+					onLongPress={onBeginSelect ? () => onBeginSelect(row.id) : undefined}
+					onOpen={() =>
+						selecting && onToggle ? onToggle(row.id) : onOpen(row)}
 					onResolve={held && onResolve
 						? () => onResolve(row as QueueEntry)
 						: undefined}
