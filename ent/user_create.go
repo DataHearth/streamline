@@ -11,9 +11,14 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/apikey"
+	"github.com/datahearth/streamline/ent/bookmark"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/oidcidentity"
+	"github.com/datahearth/streamline/ent/playlist"
+	"github.com/datahearth/streamline/ent/playqueue"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/session"
+	"github.com/datahearth/streamline/ent/share"
 	"github.com/datahearth/streamline/ent/user"
 )
 
@@ -184,6 +189,104 @@ func (_c *UserCreate) SetNillableSubsonicLastClient(v *string) *UserCreate {
 	return _c
 }
 
+// SetSubsonicCanStream sets the "subsonic_can_stream" field.
+func (_c *UserCreate) SetSubsonicCanStream(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanStream(v)
+	return _c
+}
+
+// SetNillableSubsonicCanStream sets the "subsonic_can_stream" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanStream(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanStream(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanDownload sets the "subsonic_can_download" field.
+func (_c *UserCreate) SetSubsonicCanDownload(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanDownload(v)
+	return _c
+}
+
+// SetNillableSubsonicCanDownload sets the "subsonic_can_download" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanDownload(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanDownload(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field.
+func (_c *UserCreate) SetSubsonicCanManagePlaylists(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanManagePlaylists(v)
+	return _c
+}
+
+// SetNillableSubsonicCanManagePlaylists sets the "subsonic_can_manage_playlists" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanManagePlaylists(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanManagePlaylists(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanShare sets the "subsonic_can_share" field.
+func (_c *UserCreate) SetSubsonicCanShare(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanShare(v)
+	return _c
+}
+
+// SetNillableSubsonicCanShare sets the "subsonic_can_share" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanShare(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanShare(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanRate sets the "subsonic_can_rate" field.
+func (_c *UserCreate) SetSubsonicCanRate(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanRate(v)
+	return _c
+}
+
+// SetNillableSubsonicCanRate sets the "subsonic_can_rate" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanRate(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanRate(*v)
+	}
+	return _c
+}
+
+// SetSubsonicCanChangePassword sets the "subsonic_can_change_password" field.
+func (_c *UserCreate) SetSubsonicCanChangePassword(v bool) *UserCreate {
+	_c.mutation.SetSubsonicCanChangePassword(v)
+	return _c
+}
+
+// SetNillableSubsonicCanChangePassword sets the "subsonic_can_change_password" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicCanChangePassword(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicCanChangePassword(*v)
+	}
+	return _c
+}
+
+// SetSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field.
+func (_c *UserCreate) SetSubsonicMaxBitRate(v uint16) *UserCreate {
+	_c.mutation.SetSubsonicMaxBitRate(v)
+	return _c
+}
+
+// SetNillableSubsonicMaxBitRate sets the "subsonic_max_bit_rate" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSubsonicMaxBitRate(v *uint16) *UserCreate {
+	if v != nil {
+		_c.SetSubsonicMaxBitRate(*v)
+	}
+	return _c
+}
+
 // SetOpdsToken sets the "opds_token" field.
 func (_c *UserCreate) SetOpdsToken(v string) *UserCreate {
 	_c.mutation.SetOpdsToken(v)
@@ -348,6 +451,85 @@ func (_c *UserCreate) AddSessions(v ...*Session) *UserCreate {
 	return _c.AddSessionIDs(ids...)
 }
 
+// AddMusicAnnotationIDs adds the "music_annotations" edge to the MusicAnnotation entity by IDs.
+func (_c *UserCreate) AddMusicAnnotationIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddMusicAnnotationIDs(ids...)
+	return _c
+}
+
+// AddMusicAnnotations adds the "music_annotations" edges to the MusicAnnotation entity.
+func (_c *UserCreate) AddMusicAnnotations(v ...*MusicAnnotation) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMusicAnnotationIDs(ids...)
+}
+
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (_c *UserCreate) AddPlaylistIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddPlaylistIDs(ids...)
+	return _c
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (_c *UserCreate) AddPlaylists(v ...*Playlist) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddPlaylistIDs(ids...)
+}
+
+// AddShareIDs adds the "shares" edge to the Share entity by IDs.
+func (_c *UserCreate) AddShareIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddShareIDs(ids...)
+	return _c
+}
+
+// AddShares adds the "shares" edges to the Share entity.
+func (_c *UserCreate) AddShares(v ...*Share) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddShareIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_c *UserCreate) AddBookmarkIDs(ids ...uint32) *UserCreate {
+	_c.mutation.AddBookmarkIDs(ids...)
+	return _c
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_c *UserCreate) AddBookmarks(v ...*Bookmark) *UserCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddBookmarkIDs(ids...)
+}
+
+// SetPlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID.
+func (_c *UserCreate) SetPlayQueueID(id uint32) *UserCreate {
+	_c.mutation.SetPlayQueueID(id)
+	return _c
+}
+
+// SetNillablePlayQueueID sets the "play_queue" edge to the PlayQueue entity by ID if the given value is not nil.
+func (_c *UserCreate) SetNillablePlayQueueID(id *uint32) *UserCreate {
+	if id != nil {
+		_c = _c.SetPlayQueueID(*id)
+	}
+	return _c
+}
+
+// SetPlayQueue sets the "play_queue" edge to the PlayQueue entity.
+func (_c *UserCreate) SetPlayQueue(v *PlayQueue) *UserCreate {
+	return _c.SetPlayQueueID(v.ID)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_c *UserCreate) Mutation() *UserMutation {
 	return _c.mutation
@@ -399,6 +581,34 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultAuthMethod
 		_c.mutation.SetAuthMethod(v)
 	}
+	if _, ok := _c.mutation.SubsonicCanStream(); !ok {
+		v := user.DefaultSubsonicCanStream
+		_c.mutation.SetSubsonicCanStream(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanDownload(); !ok {
+		v := user.DefaultSubsonicCanDownload
+		_c.mutation.SetSubsonicCanDownload(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanManagePlaylists(); !ok {
+		v := user.DefaultSubsonicCanManagePlaylists
+		_c.mutation.SetSubsonicCanManagePlaylists(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanShare(); !ok {
+		v := user.DefaultSubsonicCanShare
+		_c.mutation.SetSubsonicCanShare(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanRate(); !ok {
+		v := user.DefaultSubsonicCanRate
+		_c.mutation.SetSubsonicCanRate(v)
+	}
+	if _, ok := _c.mutation.SubsonicCanChangePassword(); !ok {
+		v := user.DefaultSubsonicCanChangePassword
+		_c.mutation.SetSubsonicCanChangePassword(v)
+	}
+	if _, ok := _c.mutation.SubsonicMaxBitRate(); !ok {
+		v := user.DefaultSubsonicMaxBitRate
+		_c.mutation.SetSubsonicMaxBitRate(v)
+	}
 	if _, ok := _c.mutation.FailedLoginCount(); !ok {
 		v := user.DefaultFailedLoginCount
 		_c.mutation.SetFailedLoginCount(v)
@@ -440,6 +650,32 @@ func (_c *UserCreate) check() error {
 	if v, ok := _c.mutation.SubsonicLastClient(); ok {
 		if err := user.SubsonicLastClientValidator(v); err != nil {
 			return &ValidationError{Name: "subsonic_last_client", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_last_client": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.SubsonicCanStream(); !ok {
+		return &ValidationError{Name: "subsonic_can_stream", err: errors.New(`ent: missing required field "User.subsonic_can_stream"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanDownload(); !ok {
+		return &ValidationError{Name: "subsonic_can_download", err: errors.New(`ent: missing required field "User.subsonic_can_download"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanManagePlaylists(); !ok {
+		return &ValidationError{Name: "subsonic_can_manage_playlists", err: errors.New(`ent: missing required field "User.subsonic_can_manage_playlists"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanShare(); !ok {
+		return &ValidationError{Name: "subsonic_can_share", err: errors.New(`ent: missing required field "User.subsonic_can_share"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanRate(); !ok {
+		return &ValidationError{Name: "subsonic_can_rate", err: errors.New(`ent: missing required field "User.subsonic_can_rate"`)}
+	}
+	if _, ok := _c.mutation.SubsonicCanChangePassword(); !ok {
+		return &ValidationError{Name: "subsonic_can_change_password", err: errors.New(`ent: missing required field "User.subsonic_can_change_password"`)}
+	}
+	if _, ok := _c.mutation.SubsonicMaxBitRate(); !ok {
+		return &ValidationError{Name: "subsonic_max_bit_rate", err: errors.New(`ent: missing required field "User.subsonic_max_bit_rate"`)}
+	}
+	if v, ok := _c.mutation.SubsonicMaxBitRate(); ok {
+		if err := user.SubsonicMaxBitRateValidator(v); err != nil {
+			return &ValidationError{Name: "subsonic_max_bit_rate", err: fmt.Errorf(`ent: validator failed for field "User.subsonic_max_bit_rate": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.OpdsLastClient(); ok {
@@ -530,6 +766,34 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldSubsonicLastClient, field.TypeString, value)
 		_node.SubsonicLastClient = value
 	}
+	if value, ok := _c.mutation.SubsonicCanStream(); ok {
+		_spec.SetField(user.FieldSubsonicCanStream, field.TypeBool, value)
+		_node.SubsonicCanStream = value
+	}
+	if value, ok := _c.mutation.SubsonicCanDownload(); ok {
+		_spec.SetField(user.FieldSubsonicCanDownload, field.TypeBool, value)
+		_node.SubsonicCanDownload = value
+	}
+	if value, ok := _c.mutation.SubsonicCanManagePlaylists(); ok {
+		_spec.SetField(user.FieldSubsonicCanManagePlaylists, field.TypeBool, value)
+		_node.SubsonicCanManagePlaylists = value
+	}
+	if value, ok := _c.mutation.SubsonicCanShare(); ok {
+		_spec.SetField(user.FieldSubsonicCanShare, field.TypeBool, value)
+		_node.SubsonicCanShare = value
+	}
+	if value, ok := _c.mutation.SubsonicCanRate(); ok {
+		_spec.SetField(user.FieldSubsonicCanRate, field.TypeBool, value)
+		_node.SubsonicCanRate = value
+	}
+	if value, ok := _c.mutation.SubsonicCanChangePassword(); ok {
+		_spec.SetField(user.FieldSubsonicCanChangePassword, field.TypeBool, value)
+		_node.SubsonicCanChangePassword = value
+	}
+	if value, ok := _c.mutation.SubsonicMaxBitRate(); ok {
+		_spec.SetField(user.FieldSubsonicMaxBitRate, field.TypeUint16, value)
+		_node.SubsonicMaxBitRate = value
+	}
 	if value, ok := _c.mutation.OpdsToken(); ok {
 		_spec.SetField(user.FieldOpdsToken, field.TypeString, value)
 		_node.OpdsToken = value
@@ -615,6 +879,86 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MusicAnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.MusicAnnotationsTable,
+			Columns: []string{user.MusicAnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SharesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SharesTable,
+			Columns: []string{user.SharesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(share.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.BookmarksTable,
+			Columns: []string{user.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.PlayQueueIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.PlayQueueTable,
+			Columns: []string{user.PlayQueueColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playqueue.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anacrolix/torrent/metainfo"
 
@@ -51,7 +53,22 @@ type QBittorrent struct {
 	apiKey string
 
 	client *http.Client
+
+	// registrationWait overrides qbRegistrationWait; tests shorten it.
+	registrationWait time.Duration
 }
+
+// qbRegistrationWait bounds how long the selection after a selective add
+// waits for qBittorrent to register the torrent. 5.x answers the add 202
+// while it is still processing the upload, and until it has, every call
+// addressing the hash answers 404 — a filePrio issued straight after the add
+// lost that race now and then and failed the whole grab.
+const qbRegistrationWait = 10 * time.Second
+
+// errQBNotRegistered is a 404 from a call addressing a hash qBittorrent does
+// not know (yet). Private, so it never reads as ErrTorrentNotFound, which
+// callers treat as "the torrent is gone".
+var errQBNotRegistered = errors.New("torrent not registered")
 
 func NewQBittorrentPassword(baseURL, username, password string) *QBittorrent {
 	return &QBittorrent{
@@ -444,10 +461,17 @@ func (q *QBittorrent) applySelectionAndStart(
 			skipped = append(skipped, f.Index)
 		}
 	}
-	if err := q.setFilePriority(ctx, hash, skipped, "0"); err != nil {
+	// The first call waits out registration; once it lands the torrent
+	// exists, so the second goes straight through.
+	if err := q.setFilePriorityOnceRegistered(ctx, hash, skipped, "0"); err != nil {
 		return err
 	}
-	if err := q.setFilePriority(ctx, hash, wantedFiles, "1"); err != nil {
+	if err := q.setFilePriorityOnceRegistered(
+		ctx,
+		hash,
+		wantedFiles,
+		"1",
+	); err != nil {
 		return err
 	}
 	// stopStart(false) is the same v5 start / v4 resume version split
@@ -678,6 +702,46 @@ func (q *QBittorrent) SetWantedFiles(
 	return q.setFilePriority(ctx, hash, wanted, "1")
 }
 
+// setFilePriorityOnceRegistered is setFilePriority retried, with backoff,
+// while qBittorrent answers 404 for a torrent it accepted but has not
+// registered yet, up to qbRegistrationWait.
+func (q *QBittorrent) setFilePriorityOnceRegistered(
+	ctx context.Context,
+	hash string,
+	ids []int,
+	priority string,
+) error {
+	wait := q.registrationWait
+	if wait <= 0 {
+		wait = qbRegistrationWait
+	}
+	deadline := time.Now().Add(wait)
+	delay := 50 * time.Millisecond
+	for {
+		err := q.setFilePriority(ctx, hash, ids, priority)
+		if !errors.Is(err, errQBNotRegistered) {
+			return err
+		}
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("%w after %s", err, wait)
+		}
+		slog.DebugContext(
+			ctx,
+			"qbittorrent torrent not registered yet, retrying filePrio",
+			"hash",
+			hash,
+			"retry_in",
+			delay,
+		)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+		delay = min(delay*2, time.Second)
+	}
+}
+
 // setFilePriority issues one qBittorrent filePrio call for ids, or no call at
 // all when ids is empty — the no-op is what collapses SetWantedFiles to a
 // single request when nothing needs skipping.
@@ -706,6 +770,9 @@ func (q *QBittorrent) setFilePriority(
 		return fmt.Errorf("qbittorrent filePrio: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("qbittorrent filePrio: %w: %s", errQBNotRegistered, hash)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf(
 			"qbittorrent filePrio: unexpected status %d", resp.StatusCode,

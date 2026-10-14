@@ -80,6 +80,30 @@ var _ = Describe("self-authenticated mounts", Label("unit", "server"), func() {
 		})
 	})
 
+	Describe("/share", func() {
+		It("reaches the share page without a session", func() {
+			u := client.User.Create().
+				SetEmail("listener@example.com").
+				SaveX(context.Background())
+			client.Share.Create().
+				SetToken("tok123").
+				SetItems([]string{}).
+				SetOwnerID(u.ID).
+				SaveX(context.Background())
+
+			resp, err := hc.Get(ts.URL + "/share/tok123")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(resp.Header.Get("Content-Type")).To(HavePrefix("text/html"))
+
+			resp, err = hc.Get(ts.URL + "/share/unknown")
+			Expect(err).NotTo(HaveOccurred())
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
 	Describe("/opds", func() {
 		const realm = `Basic realm="Streamline OPDS"`
 

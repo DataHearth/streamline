@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/track"
 )
@@ -364,6 +365,21 @@ func (_c *AlbumCreate) AddCredits(v ...*MusicCredit) *AlbumCreate {
 	return _c.AddCreditIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_c *AlbumCreate) AddAnnotationIDs(ids ...uint32) *AlbumCreate {
+	_c.mutation.AddAnnotationIDs(ids...)
+	return _c
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_c *AlbumCreate) AddAnnotations(v ...*MusicAnnotation) *AlbumCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAnnotationIDs(ids...)
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
 func (_c *AlbumCreate) AddPackRecordIDs(ids ...uint32) *AlbumCreate {
 	_c.mutation.AddPackRecordIDs(ids...)
@@ -670,6 +686,22 @@ func (_c *AlbumCreate) createSpec() (*Album, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.AnnotationsTable,
+			Columns: []string{album.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

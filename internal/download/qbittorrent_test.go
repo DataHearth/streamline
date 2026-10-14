@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"time"
 
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
@@ -512,6 +513,131 @@ var _ = Describe("qBittorrent Client", Label("unit", "downloads"), func() {
 				Expect(sawStart).To(BeTrue())
 			},
 		)
+
+		Describe("a selective add qBittorrent has not registered yet", func() {
+			// 5.x answers the add 202 while it is still processing the upload;
+			// until it has, filePrio for the hash answers 404.
+			var (
+				prio404s  int
+				prioCalls int
+				started   bool
+				deleted   bool
+				torrent   []byte
+			)
+
+			serve := func(notRegisteredFor int) *httptest.Server {
+				GinkgoHelper()
+				prio404s, prioCalls, started, deleted = 0, 0, false, false
+				mux := http.NewServeMux()
+				mux.HandleFunc("/api/v2/auth/login",
+					func(w http.ResponseWriter, _ *http.Request) {
+						http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/createCategory",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/add",
+					func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusAccepted)
+						_, _ = w.Write([]byte(
+							`{"added_torrent_ids":["abc123"],"success_count":1}`,
+						))
+					})
+				mux.HandleFunc("/api/v2/torrents/filePrio",
+					func(w http.ResponseWriter, _ *http.Request) {
+						prioCalls++
+						if prio404s < notRegisteredFor {
+							prio404s++
+							w.WriteHeader(http.StatusNotFound)
+							return
+						}
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/start",
+					func(w http.ResponseWriter, _ *http.Request) {
+						started = true
+						w.WriteHeader(http.StatusOK)
+					})
+				mux.HandleFunc("/api/v2/torrents/delete",
+					func(w http.ResponseWriter, _ *http.Request) {
+						deleted = true
+						w.WriteHeader(http.StatusOK)
+					})
+				srv := httptest.NewServer(mux)
+				DeferCleanup(srv.Close)
+
+				info, err := bencode.Marshal(metainfo.Info{
+					Files: []metainfo.FileInfo{
+						{Path: []string{"a.mkv"}, Length: 4},
+						{Path: []string{"b.mkv"}, Length: 4},
+					},
+					PieceLength: 32768,
+					Pieces:      make([]byte, 20),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				var buf bytes.Buffer
+				Expect(
+					(&metainfo.MetaInfo{InfoBytes: info}).Write(&buf),
+				).To(Succeed())
+				torrent = buf.Bytes()
+				return srv
+			}
+
+			add := func(c *QBittorrent) (string, error) {
+				return c.AddTorrent(context.Background(), TorrentSource{
+					Bytes: torrent, WantedFiles: []int{0}, Selective: true,
+				})
+			}
+
+			It(
+				"waits for the registration, then applies the selection and starts",
+				func() {
+					srv := serve(3)
+					c := NewQBittorrentPassword(srv.URL, "admin", "password")
+					hash, err := add(c)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hash).To(Equal("abc123"))
+					Expect(prio404s).To(Equal(3))
+					Expect(prioCalls).To(Equal(5), "3 refused, then skip and keep")
+					Expect(started).To(BeTrue())
+					Expect(deleted).To(BeFalse())
+				},
+			)
+
+			It(
+				"gives up after the wait, removes the stopped torrent and says why",
+				func() {
+					srv := serve(1 << 30)
+					c := NewQBittorrentPassword(srv.URL, "admin", "password")
+					c.registrationWait = 200 * time.Millisecond
+					_, err := add(c)
+					Expect(err).To(MatchError(ContainSubstring("not registered")))
+					Expect(err).NotTo(MatchError(ErrTorrentNotFound))
+					Expect(prioCalls).To(BeNumerically(">", 1))
+					Expect(started).To(BeFalse())
+					Expect(deleted).To(BeTrue())
+				},
+			)
+
+			It("stops waiting when the caller gives up", func() {
+				srv := serve(1 << 30)
+				c := NewQBittorrentPassword(srv.URL, "admin", "password")
+				ctx, cancel := context.WithTimeout(
+					context.Background(),
+					150*time.Millisecond,
+				)
+				DeferCleanup(cancel)
+				start := time.Now()
+				_, err := c.AddTorrent(ctx, TorrentSource{
+					Bytes: torrent, WantedFiles: []int{0}, Selective: true,
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(time.Since(start)).To(BeNumerically("<", 2*time.Second))
+			})
+		})
 
 		It(
 			"issues no selection call — no stopped/paused, no filePrio, no"+

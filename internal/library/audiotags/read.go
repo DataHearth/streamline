@@ -80,3 +80,28 @@ func Picture(path string) ([]byte, string, error) {
 	}
 	return pic.Data, pic.MIMEType, nil
 }
+
+// Lyrics returns the lyrics embedded in the file (an ID3 USLT frame, an MP4
+// ©lyr atom, a Vorbis LYRICS or UNSYNCEDLYRICS comment), possibly LRC-timed.
+// A file carrying none, or whose tags cannot be parsed, yields "" and a nil
+// error, like Read: only a failure to open is an error.
+func Lyrics(path string) (string, error) {
+	//nolint:gosec // the caller supplies the path; this package reads library files by design
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	m, err := tag.ReadFrom(f)
+	if err != nil {
+		return "", nil
+	}
+	if text := strings.TrimSpace(m.Lyrics()); text != "" {
+		return text, nil
+	}
+	if text, ok := m.Raw()["unsyncedlyrics"].(string); ok {
+		return strings.TrimSpace(text), nil
+	}
+	return "", nil
+}

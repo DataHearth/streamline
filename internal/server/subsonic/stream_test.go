@@ -96,8 +96,15 @@ var _ = g.Describe("stream", g.Label("integration"), func() {
 		serve("getCoverArt", fmt.Sprintf("ar-%d", f.artist.ID), nil)
 	})
 
-	g.It("answers 70 for cover art of a track id", func() {
-		rec := serve("getCoverArt", fmt.Sprintf("tr-%d", f.withFile.ID), nil)
+	g.It("serves a track's cover art from its album", func() {
+		posters.EXPECT().
+			Serve(mock.Anything, mock.Anything, "albums", f.album.ID).
+			Once()
+		serve("getCoverArt", fmt.Sprintf("tr-%d", f.withFile.ID), nil)
+	})
+
+	g.It("answers 70 for cover art of a track that does not exist", func() {
+		rec := serve("getCoverArt", "tr-999999", nil)
 		Expect(rec.Body.String()).To(ContainSubstring(`"code":70`))
 	})
 

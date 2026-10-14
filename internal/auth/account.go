@@ -241,6 +241,42 @@ func (s *auth) RotateSubsonicPassword(
 	return pw, nil
 }
 
+// SetSubsonicPassword sets the user's Subsonic password to one the caller
+// chose (the Subsonic API's changePassword, for the caller's own account). It is
+// held to the login password policy but never becomes the login password:
+// it is stored recoverable, so it must not double as a web credential.
+// Returns ErrPasswordWeak or ErrUserNotFound.
+func (s *auth) SetSubsonicPassword(
+	ctx context.Context,
+	userID uint32,
+	password string,
+) error {
+	ctx, span := tracer.Start(ctx, "auth.set_subsonic_password",
+		trace.WithAttributes(semconv.UserID(fmt.Sprint(userID))),
+	)
+	defer span.End()
+
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	if _, err := s.db.UpdateUser(
+		ctx,
+		userID,
+		db.UpdateUserParams{SubsonicPassword: &password, SubsonicCreatedAt: &now},
+	); err != nil {
+		if ent.IsNotFound(err) {
+			return ErrUserNotFound
+		}
+		return otelx.RecordSpanError(
+			span,
+			fmt.Errorf("set subsonic password: %w", err),
+		)
+	}
+	slog.InfoContext(ctx, "subsonic password set", "target.user.id", userID)
+	return nil
+}
+
 // DisableSubsonicPassword clears the user's Subsonic password, ending Subsonic
 // access.
 func (s *auth) DisableSubsonicPassword(ctx context.Context, userID uint32) error {

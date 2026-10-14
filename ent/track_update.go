@@ -12,7 +12,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/bookmark"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
@@ -196,6 +198,36 @@ func (_u *TrackUpdate) AddCredits(v ...*MusicCredit) *TrackUpdate {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *TrackUpdate) AddAnnotationIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *TrackUpdate) AddAnnotations(v ...*MusicAnnotation) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_u *TrackUpdate) AddBookmarkIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.AddBookmarkIDs(ids...)
+	return _u
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_u *TrackUpdate) AddBookmarks(v ...*Bookmark) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookmarkIDs(ids...)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (_u *TrackUpdate) Mutation() *TrackMutation {
 	return _u.mutation
@@ -247,6 +279,48 @@ func (_u *TrackUpdate) RemoveCredits(v ...*MusicCredit) *TrackUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *TrackUpdate) ClearAnnotations() *TrackUpdate {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *TrackUpdate) RemoveAnnotationIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *TrackUpdate) RemoveAnnotations(v ...*MusicAnnotation) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearBookmarks clears all "bookmarks" edges to the Bookmark entity.
+func (_u *TrackUpdate) ClearBookmarks() *TrackUpdate {
+	_u.mutation.ClearBookmarks()
+	return _u
+}
+
+// RemoveBookmarkIDs removes the "bookmarks" edge to Bookmark entities by IDs.
+func (_u *TrackUpdate) RemoveBookmarkIDs(ids ...uint32) *TrackUpdate {
+	_u.mutation.RemoveBookmarkIDs(ids...)
+	return _u
+}
+
+// RemoveBookmarks removes "bookmarks" edges to Bookmark entities.
+func (_u *TrackUpdate) RemoveBookmarks(v ...*Bookmark) *TrackUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookmarkIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -471,6 +545,96 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBookmarksIDs(); len(nodes) > 0 && !_u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -657,6 +821,36 @@ func (_u *TrackUpdateOne) AddCredits(v ...*MusicCredit) *TrackUpdateOne {
 	return _u.AddCreditIDs(ids...)
 }
 
+// AddAnnotationIDs adds the "annotations" edge to the MusicAnnotation entity by IDs.
+func (_u *TrackUpdateOne) AddAnnotationIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.AddAnnotationIDs(ids...)
+	return _u
+}
+
+// AddAnnotations adds the "annotations" edges to the MusicAnnotation entity.
+func (_u *TrackUpdateOne) AddAnnotations(v ...*MusicAnnotation) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAnnotationIDs(ids...)
+}
+
+// AddBookmarkIDs adds the "bookmarks" edge to the Bookmark entity by IDs.
+func (_u *TrackUpdateOne) AddBookmarkIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.AddBookmarkIDs(ids...)
+	return _u
+}
+
+// AddBookmarks adds the "bookmarks" edges to the Bookmark entity.
+func (_u *TrackUpdateOne) AddBookmarks(v ...*Bookmark) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddBookmarkIDs(ids...)
+}
+
 // Mutation returns the TrackMutation object of the builder.
 func (_u *TrackUpdateOne) Mutation() *TrackMutation {
 	return _u.mutation
@@ -708,6 +902,48 @@ func (_u *TrackUpdateOne) RemoveCredits(v ...*MusicCredit) *TrackUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveCreditIDs(ids...)
+}
+
+// ClearAnnotations clears all "annotations" edges to the MusicAnnotation entity.
+func (_u *TrackUpdateOne) ClearAnnotations() *TrackUpdateOne {
+	_u.mutation.ClearAnnotations()
+	return _u
+}
+
+// RemoveAnnotationIDs removes the "annotations" edge to MusicAnnotation entities by IDs.
+func (_u *TrackUpdateOne) RemoveAnnotationIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.RemoveAnnotationIDs(ids...)
+	return _u
+}
+
+// RemoveAnnotations removes "annotations" edges to MusicAnnotation entities.
+func (_u *TrackUpdateOne) RemoveAnnotations(v ...*MusicAnnotation) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearBookmarks clears all "bookmarks" edges to the Bookmark entity.
+func (_u *TrackUpdateOne) ClearBookmarks() *TrackUpdateOne {
+	_u.mutation.ClearBookmarks()
+	return _u
+}
+
+// RemoveBookmarkIDs removes the "bookmarks" edge to Bookmark entities by IDs.
+func (_u *TrackUpdateOne) RemoveBookmarkIDs(ids ...uint32) *TrackUpdateOne {
+	_u.mutation.RemoveBookmarkIDs(ids...)
+	return _u
+}
+
+// RemoveBookmarks removes "bookmarks" edges to Bookmark entities.
+func (_u *TrackUpdateOne) RemoveBookmarks(v ...*Bookmark) *TrackUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveBookmarkIDs(ids...)
 }
 
 // Where appends a list predicates to the TrackUpdate builder.
@@ -955,6 +1191,96 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musiccredit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAnnotationsIDs(); len(nodes) > 0 && !_u.mutation.AnnotationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AnnotationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.AnnotationsTable,
+			Columns: []string{track.AnnotationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedBookmarksIDs(); len(nodes) > 0 && !_u.mutation.BookmarksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BookmarksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   track.BookmarksTable,
+			Columns: []string{track.BookmarksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bookmark.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

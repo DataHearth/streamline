@@ -1,4 +1,4 @@
-h1:V9uPJF2EIXa7NkaAIKO3dC3GH/fvypFjecbxWdTk2JA=
+h1:bzNfcIOarUHFA4vGPtE3YYcCJ6VEufkQZlnk+4TJgrk=
 20260711233411_init.up.sql h1:SnFgSovf1iYwGuugRm4tu95nCLy0xIAqSp751Vyr/kM=
 20260716225006_torrent_sessions.up.sql h1:dEzVx6y6gahJgd97oI2zsr0z1nGCk7XJA6iIK7gi7fM=
 20260729130131_movie_delete_cascade.up.sql h1:BJFbn+C5KacGtKGdTQizJ6ghjG66OvFTXEzGlSx4m3s=
@@ -55,3 +55,5 @@ h1:V9uPJF2EIXa7NkaAIKO3dC3GH/fvypFjecbxWdTk2JA=
 20261012122905_user_device_email.up.sql h1:PDwm/kvqylAI3tIJevOFn8qLPtrs9OP13zW0uuNT0lg=
 20261012131039_album_failed.up.sql h1:ZKw8Qwa/CDLtgs0esCPjL5C9mOofR15IJP7JbgjnCYw=
 20261012132227_book_series_slug.up.sql h1:FVORcUxPC7tigXu8xk7jExKZSpr6fkoem961FzT7XCE=
+20261012195547_subsonic_state.up.sql h1:eH/2c/Sf/4Gfm+Ojg6TtnvL7uA2AqfNrYzLjgB754SE=
+20261013082028_subsonic_user_permissions.up.sql h1:Wn5bgMOCwuq8s6Kvk7P9LN3RVkxQS6i9zg6Fci99Vs4=

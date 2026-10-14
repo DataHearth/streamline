@@ -450,16 +450,7 @@ func sanitizeNext(n string) string {
 // detection is httputil.ServedOverTLS, shared with the session cookie and HSTS,
 // so a proxy reporting https by any of its spellings yields an https callback.
 func oidcRedirectURI(r *http.Request, name string) string {
-	scheme, host := "http", r.Host
-	if httputil.ServedOverTLS(r) {
-		scheme = "https"
-	}
-	if httputil.TrustedPeer(r) {
-		if fwd := r.Header.Get("X-Forwarded-Host"); fwd != "" {
-			host = fwd
-		}
-	}
-	return scheme + "://" + host + "/auth/oidc/" + name + "/callback"
+	return httputil.RequestOrigin(r) + "/auth/oidc/" + name + "/callback"
 }
 
 func (h *Handler) oidcStart(w http.ResponseWriter, r *http.Request) {

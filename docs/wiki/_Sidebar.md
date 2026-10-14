@@ -9,6 +9,7 @@
 - [Activity and Calendar](Activity-and-Calendar)
 - [Requests and Users](Requests-and-Users)
 - [Music and Books](Music-and-Books)
+- [Subsonic](Subsonic)
 - [Send to Kindle](Send-to-Kindle)
 - [NixOS and Nix](NixOS)
 - [Troubleshooting](Troubleshooting)

@@ -105,6 +105,41 @@ func SubsonicLastClient(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldSubsonicLastClient, v))
 }
 
+// SubsonicCanStream applies equality check predicate on the "subsonic_can_stream" field. It's identical to SubsonicCanStreamEQ.
+func SubsonicCanStream(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanStream, v))
+}
+
+// SubsonicCanDownload applies equality check predicate on the "subsonic_can_download" field. It's identical to SubsonicCanDownloadEQ.
+func SubsonicCanDownload(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanDownload, v))
+}
+
+// SubsonicCanManagePlaylists applies equality check predicate on the "subsonic_can_manage_playlists" field. It's identical to SubsonicCanManagePlaylistsEQ.
+func SubsonicCanManagePlaylists(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanManagePlaylists, v))
+}
+
+// SubsonicCanShare applies equality check predicate on the "subsonic_can_share" field. It's identical to SubsonicCanShareEQ.
+func SubsonicCanShare(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanShare, v))
+}
+
+// SubsonicCanRate applies equality check predicate on the "subsonic_can_rate" field. It's identical to SubsonicCanRateEQ.
+func SubsonicCanRate(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanRate, v))
+}
+
+// SubsonicCanChangePassword applies equality check predicate on the "subsonic_can_change_password" field. It's identical to SubsonicCanChangePasswordEQ.
+func SubsonicCanChangePassword(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanChangePassword, v))
+}
+
+// SubsonicMaxBitRate applies equality check predicate on the "subsonic_max_bit_rate" field. It's identical to SubsonicMaxBitRateEQ.
+func SubsonicMaxBitRate(v uint16) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicMaxBitRate, v))
+}
+
 // OpdsToken applies equality check predicate on the "opds_token" field. It's identical to OpdsTokenEQ.
 func OpdsToken(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
@@ -800,6 +835,106 @@ func SubsonicLastClientContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldSubsonicLastClient, v))
 }
 
+// SubsonicCanStreamEQ applies the EQ predicate on the "subsonic_can_stream" field.
+func SubsonicCanStreamEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanStream, v))
+}
+
+// SubsonicCanStreamNEQ applies the NEQ predicate on the "subsonic_can_stream" field.
+func SubsonicCanStreamNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanStream, v))
+}
+
+// SubsonicCanDownloadEQ applies the EQ predicate on the "subsonic_can_download" field.
+func SubsonicCanDownloadEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanDownload, v))
+}
+
+// SubsonicCanDownloadNEQ applies the NEQ predicate on the "subsonic_can_download" field.
+func SubsonicCanDownloadNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanDownload, v))
+}
+
+// SubsonicCanManagePlaylistsEQ applies the EQ predicate on the "subsonic_can_manage_playlists" field.
+func SubsonicCanManagePlaylistsEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanManagePlaylists, v))
+}
+
+// SubsonicCanManagePlaylistsNEQ applies the NEQ predicate on the "subsonic_can_manage_playlists" field.
+func SubsonicCanManagePlaylistsNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanManagePlaylists, v))
+}
+
+// SubsonicCanShareEQ applies the EQ predicate on the "subsonic_can_share" field.
+func SubsonicCanShareEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanShare, v))
+}
+
+// SubsonicCanShareNEQ applies the NEQ predicate on the "subsonic_can_share" field.
+func SubsonicCanShareNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanShare, v))
+}
+
+// SubsonicCanRateEQ applies the EQ predicate on the "subsonic_can_rate" field.
+func SubsonicCanRateEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanRate, v))
+}
+
+// SubsonicCanRateNEQ applies the NEQ predicate on the "subsonic_can_rate" field.
+func SubsonicCanRateNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanRate, v))
+}
+
+// SubsonicCanChangePasswordEQ applies the EQ predicate on the "subsonic_can_change_password" field.
+func SubsonicCanChangePasswordEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicCanChangePassword, v))
+}
+
+// SubsonicCanChangePasswordNEQ applies the NEQ predicate on the "subsonic_can_change_password" field.
+func SubsonicCanChangePasswordNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicCanChangePassword, v))
+}
+
+// SubsonicMaxBitRateEQ applies the EQ predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateEQ(v uint16) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSubsonicMaxBitRate, v))
+}
+
+// SubsonicMaxBitRateNEQ applies the NEQ predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateNEQ(v uint16) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSubsonicMaxBitRate, v))
+}
+
+// SubsonicMaxBitRateIn applies the In predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateIn(vs ...uint16) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSubsonicMaxBitRate, vs...))
+}
+
+// SubsonicMaxBitRateNotIn applies the NotIn predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateNotIn(vs ...uint16) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSubsonicMaxBitRate, vs...))
+}
+
+// SubsonicMaxBitRateGT applies the GT predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateGT(v uint16) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSubsonicMaxBitRate, v))
+}
+
+// SubsonicMaxBitRateGTE applies the GTE predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateGTE(v uint16) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSubsonicMaxBitRate, v))
+}
+
+// SubsonicMaxBitRateLT applies the LT predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateLT(v uint16) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSubsonicMaxBitRate, v))
+}
+
+// SubsonicMaxBitRateLTE applies the LTE predicate on the "subsonic_max_bit_rate" field.
+func SubsonicMaxBitRateLTE(v uint16) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSubsonicMaxBitRate, v))
+}
+
 // OpdsTokenEQ applies the EQ predicate on the "opds_token" field.
 func OpdsTokenEQ(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldOpdsToken, v))
@@ -1274,6 +1409,121 @@ func HasSessions() predicate.User {
 func HasSessionsWith(preds ...predicate.Session) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newSessionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasMusicAnnotations applies the HasEdge predicate on the "music_annotations" edge.
+func HasMusicAnnotations() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MusicAnnotationsTable, MusicAnnotationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMusicAnnotationsWith applies the HasEdge predicate on the "music_annotations" edge with a given conditions (other predicates).
+func HasMusicAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newMusicAnnotationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPlaylists applies the HasEdge predicate on the "playlists" edge.
+func HasPlaylists() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PlaylistsTable, PlaylistsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPlaylistsWith applies the HasEdge predicate on the "playlists" edge with a given conditions (other predicates).
+func HasPlaylistsWith(preds ...predicate.Playlist) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newPlaylistsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasShares applies the HasEdge predicate on the "shares" edge.
+func HasShares() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SharesTable, SharesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSharesWith applies the HasEdge predicate on the "shares" edge with a given conditions (other predicates).
+func HasSharesWith(preds ...predicate.Share) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newSharesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasBookmarks applies the HasEdge predicate on the "bookmarks" edge.
+func HasBookmarks() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BookmarksTable, BookmarksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBookmarksWith applies the HasEdge predicate on the "bookmarks" edge with a given conditions (other predicates).
+func HasBookmarksWith(preds ...predicate.Bookmark) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newBookmarksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPlayQueue applies the HasEdge predicate on the "play_queue" edge.
+func HasPlayQueue() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, PlayQueueTable, PlayQueueColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPlayQueueWith applies the HasEdge predicate on the "play_queue" edge with a given conditions (other predicates).
+func HasPlayQueueWith(preds ...predicate.PlayQueue) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newPlayQueueStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

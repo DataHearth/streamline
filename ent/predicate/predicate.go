@@ -33,6 +33,9 @@ type BookEdition func(*sql.Selector)
 // BookSeries is the predicate function for bookseries builders.
 type BookSeries func(*sql.Selector)
 
+// Bookmark is the predicate function for bookmark builders.
+type Bookmark func(*sql.Selector)
+
 // Credit is the predicate function for credit builders.
 type Credit func(*sql.Selector)
 
@@ -69,6 +72,9 @@ type MediaFile func(*sql.Selector)
 // Movie is the predicate function for movie builders.
 type Movie func(*sql.Selector)
 
+// MusicAnnotation is the predicate function for musicannotation builders.
+type MusicAnnotation func(*sql.Selector)
+
 // MusicCredit is the predicate function for musiccredit builders.
 type MusicCredit func(*sql.Selector)
 
@@ -77,6 +83,15 @@ type OIDCIdentity func(*sql.Selector)
 
 // Person is the predicate function for person builders.
 type Person func(*sql.Selector)
+
+// PlayQueue is the predicate function for playqueue builders.
+type PlayQueue func(*sql.Selector)
+
+// Playlist is the predicate function for playlist builders.
+type Playlist func(*sql.Selector)
+
+// RadioStation is the predicate function for radiostation builders.
+type RadioStation func(*sql.Selector)
 
 // Request is the predicate function for request builders.
 type Request func(*sql.Selector)
@@ -89,6 +104,9 @@ type Season func(*sql.Selector)
 
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
+
+// Share is the predicate function for share builders.
+type Share func(*sql.Selector)
 
 // TVShow is the predicate function for tvshow builders.
 type TVShow func(*sql.Selector)
