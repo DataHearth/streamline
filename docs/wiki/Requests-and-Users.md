@@ -77,6 +77,8 @@ From a request-only user's side, this is the entire app: search, find, ask.
 
 Search returns titles from TMDB (films) and TVDB (shows), including things not in the library. Pick one, optionally state a quality preference, and submit.
 
+The app's own search (the search icon on a phone, <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd> on a computer) looks in the library first, and always shows a **Not in your library? Request "…" as** strip, pinned below the results (above them on a phone): **Movie**, **Series**, **Artist** and **Book** open the request screen already searching what was typed. A title the household doesn't have is therefore one tap from a request rather than a "no matches".
+
 Their **Requests** page lists what they've asked for and where each one stands. They can't see anyone else's.
 
 ---

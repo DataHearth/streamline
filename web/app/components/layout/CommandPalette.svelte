@@ -7,6 +7,7 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
+	import LookupStrip from "./LookupStrip.svelte";
 	import {
 		createSearchModel,
 		itemKindLabel,
@@ -30,6 +31,8 @@
 	const navigateTo = searchNav();
 	let sections = $derived(model.sections);
 	let flat = $derived(model.flat);
+	// The lookup chips close `flat`, so their cursor stops start here.
+	let lookupBase = $derived(flat.length - model.lookups.length);
 
 	function indexOf(sectionIdx: number, itemIdx: number): number {
 		const before = sections
@@ -54,18 +57,21 @@
 		queueMicrotask(() => prevFocus?.focus());
 	}
 
-	function hide() {
+	// `then` replaces the focus restore, once the dialog has closed.
+	function hide(then?: () => void) {
 		if (!open || closing) return;
 		const d = dialogEl;
+		const done = () => (then ? then() : restoreFocus());
 		if (!d?.open) {
 			open = false;
+			then?.();
 			return;
 		}
 		// Reduced motion: close immediately, no exit transition to wait on.
 		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 			open = false;
 			d.close();
-			restoreFocus();
+			done();
 			return;
 		}
 		// Animate the exit by fading the box out (.is-closing) while the dialog
@@ -79,7 +85,7 @@
 			closing = false;
 			open = false;
 			d.close();
-			restoreFocus();
+			done();
 		};
 		const onEnd = (e: TransitionEvent) => {
 			if (e.target === d && e.propertyName === "opacity") finish();
@@ -96,6 +102,12 @@
 	}
 
 	function activate(item: SearchItem) {
+		// These open another dialog, which can't take focus while this modal
+		// <dialog> still makes the rest of the page inert.
+		if (item.kind === "action" || item.kind === "lookup") {
+			hide(() => navigateTo(item));
+			return;
+		}
 		hide();
 		navigateTo(item);
 	}
@@ -116,7 +128,7 @@
 			return;
 		}
 		// Escape is left to the native <dialog>, which closes with the exit
-		// animation and fires `close` → onclose={hide} for state cleanup.
+		// animation and fires `close` → hide() for state cleanup.
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
 			if (flat.length === 0) return;
@@ -174,7 +186,7 @@
 	class:is-closing={closing}
 	onclick={onBackdropClick}
 	oncancel={onCancel}
-	onclose={hide}
+	onclose={() => hide()}
 >
 	<div class="flex flex-col max-h-[70dvh]">
 			<div
@@ -328,12 +340,22 @@
 					{/each}
 				{/each}
 
-				{#if flat.length === 0}
+				{#if !model.matched}
 					<div class="px-3 py-8 text-center text-[12.5px] text-fg-subtle">
-						{i18n.search_no_matches_for({ query: query.trim() })}
+						{model.lookups.length
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
 					</div>
 				{/if}
 			</div>
+
+			<LookupStrip
+				items={model.lookups}
+				active={cursor - lookupBase}
+				onhover={(i) => (cursor = lookupBase + i)}
+				onpick={activate}
+				class="border-t border-border px-4 py-2.5"
+			/>
 
 			<footer
 				class="flex items-center gap-4 border-t border-border bg-bg-base px-4 py-2 font-mono text-[10.5px] text-fg-faint"

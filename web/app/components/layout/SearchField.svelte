@@ -8,6 +8,7 @@
 		type SearchItem,
 	} from "@lib/search-model.svelte";
 	import SearchResultRow from "./SearchResultRow.svelte";
+	import LookupStrip from "./LookupStrip.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Tablet band (md → lg). The width is there for a real field, so the bar gets
@@ -110,32 +111,42 @@
 			role="listbox"
 			aria-label={i18n.search_results_label()}
 			transition:fly={{ y: -4, duration: 160, easing: cubicOut }}
-			class="absolute right-0 top-[calc(100%+8px)] z-50 max-h-[420px] w-[520px] overflow-y-auto overscroll-contain rounded-xl border border-border-strong bg-bg-elevated p-1.5 shadow-4"
+			class="absolute right-0 top-[calc(100%+8px)] z-50 flex max-h-[420px] w-[520px] flex-col overflow-hidden rounded-xl border border-border-strong bg-bg-elevated shadow-4"
 		>
-			{#each model.sections as section (section.id)}
-				<div
-					class="flex items-baseline justify-between px-2.5 pb-1 pt-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
-				>
-					<span>{section.label}</span>
-					{#if section.id === "titles" && model.searchable !== null}
-						<span class="text-[10px] normal-case tracking-[0.04em]">
-							{i18n.search_hits_of({
-								hits: model.titleHits,
-								total: model.searchable.toLocaleString(),
-							})}
-						</span>
-					{/if}
-				</div>
-				{#each section.items as item, i (item.kind + "-" + i)}
-					<SearchResultRow {item} dense onpick={pick} />
+			<div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5">
+				{#each model.sections as section (section.id)}
+					<div
+						class="flex items-baseline justify-between px-2.5 pb-1 pt-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-faint"
+					>
+						<span>{section.label}</span>
+						{#if section.id === "titles" && model.searchable !== null}
+							<span class="text-[10px] normal-case tracking-[0.04em]">
+								{i18n.search_hits_of({
+									hits: model.titleHits,
+									total: model.searchable.toLocaleString(),
+								})}
+							</span>
+						{/if}
+					</div>
+					{#each section.items as item, i (item.kind + "-" + i)}
+						<SearchResultRow {item} dense onpick={pick} />
+					{/each}
 				{/each}
-			{/each}
 
-			{#if model.flat.length === 0}
-				<div class="px-3 py-7 text-center text-[12.5px] text-fg-subtle">
-					{i18n.search_no_matches_for({ query: query.trim() })}
-				</div>
-			{/if}
+				{#if !model.matched}
+					<div class="px-3 py-7 text-center text-[12.5px] text-fg-subtle">
+						{model.lookups.length
+							? i18n.search_no_library_matches_for({ query: query.trim() })
+							: i18n.search_no_matches_for({ query: query.trim() })}
+					</div>
+				{/if}
+			</div>
+
+			<LookupStrip
+				items={model.lookups}
+				onpick={pick}
+				class="flex-none border-t border-border px-3 py-2"
+			/>
 		</div>
 	{/if}
 </div>

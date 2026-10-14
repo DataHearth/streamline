@@ -100,9 +100,9 @@
 			showPanelOnNarrow = false;
 			return;
 		}
-		// Seed pick-mode searches from the caller (e.g. the import folder's
-		// parsed title) so candidates surface immediately, skipping the debounce.
-		if (mode === "pick" && seedQuery) {
+		// Seed the search from the caller (e.g. the import folder's parsed title)
+		// so candidates surface immediately, skipping the debounce.
+		if (seedQuery) {
 			query = seedQuery;
 			debounced = seedQuery.trim();
 		}
