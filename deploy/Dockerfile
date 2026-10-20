@@ -133,14 +133,25 @@ FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18
 #
 # The digest pin holds the base layer steady; it does not hold back security
 # updates. Grype scanning still runs against this image in CI, same as every
-# other stage — the upgrade step below covers only what apt itself tracks
-# (ca-certificates, tzdata), the rest of the base is linuxserver's to patch.
+# other stage — the upgrade step below takes every dpkg package (curl, libx11,
+# libxml2…) to what the Ubuntu archive has patched; only what sits outside dpkg
+# (ffmpeg itself, the bundled VA drivers) is linuxserver's to patch.
 #
 # /usr/bin/pebble is a Go binary the Ubuntu base drops in outside dpkg. Nothing
 # here runs it, but grype reports the stdlib it was built with as if it were
 # ours — a lagging Go toolchain there failed the scan as `stdlib go1.26.5` while
 # streamline itself was built by the pinned 1.26.6 image. Deleting the file is
 # the only way to take it off the report; no package owns it to purge.
+#
+# BUILD_DATE is declared here only to keep this layer out of the build cache.
+# image.yaml restores every layer from the GHA cache, and a cached upgrade is
+# the upgrade from whenever the layer was first built: on 2026-10-20 it still
+# held curl 8.18.0-1ubuntu2.7 six days after resolute-security shipped .8 for
+# CVE-2026-92392, and grype failed both vaapi builds on a fix the archive had.
+# A changed ARG misses the cache at the first RUN after it, so CI (which passes
+# a timestamp) upgrades on every build; a plain `docker build` leaves it at
+# `unknown` and keeps its cache.
+ARG BUILD_DATE=unknown
 RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends \
