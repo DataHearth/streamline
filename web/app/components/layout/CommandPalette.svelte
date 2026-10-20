@@ -23,9 +23,9 @@
 	let dialogEl = $state<HTMLDialogElement | null>(null);
 	let prevFocus: HTMLElement | null = null;
 
-	// The list itself lives in lib/search-model: the phone screen and the tablet
-	// panel show the same items, ordered for touch. Here it keeps the palette's
-	// order — pages and actions first, titles under them.
+	// The list itself lives in lib/search-model: the full-screen search shows the
+	// same items, ordered for touch. Here it keeps the palette's order — pages
+	// and actions first, titles under them.
 	const model = createSearchModel(() => query, {});
 	const navigateTo = searchNav();
 	let sections = $derived(model.sections);

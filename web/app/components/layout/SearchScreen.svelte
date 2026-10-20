@@ -11,15 +11,16 @@
 	import SearchResultRow from "./SearchResultRow.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Phone only — AppShell renders this in place of CommandPalette below md,
-	// off the same matchMedia switch it already runs for the add flow. Both
-	// listen for `streamline:open-palette`, so the top bar dispatches one event
-	// and doesn't know which surface answers.
+	// Phones, tablets and narrow windows — AppShell renders this in place of
+	// CommandPalette when touch is the primary input or the window is below md.
+	// Both listen for `streamline:open-palette`, so the top bar dispatches one
+	// event and doesn't know which surface answers.
 	//
-	// A screen rather than a centred dialog: the keyboard takes roughly half a
-	// phone, which leaves a 640px box nowhere to sit. The field goes where the
-	// hands are — top of the screen, keyboard up on open — and results fill
-	// what's left.
+	// A screen rather than a centred dialog: an on-screen keyboard covers the
+	// bottom third to half of the screen, which on a phone leaves a 640px box
+	// nowhere to sit and on a landscape tablet hid most of the palette. The
+	// field goes where the hands are — top of the screen, keyboard up on open —
+	// and results fill what's left.
 	let open = $state(false);
 	let query = $state("");
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -58,8 +59,22 @@
 
 	onMount(() => {
 		const onOpen = () => show();
+		// A tablet with a hardware keyboard still has Ctrl/⌘+K, which only the
+		// palette would otherwise answer.
+		const onShortcut = (e: KeyboardEvent) => {
+			if (open || (e.key !== "k" && e.key !== "K") || !(e.metaKey || e.ctrlKey)) return;
+			const active = document.activeElement as HTMLElement | null;
+			if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable))
+				return;
+			e.preventDefault();
+			show();
+		};
 		window.addEventListener("streamline:open-palette", onOpen);
-		return () => window.removeEventListener("streamline:open-palette", onOpen);
+		window.addEventListener("keydown", onShortcut);
+		return () => {
+			window.removeEventListener("streamline:open-palette", onOpen);
+			window.removeEventListener("keydown", onShortcut);
+		};
 	});
 
 	$effect(() => {
@@ -78,8 +93,10 @@
 		aria-modal="true"
 		aria-label={i18n.common_search()}
 		transition:fly={{ y: 16, duration: 200, easing: cubicOut }}
-		class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:hidden"
+		class="fixed inset-0 z-50 flex flex-col bg-bg-deep *:mx-auto *:w-full *:max-w-2xl"
 	>
+		<!-- A tablet is too wide for edge-to-edge rows: every row of the screen
+		     shares one centred column (the `*:` utilities on this element). -->
 		<form
 			onsubmit={onSubmit}
 			class="flex flex-none items-center gap-3 px-4 pb-2.5 pt-[max(env(safe-area-inset-top),10px)]"
