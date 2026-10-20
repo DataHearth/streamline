@@ -139,6 +139,10 @@ in
   # check's overrideAttrs shares this fetch instead of repeating it.
   overrideModAttrs = {
     name = "streamline-go-modules-${inputsId [ ../go.mod ../go.sum ] [ go.version ]}";
+    # buildGoModule hands the package's preBuild to this fetch too, and ours
+    # needs the frontend: vendoring would wait on a frontend build, and so on
+    # a source-built Node whenever package.json is ahead of the locked nixpkgs.
+    preBuild = "";
   };
 
   subPackages = [ "cmd" ];
