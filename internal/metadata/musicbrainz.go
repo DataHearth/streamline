@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -629,10 +630,11 @@ type mbLabelInfo struct {
 }
 
 type mbMedium struct {
-	Position uint8     `json:"position"`
-	Title    string    `json:"title"`
-	Format   string    `json:"format"`
-	Tracks   []mbTrack `json:"tracks"`
+	Position   uint8     `json:"position"`
+	Title      string    `json:"title"`
+	Format     string    `json:"format"`
+	TrackCount int       `json:"track-count"`
+	Tracks     []mbTrack `json:"tracks"`
 }
 
 type mbTrack struct {
@@ -658,23 +660,47 @@ type mbCredit struct {
 	} `json:"artist"`
 }
 
-// canonicalRelease is the earliest official release. Ties keep the first
-// listed. Falls back to the first listed release when none is official.
+// canonicalRelease is the earliest official release. Among releases out the
+// same day the one with the fewest audio tracks wins, then the fewest audio
+// discs, then the first listed: the standard edition, which is what
+// releases on the indexers carry. MusicBrainz listed Avatar's Feathers &
+// Flesh CD + live DVD first, and the deluxe one next, so the album took a
+// concert's chapters or two bonus songs no ordinary release has. Video
+// discs never count (fillRelease skips them). Falls back to the first listed
+// release when none is official.
 func canonicalRelease(releases []mbRelease) string {
-	best, bestDate := "", ""
+	best, bestDate, bestTracks, bestDiscs := "", "", 0, 0
 	for _, r := range releases {
 		if r.Status != "Official" {
 			continue
 		}
 		date := releaseSortDate(r.Date)
-		if best == "" || date < bestDate {
-			best, bestDate = r.ID, date
+		tracks, discs := audioSize(r.Media)
+		if tracks == 0 {
+			// Nothing counted is no information, not the smallest edition.
+			tracks = math.MaxInt
+		}
+		if best == "" || date < bestDate || date == bestDate &&
+			(tracks < bestTracks || tracks == bestTracks && discs < bestDiscs) {
+			best, bestDate, bestTracks, bestDiscs = r.ID, date, tracks, discs
 		}
 	}
 	if best == "" && len(releases) > 0 {
 		return releases[0].ID
 	}
 	return best
+}
+
+// audioSize counts a release's audio tracks and discs, video discs left out.
+func audioSize(media []mbMedium) (tracks, discs int) {
+	for _, md := range media {
+		if isVideoMedium(md) {
+			continue
+		}
+		discs++
+		tracks += md.TrackCount
+	}
+	return tracks, discs
 }
 
 // releaseSortDate makes a MusicBrainz date (YYYY, YYYY-MM or YYYY-MM-DD)
@@ -786,6 +812,17 @@ func (m *MusicBrainz) getRelease(
 		return mbRelease{}, false, lerr
 	}
 	return rel, false, nil
+}
+
+// videoFormats are the MusicBrainz medium formats that hold video. DVD-Audio
+// and the CD variants are audio and stay out.
+var videoFormats = []string{
+	"DVD", "DVD-Video", "Blu-ray", "HD-DVD", "VHS", "Betamax",
+	"VCD", "SVCD", "LaserDisc", "UMD", "CED", "VHD",
+}
+
+func isVideoMedium(md mbMedium) bool {
+	return slices.Contains(videoFormats, md.Format)
 }
 
 func mapMedia(formats []string) []string {
@@ -901,7 +938,16 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 	for _, r := range rel.Relations {
 		addCredit(r)
 	}
+	// A video disc's tracks are chapters of a film, not songs: a CD + DVD
+	// edition otherwise lists the DVD as a disc of tracks no audio release
+	// carries. Kept only when the release has nothing else.
+	audioOnly := slices.ContainsFunc(rel.Media, func(md mbMedium) bool {
+		return !isVideoMedium(md)
+	})
 	for _, md := range rel.Media {
+		if audioOnly && isVideoMedium(md) {
+			continue
+		}
 		disc := md.Position
 		if disc == 0 {
 			disc = 1

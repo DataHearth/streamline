@@ -355,6 +355,32 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[2].Disc).To(Equal(uint8(2)))
 		})
 
+		It("leaves a video disc's chapters out of the tracks", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(200, `{"id":"rel-1","status":"Official","media":[
+					{"position":1,"format":"CD","tracks":[
+						{"position":1,"title":"Regret","length":121000,"recording":{"id":"rec-1"}}]},
+					{"position":2,"format":"DVD","title":"Live Show DVD","tracks":[
+						{"position":1,"title":"Intro","recording":{"id":"rec-2"}},
+						{"position":2,"title":"Hail the Apocalypse","recording":{"id":"rec-3"}}]}]}`)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks).To(HaveLen(1))
+			Expect(rg.Tracks[0].Title).To(Equal("Regret"))
+		})
+
+		It("keeps a video-only release's tracks", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(200, `{"id":"rel-1","status":"Official","media":[
+					{"position":1,"format":"Blu-ray","tracks":[
+						{"position":1,"title":"Intro","recording":{"id":"rec-2"}}]}]}`)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks).To(HaveLen(1))
+		})
+
 		It("asks the heavy relationship expansion first", func() {
 			incs := serve(
 				func(string) *http.Response { return jsonResponse(200, heavyRelease) },
@@ -679,6 +705,67 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				{ID: "year", Status: "Official", Date: "2022"},
 				{ID: "month", Status: "Official", Date: "2022-10"},
 			})).To(Equal("month"))
+		})
+
+		It("takes the standard edition among releases out the same day", func() {
+			cd := func(n int) mbMedium { return mbMedium{Format: "CD", TrackCount: n} }
+			dvd := mbMedium{Format: "DVD", TrackCount: 8}
+			// Feathers & Flesh: CD + live DVD and the deluxe listed first.
+			Expect(canonicalRelease([]mbRelease{
+				{
+					ID:     "cd-dvd",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(14), dvd},
+				},
+				{
+					ID:     "deluxe",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(16), dvd},
+				},
+				{
+					ID:     "vinyl",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(10), cd(4)},
+				},
+				{
+					ID:     "us-cd",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(16)},
+				},
+			})).To(Equal("cd-dvd"))
+			Expect(canonicalRelease([]mbRelease{
+				{
+					ID:     "deluxe",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(16)},
+				},
+				{ID: "uncounted", Status: "Official", Date: "2016-05-13"},
+				{
+					ID:     "standard",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(14)},
+				},
+			})).To(Equal("standard"))
+			Expect(canonicalRelease([]mbRelease{
+				{
+					ID:     "later",
+					Status: "Official",
+					Date:   "2016-06-01",
+					Media:  []mbMedium{cd(10)},
+				},
+				{
+					ID:     "deluxe",
+					Status: "Official",
+					Date:   "2016-05-13",
+					Media:  []mbMedium{cd(16)},
+				},
+			})).To(Equal("deluxe"))
 		})
 
 		It("still takes a partial date from an earlier period", func() {
