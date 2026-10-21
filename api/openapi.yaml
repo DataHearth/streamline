@@ -4981,7 +4981,9 @@ paths:
         In-flight DownloadRecords (downloading or importing) enriched with
         live progress / speed / ETA polled from the download client. Served
         from a short-TTL cached snapshot; unreachable clients degrade to the
-        stored record without telemetry.
+        stored record without telemetry. Ordered importing, held, error,
+        downloading, then paused; within each, by progress (furthest first),
+        then newest first.
       tags: [activity]
       responses:
         "200":

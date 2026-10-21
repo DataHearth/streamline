@@ -630,6 +630,35 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			Expect(err).To(MatchError(boom))
 		})
 
+		It("orders imports first, then by status and progress", func() {
+			now := time.Now()
+			entries := []QueueEntry{
+				{RecordID: 1, Status: "downloading", Progress: 0.42, CreatedAt: now},
+				{RecordID: 2, Status: "paused", Progress: 0.9, CreatedAt: now},
+				{RecordID: 3, Status: "downloading", Progress: 0.77, CreatedAt: now},
+				{
+					RecordID:  4,
+					Status:    "importing",
+					Progress:  1,
+					CreatedAt: now.Add(-time.Hour),
+				},
+				{RecordID: 5, Status: "held", Progress: 1, CreatedAt: now},
+				{
+					RecordID:  6,
+					Status:    "downloading",
+					Progress:  0.42,
+					CreatedAt: now.Add(time.Minute),
+				},
+				{RecordID: 7, Status: "error", Progress: 0.1, CreatedAt: now},
+			}
+			sortQueue(entries)
+			ids := make([]uint32, 0, len(entries))
+			for _, e := range entries {
+				ids = append(ids, e.RecordID)
+			}
+			Expect(ids).To(Equal([]uint32{4, 5, 7, 3, 6, 1, 2}))
+		})
+
 		It("maps importing records to progress 1.0 without polling", func() {
 			rec := &ent.DownloadRecord{
 				ID: 7, Title: "Dune", Status: downloadrecord.StatusImporting,

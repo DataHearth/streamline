@@ -70,7 +70,7 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ## The queue
 
-**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for.
+**Activity → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Imports come first, then held and errored entries waiting on you, then downloads furthest along first, then paused ones.
 
 You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
 

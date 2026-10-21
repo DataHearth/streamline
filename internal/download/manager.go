@@ -533,10 +533,41 @@ func (d *download) refreshQueue(ctx context.Context) ([]QueueEntry, error) {
 		})
 	}
 	wg.Wait()
-	sort.SliceStable(entries, func(a, b int) bool {
-		return entries[a].CreatedAt.After(entries[b].CreatedAt)
-	})
+	sortQueue(entries)
 	return entries, nil
+}
+
+// sortQueue orders the queue by how close an entry is to the library: an
+// import first, then what waits on a person (held, error), then downloads,
+// then paused ones. Within a rank the furthest along comes first, then the
+// newest. Newest first alone left a download about to finish anywhere in
+// the list.
+func sortQueue(entries []QueueEntry) {
+	sort.SliceStable(entries, func(a, b int) bool {
+		ea, eb := entries[a], entries[b]
+		if ra, rb := queueRank(ea.Status), queueRank(eb.Status); ra != rb {
+			return ra < rb
+		}
+		if ea.Progress != eb.Progress {
+			return ea.Progress > eb.Progress
+		}
+		return ea.CreatedAt.After(eb.CreatedAt)
+	})
+}
+
+func queueRank(status string) int {
+	switch status {
+	case "importing":
+		return 0
+	case "held":
+		return 1
+	case "error":
+		return 2
+	case "downloading":
+		return 3
+	default:
+		return 4
+	}
 }
 
 func baseQueueEntry(rec *ent.DownloadRecord) QueueEntry {
