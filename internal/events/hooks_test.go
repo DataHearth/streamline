@@ -9,6 +9,8 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediaevent"
@@ -560,6 +562,59 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 			Expect(rows).To(HaveLen(1))
 			Expect(rows[0].Edges.Book.ID).To(Equal(b.ID))
 			Expect(rows[0].Payload).To(HaveKeyWithValue("book_kind", "audiobook"))
+		})
+
+		It("records a failed album bulk-import entry against its album", func() {
+			scan := client.ImportScan.Create().
+				SetSourcePath("/import").SetMode("in_place").SaveX(ctx)
+			row := client.ImportScanAlbum.Create().
+				SetScan(scan).SetFolderPath("/import/Magma").
+				SetExistingAlbumID(alb.ID).SaveX(ctx)
+			orphan := client.ImportScanAlbum.Create().
+				SetScan(scan).SetFolderPath("/import/Unknown").SaveX(ctx)
+
+			client.ImportScanAlbum.UpdateOne(row).
+				SetOutcome(importscanalbum.OutcomeFailed).
+				SetOutcomeMessage("adopt files: no file matched a track").
+				SaveX(ctx)
+			client.ImportScanAlbum.UpdateOne(orphan).
+				SetOutcome(importscanalbum.OutcomeFailed).SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeImportFailed))).
+				WithAlbum().AllX(ctx)
+			Expect(
+				rows,
+			).To(HaveLen(1), "an entry that resolved no album has nowhere to hang")
+			Expect(rows[0].Edges.Album.ID).To(Equal(alb.ID))
+			Expect(rows[0].Payload).To(And(
+				HaveKeyWithValue("path", "/import/Magma"),
+				HaveKeyWithValue("error", "adopt files: no file matched a track"),
+			))
+		})
+
+		It("records a failed book bulk-import entry against its book", func() {
+			b := client.Book.Create().
+				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+			scan := client.ImportScan.Create().
+				SetSourcePath("/import").SetMode("in_place").SaveX(ctx)
+			row := client.ImportScanBook.Create().
+				SetScan(scan).SetSlot(importscanbook.SlotAudiobook).
+				SetFilePaths([]string{"/import/Exhalation/01.m4b"}).SaveX(ctx)
+
+			client.ImportScanBook.UpdateOne(row).
+				SetOutcome(importscanbook.OutcomeFailed).
+				SetCreatedBookID(b.ID).SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeImportFailed))).
+				WithBook().AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Book.ID).To(Equal(b.ID))
+			Expect(rows[0].Payload).To(And(
+				HaveKeyWithValue("book_kind", "audiobook"),
+				HaveKeyWithValue("path", "/import/Exhalation/01.m4b"),
+			))
 		})
 
 		It("records against each new owner through Record", func() {

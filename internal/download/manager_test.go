@@ -682,6 +682,39 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			Expect(mgr.CancelQueueItem(ctx, 3)).To(Succeed())
 		})
 
+		DescribeTable(
+			"files the cancellation against the record's owner",
+			func(edges ent.DownloadRecordEdges, scope events.Scope, id uint32) {
+				got, gotID, ok := cancelledOwner(&ent.DownloadRecord{Edges: edges})
+				Expect(ok).To(BeTrue())
+				Expect(got).To(Equal(scope))
+				Expect(gotID).To(Equal(id))
+			},
+			Entry("a movie", ent.DownloadRecordEdges{Movie: &ent.Movie{ID: 1}},
+				events.ScopeMovie, uint32(1)),
+			Entry(
+				"an episode",
+				ent.DownloadRecordEdges{AnchorEpisode: &ent.Episode{ID: 2}},
+				events.ScopeEpisode,
+				uint32(2),
+			),
+			Entry("an album", ent.DownloadRecordEdges{Album: &ent.Album{ID: 3}},
+				events.ScopeAlbum, uint32(3)),
+			Entry("a book", ent.DownloadRecordEdges{Book: &ent.Book{ID: 4}},
+				events.ScopeBook, uint32(4)),
+			Entry(
+				"a discography pack",
+				ent.DownloadRecordEdges{Artist: &ent.Artist{ID: 5}},
+				events.ScopeArtist,
+				uint32(5),
+			),
+		)
+
+		It("has no owner for a record matching nothing", func() {
+			_, _, ok := cancelledOwner(&ent.DownloadRecord{})
+			Expect(ok).To(BeFalse())
+		})
+
 		It("refuses a held record without touching it", func() {
 			store.EXPECT().
 				FindActiveDownloadRecordByID(mock.Anything, uint32(4)).

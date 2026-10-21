@@ -19771,20 +19771,35 @@ func (_c *MockTx_SetArtistDetails_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // SetArtistMonitor provides a mock function for the type MockTx
-func (_mock *MockTx) SetArtistMonitor(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) error {
+func (_mock *MockTx) SetArtistMonitor(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) (int, int, error) {
 	ret := _mock.Called(ctx, id, monitor, types, now)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetArtistMonitor")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, artist.Monitor, []string, time.Time) error); ok {
+	var r0 int
+	var r1 int
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, artist.Monitor, []string, time.Time) (int, int, error)); ok {
+		return returnFunc(ctx, id, monitor, types, now)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, artist.Monitor, []string, time.Time) int); ok {
 		r0 = returnFunc(ctx, id, monitor, types, now)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, artist.Monitor, []string, time.Time) int); ok {
+		r1 = returnFunc(ctx, id, monitor, types, now)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, artist.Monitor, []string, time.Time) error); ok {
+		r2 = returnFunc(ctx, id, monitor, types, now)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // MockTx_SetArtistMonitor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetArtistMonitor'
@@ -19835,12 +19850,12 @@ func (_c *MockTx_SetArtistMonitor_Call) Run(run func(ctx context.Context, id uin
 	return _c
 }
 
-func (_c *MockTx_SetArtistMonitor_Call) Return(err error) *MockTx_SetArtistMonitor_Call {
-	_c.Call.Return(err)
+func (_c *MockTx_SetArtistMonitor_Call) Return(n int, n1 int, err error) *MockTx_SetArtistMonitor_Call {
+	_c.Call.Return(n, n1, err)
 	return _c
 }
 
-func (_c *MockTx_SetArtistMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) error) *MockTx_SetArtistMonitor_Call {
+func (_c *MockTx_SetArtistMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor artist.Monitor, types []string, now time.Time) (int, int, error)) *MockTx_SetArtistMonitor_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -21814,20 +21829,29 @@ func (_c *MockTx_SetSeriesEdition_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // SetSeriesMonitor provides a mock function for the type MockTx
-func (_mock *MockTx) SetSeriesMonitor(ctx context.Context, id uint32, monitor string, since time.Time) error {
+func (_mock *MockTx) SetSeriesMonitor(ctx context.Context, id uint32, monitor string, since time.Time) (int, error) {
 	ret := _mock.Called(ctx, id, monitor, since)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetSeriesMonitor")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, time.Time) error); ok {
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, time.Time) (int, error)); ok {
+		return returnFunc(ctx, id, monitor, since)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string, time.Time) int); ok {
 		r0 = returnFunc(ctx, id, monitor, since)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string, time.Time) error); ok {
+		r1 = returnFunc(ctx, id, monitor, since)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockTx_SetSeriesMonitor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSeriesMonitor'
@@ -21872,12 +21896,12 @@ func (_c *MockTx_SetSeriesMonitor_Call) Run(run func(ctx context.Context, id uin
 	return _c
 }
 
-func (_c *MockTx_SetSeriesMonitor_Call) Return(err error) *MockTx_SetSeriesMonitor_Call {
-	_c.Call.Return(err)
+func (_c *MockTx_SetSeriesMonitor_Call) Return(n int, err error) *MockTx_SetSeriesMonitor_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockTx_SetSeriesMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor string, since time.Time) error) *MockTx_SetSeriesMonitor_Call {
+func (_c *MockTx_SetSeriesMonitor_Call) RunAndReturn(run func(ctx context.Context, id uint32, monitor string, since time.Time) (int, error)) *MockTx_SetSeriesMonitor_Call {
 	_c.Call.Return(run)
 	return _c
 }

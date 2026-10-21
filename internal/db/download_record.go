@@ -11,6 +11,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
@@ -1617,6 +1618,12 @@ func (db *DB) FindActiveDownloadRecordByID(
 			),
 		).
 		WithMovie().
+		// What a cancellation is filed against when it is not a movie: the
+		// activity row needs the owner, and only its id.
+		WithAnchorEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithBook(func(q *ent.BookQuery) { q.Select(book.FieldID) }).
+		WithArtist(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
 		Only(ctx)
 }
 

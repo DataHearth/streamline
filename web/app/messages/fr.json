@@ -124,6 +124,8 @@
 	"activity_mon_on": "Surveillé",
 	"activity_n_episodes": "{count} épisodes",
 	"activity_one_episode": "1 épisode",
+	"activity_one_volume": "1 tome",
+	"activity_n_volumes": "{count} tomes",
 	"activity_history_help": "Les récupérations, imports et écarts détectés apparaîtront ici.",
 	"activity_imported": "Importé",
 	"activity_importing": "Import en cours",

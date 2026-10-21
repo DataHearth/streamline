@@ -94,14 +94,15 @@ type Store interface {
 	) error
 	// SetArtistMonitor stores the policy and applies it to the existing
 	// albums, all and future only to the listed release types; it never
-	// touches album status.
+	// touches album status. It returns how many albums it monitored and
+	// unmonitored.
 	SetArtistMonitor(
 		ctx context.Context,
 		id uint32,
 		monitor artist.Monitor,
 		types []string,
 		now time.Time,
-	) error
+	) (int, int, error)
 	// ReapplyMonitorPolicies applies every all and future artist's policy to
 	// its albums again, returning how many it monitored and unmonitored.
 	ReapplyMonitorPolicies(
@@ -320,13 +321,14 @@ type Store interface {
 	// SetSeriesQualityProfile writes the series and every one of its volumes.
 	SetSeriesQualityProfile(ctx context.Context, id uint32, profile string) error
 	// SetSeriesMonitor stores the policy and applies it to each volume's ebook
-	// slot; since is the instant "future" is measured against.
+	// slot; since is the instant "future" is measured against. It returns how
+	// many volumes' ebook flag it moved.
 	SetSeriesMonitor(
 		ctx context.Context,
 		id uint32,
 		monitor string,
 		since time.Time,
-	) error
+	) (int, error)
 	// SetSeriesEdition stores the chosen (language, publisher) and re-picks
 	// the ebook slot of every volume without an ebook file.
 	SetSeriesEdition(

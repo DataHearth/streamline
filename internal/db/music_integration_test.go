@@ -257,7 +257,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			func(policy entartist.Monitor, want map[string]bool) {
 				Expect(
 					store.SetArtistMonitor(ctx, a.ID, policy, types, now),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(monitored()).To(Equal(want))
 				Expect(client.Artist.GetX(ctx, a.ID).Monitor).To(Equal(policy))
 			},
@@ -306,8 +306,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		It("monitors nothing under all when no type is listed", func() {
 			Expect(
 				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorAll, nil, now),
-			).
-				To(Succeed())
+			).Error().To(Succeed())
 			Expect(monitored()).To(HaveEach(BeFalse()))
 		})
 
@@ -334,8 +333,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).
-					To(Succeed())
+				).Error().To(Succeed())
 
 				on, off, err := store.ReapplyMonitorPolicies(
 					ctx, []string{"album", "single"}, now,
@@ -365,7 +363,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(store.SetAlbumMonitored(ctx, albumByMBID("past").ID, false)).
 					To(Succeed())
 				Expect(store.SetAlbumMonitored(ctx, albumByMBID("single").ID, true)).
@@ -386,7 +384,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 						types,
 						now,
 					),
-				).To(Succeed())
+				).Error().To(Succeed())
 				Expect(monitored()).To(Equal(map[string]bool{
 					"past": true, "soon": true, "undated": true, "single": false,
 				}))
@@ -404,8 +402,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				SetStatus(album.StatusAvailable).ExecX(ctx)
 			Expect(
 				store.SetArtistMonitor(ctx, a.ID, entartist.MonitorNone, types, now),
-			).
-				To(Succeed())
+			).Error().To(Succeed())
 			Expect(albumByMBID("past").Status).To(Equal(album.StatusAvailable))
 		})
 	})

@@ -124,6 +124,8 @@
 	"activity_mon_on": "Monitored",
 	"activity_n_episodes": "{count} episodes",
 	"activity_one_episode": "1 episode",
+	"activity_one_volume": "1 volume",
+	"activity_n_volumes": "{count} volumes",
 	"activity_history_help": "Grabs, imports, and drift events will appear here.",
 	"activity_imported": "Imported",
 	"activity_importing": "Importing",

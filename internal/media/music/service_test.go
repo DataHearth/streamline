@@ -15,7 +15,9 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -404,6 +406,32 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 				To(BeTrue())
 		})
 
+		It("records one artist row carrying how many albums moved", func() {
+			events.Register(e.client)
+			a, _ := e.seedArtist(
+				"Nirvana",
+				albumSeed{
+					mbid:      "past",
+					title:     "Past",
+					date:      day(-30),
+					monitored: true,
+				},
+				albumSeed{mbid: "soon", title: "Soon", date: day(30)},
+			)
+			Expect(e.svc.SetArtistMonitor(e.ctx, a.ID, "future")).To(Succeed())
+
+			rows := e.client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.TypeMonitoringChanged)).
+				WithArtist().AllX(e.ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Artist.ID).To(Equal(a.ID))
+			Expect(rows[0].Payload).To(And(
+				HaveKeyWithValue("monitor", "future"),
+				HaveKeyWithValue("monitored", true),
+				HaveKeyWithValue("albums", BeNumerically("==", 2)),
+			))
+		})
+
 		It("rejects an unknown policy", func() {
 			a, _ := e.seedArtist("Nirvana")
 			Expect(
@@ -427,6 +455,20 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			Expect(
 				e.client.Artist.GetX(e.ctx, a.ID).Monitor,
 			).To(Equal(artist.MonitorAll))
+		})
+
+		It("records the change against the album", func() {
+			events.Register(e.client)
+			_, albums := e.seedArtist("Nirvana",
+				albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true})
+			Expect(e.svc.SetAlbumMonitored(e.ctx, albums[0].ID, false)).To(Succeed())
+
+			rows := e.client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.TypeMonitoringChanged)).
+				WithAlbum().AllX(e.ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Album.ID).To(Equal(albums[0].ID))
+			Expect(rows[0].Payload).To(HaveKeyWithValue("monitored", false))
 		})
 
 		It("maps a missing album to ErrAlbumNotFound", func() {

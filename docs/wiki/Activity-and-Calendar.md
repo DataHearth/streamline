@@ -36,10 +36,10 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 | `grabbed` | A release was sent to the download client |
 | `download_completed` | The bytes arrived and the import is starting |
 | `download_failed` | That download failed |
-| `download_cancelled` | You cancelled or removed the download, and the title went back to wanted |
+| `download_cancelled` | You cancelled or removed the download — of a movie, episode, album, book or discography pack — and the title went back to wanted (a movie at once, the others on the download monitor's next sweep) |
 | `grab_widened` | More episodes were added to a torrent already in flight |
 | `imported` | A file landed in the library |
-| `import_failed` | A bulk-import entry failed |
+| `import_failed` | A bulk-import entry failed (a movie, series, album or book entry) |
 | `import_held_for_review` | Import verification failed and the download is parked, waiting on your decision |
 | `file_renamed` | A file was moved by a rename pass |
 | `file_removed` | A file left the library — deleted by hand, replaced by an upgrade, or swapped in a bulk-import commit |
@@ -47,14 +47,14 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 | `drift_confirmed` | It stayed missing past the grace window and the row was reverted |
 | `reidentified` | A title was re-pointed at different metadata |
 | `metadata_refreshed` | A provider refresh actually changed something — a new title, or episodes added or pruned |
-| `monitoring_changed` | Monitoring was turned on or off |
+| `monitoring_changed` | Monitoring was turned on or off, or an artist or book series got a new monitor policy |
 | `request_approved` | Someone's request was approved and the title was added |
 | `transcode_completed` / `transcode_failed` / `transcode_rejected` | A transcode finished, gave up, or produced output that failed verification |
 | `searched` | A search-and-grab pass ran |
 
 Every event names exactly one owner — `movie`, `episode`, `series`, `artist`, `album`, `book` or `book_series`. Episode rows render as *Show · S01E03*, album rows as *Artist · Album*, a series volume as *Series · Vol. 3*, and a book row names the slot (ebook or audiobook) it was about.
 
-**Music and books follow the same rules one level up.** An album is the unit a grab and an import cover, so importing a twelve-track album is one `imported` row on the album (with the track count), never twelve, and replacing an album's or an audiobook's files is one `file_removed` row. A discography pack is filed against its artist; everything else lands on the album. Adding an artist is one `added` row — the albums it seeds are not each an arrival — and adding a book series is one row for the series, not one per volume. An artist's History tab shows its own rows and every album's; a book series' shows its own and every volume's. Automatic and *Search now* passes write one `searched` row per album, per book slot, and per series-wide pass.
+**Music and books follow the same rules one level up.** An album is the unit a grab and an import cover, so importing a twelve-track album is one `imported` row on the album (with the track count), never twelve, and replacing an album's or an audiobook's files is one `file_removed` row. A discography pack is filed against its artist; everything else lands on the album. Adding an artist is one `added` row — the albums it seeds are not each an arrival — and adding a book series is one row for the series, not one per volume. An artist's History tab shows its own rows and every album's; a book series' shows its own and every volume's. Automatic and *Search now* passes write one `searched` row per album, per book slot, and per series-wide pass. Changing an artist's monitor policy is one row saying how many albums it moved — *Boards of Canada · 13 albums · Monitored* — and a book series' policy one row with its volume count; a single album or book toggle gets its own row, and a patch that changes nothing writes none.
 
 **`searched` is recorded once per search, not once per episode.** Asking Streamline to search a series writes one event for the whole pass, with the seasons it touched, how many episodes it searched and how many it grabbed in the payload. A pass over one season reads as *Show · Season 3*. Without that, a `tv-missing-search` tick over a large library would write thousands of rows an hour.
 

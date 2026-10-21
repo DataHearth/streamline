@@ -10,6 +10,8 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/importscanalbum"
+	"github.com/datahearth/streamline/ent/importscanbook"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediafile"
@@ -75,6 +77,8 @@ func Register(client *ent.Client) {
 	client.BookSeries.Use(bookSeriesHook())
 	client.ImportScanFile.Use(importScanFileHook())
 	client.ImportScanShow.Use(importScanShowHook())
+	client.ImportScanAlbum.Use(importScanAlbumHook())
+	client.ImportScanBook.Use(importScanBookHook())
 }
 
 func downloadRecordHook() ent.Hook {
@@ -293,6 +297,131 @@ func importScanShowHook() ent.Hook {
 			},
 		)
 	}
+}
+
+// importScanAlbumHook is the music twin of importScanShowHook: a failed album
+// entry is recorded against the album it was meant to land in — the one the
+// commit created or the library's own — and a failure that resolved none has
+// nowhere to hang.
+func importScanAlbumHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				ism, ok := m.(*ent.ImportScanAlbumMutation)
+				if !ok {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				if !ism.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
+					return val, nil
+				}
+				outcome, changed := ism.Outcome()
+				if !changed || outcome != importscanalbum.OutcomeFailed {
+					return val, nil
+				}
+				c := ism.Client()
+				ids, err := ism.IDs(ctx)
+				if err != nil {
+					auxFailure(ctx, "import_scan_album", err)
+					return val, nil
+				}
+				if len(ids) == 0 {
+					return val, nil
+				}
+				row, err := c.ImportScanAlbum.Query().
+					Where(importscanalbum.IDIn(ids...)).
+					First(ctx)
+				if err != nil {
+					auxFailure(ctx, "import_scan_album", err)
+					return val, nil
+				}
+				albumID := firstID(row.CreatedAlbumID, row.ExistingAlbumID)
+				if albumID == 0 {
+					return val, nil
+				}
+				p := map[string]any{"path": row.FolderPath, "source": "bulk_import"}
+				if row.OutcomeMessage != "" {
+					p["error"] = row.OutcomeMessage
+				}
+				recordAux(ctx, "import_scan_album", c, TypeImportFailed,
+					ScopeAlbum, albumID, p)
+				return val, nil
+			},
+		)
+	}
+}
+
+// importScanBookHook records a failed book entry against the book it was
+// meant to land in, with the slot it was for.
+func importScanBookHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				ibm, ok := m.(*ent.ImportScanBookMutation)
+				if !ok {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				if !ibm.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
+					return val, nil
+				}
+				outcome, changed := ibm.Outcome()
+				if !changed || outcome != importscanbook.OutcomeFailed {
+					return val, nil
+				}
+				c := ibm.Client()
+				ids, err := ibm.IDs(ctx)
+				if err != nil {
+					auxFailure(ctx, "import_scan_book", err)
+					return val, nil
+				}
+				if len(ids) == 0 {
+					return val, nil
+				}
+				row, err := c.ImportScanBook.Query().
+					Where(importscanbook.IDIn(ids...)).
+					First(ctx)
+				if err != nil {
+					auxFailure(ctx, "import_scan_book", err)
+					return val, nil
+				}
+				bookID := firstID(row.CreatedBookID, row.ExistingBookID)
+				if bookID == 0 {
+					return val, nil
+				}
+				p := map[string]any{
+					"book_kind": string(row.Slot),
+					"source":    "bulk_import",
+				}
+				if len(row.FilePaths) > 0 {
+					p["path"] = row.FilePaths[0]
+				}
+				if row.OutcomeMessage != "" {
+					p["error"] = row.OutcomeMessage
+				}
+				recordAux(ctx, "import_scan_book", c, TypeImportFailed,
+					ScopeBook, bookID, p)
+				return val, nil
+			},
+		)
+	}
+}
+
+// firstID is the first set, non-zero id of a scan row's created-then-existing
+// pair.
+func firstID(ids ...*uint32) uint32 {
+	for _, id := range ids {
+		if id != nil && *id != 0 {
+			return *id
+		}
+	}
+	return 0
 }
 
 func downloadCreatePayload(m *ent.DownloadRecordMutation) map[string]any {

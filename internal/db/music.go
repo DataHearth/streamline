@@ -803,41 +803,42 @@ func (db *DB) SetArtistDetails(
 // SetArtistMonitor stores the policy and applies it to the artist's existing
 // albums in one transaction (applyMonitorPolicy), clearing every album's
 // monitor_pinned: choosing a policy is starting over. It never touches album
-// status.
+// status, and returns how many albums it monitored and unmonitored.
 func (db *DB) SetArtistMonitor(
 	ctx context.Context,
 	id uint32,
 	monitor artist.Monitor,
 	types []string,
 	now time.Time,
-) error {
+) (int, int, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	if err := tx.Artist.UpdateOneID(id).SetMonitor(monitor).Exec(ctx); err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
 	owned := album.HasArtistWith(artist.IDEQ(id))
 	if err := tx.Album.Update().
 		Where(owned, album.MonitorPinned(true)).
 		SetMonitorPinned(false).Exec(ctx); err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
-	if _, _, err := applyMonitorPolicy(
+	on, off, err := applyMonitorPolicy(
 		ctx,
 		tx.Client(),
 		owned,
 		monitor,
 		types,
 		now,
-	); err != nil {
+	)
+	if err != nil {
 		tx.Rollback()
-		return err
+		return 0, 0, err
 	}
-	return tx.Commit()
+	return on, off, tx.Commit()
 }
 
 // ReapplyMonitorPolicies applies every artist's own all or future policy to

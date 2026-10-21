@@ -23,6 +23,7 @@ import {
 	VideoOff,
 } from "@lucide/svelte";
 import { formatLabel, tracksCount, volumeLabel } from "./music-books";
+import { NOUN_ALBUM } from "./nouns";
 import { m as i18n } from "./paraglide/messages.js";
 import type { ActivityEvent, ActivityType } from "./types";
 
@@ -269,16 +270,29 @@ export const EVENT_MARKS: Record<ActivityType, Mark> = {
  * The direction is the point — "Monitoring changed" says something happened
  * without saying which way, and the eye glyph is the same either way. A season
  * or series toggle is one row for a whole cascade, so it also carries how many
- * episodes moved.
+ * episodes moved — as an artist's policy change carries its albums and a book
+ * series' its volumes.
  */
 export function monitoringDetail(event: ActivityEvent): string {
 	if (event.type !== "monitoring_changed") return "";
 	const state = event.payload?.monitored
 		? i18n.activity_mon_on()
 		: i18n.activity_mon_off();
-	const n = event.payload?.episodes;
-	if (typeof n !== "number" || n === 0) return state;
-	const count =
-		n === 1 ? i18n.activity_one_episode() : i18n.activity_n_episodes({ count: n });
-	return `${count} · ${state}`;
+	return joinDot([cascadeCount(event.payload), state]) ?? state;
+}
+
+// How much one monitoring row moved: a series' episodes, an artist's albums
+// or a book series' volumes. Absent or zero says nothing.
+function cascadeCount(payload: Record<string, unknown> | undefined): string | undefined {
+	const n = (key: string) => {
+		const v = payload?.[key];
+		return typeof v === "number" && v > 0 ? v : undefined;
+	};
+	const episodes = n("episodes");
+	if (episodes) return episodes === 1 ? i18n.activity_one_episode() : i18n.activity_n_episodes({ count: episodes });
+	const albums = n("albums");
+	if (albums) return NOUN_ALBUM.count(albums);
+	const volumes = n("volumes");
+	if (volumes) return volumes === 1 ? i18n.activity_one_volume() : i18n.activity_n_volumes({ count: volumes });
+	return undefined;
 }

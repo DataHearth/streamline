@@ -31,9 +31,10 @@ func main() {
 	}
 
 	// rod's auto-downloaded chromium cannot run on NixOS; the devshell
-	// exports a working one.
-	l := launcher.New().Headless(true)
-	if bin := os.Getenv("CHROME_PATH"); bin != "" {
+	// exports a working one. A cloud container ships Playwright's instead,
+	// off PATH, and runs as root, where Chromium refuses to start sandboxed.
+	l := launcher.New().Headless(true).NoSandbox(os.Geteuid() == 0)
+	if bin := chromeBin(); bin != "" {
 		l = l.Bin(bin)
 	}
 	defer l.Kill()
@@ -106,4 +107,27 @@ func main() {
 		}
 		mu.Unlock()
 	}
+}
+
+// chromeBin is CHROME_PATH, else a browser on PATH, else a Chromium under
+// PLAYWRIGHT_BROWSERS_PATH; empty lets rod download its own.
+func chromeBin() string {
+	if bin := os.Getenv("CHROME_PATH"); bin != "" {
+		return bin
+	}
+	if bin, ok := launcher.LookPath(); ok {
+		return bin
+	}
+	if dir := os.Getenv("PLAYWRIGHT_BROWSERS_PATH"); dir != "" {
+		for _, pattern := range []string{
+			"chromium*/chrome-linux*/chrome",
+			"chromium*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+			"chromium*/chrome-win*/chrome.exe",
+		} {
+			if m, _ := filepath.Glob(filepath.Join(dir, pattern)); len(m) > 0 {
+				return m[0]
+			}
+		}
+	}
+	return ""
 }

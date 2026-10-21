@@ -32,25 +32,29 @@ The fake tracker must not listen on loopback. Its magnets announce to the
 address it listens on, and the builtin engine refuses a tracker on loopback or
 link-local (`internal/bittorrent/egress.go`), so on `127.0.0.1` every torrent
 sits at "fetching" with no peers and nothing is ever downloaded. Prefer the
-docker bridge, which only this machine can reach; otherwise take the address the
-default route leaves from.
+docker bridge, which only this machine can reach; otherwise ask the tracker
+itself (`-print-host`): it names the address the default route leaves from, or
+the first non-loopback, non-link-local one, on Linux, macOS and Windows alike,
+with no `ip`/`ifconfig` needed. The tracker also needs no IPv6: its seeding
+client skips the IPv6 listeners on a host that has none.
 
 ```sh
-mkdir -p "${TMPDIR:-/tmp}/streamline"; S=$(mktemp -d "${TMPDIR:-/tmp}/streamline/verify.XXXXXX"); mkdir -p "$S"/{data,downloads,movies,series}
+mkdir -p "${TMPDIR:-/tmp}/streamline"; S=$(mktemp -d "${TMPDIR:-/tmp}/streamline/verify.XXXXXX"); mkdir -p "$S"/{data,downloads,movies,series,music,books,audiobooks}
 PORT=18080; while curl -s -m1 -o /dev/null "127.0.0.1:$PORT"; do PORT=$((PORT+1)); done
 TRACKER_HOST=$(ip -4 -o addr show docker0 2>/dev/null | awk '{sub("/.*", "", $4); print $4}')
-[ -n "$TRACKER_HOST" ] || TRACKER_HOST=$(ip -4 route get 1.1.1.1 | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i+1)}')
+[ -n "$TRACKER_HOST" ] || TRACKER_HOST=$(go run ./e2e/faketracker -print-host)
 TRACKER=$((PORT+1)); while curl -s -m1 -o /dev/null "$TRACKER_HOST:$TRACKER"; do TRACKER=$((TRACKER+1)); done
 TMDB=${STREAMLINE_METADATA__TMDB_API_KEY:-$(sed -n 's/^ *tmdb_api_key: *//p' tmp/config.yaml 2>/dev/null | head -1)}
 TVDB=${STREAMLINE_METADATA__TVDB_API_KEY:-$(sed -n 's/^ *tvdb_api_key: *//p' tmp/config.yaml 2>/dev/null | head -1)}
+HARDCOVER=${STREAMLINE_METADATA__HARDCOVER_API_KEY:-$(sed -n 's/^ *hardcover_api_key: *//p' tmp/config.yaml 2>/dev/null | head -1)}
 cat > "$S/config.yaml" <<EOF
 data_dir: $S/data
 server: {host: 127.0.0.1, port: $PORT}
 auth:
   session_secret: verify-session-secret-0123456789abcdef
   seed_admin: {email: verify@streamline.local, password: Verify-Passw0rd!}
-library: {download_path: $S/downloads, movie_path: $S/movies, series_path: $S/series}
-metadata: {tmdb_api_key: "$TMDB", tvdb_api_key: "$TVDB"}
+library: {download_path: $S/downloads, movie_path: $S/movies, series_path: $S/series, music_path: $S/music, ebook_path: $S/books, audiobook_path: $S/audiobooks}
+metadata: {tmdb_api_key: "$TMDB", tvdb_api_key: "$TVDB", hardcover_api_key: "$HARDCOVER"}
 download_clients:
   - {name: builtin, client_type: builtin, enabled: true, download_dir: $S/downloads}
 indexers:
@@ -73,7 +77,11 @@ the answer is in `$S/server.log`.
 No TMDB/TVDB key resolved? The instance runs, but adding or refreshing a title
 fails. Say so in the report instead of passing a check that never ran. A cloud
 environment supplies the keys as `STREAMLINE_METADATA__TMDB_API_KEY` /
-`STREAMLINE_METADATA__TVDB_API_KEY` secrets.
+`STREAMLINE_METADATA__TVDB_API_KEY` secrets. Books need a Hardcover key the
+same way (`STREAMLINE_METADATA__HARDCOVER_API_KEY`); without one every book
+call answers 503. Where the session's proxy injects credentials for
+`api.hardcover.app`, any non-empty placeholder will do, since the proxy
+replaces the header.
 
 ## 3. Drive the change
 

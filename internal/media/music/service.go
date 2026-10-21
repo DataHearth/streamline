@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -390,12 +391,27 @@ func (s *Service) SetArtistMonitor(
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	return otelx.RecordSpanError(
-		span,
-		notFound(s.db.SetArtistMonitor(
-			ctx, id, policy, config.Get().Library.MusicMonitoredTypes, time.Now(),
-		)),
+	on, off, err := s.db.SetArtistMonitor(
+		ctx, id, policy, config.Get().Library.MusicMonitoredTypes, time.Now(),
 	)
+	if err != nil {
+		return otelx.RecordSpanError(span, notFound(err))
+	}
+	// One artist-scoped row for the whole re-apply, carrying how many albums
+	// it moved — the series twin records one row with its episode count, not
+	// one per episode.
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeArtist, id,
+		map[string]any{
+			"monitor":   string(policy),
+			"monitored": policy != artist.MonitorNone,
+			"albums":    on + off,
+		},
+	); err != nil {
+		slog.WarnContext(ctx, "music: record monitoring event failed",
+			"artist.id", id, "error", err)
+	}
+	return nil
 }
 
 // ApplyMonitoredTypes applies the current library.music_monitored_types to
@@ -432,7 +448,17 @@ func (s *Service) SetAlbumMonitored(ctx context.Context, id uint32, m bool) erro
 	if ent.IsNotFound(err) {
 		err = ErrAlbumNotFound
 	}
-	return otelx.RecordSpanError(span, err)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeMonitoringChanged, events.ScopeAlbum, id,
+		map[string]any{"monitored": m},
+	); err != nil {
+		slog.WarnContext(ctx, "music: record monitoring event failed",
+			"album.id", id, "error", err)
+	}
+	return nil
 }
 
 // Delete removes the artist; albums, tracks and media-file rows cascade in the

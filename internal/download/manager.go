@@ -612,15 +612,40 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 		if err := d.db.RevertMovieToWantedIfNoFile(ctx, m.ID); err != nil {
 			return fmt.Errorf("revert movie: %w", err)
 		}
+	}
+	if scope, id, ok := cancelledOwner(rec); ok {
+		p := map[string]any{"release_title": rec.Title}
+		if rec.BookKind != "" {
+			p["book_kind"] = string(rec.BookKind)
+		}
 		if err := events.Record(
-			ctx, nil, events.TypeDownloadCancelled, events.ScopeMovie, m.ID,
-			map[string]any{"release_title": rec.Title},
+			ctx, nil, events.TypeDownloadCancelled, scope, id, p,
 		); err != nil {
 			slog.WarnContext(ctx, "record download cancellation event failed",
-				"movie.id", m.ID, "error", err)
+				"download_record.id", rec.ID, "error", err)
 		}
 	}
 	return nil
+}
+
+// cancelledOwner names what a cancelled record's activity row is filed
+// against, in the order the download-record hooks resolve owners: the movie,
+// the anchor episode, the album, the book, then the artist of a discography
+// pack. An adoption proposal matching nothing has none.
+func cancelledOwner(rec *ent.DownloadRecord) (events.Scope, uint32, bool) {
+	switch e := rec.Edges; {
+	case e.Movie != nil:
+		return events.ScopeMovie, e.Movie.ID, true
+	case e.AnchorEpisode != nil:
+		return events.ScopeEpisode, e.AnchorEpisode.ID, true
+	case e.Album != nil:
+		return events.ScopeAlbum, e.Album.ID, true
+	case e.Book != nil:
+		return events.ScopeBook, e.Book.ID, true
+	case e.Artist != nil:
+		return events.ScopeArtist, e.Artist.ID, true
+	}
+	return 0, 0, false
 }
 
 func (d *download) PauseQueueItem(ctx context.Context, recordID uint32) error {
