@@ -61,6 +61,9 @@ const BY_CODE: Record<string, () => string> = {
 	// room to say who fixes the key, the caller checks hardcoverIssue() first.
 	hardcover_key_rejected: i18n.books_lookup_key_rejected,
 	hardcover_not_configured: i18n.err_hardcover_not_configured,
+	// A release's file list, read before grabbing it.
+	files_unavailable: i18n.release_files_magnet,
+	torrent_unreadable: i18n.release_files_failed,
 };
 
 function byStatus(status: number): string {

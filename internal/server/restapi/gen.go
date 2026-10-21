@@ -7498,6 +7498,40 @@ type ReidentifyResult struct {
 	Unmatched *[]string `json:"unmatched,omitempty"`
 }
 
+// ReleaseFile defines model for ReleaseFile.
+type ReleaseFile struct {
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+
+	// TrackId The track the file's name points at; absent for none.
+	TrackId *uint32 `json:"track_id,omitempty"`
+}
+
+// ReleaseFiles defines model for ReleaseFiles.
+type ReleaseFiles struct {
+	Files []ReleaseFile `json:"files"`
+
+	// Tracks Every track of the album, in disc and position order.
+	Tracks []ReleaseTrack `json:"tracks"`
+}
+
+// ReleaseTrack defines model for ReleaseTrack.
+type ReleaseTrack struct {
+	Disc uint8 `json:"disc"`
+
+	// HasFile The track already holds a file in the library.
+	HasFile bool   `json:"has_file"`
+	Id      uint32 `json:"id"`
+
+	// InRelease A file of the release is named for this track.
+	InRelease bool `json:"in_release"`
+
+	// Number Position on the disc.
+	Number uint16 `json:"number"`
+	Title  string `json:"title"`
+}
+
 // RenameOperation defines model for RenameOperation.
 type RenameOperation struct {
 	From        string `json:"from"`
@@ -10130,6 +10164,9 @@ type PatchMusicAlbumJSONRequestBody = PatchMusicAlbumRequest
 // GrabMusicAlbumReleaseJSONRequestBody defines body for GrabMusicAlbumRelease for application/json ContentType.
 type GrabMusicAlbumReleaseJSONRequestBody = SearchResult
 
+// GetMusicAlbumReleaseFilesJSONRequestBody defines body for GetMusicAlbumReleaseFiles for application/json ContentType.
+type GetMusicAlbumReleaseFilesJSONRequestBody = SearchResult
+
 // AddMusicArtistJSONRequestBody defines body for AddMusicArtist for application/json ContentType.
 type AddMusicArtistJSONRequestBody = AddMusicArtistRequest
 
@@ -10742,6 +10779,9 @@ type ServerInterface interface {
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+	// (POST /music/albums/{id}/release-files)
+	GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -11901,6 +11941,12 @@ func (_ Unimplemented) PatchMusicAlbum(w http.ResponseWriter, r *http.Request, i
 // GrabMusicAlbumRelease Grab a specific release for this album
 // (POST /music/albums/{id}/grab)
 func (_ Unimplemented) GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+// (POST /music/albums/{id}/release-files)
+func (_ Unimplemented) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -16599,6 +16645,32 @@ func (siw *ServerInterfaceWrapper) GrabMusicAlbumRelease(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicAlbumReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicAlbumReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SearchMusicAlbumReleases operation middleware
 func (siw *ServerInterfaceWrapper) SearchMusicAlbumReleases(w http.ResponseWriter, r *http.Request) {
 
@@ -19883,6 +19955,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/grab", wrapper.GrabMusicAlbumRelease)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/albums/{id}/release-files", wrapper.GetMusicAlbumReleaseFiles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/search-now", wrapper.SearchMusicAlbumNow)
@@ -30423,6 +30498,101 @@ func (response GrabMusicAlbumRelease500JSONResponse) VisitGrabMusicAlbumReleaseR
 	return err
 }
 
+type GetMusicAlbumReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetMusicAlbumReleaseFilesJSONRequestBody
+}
+
+type GetMusicAlbumReleaseFilesResponseObject interface {
+	VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetMusicAlbumReleaseFiles200JSONResponse ReleaseFiles
+
+func (response GetMusicAlbumReleaseFiles200JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles403JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles404JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles413JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetMusicAlbumReleaseFiles422JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicAlbumReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicAlbumReleaseFiles500JSONResponse) VisitGetMusicAlbumReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchMusicAlbumReleasesRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -37205,6 +37375,9 @@ type StrictServerInterface interface {
 	// GrabMusicAlbumRelease Grab a specific release for this album
 	// (POST /music/albums/{id}/grab)
 	GrabMusicAlbumRelease(ctx context.Context, request GrabMusicAlbumReleaseRequestObject) (GrabMusicAlbumReleaseResponseObject, error)
+	// GetMusicAlbumReleaseFiles List a release's files against the album's tracks, before grabbing it
+	// (POST /music/albums/{id}/release-files)
+	GetMusicAlbumReleaseFiles(ctx context.Context, request GetMusicAlbumReleaseFilesRequestObject) (GetMusicAlbumReleaseFilesResponseObject, error)
 	// SearchMusicAlbumReleases Search indexers for one album's releases
 	// (POST /music/albums/{id}/search)
 	SearchMusicAlbumReleases(ctx context.Context, request SearchMusicAlbumReleasesRequestObject) (SearchMusicAlbumReleasesResponseObject, error)
@@ -41650,6 +41823,39 @@ func (sh *strictHandler) GrabMusicAlbumRelease(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GrabMusicAlbumReleaseResponseObject); ok {
 		if err := validResponse.VisitGrabMusicAlbumReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicAlbumReleaseFiles operation middleware
+func (sh *strictHandler) GetMusicAlbumReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicAlbumReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetMusicAlbumReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicAlbumReleaseFiles(ctx, request.(GetMusicAlbumReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicAlbumReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicAlbumReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetMusicAlbumReleaseFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

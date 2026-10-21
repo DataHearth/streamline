@@ -37,6 +37,13 @@
 	let base = $derived(release ? `/music/albums/${release.id}` : `/music/artists/${artist.id}`);
 	// Tracks already on disk in the scope: above zero, a grab asks first.
 	let onDisk = $derived(release ? release.tracks_have : out.reduce((n, r) => n + r.tracks_have, 0));
+	// Tracks still without a file in the scope. A discography pack fills the
+	// albums it is linked to, so the artist scope counts the monitored ones.
+	let missing = $derived(
+		release
+			? release.track_count - release.tracks_have
+			: out.filter((r) => r.monitored).reduce((n, r) => n + r.track_count - r.tracks_have, 0),
+	);
 </script>
 
 <Modal {open} title={i18n.manual_search_scope({ scope: artist.name })} size="4xl" {onClose}>
@@ -52,6 +59,8 @@
 			grabPath={`${base}/grab`}
 			queryKey={["releases", "music", base]}
 			existingCount={onDisk}
+			missingCount={Math.max(0, missing)}
+			filesPath={release ? `${base}/release-files` : undefined}
 			enabled={open}
 			onGrabbed={onClose}
 			media="music"

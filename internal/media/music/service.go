@@ -95,6 +95,11 @@ type Manager interface {
 		result indexer.SearchResult,
 		replace bool,
 	) error
+	AlbumReleaseFiles(
+		ctx context.Context,
+		albumID uint32,
+		result indexer.SearchResult,
+	) (*ReleaseFilesView, error)
 	SearchAlbumNow(ctx context.Context, albumID uint32) error
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error

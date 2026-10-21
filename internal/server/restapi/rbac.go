@@ -208,6 +208,7 @@ var minRole = map[string]string{
 	"PatchMusicTrack":           roleMember,
 	"SearchMusicAlbumReleases":  roleMember,
 	"GrabMusicAlbumRelease":     roleMember,
+	"GetMusicAlbumReleaseFiles": roleMember,
 	"CreateMusicQualityProfile": roleAdmin,
 	"UpdateMusicQualityProfile": roleAdmin,
 	"DeleteMusicQualityProfile": roleAdmin,

@@ -307,6 +307,12 @@ type Downloader interface {
 	CancelQueueItem(ctx context.Context, recordID uint32) error
 	PauseQueueItem(ctx context.Context, recordID uint32) error
 	ResumeQueueItem(ctx context.Context, recordID uint32) error
+	// ReleaseFiles lists the files of a release's .torrent without grabbing
+	// it; ErrFileListUnavailable for a magnet.
+	ReleaseFiles(
+		ctx context.Context,
+		result indexer.SearchResult,
+	) ([]ReleaseFile, error)
 }
 
 const (

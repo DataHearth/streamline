@@ -837,3 +837,16 @@ export const bookRequest = (x: BookProfileValues) => ({
 		min_bitrate: x.min_bitrate,
 	},
 });
+
+// A release's torrent read against an album before grabbing it
+// (POST /music/albums/{id}/release-files). Matched by file name, so a preview.
+export type ReleaseFile = { path: string; size: number; track_id?: number };
+export type ReleaseTrack = {
+	id: number;
+	disc: number;
+	number: number;
+	title: string;
+	has_file: boolean;
+	in_release: boolean;
+};
+export type ReleaseFiles = { files: ReleaseFile[]; tracks: ReleaseTrack[] };

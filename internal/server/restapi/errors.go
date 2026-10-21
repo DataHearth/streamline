@@ -196,3 +196,22 @@ func errSendFailed(err error) BadGatewayJSONResponse {
 	code := codeSendFailed
 	return BadGatewayJSONResponse{Message: err.Error(), Code: &code}
 }
+
+// codeFilesUnavailable marks a 422 raised because a release is a magnet,
+// whose file list only peers hold; codeTorrentUnreadable one raised because
+// the indexer did not hand a readable .torrent over. The request is fine
+// either way, and the SPA words each in the reader's language.
+const (
+	codeFilesUnavailable  = "files_unavailable"
+	codeTorrentUnreadable = "torrent_unreadable"
+)
+
+func errFilesUnavailable(msg string) UnprocessableEntityJSONResponse {
+	code := codeFilesUnavailable
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}
+
+func errTorrentUnreadable(msg string) UnprocessableEntityJSONResponse {
+	code := codeTorrentUnreadable
+	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
+}

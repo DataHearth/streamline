@@ -1571,6 +1571,44 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/albums/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getMusicAlbumReleaseFiles
+      summary: List a release's files against the album's tracks, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each audio file carries the `track_id` its **name** points at (disc folder or
+         prefix, track number, then a loose title), and every track of the album says whether it
+         already holds a file and whether the release seems to carry it. The import itself
+         matches by tags, so this is a preview: a file named for no track may still fill one.
+         The body is an item of the search response, unchanged. A magnet has no file list until
+         peers supply it and answers 422 with `code: files_unavailable`; an indexer that does
+         not hand a readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link
+         outside the configured indexers answers 422 with `code: grab_rejected`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabAlbumRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the album's tracks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReleaseFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/albums/{id}/search-now:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -10364,6 +10402,58 @@ components:
             reports it, and only when non-zero: it tells an operator that an
             empty or short list is not the whole story, and that the season or
             whole-series scope is where those releases are grabbable.
+
+    ReleaseFiles:
+      type: object
+      required: [files, tracks]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseFile"
+        tracks:
+          type: array
+          description: Every track of the album, in disc and position order.
+          items:
+            $ref: "#/components/schemas/ReleaseTrack"
+
+    ReleaseFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        track_id:
+          type: integer
+          x-go-type: uint32
+          description: The track the file's name points at; absent for none.
+
+    ReleaseTrack:
+      type: object
+      required: [id, disc, number, title, has_file, in_release]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        disc:
+          type: integer
+          x-go-type: uint8
+        number:
+          type: integer
+          x-go-type: uint16
+          description: Position on the disc.
+        title:
+          type: string
+        has_file:
+          type: boolean
+          description: The track already holds a file in the library.
+        in_release:
+          type: boolean
+          description: A file of the release is named for this track.
 
     SearchResult:
       type: object

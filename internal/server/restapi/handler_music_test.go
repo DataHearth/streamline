@@ -1449,6 +1449,104 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			})
 		})
 
+		Describe("GetMusicAlbumReleaseFiles", func() {
+			peek := func(body string) *http.Response {
+				GinkgoHelper()
+				return send(
+					http.MethodPost,
+					"/api/v1/music/albums/3/release-files",
+					app.memberKey,
+					body,
+				)
+			}
+
+			It("answers the files mapped onto the tracks", func() {
+				app.music.EXPECT().
+					AlbumReleaseFiles(mock.Anything, uint32(3), matchesRelease).
+					Return(&music.ReleaseFilesView{
+						Files: []music.ReleaseFileView{
+							{Path: "A/02 - Two.flac", Size: 20, TrackID: 12},
+							{Path: "A/cover.jpg", Size: 1},
+						},
+						Tracks: []music.ReleaseTrackView{
+							{
+								ID:       11,
+								Disc:     1,
+								Position: 1,
+								Title:    "One",
+								HasFile:  true,
+							},
+							{
+								ID:        12,
+								Disc:      1,
+								Position:  2,
+								Title:     "Two",
+								InRelease: true,
+							},
+						},
+					}, nil).
+					Once()
+				resp := peek(grabBody(sealReleaseLink("magnet:?xt=urn:btih:aaaa")))
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body ReleaseFiles
+				decodeInto(resp, &body)
+				Expect(body.Files).To(HaveLen(2))
+				Expect(body.Files[0].TrackId).To(HaveValue(Equal(uint32(12))))
+				Expect(body.Files[1].TrackId).To(BeNil())
+				Expect(body.Tracks).To(Equal([]ReleaseTrack{
+					{Id: 11, Disc: 1, Number: 1, Title: "One", HasFile: true},
+					{Id: 12, Disc: 1, Number: 2, Title: "Two", InRelease: true},
+				}))
+			})
+
+			DescribeTable(
+				"maps a file list it cannot read",
+				func(err error, wantCode string) {
+					app.music.EXPECT().
+						AlbumReleaseFiles(mock.Anything, uint32(3), mock.Anything).
+						Return(nil, err).
+						Once()
+					resp := peek(grabBody("magnet:?xt=urn:btih:aaaa"))
+					Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+					_, code := decode(resp)
+					Expect(code).To(Equal(wantCode))
+				},
+				Entry(
+					"a magnet",
+					download.ErrFileListUnavailable,
+					"files_unavailable",
+				),
+				Entry("an indexer that refused",
+					errors.New("indexer returned status 404"), "torrent_unreadable"),
+				Entry(
+					"an untrusted source",
+					download.ErrUntrustedSource,
+					"grab_rejected",
+				),
+			)
+
+			It("404s for an unknown album", func() {
+				app.music.EXPECT().
+					AlbumReleaseFiles(mock.Anything, uint32(3), mock.Anything).
+					Return(nil, music.ErrAlbumNotFound).
+					Once()
+				resp := peek(grabBody("magnet:?xt=urn:btih:aaaa"))
+				Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+				resp.Body.Close()
+			})
+
+			It("answers 403 to a request-only caller", func() {
+				resp := send(
+					http.MethodPost,
+					"/api/v1/music/albums/3/release-files",
+					app.requestOnlyKey,
+					grabBody("magnet:?xt=urn:btih:aaaa"),
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+				resp.Body.Close()
+			})
+		})
+
 		Describe("GrabMusicArtistRelease", func() {
 			grab := func(body string) *http.Response {
 				GinkgoHelper()
