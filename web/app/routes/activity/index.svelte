@@ -44,6 +44,9 @@
 	import PendingRow from "@components/pending/PendingRow.svelte";
 	import EventList from "@components/activity/EventList.svelte";
 	import DownloadBulkActions from "@components/activity/DownloadBulkActions.svelte";
+	import DownloadConfirmDialog, {
+		type DownloadConfirm,
+	} from "@components/activity/DownloadConfirmDialog.svelte";
 	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -377,6 +380,14 @@
 	// the snapshot it opened with would show a frozen speed and percentage.
 	let detailItem = $derived<QueueEntry | HistoryEntry | null>(
 		detailId === null ? null : (source.find((i) => i.id === detailId) ?? null),
+	);
+	// A swiped row's cancel / retry / remove asks first, in the sheet's words.
+	// By id for the same reason as the sheet: the queue repolls every 2 s.
+	let swipeConfirm = $state<{ id: number; kind: DownloadConfirm } | null>(null);
+	let swipeItem = $derived(
+		swipeConfirm === null
+			? null
+			: (source.find((i) => i.id === swipeConfirm?.id) ?? null),
 	);
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
 	let clearableCount = $derived(
@@ -717,6 +728,11 @@
 		onBeginSelect={auth.isAdmin ? (id) => selection.begin(id) : undefined}
 		onOpen={(item) => (detailId = item.id)}
 		onResolve={auth.isAdmin ? (item) => (resolveId = item.id) : undefined}
+		onPause={auth.isAdmin ? (id) => pause.mutate(id) : undefined}
+		onResume={auth.isAdmin ? (id) => resume.mutate(id) : undefined}
+		onConfirm={auth.isAdmin
+			? (item, kind) => (swipeConfirm = { id: item.id, kind })
+			: undefined}
 	/>
 
 	{#if auth.isAdmin}
@@ -759,6 +775,18 @@
 	onResolve={(action) =>
 		resolveId !== null && resolve.mutate({ id: resolveId, action })}
 	onClose={() => (resolveId = null)}
+/>
+
+<DownloadConfirmDialog
+	kind={swipeConfirm?.kind ?? null}
+	item={swipeItem}
+	onClose={() => (swipeConfirm = null)}
+	onConfirm={(kind, id) =>
+		kind === "cancel"
+			? cancel.mutate(id)
+			: kind === "retry"
+				? retryImport.mutate(id)
+				: removeHistory.mutate(id)}
 />
 
 <ActivityDetailSheet

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { parts } from "@lib/message-parts";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
@@ -18,8 +17,7 @@
 	} from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
-	import Dialog from "@components/modals/Dialog.svelte";
-	import Checkbox from "@components/forms/Checkbox.svelte";
+	import TorrentRemoveDialog from "./TorrentRemoveDialog.svelte";
 	import TorrentFilesTab from "./TorrentFilesTab.svelte";
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
@@ -39,9 +37,6 @@
 		TorrentDetails,
 		TorrentFilePriority,
 	} from "@lib/types";
-
-	const removeBody = parts(i18n.torrent_remove_body, ["name"]);
-	const deleteFilesBody = parts(i18n.torrent_delete_files_body, ["action"]);
 
 	let {
 		open,
@@ -73,7 +68,6 @@
 	let tab = $state<Tab>("files");
 	let copied = $state(false);
 	let confirmRemove = $state(false);
-	let deleteFiles = $state(false);
 
 	// Below md the same detail is a bottom sheet rather than a side drawer: it
 	// arrives from the edge the thumb is on, and it's dismissed by dragging rather
@@ -373,7 +367,7 @@
 					<button
 						type="button"
 						disabled={busy}
-						onclick={() => { deleteFiles = false; confirmRemove = true; }}
+						onclick={() => (confirmRemove = true)}
 						class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-status-failed/15 px-3.5 text-sm font-semibold text-status-failed transition hover:bg-status-failed/25 disabled:opacity-50"
 					>
 						<Trash2 size={14} aria-hidden="true" />
@@ -404,31 +398,8 @@
 	</div>
 {/snippet}
 
-<Dialog
-	open={confirmRemove}
-	title={i18n.torrent_remove_confirm()}
-	inlineActions
+<TorrentRemoveDialog
+	torrent={confirmRemove ? torrent : null}
 	onClose={() => (confirmRemove = false)}
-	actions={[
-		{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
-		{
-			label: i18n.common_remove(),
-			variant: "danger",
-			onClick: () => torrent && onRemove(torrent.hash, deleteFiles),
-		},
-	]}
->
-	<p class="text-sm text-fg-muted">
-		{#each removeBody as p}{#if p.slot === "name"}<span class="font-medium text-fg">{torrent?.name || i18n.torrent_this()}</span>{:else}{p.text}{/if}{/each}
-	</p>
-	<Checkbox
-		checked={deleteFiles}
-		onChange={(v) => (deleteFiles = v)}
-		tone="danger"
-		class="mt-4 rounded-md border border-border bg-bg-card p-3"
-	>
-		<span class="text-sm text-fg-muted">
-			{#each deleteFilesBody as p}{#if p.slot === "action"}<span class="font-medium text-fg">{i18n.torrent_also_delete_files()}</span>{:else}{p.text}{/if}{/each}
-		</span>
-	</Checkbox>
-</Dialog>
+	{onRemove}
+/>

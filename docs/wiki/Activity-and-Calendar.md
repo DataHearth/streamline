@@ -74,6 +74,8 @@ You can **pause**, **resume** and **remove** items directly — these act on you
 
 To act on several at once, tick their checkboxes (or the header box for every row the filters show) and use the bar that appears at the bottom: **Pause**, **Resume** or **Cancel download**. On a phone, press and hold a row to start selecting, then tap the others. Each action only touches the entries it applies to — Pause skips what is already paused, Resume takes only paused entries, and **held** entries are left out of all three, since resolving them is a decision per entry.
 
+On a phone, swipe a row sideways for a shortcut. Swipe right to **pause** or **resume** it (in the history, to **retry the import** of a failed entry), and swipe left to **cancel** the download (in the history, to **remove** the entry). Let go once the colour fills in; short of that, the row springs back. Cancel, retry and remove still ask first, in the same words as the row's sheet, and held entries have no swipe.
+
 A queue entry is in one of five states:
 
 | Status | Meaning |
@@ -155,6 +157,8 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
 Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted.
+
+On a phone, swipe a torrent right to **pause** or **resume** it, or left to **remove** it, which asks the same question about its files.
 
 If you're using qBittorrent or Transmission, this page will be empty; manage those torrents in their own UI or from the Queue.
 

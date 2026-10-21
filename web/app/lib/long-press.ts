@@ -76,7 +76,9 @@ export function longPress(node: HTMLElement, initial: LongPressOptions) {
 // the row the hold just selected. Swallowed on the window, in capture, rather
 // than on the node: entering selection mode usually re-renders the row, so the
 // element that started the hold may not be the one the click lands on.
-function swallowNextClick() {
+// Exported for swipe-row, whose drag ends on a lift the browser would also turn
+// into a click on the row.
+export function swallowNextClick() {
 	const swallow = (e: MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();

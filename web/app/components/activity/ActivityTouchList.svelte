@@ -1,7 +1,16 @@
 <script lang="ts">
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
-	import { Activity, LoaderCircle } from "@lucide/svelte";
-	import TouchRow from "./TouchRow.svelte";
+	import {
+		Activity,
+		Ban,
+		LoaderCircle,
+		Pause,
+		Play,
+		RotateCw,
+		Trash2,
+	} from "@lucide/svelte";
+	import TouchRow, { type RowSwipe } from "./TouchRow.svelte";
+	import type { DownloadConfirm } from "./DownloadConfirmDialog.svelte";
 	import { entryHeading, historyMeta, queueMeta } from "@lib/activity-touch";
 	import { pillStatus } from "@lib/format";
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
@@ -25,6 +34,9 @@
 		onBeginSelect,
 		onOpen,
 		onResolve,
+		onPause,
+		onResume,
+		onConfirm,
 	}: {
 		view: "queue" | "history";
 		rows: (QueueEntry | HistoryEntry)[];
@@ -41,7 +53,59 @@
 		onBeginSelect?: (id: number) => void;
 		onOpen: (item: QueueEntry | HistoryEntry) => void;
 		onResolve?: (item: QueueEntry) => void;
+		// Swipe actions, given only to someone who may act on them. Pause and
+		// resume run at once, as the sheet's buttons do; cancel, retry and
+		// remove go through onConfirm to the same question the sheet asks.
+		onPause?: (id: number) => void;
+		onResume?: (id: number) => void;
+		onConfirm?: (item: QueueEntry | HistoryEntry, kind: DownloadConfirm) => void;
 	} = $props();
+
+	// The sheet's own rules, one swipe per button it shows: a held record has
+	// none (the server refuses pause and cancel on it, and Resolve is on the
+	// row), and only a failed history entry can be retried.
+	function swipes(row: QueueEntry | HistoryEntry): {
+		start?: RowSwipe;
+		end?: RowSwipe;
+	} {
+		if (!onConfirm) return {};
+		if (view === "queue") {
+			if (row.status === "held") return {};
+			const paused = row.status === "paused";
+			const toggle = paused ? onResume : onPause;
+			return {
+				start: toggle && {
+					label: paused ? i18n.schedule_resume() : i18n.schedule_pause(),
+					icon: paused ? Play : Pause,
+					tone: paused ? "var(--status-downloading)" : "var(--status-warning)",
+					onSwipe: () => toggle(row.id),
+				},
+				end: {
+					label: i18n.common_cancel(),
+					icon: Ban,
+					tone: "var(--status-failed)",
+					onSwipe: () => onConfirm(row, "cancel"),
+				},
+			};
+		}
+		return {
+			start:
+				row.status === "failed"
+					? {
+							label: i18n.activity_retry_import(),
+							icon: RotateCw,
+							tone: "var(--accent)",
+							onSwipe: () => onConfirm(row, "retry"),
+						}
+					: undefined,
+			end: {
+				label: i18n.common_remove(),
+				icon: Trash2,
+				tone: "var(--status-failed)",
+				onSwipe: () => onConfirm(row, "remove"),
+			},
+		};
+	}
 
 	// Same contract as the table's sentinel: it only exists in the history view,
 	// so it mounts long after this component and re-mounts on every switch.
@@ -101,6 +165,7 @@
 			{#each rows as row (row.id)}
 				{@const held =
 					view === "queue" && (row as QueueEntry).status === "held"}
+				{@const swipe = swipes(row)}
 				<TouchRow
 					status={pillStatus(row.status)}
 					progress={progressOf(row)}
@@ -117,6 +182,8 @@
 						? () => onResolve(row as QueueEntry)
 						: undefined}
 					resolveLabel={i18n.action_resolve()}
+					swipeStart={swipe.start}
+					swipeEnd={swipe.end}
 				/>
 			{/each}
 		</div>

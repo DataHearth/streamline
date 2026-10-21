@@ -1,8 +1,22 @@
+<script lang="ts" module>
+	import type { LucideIcon } from "@lucide/svelte";
+
+	// What a sideways swipe on the row does. `tone` is a CSS colour — the
+	// action's status token — painted under the row as it slides away.
+	export type RowSwipe = {
+		label: string;
+		icon: LucideIcon;
+		tone: string;
+		onSwipe: () => void;
+	};
+</script>
+
 <script lang="ts">
 	import { Check, ChevronRight } from "@lucide/svelte";
 	import ProgressRing from "./ProgressRing.svelte";
 	import { cn } from "@lib/cn";
 	import { longPress } from "@lib/long-press";
+	import { swipeRow } from "@lib/swipe-row";
 	import type { MetaLine } from "@lib/activity-touch";
 	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
@@ -23,6 +37,8 @@
 		resolveLabel,
 		selected,
 		onLongPress,
+		swipeStart,
+		swipeEnd,
 	}: {
 		status: StatusKind;
 		progress?: number;
@@ -51,12 +67,27 @@
 		selected?: boolean;
 		// Press and hold: how a phone starts a selection.
 		onLongPress?: () => void;
+		// Swipe right runs swipeStart, swipe left swipeEnd. A shortcut only:
+		// every one of them is also a labelled button in the row's sheet. They
+		// stand down while selecting, where a stray swipe would act on one row
+		// in the middle of choosing several.
+		swipeStart?: RowSwipe;
+		swipeEnd?: RowSwipe;
 	} = $props();
 
 	let selecting = $derived(selected !== undefined);
+	let swipeable = $derived(!selecting && !!(swipeStart || swipeEnd));
+	let offset = $state(0);
+	let settling = $state(false);
+	let armed = $state(false);
+	// Which side is showing, held through the spring back so the action stays
+	// under the row until it has covered it again.
+	let side = $state<"start" | "end" | null>(null);
+	let revealed = $derived(side === "start" ? swipeStart : side === "end" ? swipeEnd : undefined);
 
 	const rowClass =
-		"flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition last:border-b-0 active:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring";
+		"flex w-full items-center gap-3 px-3 py-2.5 text-left transition active:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring";
+	const divider = "border-b border-border last:border-b-0";
 </script>
 
 {#snippet lead()}
@@ -112,18 +143,19 @@
 	{/if}
 {/snippet}
 
+{#snippet row(cls: string)}
 {#if selecting}
 	<button
 		type="button"
 		onclick={onOpen}
 		aria-pressed={selected}
-		class={cn(rowClass, selected && "bg-accent-soft")}
+		class={cn(cls, selected && "bg-accent-soft")}
 	>
 		{@render body()}
 	</button>
 {:else if onResolve}
 	<div
-		class={rowClass}
+		class={cls}
 		use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress }}
 	>
 		<button
@@ -143,16 +175,68 @@
 		</button>
 	</div>
 {:else if href}
-	<a {href} class={rowClass}>{@render body()}</a>
+	<a {href} class={cls}>{@render body()}</a>
 {:else}
 	<button
 		type="button"
 		onclick={onOpen}
-		class={rowClass}
+		class={cls}
 		use:longPress={{ onLongPress: () => onLongPress?.(), disabled: !onLongPress }}
 	>
 		{@render body()}
 	</button>
+{/if}
+{/snippet}
+
+{#if swipeable}
+	<!-- The divider moves to the wrapper: `last:` has to see the list's own
+	     children, and the row inside is always its wrapper's last. -->
+	<div class={cn("relative overflow-hidden", divider)}>
+		{#if revealed}
+			<div
+				aria-hidden="true"
+				class={cn(
+					"absolute inset-0 flex items-center gap-2 px-5 text-[13px] font-semibold",
+					side === "start" ? "justify-start" : "justify-end",
+				)}
+				style:background-color={armed
+					? revealed.tone
+					: `color-mix(in oklab, ${revealed.tone} 28%, var(--bg-elevated))`}
+				style:color={armed ? "var(--bg-deep)" : revealed.tone}
+			>
+				<revealed.icon
+					size={20}
+					class={cn("shrink-0 transition-transform duration-150", armed && "scale-110")}
+				/>
+				{revealed.label}
+			</div>
+		{/if}
+		<div
+			class="relative bg-bg-elevated"
+			style:transform={offset ? `translateX(${offset}px)` : undefined}
+			style:transition={settling ? "transform 220ms var(--ease)" : "none"}
+			ontransitionend={() => {
+				settling = false;
+				if (offset === 0) side = null;
+			}}
+			use:swipeRow={{
+				start: !!swipeStart,
+				end: !!swipeEnd,
+				disabled: !swipeable,
+				onOffset: (dx, settle) => {
+					settling = settle;
+					offset = dx;
+					if (dx !== 0) side = dx > 0 ? "start" : "end";
+				},
+				onArmed: (on) => (armed = on),
+				onCommit: (side) => (side === "start" ? swipeStart : swipeEnd)?.onSwipe(),
+			}}
+		>
+			{@render row(rowClass)}
+		</div>
+	</div>
+{:else}
+	{@render row(cn(rowClass, divider))}
 {/if}
 
 <style>

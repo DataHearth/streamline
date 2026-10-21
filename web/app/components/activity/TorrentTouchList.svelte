@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Magnet } from "@lucide/svelte";
-	import TouchRow from "./TouchRow.svelte";
+	import { Magnet, Pause, Play, Trash2 } from "@lucide/svelte";
+	import TouchRow, { type RowSwipe } from "./TouchRow.svelte";
 	import { torrentMeta } from "@lib/activity-touch";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -19,6 +19,9 @@
 		onToggle,
 		onBeginSelect,
 		onOpen,
+		onPause,
+		onResume,
+		onRemove,
 	}: {
 		rows: Torrent[];
 		loading: boolean;
@@ -31,7 +34,39 @@
 		onToggle?: (hash: string) => void;
 		onBeginSelect?: (hash: string) => void;
 		onOpen: (hash: string) => void;
+		// Swipe actions, given with canControl. Pause and resume run at once, as
+		// the drawer's buttons do; remove asks the drawer's question first.
+		onPause?: (hash: string) => void;
+		onResume?: (hash: string) => void;
+		onRemove?: (t: Torrent) => void;
 	} = $props();
+
+	// The drawer's own rules: resume a paused torrent, pause one that is moving
+	// or seeding, and nothing either way for a finished or errored one.
+	function swipes(t: Torrent): { start?: RowSwipe; end?: RowSwipe } {
+		if (!canControl) return {};
+		const paused = t.status === "paused";
+		const pausable =
+			t.status === "downloading" ||
+			t.status === "seeding" ||
+			t.status === "fetching" ||
+			t.status === "stalled";
+		const toggle = paused ? onResume : pausable ? onPause : undefined;
+		return {
+			start: toggle && {
+				label: paused ? i18n.common_resume() : i18n.common_pause(),
+				icon: paused ? Play : Pause,
+				tone: paused ? "var(--status-downloading)" : "var(--status-warning)",
+				onSwipe: () => toggle(t.hash),
+			},
+			end: onRemove && {
+				label: i18n.common_remove(),
+				icon: Trash2,
+				tone: "var(--status-failed)",
+				onSwipe: () => onRemove(t),
+			},
+		};
+	}
 
 	const fetching = (t: Torrent) => t.status === "fetching" && !t.name;
 </script>
@@ -75,6 +110,7 @@
 	{:else}
 		<div class="overflow-hidden rounded-xl border border-border bg-bg-elevated">
 			{#each rows as t (t.hash)}
+				{@const swipe = swipes(t)}
 				<TouchRow
 					status={t.status}
 					progress={t.progress}
@@ -87,6 +123,8 @@
 					onLongPress={onBeginSelect ? () => onBeginSelect(t.hash) : undefined}
 					onOpen={() =>
 						selecting && onToggle ? onToggle(t.hash) : onOpen(t.hash)}
+					swipeStart={swipe.start}
+					swipeEnd={swipe.end}
 				/>
 			{/each}
 		</div>

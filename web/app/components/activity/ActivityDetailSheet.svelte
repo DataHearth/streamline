@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { parts } from "@lib/message-parts";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ban, LoaderCircle, Pause, Play, RotateCw, Trash2, X } from "@lucide/svelte";
-	import Dialog from "@components/modals/Dialog.svelte";
+	import DownloadConfirmDialog, {
+		type DownloadConfirm,
+	} from "./DownloadConfirmDialog.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import { cn } from "@lib/cn";
@@ -15,14 +16,9 @@
 	import type { HistoryEntry, QueueEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Confirm bodies: whole sentences with the title (and status) marked up.
-	const cancelBody = parts(i18n.activity_cancel_body, ["title", "status"]);
-	const retryBody = parts(i18n.activity_retry_body, ["title"]);
-	const deleteEntryBody = parts(i18n.activity_delete_entry_body, ["title"]);
-
-	// Where a queue or history row opens below md, and the only place pause,
-	// resume, cancel and remove exist on touch — no swipe, no per-row kebab, so
-	// there's one way to reach a verb and it's labelled.
+	// Where a queue or history row opens below md, and the labelled home of
+	// pause, resume, cancel, retry and remove on touch. The row's swipes are
+	// shortcuts to the same verbs and ask the same questions (no per-row kebab).
 	let {
 		item,
 		view,
@@ -47,9 +43,7 @@
 		onRetry: (id: number) => void;
 	} = $props();
 
-	let confirmCancel = $state(false);
-	let confirmRemove = $state(false);
-	let confirmRetry = $state(false);
+	let confirm = $state<DownloadConfirm | null>(null);
 
 	$effect(() => {
 		if (!item) return;
@@ -260,7 +254,7 @@
 						<button
 							type="button"
 							disabled={busy}
-							onclick={() => (confirmCancel = true)}
+							onclick={() => (confirm = "cancel")}
 							class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-status-failed/15 text-[14px] font-semibold text-status-failed transition active:bg-status-failed/25 disabled:opacity-50"
 						>
 							<Ban size={16} aria-hidden="true" />
@@ -271,7 +265,7 @@
 							<button
 								type="button"
 								disabled={busy}
-								onclick={() => (confirmRetry = true)}
+								onclick={() => (confirm = "retry")}
 								class={cn(
 									"inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-accent/15 text-[14px] font-semibold text-accent transition active:bg-accent/25 disabled:opacity-50",
 								)}
@@ -283,7 +277,7 @@
 						<button
 							type="button"
 							disabled={busy}
-							onclick={() => (confirmRemove = true)}
+							onclick={() => (confirm = "remove")}
 							class={cn(
 								"inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-status-failed/15 text-[14px] font-semibold text-status-failed transition active:bg-status-failed/25 disabled:opacity-50",
 							)}
@@ -305,69 +299,15 @@
 		</div>
 	</div>
 
-	<Dialog
-		open={confirmCancel}
-		title={i18n.activity_cancel_confirm()}
-		inlineActions
-		onClose={() => (confirmCancel = false)}
-		actions={[
-			{ label: i18n.common_keep(), variant: "ghost", autofocus: true },
-			{
-				label: i18n.action_cancel_download(),
-				variant: "danger",
-				onClick: () => {
-					onCancel(item.id);
-					onClose();
-				},
-			},
-		]}
-	>
-		<p class="text-sm text-fg-muted">
-			{#each cancelBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else if p.slot === "status"}<em>{i18n.lc_wanted()}</em>{:else}{p.text}{/if}{/each}
-		</p>
-	</Dialog>
-
-	<Dialog
-		open={confirmRetry}
-		title={i18n.activity_retry_import_confirm()}
-		inlineActions
-		onClose={() => (confirmRetry = false)}
-		actions={[
-			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
-			{
-				label: i18n.activity_retry_import(),
-				variant: "primary",
-				onClick: () => {
-					onRetry(item.id);
-					onClose();
-				},
-			},
-		]}
-	>
-		<p class="text-sm text-fg-muted">
-			{#each retryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
-		</p>
-	</Dialog>
-
-	<Dialog
-		open={confirmRemove}
-		title={i18n.activity_remove_record_confirm()}
-		inlineActions
-		onClose={() => (confirmRemove = false)}
-		actions={[
-			{ label: i18n.common_cancel(), variant: "ghost", autofocus: true },
-			{
-				label: i18n.common_remove(),
-				variant: "danger",
-				onClick: () => {
-					onRemove(item.id);
-					onClose();
-				},
-			},
-		]}
-	>
-		<p class="text-sm text-fg-muted">
-			{#each deleteEntryBody as p}{#if p.slot === "title"}<span class="font-medium text-fg">{item.title}</span>{:else}{p.text}{/if}{/each}
-		</p>
-	</Dialog>
+	<DownloadConfirmDialog
+		kind={confirm}
+		{item}
+		onClose={() => (confirm = null)}
+		onConfirm={(kind, id) => {
+			if (kind === "cancel") onCancel(id);
+			else if (kind === "retry") onRetry(id);
+			else onRemove(id);
+			onClose();
+		}}
+	/>
 {/if}

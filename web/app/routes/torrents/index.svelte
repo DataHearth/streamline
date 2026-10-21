@@ -44,6 +44,7 @@
 	import TorrentTable from "@components/activity/TorrentTable.svelte";
 	import TorrentTouchList from "@components/activity/TorrentTouchList.svelte";
 	import TorrentDrawer from "@components/activity/TorrentDrawer.svelte";
+	import TorrentRemoveDialog from "@components/activity/TorrentRemoveDialog.svelte";
 	import AddTorrentModal from "@components/activity/AddTorrentModal.svelte";
 	import AddTorrentSheet from "@components/activity/AddTorrentSheet.svelte";
 	import TorrentBulkActions from "@components/activity/TorrentBulkActions.svelte";
@@ -209,6 +210,14 @@
 	});
 	// Sorted once, then handed to both the table and the touch list.
 	let torrentRows = $derived(sortTorrents(filteredRows, sort, order));
+	// A row swiped away asks before it goes. Held by hash: the list repolls
+	// every 2 s, and the dialog names the torrent from the live row.
+	let swipeRemoveHash = $state<string | null>(null);
+	let swipeRemoveTorrent = $derived(
+		swipeRemoveHash === null
+			? null
+			: (torrentRows.find((t) => t.hash === swipeRemoveHash) ?? null),
+	);
 	let sortChipKey = $derived(torrentSortChipKey(sort, order));
 	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
 	let selectedTorrent = $derived(
@@ -517,6 +526,9 @@
 			onToggle={(h) => selection.toggle(h)}
 			onBeginSelect={auth.isAdmin ? (h) => selection.begin(h) : undefined}
 			onOpen={(h) => (selectedHash = h)}
+			onPause={(h) => pauseTorrent.mutate(h)}
+			onResume={(h) => resumeTorrent.mutate(h)}
+			onRemove={(t) => (swipeRemoveHash = t.hash)}
 		/>
 
 		{#if auth.isAdmin}
@@ -567,6 +579,12 @@
 	onRemove={(hash, deleteFiles) => removeTorrent.mutate({ hash, deleteFiles })}
 	onSetPriority={(hash, index, priority) =>
 		setPriority.mutate({ hash, index, priority })}
+/>
+
+<TorrentRemoveDialog
+	torrent={swipeRemoveTorrent}
+	onClose={() => (swipeRemoveHash = null)}
+	onRemove={(hash, deleteFiles) => removeTorrent.mutate({ hash, deleteFiles })}
 />
 
 {#if compact}
