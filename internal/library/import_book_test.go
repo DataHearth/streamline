@@ -132,18 +132,20 @@ var _ = Describe("ImportService books", Label("unit", "library"), func() {
 
 		It("removes what it placed when a later file fails", func() {
 			write(src, "Part 01.mp3")
-			unreadable := write(src, "Part 02.mp3")
-			Expect(os.Chmod(unreadable, 0o000)).To(Succeed())
-			DeferCleanup(func() {
-				Expect(os.Chmod(unreadable, 0o644)).To(Succeed())
-			})
+			// A dangling symlink fails the copy for every user. A chmod 000
+			// file did not: root reads it anyway, so the spec failed exactly
+			// where it ran as root (containers, CI runners).
+			target := filepath.Join(GinkgoT().TempDir(), "part 02.mp3")
+			Expect(
+				os.Symlink(target, filepath.Join(src, "Part 02.mp3")),
+			).To(Succeed())
 
 			_, err := svc.ImportAudiobook(ctx, src, book, false)
 			Expect(err).To(HaveOccurred())
 			dir := filepath.Join(audio, "Brandon Sanderson", "Elantris (2005)")
 			Expect(dir).NotTo(BeAnExistingFile())
 
-			Expect(os.Chmod(unreadable, 0o644)).To(Succeed())
+			Expect(os.WriteFile(target, []byte("part two"), 0o644)).To(Succeed())
 			_, err = svc.ImportAudiobook(ctx, src, book, false)
 			Expect(err).NotTo(HaveOccurred())
 		})

@@ -16,4 +16,7 @@ func TestConfig(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(testutil.InstallSlog())
+	// Every spec here loads config, and the loader reads STREAMLINE_* over
+	// the file; the specs that test that layer set their own variables.
+	DeferCleanup(testutil.IsolateEnv())
 })
