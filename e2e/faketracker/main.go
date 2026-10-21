@@ -819,16 +819,19 @@ func torznabHandler(
 		if err := xml.EscapeText(&title, []byte(p.release)); err != nil {
 			continue
 		}
-		link := baseURL + "/torrents/" + url.PathEscape(p.release+".torrent")
+		raw := baseURL + "/torrents/" + url.PathEscape(p.release+".torrent")
 		if magnets {
 			// resolveTorrentSource keys its magnet arm on the URI scheme, so a
 			// magnet feed is just a different enclosure string.
-			var esc bytes.Buffer
-			if err := xml.EscapeText(&esc, []byte(p.magnet)); err != nil {
-				continue
-			}
-			link = esc.String()
+			raw = p.magnet
 		}
+		// PathEscape leaves "&" alone (it is legal in a path), so a release
+		// named "Feathers & Flesh" needs the XML escape as much as a magnet.
+		var esc bytes.Buffer
+		if err := xml.EscapeText(&esc, []byte(raw)); err != nil {
+			continue
+		}
+		link := esc.String()
 		items[p] = fmt.Sprintf(`  <item>
     <title>%[1]s</title>
     <guid>faketracker-%[1]s</guid>
