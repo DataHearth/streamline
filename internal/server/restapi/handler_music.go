@@ -574,8 +574,7 @@ func toMusicSearchItems(releases []music.AlbumRelease) []SearchResult {
 // toReleaseFiles maps a release's files read against the album.
 func toReleaseFiles(v *music.ReleaseFilesView) ReleaseFiles {
 	out := ReleaseFiles{
-		Files:  make([]ReleaseFile, 0, len(v.Files)),
-		Tracks: make([]ReleaseTrack, 0, len(v.Tracks)),
+		Files: make([]ReleaseFile, 0, len(v.Files)),
 	}
 	for _, f := range v.Files {
 		rf := ReleaseFile{Path: f.Path, Size: f.Size}
@@ -584,8 +583,14 @@ func toReleaseFiles(v *music.ReleaseFilesView) ReleaseFiles {
 		}
 		out.Files = append(out.Files, rf)
 	}
-	for _, t := range v.Tracks {
-		out.Tracks = append(out.Tracks, ReleaseTrack{
+	out.Tracks = toReleaseTracks(v.Tracks)
+	return out
+}
+
+func toReleaseTracks(tracks []music.ReleaseTrackView) []ReleaseTrack {
+	out := make([]ReleaseTrack, 0, len(tracks))
+	for _, t := range tracks {
+		out = append(out, ReleaseTrack{
 			Id:        t.ID,
 			Disc:      t.Disc,
 			Number:    t.Position,
@@ -593,6 +598,45 @@ func toReleaseFiles(v *music.ReleaseFilesView) ReleaseFiles {
 			HasFile:   t.HasFile,
 			InRelease: t.InRelease,
 		})
+	}
+	return out
+}
+
+// toDiscographyFiles maps a discography pack read against the artist.
+func toDiscographyFiles(v *music.DiscographyFilesView) DiscographyFiles {
+	out := DiscographyFiles{
+		Files:   make([]DiscographyFile, 0, len(v.Files)),
+		Folders: make([]DiscographyFolder, 0, len(v.Folders)),
+		Albums:  make([]DiscographyAlbum, 0, len(v.Albums)),
+	}
+	for _, f := range v.Files {
+		df := DiscographyFile{Path: f.Path, Size: f.Size}
+		if f.AlbumID != 0 {
+			df.AlbumId = &f.AlbumID
+		}
+		if f.TrackID != 0 {
+			df.TrackId = &f.TrackID
+		}
+		out.Files = append(out.Files, df)
+	}
+	for _, f := range v.Folders {
+		df := DiscographyFolder{Path: f.Path, Waiting: f.Waiting}
+		if f.AlbumID != 0 {
+			df.AlbumId = &f.AlbumID
+		}
+		out.Folders = append(out.Folders, df)
+	}
+	for _, a := range v.Albums {
+		da := DiscographyAlbum{
+			Id:        a.ID,
+			Title:     a.Title,
+			InRelease: a.InRelease,
+			Tracks:    toReleaseTracks(a.Tracks),
+		}
+		if a.Year != 0 {
+			da.Year = &a.Year
+		}
+		out.Albums = append(out.Albums, da)
 	}
 	return out
 }
@@ -876,6 +920,52 @@ func (s *Server) GetMusicAlbumReleaseFiles(
 		}, nil
 	}
 	return GetMusicAlbumReleaseFiles200JSONResponse(toReleaseFiles(view)), nil
+}
+
+func (s *Server) GetMusicArtistReleaseFiles(
+	ctx context.Context,
+	request GetMusicArtistReleaseFilesRequestObject,
+) (GetMusicArtistReleaseFilesResponseObject, error) {
+	if err := requireNotRequestOnly(ctx); err != nil {
+		return GetMusicArtistReleaseFiles403JSONResponse{
+			ForbiddenJSONResponse: requestOnlyResp,
+		}, nil
+	}
+	sr, err := toIndexerResult(request.Body)
+	switch {
+	case errors.Is(err, errBadReleaseHandle):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case err != nil:
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: unprocessableResp(err.Error()),
+		}, nil
+	}
+	view, err := s.music.ArtistPackFiles(ctx, request.Id, sr)
+	switch {
+	case errors.Is(err, music.ErrArtistNotFound):
+		return GetMusicArtistReleaseFiles404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrUntrustedSource):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errGrabRejected(err.Error()),
+		}, nil
+	case errors.Is(err, download.ErrFileListUnavailable):
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errFilesUnavailable(err.Error()),
+		}, nil
+	case err != nil:
+		slog.WarnContext(ctx, "release files: fetch failed",
+			"artist.id", request.Id, "release", sr.Title, "error", err)
+		return GetMusicArtistReleaseFiles422JSONResponse{
+			UnprocessableEntityJSONResponse: errTorrentUnreadable(
+				"the indexer did not hand over a readable .torrent for this release",
+			),
+		}, nil
+	}
+	return GetMusicArtistReleaseFiles200JSONResponse(toDiscographyFiles(view)), nil
 }
 
 func (s *Server) SearchMusicAlbumNow(

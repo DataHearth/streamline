@@ -1547,6 +1547,109 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 			})
 		})
 
+		Describe("GetMusicArtistReleaseFiles", func() {
+			peek := func(key, body string) *http.Response {
+				GinkgoHelper()
+				return send(
+					http.MethodPost,
+					"/api/v1/music/artists/3/release-files",
+					key,
+					body,
+				)
+			}
+
+			It("answers the pack read against the artist's albums", func() {
+				app.music.EXPECT().
+					ArtistPackFiles(mock.Anything, uint32(3), matchesRelease).
+					Return(&music.DiscographyFilesView{
+						Files: []music.PackFileView{
+							{
+								Path:    "FF (2016)/01 - One.flac",
+								Size:    2,
+								AlbumID: 7,
+								TrackID: 70,
+							},
+							{Path: "Bonus/01.flac", Size: 1},
+						},
+						Folders: []music.PackFolderView{
+							{Path: "FF (2016)", AlbumID: 7, Waiting: true},
+							{Path: "HTA (2014)", AlbumID: 8},
+							{Path: "Bonus"},
+						},
+						Albums: []music.PackAlbumView{{
+							ID: 7, Title: "FF", Year: 2016, InRelease: true,
+							Tracks: []music.ReleaseTrackView{
+								{
+									ID:        70,
+									Disc:      1,
+									Position:  1,
+									Title:     "One",
+									InRelease: true,
+								},
+							},
+						}},
+					}, nil).
+					Once()
+				resp := peek(
+					app.memberKey,
+					grabBody(sealReleaseLink("magnet:?xt=urn:btih:aaaa")),
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body DiscographyFiles
+				decodeInto(resp, &body)
+				Expect(body.Files[0].AlbumId).To(HaveValue(Equal(uint32(7))))
+				Expect(body.Files[0].TrackId).To(HaveValue(Equal(uint32(70))))
+				Expect(body.Files[1].AlbumId).To(BeNil())
+				Expect(body.Folders[1].AlbumId).To(HaveValue(Equal(uint32(8))))
+				Expect(body.Folders[1].Waiting).To(BeFalse())
+				Expect(body.Folders[2].AlbumId).To(BeNil())
+				Expect(body.Albums).To(HaveLen(1))
+				Expect(body.Albums[0].Year).To(HaveValue(Equal(2016)))
+				Expect(body.Albums[0].Tracks).To(Equal([]ReleaseTrack{
+					{Id: 70, Disc: 1, Number: 1, Title: "One", InRelease: true},
+				}))
+			})
+
+			DescribeTable(
+				"sorts a failure into its status and code",
+				func(err error, status int, want string) {
+					app.music.EXPECT().
+						ArtistPackFiles(mock.Anything, uint32(3), mock.Anything).
+						Return(nil, err).
+						Once()
+					resp := peek(app.memberKey, grabBody("magnet:?xt=urn:btih:aaaa"))
+					Expect(resp.StatusCode).To(Equal(status))
+					_, code := decode(resp)
+					Expect(code).To(Equal(want))
+				},
+				Entry(
+					"unknown artist",
+					music.ErrArtistNotFound,
+					http.StatusNotFound,
+					"",
+				),
+				Entry("a magnet", download.ErrFileListUnavailable,
+					http.StatusUnprocessableEntity, "files_unavailable"),
+				Entry(
+					"an indexer that refused",
+					errors.New("indexer returned status 404"),
+					http.StatusUnprocessableEntity,
+					"torrent_unreadable",
+				),
+				Entry("an untrusted link", download.ErrUntrustedSource,
+					http.StatusUnprocessableEntity, "grab_rejected"),
+			)
+
+			It("answers 403 to a request-only caller", func() {
+				resp := peek(
+					app.requestOnlyKey,
+					grabBody("magnet:?xt=urn:btih:aaaa"),
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+				resp.Body.Close()
+			})
+		})
+
 		Describe("GrabMusicArtistRelease", func() {
 			grab := func(body string) *http.Response {
 				GinkgoHelper()

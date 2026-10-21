@@ -100,6 +100,11 @@ type Manager interface {
 		albumID uint32,
 		result indexer.SearchResult,
 	) (*ReleaseFilesView, error)
+	ArtistPackFiles(
+		ctx context.Context,
+		artistID uint32,
+		result indexer.SearchResult,
+	) (*DiscographyFilesView, error)
 	SearchAlbumNow(ctx context.Context, albumID uint32) error
 	SearchArtistNow(ctx context.Context, artistID uint32) error
 	SearchTrackNow(ctx context.Context, trackID uint32) error

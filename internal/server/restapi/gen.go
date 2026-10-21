@@ -4860,6 +4860,50 @@ type DenyRequestRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// DiscographyAlbum defines model for DiscographyAlbum.
+type DiscographyAlbum struct {
+	Id uint32 `json:"id"`
+
+	// InRelease A folder of the pack names this album.
+	InRelease bool           `json:"in_release"`
+	Title     string         `json:"title"`
+	Tracks    []ReleaseTrack `json:"tracks"`
+	Year      *int           `json:"year,omitempty"`
+}
+
+// DiscographyFile defines model for DiscographyFile.
+type DiscographyFile struct {
+	// AlbumId The waiting album the file's folder fills; absent for none.
+	AlbumId *uint32 `json:"album_id,omitempty"`
+
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+
+	// TrackId The track the file's name points at; absent for none.
+	TrackId *uint32 `json:"track_id,omitempty"`
+}
+
+// DiscographyFiles defines model for DiscographyFiles.
+type DiscographyFiles struct {
+	// Albums The albums the grab would link and fill, with their tracks.
+	Albums []DiscographyAlbum `json:"albums"`
+	Files  []DiscographyFile  `json:"files"`
+
+	// Folders Every folder holding audio, in the torrent's order.
+	Folders []DiscographyFolder `json:"folders"`
+}
+
+// DiscographyFolder defines model for DiscographyFolder.
+type DiscographyFolder struct {
+	// AlbumId The artist's album the folder names; absent for none.
+	AlbumId *uint32 `json:"album_id,omitempty"`
+	Path    string  `json:"path"`
+
+	// Waiting The album is one the grab links, so the import fills it.
+	Waiting bool `json:"waiting"`
+}
+
 // DiskUsage defines model for DiskUsage.
 type DiskUsage struct {
 	Free string `json:"free"`
@@ -10209,6 +10253,9 @@ type PatchMusicArtistJSONRequestBody = PatchMusicArtistRequest
 // GrabMusicArtistReleaseJSONRequestBody defines body for GrabMusicArtistRelease for application/json ContentType.
 type GrabMusicArtistReleaseJSONRequestBody = SearchResult
 
+// GetMusicArtistReleaseFilesJSONRequestBody defines body for GetMusicArtistReleaseFiles for application/json ContentType.
+type GetMusicArtistReleaseFilesJSONRequestBody = SearchResult
+
 // CreateMusicQualityProfileJSONRequestBody defines body for CreateMusicQualityProfile for application/json ContentType.
 type CreateMusicQualityProfileJSONRequestBody = MusicQualityProfileCreate
 
@@ -10860,6 +10907,9 @@ type ServerInterface interface {
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
 	// (POST /music/artists/{id}/refresh-metadata)
 	RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams)
+	// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+	// (POST /music/artists/{id}/release-files)
+	GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
 	// (POST /music/artists/{id}/rename)
 	RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameMusicArtistFilesParams)
@@ -12070,6 +12120,12 @@ func (_ Unimplemented) GrabMusicArtistRelease(w http.ResponseWriter, r *http.Req
 // RefreshMusicArtist Refresh an artist from MusicBrainz
 // (POST /music/artists/{id}/refresh-metadata)
 func (_ Unimplemented) RefreshMusicArtist(w http.ResponseWriter, r *http.Request, id ResourceID, params RefreshMusicArtistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+// (POST /music/artists/{id}/release-files)
+func (_ Unimplemented) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -17249,6 +17305,32 @@ func (siw *ServerInterfaceWrapper) RefreshMusicArtist(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetMusicArtistReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMusicArtistReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameMusicArtistFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameMusicArtistFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -20079,6 +20161,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/grab", wrapper.GrabMusicAlbumRelease)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/music/artists/{id}/release-files", wrapper.GetMusicArtistReleaseFiles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/music/albums/{id}/release-files", wrapper.GetMusicAlbumReleaseFiles)
@@ -31652,6 +31737,101 @@ func (response RefreshMusicArtist500JSONResponse) VisitRefreshMusicArtistRespons
 	return err
 }
 
+type GetMusicArtistReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetMusicArtistReleaseFilesJSONRequestBody
+}
+
+type GetMusicArtistReleaseFilesResponseObject interface {
+	VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetMusicArtistReleaseFiles200JSONResponse DiscographyFiles
+
+func (response GetMusicArtistReleaseFiles200JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMusicArtistReleaseFiles403JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetMusicArtistReleaseFiles404JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetMusicArtistReleaseFiles413JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetMusicArtistReleaseFiles422JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMusicArtistReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMusicArtistReleaseFiles500JSONResponse) VisitGetMusicArtistReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameMusicArtistFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameMusicArtistFilesParams
@@ -37732,6 +37912,9 @@ type StrictServerInterface interface {
 	// RefreshMusicArtist Refresh an artist from MusicBrainz
 	// (POST /music/artists/{id}/refresh-metadata)
 	RefreshMusicArtist(ctx context.Context, request RefreshMusicArtistRequestObject) (RefreshMusicArtistResponseObject, error)
+	// GetMusicArtistReleaseFiles List a discography pack's files against the artist's albums, before grabbing it
+	// (POST /music/artists/{id}/release-files)
+	GetMusicArtistReleaseFiles(ctx context.Context, request GetMusicArtistReleaseFilesRequestObject) (GetMusicArtistReleaseFilesResponseObject, error)
 	// RenameMusicArtistFiles Rename an artist's track files to match the library naming pattern
 	// (POST /music/artists/{id}/rename)
 	RenameMusicArtistFiles(ctx context.Context, request RenameMusicArtistFilesRequestObject) (RenameMusicArtistFilesResponseObject, error)
@@ -42538,6 +42721,39 @@ func (sh *strictHandler) RefreshMusicArtist(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RefreshMusicArtistResponseObject); ok {
 		if err := validResponse.VisitRefreshMusicArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMusicArtistReleaseFiles operation middleware
+func (sh *strictHandler) GetMusicArtistReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetMusicArtistReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetMusicArtistReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMusicArtistReleaseFiles(ctx, request.(GetMusicArtistReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMusicArtistReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMusicArtistReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetMusicArtistReleaseFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -65,6 +65,7 @@
 		media = "video",
 		missingCount = 0,
 		filesPath,
+		filesKind: filesKindProp,
 	}: {
 		// POST endpoint returning ranked SearchResult[] (movie or episode browse).
 		searchPath: string;
@@ -95,6 +96,9 @@
 		// is grabbed (an album's tracks, a season's or show's episodes). Set, each release can show its files
 		// on demand and the confirmation shows them for the pick.
 		filesPath?: string;
+		// What filesPath answers about; by default an album's tracks for music
+		// and a season's or show's episodes otherwise.
+		filesKind?: "tracks" | "episodes" | "discography";
 	} = $props();
 	let books = $derived(media === "books");
 	let music = $derived(media === "music");
@@ -323,7 +327,7 @@
 	// The one release whose files are unfolded. Each unfolding is a request
 	// to the indexer, so it only happens on a tap.
 	let filesFor = $state<string | null>(null);
-	let filesKind = $derived<"tracks" | "episodes">(music ? "tracks" : "episodes");
+	let filesKind = $derived(filesKindProp ?? (music ? "tracks" : "episodes"));
 
 	let pendingId = $state<string | null>(null);
 	function doGrab(r: SearchResult, replace: boolean) {

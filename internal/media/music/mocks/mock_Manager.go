@@ -461,6 +461,80 @@ func (_c *MockManager_ApplyMonitoredTypes_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// ArtistPackFiles provides a mock function for the type MockManager
+func (_mock *MockManager) ArtistPackFiles(ctx context.Context, artistID uint32, result indexer.SearchResult) (*music.DiscographyFilesView, error) {
+	ret := _mock.Called(ctx, artistID, result)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ArtistPackFiles")
+	}
+
+	var r0 *music.DiscographyFilesView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, indexer.SearchResult) (*music.DiscographyFilesView, error)); ok {
+		return returnFunc(ctx, artistID, result)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, indexer.SearchResult) *music.DiscographyFilesView); ok {
+		r0 = returnFunc(ctx, artistID, result)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*music.DiscographyFilesView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, indexer.SearchResult) error); ok {
+		r1 = returnFunc(ctx, artistID, result)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_ArtistPackFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ArtistPackFiles'
+type MockManager_ArtistPackFiles_Call struct {
+	*mock.Call
+}
+
+// ArtistPackFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - artistID uint32
+//   - result indexer.SearchResult
+func (_e *MockManager_Expecter) ArtistPackFiles(ctx any, artistID any, result any) *MockManager_ArtistPackFiles_Call {
+	return &MockManager_ArtistPackFiles_Call{Call: _e.mock.On("ArtistPackFiles", ctx, artistID, result)}
+}
+
+func (_c *MockManager_ArtistPackFiles_Call) Run(run func(ctx context.Context, artistID uint32, result indexer.SearchResult)) *MockManager_ArtistPackFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 indexer.SearchResult
+		if args[2] != nil {
+			arg2 = args[2].(indexer.SearchResult)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_ArtistPackFiles_Call) Return(discographyFilesView *music.DiscographyFilesView, err error) *MockManager_ArtistPackFiles_Call {
+	_c.Call.Return(discographyFilesView, err)
+	return _c
+}
+
+func (_c *MockManager_ArtistPackFiles_Call) RunAndReturn(run func(ctx context.Context, artistID uint32, result indexer.SearchResult) (*music.DiscographyFilesView, error)) *MockManager_ArtistPackFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BrowseArtistReleases provides a mock function for the type MockManager
 func (_mock *MockManager) BrowseArtistReleases(ctx context.Context, artistID uint32) ([]music.AlbumRelease, error) {
 	ret := _mock.Called(ctx, artistID)

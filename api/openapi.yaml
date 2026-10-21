@@ -1648,6 +1648,46 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /music/artists/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getMusicArtistReleaseFiles
+      summary: List a discography pack's files against the artist's albums, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and reads it the way the pack import will: audio files
+         grouped by album folder (a `CD1`/`Disc 2` subfolder belongs to its parent), each folder
+         matched by title, and by year when it names one, to an album of the artist. `albums` is
+         what the grab would link and fill (monitored, released, hydrated, still wanted, paused or
+         failed); empty means the grab would be refused. A folder naming an album that is not
+         among them has `waiting: false` and is skipped by the import. Inside a waiting folder each
+         file carries the `track_id` its **name** points at; the import matches by tags, so that
+         half is a preview. The body is an item of the browse response, unchanged. A magnet answers
+         422 with `code: files_unavailable`; an indexer that does not hand a readable `.torrent`
+         over answers 422 with `code: torrent_unreadable`; a link outside the configured indexers
+         answers 422 with `code: grab_rejected`.
+      tags: [music]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabArtistRelease"
+      responses:
+        "200":
+          description: The pack's files mapped onto the artist's albums.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscographyFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /music/albums/{id}/release-files:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -10533,6 +10573,77 @@ components:
         in_release:
           type: boolean
           description: A file of the release is named for this episode.
+
+    DiscographyFiles:
+      type: object
+      required: [files, folders, albums]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscographyFile"
+        folders:
+          type: array
+          description: Every folder holding audio, in the torrent's order.
+          items:
+            $ref: "#/components/schemas/DiscographyFolder"
+        albums:
+          type: array
+          description: The albums the grab would link and fill, with their tracks.
+          items:
+            $ref: "#/components/schemas/DiscographyAlbum"
+
+    DiscographyFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        album_id:
+          type: integer
+          x-go-type: uint32
+          description: The waiting album the file's folder fills; absent for none.
+        track_id:
+          type: integer
+          x-go-type: uint32
+          description: The track the file's name points at; absent for none.
+
+    DiscographyFolder:
+      type: object
+      required: [path, waiting]
+      properties:
+        path:
+          type: string
+        album_id:
+          type: integer
+          x-go-type: uint32
+          description: The artist's album the folder names; absent for none.
+        waiting:
+          type: boolean
+          description: The album is one the grab links, so the import fills it.
+
+    DiscographyAlbum:
+      type: object
+      required: [id, title, in_release, tracks]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        year:
+          type: integer
+        in_release:
+          type: boolean
+          description: A folder of the pack names this album.
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReleaseTrack"
 
     ReleaseFiles:
       type: object

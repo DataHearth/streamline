@@ -850,3 +850,11 @@ export type ReleaseTrack = {
 	in_release: boolean;
 };
 export type ReleaseFiles = { files: ReleaseFile[]; tracks: ReleaseTrack[] };
+// A discography pack read against the artist (POST /music/artists/{id}/release-files):
+// albums is what the grab links and fills; a folder naming any other album is
+// skipped by the import (waiting false).
+export type DiscographyFiles = {
+	files: { path: string; size: number; album_id?: number; track_id?: number }[];
+	folders: { path: string; album_id?: number; waiting: boolean }[];
+	albums: { id: number; title: string; year?: number; in_release: boolean; tracks: ReleaseTrack[] }[];
+};

@@ -37,12 +37,15 @@
 	let base = $derived(release ? `/music/albums/${release.id}` : `/music/artists/${artist.id}`);
 	// Tracks already on disk in the scope: above zero, a grab asks first.
 	let onDisk = $derived(release ? release.tracks_have : out.reduce((n, r) => n + r.tracks_have, 0));
-	// Tracks still without a file in the scope. A discography pack fills the
-	// albums it is linked to, so the artist scope counts the monitored ones.
+	// Tracks still without a file in the scope. A discography pack fills only
+	// the albums it is linked to (ListPackAlbums: monitored, released,
+	// hydrated, still waiting), so the artist scope counts those.
+	const waitingForPack = (r: (typeof out)[number]) =>
+		r.monitored && !r.tracks_pending && (r.status === "wanted" || r.status === "paused" || r.status === "failed");
 	let missing = $derived(
 		release
 			? release.track_count - release.tracks_have
-			: out.filter((r) => r.monitored).reduce((n, r) => n + r.track_count - r.tracks_have, 0),
+			: out.filter(waitingForPack).reduce((n, r) => n + r.track_count - r.tracks_have, 0),
 	);
 </script>
 
@@ -60,7 +63,8 @@
 			queryKey={["releases", "music", base]}
 			existingCount={onDisk}
 			missingCount={Math.max(0, missing)}
-			filesPath={release ? `${base}/release-files` : undefined}
+			filesPath={`${base}/release-files`}
+			filesKind={release ? "tracks" : "discography"}
 			enabled={open}
 			onGrabbed={onClose}
 			media="music"
