@@ -666,6 +666,28 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rg.ReleaseMBID).To(Equal("dated"))
 		})
+
+		It("ranks a partial date after the fuller dates inside its period", func() {
+			// Omens: a Russian pressing dated "2022", three bonus tracks,
+			// beside the standard edition released 2022-10-07.
+			Expect(canonicalRelease([]mbRelease{
+				{ID: "year", Status: "Official", Date: "2022"},
+				{ID: "month", Status: "Official", Date: "2022-10"},
+				{ID: "day", Status: "Official", Date: "2022-10-07"},
+			})).To(Equal("day"))
+			Expect(canonicalRelease([]mbRelease{
+				{ID: "year", Status: "Official", Date: "2022"},
+				{ID: "month", Status: "Official", Date: "2022-10"},
+			})).To(Equal("month"))
+		})
+
+		It("still takes a partial date from an earlier period", func() {
+			Expect(canonicalRelease([]mbRelease{
+				{ID: "later", Status: "Official", Date: "2023-01-01"},
+				{ID: "year", Status: "Official", Date: "2022"},
+				{ID: "undated", Status: "Official"},
+			})).To(Equal("year"))
+		})
 	})
 
 	Describe("SearchReleaseGroups", func() {

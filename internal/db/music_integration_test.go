@@ -612,6 +612,48 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 		})
 
 		It(
+			"drops a track the release no longer lists unless it holds a file",
+			func() {
+				p := heavy()
+				p.Tracks = append(
+					p.Tracks,
+					TrackSeed{MBID: "r-3", Title: "Bonus", Disc: 1, Position: 3},
+					TrackSeed{
+						MBID:     "r-4",
+						Title:    "Bonus Held",
+						Disc:     1,
+						Position: 4,
+					},
+				)
+				Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+				held := client.Track.Query().Where(track.MbidEQ("r-4")).OnlyX(ctx)
+				client.MediaFile.Create().SetPath("/m/4.flac").SetSize(10).
+					SetTrackID(held.ID).ExecX(ctx)
+
+				Expect(
+					store.SetAlbumHydration(ctx, rg2.ID, heavy(), now),
+				).To(Succeed())
+				left := client.Track.Query().
+					Where(track.HasAlbumWith(album.IDEQ(rg2.ID))).
+					Order(ent.Asc(track.FieldPosition)).
+					AllX(ctx)
+				Expect(left).To(HaveLen(3))
+				Expect(left[2].ID).To(Equal(held.ID))
+			},
+		)
+
+		It("keeps every stored track when the release lists none", func() {
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, heavy(), now)).To(Succeed())
+			p := heavy()
+			p.Tracks = nil
+			Expect(store.SetAlbumHydration(ctx, rg2.ID, p, now)).To(Succeed())
+			Expect(
+				client.Track.Query().Where(track.HasAlbumWith(album.IDEQ(rg2.ID))).
+					CountX(ctx),
+			).To(Equal(2))
+		})
+
+		It(
 			"replaces credits on a repeat heavy call instead of stacking them",
 			func() {
 				Expect(

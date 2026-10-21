@@ -972,7 +972,8 @@ func (db *DB) DeleteArtist(ctx context.Context, id uint32) error {
 
 // SetAlbumHydration stores one album's release call in a transaction: the
 // album-level facts, its tracks (updated in place by disc and position, so a
-// track already holding a file keeps it), the featuring credits of every
+// track already holding a file keeps it, and one the release no longer
+// lists is deleted unless it holds a file), the featuring credits of every
 // track and, when CreditsComplete, the album's credits and performers, the
 // tracks' writers and the studio. It stamps metadata_fetched_at, and
 // credits_fetched_at when the credits landed; it never touches status or
@@ -1109,6 +1110,33 @@ func (db *DB) SetAlbumHydration(
 		}
 		if len(creates) > 0 {
 			if err := c.MusicCredit.CreateBulk(creates...).Exec(ctx); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	// A stored track the release does not list goes, unless it holds a file:
+	// an album re-picked onto another edition (a bonus-track pressing
+	// replaced by the standard one) would otherwise keep the extra tracks
+	// forever, each one missing. No tracks at all is a release MusicBrainz
+	// no longer knows, which says nothing about the stored ones.
+	if len(p.Tracks) > 0 {
+		listed := make(map[slot]bool, len(p.Tracks))
+		for _, t := range p.Tracks {
+			listed[slot{t.Disc, t.Position}] = true
+		}
+		var gone []uint32
+		for s, t := range byslot {
+			if !listed[s] {
+				gone = append(gone, t.ID)
+			}
+		}
+		if len(gone) > 0 {
+			if _, err := c.Track.Delete().Where(
+				track.IDIn(gone...),
+				track.Not(track.HasMediaFiles()),
+			).Exec(ctx); err != nil {
 				tx.Rollback()
 				return err
 			}

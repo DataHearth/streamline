@@ -658,19 +658,15 @@ type mbCredit struct {
 	} `json:"artist"`
 }
 
-// canonicalRelease is the earliest official release; an undated one ranks
-// after every dated one (ISO dates sort lexically, so "" would otherwise win).
-// Falls back to the first listed release when none is official.
+// canonicalRelease is the earliest official release. Ties keep the first
+// listed. Falls back to the first listed release when none is official.
 func canonicalRelease(releases []mbRelease) string {
 	best, bestDate := "", ""
 	for _, r := range releases {
 		if r.Status != "Official" {
 			continue
 		}
-		date := r.Date
-		if date == "" {
-			date = "9999"
-		}
+		date := releaseSortDate(r.Date)
 		if best == "" || date < bestDate {
 			best, bestDate = r.ID, date
 		}
@@ -679,6 +675,24 @@ func canonicalRelease(releases []mbRelease) string {
 		return releases[0].ID
 	}
 	return best
+}
+
+// releaseSortDate makes a MusicBrainz date (YYYY, YYYY-MM or YYYY-MM-DD)
+// sort lexically by when it can have happened: a partial date ranks after
+// every fuller date inside its period and before the next period, and an
+// undated release after every dated one. Compared raw, "2022" sorts before
+// "2022-10-07", and Omens took a Russian pressing dated only by its year,
+// three bonus tracks included, over the standard edition released that day.
+func releaseSortDate(date string) string {
+	switch len(date) {
+	case 0:
+		return "9999-99-99"
+	case 4:
+		return date + "-99-99"
+	case 7:
+		return date + "-99"
+	}
+	return date
 }
 
 const (
