@@ -149,11 +149,19 @@ export function queueMeta(item: QueueEntry): MetaLine {
 			]),
 		};
 	}
+	// The bytes go in even with a speed beside them: a queue of grabs sitting at
+	// 0% with nothing moving otherwise read as the client's name and nothing else.
 	const eta = formatEta(item.eta);
 	return {
 		text: joinDot([
 			formatSpeed(item.download_speed),
 			eta ? i18n.queue_time_left({ eta }) : "",
+			total > 0
+				? i18n.queue_of_total({
+						done: formatBytes(total * (item.progress ?? 0), "0 B"),
+						total: formatBytes(total),
+					})
+				: "",
 			item.selection_state === "unsupported"
 				? i18n.queue_selection_unsupported()
 				: item.download_client,

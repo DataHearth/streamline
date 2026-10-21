@@ -21,8 +21,11 @@
 	} = $props();
 </script>
 
+<!-- The accent tint is translucent, so it is laid over an opaque ground: the bar
+     is sticky on Queue and Torrents, and a bare tint let the rows scrolling under
+     it read straight through the count. -->
 <div
-	class="flex items-center gap-2 border-b border-accent-line bg-accent-soft px-2.5 py-2 md:hidden"
+	class="flex items-center gap-2 border-b border-accent-line bg-bg-deep bg-[image:linear-gradient(var(--accent-soft),var(--accent-soft))] px-2.5 py-2 md:hidden"
 	role="toolbar"
 	aria-label={i18n.bulk_selection()}
 >

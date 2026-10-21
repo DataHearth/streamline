@@ -92,17 +92,26 @@
 	}
 </script>
 
+<!-- Below md a `leading` switch takes a line of its own and the chips get the
+     next one: beside the three-cell switch, 390px left the strip ~25px — one
+     dot in an empty pill. Two lines are too tall to pin, so that toolbar scrolls
+     away with the page on a phone; a selection's bar is what stays pinned. -->
 <div
-	class="sticky top-16 z-20 -mx-4 mb-1 flex flex-nowrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:-mx-6 md:flex-wrap md:gap-3 md:px-6"
+	class={cn(
+		"top-16 z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
+		!leading && "sticky flex-nowrap",
+	)}
 >
-	{@render leading?.()}
+	{#if leading}
+		<div class="w-full md:w-auto">{@render leading()}</div>
+	{/if}
 
 	<!-- Status filters stay in the open as toggle pills: the set is small and
 	     view-specific, and a popover hid which filter was active. The strip swipes
 	     rather than wrapping, so the line height never changes and the switch
 	     beside it keeps its width. Clear sits outside the scroller. -->
 	<div
-		class="inline-flex min-w-0 shrink items-center rounded-md border border-border bg-bg-elevated p-[3px] md:flex-none"
+		class="inline-flex min-w-0 flex-1 items-center rounded-md border border-border bg-bg-elevated p-[3px] md:flex-none"
 	>
 		<div
 			use:dragScroll

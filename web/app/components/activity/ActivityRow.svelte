@@ -110,9 +110,14 @@
 					{Math.round((queue.progress ?? 0) * 100)}%
 				</span>
 			</div>
+			{#if speedEta}
+				<div class="mt-1 tabular-nums text-[11px] text-fg-subtle @3xl:hidden">
+					{speedEta}
+				</div>
+			{/if}
 			{/if}
 		</td>
-		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
+		<td class={cn("hidden px-2 tabular-nums text-xs text-fg-muted @3xl:table-cell", tight, pad)}>
 			{held ? "—" : speedEta || "—"}
 		</td>
 		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>

@@ -54,7 +54,8 @@
 			class="relative font-mono font-medium tabular-nums text-fg-muted"
 			style:font-size="{NUM[size]}px"
 		>
-			{arc}
+			<!-- With the sign: a bare "0" inside a circle read as a count. -->
+			{arc}<span class="text-[0.75em] text-fg-faint">%</span>
 		</span>
 	{:else}
 		<span
@@ -92,7 +93,9 @@
 	}
 
 	.ring {
-		background: conic-gradient(var(--c) var(--arc), var(--surface) 0);
+		/* The track is --border-strong, not --surface: at 4% white it vanished on
+		   the elevated rows, and a 1% arc then had nothing to be a fraction of. */
+		background: conic-gradient(var(--c) var(--arc), var(--border-strong) 0);
 		/* Punching the middle out with a mask rather than stacking a filled
 		   circle on top keeps the ring transparent, so it sits on the row's
 		   surface, the sheet's, or a table cell's without carrying a background
@@ -114,7 +117,7 @@
 	   between samples instead — slightly behind the truth, but the progress bars
 	   next to it already shimmer, and a jumping ring would be the odd one out. */
 	.ring.spin {
-		background: conic-gradient(var(--c) 0 22%, var(--surface) 0);
+		background: conic-gradient(var(--c) 0 22%, var(--border-strong) 0);
 		animation: ring-spin 1.1s linear infinite;
 		transition: none;
 	}

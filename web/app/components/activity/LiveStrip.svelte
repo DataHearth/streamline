@@ -2,6 +2,7 @@
 	import { untrack } from "svelte";
 	import type { QueueEntry } from "@lib/types";
 	import { formatSpeed, formatEta } from "@lib/format";
+	import { cn } from "@lib/cn";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { items }: { items: QueueEntry[] } = $props();
@@ -57,8 +58,11 @@
 		});
 	});
 
+	// A flat line at zero says nothing, and below lg the sparkline has a row of
+	// its own: with nothing moving it was a 40px band holding a hairline, half
+	// the card's height on a tablet.
 	let sparkPoints = $derived.by(() => {
-		if (buffer.length < 2) return "";
+		if (buffer.length < 2 || !buffer.some((v) => v > 0)) return "";
 		const max = Math.max(...buffer, 1);
 		const w = 240;
 		const h = 40;
@@ -77,7 +81,10 @@
      numbers collapse into TouchStatLine's single row: the sparkline needs width
      to say anything, and 390px isn't it. -->
 <div
-	class="mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 md:grid lg:grid-cols-[repeat(4,auto)_1fr]"
+	class={cn(
+		"mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 md:grid",
+		sparkPoints && "lg:grid-cols-[repeat(4,auto)_1fr]",
+	)}
 >
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-fg">{active}</div>
@@ -115,8 +122,8 @@
 			{i18n.activity_next_eta()}
 		</div>
 	</div>
-	<div class="col-span-2 h-10 sm:col-span-4 lg:col-span-1">
-		{#if sparkPoints}
+	{#if sparkPoints}
+		<div class="col-span-2 h-10 sm:col-span-4 lg:col-span-1">
 			<svg
 				viewBox="0 0 240 40"
 				preserveAspectRatio="none"
@@ -131,8 +138,6 @@
 					vector-effect="non-scaling-stroke"
 				/>
 			</svg>
-		{:else}
-			<div class="h-px w-full bg-border" aria-hidden="true"></div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>

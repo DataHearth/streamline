@@ -79,7 +79,9 @@
 			{ label: i18n.common_progress(), sort: "progress" },
 			// The cell reads speed · ETA; speed is the half worth ordering on, and the
 			// ETA follows it for anything actually moving.
-			{ label: i18n.activity_speed_eta(), sort: "speed" },
+			// Below @3xl the cell folds under the progress bar instead: on a tablet
+			// the column cost the title ~140px to hold a "—".
+			{ label: i18n.activity_speed_eta(), hide: "hidden @3xl:table-cell", sort: "speed" },
 			{ label: i18n.common_client(), hide: "hidden @3xl:table-cell", sort: "client" },
 			{ label: "" },
 		],

@@ -17,6 +17,7 @@
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
 	import { fold } from "@lib/text";
+	import { cn } from "@lib/cn";
 	import { Selection } from "@lib/selection.svelte";
 	import { NOUN_DOWNLOAD } from "@lib/nouns";
 	import type {
@@ -449,10 +450,14 @@
      clipping column sliced the first row in half with no way to scroll to it.
      Below md the page scrolls as before — the touch list is paged,
      pull-to-refresh needs the page at scrollTop 0, and the bottom nav already
-     eats the bottom of the viewport. -->
+     eats the bottom of the viewport. While rows are picked the column ends above
+     the floating bulk bar, which otherwise sat over the last rows of the list. -->
 <div
 	use:pullRefresh={{ onRefresh: refreshAll }}
-	class="group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6"
+	class={cn(
+		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6",
+		auth.isAdmin && selection.size > 0 && "md:pb-24",
+	)}
 >
 	<!-- Sits in the gap the pull opens above the page. -->
 	<div
