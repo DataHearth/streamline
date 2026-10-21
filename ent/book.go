@@ -98,9 +98,11 @@ type BookEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// DownloadRecords holds the value of the download_records edge.
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // SeriesOrErr returns the Series value or an error if the edge
@@ -170,6 +172,15 @@ func (e BookEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 		return e.DownloadRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "download_records"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[7] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -450,6 +461,11 @@ func (_m *Book) QueryMediaFiles() *MediaFileQuery {
 // QueryDownloadRecords queries the "download_records" edge of the Book entity.
 func (_m *Book) QueryDownloadRecords() *DownloadRecordQuery {
 	return NewBookClient(_m.config).QueryDownloadRecords(_m)
+}
+
+// QueryEvents queries the "events" edge of the Book entity.
+func (_m *Book) QueryEvents() *MediaEventQuery {
+	return NewBookClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this Book.

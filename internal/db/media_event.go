@@ -10,6 +10,10 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/movie"
@@ -21,10 +25,15 @@ type ActivityFilter struct {
 	Types    []mediaevent.Type
 	MovieID  *uint32
 	SeriesID *uint32
-	Since    *time.Time
-	Before   *time.Time
-	Limit    int
-	Cursor   string
+	// ArtistID matches the artist's own rows and every one of its albums'.
+	ArtistID *uint32
+	BookID   *uint32
+	// BookSeriesID matches the series' own rows and its volumes'.
+	BookSeriesID *uint32
+	Since        *time.Time
+	Before       *time.Time
+	Limit        int
+	Cursor       string
 }
 
 type ActivityResult struct {
@@ -51,7 +60,13 @@ func (db *DB) RecentActivity(
 		WithTvShow().
 		WithEpisode(func(eq *ent.EpisodeQuery) {
 			eq.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
-		})
+		}).
+		// An album row renders as "Artist — Album" and a volume as
+		// "Series · Vol. n", so their parents come along the same way.
+		WithArtist().
+		WithAlbum(func(aq *ent.AlbumQuery) { aq.WithArtist() }).
+		WithBook(func(bq *ent.BookQuery) { bq.WithSeries() }).
+		WithBookSeries()
 
 	if len(f.Types) > 0 {
 		q = q.Where(mediaevent.TypeIn(f.Types...))
@@ -66,6 +81,23 @@ func (db *DB) RecentActivity(
 			mediaevent.HasTvShowWith(tvshow.ID(*f.SeriesID)),
 			mediaevent.HasEpisodeWith(
 				episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(*f.SeriesID))),
+			),
+		))
+	}
+	if f.ArtistID != nil {
+		q = q.Where(mediaevent.Or(
+			mediaevent.HasArtistWith(artist.ID(*f.ArtistID)),
+			mediaevent.HasAlbumWith(album.HasArtistWith(artist.ID(*f.ArtistID))),
+		))
+	}
+	if f.BookID != nil {
+		q = q.Where(mediaevent.HasBookWith(book.ID(*f.BookID)))
+	}
+	if f.BookSeriesID != nil {
+		q = q.Where(mediaevent.Or(
+			mediaevent.HasBookSeriesWith(bookseries.ID(*f.BookSeriesID)),
+			mediaevent.HasBookWith(
+				book.HasSeriesWith(bookseries.ID(*f.BookSeriesID)),
 			),
 		))
 	}

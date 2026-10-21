@@ -98,6 +98,81 @@ var _ = Describe(
 				},
 			)
 
+			It("forwards the music and book owner filters", func() {
+				app.store.EXPECT().
+					RecentActivity(mock.Anything, mock.MatchedBy(func(f db.ActivityFilter) bool {
+						return f.ArtistID != nil && *f.ArtistID == 3 &&
+							f.BookID != nil && *f.BookID == 4 &&
+							f.BookSeriesID != nil && *f.BookSeriesID == 5
+					})).
+					Return(&db.ActivityResult{}, nil).
+					Once()
+
+				resp, err := http.Get(app.srv.URL +
+					"/api/v1/activity?artist_id=3&book_id=4&book_series_id=5")
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			})
+
+			It(
+				"names the artist, album, book or book series an event is for",
+				func() {
+					gojira := &ent.Artist{ID: 1, Name: "Gojira"}
+					magma := &ent.Album{ID: 24, Title: "Magma"}
+					magma.Edges.Artist = gojira
+					series := &ent.BookSeries{ID: 2, Title: "Astérix"}
+					pos := 3.0
+					vol := &ent.Book{
+						ID:             8,
+						Title:          "Tome 3",
+						AuthorName:     "Goscinny",
+						SeriesPosition: &pos,
+					}
+					vol.Edges.Series = series
+					now := time.Now()
+					evs := []*ent.MediaEvent{
+						{ID: 1, Type: mediaevent.TypeAdded, CreateTime: now},
+						{ID: 2, Type: mediaevent.TypeImported, CreateTime: now},
+						{
+							ID: 3, Type: mediaevent.TypeImported, CreateTime: now,
+							Payload: map[string]any{"book_kind": "ebook"},
+						},
+						{ID: 4, Type: mediaevent.TypeAdded, CreateTime: now},
+					}
+					evs[0].Edges.Artist = gojira
+					evs[1].Edges.Album = magma
+					evs[2].Edges.Book = vol
+					evs[3].Edges.BookSeries = series
+					app.store.EXPECT().
+						RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).
+						Return(&db.ActivityResult{Events: evs}, nil).
+						Once()
+
+					resp, err := http.Get(app.srv.URL + "/api/v1/activity")
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					var body ActivityList
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Events).To(HaveLen(4))
+					Expect(
+						body.Events[0].Artist,
+					).To(Equal(&ArtistRef{Id: 1, Name: "Gojira"}))
+					Expect(body.Events[1].Album).To(Equal(&ActivityAlbumRef{
+						Id: 24, Title: "Magma", ArtistId: 1, ArtistName: "Gojira",
+					}))
+					slot := ActivityBookRefSlotEbook
+					Expect(body.Events[2].Book).To(Equal(&ActivityBookRef{
+						Id: 8, Title: "Tome 3", Author: "Goscinny", Slot: &slot,
+						Series: &BookSeriesRef{Id: 2, Title: "Astérix", Number: 3},
+					}))
+					Expect(
+						body.Events[3].BookSeries,
+					).To(Equal(&SeriesRef{Id: 2, Title: "Astérix"}))
+					Expect(body.Events[3].Series).To(BeNil())
+				},
+			)
+
 			It("400s on a malformed cursor", func() {
 				app.store.EXPECT().
 					RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).

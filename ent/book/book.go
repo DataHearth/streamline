@@ -83,6 +83,8 @@ const (
 	EdgeMediaFiles = "media_files"
 	// EdgeDownloadRecords holds the string denoting the download_records edge name in mutations.
 	EdgeDownloadRecords = "download_records"
+	// EdgeEvents holds the string denoting the events edge name in mutations.
+	EdgeEvents = "events"
 	// Table holds the table name of the book in the database.
 	Table = "books"
 	// SeriesTable is the table that holds the series relation/edge.
@@ -134,6 +136,13 @@ const (
 	DownloadRecordsInverseTable = "download_records"
 	// DownloadRecordsColumn is the table column denoting the download_records relation/edge.
 	DownloadRecordsColumn = "book_download_records"
+	// EventsTable is the table that holds the events relation/edge.
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
+	// EventsColumn is the table column denoting the events relation/edge.
+	EventsColumn = "book_events"
 )
 
 // Columns holds all SQL columns for book fields.
@@ -517,6 +526,20 @@ func ByDownloadRecords(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDownloadRecordsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByEventsCount orders the results by events count.
+func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventsStep(), opts...)
+	}
+}
+
+// ByEvents orders the results by events terms.
+func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSeriesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -564,5 +587,12 @@ func newDownloadRecordsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DownloadRecordsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DownloadRecordsTable, DownloadRecordsColumn),
+	)
+}
+func newEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
 	)
 }

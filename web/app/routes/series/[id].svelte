@@ -51,6 +51,7 @@
 	import SeriesKebabMenu from "@components/series/SeriesKebabMenu.svelte";
 	import DetailCast from "@components/shared/DetailCast.svelte";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import DetailAbout from "@components/shared/DetailAbout.svelte";
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
 	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
@@ -101,6 +102,7 @@
 		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
 	}
 	let tab = $state<Tab>(readTab());
+	let tabTrack = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		if (typeof window === "undefined") return;
@@ -699,7 +701,7 @@
 		aria-label={i18n.series_sections()}
 		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
-		<div class="tabs-track flex w-full gap-0.5">
+		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
 				{@const active = tab === t.key}
 				<button
@@ -728,7 +730,10 @@
 		</div>
 	</nav>
 
-	<div class="w-full px-4 py-6 md:px-8">
+	<div
+		use:swipeTabs={{ keys: TABS.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }}
+		class="min-h-[60dvh] w-full px-4 py-6 md:px-8"
+	>
 		{#if tab === "overview"}
 			<div
 				class="grid grid-cols-1 gap-6 md:grid-cols-[1fr_260px] md:gap-7 lg:grid-cols-[1fr_320px] lg:gap-10"

@@ -10,6 +10,7 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -139,6 +140,7 @@ func (w *Worker) importBookRecord(
 		)
 	}
 	dropAside(ctx, aside)
+	recordBookImported(ctx, b.ID, rec.Title, kind, rows)
 	slog.InfoContext(ctx, "imported book",
 		"book.id", b.ID, "book.kind", string(rec.BookKind), "files", len(placed))
 
@@ -150,4 +152,35 @@ func (w *Worker) importBookRecord(
 	w.refreshMediaServers(ctx, mediaserver.KindBook,
 		library.BookRoot(libCfg, string(rec.BookKind)))
 	return nil
+}
+
+// recordBookImported files one imported event for the slot the record filled.
+// An audiobook is a folder of files, which the per-file create hook would
+// have written as one row each.
+func recordBookImported(
+	ctx context.Context,
+	bookID uint32,
+	release string,
+	kind mediafile.BookKind,
+	rows []db.MediaFileRow,
+) {
+	var size int64
+	for _, r := range rows {
+		size += r.Size
+	}
+	p := map[string]any{
+		"release_title": release,
+		"book_kind":     string(kind),
+		"files":         len(rows),
+		"size_bytes":    size,
+	}
+	if len(rows) > 0 && rows[0].Quality != "" {
+		p["quality"] = rows[0].Quality
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeBook, bookID, p,
+	); err != nil {
+		slog.WarnContext(ctx, "book import: record imported event failed",
+			"book.id", bookID, "error", err)
+	}
 }

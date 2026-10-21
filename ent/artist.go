@@ -75,9 +75,11 @@ type ArtistEdges struct {
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// Annotations holds the value of the annotations edge.
 	Annotations []*MusicAnnotation `json:"annotations,omitempty"`
+	// Events holds the value of the events edge.
+	Events []*MediaEvent `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
@@ -114,6 +116,15 @@ func (e ArtistEdges) AnnotationsOrErr() ([]*MusicAnnotation, error) {
 		return e.Annotations, nil
 	}
 	return nil, &NotLoadedError{edge: "annotations"}
+}
+
+// EventsOrErr returns the Events value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) EventsOrErr() ([]*MediaEvent, error) {
+	if e.loadedTypes[4] {
+		return e.Events, nil
+	}
+	return nil, &NotLoadedError{edge: "events"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -307,6 +318,11 @@ func (_m *Artist) QueryDownloadRecords() *DownloadRecordQuery {
 // QueryAnnotations queries the "annotations" edge of the Artist entity.
 func (_m *Artist) QueryAnnotations() *MusicAnnotationQuery {
 	return NewArtistClient(_m.config).QueryAnnotations(_m)
+}
+
+// QueryEvents queries the "events" edge of the Artist entity.
+func (_m *Artist) QueryEvents() *MediaEventQuery {
+	return NewArtistClient(_m.config).QueryEvents(_m)
 }
 
 // Update returns a builder for updating this Artist.

@@ -711,6 +711,22 @@ func (c *AlbumClient) QueryAnnotations(_m *Album) *MusicAnnotationQuery {
 	return query
 }
 
+// QueryEvents queries the events edge of a Album.
+func (c *AlbumClient) QueryEvents(_m *Album) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.EventsTable, album.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryPackRecords queries the pack_records edge of a Album.
 func (c *AlbumClient) QueryPackRecords(_m *Album) *DownloadRecordQuery {
 	query := (&DownloadRecordClient{config: c.config}).Query()
@@ -1066,6 +1082,22 @@ func (c *ArtistClient) QueryAnnotations(_m *Artist) *MusicAnnotationQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, id),
 			sqlgraph.To(musicannotation.Table, musicannotation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, artist.AnnotationsTable, artist.AnnotationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEvents queries the events edge of a Artist.
+func (c *ArtistClient) QueryEvents(_m *Artist) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.EventsTable, artist.EventsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1616,6 +1648,22 @@ func (c *BookClient) QueryDownloadRecords(_m *Book) *DownloadRecordQuery {
 	return query
 }
 
+// QueryEvents queries the events edge of a Book.
+func (c *BookClient) QueryEvents(_m *Book) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.EventsTable, book.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *BookClient) Hooks() []Hook {
 	return c.hooks.Book
@@ -2104,6 +2152,22 @@ func (c *BookSeriesClient) QueryContributions(_m *BookSeries) *BookContributionQ
 			sqlgraph.From(bookseries.Table, bookseries.FieldID, id),
 			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.ContributionsTable, bookseries.ContributionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEvents queries the events edge of a BookSeries.
+func (c *BookSeriesClient) QueryEvents(_m *BookSeries) *MediaEventQuery {
+	query := (&MediaEventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookseries.Table, bookseries.FieldID, id),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.EventsTable, bookseries.EventsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4047,6 +4111,70 @@ func (c *MediaEventClient) QueryTvShow(_m *MediaEvent) *TVShowQuery {
 			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
 			sqlgraph.To(tvshow.Table, tvshow.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.TvShowTable, mediaevent.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArtist queries the artist edge of a MediaEvent.
+func (c *MediaEventClient) QueryArtist(_m *MediaEvent) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.ArtistTable, mediaevent.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlbum queries the album edge of a MediaEvent.
+func (c *MediaEventClient) QueryAlbum(_m *MediaEvent) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.AlbumTable, mediaevent.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBook queries the book edge of a MediaEvent.
+func (c *MediaEventClient) QueryBook(_m *MediaEvent) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.BookTable, mediaevent.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBookSeries queries the book_series edge of a MediaEvent.
+func (c *MediaEventClient) QueryBookSeries(_m *MediaEvent) *BookSeriesQuery {
+	query := (&BookSeriesClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, id),
+			sqlgraph.To(bookseries.Table, bookseries.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.BookSeriesTable, mediaevent.BookSeriesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

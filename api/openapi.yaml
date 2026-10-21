@@ -4797,13 +4797,17 @@ paths:
       operationId: listActivity
       summary: Library activity events.
       description: |
-        Reverse-chronological feed of media events across movies, episodes and
-        series. Supports cursor pagination and optional filtering by event
-        type, movie id, series id, and a time window.
+        Reverse-chronological feed of media events across movies, episodes,
+        series, artists, albums, books and book series. Supports cursor
+        pagination and optional filtering by event type, owner (movie, series,
+        artist, book, book series) and a time window.
       parameters:
         - $ref: "#/components/parameters/ActivityType"
         - $ref: "#/components/parameters/ActivityMovieID"
         - $ref: "#/components/parameters/ActivitySeriesID"
+        - $ref: "#/components/parameters/ActivityArtistID"
+        - $ref: "#/components/parameters/ActivityBookID"
+        - $ref: "#/components/parameters/ActivityBookSeriesID"
         - $ref: "#/components/parameters/ActivitySince"
         - $ref: "#/components/parameters/ActivityBefore"
         - $ref: "#/components/parameters/ActivityLimit"
@@ -5973,6 +5977,32 @@ components:
       required: false
       description: |
         Matches both the series' own events and those of its episodes.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityArtistID:
+      name: artist_id
+      in: query
+      required: false
+      description: |
+        Matches both the artist's own events (a discography pack, the artist
+        being added) and those of its albums.
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityBookID:
+      name: book_id
+      in: query
+      required: false
+      schema:
+        type: integer
+        x-go-type: uint32
+    ActivityBookSeriesID:
+      name: book_series_id
+      in: query
+      required: false
+      description: |
+        Matches both the series' own events and those of its volumes.
       schema:
         type: integer
         x-go-type: uint32
@@ -13438,11 +13468,17 @@ components:
       type: object
       required: [id, type, created_at]
       description: |
-        Exactly one of movie / episode / series is set, naming what the event
-        happened to. `series` carries what belongs to no single episode — a
-        search issued at series or season scope, and the show-level actions
-        (added, reidentified, metadata_refreshed, monitoring_changed);
-        per-episode outcomes use `episode`.
+        Exactly one of movie / episode / series / artist / album / book /
+        book_series is set, naming what the event happened to. `series`
+        carries what belongs to no single episode — a search issued at series
+        or season scope, and the show-level actions (added, reidentified,
+        metadata_refreshed, monitoring_changed); per-episode outcomes use
+        `episode`. Music and books split the same way one level up: `album`
+        and `book` carry their own grabs, imports, removals and searches (an
+        album import is one event, never one per track; a book event's
+        `book_kind` payload key names the slot), `artist` a discography pack
+        and the artist being added, `book_series` the series being added and
+        a series-wide search.
       properties:
         id:
           type: integer
@@ -13461,6 +13497,22 @@ components:
           $ref: "#/components/schemas/EpisodeRef"
         series:
           $ref: "#/components/schemas/SeriesRef"
+        artist:
+          $ref: "#/components/schemas/ArtistRef"
+        album:
+          $ref: "#/components/schemas/ActivityAlbumRef"
+        book:
+          $ref: "#/components/schemas/ActivityBookRef"
+        book_series:
+          $ref: "#/components/schemas/SeriesRef"
+
+    ArtistRef:
+      type: object
+      required: [id, name]
+      description: Minimal artist identity for feed rows.
+      properties:
+        id: { type: integer, x-go-type: uint32 }
+        name: { type: string }
 
     ReidentifyResult:
       type: object
@@ -13484,8 +13536,9 @@ components:
       type: object
       required: [id, title]
       description: |
-        Minimal series identity for feed rows. Deliberately not the full TVShow
-        schema, which carries the whole season/episode tree.
+        Minimal series identity for feed rows — a TV series under `series`, a
+        book series under `book_series`. Deliberately not the full TVShow or
+        BookSeries schema, which carry the whole season or volume tree.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
@@ -13506,8 +13559,9 @@ components:
       type: object
       required: [id, title, artist_id, artist_name]
       description: |
-        The album an album download is for (queue/history rows render
-        "<artist> · <album>" from it). Absent on every other record.
+        The album an album download or activity event is for (queue,
+        history and feed rows render "<artist> · <album>" from it). Absent on
+        every other record.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }
@@ -13530,7 +13584,8 @@ components:
       type: object
       required: [id, title, author]
       description: |
-        The book a book download is for. Absent on every other record.
+        The book a book download or activity event is for. Absent on every
+        other record.
       properties:
         id: { type: integer, x-go-type: uint32 }
         title: { type: string }

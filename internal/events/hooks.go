@@ -5,12 +5,16 @@ import (
 	"log/slog"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/ent/track"
 )
 
 // owner is the resolved (scope, id) pair an event hangs off. A zero id means
@@ -66,6 +70,9 @@ func Register(client *ent.Client) {
 	client.MediaFile.Use(mediaFileDeleteHook())
 	client.Movie.Use(movieHook())
 	client.TVShow.Use(tvShowHook())
+	client.Artist.Use(artistHook())
+	client.Book.Use(bookHook())
+	client.BookSeries.Use(bookSeriesHook())
 	client.ImportScanFile.Use(importScanFileHook())
 	client.ImportScanShow.Use(importScanShowHook())
 }
@@ -170,6 +177,10 @@ func mediaFileHook() ent.Hook {
 				if importedSuppressed(ctx) {
 					return val, nil
 				}
+				// Track and book files are left to their importers, which
+				// record one imported event per album or book slot: an album
+				// is a dozen files and an audiobook a folder of them, and a
+				// row per file read as a dozen unrelated imports.
 				var o owner
 				switch {
 				case hasID(mf.MovieID):
@@ -295,6 +306,9 @@ func downloadCreatePayload(m *ent.DownloadRecordMutation) map[string]any {
 	if v, ok := m.Size(); ok {
 		p["size_bytes"] = v
 	}
+	if v, ok := m.BookKind(); ok {
+		p["book_kind"] = string(v)
+	}
 	return p
 }
 
@@ -363,9 +377,10 @@ func mustID(f func() (uint32, bool)) uint32 {
 	return id
 }
 
-// downloadRecordOwner resolves the movie or episode a record belongs to. On a
-// create the mutation carries the edge; on an update it usually does not, so
-// the row is queried back — movie first, then episode.
+// downloadRecordOwner resolves the movie, episode, album, book or artist a
+// record belongs to. On a create the mutation carries the edge; on an update
+// it usually does not, so the row is queried back — movie first, then episode,
+// album, book and, for a discography pack, artist.
 func downloadRecordOwner(
 	ctx context.Context,
 	c *ent.Client,
@@ -376,6 +391,17 @@ func downloadRecordOwner(
 	}
 	if hasID(m.AnchorEpisodeID) {
 		return owner{ScopeEpisode, mustID(m.AnchorEpisodeID)}, nil
+	}
+	if hasID(m.AlbumID) {
+		return owner{ScopeAlbum, mustID(m.AlbumID)}, nil
+	}
+	if hasID(m.BookID) {
+		return owner{ScopeBook, mustID(m.BookID)}, nil
+	}
+	// A discography pack: the artist edge, with the albums it expects on a
+	// separate many-to-many. The pack is one grab, so it is one artist row.
+	if hasID(m.ArtistID) {
+		return owner{ScopeArtist, mustID(m.ArtistID)}, nil
 	}
 	// A create carries its edges in the mutation or not at all — there is no
 	// stored row to fall back to, and ent refuses IDs() on OpCreate outright.
@@ -398,6 +424,9 @@ func downloadRecordOwner(
 		// caller's transaction on every download-record mutation.
 		WithMovie(func(q *ent.MovieQuery) { q.Select(movie.FieldID) }).
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) }).
+		WithBook(func(q *ent.BookQuery) { q.Select(book.FieldID) }).
+		WithArtist(func(q *ent.ArtistQuery) { q.Select(artist.FieldID) }).
 		Only(ctx)
 	if ent.IsNotFound(err) {
 		return owner{}, nil
@@ -410,6 +439,12 @@ func downloadRecordOwner(
 		return owner{ScopeMovie, row.Edges.Movie.ID}, nil
 	case row.Edges.AnchorEpisode != nil:
 		return owner{ScopeEpisode, row.Edges.AnchorEpisode.ID}, nil
+	case row.Edges.Album != nil:
+		return owner{ScopeAlbum, row.Edges.Album.ID}, nil
+	case row.Edges.Book != nil:
+		return owner{ScopeBook, row.Edges.Book.ID}, nil
+	case row.Edges.Artist != nil:
+		return owner{ScopeArtist, row.Edges.Artist.ID}, nil
 	}
 	return owner{}, nil
 }
@@ -627,10 +662,15 @@ func mediaFileDeleteHook() ent.Hook {
 					return val, err
 				}
 				for _, d := range doomed {
+					p := map[string]any{"path": d.path}
+					if d.files > 1 {
+						p = map[string]any{"files": d.files}
+					}
+					if d.bookKind != "" {
+						p["book_kind"] = d.bookKind
+					}
 					recordAux(ctx, "media_file_delete", c, TypeFileRemoved,
-						d.scope, d.id, map[string]any{
-							"path": d.path,
-						})
+						d.scope, d.id, p)
 				}
 				return val, nil
 			},
@@ -638,16 +678,22 @@ func mediaFileDeleteHook() ent.Hook {
 	}
 }
 
-// removed is a media file resolved to its owner before deletion.
+// removed is a media file resolved to its owner before deletion. Track and
+// book files are folded per owner: replacing an album or an audiobook deletes
+// every file of it in one mutation, which is one removal, not a dozen — files
+// counts them and path is the first one's.
 type removed struct {
-	scope Scope
-	id    uint32
-	path  string
+	scope    Scope
+	id       uint32
+	path     string
+	files    int
+	bookKind string
 }
 
 // doomedMediaFiles reads the rows a delete mutation is about to remove,
-// resolving each to its owning movie or episode. Files whose owner is itself
-// being deleted come back ownerless and are skipped.
+// resolving each to its owning movie, episode, album (through its track) or
+// book. Files whose owner is itself being deleted come back ownerless and are
+// skipped.
 func doomedMediaFiles(
 	ctx context.Context,
 	c *ent.Client,
@@ -664,24 +710,140 @@ func doomedMediaFiles(
 		Where(mediafile.IDIn(ids...)).
 		WithMovie(func(q *ent.MovieQuery) { q.Select(movie.FieldID) }).
 		WithEpisode(func(q *ent.EpisodeQuery) { q.Select(episode.FieldID) }).
+		WithTrack(func(q *ent.TrackQuery) {
+			q.Select(track.FieldID).
+				WithAlbum(func(q *ent.AlbumQuery) { q.Select(album.FieldID) })
+		}).
+		WithBook(func(q *ent.BookQuery) { q.Select(book.FieldID) }).
 		All(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]removed, 0, len(rows))
+	folded := map[owner]int{}
+	fold := func(o owner, path, kind string) {
+		if i, ok := folded[o]; ok {
+			out[i].files++
+			return
+		}
+		folded[o] = len(out)
+		out = append(out, removed{
+			scope: o.scope, id: o.id, path: path, files: 1, bookKind: kind,
+		})
+	}
 	for _, row := range rows {
 		switch {
 		case row.Edges.Movie != nil:
 			out = append(out, removed{
-				ScopeMovie, row.Edges.Movie.ID, row.Path,
+				scope: ScopeMovie, id: row.Edges.Movie.ID, path: row.Path,
 			})
 		case row.Edges.Episode != nil:
 			out = append(out, removed{
-				ScopeEpisode, row.Edges.Episode.ID, row.Path,
+				scope: ScopeEpisode, id: row.Edges.Episode.ID, path: row.Path,
 			})
+		case row.Edges.Track != nil && row.Edges.Track.Edges.Album != nil:
+			fold(owner{ScopeAlbum, row.Edges.Track.Edges.Album.ID}, row.Path, "")
+		case row.Edges.Book != nil:
+			fold(owner{ScopeBook, row.Edges.Book.ID}, row.Path,
+				string(row.BookKind))
 		}
 	}
 	return out, nil
+}
+
+// artistHook records an artist entering the library. Create-only, like
+// tvShowHook: the monitor policy is re-applied over every album in one
+// statement, and the stub albums an add seeds are not each an arrival — the
+// artist row stands for all of them.
+func artistHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				am, ok := m.(*ent.ArtistMutation)
+				if !ok || !am.Op().Is(ent.OpCreate) {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				row, ok := val.(*ent.Artist)
+				if !ok || row.ID == 0 {
+					return val, nil
+				}
+				recordAux(ctx, "artist", am.Client(), TypeAdded, ScopeArtist,
+					row.ID, map[string]any{"title": row.Name})
+				return val, nil
+			},
+		)
+	}
+}
+
+// bookHook records a standalone book entering the library. A series volume is
+// skipped: adding a series writes a row — most of them stubs — for every
+// position, and bookSeriesHook's one row stands for all of them.
+func bookHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				bm, ok := m.(*ent.BookMutation)
+				if !ok || !bm.Op().Is(ent.OpCreate) || hasID(bm.SeriesID) {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				row, ok := val.(*ent.Book)
+				if !ok || row.ID == 0 {
+					return val, nil
+				}
+				recordAux(ctx, "book", bm.Client(), TypeAdded, ScopeBook,
+					row.ID, bookPayload(row))
+				return val, nil
+			},
+		)
+	}
+}
+
+// bookSeriesHook records a book series entering the library.
+func bookSeriesHook() ent.Hook {
+	return func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(
+			func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				sm, ok := m.(*ent.BookSeriesMutation)
+				if !ok || !sm.Op().Is(ent.OpCreate) {
+					return next.Mutate(ctx, m)
+				}
+				val, err := next.Mutate(ctx, m)
+				if err != nil {
+					return val, err
+				}
+				row, ok := val.(*ent.BookSeries)
+				if !ok || row.ID == 0 {
+					return val, nil
+				}
+				p := map[string]any{"title": row.Title}
+				if row.QualityProfile != "" {
+					p["quality_profile"] = row.QualityProfile
+				}
+				recordAux(ctx, "book_series", sm.Client(), TypeAdded,
+					ScopeBookSeries, row.ID, p)
+				return val, nil
+			},
+		)
+	}
+}
+
+func bookPayload(b *ent.Book) map[string]any {
+	p := map[string]any{"title": b.Title}
+	if b.AuthorName != "" {
+		p["author"] = b.AuthorName
+	}
+	if b.QualityProfile != "" {
+		p["quality_profile"] = b.QualityProfile
+	}
+	return p
 }
 
 func moviePayload(m *ent.Movie) map[string]any {

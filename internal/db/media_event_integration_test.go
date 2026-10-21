@@ -85,6 +85,63 @@ var _ = Describe("Store.RecentActivity", Label("integration", "db"), func() {
 		Expect(res.Events[0].Edges.Movie.ID).To(Equal(mid1))
 	})
 
+	It("matches an artist's own rows and its albums'", func() {
+		gojira := client.Artist.Create().SetMbid("a1").SetName("Gojira").SaveX(ctx)
+		other := client.Artist.Create().SetMbid("a2").SetName("Other").SaveX(ctx)
+		magma := client.Album.Create().
+			SetMbid("rg1").SetTitle("Magma").SetArtist(gojira).SaveX(ctx)
+		elsewhere := client.Album.Create().
+			SetMbid("rg2").SetTitle("Else").SetArtist(other).SaveX(ctx)
+		client.MediaEvent.Create().SetType("grabbed").SetArtist(gojira).SaveX(ctx)
+		client.MediaEvent.Create().SetType("imported").SetAlbum(magma).SaveX(ctx)
+		client.MediaEvent.Create().SetType("imported").SetAlbum(elsewhere).SaveX(ctx)
+
+		res, err := store.RecentActivity(ctx, ActivityFilter{ArtistID: &gojira.ID})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Events).To(HaveLen(2))
+		var album *ent.Album
+		for _, e := range res.Events {
+			if e.Edges.Album != nil {
+				album = e.Edges.Album
+			}
+		}
+		Expect(album).NotTo(BeNil())
+		Expect(album.Edges.Artist).NotTo(BeNil(),
+			"the row names the artist beside the album")
+		Expect(album.Edges.Artist.Name).To(Equal("Gojira"))
+	})
+
+	It("matches a book, and a series with its volumes", func() {
+		series := client.BookSeries.Create().
+			SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+		vol := client.Book.Create().
+			SetHardcoverID(1).SetTitle("Astérix le Gaulois").
+			SetSeries(series).SaveX(ctx)
+		alone := client.Book.Create().
+			SetHardcoverID(2).SetTitle("Exhalation").SaveX(ctx)
+		client.MediaEvent.Create().SetType("added").SetBookSeries(series).SaveX(ctx)
+		client.MediaEvent.Create().SetType("imported").SetBook(vol).SaveX(ctx)
+		client.MediaEvent.Create().SetType("imported").SetBook(alone).SaveX(ctx)
+
+		res, err := store.RecentActivity(
+			ctx,
+			ActivityFilter{BookSeriesID: &series.ID},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Events).To(HaveLen(2))
+
+		res, err = store.RecentActivity(ctx, ActivityFilter{BookID: &alone.ID})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Events).To(HaveLen(1))
+		Expect(res.Events[0].Edges.Book.ID).To(Equal(alone.ID))
+
+		res, err = store.RecentActivity(ctx, ActivityFilter{BookID: &vol.ID})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Events).To(HaveLen(1))
+		Expect(res.Events[0].Edges.Book.Edges.Series).NotTo(BeNil(),
+			"a volume's row names its series")
+	})
+
 	It("pages stably with cursors", func() {
 		mid := createMovie("Z", 999)
 		for i := range 5 {

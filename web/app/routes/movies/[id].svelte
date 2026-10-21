@@ -13,6 +13,7 @@
 	import DetailAbout from "@components/shared/DetailAbout.svelte";
 	import MovieDetailInfo from "@components/movies/MovieDetailInfo.svelte";
 	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import DetailCast from "@components/shared/DetailCast.svelte";
 	import MovieDetailSimilar from "@components/movies/MovieDetailSimilar.svelte";
 	import PlayOnMenu from "@components/shared/PlayOnMenu.svelte";
@@ -52,6 +53,7 @@
 		return t && VALID_TABS.has(t as Tab) ? (t as Tab) : "overview";
 	}
 	let tab = $state<Tab>(readTab());
+	let tabTrack = $state<HTMLElement | null>(null);
 
 	$effect(() => {
 		if (typeof window === "undefined") return;
@@ -203,7 +205,7 @@
 		aria-label={i18n.movies_sections()}
 		class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8"
 	>
-		<div class="tabs-track flex w-full gap-0.5">
+		<div bind:this={tabTrack} class="tabs-track flex w-full gap-0.5">
 			{#each TABS as t (t.key)}
 				{@const active = tab === t.key}
 				<button
@@ -228,8 +230,9 @@
 	</nav>
 
 	<div
+		use:swipeTabs={{ keys: TABS.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }}
 		class={cn(
-			"w-full px-4 pt-6 md:px-8 md:pb-6",
+			"min-h-[60dvh] w-full px-4 pt-6 md:px-8 md:pb-6",
 			auth.canAddDirectly ? "pb-24" : "pb-6",
 		)}
 	>

@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -582,6 +583,21 @@ func (_u *AlbumUpdate) AddAnnotations(v ...*MusicAnnotation) *AlbumUpdate {
 	return _u.AddAnnotationIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *AlbumUpdate) AddEventIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *AlbumUpdate) AddEvents(v ...*MediaEvent) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
 func (_u *AlbumUpdate) AddPackRecordIDs(ids ...uint32) *AlbumUpdate {
 	_u.mutation.AddPackRecordIDs(ids...)
@@ -690,6 +706,27 @@ func (_u *AlbumUpdate) RemoveAnnotations(v ...*MusicAnnotation) *AlbumUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *AlbumUpdate) ClearEvents() *AlbumUpdate {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *AlbumUpdate) RemoveEventIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *AlbumUpdate) RemoveEvents(v ...*MediaEvent) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
 }
 
 // ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
@@ -1140,6 +1177,51 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1761,6 +1843,21 @@ func (_u *AlbumUpdateOne) AddAnnotations(v ...*MusicAnnotation) *AlbumUpdateOne 
 	return _u.AddAnnotationIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *AlbumUpdateOne) AddEventIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *AlbumUpdateOne) AddEvents(v ...*MediaEvent) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
 func (_u *AlbumUpdateOne) AddPackRecordIDs(ids ...uint32) *AlbumUpdateOne {
 	_u.mutation.AddPackRecordIDs(ids...)
@@ -1869,6 +1966,27 @@ func (_u *AlbumUpdateOne) RemoveAnnotations(v ...*MusicAnnotation) *AlbumUpdateO
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAnnotationIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *AlbumUpdateOne) ClearEvents() *AlbumUpdateOne {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *AlbumUpdateOne) RemoveEventIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *AlbumUpdateOne) RemoveEvents(v ...*MediaEvent) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
 }
 
 // ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
@@ -2349,6 +2467,51 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.EventsTable,
+			Columns: []string{album.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

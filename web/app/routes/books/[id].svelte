@@ -25,6 +25,8 @@
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import PeopleGrid from "@components/shared/PeopleGrid.svelte";
 	import InfoCard, { type InfoRow } from "@components/shared/InfoCard.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import {
 		bookPeople,
 		bookRoleLabel,
@@ -43,7 +45,18 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let id = $state("");
-	onMount(() => params.subscribe((p) => (id = p.id ?? "")));
+	const TABS = ["overview", "history"] as const;
+	let tab = $state<(typeof TABS)[number]>("overview");
+	let tabTrack = $state<HTMLElement | null>(null);
+	// The route component is reused from book to book; a volume link followed
+	// from one book's history opens the next on its overview.
+	onMount(() =>
+		params.subscribe((p) => {
+			const next = p.id ?? "";
+			if (next !== id) tab = "overview";
+			id = next;
+		}),
+	);
 
 	const bookQuery = createQuery<Book>(() => ({
 		queryKey: ["books", "book", id],
@@ -288,7 +301,30 @@
 		{/snippet}
 	</MediaHero>
 
-	<div class={cn("w-full px-4 md:px-8 md:pb-8 md:pt-2", canEdit ? "pb-24" : "pb-8")}>
+	<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
+		<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+			{#each [{ key: "overview", label: i18n.common_overview() }, { key: "history", label: i18n.common_history() }] as const as t (t.key)}
+				{@const active = tab === t.key}
+				<button
+					type="button"
+					onclick={() => (tab = t.key)}
+					aria-current={active ? "page" : undefined}
+					class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
+				>
+					<span>{t.label}</span>
+					{#if active}<span aria-hidden="true" class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"></span>{/if}
+				</button>
+			{/each}
+		</div>
+	</nav>
+
+	<div use:swipeTabs={{ keys: TABS, current: tab, onChange: (k) => (tab = k), track: tabTrack }} class="min-h-[60dvh]">
+	{#if tab === "history"}
+		<div class={cn("w-full px-4 py-6 md:px-8", canEdit && "pb-24 md:pb-6")}>
+			<DetailHistory bookId={book.id} />
+		</div>
+	{:else}
+	<div class={cn("w-full px-4 pt-6 md:px-8 md:pb-8", canEdit ? "pb-24" : "pb-8")}>
 		<div class="grid gap-3 md:grid-cols-2 md:gap-4">
 			{#each slots as slot (slot.format)}
 				{@const edition = editionOf(slot.edition_id)}
@@ -339,6 +375,8 @@
 		<div bind:this={editionsEl} class="mt-8">
 			<EditionsTable editions={book.editions} {inUse} {filter} onFilterChange={(f) => (filter = f)} {canEdit} onUse={use} />
 		</div>
+	</div>
+	{/if}
 	</div>
 
 	{#if canEdit}

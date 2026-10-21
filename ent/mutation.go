@@ -156,6 +156,9 @@ type AlbumMutation struct {
 	annotations             map[uint32]struct{}
 	removedannotations      map[uint32]struct{}
 	clearedannotations      bool
+	events                  map[uint32]struct{}
+	removedevents           map[uint32]struct{}
+	clearedevents           bool
 	pack_records            map[uint32]struct{}
 	removedpack_records     map[uint32]struct{}
 	clearedpack_records     bool
@@ -1808,6 +1811,60 @@ func (m *AlbumMutation) ResetAnnotations() {
 	m.removedannotations = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *AlbumMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *AlbumMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *AlbumMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *AlbumMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *AlbumMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *AlbumMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *AlbumMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by ids.
 func (m *AlbumMutation) AddPackRecordIDs(ids ...uint32) {
 	if m.pack_records == nil {
@@ -2586,7 +2643,7 @@ func (m *AlbumMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AlbumMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.artist != nil {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2601,6 +2658,9 @@ func (m *AlbumMutation) AddedEdges() []string {
 	}
 	if m.annotations != nil {
 		edges = append(edges, album.EdgeAnnotations)
+	}
+	if m.events != nil {
+		edges = append(edges, album.EdgeEvents)
 	}
 	if m.pack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
@@ -2640,6 +2700,12 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgePackRecords:
 		ids := make([]ent.Value, 0, len(m.pack_records))
 		for id := range m.pack_records {
@@ -2652,7 +2718,7 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AlbumMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.removedtracks != nil {
 		edges = append(edges, album.EdgeTracks)
 	}
@@ -2664,6 +2730,9 @@ func (m *AlbumMutation) RemovedEdges() []string {
 	}
 	if m.removedannotations != nil {
 		edges = append(edges, album.EdgeAnnotations)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, album.EdgeEvents)
 	}
 	if m.removedpack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
@@ -2699,6 +2768,12 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgePackRecords:
 		ids := make([]ent.Value, 0, len(m.removedpack_records))
 		for id := range m.removedpack_records {
@@ -2711,7 +2786,7 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AlbumMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.clearedartist {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2726,6 +2801,9 @@ func (m *AlbumMutation) ClearedEdges() []string {
 	}
 	if m.clearedannotations {
 		edges = append(edges, album.EdgeAnnotations)
+	}
+	if m.clearedevents {
+		edges = append(edges, album.EdgeEvents)
 	}
 	if m.clearedpack_records {
 		edges = append(edges, album.EdgePackRecords)
@@ -2747,6 +2825,8 @@ func (m *AlbumMutation) EdgeCleared(name string) bool {
 		return m.clearedcredits
 	case album.EdgeAnnotations:
 		return m.clearedannotations
+	case album.EdgeEvents:
+		return m.clearedevents
 	case album.EdgePackRecords:
 		return m.clearedpack_records
 	}
@@ -2782,6 +2862,9 @@ func (m *AlbumMutation) ResetEdge(name string) error {
 		return nil
 	case album.EdgeAnnotations:
 		m.ResetAnnotations()
+		return nil
+	case album.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	case album.EdgePackRecords:
 		m.ResetPackRecords()
@@ -3469,6 +3552,9 @@ type ArtistMutation struct {
 	annotations             map[uint32]struct{}
 	removedannotations      map[uint32]struct{}
 	clearedannotations      bool
+	events                  map[uint32]struct{}
+	removedevents           map[uint32]struct{}
+	clearedevents           bool
 	done                    bool
 	oldValue                func(context.Context) (*Artist, error)
 	predicates              []predicate.Artist
@@ -4800,6 +4886,60 @@ func (m *ArtistMutation) ResetAnnotations() {
 	m.removedannotations = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *ArtistMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *ArtistMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *ArtistMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *ArtistMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *ArtistMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *ArtistMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *ArtistMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // Where appends a list predicates to the ArtistMutation builder.
 func (m *ArtistMutation) Where(ps ...predicate.Artist) {
 	m.predicates = append(m.predicates, ps...)
@@ -5399,7 +5539,7 @@ func (m *ArtistMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArtistMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.albums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5411,6 +5551,9 @@ func (m *ArtistMutation) AddedEdges() []string {
 	}
 	if m.annotations != nil {
 		edges = append(edges, artist.EdgeAnnotations)
+	}
+	if m.events != nil {
+		edges = append(edges, artist.EdgeEvents)
 	}
 	return edges
 }
@@ -5443,13 +5586,19 @@ func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArtistMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedalbums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5461,6 +5610,9 @@ func (m *ArtistMutation) RemovedEdges() []string {
 	}
 	if m.removedannotations != nil {
 		edges = append(edges, artist.EdgeAnnotations)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, artist.EdgeEvents)
 	}
 	return edges
 }
@@ -5493,13 +5645,19 @@ func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArtistMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedalbums {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5511,6 +5669,9 @@ func (m *ArtistMutation) ClearedEdges() []string {
 	}
 	if m.clearedannotations {
 		edges = append(edges, artist.EdgeAnnotations)
+	}
+	if m.clearedevents {
+		edges = append(edges, artist.EdgeEvents)
 	}
 	return edges
 }
@@ -5527,6 +5688,8 @@ func (m *ArtistMutation) EdgeCleared(name string) bool {
 		return m.cleareddownload_records
 	case artist.EdgeAnnotations:
 		return m.clearedannotations
+	case artist.EdgeEvents:
+		return m.clearedevents
 	}
 	return false
 }
@@ -5554,6 +5717,9 @@ func (m *ArtistMutation) ResetEdge(name string) error {
 		return nil
 	case artist.EdgeAnnotations:
 		m.ResetAnnotations()
+		return nil
+	case artist.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	}
 	return fmt.Errorf("unknown Artist edge %s", name)
@@ -7349,6 +7515,9 @@ type BookMutation struct {
 	download_records             map[uint32]struct{}
 	removeddownload_records      map[uint32]struct{}
 	cleareddownload_records      bool
+	events                       map[uint32]struct{}
+	removedevents                map[uint32]struct{}
+	clearedevents                bool
 	done                         bool
 	oldValue                     func(context.Context) (*Book, error)
 	predicates                   []predicate.Book
@@ -9081,6 +9250,60 @@ func (m *BookMutation) ResetDownloadRecords() {
 	m.removeddownload_records = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *BookMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *BookMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *BookMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *BookMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *BookMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *BookMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *BookMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // Where appends a list predicates to the BookMutation builder.
 func (m *BookMutation) Where(ps ...predicate.Book) {
 	m.predicates = append(m.predicates, ps...)
@@ -9824,7 +10047,7 @@ func (m *BookMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BookMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.series != nil {
 		edges = append(edges, book.EdgeSeries)
 	}
@@ -9845,6 +10068,9 @@ func (m *BookMutation) AddedEdges() []string {
 	}
 	if m.download_records != nil {
 		edges = append(edges, book.EdgeDownloadRecords)
+	}
+	if m.events != nil {
+		edges = append(edges, book.EdgeEvents)
 	}
 	return edges
 }
@@ -9889,13 +10115,19 @@ func (m *BookMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case book.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BookMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removededitions != nil {
 		edges = append(edges, book.EdgeEditions)
 	}
@@ -9907,6 +10139,9 @@ func (m *BookMutation) RemovedEdges() []string {
 	}
 	if m.removeddownload_records != nil {
 		edges = append(edges, book.EdgeDownloadRecords)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, book.EdgeEvents)
 	}
 	return edges
 }
@@ -9939,13 +10174,19 @@ func (m *BookMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case book.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BookMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedseries {
 		edges = append(edges, book.EdgeSeries)
 	}
@@ -9966,6 +10207,9 @@ func (m *BookMutation) ClearedEdges() []string {
 	}
 	if m.cleareddownload_records {
 		edges = append(edges, book.EdgeDownloadRecords)
+	}
+	if m.clearedevents {
+		edges = append(edges, book.EdgeEvents)
 	}
 	return edges
 }
@@ -9988,6 +10232,8 @@ func (m *BookMutation) EdgeCleared(name string) bool {
 		return m.clearedmedia_files
 	case book.EdgeDownloadRecords:
 		return m.cleareddownload_records
+	case book.EdgeEvents:
+		return m.clearedevents
 	}
 	return false
 }
@@ -10033,6 +10279,9 @@ func (m *BookMutation) ResetEdge(name string) error {
 		return nil
 	case book.EdgeDownloadRecords:
 		m.ResetDownloadRecords()
+		return nil
+	case book.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	}
 	return fmt.Errorf("unknown Book edge %s", name)
@@ -12359,6 +12608,9 @@ type BookSeriesMutation struct {
 	contributions        map[uint32]struct{}
 	removedcontributions map[uint32]struct{}
 	clearedcontributions bool
+	events               map[uint32]struct{}
+	removedevents        map[uint32]struct{}
+	clearedevents        bool
 	done                 bool
 	oldValue             func(context.Context) (*BookSeries, error)
 	predicates           []predicate.BookSeries
@@ -13429,6 +13681,60 @@ func (m *BookSeriesMutation) ResetContributions() {
 	m.removedcontributions = nil
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by ids.
+func (m *BookSeriesMutation) AddEventIDs(ids ...uint32) {
+	if m.events == nil {
+		m.events = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.events[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvents clears the "events" edge to the MediaEvent entity.
+func (m *BookSeriesMutation) ClearEvents() {
+	m.clearedevents = true
+}
+
+// EventsCleared reports if the "events" edge to the MediaEvent entity was cleared.
+func (m *BookSeriesMutation) EventsCleared() bool {
+	return m.clearedevents
+}
+
+// RemoveEventIDs removes the "events" edge to the MediaEvent entity by IDs.
+func (m *BookSeriesMutation) RemoveEventIDs(ids ...uint32) {
+	if m.removedevents == nil {
+		m.removedevents = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.events, ids[i])
+		m.removedevents[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvents returns the removed IDs of the "events" edge to the MediaEvent entity.
+func (m *BookSeriesMutation) RemovedEventsIDs() (ids []uint32) {
+	for id := range m.removedevents {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventsIDs returns the "events" edge IDs in the mutation.
+func (m *BookSeriesMutation) EventsIDs() (ids []uint32) {
+	for id := range m.events {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvents resets all changes to the "events" edge.
+func (m *BookSeriesMutation) ResetEvents() {
+	m.events = nil
+	m.clearedevents = false
+	m.removedevents = nil
+}
+
 // Where appends a list predicates to the BookSeriesMutation builder.
 func (m *BookSeriesMutation) Where(ps ...predicate.BookSeries) {
 	m.predicates = append(m.predicates, ps...)
@@ -13959,12 +14265,15 @@ func (m *BookSeriesMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BookSeriesMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.volumes != nil {
 		edges = append(edges, bookseries.EdgeVolumes)
 	}
 	if m.contributions != nil {
 		edges = append(edges, bookseries.EdgeContributions)
+	}
+	if m.events != nil {
+		edges = append(edges, bookseries.EdgeEvents)
 	}
 	return edges
 }
@@ -13985,18 +14294,27 @@ func (m *BookSeriesMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case bookseries.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.events))
+		for id := range m.events {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BookSeriesMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedvolumes != nil {
 		edges = append(edges, bookseries.EdgeVolumes)
 	}
 	if m.removedcontributions != nil {
 		edges = append(edges, bookseries.EdgeContributions)
+	}
+	if m.removedevents != nil {
+		edges = append(edges, bookseries.EdgeEvents)
 	}
 	return edges
 }
@@ -14017,18 +14335,27 @@ func (m *BookSeriesMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case bookseries.EdgeEvents:
+		ids := make([]ent.Value, 0, len(m.removedevents))
+		for id := range m.removedevents {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BookSeriesMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedvolumes {
 		edges = append(edges, bookseries.EdgeVolumes)
 	}
 	if m.clearedcontributions {
 		edges = append(edges, bookseries.EdgeContributions)
+	}
+	if m.clearedevents {
+		edges = append(edges, bookseries.EdgeEvents)
 	}
 	return edges
 }
@@ -14041,6 +14368,8 @@ func (m *BookSeriesMutation) EdgeCleared(name string) bool {
 		return m.clearedvolumes
 	case bookseries.EdgeContributions:
 		return m.clearedcontributions
+	case bookseries.EdgeEvents:
+		return m.clearedevents
 	}
 	return false
 }
@@ -14062,6 +14391,9 @@ func (m *BookSeriesMutation) ResetEdge(name string) error {
 		return nil
 	case bookseries.EdgeContributions:
 		m.ResetContributions()
+		return nil
+	case bookseries.EdgeEvents:
+		m.ResetEvents()
 		return nil
 	}
 	return fmt.Errorf("unknown BookSeries edge %s", name)
@@ -28604,23 +28936,31 @@ func (m *InviteMutation) ResetEdge(name string) error {
 // MediaEventMutation represents an operation that mutates the MediaEvent nodes in the graph.
 type MediaEventMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uint32
-	create_time    *time.Time
-	update_time    *time.Time
-	_type          *mediaevent.Type
-	payload        *map[string]interface{}
-	clearedFields  map[string]struct{}
-	movie          *uint32
-	clearedmovie   bool
-	episode        *uint32
-	clearedepisode bool
-	tv_show        *uint32
-	clearedtv_show bool
-	done           bool
-	oldValue       func(context.Context) (*MediaEvent, error)
-	predicates     []predicate.MediaEvent
+	op                 Op
+	typ                string
+	id                 *uint32
+	create_time        *time.Time
+	update_time        *time.Time
+	_type              *mediaevent.Type
+	payload            *map[string]interface{}
+	clearedFields      map[string]struct{}
+	movie              *uint32
+	clearedmovie       bool
+	episode            *uint32
+	clearedepisode     bool
+	tv_show            *uint32
+	clearedtv_show     bool
+	artist             *uint32
+	clearedartist      bool
+	album              *uint32
+	clearedalbum       bool
+	book               *uint32
+	clearedbook        bool
+	book_series        *uint32
+	clearedbook_series bool
+	done               bool
+	oldValue           func(context.Context) (*MediaEvent, error)
+	predicates         []predicate.MediaEvent
 }
 
 var _ ent.Mutation = (*MediaEventMutation)(nil)
@@ -29001,6 +29341,162 @@ func (m *MediaEventMutation) ResetTvShow() {
 	m.clearedtv_show = false
 }
 
+// SetArtistID sets the "artist" edge to the Artist entity by id.
+func (m *MediaEventMutation) SetArtistID(id uint32) {
+	m.artist = &id
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (m *MediaEventMutation) ClearArtist() {
+	m.clearedartist = true
+}
+
+// ArtistCleared reports if the "artist" edge to the Artist entity was cleared.
+func (m *MediaEventMutation) ArtistCleared() bool {
+	return m.clearedartist
+}
+
+// ArtistID returns the "artist" edge ID in the mutation.
+func (m *MediaEventMutation) ArtistID() (id uint32, exists bool) {
+	if m.artist != nil {
+		return *m.artist, true
+	}
+	return
+}
+
+// ArtistIDs returns the "artist" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArtistID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) ArtistIDs() (ids []uint32) {
+	if id := m.artist; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArtist resets all changes to the "artist" edge.
+func (m *MediaEventMutation) ResetArtist() {
+	m.artist = nil
+	m.clearedartist = false
+}
+
+// SetAlbumID sets the "album" edge to the Album entity by id.
+func (m *MediaEventMutation) SetAlbumID(id uint32) {
+	m.album = &id
+}
+
+// ClearAlbum clears the "album" edge to the Album entity.
+func (m *MediaEventMutation) ClearAlbum() {
+	m.clearedalbum = true
+}
+
+// AlbumCleared reports if the "album" edge to the Album entity was cleared.
+func (m *MediaEventMutation) AlbumCleared() bool {
+	return m.clearedalbum
+}
+
+// AlbumID returns the "album" edge ID in the mutation.
+func (m *MediaEventMutation) AlbumID() (id uint32, exists bool) {
+	if m.album != nil {
+		return *m.album, true
+	}
+	return
+}
+
+// AlbumIDs returns the "album" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AlbumID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) AlbumIDs() (ids []uint32) {
+	if id := m.album; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAlbum resets all changes to the "album" edge.
+func (m *MediaEventMutation) ResetAlbum() {
+	m.album = nil
+	m.clearedalbum = false
+}
+
+// SetBookID sets the "book" edge to the Book entity by id.
+func (m *MediaEventMutation) SetBookID(id uint32) {
+	m.book = &id
+}
+
+// ClearBook clears the "book" edge to the Book entity.
+func (m *MediaEventMutation) ClearBook() {
+	m.clearedbook = true
+}
+
+// BookCleared reports if the "book" edge to the Book entity was cleared.
+func (m *MediaEventMutation) BookCleared() bool {
+	return m.clearedbook
+}
+
+// BookID returns the "book" edge ID in the mutation.
+func (m *MediaEventMutation) BookID() (id uint32, exists bool) {
+	if m.book != nil {
+		return *m.book, true
+	}
+	return
+}
+
+// BookIDs returns the "book" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BookID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) BookIDs() (ids []uint32) {
+	if id := m.book; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBook resets all changes to the "book" edge.
+func (m *MediaEventMutation) ResetBook() {
+	m.book = nil
+	m.clearedbook = false
+}
+
+// SetBookSeriesID sets the "book_series" edge to the BookSeries entity by id.
+func (m *MediaEventMutation) SetBookSeriesID(id uint32) {
+	m.book_series = &id
+}
+
+// ClearBookSeries clears the "book_series" edge to the BookSeries entity.
+func (m *MediaEventMutation) ClearBookSeries() {
+	m.clearedbook_series = true
+}
+
+// BookSeriesCleared reports if the "book_series" edge to the BookSeries entity was cleared.
+func (m *MediaEventMutation) BookSeriesCleared() bool {
+	return m.clearedbook_series
+}
+
+// BookSeriesID returns the "book_series" edge ID in the mutation.
+func (m *MediaEventMutation) BookSeriesID() (id uint32, exists bool) {
+	if m.book_series != nil {
+		return *m.book_series, true
+	}
+	return
+}
+
+// BookSeriesIDs returns the "book_series" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BookSeriesID instead. It exists only for internal usage by the builders.
+func (m *MediaEventMutation) BookSeriesIDs() (ids []uint32) {
+	if id := m.book_series; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBookSeries resets all changes to the "book_series" edge.
+func (m *MediaEventMutation) ResetBookSeries() {
+	m.book_series = nil
+	m.clearedbook_series = false
+}
+
 // Where appends a list predicates to the MediaEventMutation builder.
 func (m *MediaEventMutation) Where(ps ...predicate.MediaEvent) {
 	m.predicates = append(m.predicates, ps...)
@@ -29194,7 +29690,7 @@ func (m *MediaEventMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MediaEventMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 7)
 	if m.movie != nil {
 		edges = append(edges, mediaevent.EdgeMovie)
 	}
@@ -29203,6 +29699,18 @@ func (m *MediaEventMutation) AddedEdges() []string {
 	}
 	if m.tv_show != nil {
 		edges = append(edges, mediaevent.EdgeTvShow)
+	}
+	if m.artist != nil {
+		edges = append(edges, mediaevent.EdgeArtist)
+	}
+	if m.album != nil {
+		edges = append(edges, mediaevent.EdgeAlbum)
+	}
+	if m.book != nil {
+		edges = append(edges, mediaevent.EdgeBook)
+	}
+	if m.book_series != nil {
+		edges = append(edges, mediaevent.EdgeBookSeries)
 	}
 	return edges
 }
@@ -29223,13 +29731,29 @@ func (m *MediaEventMutation) AddedIDs(name string) []ent.Value {
 		if id := m.tv_show; id != nil {
 			return []ent.Value{*id}
 		}
+	case mediaevent.EdgeArtist:
+		if id := m.artist; id != nil {
+			return []ent.Value{*id}
+		}
+	case mediaevent.EdgeAlbum:
+		if id := m.album; id != nil {
+			return []ent.Value{*id}
+		}
+	case mediaevent.EdgeBook:
+		if id := m.book; id != nil {
+			return []ent.Value{*id}
+		}
+	case mediaevent.EdgeBookSeries:
+		if id := m.book_series; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MediaEventMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 7)
 	return edges
 }
 
@@ -29241,7 +29765,7 @@ func (m *MediaEventMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MediaEventMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 7)
 	if m.clearedmovie {
 		edges = append(edges, mediaevent.EdgeMovie)
 	}
@@ -29250,6 +29774,18 @@ func (m *MediaEventMutation) ClearedEdges() []string {
 	}
 	if m.clearedtv_show {
 		edges = append(edges, mediaevent.EdgeTvShow)
+	}
+	if m.clearedartist {
+		edges = append(edges, mediaevent.EdgeArtist)
+	}
+	if m.clearedalbum {
+		edges = append(edges, mediaevent.EdgeAlbum)
+	}
+	if m.clearedbook {
+		edges = append(edges, mediaevent.EdgeBook)
+	}
+	if m.clearedbook_series {
+		edges = append(edges, mediaevent.EdgeBookSeries)
 	}
 	return edges
 }
@@ -29264,6 +29800,14 @@ func (m *MediaEventMutation) EdgeCleared(name string) bool {
 		return m.clearedepisode
 	case mediaevent.EdgeTvShow:
 		return m.clearedtv_show
+	case mediaevent.EdgeArtist:
+		return m.clearedartist
+	case mediaevent.EdgeAlbum:
+		return m.clearedalbum
+	case mediaevent.EdgeBook:
+		return m.clearedbook
+	case mediaevent.EdgeBookSeries:
+		return m.clearedbook_series
 	}
 	return false
 }
@@ -29281,6 +29825,18 @@ func (m *MediaEventMutation) ClearEdge(name string) error {
 	case mediaevent.EdgeTvShow:
 		m.ClearTvShow()
 		return nil
+	case mediaevent.EdgeArtist:
+		m.ClearArtist()
+		return nil
+	case mediaevent.EdgeAlbum:
+		m.ClearAlbum()
+		return nil
+	case mediaevent.EdgeBook:
+		m.ClearBook()
+		return nil
+	case mediaevent.EdgeBookSeries:
+		m.ClearBookSeries()
+		return nil
 	}
 	return fmt.Errorf("unknown MediaEvent unique edge %s", name)
 }
@@ -29297,6 +29853,18 @@ func (m *MediaEventMutation) ResetEdge(name string) error {
 		return nil
 	case mediaevent.EdgeTvShow:
 		m.ResetTvShow()
+		return nil
+	case mediaevent.EdgeArtist:
+		m.ResetArtist()
+		return nil
+	case mediaevent.EdgeAlbum:
+		m.ResetAlbum()
+		return nil
+	case mediaevent.EdgeBook:
+		m.ResetBook()
+		return nil
+	case mediaevent.EdgeBookSeries:
+		m.ResetBookSeries()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaEvent edge %s", name)

@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/bookedition"
 	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -639,6 +640,21 @@ func (_u *BookUpdate) AddDownloadRecords(v ...*DownloadRecord) *BookUpdate {
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *BookUpdate) AddEventIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *BookUpdate) AddEvents(v ...*MediaEvent) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // Mutation returns the BookMutation object of the builder.
 func (_u *BookUpdate) Mutation() *BookMutation {
 	return _u.mutation
@@ -744,6 +760,27 @@ func (_u *BookUpdate) RemoveDownloadRecords(v ...*DownloadRecord) *BookUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *BookUpdate) ClearEvents() *BookUpdate {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *BookUpdate) RemoveEventIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *BookUpdate) RemoveEvents(v ...*MediaEvent) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1226,6 +1263,51 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1860,6 +1942,21 @@ func (_u *BookUpdateOne) AddDownloadRecords(v ...*DownloadRecord) *BookUpdateOne
 	return _u.AddDownloadRecordIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_u *BookUpdateOne) AddEventIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.AddEventIDs(ids...)
+	return _u
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_u *BookUpdateOne) AddEvents(v ...*MediaEvent) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddEventIDs(ids...)
+}
+
 // Mutation returns the BookMutation object of the builder.
 func (_u *BookUpdateOne) Mutation() *BookMutation {
 	return _u.mutation
@@ -1965,6 +2062,27 @@ func (_u *BookUpdateOne) RemoveDownloadRecords(v ...*DownloadRecord) *BookUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDownloadRecordIDs(ids...)
+}
+
+// ClearEvents clears all "events" edges to the MediaEvent entity.
+func (_u *BookUpdateOne) ClearEvents() *BookUpdateOne {
+	_u.mutation.ClearEvents()
+	return _u
+}
+
+// RemoveEventIDs removes the "events" edge to MediaEvent entities by IDs.
+func (_u *BookUpdateOne) RemoveEventIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.RemoveEventIDs(ids...)
+	return _u
+}
+
+// RemoveEvents removes "events" edges to MediaEvent entities.
+func (_u *BookUpdateOne) RemoveEvents(v ...*MediaEvent) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveEventIDs(ids...)
 }
 
 // Where appends a list predicates to the BookUpdate builder.
@@ -2477,6 +2595,51 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(downloadrecord.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedEventsIDs(); len(nodes) > 0 && !_u.mutation.EventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.EventsTable,
+			Columns: []string{book.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

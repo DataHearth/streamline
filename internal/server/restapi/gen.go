@@ -3954,8 +3954,9 @@ func (e ListUsersParamsOrder) Valid() bool {
 	}
 }
 
-// ActivityAlbumRef The album an album download is for (queue/history rows render
-// "<artist> · <album>" from it). Absent on every other record.
+// ActivityAlbumRef The album an album download or activity event is for (queue,
+// history and feed rows render "<artist> · <album>" from it). Absent on
+// every other record.
 type ActivityAlbumRef struct {
 	ArtistId   uint32 `json:"artist_id"`
 	ArtistName string `json:"artist_name"`
@@ -3971,7 +3972,8 @@ type ActivityArtistRef struct {
 	Name       string `json:"name"`
 }
 
-// ActivityBookRef The book a book download is for. Absent on every other record.
+// ActivityBookRef The book a book download or activity event is for. Absent on every
+// other record.
 type ActivityBookRef struct {
 	Author string         `json:"author"`
 	Id     uint32         `json:"id"`
@@ -3985,13 +3987,35 @@ type ActivityBookRef struct {
 // ActivityBookRefSlot Which of the book's two slots the download fills.
 type ActivityBookRefSlot string
 
-// ActivityEvent Exactly one of movie / episode / series is set, naming what the event
-// happened to. `series` carries what belongs to no single episode — a
-// search issued at series or season scope, and the show-level actions
-// (added, reidentified, metadata_refreshed, monitoring_changed);
-// per-episode outcomes use `episode`.
+// ActivityEvent Exactly one of movie / episode / series / artist / album / book /
+// book_series is set, naming what the event happened to. `series`
+// carries what belongs to no single episode — a search issued at series
+// or season scope, and the show-level actions (added, reidentified,
+// metadata_refreshed, monitoring_changed); per-episode outcomes use
+// `episode`. Music and books split the same way one level up: `album`
+// and `book` carry their own grabs, imports, removals and searches (an
+// album import is one event, never one per track; a book event's
+// `book_kind` payload key names the slot), `artist` a discography pack
+// and the artist being added, `book_series` the series being added and
+// a series-wide search.
 type ActivityEvent struct {
-	CreatedAt time.Time `json:"created_at"`
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
+	Album *ActivityAlbumRef `json:"album,omitempty"`
+
+	// Artist Minimal artist identity for feed rows.
+	Artist *ArtistRef `json:"artist,omitempty"`
+
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
+	Book *ActivityBookRef `json:"book,omitempty"`
+
+	// BookSeries Minimal series identity for feed rows — a TV series under `series`, a
+	// book series under `book_series`. Deliberately not the full TVShow or
+	// BookSeries schema, which carry the whole season or volume tree.
+	BookSeries *SeriesRef `json:"book_series,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 
 	// Episode Show + S/E context for a TV download record (queue/history rows render
 	// "<show> · SxxExx" from it). Absent on movie records.
@@ -4000,8 +4024,9 @@ type ActivityEvent struct {
 	Movie   *Movie                  `json:"movie,omitempty"`
 	Payload *map[string]interface{} `json:"payload,omitempty"`
 
-	// Series Minimal series identity for feed rows. Deliberately not the full TVShow
-	// schema, which carries the whole season/episode tree.
+	// Series Minimal series identity for feed rows — a TV series under `series`, a
+	// book series under `book_series`. Deliberately not the full TVShow or
+	// BookSeries schema, which carry the whole season or volume tree.
 	Series *SeriesRef `json:"series,omitempty"`
 
 	// Type What happened to the item the event hangs off. Mirrors the enum on
@@ -4161,6 +4186,12 @@ type ApproveRequestRequest struct {
 	// request's media (movie or series; the book's kind). A name that
 	// is not in the family answers 422 and the request stays pending.
 	QualityProfile *string `json:"quality_profile,omitempty"`
+}
+
+// ArtistRef Minimal artist identity for feed rows.
+type ArtistRef struct {
+	Id   uint32 `json:"id"`
+	Name string `json:"name"`
 }
 
 // AudiobookFormat Best first. Upper case on the wire, in config and in `MediaFile.quality`.
@@ -5105,14 +5136,16 @@ type HTTPLogConfigFormat string
 
 // HistoryEntry defines model for HistoryEntry.
 type HistoryEntry struct {
-	// Album The album an album download is for (queue/history rows render
-	// "<artist> · <album>" from it). Absent on every other record.
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
 	Album *ActivityAlbumRef `json:"album,omitempty"`
 
 	// Artist The artist a discography pack is for. Absent on every other record.
 	Artist *ActivityArtistRef `json:"artist,omitempty"`
 
-	// Book The book a book download is for. Absent on every other record.
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
 	Book           *ActivityBookRef `json:"book,omitempty"`
 	CreatedAt      time.Time        `json:"created_at"`
 	DownloadClient *string          `json:"download_client,omitempty"`
@@ -7392,14 +7425,16 @@ type QualityProfileFormatScore struct {
 
 // QueueEntry defines model for QueueEntry.
 type QueueEntry struct {
-	// Album The album an album download is for (queue/history rows render
-	// "<artist> · <album>" from it). Absent on every other record.
+	// Album The album an album download or activity event is for (queue,
+	// history and feed rows render "<artist> · <album>" from it). Absent on
+	// every other record.
 	Album *ActivityAlbumRef `json:"album,omitempty"`
 
 	// Artist The artist a discography pack is for. Absent on every other record.
 	Artist *ActivityArtistRef `json:"artist,omitempty"`
 
-	// Book The book a book download is for. Absent on every other record.
+	// Book The book a book download or activity event is for. Absent on every
+	// other record.
 	Book           *ActivityBookRef `json:"book,omitempty"`
 	CreatedAt      time.Time        `json:"created_at"`
 	DownloadClient *string          `json:"download_client,omitempty"`
@@ -7783,8 +7818,9 @@ type SeriesLookupResultList struct {
 	Items []SeriesLookupResult `json:"items"`
 }
 
-// SeriesRef Minimal series identity for feed rows. Deliberately not the full TVShow
-// schema, which carries the whole season/episode tree.
+// SeriesRef Minimal series identity for feed rows — a TV series under `series`, a
+// book series under `book_series`. Deliberately not the full TVShow or
+// BookSeries schema, which carry the whole season or volume tree.
 type SeriesRef struct {
 	Id    uint32 `json:"id"`
 	Title string `json:"title"`
@@ -8720,8 +8756,17 @@ type UserSend struct {
 	From string `json:"from"`
 }
 
+// ActivityArtistID defines model for ActivityArtistID.
+type ActivityArtistID = uint32
+
 // ActivityBefore defines model for ActivityBefore.
 type ActivityBefore = time.Time
+
+// ActivityBookID defines model for ActivityBookID.
+type ActivityBookID = uint32
+
+// ActivityBookSeriesID defines model for ActivityBookSeriesID.
+type ActivityBookSeriesID = uint32
 
 // ActivityCursor defines model for ActivityCursor.
 type ActivityCursor = string
@@ -9379,10 +9424,18 @@ type ListActivityParams struct {
 
 	// SeriesId Matches both the series' own events and those of its episodes.
 	SeriesId *ActivitySeriesID `form:"series_id,omitempty" json:"series_id,omitempty"`
-	Since    *ActivitySince    `form:"since,omitempty" json:"since,omitempty"`
-	Before   *ActivityBefore   `form:"before,omitempty" json:"before,omitempty"`
-	Limit    *ActivityLimit    `form:"limit,omitempty" json:"limit,omitempty"`
-	Cursor   *ActivityCursor   `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// ArtistId Matches both the artist's own events (a discography pack, the artist
+	// being added) and those of its albums.
+	ArtistId *ActivityArtistID `form:"artist_id,omitempty" json:"artist_id,omitempty"`
+	BookId   *ActivityBookID   `form:"book_id,omitempty" json:"book_id,omitempty"`
+
+	// BookSeriesId Matches both the series' own events and those of its volumes.
+	BookSeriesId *ActivityBookSeriesID `form:"book_series_id,omitempty" json:"book_series_id,omitempty"`
+	Since        *ActivitySince        `form:"since,omitempty" json:"since,omitempty"`
+	Before       *ActivityBefore       `form:"before,omitempty" json:"before,omitempty"`
+	Limit        *ActivityLimit        `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor       *ActivityCursor       `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListDownloadHistoryParams defines parameters for ListDownloadHistory.
@@ -12564,6 +12617,45 @@ func (siw *ServerInterfaceWrapper) ListActivity(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "series_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "series_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "artist_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "artist_id", r.URL.Query(), &params.ArtistId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "artist_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "artist_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "book_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "book_id", r.URL.Query(), &params.BookId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "book_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "book_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "book_series_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "book_series_id", r.URL.Query(), &params.BookSeriesId, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "book_series_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "book_series_id", Err: err})
 		}
 		return
 	}

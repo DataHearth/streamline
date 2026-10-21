@@ -81,6 +81,8 @@ const (
 	EdgeCredits = "credits"
 	// EdgeAnnotations holds the string denoting the annotations edge name in mutations.
 	EdgeAnnotations = "annotations"
+	// EdgeEvents holds the string denoting the events edge name in mutations.
+	EdgeEvents = "events"
 	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
 	EdgePackRecords = "pack_records"
 	// Table holds the table name of the album in the database.
@@ -120,6 +122,13 @@ const (
 	AnnotationsInverseTable = "music_annotations"
 	// AnnotationsColumn is the table column denoting the annotations relation/edge.
 	AnnotationsColumn = "album_id"
+	// EventsTable is the table that holds the events relation/edge.
+	EventsTable = "media_events"
+	// EventsInverseTable is the table name for the MediaEvent entity.
+	// It exists in this package in order to avoid circular dependency with the "mediaevent" package.
+	EventsInverseTable = "media_events"
+	// EventsColumn is the table column denoting the events relation/edge.
+	EventsColumn = "album_events"
 	// PackRecordsTable is the table that holds the pack_records relation/edge. The primary key declared below.
 	PackRecordsTable = "download_record_albums"
 	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
@@ -471,6 +480,20 @@ func ByAnnotations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByEventsCount orders the results by events count.
+func ByEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newEventsStep(), opts...)
+	}
+}
+
+// ByEvents orders the results by events terms.
+func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPackRecordsCount orders the results by pack_records count.
 func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -517,6 +540,13 @@ func newAnnotationsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AnnotationsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AnnotationsTable, AnnotationsColumn),
+	)
+}
+func newEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
 	)
 }
 func newPackRecordsStep() *sqlgraph.Step {

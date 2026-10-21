@@ -29,6 +29,14 @@ const (
 	EdgeEpisode = "episode"
 	// EdgeTvShow holds the string denoting the tv_show edge name in mutations.
 	EdgeTvShow = "tv_show"
+	// EdgeArtist holds the string denoting the artist edge name in mutations.
+	EdgeArtist = "artist"
+	// EdgeAlbum holds the string denoting the album edge name in mutations.
+	EdgeAlbum = "album"
+	// EdgeBook holds the string denoting the book edge name in mutations.
+	EdgeBook = "book"
+	// EdgeBookSeries holds the string denoting the book_series edge name in mutations.
+	EdgeBookSeries = "book_series"
 	// Table holds the table name of the mediaevent in the database.
 	Table = "media_events"
 	// MovieTable is the table that holds the movie relation/edge.
@@ -52,6 +60,34 @@ const (
 	TvShowInverseTable = "tv_shows"
 	// TvShowColumn is the table column denoting the tv_show relation/edge.
 	TvShowColumn = "tv_show_events"
+	// ArtistTable is the table that holds the artist relation/edge.
+	ArtistTable = "media_events"
+	// ArtistInverseTable is the table name for the Artist entity.
+	// It exists in this package in order to avoid circular dependency with the "artist" package.
+	ArtistInverseTable = "artists"
+	// ArtistColumn is the table column denoting the artist relation/edge.
+	ArtistColumn = "artist_events"
+	// AlbumTable is the table that holds the album relation/edge.
+	AlbumTable = "media_events"
+	// AlbumInverseTable is the table name for the Album entity.
+	// It exists in this package in order to avoid circular dependency with the "album" package.
+	AlbumInverseTable = "albums"
+	// AlbumColumn is the table column denoting the album relation/edge.
+	AlbumColumn = "album_events"
+	// BookTable is the table that holds the book relation/edge.
+	BookTable = "media_events"
+	// BookInverseTable is the table name for the Book entity.
+	// It exists in this package in order to avoid circular dependency with the "book" package.
+	BookInverseTable = "books"
+	// BookColumn is the table column denoting the book relation/edge.
+	BookColumn = "book_events"
+	// BookSeriesTable is the table that holds the book_series relation/edge.
+	BookSeriesTable = "media_events"
+	// BookSeriesInverseTable is the table name for the BookSeries entity.
+	// It exists in this package in order to avoid circular dependency with the "bookseries" package.
+	BookSeriesInverseTable = "book_series"
+	// BookSeriesColumn is the table column denoting the book_series relation/edge.
+	BookSeriesColumn = "book_series_events"
 )
 
 // Columns holds all SQL columns for mediaevent fields.
@@ -66,6 +102,10 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "media_events"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"album_events",
+	"artist_events",
+	"book_events",
+	"book_series_events",
 	"episode_events",
 	"movie_events",
 	"tv_show_events",
@@ -180,6 +220,34 @@ func ByTvShowField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTvShowStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByArtistField orders the results by artist field.
+func ByArtistField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArtistStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByAlbumField orders the results by album field.
+func ByAlbumField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlbumStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBookField orders the results by book field.
+func ByBookField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByBookSeriesField orders the results by book_series field.
+func ByBookSeriesField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBookSeriesStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newMovieStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -199,5 +267,33 @@ func newTvShowStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TvShowInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, TvShowTable, TvShowColumn),
+	)
+}
+func newArtistStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArtistInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ArtistTable, ArtistColumn),
+	)
+}
+func newAlbumStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlbumInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AlbumTable, AlbumColumn),
+	)
+}
+func newBookStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BookTable, BookColumn),
+	)
+}
+func newBookSeriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BookSeriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BookSeriesTable, BookSeriesColumn),
 	)
 }

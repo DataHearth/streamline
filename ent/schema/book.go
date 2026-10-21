@@ -78,6 +78,8 @@ func (Book) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("download_records", DownloadRecord.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

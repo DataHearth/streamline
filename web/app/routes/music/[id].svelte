@@ -25,6 +25,8 @@
 	import ReleaseAccordion from "@components/music/ReleaseAccordion.svelte";
 	import ReleaseSearchModal from "@components/music/ReleaseSearchModal.svelte";
 	import ReleaseTagsModal from "@components/music/ReleaseTagsModal.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import {
 		artistPeople,
 		artistTally,
@@ -52,6 +54,7 @@
 	// Phone accordion: null follows the selection, -1 is "all closed".
 	let openId = $state<number | null>(null);
 	let tab = $state<string>("overview");
+	let tabTrack = $state<HTMLElement | null>(null);
 	// Manual search opens on the whole discography ("artist") or on a release id.
 	let manualOpen = $state(false);
 	let manualScope = $state("artist");
@@ -165,6 +168,12 @@
 	// The cast and crew of a discography. The overview shows the line-up and
 	// the few names that recur most; Credits shows everyone, by what they did.
 	let people = $derived(artist ? artistPeople(artist) : null);
+	let tabs = $derived([
+		{ key: "overview", label: i18n.common_overview(), n: null },
+		{ key: "discography", label: i18n.music_discography(), n: artist?.albums.length ?? null },
+		{ key: "credits", label: i18n.music_credits(), n: people?.total || null },
+		{ key: "history", label: i18n.common_history(), n: null },
+	]);
 	let collabs = $derived(people ? collaborators(people, 6) : []);
 	let moreCredits = $derived(!!people && people.total > people.current.length + collabs.length);
 	const memberTile = (m: Member): PersonTile => ({
@@ -361,8 +370,8 @@
 		</MediaHero>
 
 		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
-			<div class="flex w-full gap-0.5">
-				{#each [{ key: "overview", label: i18n.common_overview(), n: null }, { key: "discography", label: i18n.music_discography(), n: artist.albums.length }, { key: "credits", label: i18n.music_credits(), n: people?.total || null }] as t (t.key)}
+			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
 					<button
 						type="button"
@@ -378,6 +387,7 @@
 			</div>
 		</nav>
 
+		<div use:swipeTabs={{ keys: tabs.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }} class="min-h-[60dvh]">
 		{#if tab === "discography"}
 			<div class="md:hidden">
 				<ReleaseAccordion
@@ -429,6 +439,10 @@
 					</div>
 				{/each}
 			</div>
+		{:else if tab === "history"}
+			<div class="px-4 py-6 md:px-8">
+				<DetailHistory artistId={artist.id} />
+			</div>
 		{:else}
 			<!-- The movie and series overview: about and people on the left, the
 			     facts beside them. -->
@@ -455,6 +469,7 @@
 				</aside>
 			</div>
 		{/if}
+		</div>
 
 		{#if canEdit}
 			<!-- Phone: the searches, as on the book page — the automatic one, then

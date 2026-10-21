@@ -29,7 +29,7 @@ func init() {
 	)
 }
 
-// Scope names which entity an event hangs off. A MediaEvent has three
+// Scope names which entity an event hangs off. A MediaEvent has seven
 // optional owner edges and exactly one must be set; Scope is how a caller
 // says which, so no call site can write a row with none or two.
 type Scope uint8
@@ -40,6 +40,19 @@ const (
 	// ScopeSeries carries only what belongs to no single episode — a search
 	// issued at series or season scope. Per-episode outcomes use ScopeEpisode.
 	ScopeSeries
+	// ScopeAlbum carries an album's lifecycle: grabs, imports, removals and
+	// searches. An album is the unit a grab and an import cover, so no event
+	// is ever filed against a single track.
+	ScopeAlbum
+	// ScopeArtist carries what belongs to no single album — a discography
+	// pack, the artist entering the library.
+	ScopeArtist
+	// ScopeBook carries a book's lifecycle, either slot; the payload's
+	// book_kind says which.
+	ScopeBook
+	// ScopeBookSeries carries what belongs to a series as a whole: the series
+	// being added, a series-wide search.
+	ScopeBookSeries
 )
 
 // logKey is also the span/log attribute name for the owner id.
@@ -49,6 +62,14 @@ func (s Scope) logKey() string {
 		return "episode.id"
 	case ScopeSeries:
 		return "tvshow.id"
+	case ScopeAlbum:
+		return "album.id"
+	case ScopeArtist:
+		return "artist.id"
+	case ScopeBook:
+		return "book.id"
+	case ScopeBookSeries:
+		return "book_series.id"
 	default:
 		return "movie.id"
 	}
@@ -60,6 +81,14 @@ func (s Scope) String() string {
 		return "episode"
 	case ScopeSeries:
 		return "series"
+	case ScopeAlbum:
+		return "album"
+	case ScopeArtist:
+		return "artist"
+	case ScopeBook:
+		return "book"
+	case ScopeBookSeries:
+		return "book series"
 	default:
 		return "movie"
 	}
@@ -109,6 +138,14 @@ func Record(
 		q = q.SetEpisodeID(ownerID)
 	case ScopeSeries:
 		q = q.SetTvShowID(ownerID)
+	case ScopeAlbum:
+		q = q.SetAlbumID(ownerID)
+	case ScopeArtist:
+		q = q.SetArtistID(ownerID)
+	case ScopeBook:
+		q = q.SetBookID(ownerID)
+	case ScopeBookSeries:
+		q = q.SetBookSeriesID(ownerID)
 	default:
 		q = q.SetMovieID(ownerID)
 	}

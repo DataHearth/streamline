@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 )
 
@@ -368,6 +369,21 @@ func (_c *ArtistCreate) AddAnnotations(v ...*MusicAnnotation) *ArtistCreate {
 	return _c.AddAnnotationIDs(ids...)
 }
 
+// AddEventIDs adds the "events" edge to the MediaEvent entity by IDs.
+func (_c *ArtistCreate) AddEventIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddEventIDs(ids...)
+	return _c
+}
+
+// AddEvents adds the "events" edges to the MediaEvent entity.
+func (_c *ArtistCreate) AddEvents(v ...*MediaEvent) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddEventIDs(ids...)
+}
+
 // Mutation returns the ArtistMutation object of the builder.
 func (_c *ArtistCreate) Mutation() *ArtistMutation {
 	return _c.mutation
@@ -627,6 +643,22 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(musicannotation.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.EventsTable,
+			Columns: []string{artist.EventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

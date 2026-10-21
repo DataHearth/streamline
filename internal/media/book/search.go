@@ -14,6 +14,7 @@ import (
 	entbook "github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/searchwindow"
@@ -144,20 +145,45 @@ func (s *Service) searchSlot(ctx context.Context, b *ent.Book, kind string) bool
 		))
 	defer span.End()
 
+	outcome, results := "no_match", 0
+	defer func() {
+		if err := events.Record(
+			ctx, nil, events.TypeSearched, events.ScopeBook, b.ID,
+			map[string]any{
+				"outcome": outcome, "results": results, "book_kind": kind,
+			},
+		); err != nil {
+			slog.WarnContext(
+				ctx,
+				"book missing-search: record searched event failed",
+				"book.id",
+				b.ID,
+				"error",
+				err,
+			)
+		}
+	}()
+
 	releases, err := s.slotReleases(ctx, b, kind, true)
 	if err != nil {
+		outcome = "search_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "book missing-search: search failed",
 			"book.id", b.ID, "book.kind", kind, "error", err)
 		return false
 	}
+	results = len(releases)
 	if err := s.db.SetBookSlotLastSearchAt(ctx, b.ID, kind, time.Now()); err != nil {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "book missing-search: stamp last_search_at failed",
 			"book.id", b.ID, "book.kind", kind, "error", err)
 	}
 	sortReleases(releases)
-	return s.grabBest(ctx, span, b, kind, namingBook(releases, b))
+	if s.grabBest(ctx, span, b, kind, namingBook(releases, b)) {
+		outcome = "grabbed"
+		return true
+	}
+	return false
 }
 
 // namingBook keeps the releases whose name is this book by this author. An
@@ -286,10 +312,36 @@ func (s *Service) searchSeriesVolumes(
 	for _, v := range vols {
 		v.Edges.Series = series
 	}
+	// One series-scoped row for the pass, however many volumes it covered:
+	// per-volume rows would be one for every wanted volume on every tick.
+	outcome, grabbed := "no_match", 0
+	defer func() {
+		if grabbed > 0 {
+			outcome = "grabbed"
+		}
+		if err := events.Record(
+			ctx, nil, events.TypeSearched, events.ScopeBookSeries, series.ID,
+			map[string]any{
+				"outcome":          outcome,
+				"volumes_searched": len(vols),
+				"grabbed":          grabbed,
+			},
+		); err != nil {
+			slog.WarnContext(
+				ctx,
+				"series missing-search: record searched event failed",
+				"series.id",
+				series.ID,
+				"error",
+				err,
+			)
+		}
+	}()
 	found, err := s.indexers.SearchBook(
 		ctx, series.AuthorName, series.Title, 0, mediafile.BookKindEbook,
 	)
 	if err != nil {
+		outcome = "search_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "series missing-search: search failed",
 			"series.id", series.ID, "error", err)
@@ -297,7 +349,6 @@ func (s *Service) searchSeriesVolumes(
 	}
 	byVolume := volumeReleases(found, series)
 
-	grabbed := 0
 	var missed []*ent.Book
 	for _, v := range vols {
 		if v.SeriesPosition == nil {

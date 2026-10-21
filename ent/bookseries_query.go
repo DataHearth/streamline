@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookcontribution"
 	"github.com/datahearth/streamline/ent/bookseries"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -27,6 +28,7 @@ type BookSeriesQuery struct {
 	predicates        []predicate.BookSeries
 	withVolumes       *BookQuery
 	withContributions *BookContributionQuery
+	withEvents        *MediaEventQuery
 	modifiers         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -101,6 +103,28 @@ func (_q *BookSeriesQuery) QueryContributions() *BookContributionQuery {
 			sqlgraph.From(bookseries.Table, bookseries.FieldID, selector),
 			sqlgraph.To(bookcontribution.Table, bookcontribution.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.ContributionsTable, bookseries.ContributionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *BookSeriesQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookseries.Table, bookseries.FieldID, selector),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookseries.EventsTable, bookseries.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -302,6 +326,7 @@ func (_q *BookSeriesQuery) Clone() *BookSeriesQuery {
 		predicates:        append([]predicate.BookSeries{}, _q.predicates...),
 		withVolumes:       _q.withVolumes.Clone(),
 		withContributions: _q.withContributions.Clone(),
+		withEvents:        _q.withEvents.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -328,6 +353,17 @@ func (_q *BookSeriesQuery) WithContributions(opts ...func(*BookContributionQuery
 		opt(query)
 	}
 	_q.withContributions = query
+	return _q
+}
+
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookSeriesQuery) WithEvents(opts ...func(*MediaEventQuery)) *BookSeriesQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
 	return _q
 }
 
@@ -409,9 +445,10 @@ func (_q *BookSeriesQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*B
 	var (
 		nodes       = []*BookSeries{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withVolumes != nil,
 			_q.withContributions != nil,
+			_q.withEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -446,6 +483,13 @@ func (_q *BookSeriesQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*B
 		if err := _q.loadContributions(ctx, query, nodes,
 			func(n *BookSeries) { n.Edges.Contributions = []*BookContribution{} },
 			func(n *BookSeries, e *BookContribution) { n.Edges.Contributions = append(n.Edges.Contributions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *BookSeries) { n.Edges.Events = []*MediaEvent{} },
+			func(n *BookSeries, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -509,6 +553,37 @@ func (_q *BookSeriesQuery) loadContributions(ctx context.Context, query *BookCon
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "book_series_contributions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *BookSeriesQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*BookSeries, init func(*BookSeries), assign func(*BookSeries, *MediaEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*BookSeries)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(bookseries.EventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.book_series_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "book_series_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_series_events" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

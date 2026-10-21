@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
+	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/musicannotation"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -31,6 +32,7 @@ type ArtistQuery struct {
 	withMembers         *ArtistMemberQuery
 	withDownloadRecords *DownloadRecordQuery
 	withAnnotations     *MusicAnnotationQuery
+	withEvents          *MediaEventQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -149,6 +151,28 @@ func (_q *ArtistQuery) QueryAnnotations() *MusicAnnotationQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, selector),
 			sqlgraph.To(musicannotation.Table, musicannotation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, artist.AnnotationsTable, artist.AnnotationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvents chains the current query on the "events" edge.
+func (_q *ArtistQuery) QueryEvents() *MediaEventQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, selector),
+			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.EventsTable, artist.EventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +376,7 @@ func (_q *ArtistQuery) Clone() *ArtistQuery {
 		withMembers:         _q.withMembers.Clone(),
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
 		withAnnotations:     _q.withAnnotations.Clone(),
+		withEvents:          _q.withEvents.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -400,6 +425,17 @@ func (_q *ArtistQuery) WithAnnotations(opts ...func(*MusicAnnotationQuery)) *Art
 		opt(query)
 	}
 	_q.withAnnotations = query
+	return _q
+}
+
+// WithEvents tells the query-builder to eager-load the nodes that are connected to
+// the "events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ArtistQuery) WithEvents(opts ...func(*MediaEventQuery)) *ArtistQuery {
+	query := (&MediaEventClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEvents = query
 	return _q
 }
 
@@ -481,11 +517,12 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	var (
 		nodes       = []*Artist{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withAlbums != nil,
 			_q.withMembers != nil,
 			_q.withDownloadRecords != nil,
 			_q.withAnnotations != nil,
+			_q.withEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -534,6 +571,13 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 		if err := _q.loadAnnotations(ctx, query, nodes,
 			func(n *Artist) { n.Edges.Annotations = []*MusicAnnotation{} },
 			func(n *Artist, e *MusicAnnotation) { n.Edges.Annotations = append(n.Edges.Annotations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEvents; query != nil {
+		if err := _q.loadEvents(ctx, query, nodes,
+			func(n *Artist) { n.Edges.Events = []*MediaEvent{} },
+			func(n *Artist, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -661,6 +705,37 @@ func (_q *ArtistQuery) loadAnnotations(ctx context.Context, query *MusicAnnotati
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "artist_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ArtistQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nodes []*Artist, init func(*Artist), assign func(*Artist, *MediaEvent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Artist)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MediaEvent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(artist.EventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.artist_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "artist_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "artist_events" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

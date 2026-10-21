@@ -28,11 +28,11 @@ The health indicator in the top bar reflects real state — disk usage on your d
 
 ## The event feed
 
-The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes and series:
+The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behind it, is the history of what happened to each title. Events cover movies, episodes, series, artists, albums, books and book series, and every detail page — movie, series, artist, book, book series — has a **History** tab showing its own slice of the feed:
 
 | Event | When it fires |
 | --- | --- |
-| `added` | A movie or series entered the library |
+| `added` | A movie, series, artist, book or book series entered the library |
 | `grabbed` | A release was sent to the download client |
 | `download_completed` | The bytes arrived and the import is starting |
 | `download_failed` | That download failed |
@@ -52,7 +52,9 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 | `transcode_completed` / `transcode_failed` / `transcode_rejected` | A transcode finished, gave up, or produced output that failed verification |
 | `searched` | A search-and-grab pass ran |
 
-Every event names exactly one owner — `movie`, `episode` or `series`. Episode rows render as *Show · S01E03*.
+Every event names exactly one owner — `movie`, `episode`, `series`, `artist`, `album`, `book` or `book_series`. Episode rows render as *Show · S01E03*, album rows as *Artist · Album*, a series volume as *Series · Vol. 3*, and a book row names the slot (ebook or audiobook) it was about.
+
+**Music and books follow the same rules one level up.** An album is the unit a grab and an import cover, so importing a twelve-track album is one `imported` row on the album (with the track count), never twelve, and replacing an album's or an audiobook's files is one `file_removed` row. A discography pack is filed against its artist; everything else lands on the album. Adding an artist is one `added` row — the albums it seeds are not each an arrival — and adding a book series is one row for the series, not one per volume. An artist's History tab shows its own rows and every album's; a book series' shows its own and every volume's. Automatic and *Search now* passes write one `searched` row per album, per book slot, and per series-wide pass.
 
 **`searched` is recorded once per search, not once per episode.** Asking Streamline to search a series writes one event for the whole pass, with the seasons it touched, how many episodes it searched and how many it grabbed in the payload. A pass over one season reads as *Show · Season 3*. Without that, a `tv-missing-search` tick over a large library would write thousands of rows an hour.
 

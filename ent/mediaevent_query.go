@@ -11,6 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/movie"
@@ -21,15 +25,19 @@ import (
 // MediaEventQuery is the builder for querying MediaEvent entities.
 type MediaEventQuery struct {
 	config
-	ctx         *QueryContext
-	order       []mediaevent.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.MediaEvent
-	withMovie   *MovieQuery
-	withEpisode *EpisodeQuery
-	withTvShow  *TVShowQuery
-	withFKs     bool
-	modifiers   []func(*sql.Selector)
+	ctx            *QueryContext
+	order          []mediaevent.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.MediaEvent
+	withMovie      *MovieQuery
+	withEpisode    *EpisodeQuery
+	withTvShow     *TVShowQuery
+	withArtist     *ArtistQuery
+	withAlbum      *AlbumQuery
+	withBook       *BookQuery
+	withBookSeries *BookSeriesQuery
+	withFKs        bool
+	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +133,94 @@ func (_q *MediaEventQuery) QueryTvShow() *TVShowQuery {
 			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
 			sqlgraph.To(tvshow.Table, tvshow.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.TvShowTable, mediaevent.TvShowColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryArtist chains the current query on the "artist" edge.
+func (_q *MediaEventQuery) QueryArtist() *ArtistQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.ArtistTable, mediaevent.ArtistColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAlbum chains the current query on the "album" edge.
+func (_q *MediaEventQuery) QueryAlbum() *AlbumQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.AlbumTable, mediaevent.AlbumColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBook chains the current query on the "book" edge.
+func (_q *MediaEventQuery) QueryBook() *BookQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.BookTable, mediaevent.BookColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBookSeries chains the current query on the "book_series" edge.
+func (_q *MediaEventQuery) QueryBookSeries() *BookSeriesQuery {
+	query := (&BookSeriesClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mediaevent.Table, mediaevent.FieldID, selector),
+			sqlgraph.To(bookseries.Table, bookseries.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, mediaevent.BookSeriesTable, mediaevent.BookSeriesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +415,18 @@ func (_q *MediaEventQuery) Clone() *MediaEventQuery {
 		return nil
 	}
 	return &MediaEventQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]mediaevent.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.MediaEvent{}, _q.predicates...),
-		withMovie:   _q.withMovie.Clone(),
-		withEpisode: _q.withEpisode.Clone(),
-		withTvShow:  _q.withTvShow.Clone(),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]mediaevent.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.MediaEvent{}, _q.predicates...),
+		withMovie:      _q.withMovie.Clone(),
+		withEpisode:    _q.withEpisode.Clone(),
+		withTvShow:     _q.withTvShow.Clone(),
+		withArtist:     _q.withArtist.Clone(),
+		withAlbum:      _q.withAlbum.Clone(),
+		withBook:       _q.withBook.Clone(),
+		withBookSeries: _q.withBookSeries.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -364,6 +464,50 @@ func (_q *MediaEventQuery) WithTvShow(opts ...func(*TVShowQuery)) *MediaEventQue
 		opt(query)
 	}
 	_q.withTvShow = query
+	return _q
+}
+
+// WithArtist tells the query-builder to eager-load the nodes that are connected to
+// the "artist" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithArtist(opts ...func(*ArtistQuery)) *MediaEventQuery {
+	query := (&ArtistClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withArtist = query
+	return _q
+}
+
+// WithAlbum tells the query-builder to eager-load the nodes that are connected to
+// the "album" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithAlbum(opts ...func(*AlbumQuery)) *MediaEventQuery {
+	query := (&AlbumClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlbum = query
+	return _q
+}
+
+// WithBook tells the query-builder to eager-load the nodes that are connected to
+// the "book" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithBook(opts ...func(*BookQuery)) *MediaEventQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBook = query
+	return _q
+}
+
+// WithBookSeries tells the query-builder to eager-load the nodes that are connected to
+// the "book_series" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MediaEventQuery) WithBookSeries(opts ...func(*BookSeriesQuery)) *MediaEventQuery {
+	query := (&BookSeriesClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withBookSeries = query
 	return _q
 }
 
@@ -446,13 +590,17 @@ func (_q *MediaEventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 		nodes       = []*MediaEvent{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [7]bool{
 			_q.withMovie != nil,
 			_q.withEpisode != nil,
 			_q.withTvShow != nil,
+			_q.withArtist != nil,
+			_q.withAlbum != nil,
+			_q.withBook != nil,
+			_q.withBookSeries != nil,
 		}
 	)
-	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTvShow != nil {
+	if _q.withMovie != nil || _q.withEpisode != nil || _q.withTvShow != nil || _q.withArtist != nil || _q.withAlbum != nil || _q.withBook != nil || _q.withBookSeries != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -494,6 +642,30 @@ func (_q *MediaEventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 	if query := _q.withTvShow; query != nil {
 		if err := _q.loadTvShow(ctx, query, nodes, nil,
 			func(n *MediaEvent, e *TVShow) { n.Edges.TvShow = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withArtist; query != nil {
+		if err := _q.loadArtist(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *Artist) { n.Edges.Artist = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAlbum; query != nil {
+		if err := _q.loadAlbum(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *Album) { n.Edges.Album = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBook; query != nil {
+		if err := _q.loadBook(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *Book) { n.Edges.Book = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withBookSeries; query != nil {
+		if err := _q.loadBookSeries(ctx, query, nodes, nil,
+			func(n *MediaEvent, e *BookSeries) { n.Edges.BookSeries = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -589,6 +761,134 @@ func (_q *MediaEventQuery) loadTvShow(ctx context.Context, query *TVShowQuery, n
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "tv_show_events" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaEventQuery) loadArtist(ctx context.Context, query *ArtistQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *Artist)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
+	for i := range nodes {
+		if nodes[i].artist_events == nil {
+			continue
+		}
+		fk := *nodes[i].artist_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(artist.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "artist_events" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaEventQuery) loadAlbum(ctx context.Context, query *AlbumQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *Album)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
+	for i := range nodes {
+		if nodes[i].album_events == nil {
+			continue
+		}
+		fk := *nodes[i].album_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(album.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "album_events" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaEventQuery) loadBook(ctx context.Context, query *BookQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *Book)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
+	for i := range nodes {
+		if nodes[i].book_events == nil {
+			continue
+		}
+		fk := *nodes[i].book_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(book.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "book_events" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *MediaEventQuery) loadBookSeries(ctx context.Context, query *BookSeriesQuery, nodes []*MediaEvent, init func(*MediaEvent), assign func(*MediaEvent, *BookSeries)) error {
+	ids := make([]uint32, 0, len(nodes))
+	nodeids := make(map[uint32][]*MediaEvent)
+	for i := range nodes {
+		if nodes[i].book_series_events == nil {
+			continue
+		}
+		fk := *nodes[i].book_series_events
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(bookseries.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "book_series_events" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

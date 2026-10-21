@@ -21,6 +21,8 @@
 	import LibraryActions from "@components/shared/LibraryActions.svelte";
 	import PeopleGrid from "@components/shared/PeopleGrid.svelte";
 	import InfoCard, { type InfoRow } from "@components/shared/InfoCard.svelte";
+	import DetailHistory from "@components/shared/DetailHistory.svelte";
+	import { swipeTabs } from "@lib/swipe-tabs";
 	import {
 		bookPeople,
 		bookRoleLabel,
@@ -59,6 +61,12 @@
 	let wanted = $derived(out.filter((v) => v.status === "wanted").length);
 	let next = $derived(s?.volumes.find((v) => v.status === "upcoming"));
 	let tab = $state<string>("overview");
+	let tabTrack = $state<HTMLElement | null>(null);
+	let tabs = $derived([
+		{ key: "overview", label: i18n.common_overview(), n: "" },
+		{ key: "volumes", label: i18n.books_volumes(), n: `${have}/${out.length}` },
+		{ key: "history", label: i18n.common_history(), n: "" },
+	]);
 
 	const MONITOR: { key: SeriesMonitor; label: string }[] = [
 		{ key: "all", label: i18n.books_monitor_volumes_all() },
@@ -282,8 +290,8 @@
 		</MediaHero>
 
 		<nav class="sticky top-16 z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
-			<div class="flex w-full gap-0.5">
-				{#each [{ key: "overview", label: i18n.common_overview(), n: "" }, { key: "volumes", label: i18n.books_volumes(), n: `${have}/${out.length}` }] as t (t.key)}
+			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				{#each tabs as t (t.key)}
 					{@const active = tab === t.key}
 					<button
 						type="button"
@@ -299,6 +307,7 @@
 			</div>
 		</nav>
 
+		<div use:swipeTabs={{ keys: tabs.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }} class="min-h-[60dvh]">
 		{#if tab === "volumes"}
 			<ol class="grid grid-cols-4 gap-x-2.5 gap-y-4 px-4 py-5 sm:grid-cols-5 md:grid-cols-6 md:gap-x-3 md:gap-y-5 md:px-8 md:py-6 lg:grid-cols-8">
 				{#each s.volumes as v (v.number)}
@@ -319,6 +328,10 @@
 					</li>
 				{/each}
 			</ol>
+		{:else if tab === "history"}
+			<div class="px-4 py-6 md:px-8">
+				<DetailHistory bookSeriesId={s.id} />
+			</div>
 		{:else}
 			<div class="grid gap-6 px-4 py-6 md:grid-cols-[1fr_260px] md:gap-7 md:px-8 lg:grid-cols-[1fr_320px] lg:gap-10">
 				<section class="min-w-0" aria-labelledby="series-synopsis">
@@ -338,6 +351,7 @@
 				</aside>
 			</div>
 		{/if}
+		</div>
 
 		{#if canEdit && wanted > 0}
 			<div

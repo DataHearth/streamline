@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -418,6 +419,178 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		client.MediaFile.DeleteOne(mf).ExecX(SuppressFileRemoved(ctx))
 
 		Expect(eventsOfType(ctx, client, TypeFileRemoved)).To(BeEmpty())
+	})
+
+	Describe("music and books", func() {
+		var (
+			artist *ent.Artist
+			alb    *ent.Album
+			tracks []*ent.Track
+		)
+
+		BeforeEach(func() {
+			artist = client.Artist.Create().
+				SetMbid("artist-1").SetName("Gojira").SaveX(ctx)
+			alb = client.Album.Create().
+				SetMbid("rg-1").SetTitle("Magma").SetArtist(artist).SaveX(ctx)
+			tracks = make([]*ent.Track, 0, 3)
+			for i := range 3 {
+				tracks = append(tracks, client.Track.Create().
+					SetTitle(fmt.Sprintf("T%d", i)).
+					SetPosition(uint16(i+1)).
+					SetAlbum(alb).
+					SaveX(ctx))
+			}
+		})
+
+		It("emits added for the artist, not for each stub album", func() {
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeAdded))).
+				WithArtist().WithAlbum().AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Artist.ID).To(Equal(artist.ID))
+			Expect(rows[0].Payload).To(HaveKeyWithValue("title", "Gojira"))
+		})
+
+		It("files an album record's lifecycle against the album", func() {
+			dl := client.DownloadRecord.Create().
+				SetAlbumID(alb.ID).SetTitle("Gojira-Magma-FLAC").SaveX(ctx)
+			client.DownloadRecord.UpdateOne(dl).
+				SetStatus(downloadrecord.StatusImporting).SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeIn(
+					mediaevent.Type(TypeGrabbed),
+					mediaevent.Type(TypeDownloadCompleted),
+				)).
+				WithAlbum().AllX(ctx)
+			Expect(rows).To(HaveLen(2))
+			for _, r := range rows {
+				Expect(r.Edges.Album.ID).To(Equal(alb.ID))
+			}
+		})
+
+		It("files a discography pack against its artist", func() {
+			client.DownloadRecord.Create().
+				SetArtistID(artist.ID).SetTitle("Gojira-Discography").SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeGrabbed))).
+				WithArtist().AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Artist.ID).To(Equal(artist.ID))
+		})
+
+		It("leaves track imports to the importer", func() {
+			client.MediaFile.Create().
+				SetPath("/music/01.flac").SetSize(1).
+				SetTrackID(tracks[0].ID).SaveX(ctx)
+
+			Expect(eventsOfType(ctx, client, TypeImported)).To(BeEmpty())
+		})
+
+		It("folds an album's removed files into one row on the album", func() {
+			for i, t := range tracks {
+				client.MediaFile.Create().
+					SetPath(fmt.Sprintf("/music/%02d.flac", i+1)).SetSize(1).
+					SetTrackID(t.ID).SaveX(ctx)
+			}
+
+			client.MediaFile.Delete().ExecX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeFileRemoved))).
+				WithAlbum().AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Album.ID).To(Equal(alb.ID))
+			Expect(
+				rows[0].Payload,
+			).To(HaveKeyWithValue("files", BeNumerically("==", 3)))
+		})
+
+		It("names the path when a single track file goes", func() {
+			mf := client.MediaFile.Create().
+				SetPath("/music/01.flac").SetSize(1).
+				SetTrackID(tracks[0].ID).SaveX(ctx)
+
+			client.MediaFile.DeleteOne(mf).ExecX(ctx)
+
+			removed := eventsOfType(ctx, client, TypeFileRemoved)
+			Expect(removed).To(HaveLen(1))
+			Expect(removed[0].Payload).To(HaveKeyWithValue("path", "/music/01.flac"))
+		})
+
+		It("emits added for a standalone book, not for a series volume", func() {
+			standalone := client.Book.Create().
+				SetHardcoverID(1).SetTitle("Exhalation").
+				SetAuthorName("Ted Chiang").SaveX(ctx)
+			series := client.BookSeries.Create().
+				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+			client.Book.Create().
+				SetHardcoverID(2).SetTitle("Astérix #1").
+				SetSeries(series).SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeAdded))).
+				WithBook().WithBookSeries().AllX(ctx)
+			var books, seriesRows []uint32
+			for _, r := range rows {
+				switch {
+				case r.Edges.Book != nil:
+					books = append(books, r.Edges.Book.ID)
+				case r.Edges.BookSeries != nil:
+					seriesRows = append(seriesRows, r.Edges.BookSeries.ID)
+				}
+			}
+			Expect(books).To(ConsistOf(standalone.ID))
+			Expect(seriesRows).To(ConsistOf(series.ID))
+		})
+
+		It("files a book record against the book with its slot", func() {
+			b := client.Book.Create().
+				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+			client.DownloadRecord.Create().
+				SetBookID(b.ID).
+				SetBookKind(downloadrecord.BookKindAudiobook).
+				SetTitle("Ted.Chiang-Exhalation-M4B").SaveX(ctx)
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeGrabbed))).
+				WithBook().AllX(ctx)
+			Expect(rows).To(HaveLen(1))
+			Expect(rows[0].Edges.Book.ID).To(Equal(b.ID))
+			Expect(rows[0].Payload).To(HaveKeyWithValue("book_kind", "audiobook"))
+		})
+
+		It("records against each new owner through Record", func() {
+			b := client.Book.Create().
+				SetHardcoverID(1).SetTitle("Exhalation").SaveX(ctx)
+			series := client.BookSeries.Create().
+				SetHardcoverID(9).SetTitle("Astérix").SaveX(ctx)
+
+			Expect(
+				Record(ctx, nil, TypeSearched, ScopeAlbum, alb.ID, nil),
+			).To(Succeed())
+			Expect(
+				Record(ctx, nil, TypeSearched, ScopeArtist, artist.ID, nil),
+			).To(Succeed())
+			Expect(
+				Record(ctx, nil, TypeSearched, ScopeBook, b.ID, nil),
+			).To(Succeed())
+			Expect(
+				Record(ctx, nil, TypeSearched, ScopeBookSeries, series.ID, nil),
+			).To(Succeed())
+
+			rows := client.MediaEvent.Query().
+				Where(mediaevent.TypeEQ(mediaevent.Type(TypeSearched))).
+				WithAlbum().WithArtist().WithBook().WithBookSeries().
+				Order(ent.Asc(mediaevent.FieldID)).AllX(ctx)
+			Expect(rows).To(HaveLen(4))
+			Expect(rows[0].Edges.Album.ID).To(Equal(alb.ID))
+			Expect(rows[1].Edges.Artist.ID).To(Equal(artist.ID))
+			Expect(rows[2].Edges.Book.ID).To(Equal(b.ID))
+			Expect(rows[3].Edges.BookSeries.ID).To(Equal(series.ID))
+		})
 	})
 })
 

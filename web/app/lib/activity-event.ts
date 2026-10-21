@@ -22,6 +22,7 @@ import {
 	Trash,
 	VideoOff,
 } from "@lucide/svelte";
+import { formatLabel, tracksCount, volumeLabel } from "./music-books";
 import { m as i18n } from "./paraglide/messages.js";
 import type { ActivityEvent, ActivityType } from "./types";
 
@@ -35,10 +36,11 @@ export type EventSubject = {
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const joinDot = (parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
 
 /**
- * Resolves which of an event's three possible owners is set and renders it as
- * one row. A series-scoped event carries the seasons and episode count it
+ * Resolves which of an event's possible owners is set and renders it as one
+ * row. A series-scoped event carries the seasons and episode count it
  * covered in its payload; when it touched exactly one season, saying so is
  * more useful than the bare show title, and the episode count (bulk imports,
  * renames, grab widenings, drift) rides alongside it — see `seriesQualifier`.
@@ -61,6 +63,35 @@ export function eventSubject(event: ActivityEvent): EventSubject {
 			href: `/series/${event.series.id}`,
 			detail: seriesQualifier(event.payload),
 		};
+	}
+	// An album row reads like the queue's — the artist, then which album — and
+	// lands on the artist page with that release open.
+	if (event.album) {
+		const a = event.album;
+		const tracks = event.payload?.tracks;
+		return {
+			title: a.artist_name || a.title,
+			href: a.artist_id ? `/music/${a.artist_id}?release=${a.id}` : undefined,
+			detail: joinDot([a.artist_name ? a.title : undefined, typeof tracks === "number" ? tracksCount(tracks) : undefined]),
+		};
+	}
+	if (event.artist) {
+		return { title: event.artist.name, href: `/music/${event.artist.id}` };
+	}
+	// A volume's own title is often just "Tome 3": the series and its number are
+	// what identify it, as in the queue. The slot rides alongside, since a book
+	// holds an ebook and an audiobook and either can be the one that moved.
+	if (event.book) {
+		const b = event.book;
+		const slot = b.slot ? formatLabel(b.slot) : undefined;
+		return {
+			title: b.series ? b.series.title : b.title,
+			href: `/books/${b.id}`,
+			detail: joinDot([b.series ? volumeLabel(b.series.number) : undefined, slot]),
+		};
+	}
+	if (event.book_series) {
+		return { title: event.book_series.title, href: `/books/series/${event.book_series.id}` };
 	}
 	return { title: i18n.common_unknown() };
 }

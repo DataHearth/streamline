@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/mediaserver"
@@ -267,6 +268,7 @@ func (w *Worker) importAlbumFiles(
 	}
 	dropAside(ctx, aside)
 	unlockFiles()
+	w.recordAlbumImported(ctx, alb.ID, rec.Title, pack, rows)
 	// Tagged before the media servers hear of the files, so they index them
 	// once. A file the torrent still shares is deferred to the job.
 	coverResolved := false
@@ -398,4 +400,38 @@ func tierName(q albumFileQuality) string {
 		return ""
 	}
 	return q.tier.String()
+}
+
+// recordAlbumImported files one imported event for the album, however many
+// tracks it took: the per-file create hook leaves track files alone, since an
+// album is one import from where its owner stands. A pack records one per
+// album it filled, against that album.
+func (w *Worker) recordAlbumImported(
+	ctx context.Context,
+	albumID uint32,
+	release string,
+	pack bool,
+	rows []db.AdoptAlbumFile,
+) {
+	var size int64
+	for _, r := range rows {
+		size += r.Size
+	}
+	p := map[string]any{
+		"release_title": release,
+		"tracks":        len(rows),
+		"size_bytes":    size,
+	}
+	if q := rows[0].Quality; q != "" {
+		p["quality"] = q
+	}
+	if pack {
+		p["source"] = "pack"
+	}
+	if err := events.Record(
+		ctx, nil, events.TypeImported, events.ScopeAlbum, albumID, p,
+	); err != nil {
+		slog.WarnContext(ctx, "album import: record imported event failed",
+			"album.id", albumID, "error", err)
+	}
 }

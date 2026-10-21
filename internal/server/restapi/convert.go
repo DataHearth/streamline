@@ -583,6 +583,18 @@ func toActivityEvent(e *ent.MediaEvent) ActivityEvent {
 			Id:    e.Edges.TvShow.ID,
 			Title: e.Edges.TvShow.Title,
 		}
+	case e.Edges.Artist != nil:
+		out.Artist = &ArtistRef{Id: e.Edges.Artist.ID, Name: e.Edges.Artist.Name}
+	case e.Edges.Album != nil:
+		out.Album = activityAlbumRef(e.Edges.Album)
+	case e.Edges.Book != nil:
+		kind, _ := e.Payload["book_kind"].(string)
+		out.Book = activityBookRef(e.Edges.Book, kind)
+	case e.Edges.BookSeries != nil:
+		out.BookSeries = &SeriesRef{
+			Id:    e.Edges.BookSeries.ID,
+			Title: e.Edges.BookSeries.Title,
+		}
 	}
 	return out
 }

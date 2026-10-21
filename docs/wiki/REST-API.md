@@ -317,7 +317,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/activity` | Event feed (movies, episodes and series; filter with `?movie_id=` or `?series_id=`) | Authenticated |
+| `GET` | `/activity` | Event feed (movies, episodes, series, artists, albums, books and book series; filter with `?movie_id=`, `?series_id=`, `?artist_id=`, `?book_id=` or `?book_series_id=` — a series, artist or book series also matches its episodes', albums' or volumes' events) | Authenticated |
 | `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record). Each entry names what it is for: `movie`, `episode` (show + season/episode), `album` (with its artist), `artist` (a discography pack, with the number of albums it covers) or `book` (with the slot it fills and, for a volume, its series); `movie` is always present and is an empty placeholder on every non-movie record | Authenticated |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | 🔒 Admin |
 | `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | 🔒 Admin |

@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/searchwindow"
@@ -237,13 +238,28 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		trace.WithAttributes(attribute.Int("album.id", int(a.ID))))
 	defer span.End()
 
+	// One row per pass at the album's scope, as a movie search writes: the
+	// outcome is what an empty history otherwise leaves unexplained.
+	outcome, results := "no_match", 0
+	defer func() {
+		if err := events.Record(
+			ctx, nil, events.TypeSearched, events.ScopeAlbum, a.ID,
+			map[string]any{"outcome": outcome, "results": results},
+		); err != nil {
+			slog.WarnContext(ctx, "music search: record searched event failed",
+				"album.id", a.ID, "error", err)
+		}
+	}()
+
 	releases, err := s.SearchAlbumReleases(ctx, a.ID)
 	if err != nil {
+		outcome = "search_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: search failed",
 			"album.id", a.ID, "error", err)
 		return false
 	}
+	results = len(releases)
 	if err := s.db.SetAlbumLastSearchAt(ctx, a.ID, time.Now()); err != nil {
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: stamp last_search_at failed",
@@ -255,6 +271,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 	}
 
 	if err := s.GrabAlbumRelease(ctx, a.ID, best.Result); err != nil {
+		outcome = "grab_failed"
 		otelx.RecordSpanError(span, err)
 		slog.WarnContext(ctx, "music search: grab failed",
 			"album.id", a.ID, "error", err)
@@ -266,6 +283,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) bool {
 		}
 		return false
 	}
+	outcome = "grabbed"
 	if err := s.db.ResetAlbumGrabFailures(ctx, a.ID); err != nil {
 		slog.WarnContext(ctx, "music search: reset grab_failures failed",
 			"album.id", a.ID, "error", err)

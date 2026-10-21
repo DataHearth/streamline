@@ -1690,6 +1690,29 @@ func HasAnnotationsWith(preds ...predicate.MusicAnnotation) predicate.Album {
 	})
 }
 
+// HasEvents applies the HasEdge predicate on the "events" edge.
+func HasEvents() predicate.Album {
+	return predicate.Album(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEventsWith applies the HasEdge predicate on the "events" edge with a given conditions (other predicates).
+func HasEventsWith(preds ...predicate.MediaEvent) predicate.Album {
+	return predicate.Album(func(s *sql.Selector) {
+		step := newEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasPackRecords applies the HasEdge predicate on the "pack_records" edge.
 func HasPackRecords() predicate.Album {
 	return predicate.Album(func(s *sql.Selector) {

@@ -637,9 +637,11 @@ export type SeriesRef = {
 	title: string;
 };
 
-// Exactly one of movie / episode / series is set — what the event happened to.
-// series carries only what belongs to no single episode (a search issued at
-// series or season scope); per-episode outcomes use episode.
+// Exactly one owner is set — what the event happened to. series carries only
+// what belongs to no single episode (a search issued at series or season
+// scope); per-episode outcomes use episode. Music and books split the same way
+// one level up: album and book carry their own lifecycle, artist a discography
+// pack and the artist being added, book_series what belongs to the series.
 export type ActivityEvent = {
 	id: number;
 	type: ActivityType;
@@ -648,6 +650,10 @@ export type ActivityEvent = {
 	movie?: Movie;
 	episode?: EpisodeRef;
 	series?: SeriesRef;
+	artist?: { id: number; name: string };
+	album?: ActivityAlbumRef;
+	book?: ActivityBookRef;
+	book_series?: SeriesRef;
 };
 
 export type ActivityList = {

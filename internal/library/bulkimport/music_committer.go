@@ -20,6 +20,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
 	"github.com/datahearth/streamline/internal/media/music"
@@ -166,6 +167,17 @@ func (s *Service) commitAlbum(
 	})
 	if err := s.store.AdoptAlbumFiles(ctx, alb.ID, plan); err != nil {
 		return commitAlbumFail(span, "adopt files", err, alb.ID)
+	}
+	// One row for the album, as the album importer writes: the per-file
+	// create hook leaves track files alone.
+	if len(plan) > 0 {
+		if err := events.Record(
+			ctx, nil, events.TypeImported, events.ScopeAlbum, alb.ID,
+			map[string]any{"tracks": len(plan), "source": "bulk_import"},
+		); err != nil {
+			slog.WarnContext(ctx, "music commit: record imported event failed",
+				"album.id", alb.ID, "error", err)
+		}
 	}
 	outcome := entimportscanalbum.OutcomeCreated
 	if sc.Classification == entimportscanalbum.ClassificationExisting &&

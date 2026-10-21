@@ -10,6 +10,10 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/datahearth/streamline/ent/album"
+	"github.com/datahearth/streamline/ent/artist"
+	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/bookseries"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/movie"
@@ -31,11 +35,15 @@ type MediaEvent struct {
 	Payload map[string]interface{} `json:"payload,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MediaEventQuery when eager-loading is set.
-	Edges          MediaEventEdges `json:"edges"`
-	episode_events *uint32
-	movie_events   *uint32
-	tv_show_events *uint32
-	selectValues   sql.SelectValues
+	Edges              MediaEventEdges `json:"edges"`
+	album_events       *uint32
+	artist_events      *uint32
+	book_events        *uint32
+	book_series_events *uint32
+	episode_events     *uint32
+	movie_events       *uint32
+	tv_show_events     *uint32
+	selectValues       sql.SelectValues
 }
 
 // MediaEventEdges holds the relations/edges for other nodes in the graph.
@@ -46,9 +54,17 @@ type MediaEventEdges struct {
 	Episode *Episode `json:"episode,omitempty"`
 	// TvShow holds the value of the tv_show edge.
 	TvShow *TVShow `json:"tv_show,omitempty"`
+	// Artist holds the value of the artist edge.
+	Artist *Artist `json:"artist,omitempty"`
+	// Album holds the value of the album edge.
+	Album *Album `json:"album,omitempty"`
+	// Book holds the value of the book edge.
+	Book *Book `json:"book,omitempty"`
+	// BookSeries holds the value of the book_series edge.
+	BookSeries *BookSeries `json:"book_series,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [7]bool
 }
 
 // MovieOrErr returns the Movie value or an error if the edge
@@ -84,6 +100,50 @@ func (e MediaEventEdges) TvShowOrErr() (*TVShow, error) {
 	return nil, &NotLoadedError{edge: "tv_show"}
 }
 
+// ArtistOrErr returns the Artist value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MediaEventEdges) ArtistOrErr() (*Artist, error) {
+	if e.Artist != nil {
+		return e.Artist, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: artist.Label}
+	}
+	return nil, &NotLoadedError{edge: "artist"}
+}
+
+// AlbumOrErr returns the Album value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MediaEventEdges) AlbumOrErr() (*Album, error) {
+	if e.Album != nil {
+		return e.Album, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: album.Label}
+	}
+	return nil, &NotLoadedError{edge: "album"}
+}
+
+// BookOrErr returns the Book value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MediaEventEdges) BookOrErr() (*Book, error) {
+	if e.Book != nil {
+		return e.Book, nil
+	} else if e.loadedTypes[5] {
+		return nil, &NotFoundError{label: book.Label}
+	}
+	return nil, &NotLoadedError{edge: "book"}
+}
+
+// BookSeriesOrErr returns the BookSeries value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MediaEventEdges) BookSeriesOrErr() (*BookSeries, error) {
+	if e.BookSeries != nil {
+		return e.BookSeries, nil
+	} else if e.loadedTypes[6] {
+		return nil, &NotFoundError{label: bookseries.Label}
+	}
+	return nil, &NotLoadedError{edge: "book_series"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*MediaEvent) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -97,11 +157,19 @@ func (*MediaEvent) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case mediaevent.FieldCreateTime, mediaevent.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
-		case mediaevent.ForeignKeys[0]: // episode_events
+		case mediaevent.ForeignKeys[0]: // album_events
 			values[i] = new(sql.NullInt64)
-		case mediaevent.ForeignKeys[1]: // movie_events
+		case mediaevent.ForeignKeys[1]: // artist_events
 			values[i] = new(sql.NullInt64)
-		case mediaevent.ForeignKeys[2]: // tv_show_events
+		case mediaevent.ForeignKeys[2]: // book_events
+			values[i] = new(sql.NullInt64)
+		case mediaevent.ForeignKeys[3]: // book_series_events
+			values[i] = new(sql.NullInt64)
+		case mediaevent.ForeignKeys[4]: // episode_events
+			values[i] = new(sql.NullInt64)
+		case mediaevent.ForeignKeys[5]: // movie_events
+			values[i] = new(sql.NullInt64)
+		case mediaevent.ForeignKeys[6]: // tv_show_events
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -152,19 +220,47 @@ func (_m *MediaEvent) assignValues(columns []string, values []any) error {
 			}
 		case mediaevent.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field album_events", value)
+			} else if value.Valid {
+				_m.album_events = new(uint32)
+				*_m.album_events = uint32(value.Int64)
+			}
+		case mediaevent.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field artist_events", value)
+			} else if value.Valid {
+				_m.artist_events = new(uint32)
+				*_m.artist_events = uint32(value.Int64)
+			}
+		case mediaevent.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field book_events", value)
+			} else if value.Valid {
+				_m.book_events = new(uint32)
+				*_m.book_events = uint32(value.Int64)
+			}
+		case mediaevent.ForeignKeys[3]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field book_series_events", value)
+			} else if value.Valid {
+				_m.book_series_events = new(uint32)
+				*_m.book_series_events = uint32(value.Int64)
+			}
+		case mediaevent.ForeignKeys[4]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field episode_events", value)
 			} else if value.Valid {
 				_m.episode_events = new(uint32)
 				*_m.episode_events = uint32(value.Int64)
 			}
-		case mediaevent.ForeignKeys[1]:
+		case mediaevent.ForeignKeys[5]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field movie_events", value)
 			} else if value.Valid {
 				_m.movie_events = new(uint32)
 				*_m.movie_events = uint32(value.Int64)
 			}
-		case mediaevent.ForeignKeys[2]:
+		case mediaevent.ForeignKeys[6]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field tv_show_events", value)
 			} else if value.Valid {
@@ -197,6 +293,26 @@ func (_m *MediaEvent) QueryEpisode() *EpisodeQuery {
 // QueryTvShow queries the "tv_show" edge of the MediaEvent entity.
 func (_m *MediaEvent) QueryTvShow() *TVShowQuery {
 	return NewMediaEventClient(_m.config).QueryTvShow(_m)
+}
+
+// QueryArtist queries the "artist" edge of the MediaEvent entity.
+func (_m *MediaEvent) QueryArtist() *ArtistQuery {
+	return NewMediaEventClient(_m.config).QueryArtist(_m)
+}
+
+// QueryAlbum queries the "album" edge of the MediaEvent entity.
+func (_m *MediaEvent) QueryAlbum() *AlbumQuery {
+	return NewMediaEventClient(_m.config).QueryAlbum(_m)
+}
+
+// QueryBook queries the "book" edge of the MediaEvent entity.
+func (_m *MediaEvent) QueryBook() *BookQuery {
+	return NewMediaEventClient(_m.config).QueryBook(_m)
+}
+
+// QueryBookSeries queries the "book_series" edge of the MediaEvent entity.
+func (_m *MediaEvent) QueryBookSeries() *BookSeriesQuery {
+	return NewMediaEventClient(_m.config).QueryBookSeries(_m)
 }
 
 // Update returns a builder for updating this MediaEvent.

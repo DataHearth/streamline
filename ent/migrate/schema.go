@@ -977,6 +977,10 @@ var (
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"grabbed", "download_completed", "download_failed", "download_cancelled", "grab_widened", "imported", "import_failed", "import_held_for_review", "drift_detected", "drift_confirmed", "searched", "added", "file_renamed", "file_removed", "reidentified", "metadata_refreshed", "monitoring_changed", "request_approved", "transcode_completed", "transcode_failed", "transcode_rejected"}},
 		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "album_events", Type: field.TypeUint32, Nullable: true},
+		{Name: "artist_events", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_events", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_series_events", Type: field.TypeUint32, Nullable: true},
 		{Name: "episode_events", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_events", Type: field.TypeUint32, Nullable: true},
 		{Name: "tv_show_events", Type: field.TypeUint32, Nullable: true},
@@ -988,20 +992,44 @@ var (
 		PrimaryKey: []*schema.Column{MediaEventsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "media_events_episodes_events",
+				Symbol:     "media_events_albums_events",
 				Columns:    []*schema.Column{MediaEventsColumns[5]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_artists_events",
+				Columns:    []*schema.Column{MediaEventsColumns[6]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_books_events",
+				Columns:    []*schema.Column{MediaEventsColumns[7]},
+				RefColumns: []*schema.Column{BooksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_book_series_events",
+				Columns:    []*schema.Column{MediaEventsColumns[8]},
+				RefColumns: []*schema.Column{BookSeriesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "media_events_episodes_events",
+				Columns:    []*schema.Column{MediaEventsColumns[9]},
 				RefColumns: []*schema.Column{EpisodesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_events_movies_events",
-				Columns:    []*schema.Column{MediaEventsColumns[6]},
+				Columns:    []*schema.Column{MediaEventsColumns[10]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "media_events_tv_shows_events",
-				Columns:    []*schema.Column{MediaEventsColumns[7]},
+				Columns:    []*schema.Column{MediaEventsColumns[11]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1020,17 +1048,37 @@ var (
 			{
 				Name:    "mediaevent_create_time_movie_events",
 				Unique:  false,
-				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[6]},
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[10]},
 			},
 			{
 				Name:    "mediaevent_create_time_episode_events",
 				Unique:  false,
-				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[5]},
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[9]},
 			},
 			{
 				Name:    "mediaevent_create_time_tv_show_events",
 				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[11]},
+			},
+			{
+				Name:    "mediaevent_create_time_artist_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[6]},
+			},
+			{
+				Name:    "mediaevent_create_time_album_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[5]},
+			},
+			{
+				Name:    "mediaevent_create_time_book_events",
+				Unique:  false,
 				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[7]},
+			},
+			{
+				Name:    "mediaevent_create_time_book_series_events",
+				Unique:  false,
+				Columns: []*schema.Column{MediaEventsColumns[1], MediaEventsColumns[8]},
 			},
 		},
 	}
@@ -1952,9 +2000,13 @@ func init() {
 	ImportScanShowsTable.ForeignKeys[0].RefTable = ImportScansTable
 	InvitesTable.ForeignKeys[0].RefTable = UsersTable
 	InvitesTable.ForeignKeys[1].RefTable = UsersTable
-	MediaEventsTable.ForeignKeys[0].RefTable = EpisodesTable
-	MediaEventsTable.ForeignKeys[1].RefTable = MoviesTable
-	MediaEventsTable.ForeignKeys[2].RefTable = TvShowsTable
+	MediaEventsTable.ForeignKeys[0].RefTable = AlbumsTable
+	MediaEventsTable.ForeignKeys[1].RefTable = ArtistsTable
+	MediaEventsTable.ForeignKeys[2].RefTable = BooksTable
+	MediaEventsTable.ForeignKeys[3].RefTable = BookSeriesTable
+	MediaEventsTable.ForeignKeys[4].RefTable = EpisodesTable
+	MediaEventsTable.ForeignKeys[5].RefTable = MoviesTable
+	MediaEventsTable.ForeignKeys[6].RefTable = TvShowsTable
 	MediaFilesTable.ForeignKeys[0].RefTable = BooksTable
 	MediaFilesTable.ForeignKeys[1].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[2].RefTable = MoviesTable
