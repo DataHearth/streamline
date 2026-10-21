@@ -127,7 +127,7 @@ By default the results read in plain words: which language you will hear (**FR +
 
 Each release also says whether its indexer is a private or public tracker — the **Private** setting on the indexer, since trackers don't report it themselves — and whether you have grabbed that exact release before for this title (for TV, for any episode of the show), with when. "That exact release" means the same info hash when both the release and the earlier download have one, and otherwise the same release name. Earlier grabs that failed count too, which is the point: it stops you re-grabbing something that already went wrong.
 
-When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing.
+When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing. When a season or whole-series search also has aired episodes still missing, the question offers *Download missing episodes only* as well: the import then fills only the episodes without a file and leaves yours in place (a pack holding none of the missing episodes imports nothing).
 
 For TV you can search at three levels:
 

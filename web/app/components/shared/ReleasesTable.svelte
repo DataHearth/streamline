@@ -85,8 +85,9 @@
 		// the dub/subtitle chip and a resolution, with an Ebook/Audiobook filter.
 		// "music": the tier and the container (Lossless · FLAC) in their place.
 		media?: "video" | "books" | "music";
-		// How many items of the scope have no file yet (an album's missing
-		// tracks). With files on disk too, the confirmation offers a grab that
+		// How many items of the scope a grab without replace_existing would
+		// fill (an album's missing tracks, a season's wanted aired episodes).
+		// With files on disk too, the confirmation offers a grab that
 		// fills only those and leaves the rest in place: one without
 		// replace_existing.
 		missingCount?: number;
@@ -302,6 +303,22 @@
 	let confirmFor = $state<SearchResult | null>(null);
 	// Some files on disk and some missing: the grab may fill the gaps only.
 	let canFillGaps = $derived(replaceCount > 0 && missingCount > 0);
+	// What the gaps are: an album's tracks, else a season's or show's episodes.
+	let gapText = $derived(
+		music
+			? {
+					title: i18n.replace_missing_title,
+					one: i18n.replace_missing_body_one,
+					other: i18n.replace_missing_body_other,
+					action: i18n.replace_missing_action,
+				}
+			: {
+					title: i18n.replace_missing_episodes_title,
+					one: i18n.replace_missing_episodes_body_one,
+					other: i18n.replace_missing_episodes_body_other,
+					action: i18n.replace_missing_episodes_action,
+				},
+	);
 
 	// The one release whose files are unfolded. Each unfolding is a request
 	// to the indexer, so it only happens on a tap.
@@ -1150,7 +1167,7 @@
 	open={confirmFor !== null}
 	size={canFillGaps ? "xl" : "md"}
 	title={canFillGaps
-		? i18n.replace_missing_title()
+		? gapText.title()
 		: replaceCount > 1
 			? i18n.replace_confirm_title_many()
 			: i18n.replace_confirm_title()}
@@ -1168,7 +1185,7 @@
 		...(canFillGaps
 			? [
 					{
-						label: i18n.replace_missing_action(),
+						label: gapText.action(),
 						variant: "primary" as const,
 						onClick: () => {
 							if (confirmFor) doGrab(confirmFor, false);
@@ -1181,9 +1198,7 @@
 >
 	<p class="text-sm leading-relaxed text-fg-muted">
 		{#if canFillGaps}
-			{(missingCount === 1 ? i18n.replace_missing_body_one : i18n.replace_missing_body_other)({
-				count: missingCount,
-			})}
+			{(missingCount === 1 ? gapText.one : gapText.other)({ count: missingCount })}
 		{:else if replaceCount > 1}
 			{i18n.replace_confirm_body_many({ count: replaceCount })}
 		{:else}

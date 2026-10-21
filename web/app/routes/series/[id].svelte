@@ -427,6 +427,19 @@
 			counts[String(s.number)] = (s.episodes ?? []).filter((e) => (e.size ?? 0) > 0).length;
 		return counts;
 	});
+	// Episodes a pack grabbed without replace_existing is for, per scope: the
+	// server's wantedAiredEpisodes (still wanted, not dated in the future).
+	// Above zero beside files on disk, the grab can fill only these.
+	const fillable = (eps: Episode[]) =>
+		eps.filter((e) => e.status === "wanted" && !(e.air_date && Date.parse(e.air_date) > Date.now()))
+			.length;
+	let packMissingCounts = $derived.by(() => {
+		const counts: Record<string, number> = {
+			series: fillable(seasons.flatMap((s) => s.episodes ?? [])),
+		};
+		for (const s of seasons) counts[String(s.number)] = fillable(s.episodes ?? []);
+		return counts;
+	});
 	const qpQuery = createQuery<QualityProfile[]>(() => ({
 		queryKey: ["quality-profiles"],
 		queryFn: () => api<QualityProfile[]>("/quality-profiles"),
@@ -1013,6 +1026,7 @@
 		seasons={searchSeasons}
 		initialScope={packSearchScope}
 		fileCounts={packFileCounts}
+		missingCounts={packMissingCounts}
 		scopeLabel={show.year ? `${show.title} (${show.year})` : show.title}
 		onClose={() => (packSearchOpen = false)}
 	/>

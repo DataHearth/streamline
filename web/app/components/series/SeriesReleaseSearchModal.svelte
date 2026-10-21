@@ -17,6 +17,7 @@
 		initialScope = "series",
 		scopeLabel,
 		fileCounts = {},
+		missingCounts = {},
 		onClose,
 	}: {
 		open: boolean;
@@ -32,6 +33,9 @@
 		// Episode files already on disk per scope ("series" or a season number as a
 		// string). Above zero, picking a pack asks before replacing them.
 		fileCounts?: Record<string, number>;
+		// Episodes per scope a grab can still fill (wanted and aired). With
+		// files on disk too, the confirmation offers to fetch only those.
+		missingCounts?: Record<string, number>;
 		onClose: () => void;
 	} = $props();
 
@@ -100,6 +104,7 @@
 			{grabPath}
 			{queryKey}
 			existingCount={fileCounts[scope] ?? 0}
+			missingCount={missingCounts[scope] ?? 0}
 			enabled={open}
 			onGrabbed={onClose}
 		/>
