@@ -23,6 +23,8 @@ Apps such as Symfonium, DSub, Ultrasonic, Tempo, play:Sub, Feishin and Sublime M
 | Library scan | "Rescan" in an app checks every file Streamline tracks and marks missing ones (admins only) |
 | Users | Read your own account and change your own Subsonic password; admins can list accounts. Accounts and their Subsonic permissions are managed in the web UI |
 
+Apps see only what you can play: an album appears once at least one of its songs is on disk, and an artist once one of their albums does. The rest of a followed discography (albums, EPs and singles Streamline knows about but holds no file for) stays out of the apps, and an album's song count and length cover its playable songs. **Newest** lists albums by when their music arrived, not by when the artist was added.
+
 Not available: podcasts, chat, jukebox mode, video and avatars.
 
 ## Stars, ratings and play counts

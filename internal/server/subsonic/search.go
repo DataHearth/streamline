@@ -45,8 +45,8 @@ func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 
 	if n := intParam(r, "artistCount", defaultPageSize, 0, maxSearchSize); n > 0 {
 		ars, err := h.ent.Artist.Query().
-			Where(artist.NameContainsFold(query)).
-			WithAlbums().
+			Where(artist.NameContainsFold(query), listedArtist()).
+			WithAlbums(listedAlbums).
 			Order(artist.ByName(), artist.ByID()).
 			Limit(n).
 			Offset(intParam(r, "artistOffset", 0, 0, 1<<30)).
@@ -59,9 +59,9 @@ func (h *Handler) searchAll(r *http.Request) (searchHits, error) {
 
 	if n := intParam(r, "albumCount", defaultPageSize, 0, maxSearchSize); n > 0 {
 		als, err := h.ent.Album.Query().
-			Where(album.TitleContainsFold(query)).
+			Where(album.TitleContainsFold(query), listed()).
 			WithArtist().
-			WithTracks().
+			WithTracks(onDisk).
 			Order(album.ByTitle(), album.ByID()).
 			Limit(n).
 			Offset(intParam(r, "albumOffset", 0, 0, 1<<30)).

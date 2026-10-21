@@ -139,6 +139,7 @@ var _ = g.Describe("library", g.Label("integration"), func() {
 
 	g.It("answers artist and album info", func() {
 		other := f.addArtist("a-2", "Mudhoney", "Grunge")
+		f.addAlbum(other, "rg-2", "Superfuzz Bigmuff", "/music/mudhoney/01.flac")
 		info := obj(
 			okResp(f.call("getArtistInfo2", url.Values{"id": {tr(f.withFile)}})),
 			"artistInfo2",
@@ -236,7 +237,16 @@ var _ = g.Describe("library", g.Label("integration"), func() {
 				SetMbid(fmt.Sprintf("bulk-%03d", i)).
 				SetName(fmt.Sprintf("Bulk Band %03d", i)))
 		}
-		Expect(f.client.Artist.CreateBulk(bulk...).Exec(ctx)).To(Succeed())
+		bands, err := f.client.Artist.CreateBulk(bulk...).Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		for i, b := range bands {
+			f.addAlbum(
+				b,
+				fmt.Sprintf("bulk-rg-%03d", i),
+				"Demo",
+				fmt.Sprintf("/music/bulk/%03d.flac", i),
+			)
+		}
 
 		res := obj(okResp(f.call("search3", url.Values{
 			"query": {"Bulk Band"}, "artistCount": {"150"},
@@ -270,9 +280,9 @@ var _ = g.Describe("library", g.Label("integration"), func() {
 		for _, g := range gs {
 			byName[g["value"].(string)] = [2]any{g["albumCount"], g["songCount"]}
 		}
+		// Kind of Blue holds no file, so Jazz has nothing to count.
 		Expect(byName).To(Equal(map[string][2]any{
 			"Grunge": {float64(1), float64(1)},
-			"Jazz":   {float64(1), float64(0)},
 		}))
 	})
 })

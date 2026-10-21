@@ -69,6 +69,41 @@ func playable() predicate.Track {
 	return track.HasMediaFilesWith(mediafile.MissingSinceIsNil())
 }
 
+// listed keeps albums holding at least one playable track. The library holds
+// every release group of a followed artist, wanted or not, and a client showed
+// each one it had no file for as an empty album.
+func listed() predicate.Album {
+	return album.HasTracksWith(playable())
+}
+
+// listedArtist keeps artists with at least one listed album.
+func listedArtist() predicate.Artist {
+	return artist.HasAlbumsWith(listed())
+}
+
+// onDisk loads an album's playable tracks only: songCount and duration count
+// what a client can play.
+func onDisk(q *ent.TrackQuery) {
+	q.Where(playable())
+}
+
+// listedAlbums loads an artist's listed albums only, which is what
+// albumCount counts.
+func listedAlbums(q *ent.AlbumQuery) {
+	q.Where(listed())
+}
+
+// byLatestFile orders albums by their newest playable file, newest first. An
+// album row is created with its artist's whole discography, so its own
+// creation time says nothing about when its music arrived.
+func byLatestFile(s *sql.Selector) {
+	s.OrderBy(sql.Desc("(SELECT MAX(mf." + mediafile.FieldCreateTime + ") FROM " +
+		track.Table + " t JOIN " + track.MediaFilesTable + " mf ON mf." +
+		track.MediaFilesColumn + " = t." + track.FieldID +
+		" WHERE t." + track.AlbumColumn + " = " + s.C(album.FieldID) +
+		" AND mf." + mediafile.FieldMissingSince + " IS NULL)"))
+}
+
 // songEdges loads what toSong reads.
 func songEdges(q *ent.TrackQuery) *ent.TrackQuery {
 	return q.WithAlbum(func(q *ent.AlbumQuery) { q.WithArtist() }).
@@ -285,7 +320,8 @@ func indexLetter(key string) string {
 
 func (h *Handler) sortedArtists(r *http.Request) ([]*ent.Artist, error) {
 	artists, err := h.ent.Artist.Query().
-		WithAlbums().
+		Where(listedArtist()).
+		WithAlbums(listedAlbums).
 		Order(artist.ByID()).
 		All(r.Context())
 	if err != nil {
@@ -362,7 +398,8 @@ func (h *Handler) loadArtist(ctx context.Context, id uint32) (*ent.Artist, error
 	ar, err := h.ent.Artist.Query().
 		Where(artist.IDEQ(id)).
 		WithAlbums(func(q *ent.AlbumQuery) {
-			q.WithTracks().Order(album.ByReleaseDate(), album.ByTitle())
+			q.Where(listed()).WithTracks(onDisk).
+				Order(album.ByReleaseDate(), album.ByTitle())
 		}).
 		Only(ctx)
 	return ar, lookupErr(err)
@@ -373,7 +410,8 @@ func (h *Handler) loadAlbum(ctx context.Context, id uint32) (*ent.Album, error) 
 		Where(album.IDEQ(id)).
 		WithArtist().
 		WithTracks(func(q *ent.TrackQuery) {
-			q.Order(track.ByDisc(), track.ByPosition()).WithMediaFiles(liveFiles)
+			q.Where(playable()).Order(track.ByDisc(), track.ByPosition()).
+				WithMediaFiles(liveFiles)
 		}).
 		Only(ctx)
 	return al, lookupErr(err)
@@ -506,6 +544,7 @@ func (h *Handler) getGenres(
 	// Two grouped reads: albums per genre, then playable songs per genre.
 	var albumRows, songRows []genreCount
 	err := h.ent.Album.Query().
+		Where(listed()).
 		Modify(func(s *sql.Selector) {
 			ar := sql.Table(artist.Table)
 			s.Join(ar).On(s.C(album.ArtistColumn), ar.C(artist.FieldID))
@@ -587,8 +626,8 @@ func (h *Handler) similarArtists(
 		return nil, nil
 	}
 	return h.ent.Artist.Query().
-		Where(artist.GenreEQ(ar.Genre), artist.IDNEQ(ar.ID)).
-		WithAlbums().
+		Where(artist.GenreEQ(ar.Genre), artist.IDNEQ(ar.ID), listedArtist()).
+		WithAlbums(listedAlbums).
 		Order(func(s *sql.Selector) { s.OrderBy("RANDOM()") }).
 		Limit(n).
 		All(ctx)

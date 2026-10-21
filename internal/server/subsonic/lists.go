@@ -56,7 +56,8 @@ func (h *Handler) albumList(r *http.Request, u *ent.User) ([]*ent.Album, error) 
 	}
 	size := intParam(r, "size", defaultListSize, 1, maxListSize)
 	offset := intParam(r, "offset", 0, 0, 1<<30)
-	q := h.ent.Album.Query().WithArtist().WithTracks().Limit(size).Offset(offset)
+	q := h.ent.Album.Query().Where(listed()).
+		WithArtist().WithTracks(onDisk).Limit(size).Offset(offset)
 
 	byMark := func(cond predicate.MusicAnnotation, order ...musicannotation.OrderOption) ([]*ent.Album, error) {
 		return h.albumsByMark(ctx, u.ID, cond, size, offset, order...)
@@ -65,7 +66,7 @@ func (h *Handler) albumList(r *http.Request, u *ent.User) ([]*ent.Album, error) 
 	case "random":
 		q.Order(randomOrder)
 	case "newest":
-		q.Order(album.ByCreateTime(sql.OrderDesc()), album.ByID(sql.OrderDesc()))
+		q.Order(byLatestFile, album.ByID(sql.OrderDesc()))
 	case "alphabeticalByArtist":
 		q.Order(
 			album.ByArtistField(artist.FieldName),
@@ -152,9 +153,9 @@ func (h *Handler) albumsByMark(
 		ids = append(ids, *a.AlbumID)
 	}
 	als, err := h.ent.Album.Query().
-		Where(album.IDIn(ids...)).
+		Where(album.IDIn(ids...), listed()).
 		WithArtist().
-		WithTracks().
+		WithTracks(onDisk).
 		All(ctx)
 	if err != nil {
 		return nil, err
@@ -275,15 +276,15 @@ func (h *Handler) starredItems(
 		}
 	}
 	ars, err := h.ent.Artist.Query().
-		Where(artist.IDIn(arIDs...)).
-		WithAlbums().
+		Where(artist.IDIn(arIDs...), listedArtist()).
+		WithAlbums(listedAlbums).
 		All(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	als, err := h.ent.Album.Query().Where(album.IDIn(alIDs...)).
+	als, err := h.ent.Album.Query().Where(album.IDIn(alIDs...), listed()).
 		WithArtist().
-		WithTracks().
+		WithTracks(onDisk).
 		All(ctx)
 	if err != nil {
 		return nil, nil, nil, err

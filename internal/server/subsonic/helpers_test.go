@@ -112,6 +112,32 @@ func (f *fixture) addArtist(mbid, name, genre string) *ent.Artist {
 	return a
 }
 
+// addAlbum seeds an album of a with one track, playable from path, or with
+// no file when path is empty.
+func (f *fixture) addAlbum(a *ent.Artist, mbid, title, path string) *ent.Album {
+	g.GinkgoHelper()
+	ctx := context.Background()
+	al, err := f.client.Album.Create().
+		SetMbid(mbid).
+		SetTitle(title).
+		SetType("album").
+		SetArtist(a).
+		Save(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	t, err := f.client.Track.Create().
+		SetMbid(mbid + "-t1").
+		SetTitle(title + " I").
+		SetDisc(1).
+		SetPosition(1).
+		SetAlbum(al).
+		Save(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	if path != "" {
+		f.giveFile(t, path)
+	}
+	return al
+}
+
 // beforeNextFileQuery runs fn once, just before the next MediaFile query:
 // the window between a track query and the eager load of its files.
 func (f *fixture) beforeNextFileQuery(fn func()) {
