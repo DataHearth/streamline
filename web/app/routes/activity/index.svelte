@@ -346,8 +346,18 @@
 	let source = $derived<(QueueEntry | HistoryEntry)[]>(
 		view === "queue" ? queueItems : historyItems,
 	);
+	// The queue arrives in the order the client is working it; rows waiting on a
+	// person (held, then errored) go ahead of that order, or a held download sat
+	// thirty rows down a phone-length list with nothing pointing at it. A header
+	// sort on the table still overrides this.
+	const ATTENTION_RANK: Record<string, number> = { held: 0, error: 1 };
 	let rows = $derived.by<(QueueEntry | HistoryEntry)[]>(() => {
 		let out = source;
+		if (view === "queue")
+			out = [...out].sort(
+				(a, b) =>
+					(ATTENTION_RANK[a.status] ?? 2) - (ATTENTION_RANK[b.status] ?? 2),
+			);
 		if (statusFilter.length)
 			out = out.filter((i) => statusFilter.includes(i.status));
 		if (search.trim()) {
@@ -397,6 +407,19 @@
 	let heldCount = $derived(
 		queueItems.filter((i) => i.status === "held").length,
 	);
+
+	// The counters double as shortcuts: tapping one shows exactly the rows it
+	// counts, and tapping it again while it is the only filter clears it.
+	function showStatus(status: string) {
+		if (view !== "queue") switchView("queue");
+		statusFilter =
+			statusFilter.length === 1 && statusFilter[0] === status ? [] : [status];
+	}
+	function statusShown(status: string): boolean {
+		return (
+			view === "queue" && statusFilter.length === 1 && statusFilter[0] === status
+		);
+	}
 
 	function resetFilters() {
 		statusFilter = [];
@@ -545,18 +568,31 @@
 	{/if}
 
 	<div class="hidden md:mt-3 md:block">
-		<LiveStrip items={queueItems} />
+		<LiveStrip
+			items={queueItems}
+			onShowStatus={showStatus}
+			shownStatus={view === "queue" && statusFilter.length === 1
+				? statusFilter[0]
+				: null}
+		/>
 	</div>
 
 	<TouchStatLine
 		stats={[
-			{ value: String(activeCount), label: i18n.common_active() },
+			{
+				value: String(activeCount),
+				label: i18n.common_active(),
+				onClick: () => showStatus("downloading"),
+				pressed: statusShown("downloading"),
+			},
 			...(heldCount > 0
 				? [
 						{
 							value: String(heldCount),
 							label: i18n.status_held(),
 							color: "var(--status-held)",
+							onClick: () => showStatus("held"),
+							pressed: statusShown("held"),
 						},
 					]
 				: []),

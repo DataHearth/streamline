@@ -4,7 +4,17 @@
 	import { formatSpeed, formatEta } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	let { items }: { items: QueueEntry[] } = $props();
+	// onShowStatus turns the count tiles into filter shortcuts; shownStatus is the
+	// lone status filter in effect, so its tile reads as pressed.
+	let {
+		items,
+		onShowStatus,
+		shownStatus = null,
+	}: {
+		items: QueueEntry[];
+		onShowStatus?: (status: string) => void;
+		shownStatus?: string | null;
+	} = $props();
 
 	const SPARK_KEY = "streamline:activity-spark";
 	const SPARK_MAX = 60;
@@ -28,6 +38,7 @@
 	let importing = $derived(
 		items.filter((i) => i.status === "importing").length,
 	);
+	let held = $derived(items.filter((i) => i.status === "held").length);
 	let aggregate = $derived(
 		items.reduce((s, i) => s + (i.download_speed ?? 0), 0),
 	);
@@ -73,20 +84,43 @@
 	});
 </script>
 
+{#snippet countTile(
+	value: number,
+	label: string,
+	status: string,
+	tone = "text-fg",
+)}
+	{@const on = shownStatus === status}
+	<button
+		type="button"
+		onclick={() => onShowStatus?.(status)}
+		disabled={!onShowStatus}
+		aria-pressed={on}
+		class="-m-2 rounded-md p-2 text-left transition enabled:hover:bg-surface disabled:cursor-default"
+	>
+		<div class="text-2xl font-bold tabular-nums {tone}">{value}</div>
+		<div
+			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] {on
+				? 'text-accent-text'
+				: 'text-fg-faint'}"
+		>
+			{label}
+		</div>
+	</button>
+{/snippet}
+
 <!-- The tiles and the sparkline are the md-and-up reading. Below that the four
      numbers collapse into TouchStatLine's single row: the sparkline needs width
      to say anything, and 390px isn't it. -->
 <div
-	class="mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 md:grid lg:grid-cols-[repeat(4,auto)_1fr]"
+	class="mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 {held > 0
+		? 'sm:grid-cols-5 lg:grid-cols-[repeat(5,auto)_1fr]'
+		: 'sm:grid-cols-4 lg:grid-cols-[repeat(4,auto)_1fr]'} md:grid"
 >
-	<div>
-		<div class="text-2xl font-bold tabular-nums text-fg">{active}</div>
-		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
-		>
-			{i18n.common_active()}
-		</div>
-	</div>
+	{@render countTile(active, i18n.common_active(), "downloading")}
+	{#if held > 0}
+		{@render countTile(held, i18n.status_held(), "held", "text-status-held")}
+	{/if}
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-status-downloading">
 			{formatSpeed(aggregate) || "—"}
@@ -97,14 +131,7 @@
 			{i18n.torrent_aggregate_down()}
 		</div>
 	</div>
-	<div>
-		<div class="text-2xl font-bold tabular-nums text-fg">{importing}</div>
-		<div
-			class="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-fg-faint"
-		>
-			{i18n.activity_importing()}
-		</div>
-	</div>
+	{@render countTile(importing, i18n.activity_importing(), "importing")}
 	<div>
 		<div class="text-2xl font-bold tabular-nums text-fg">
 			{formatEta(minEta) || "—"}
@@ -115,7 +142,9 @@
 			{i18n.activity_next_eta()}
 		</div>
 	</div>
-	<div class="col-span-2 h-10 sm:col-span-4 lg:col-span-1">
+	<div
+		class="col-span-2 h-10 lg:col-span-1 {held > 0 ? 'sm:col-span-5' : 'sm:col-span-4'}"
+	>
 		{#if sparkPoints}
 			<svg
 				viewBox="0 0 240 40"

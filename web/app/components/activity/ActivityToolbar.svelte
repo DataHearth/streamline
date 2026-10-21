@@ -8,7 +8,10 @@
 		ActivityView,
 		{ key: string; label: string; dot: string }[]
 	> = {
+		// Held leads: it is the one state waiting on a person, and the page
+		// floats those rows to the top of the queue as well.
 		queue: [
+			{ key: "held", label: i18n.lc_held(), dot: "held" },
 			{ key: "downloading", label: i18n.lc_downloading(), dot: "downloading" },
 			{ key: "importing", label: i18n.lc_importing(), dot: "grabbing" },
 			{ key: "paused", label: i18n.lc_paused(), dot: "paused" },

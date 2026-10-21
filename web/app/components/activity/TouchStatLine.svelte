@@ -1,5 +1,12 @@
 <script lang="ts" module>
-	export type TouchStat = { value: string; label: string; color?: string };
+	// onClick makes a stat a filter shortcut; pressed marks the one in effect.
+	export type TouchStat = {
+		value: string;
+		label: string;
+		color?: string;
+		onClick?: () => void;
+		pressed?: boolean;
+	};
 </script>
 
 <script lang="ts">
@@ -8,6 +15,22 @@
 	// numbers are the part that still reads at 390px.
 	let { stats }: { stats: TouchStat[] } = $props();
 </script>
+
+{#snippet body(s: TouchStat)}
+	<div
+		class="truncate font-mono text-[15px] font-semibold tabular-nums"
+		style:color={s.color ?? "var(--fg)"}
+	>
+		{s.value}
+	</div>
+	<div
+		class="mt-px truncate text-[9px] font-medium uppercase tracking-[0.13em] {s.pressed
+			? 'text-accent-text'
+			: 'text-fg-faint'}"
+	>
+		{s.label}
+	</div>
+{/snippet}
 
 <div
 	class="mt-3 flex items-center rounded-lg border border-border bg-bg-elevated px-3 py-2 md:hidden"
@@ -19,17 +42,18 @@
 			class:border-border={i > 0}
 			class:pl-3={i > 0}
 		>
-			<div
-				class="truncate font-mono text-[15px] font-semibold tabular-nums"
-				style:color={s.color ?? "var(--fg)"}
-			>
-				{s.value}
-			</div>
-			<div
-				class="mt-px truncate text-[9px] font-medium uppercase tracking-[0.13em] text-fg-faint"
-			>
-				{s.label}
-			</div>
+			{#if s.onClick}
+				<button
+					type="button"
+					onclick={s.onClick}
+					aria-pressed={s.pressed ?? false}
+					class="-my-1 block w-full min-w-0 rounded-md py-1 text-left transition active:bg-surface"
+				>
+					{@render body(s)}
+				</button>
+			{:else}
+				{@render body(s)}
+			{/if}
 		</div>
 	{/each}
 </div>
