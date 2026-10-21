@@ -392,6 +392,22 @@ export type SearchResult = {
 	previously_grabbed_at?: string;
 };
 
+// A season or whole-series release's torrent read against the show before
+// grabbing it (POST /series/{id}[/seasons/{n}]/release-files). wanted is what a
+// grab without replace_existing fetches: still wanted, and aired.
+export type PackFiles = {
+	files: { path: string; size: number; episode_id?: number }[];
+	episodes: {
+		id: number;
+		season: number;
+		number: number;
+		title: string;
+		has_file: boolean;
+		wanted: boolean;
+		in_release: boolean;
+	}[];
+};
+
 export type PlayOnStatus = "resolved" | "fallback" | "unavailable";
 
 export type PlayOnLink = {

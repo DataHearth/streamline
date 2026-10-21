@@ -743,6 +743,45 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /series/{id}/seasons/{number}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/SeasonNumber"
+    post:
+      operationId: getSeasonReleaseFiles
+      summary: List a season pack's files against the season's episodes, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
+         read by the matcher the selective download and the importer share, so it is what a grab
+         would keep and import. `episodes` is the season's; 404 for a season the show does not have. Each episode says whether it holds a file, whether a
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         the release seems to carry it. The body is an item of the search response, unchanged. A
+         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
+         configured indexers answers 422 with `code: grab_rejected`.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the scope's episodes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /series/{id}/episodes/{episodeId}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -845,6 +884,44 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /series/{id}/release-files:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: getSeriesReleaseFiles
+      summary: List a whole-series release's files against the show's episodes, before grabbing it
+      description: |
+        Fetches the release's `.torrent` from its indexer (one request, through the same
+         allowlist a grab is held to) and lists its files without adding anything to a download
+         client. Each video file of at least 5 MiB carries the `episode_id` its name points at,
+         read by the matcher the selective download and the importer share, so it is what a grab
+         would keep and import. `episodes` is every episode of the show, specials included. Each episode says whether it holds a file, whether a
+         grab without `replace_existing` is for it (`wanted`: still wanted and aired), and whether
+         the release seems to carry it. The body is an item of the search response, unchanged. A
+         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
+         configured indexers answers 422 with `code: grab_rejected`.
+      tags: [series]
+      requestBody:
+        $ref: "#/components/requestBodies/GrabSeriesRelease"
+      responses:
+        "200":
+          description: The release's files mapped onto the scope's episodes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackFiles"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -10402,6 +10479,60 @@ components:
             reports it, and only when non-zero: it tells an operator that an
             empty or short list is not the whole story, and that the season or
             whole-series scope is where those releases are grabbable.
+
+    PackFiles:
+      type: object
+      required: [files, episodes]
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackFile"
+        episodes:
+          type: array
+          description: Every episode of the scope, in season and episode order.
+          items:
+            $ref: "#/components/schemas/PackEpisode"
+
+    PackFile:
+      type: object
+      required: [path, size]
+      properties:
+        path:
+          type: string
+          description: The file's path inside the torrent.
+        size:
+          type: integer
+          format: int64
+        episode_id:
+          type: integer
+          x-go-type: uint32
+          description: The episode the file's name points at; absent for none.
+
+    PackEpisode:
+      type: object
+      required: [id, season, number, title, has_file, wanted, in_release]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        season:
+          type: integer
+          x-go-type: uint16
+        number:
+          type: integer
+          x-go-type: uint16
+        title:
+          type: string
+        has_file:
+          type: boolean
+          description: The episode already holds a file in the library.
+        wanted:
+          type: boolean
+          description: Still wanted and aired, what a grab without replace_existing fetches.
+        in_release:
+          type: boolean
+          description: A file of the release is named for this episode.
 
     ReleaseFiles:
       type: object

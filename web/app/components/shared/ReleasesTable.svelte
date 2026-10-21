@@ -38,7 +38,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import SearchNarration from "@components/shared/SearchNarration.svelte";
-	import ReleaseFilesPanel from "@components/music/ReleaseFilesPanel.svelte";
+	import ReleaseFilesPanel from "@components/shared/ReleaseFilesPanel.svelte";
 	import { getLocale } from "@lib/paraglide/runtime.js";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -92,7 +92,7 @@
 		// replace_existing.
 		missingCount?: number;
 		// POST endpoint listing a release's files against the scope before it
-		// is grabbed (an album's tracks). Set, each release can show its files
+		// is grabbed (an album's tracks, a season's or show's episodes). Set, each release can show its files
 		// on demand and the confirmation shows them for the pick.
 		filesPath?: string;
 	} = $props();
@@ -323,6 +323,7 @@
 	// The one release whose files are unfolded. Each unfolding is a request
 	// to the indexer, so it only happens on a tap.
 	let filesFor = $state<string | null>(null);
+	let filesKind = $derived<"tracks" | "episodes">(music ? "tracks" : "episodes");
 
 	let pendingId = $state<string | null>(null);
 	function doGrab(r: SearchResult, replace: boolean) {
@@ -480,7 +481,7 @@
 {#snippet filesPanel(r: SearchResult, extra = "")}
 	{#if filesPath && filesFor === r.download_url}
 		<div class={extra}>
-			<ReleaseFilesPanel path={filesPath} release={r} />
+			<ReleaseFilesPanel path={filesPath} release={r} kind={filesKind} />
 		</div>
 	{/if}
 {/snippet}
@@ -1152,7 +1153,7 @@
 						{#if filesPath && filesFor === r.download_url}
 							<tr class="border-b border-border last:border-b-0">
 								<td colspan={scored ? 9 : 8} class="px-4 pb-3 pt-0">
-									<ReleaseFilesPanel path={filesPath} release={r} />
+									<ReleaseFilesPanel path={filesPath} release={r} kind={filesKind} />
 								</td>
 							</tr>
 						{/if}
@@ -1259,7 +1260,7 @@
 	{/if}
 	{#if confirmFor && filesPath}
 		<div class="mt-3.5">
-			<ReleaseFilesPanel path={filesPath} release={confirmFor} />
+			<ReleaseFilesPanel path={filesPath} release={confirmFor} kind={filesKind} />
 		</div>
 	{/if}
 </Dialog>

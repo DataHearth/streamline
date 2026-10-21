@@ -6861,6 +6861,39 @@ type OIDCProviderView struct {
 	Name            string `json:"name"`
 }
 
+// PackEpisode defines model for PackEpisode.
+type PackEpisode struct {
+	// HasFile The episode already holds a file in the library.
+	HasFile bool   `json:"has_file"`
+	Id      uint32 `json:"id"`
+
+	// InRelease A file of the release is named for this episode.
+	InRelease bool   `json:"in_release"`
+	Number    uint16 `json:"number"`
+	Season    uint16 `json:"season"`
+	Title     string `json:"title"`
+
+	// Wanted Still wanted and aired, what a grab without replace_existing fetches.
+	Wanted bool `json:"wanted"`
+}
+
+// PackFile defines model for PackFile.
+type PackFile struct {
+	// EpisodeId The episode the file's name points at; absent for none.
+	EpisodeId *uint32 `json:"episode_id,omitempty"`
+
+	// Path The file's path inside the torrent.
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
+// PackFiles defines model for PackFiles.
+type PackFiles struct {
+	// Episodes Every episode of the scope, in season and episode order.
+	Episodes []PackEpisode `json:"episodes"`
+	Files    []PackFile    `json:"files"`
+}
+
 // PaginatedMovies defines model for PaginatedMovies.
 type PaginatedMovies struct {
 	Items []Movie `json:"items"`
@@ -10224,11 +10257,17 @@ type GrabSeriesReleaseJSONRequestBody = SearchResult
 // ReidentifySeriesJSONRequestBody defines body for ReidentifySeries for application/json ContentType.
 type ReidentifySeriesJSONRequestBody ReidentifySeriesJSONBody
 
+// GetSeriesReleaseFilesJSONRequestBody defines body for GetSeriesReleaseFiles for application/json ContentType.
+type GetSeriesReleaseFilesJSONRequestBody = SearchResult
+
 // PatchSeasonJSONRequestBody defines body for PatchSeason for application/json ContentType.
 type PatchSeasonJSONRequestBody = MonitorToggleRequest
 
 // GrabSeasonReleaseJSONRequestBody defines body for GrabSeasonRelease for application/json ContentType.
 type GrabSeasonReleaseJSONRequestBody = SearchResult
+
+// GetSeasonReleaseFilesJSONRequestBody defines body for GetSeasonReleaseFiles for application/json ContentType.
+type GetSeasonReleaseFilesJSONRequestBody = SearchResult
 
 // AddTorrentJSONRequestBody defines body for AddTorrent for application/json ContentType.
 type AddTorrentJSONRequestBody = AddTorrentRequest
@@ -10989,6 +11028,9 @@ type ServerInterface interface {
 	// ReidentifySeries Point this series at a different TVDB show
 	// (POST /series/{id}/reidentify)
 	ReidentifySeries(w http.ResponseWriter, r *http.Request, id ResourceID)
+	// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+	// (POST /series/{id}/release-files)
+	GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams)
@@ -11001,6 +11043,9 @@ type ServerInterface interface {
 	// GrabSeasonRelease Grab a season-pack release
 	// (POST /series/{id}/seasons/{number}/grab)
 	GrabSeasonRelease(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
+	// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+	// (POST /series/{id}/seasons/{number}/release-files)
+	GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber)
@@ -12364,6 +12409,12 @@ func (_ Unimplemented) ReidentifySeries(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+// (POST /series/{id}/release-files)
+func (_ Unimplemented) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // RenameSeriesFiles Rename series episode files to match the library naming pattern
 // (POST /series/{id}/rename)
 func (_ Unimplemented) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
@@ -12385,6 +12436,12 @@ func (_ Unimplemented) PatchSeason(w http.ResponseWriter, r *http.Request, id Re
 // GrabSeasonRelease Grab a season-pack release
 // (POST /series/{id}/seasons/{number}/grab)
 func (_ Unimplemented) GrabSeasonRelease(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+// (POST /series/{id}/seasons/{number}/release-files)
+func (_ Unimplemented) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -18881,6 +18938,32 @@ func (siw *ServerInterfaceWrapper) ReidentifySeries(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetSeriesReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeriesReleaseFiles(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RenameSeriesFiles operation middleware
 func (siw *ServerInterfaceWrapper) RenameSeriesFiles(w http.ResponseWriter, r *http.Request) {
 
@@ -19010,6 +19093,41 @@ func (siw *ServerInterfaceWrapper) GrabSeasonRelease(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GrabSeasonRelease(w, r, id, number)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSeasonReleaseFiles operation middleware
+func (siw *ServerInterfaceWrapper) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "number" -------------
+	var number SeasonNumber
+
+	err = runtime.BindStyledParameterWithOptions("simple", "number", chi.URLParam(r, "number"), &number, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "number", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSeasonReleaseFiles(w, r, id, number)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -19858,6 +19976,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/series/{id}/seasons/{number}/grab", wrapper.GrabSeasonRelease)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/seasons/{number}/release-files", wrapper.GetSeasonReleaseFiles)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/series/{id}/episodes/{episodeId}", wrapper.PatchEpisode)
 	})
 	r.Group(func(r chi.Router) {
@@ -19868,6 +19989,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/browse", wrapper.BrowseSeriesReleases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/series/{id}/release-files", wrapper.GetSeriesReleaseFiles)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/grab", wrapper.GrabSeriesRelease)
@@ -35347,6 +35471,101 @@ func (response ReidentifySeries500JSONResponse) VisitReidentifySeriesResponse(w 
 	return err
 }
 
+type GetSeriesReleaseFilesRequestObject struct {
+	Id   ResourceID `json:"id"`
+	Body *GetSeriesReleaseFilesJSONRequestBody
+}
+
+type GetSeriesReleaseFilesResponseObject interface {
+	VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetSeriesReleaseFiles200JSONResponse PackFiles
+
+func (response GetSeriesReleaseFiles200JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSeriesReleaseFiles403JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSeriesReleaseFiles404JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetSeriesReleaseFiles413JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetSeriesReleaseFiles422JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeriesReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeriesReleaseFiles500JSONResponse) VisitGetSeriesReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RenameSeriesFilesRequestObject struct {
 	Id     ResourceID `json:"id"`
 	Params RenameSeriesFilesParams
@@ -35620,6 +35839,102 @@ func (response GrabSeasonRelease422JSONResponse) VisitGrabSeasonReleaseResponse(
 type GrabSeasonRelease500JSONResponse struct{ InternalErrorJSONResponse }
 
 func (response GrabSeasonRelease500JSONResponse) VisitGrabSeasonReleaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFilesRequestObject struct {
+	Id     ResourceID   `json:"id"`
+	Number SeasonNumber `json:"number"`
+	Body   *GetSeasonReleaseFilesJSONRequestBody
+}
+
+type GetSeasonReleaseFilesResponseObject interface {
+	VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error
+}
+
+type GetSeasonReleaseFiles200JSONResponse PackFiles
+
+func (response GetSeasonReleaseFiles200JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetSeasonReleaseFiles403JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSeasonReleaseFiles404JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles413JSONResponse struct{ PayloadTooLargeJSONResponse }
+
+func (response GetSeasonReleaseFiles413JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(413)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles422JSONResponse struct {
+	UnprocessableEntityJSONResponse
+}
+
+func (response GetSeasonReleaseFiles422JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSeasonReleaseFiles500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSeasonReleaseFiles500JSONResponse) VisitGetSeasonReleaseFilesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -37585,6 +37900,9 @@ type StrictServerInterface interface {
 	// ReidentifySeries Point this series at a different TVDB show
 	// (POST /series/{id}/reidentify)
 	ReidentifySeries(ctx context.Context, request ReidentifySeriesRequestObject) (ReidentifySeriesResponseObject, error)
+	// GetSeriesReleaseFiles List a whole-series release's files against the show's episodes, before grabbing it
+	// (POST /series/{id}/release-files)
+	GetSeriesReleaseFiles(ctx context.Context, request GetSeriesReleaseFilesRequestObject) (GetSeriesReleaseFilesResponseObject, error)
 	// RenameSeriesFiles Rename series episode files to match the library naming pattern
 	// (POST /series/{id}/rename)
 	RenameSeriesFiles(ctx context.Context, request RenameSeriesFilesRequestObject) (RenameSeriesFilesResponseObject, error)
@@ -37597,6 +37915,9 @@ type StrictServerInterface interface {
 	// GrabSeasonRelease Grab a season-pack release
 	// (POST /series/{id}/seasons/{number}/grab)
 	GrabSeasonRelease(ctx context.Context, request GrabSeasonReleaseRequestObject) (GrabSeasonReleaseResponseObject, error)
+	// GetSeasonReleaseFiles List a season pack's files against the season's episodes, before grabbing it
+	// (POST /series/{id}/seasons/{number}/release-files)
+	GetSeasonReleaseFiles(ctx context.Context, request GetSeasonReleaseFilesRequestObject) (GetSeasonReleaseFilesResponseObject, error)
 	// BrowseSeasonReleases Search indexers for a season's releases
 	// (POST /series/{id}/seasons/{number}/search)
 	BrowseSeasonReleases(ctx context.Context, request BrowseSeasonReleasesRequestObject) (BrowseSeasonReleasesResponseObject, error)
@@ -43782,6 +44103,39 @@ func (sh *strictHandler) ReidentifySeries(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetSeriesReleaseFiles operation middleware
+func (sh *strictHandler) GetSeriesReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request GetSeriesReleaseFilesRequestObject
+
+	request.Id = id
+
+	var body GetSeriesReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeriesReleaseFiles(ctx, request.(GetSeriesReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeriesReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeriesReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetSeriesReleaseFilesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RenameSeriesFiles operation middleware
 func (sh *strictHandler) RenameSeriesFiles(w http.ResponseWriter, r *http.Request, id ResourceID, params RenameSeriesFilesParams) {
 	var request RenameSeriesFilesRequestObject
@@ -43896,6 +44250,40 @@ func (sh *strictHandler) GrabSeasonRelease(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GrabSeasonReleaseResponseObject); ok {
 		if err := validResponse.VisitGrabSeasonReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSeasonReleaseFiles operation middleware
+func (sh *strictHandler) GetSeasonReleaseFiles(w http.ResponseWriter, r *http.Request, id ResourceID, number SeasonNumber) {
+	var request GetSeasonReleaseFilesRequestObject
+
+	request.Id = id
+	request.Number = number
+
+	var body GetSeasonReleaseFilesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSeasonReleaseFiles(ctx, request.(GetSeasonReleaseFilesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSeasonReleaseFiles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSeasonReleaseFilesResponseObject); ok {
+		if err := validResponse.VisitGetSeasonReleaseFilesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

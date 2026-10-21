@@ -1309,6 +1309,12 @@ type Manager interface {
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	SetEpisodeMonitored(ctx context.Context, id uint32, monitored bool) error
 	ApplySpecialsToExisting(ctx context.Context) (int, error)
+	PackReleaseFiles(
+		ctx context.Context,
+		seriesID uint32,
+		season *uint16,
+		result indexer.SearchResult,
+	) (*PackFilesView, error)
 }
 
 type DeleteOptions struct{ DeleteFiles bool }

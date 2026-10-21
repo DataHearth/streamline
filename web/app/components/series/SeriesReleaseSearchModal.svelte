@@ -105,6 +105,9 @@
 			{queryKey}
 			existingCount={fileCounts[scope] ?? 0}
 			missingCount={missingCounts[scope] ?? 0}
+			filesPath={scope === "series"
+				? `/series/${seriesId}/release-files`
+				: `/series/${seriesId}/seasons/${scope}/release-files`}
 			enabled={open}
 			onGrabbed={onClose}
 		/>

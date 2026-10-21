@@ -750,6 +750,86 @@ func (_c *MockManager_List_Call) RunAndReturn(run func(ctx context.Context, page
 	return _c
 }
 
+// PackReleaseFiles provides a mock function for the type MockManager
+func (_mock *MockManager) PackReleaseFiles(ctx context.Context, seriesID uint32, season *uint16, result indexer.SearchResult) (*tvshow.PackFilesView, error) {
+	ret := _mock.Called(ctx, seriesID, season, result)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PackReleaseFiles")
+	}
+
+	var r0 *tvshow.PackFilesView
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, *uint16, indexer.SearchResult) (*tvshow.PackFilesView, error)); ok {
+		return returnFunc(ctx, seriesID, season, result)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, *uint16, indexer.SearchResult) *tvshow.PackFilesView); ok {
+		r0 = returnFunc(ctx, seriesID, season, result)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*tvshow.PackFilesView)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, *uint16, indexer.SearchResult) error); ok {
+		r1 = returnFunc(ctx, seriesID, season, result)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockManager_PackReleaseFiles_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PackReleaseFiles'
+type MockManager_PackReleaseFiles_Call struct {
+	*mock.Call
+}
+
+// PackReleaseFiles is a helper method to define mock.On call
+//   - ctx context.Context
+//   - seriesID uint32
+//   - season *uint16
+//   - result indexer.SearchResult
+func (_e *MockManager_Expecter) PackReleaseFiles(ctx any, seriesID any, season any, result any) *MockManager_PackReleaseFiles_Call {
+	return &MockManager_PackReleaseFiles_Call{Call: _e.mock.On("PackReleaseFiles", ctx, seriesID, season, result)}
+}
+
+func (_c *MockManager_PackReleaseFiles_Call) Run(run func(ctx context.Context, seriesID uint32, season *uint16, result indexer.SearchResult)) *MockManager_PackReleaseFiles_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 *uint16
+		if args[2] != nil {
+			arg2 = args[2].(*uint16)
+		}
+		var arg3 indexer.SearchResult
+		if args[3] != nil {
+			arg3 = args[3].(indexer.SearchResult)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_PackReleaseFiles_Call) Return(packFilesView *tvshow.PackFilesView, err error) *MockManager_PackReleaseFiles_Call {
+	_c.Call.Return(packFilesView, err)
+	return _c
+}
+
+func (_c *MockManager_PackReleaseFiles_Call) RunAndReturn(run func(ctx context.Context, seriesID uint32, season *uint16, result indexer.SearchResult) (*tvshow.PackFilesView, error)) *MockManager_PackReleaseFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RefreshOne provides a mock function for the type MockManager
 func (_mock *MockManager) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error) {
 	ret := _mock.Called(ctx, id)

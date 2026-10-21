@@ -232,6 +232,8 @@ var minRole = map[string]string{
 	"DeleteEpisodeFile":       roleMember,
 	"GrabSeriesRelease":       roleMember,
 	"GrabSeasonRelease":       roleMember,
+	"GetSeriesReleaseFiles":   roleMember,
+	"GetSeasonReleaseFiles":   roleMember,
 	"GrabEpisodeRelease":      roleMember,
 	"BrowseSeriesReleases":    roleMember,
 	"BrowseSeasonReleases":    roleMember,

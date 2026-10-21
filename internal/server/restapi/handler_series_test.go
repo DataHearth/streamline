@@ -441,6 +441,117 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		})
 	})
 
+	Describe("release files", func() {
+		post := func(path, key string) *http.Response {
+			GinkgoHelper()
+			req := app.req(http.MethodPost, path, key, strings.NewReader(
+				`{"title":"BB S01","download_url":"magnet:x","size":1,"seeders":1}`,
+			))
+			req.Header.Set("Content-Type", "application/json")
+			return app.do(req)
+		}
+		code := func(resp *http.Response) string {
+			GinkgoHelper()
+			var body struct {
+				Code string `json:"code"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			return body.Code
+		}
+
+		It("maps a season pack onto the season's episodes", func() {
+			app.tvshows.EXPECT().
+				PackReleaseFiles(mock.Anything, uint32(3),
+					mock.MatchedBy(func(n *uint16) bool { return n != nil && *n == 1 }),
+					mock.AnythingOfType("indexer.SearchResult")).
+				Return(&tvshow.PackFilesView{
+					Files: []tvshow.PackFile{
+						{Path: "BB.S01E02.mkv", Size: 9, EpisodeID: 11},
+						{Path: "BB.S01.nfo", Size: 1},
+					},
+					Episodes: []tvshow.PackEpisode{
+						{ID: 10, Season: 1, Number: 1, Title: "One", HasFile: true},
+						{
+							ID:        11,
+							Season:    1,
+							Number:    2,
+							Title:     "Two",
+							Wanted:    true,
+							InRelease: true,
+						},
+					},
+				}, nil).Once()
+
+			resp := post("/api/v1/series/3/seasons/1/release-files", app.adminKey)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body PackFiles
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Files[0].EpisodeId).To(HaveValue(Equal(uint32(11))))
+			Expect(body.Files[1].EpisodeId).To(BeNil())
+			Expect(body.Episodes).To(Equal([]PackEpisode{
+				{Id: 10, Season: 1, Number: 1, Title: "One", HasFile: true},
+				{
+					Id:        11,
+					Season:    1,
+					Number:    2,
+					Title:     "Two",
+					Wanted:    true,
+					InRelease: true,
+				},
+			}))
+		})
+
+		It("asks for the whole show on the series route", func() {
+			app.tvshows.EXPECT().
+				PackReleaseFiles(mock.Anything, uint32(3), (*uint16)(nil),
+					mock.AnythingOfType("indexer.SearchResult")).
+				Return(&tvshow.PackFilesView{}, nil).Once()
+			resp := post("/api/v1/series/3/release-files", app.adminKey)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		DescribeTable(
+			"sorts a failure into its status and code",
+			func(err error, status int, want string) {
+				app.tvshows.EXPECT().
+					PackReleaseFiles(mock.Anything, uint32(3), mock.Anything, mock.Anything).
+					Return(nil, err).Once()
+				resp := post(
+					"/api/v1/series/3/seasons/1/release-files",
+					app.adminKey,
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(status))
+				Expect(code(resp)).To(Equal(want))
+			},
+			Entry("unknown show", tvshow.ErrSeriesNotFound, http.StatusNotFound, ""),
+			Entry(
+				"unknown season",
+				tvshow.ErrSeasonNotFound,
+				http.StatusNotFound,
+				"",
+			),
+			Entry("a magnet", download.ErrFileListUnavailable,
+				http.StatusUnprocessableEntity, "files_unavailable"),
+			Entry(
+				"an indexer that refused",
+				errors.New("indexer returned status 404"),
+				http.StatusUnprocessableEntity,
+				"torrent_unreadable",
+			),
+			Entry("an untrusted link", download.ErrUntrustedSource,
+				http.StatusUnprocessableEntity, "grab_rejected"),
+		)
+
+		It("answers 403 to a request-only caller", func() {
+			resp := post("/api/v1/series/3/release-files", app.requestOnlyKey)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+		})
+	})
+
 	Describe("GrabSeasonRelease", func() {
 		It("grabs a season pack and returns 202", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
