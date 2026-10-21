@@ -629,20 +629,18 @@
 			{/if}
 		</div>
 	{:else}
-	<!-- Below md an active selection takes the toolbar's line rather than
-	     stacking on it, so selecting costs no height. -->
+	<!-- Below md an active selection takes over the top bar (SelectionTopBar
+	     draws nothing in place), so the toolbar and the list stay where they
+	     are as selecting begins. -->
 	{#if selecting}
-		<div class="sticky top-16 z-20 -mx-4 mb-1 md:hidden">
-			<SelectionTopBar
-				count={selection.size}
-				total={rows.length}
-				noun={NOUN_DOWNLOAD}
-				onClear={() => selection.clear()}
-				onSelectAll={selectAllRows}
-			/>
-		</div>
+		<SelectionTopBar
+			count={selection.size}
+			total={rows.length}
+			noun={NOUN_DOWNLOAD}
+			onClear={() => selection.clear()}
+			onSelectAll={selectAllRows}
+		/>
 	{/if}
-	<div class={selecting ? "hidden md:contents" : "contents"}>
 	<ActivityToolbar
 		view={tableView}
 		{statusFilter}
@@ -662,7 +660,6 @@
 			/>
 		{/snippet}
 	</ActivityToolbar>
-	</div>
 
 	{#if showPending}
 		<!-- Below md the section is one line, and it sits under the toolbar rather than

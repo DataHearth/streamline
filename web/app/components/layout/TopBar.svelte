@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, onDestroy } from "svelte";
-	import { fly } from "svelte/transition";
+	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { activeRoute } from "@roxi/routify";
@@ -12,11 +12,14 @@
 		Music,
 		BookOpen,
 		FolderInput,
+		X,
 	} from "@lucide/svelte";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
+	import { selectionHeader } from "@lib/selection-header.svelte";
+	import { cn } from "@lib/cn";
 	import SearchField from "@components/layout/SearchField.svelte";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
@@ -93,6 +96,12 @@
 	);
 	const titleClass =
 		"truncate text-[17px] font-semibold leading-[22px] tracking-[-0.02em] text-fg";
+
+	// Below md a live touch selection takes the bar over (lib/selection-header).
+	// The bar's own row goes invisible rather than unmounting, so the header
+	// keeps its height and the list under it does not move.
+	let selection = $derived(selectionHeader.state);
+	let hideForSelection = $derived(selection ? "max-md:invisible" : "");
 
 	let crumbs = $derived.by<Crumb[]>(() => {
 		if (!root) return [];
@@ -321,10 +330,15 @@
 	}
 </script>
 
+<!-- Near-opaque while it holds a selection: the count and select all are
+     controls, and the rows scrolling under the usual 70% read through them. -->
 <header
-	class="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8"
+	class={cn(
+		"sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8",
+		selection && "max-md:bg-bg-deep/95",
+	)}
 >
-	<div class="min-w-0 flex-1">
+	<div class={cn("min-w-0 flex-1", hideForSelection)}>
 		<div class="flex h-[22px] min-w-0 items-center">
 			{#if crumbs.length > 1}
 				<nav
@@ -359,7 +373,7 @@
 		type="button"
 		onclick={openPalette}
 		aria-label={i18n.palette_open()}
-		class="hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
+		class="{hideForSelection} hidden h-10 w-full max-w-[540px] flex-1 shrink-0 items-center gap-2.5 rounded-md border border-border bg-surface px-3.5 text-left text-[13px] text-fg-subtle transition hover:border-border-strong hover:bg-surface-2 hover:text-fg-muted lg:flex"
 	>
 		<Search size={14} aria-hidden="true" />
 		<span class="flex-1 truncate">{i18n.search_field_placeholder()}</span>
@@ -372,7 +386,7 @@
 
 	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
 	     a flex-1 here took half the header from the breadcrumbs. -->
-	<div class="flex flex-none items-center justify-end gap-2 lg:flex-1">
+	<div class={cn("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
 		<SearchField />
 		<button
 			type="button"
@@ -405,6 +419,44 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if selection}
+		<div
+			transition:fade={{ duration: 140 }}
+			class="absolute inset-x-0 bottom-0 flex h-16 items-center gap-1 pl-1.5 pr-2 md:hidden"
+			role="toolbar"
+			aria-label={i18n.bulk_selection()}
+		>
+			<button
+				type="button"
+				onclick={selection.onClear}
+				aria-label={i18n.bulk_exit_selection()}
+				class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-fg-muted transition active:bg-surface"
+			>
+				<X size={20} aria-hidden="true" />
+			</button>
+			<span class={cn(titleClass, "min-w-0 flex-1 pl-1 tabular-nums")} aria-live="polite">
+				{selection.count === 0
+					? i18n.a11y_select_all_of({ items: selection.noun.items })
+					: (selection.count === 1
+							? i18n.common_n_selected_one
+							: i18n.common_n_selected_other)({
+							count: selection.count.toLocaleString(),
+						})}
+			</span>
+			<button
+				type="button"
+				onclick={selection.count < selection.total
+					? selection.onSelectAll
+					: selection.onClear}
+				class="h-11 shrink-0 rounded-full px-3 text-[14px] font-semibold text-accent-text transition active:bg-accent-soft"
+			>
+				{selection.count < selection.total
+					? i18n.bulk_select_all_n({ total: selection.total })
+					: i18n.common_clear()}
+			</button>
+		</div>
+	{/if}
 </header>
 
 {#if addOpen}

@@ -468,32 +468,28 @@
 			</div>
 		</div>
 
-		<!-- Below md an active selection takes the toolbar's line rather than
-		     stacking on it, so selecting costs no height. -->
+		<!-- Below md an active selection takes over the top bar (SelectionTopBar
+		     draws nothing in place), so the toolbar and the list stay put. -->
 		{#if selecting}
-			<div class="sticky top-16 z-20 -mx-4 mb-1 md:hidden">
-				<SelectionTopBar
-					count={selection.size}
-					total={torrentRows.length}
-					noun={NOUN_TORRENT}
-					onClear={() => selection.clear()}
-					onSelectAll={() => selection.selectAll(torrentRows.map((t) => t.hash))}
-				/>
-			</div>
-		{/if}
-		<div class={selecting ? "hidden md:contents" : "contents"}>
-			<ActivityToolbar
-				view="torrents"
-				{statusFilter}
-				{search}
-				{activeFilters}
-				onOpenFilters={() => (filtersOpen = true)}
-				onStatusFilterChange={(s) => (statusFilter = s)}
-				onSearchChange={(q) => (search = q)}
-				onAddTorrent={() => (addOpen = true)}
-				canAddTorrent={auth.isAdmin}
+			<SelectionTopBar
+				count={selection.size}
+				total={torrentRows.length}
+				noun={NOUN_TORRENT}
+				onClear={() => selection.clear()}
+				onSelectAll={() => selection.selectAll(torrentRows.map((t) => t.hash))}
 			/>
-		</div>
+		{/if}
+		<ActivityToolbar
+			view="torrents"
+			{statusFilter}
+			{search}
+			{activeFilters}
+			onOpenFilters={() => (filtersOpen = true)}
+			onStatusFilterChange={(s) => (statusFilter = s)}
+			onSearchChange={(q) => (search = q)}
+			onAddTorrent={() => (addOpen = true)}
+			canAddTorrent={auth.isAdmin}
+		/>
 
 		<TorrentTable
 			rows={torrentRows}

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { X } from "@lucide/svelte";
-	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { NOUN_TITLE, type Noun } from "@lib/nouns";
+	import { selectionHeader } from "@lib/selection-header.svelte";
 
-	// Phone header for an active selection: it replaces the filter line rather
-	// than sitting on top of it, so entering selection mode costs no height. The
-	// count is the title, so the bar can never claim a set it doesn't have.
+	// Phone selection header. It draws nothing here: while mounted it hands the
+	// selection to the top bar, which shows close, the count and select all in
+	// place of the page title (lib/selection-header). Pages mount it wherever a
+	// selection is live; the count is the title, so the bar can never claim a
+	// set it doesn't have.
 	let {
 		count,
 		total,
@@ -19,49 +20,8 @@
 		onClear: () => void;
 		onSelectAll: () => void;
 	} = $props();
-</script>
 
-<!-- The accent tint is translucent, so it is laid over an opaque ground: the bar
-     is sticky on Queue and Torrents, and a bare tint let the rows scrolling under
-     it read straight through the count. -->
-<div
-	class="flex items-center gap-2 border-b border-accent-line bg-bg-deep bg-[image:linear-gradient(var(--accent-soft),var(--accent-soft))] px-2.5 py-2 md:hidden"
-	role="toolbar"
-	aria-label={i18n.bulk_selection()}
->
-	<button
-		type="button"
-		onclick={onClear}
-		aria-label={i18n.bulk_exit_selection()}
-		class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-full text-accent-text transition active:bg-white/[0.06]"
-	>
-		<X size={18} aria-hidden="true" />
-	</button>
-	<span
-		class="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight text-accent-text"
-		aria-live="polite"
-	>
-		{count === 0
-			? i18n.a11y_select_all_of({ items: noun.items })
-			: (count === 1 ? i18n.common_n_selected_one : i18n.common_n_selected_other)({
-					count: count.toLocaleString(),
-				})}
-	</span>
-	{#if count < total}
-		<button
-			type="button"
-			onclick={onSelectAll}
-			class="shrink-0 rounded-full px-3 py-2 text-[13px] font-medium text-accent-text transition active:bg-white/[0.06]"
-		>
-			{i18n.bulk_select_all_n({ total })}
-		</button>
-	{:else}
-		<button
-			type="button"
-			onclick={onClear}
-			class="shrink-0 rounded-full px-3 py-2 text-[13px] font-medium text-accent-text transition active:bg-white/[0.06]"
-		>
-			{i18n.common_clear()}
-		</button>
-	{/if}
-</div>
+	$effect(() =>
+		selectionHeader.claim(() => ({ count, total, noun, onClear, onSelectAll })),
+	);
+</script>
