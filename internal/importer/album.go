@@ -181,7 +181,7 @@ func (w *Worker) importAlbumFiles(
 	plan, skippedCovered := w.planAlbumImport(ctx, rec, alb, files, profile)
 	if len(plan) == 0 {
 		if skippedCovered > 0 {
-			return false, otelx.RecordSpanError(span, library.ErrDestExists)
+			return false, otelx.RecordSpanError(span, ErrTracksHeld)
 		}
 		return false, otelx.RecordSpanError(span, ErrNoAlbumTracks)
 	}
@@ -322,6 +322,10 @@ func (w *Worker) planAlbumImport(
 		plan           []albumFile
 		skippedCovered int
 	)
+	// Every file's tags first: whether their numbers name the album's tracks
+	// is decided over the whole release.
+	paths := make([]string, 0, len(files))
+	infos := make([]audiotags.Info, 0, len(files))
 	for _, path := range files {
 		info, err := audiotags.Read(path)
 		if err != nil {
@@ -329,7 +333,21 @@ func (w *Worker) planAlbumImport(
 				"file", path, "error", err)
 			continue
 		}
-		tr := library.MatchTrack(alb.Edges.Tracks, info)
+		paths = append(paths, path)
+		infos = append(infos, info)
+	}
+	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
+	if !matcher.ByNumber() {
+		slog.InfoContext(
+			ctx,
+			"album import: track numbers name other titles, matching by title",
+			"album.id",
+			alb.ID,
+		)
+	}
+	for i, path := range paths {
+		info := infos[i]
+		tr := matcher.Match(info)
 		if tr == nil {
 			slog.WarnContext(ctx, "album import: file matched no track",
 				"file", filepath.Base(path), "album.id", alb.ID)

@@ -30,16 +30,8 @@ func DiscFolderNumber(name string) (uint8, bool) {
 
 // MatchTrack prefers the tagged (disc, track) pair and falls back to the title.
 func MatchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
-	disc := info.Disc
-	if disc == 0 {
-		disc = 1
-	}
-	if info.Track > 0 {
-		if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
-			return t.Disc == disc && t.Position == info.Track
-		}); i >= 0 {
-			return tracks[i]
-		}
+	if t := trackAt(tracks, info); t != nil {
+		return t
 	}
 	title := strings.TrimSpace(info.Title)
 	if title == "" {
@@ -51,6 +43,114 @@ func MatchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 		return tracks[i]
 	}
 	return nil
+}
+
+// trackAt is the track at the file's (disc, track) pair, disc 1 when it
+// states none.
+func trackAt(tracks []*ent.Track, info audiotags.Info) *ent.Track {
+	if info.Track == 0 {
+		return nil
+	}
+	disc := info.Disc
+	if disc == 0 {
+		disc = 1
+	}
+	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
+		return t.Disc == disc && t.Position == info.Track
+	}); i >= 0 {
+		return tracks[i]
+	}
+	return nil
+}
+
+// TrackMatcher matches the files of one release to an album's tracks. The
+// files decide together whether their numbers name the album's tracks: by
+// number is right for an ordinary rip and wrong for an edition numbered
+// otherwise. Avatar's "Feathers & Flesh (In His Own Words)" puts a spoken
+// interlude before every song, so its 01 is "An Ancient Old Tale" where the
+// album's 01 is "Regret", and by number every song landed in another song's
+// slot with the interludes between them.
+type TrackMatcher struct {
+	tracks   []*ent.Track
+	byNumber bool
+}
+
+// NewTrackMatcher trusts the numbers unless the titles show the release
+// ordered otherwise: more of the files whose number reaches a track state
+// another track's title than state that one's. A title naming no track of
+// the album (a translation, a typo) says nothing about the order. Distrusted,
+// a file matches by title alone and an interlude matches nothing.
+func NewTrackMatcher(tracks []*ent.Track, infos []audiotags.Info) TrackMatcher {
+	agree, elsewhere := 0, 0
+	for _, info := range infos {
+		t := trackAt(tracks, info)
+		if t == nil {
+			continue
+		}
+		switch {
+		case TitlePrefixMatches(t.Title, info.Title):
+			agree++
+		case matchTitle(tracks, info.Disc, info.Title) != nil:
+			elsewhere++
+		}
+	}
+	return TrackMatcher{
+		tracks:   tracks,
+		byNumber: elsewhere < 2 || elsewhere <= agree,
+	}
+}
+
+// NewTrackMatcherByName is NewTrackMatcher for files known by their paths
+// only, as TrackInfoFromName reads them.
+func NewTrackMatcherByName(tracks []*ent.Track, paths []string) TrackMatcher {
+	infos := make([]audiotags.Info, 0, len(paths))
+	for _, p := range paths {
+		infos = append(infos, TrackInfoFromName(p))
+	}
+	return NewTrackMatcher(tracks, infos)
+}
+
+// ByNumber reports whether the files' numbers were trusted.
+func (m TrackMatcher) ByNumber() bool { return m.byNumber }
+
+// Match is MatchTrack when the numbers are trusted, else the track whose
+// title the file states, on the file's disc first.
+func (m TrackMatcher) Match(info audiotags.Info) *ent.Track {
+	if m.byNumber {
+		return MatchTrack(m.tracks, info)
+	}
+	return matchTitle(m.tracks, info.Disc, info.Title)
+}
+
+// MatchByName is MatchTrackByName when the numbers are trusted, else the
+// track whose title the file name states, on its disc first.
+func (m TrackMatcher) MatchByName(p string) *ent.Track {
+	if m.byNumber {
+		return MatchTrackByName(m.tracks, p)
+	}
+	info := TrackInfoFromName(p)
+	return matchTitle(m.tracks, info.Disc, info.Title)
+}
+
+// matchTitle is the track whose title equals title once normalized,
+// preferring one on disc: an album can carry a song twice, studio and live.
+func matchTitle(tracks []*ent.Track, disc uint8, title string) *ent.Track {
+	if disc == 0 {
+		disc = 1
+	}
+	var found *ent.Track
+	for _, t := range tracks {
+		if !TitleMatchesStrict(t.Title, title) {
+			continue
+		}
+		if t.Disc == disc {
+			return t
+		}
+		if found == nil {
+			found = t
+		}
+	}
+	return found
 }
 
 var (

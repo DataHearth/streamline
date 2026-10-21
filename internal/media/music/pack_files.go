@@ -97,6 +97,17 @@ func (s *Service) ArtistPackFiles(
 		}
 	}
 
+	// Each folder is one album import, which decides over its own files
+	// whether their numbers name the album's tracks.
+	byDir := map[string][]string{}
+	for _, f := range files {
+		if audiotags.IsAudioFile(f.Path) {
+			dir := library.PackAlbumDir(f.Path)
+			byDir[dir] = append(byDir[dir], f.Path)
+		}
+	}
+	matchers := map[string]library.TrackMatcher{}
+
 	view := &DiscographyFilesView{Files: make([]PackFileView, 0, len(files))}
 	folders := map[string]int{}
 	named := map[uint32]bool{}
@@ -120,8 +131,15 @@ func (s *Service) ArtistPackFiles(
 			}
 			if pf := view.Folders[i]; pf.Waiting {
 				fv.AlbumID = pf.AlbumID
-				tracks := byID[pf.AlbumID].Edges.Tracks
-				if t := library.MatchTrackByName(tracks, f.Path); t != nil {
+				m, ok := matchers[dir]
+				if !ok {
+					m = library.NewTrackMatcherByName(
+						byID[pf.AlbumID].Edges.Tracks,
+						byDir[dir],
+					)
+					matchers[dir] = m
+				}
+				if t := m.MatchByName(f.Path); t != nil {
 					fv.TrackID = t.ID
 					in[t.ID] = true
 				}

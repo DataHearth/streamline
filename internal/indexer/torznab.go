@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log/slog"
 	"net/http"
@@ -147,7 +148,9 @@ func parseItems(items []torznabItem) []SearchResult {
 	results := make([]SearchResult, 0, len(items))
 	for _, item := range items {
 		r := SearchResult{
-			Title:       item.Title,
+			// XML decoding unescapes once; a tracker that escaped its title
+			// itself still leaves "&amp;" behind.
+			Title:       html.UnescapeString(item.Title),
 			InfoURL:     item.GUID,
 			Download:    item.Enclosure.URL,
 			Size:        item.Enclosure.Length,

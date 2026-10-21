@@ -391,6 +391,10 @@ func (s *Service) planAlbumFiles(
 
 	var plan []db.AdoptAlbumFile
 	unmatched, adopted := 0, 0
+	// Every file's tags first: whether their numbers name the album's tracks
+	// is decided over the whole folder.
+	var paths []string
+	var infos []audiotags.Info
 	for _, af := range files {
 		path := af.path
 		if _, ok := held[path]; ok {
@@ -404,6 +408,15 @@ func (s *Service) planAlbumFiles(
 			unmatched++
 			continue
 		}
+		if info.Disc == 0 {
+			info.Disc = af.disc
+		}
+		paths = append(paths, path)
+		infos = append(infos, info)
+	}
+	matcher := library.NewTrackMatcher(alb.Edges.Tracks, infos)
+	for i, path := range paths {
+		info := infos[i]
 		stat, err := os.Stat(path)
 		if err != nil {
 			slog.WarnContext(ctx, "music adopt: stat failed",
@@ -411,10 +424,7 @@ func (s *Service) planAlbumFiles(
 			unmatched++
 			continue
 		}
-		if info.Disc == 0 {
-			info.Disc = af.disc
-		}
-		tr := library.MatchTrack(alb.Edges.Tracks, info)
+		tr := matcher.Match(info)
 		if tr == nil {
 			unmatched++
 			continue

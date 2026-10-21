@@ -66,12 +66,20 @@ func (s *Service) AlbumReleaseFiles(
 	}
 
 	tracks := a.Edges.Tracks
+	var audio []string
+	for _, f := range files {
+		if audiotags.IsAudioFile(f.Path) {
+			audio = append(audio, f.Path)
+		}
+	}
+	// The importer's own decision, made over the whole release.
+	matcher := library.NewTrackMatcherByName(tracks, audio)
 	in := make(map[uint32]bool, len(tracks))
 	view := &ReleaseFilesView{Files: make([]ReleaseFileView, 0, len(files))}
 	for _, f := range files {
 		fv := ReleaseFileView{Path: f.Path, Size: f.Size}
 		if audiotags.IsAudioFile(f.Path) {
-			if t := library.MatchTrackByName(tracks, f.Path); t != nil {
+			if t := matcher.MatchByName(f.Path); t != nil {
 				fv.TrackID = t.ID
 				in[t.ID] = true
 			}

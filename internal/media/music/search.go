@@ -88,9 +88,7 @@ func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
 		return nil
 	}
 	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
-		creator, title, ok := library.SplitCreatorTitle(r.Result.Title)
-		return !ok || !library.TitleMatchesStrict(creator, artist.Name) ||
-			!library.TitleNamesSameWork(title, a.Title)
+		return !library.ReleaseNamesWork(r.Result.Title, artist.Name, a.Title)
 	})
 }
 
@@ -177,8 +175,7 @@ func (s *Service) BrowseArtistReleases(
 	}
 	byArtist := make([]indexer.SearchResult, 0, len(results))
 	for _, r := range results {
-		creator, _, ok := library.SplitCreatorTitle(r.Title)
-		if ok && library.TitleMatchesStrict(creator, a.Name) {
+		if library.ReleaseNamedByCreator(r.Title, a.Name) {
 			byArtist = append(byArtist, r)
 		}
 	}

@@ -12,7 +12,10 @@ var (
 	// title that carries no brackets ("Elantris Unabridged M4B 128kbps", "Hi
 	// Scores FLAC 24bit"). It is anchored on word boundaries so a title word
 	// that merely contains one ("Cdrom", "Webs") is left alone.
-	releaseTagRe = regexp.MustCompile(
+	// releaseLeadTagsRe matches the bracketed groups a tracker writes before
+	// the name: RuTracker's "(Groove Metal) [CD] " or "[TR24][OF][LDR] ".
+	releaseLeadTagsRe = regexp.MustCompile(`^\s*(?:[(\[][^)\]]*[)\]]\s*)+`)
+	releaseTagRe      = regexp.MustCompile(
 		`(?i)\b(?:epub|azw3?|mobi|pdf|cbz|cbr|m4b|m4a|mp3|flac|alac|aac|ogg|opus|` +
 			`unabridged|abridged|audiobook|ebook|retail|lossless|web|cd|vinyl|` +
 			`v0|v2|\d{2}\s?bit|\d{2,3}(?:\.\d)?\s?khz|\d{2,4}\s?k(?:bps)?)\b`,
@@ -41,28 +44,88 @@ func SplitCreatorTitle(name string) (string, string, bool) {
 	return creator, title, creator != "" && title != ""
 }
 
+// ReleaseNamesWork reports whether a release name reads as "creator - title"
+// naming this creator and this work. A scene name with no " - " is read by
+// finding the creator's words at its head, and a name opening on tracker
+// tags ("(Groove Metal) [CD] Artist - Album - 2026, FLAC") is read without
+// them too: cut at its first " - ", the creator was "(Groove Metal) [CD]
+// Artist", and every RuTracker release was refused as another artist's.
+func ReleaseNamesWork(name, creator, title string) bool {
+	for _, r := range releaseReadings(name, creator) {
+		if sameCreator(r[0], creator) && sameWork(r[1], title) {
+			return true
+		}
+	}
+	return false
+}
+
+// ReleaseNamedByCreator reports whether a release name reads as one of
+// creator's, whatever the title. Only a " - " separator says where the
+// creator ends: with no title to confirm, a scene name led by the creator's
+// words could be another's ("Nirvana Tribute Discography").
+func ReleaseNamedByCreator(name, creator string) bool {
+	for _, r := range releaseReadings(name, "") {
+		if sameCreator(r[0], creator) {
+			return true
+		}
+	}
+	return false
+}
+
 // ReleaseNamesOtherWork reports whether a release name can be read as
 // "creator - title" and names a different creator or a different work than the
-// one searched for. A scene name with no " - " is read by finding the creator's
-// words at its head. Anything it cannot read answers false — a name that does
+// one searched for. Anything it cannot read answers false — a name that does
 // not start with the creator, a creator or title that normalizes to nothing —
 // since an interactive search shows every result and unsure is not "other".
 func ReleaseNamesOtherWork(name, creator, title string) bool {
 	if normalizeTitle(creator) == "" || normalizeTitle(title) == "" {
 		return false
 	}
-	c, t, ok := SplitCreatorTitle(name)
-	if !ok {
-		c, t, ok = splitAtCreator(name, creator)
+	readings := releaseReadings(name, creator)
+	return len(readings) > 0 && !ReleaseNamesWork(name, creator, title)
+}
+
+// releaseReadings is every (creator, title) pair a release name can be read
+// as: the name itself, then the name without the tags it opens on. The first
+// reading stays for a creator whose own name opens on brackets ("(hed) p.e.").
+// An empty creator reads " - " separated names only.
+func releaseReadings(name, creator string) [][2]string {
+	names := []string{name}
+	if bare := releaseLeadTagsRe.ReplaceAllString(
+		name,
+		"",
+	); bare != name &&
+		bare != "" {
+		names = append(names, bare)
+	}
+	var out [][2]string
+	for _, n := range names {
+		c, t, ok := SplitCreatorTitle(n)
 		if !ok {
-			return false
+			c, t, ok = splitAtCreator(n, creator)
+		}
+		if ok && normalizeTitle(c) != "" && normalizeTitle(t) != "" {
+			out = append(out, [2]string{c, t})
 		}
 	}
-	if normalizeTitle(c) == "" || normalizeTitle(t) == "" {
-		return false
-	}
-	return !TitleMatchesStrict(c, creator) || !TitleNamesSameWork(t, title)
+	return out
 }
+
+// sameCreator and sameWork also read "&" as "and" on both sides, since
+// normalizing drops the one and keeps the other: "Avatar.Feathers.And.Flesh"
+// never equalled "Feathers & Flesh". The plain comparison stays for a name
+// that drops the "&" altogether.
+func sameCreator(release, creator string) bool {
+	return TitleMatchesStrict(release, creator) ||
+		TitleMatchesStrict(ampersandAsAnd(release), ampersandAsAnd(creator))
+}
+
+func sameWork(release, title string) bool {
+	return TitleNamesSameWork(release, title) ||
+		TitleNamesSameWork(ampersandAsAnd(release), ampersandAsAnd(title))
+}
+
+func ampersandAsAnd(s string) string { return strings.ReplaceAll(s, "&", " and ") }
 
 // splitAtCreator splits a release name with no " - " separator after the
 // leading words that normalize to creator, then cuts the title the way
