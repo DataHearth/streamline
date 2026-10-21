@@ -755,7 +755,10 @@
 	</div>
 
 	{#if !technical}
-		<ul class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto overscroll-contain">
+		<!-- Below md the list scrolls with the modal body: a 60vh box of its
+		     own under the toolbar overflows the 85vh dialog, and with
+		     overscroll-contain its last cards could never be reached. -->
+		<ul class="flex flex-col gap-2 md:max-h-[60vh] md:overflow-y-auto md:overscroll-contain">
 			{#each friendly as r (r.download_url)}
 				{@render friendlyCard(r, r === recommended)}
 			{/each}
@@ -804,7 +807,7 @@
 		<!-- Phone: cards. A row has seven columns of which only two fit, and
 		     sideways scrolling to compare seeders is not a comparison. -->
 		<ul
-			class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto overscroll-contain md:hidden"
+			class="flex flex-col gap-2 md:hidden"
 		>
 			{#each rows as r (r.download_url)}
 				<li
