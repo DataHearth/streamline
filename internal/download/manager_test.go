@@ -679,7 +679,51 @@ var _ = Describe("Manager", Label("unit", "downloads"), func() {
 			store.EXPECT().
 				RevertMovieToWantedIfNoFile(mock.Anything, uint32(5)).
 				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingAlbumsAndBooks(mock.Anything).
+				Return(0, nil).Once()
 			Expect(mgr.CancelQueueItem(ctx, 3)).To(Succeed())
+		})
+
+		It("reverts an album's or episode's media in the same call", func() {
+			rec := &ent.DownloadRecord{
+				ID: 6, Status: downloadrecord.StatusDownloading,
+			}
+			rec.Edges.Album = &ent.Album{ID: 21}
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(6)).
+				Return(rec, nil).Once()
+			store.EXPECT().
+				DeleteDownloadRecord(mock.Anything, uint32(6)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingAlbumsAndBooks(mock.Anything).
+				Return(1, nil).Once()
+			Expect(mgr.CancelQueueItem(ctx, 6)).To(Succeed())
+		})
+
+		It("still reports the cancel when the revert fails", func() {
+			rec := &ent.DownloadRecord{
+				ID: 7, Status: downloadrecord.StatusDownloading,
+			}
+			rec.Edges.Book = &ent.Book{ID: 8}
+			store.EXPECT().
+				FindActiveDownloadRecordByID(mock.Anything, uint32(7)).
+				Return(rec, nil).Once()
+			store.EXPECT().
+				DeleteDownloadRecord(mock.Anything, uint32(7)).
+				Return(nil).Once()
+			store.EXPECT().
+				RevertOrphanedDownloadingEpisodes(mock.Anything).
+				Return(0, errors.New("database is locked")).Once()
+			Expect(mgr.CancelQueueItem(ctx, 7)).To(Succeed(),
+				"the record is already gone; the monitor retries the revert")
 		})
 
 		DescribeTable(

@@ -36,7 +36,7 @@ The **Recent activity** panel on the dashboard, and `GET /api/v1/activity` behin
 | `grabbed` | A release was sent to the download client |
 | `download_completed` | The bytes arrived and the import is starting |
 | `download_failed` | That download failed |
-| `download_cancelled` | You cancelled or removed the download — of a movie, episode, album, book or discography pack — and the title went back to wanted (a movie at once, the others on the download monitor's next sweep) |
+| `download_cancelled` | You cancelled or removed the download — of a movie, episode, album, book or discography pack — and the title went back to wanted at once (or to available, when it already had its files and the grab was an upgrade) |
 | `grab_widened` | More episodes were added to a torrent already in flight |
 | `imported` | A file landed in the library |
 | `import_failed` | A bulk-import entry failed (a movie, series, album or book entry) |

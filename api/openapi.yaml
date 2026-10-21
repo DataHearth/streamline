@@ -4840,9 +4840,11 @@ paths:
       summary: Cancel an in-flight download.
       description: |
         Removes the torrent (and its partial files) from the client, deletes
-        the record, and reverts the movie to "wanted" when it has no file.
-        409 when the download is held by import verification — resolve it via
-        POST /downloads/{id}/resolve instead.
+        the record, and reverts what it was for in the same request: the
+        movie to "wanted" when it has no file, and every episode, album or
+        book slot left "downloading" to "wanted" (or "available" when it
+        still holds its files). 409 when the download is held by import
+        verification — resolve it via POST /downloads/{id}/resolve instead.
       tags: [activity]
       responses:
         "204":

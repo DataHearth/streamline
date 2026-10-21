@@ -582,9 +582,14 @@ func liveQueueStatus(s TorrentStatus) string {
 }
 
 // CancelQueueItem removes the torrent (and its partial files) from the
-// client, deletes the record, and reverts the movie to "wanted" when it has
-// no file. A NotFound record propagates so the handler can 404, a held one
-// yields ErrRecordHeld so it can 409.
+// client, deletes the record, and reverts what it was for at once: the movie
+// to "wanted" when it has no file, and every episode, album and book slot the
+// record left "downloading" through ReconcileStrandedMedia — the same pass
+// PurgeRecordForHash runs, since a cancel issued through streamline is as
+// final as a removal from the Torrents page. Without it those waited for the
+// next download-monitor tick, reading as downloading with nothing in the
+// queue and skipped by every search. A NotFound record propagates so the
+// handler can 404, a held one yields ErrRecordHeld so it can 409.
 func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 	rec, err := d.db.FindActiveDownloadRecordByID(ctx, recordID)
 	if err != nil {
@@ -612,6 +617,18 @@ func (d *download) CancelQueueItem(ctx context.Context, recordID uint32) error {
 		if err := d.db.RevertMovieToWantedIfNoFile(ctx, m.ID); err != nil {
 			return fmt.Errorf("revert movie: %w", err)
 		}
+	}
+	// The record is gone by now, so the cancel happened whatever this says: a
+	// failure is logged, not returned, and the monitor's own pass retries it.
+	if err := d.ReconcileStrandedMedia(ctx); err != nil {
+		slog.WarnContext(
+			ctx,
+			"cancel: reverting the record's media failed, the monitor retries",
+			"download_record.id",
+			rec.ID,
+			"error",
+			err,
+		)
 	}
 	if scope, id, ok := cancelledOwner(rec); ok {
 		p := map[string]any{"release_title": rec.Title}
