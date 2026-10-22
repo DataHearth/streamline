@@ -29,6 +29,7 @@ import {
 	LogOut,
 } from "@lucide/svelte";
 import { api, type Paginated } from "./api";
+import { openAdd, type AddKind } from "./add-flow";
 import { artistPosterUrl, bookPosterUrl } from "./posters";
 import { auth } from "./auth.svelte";
 import { fold } from "./text";
@@ -87,6 +88,16 @@ export type BookItem = {
 	// A series folds into one row, as it folds into one card on the shelf.
 	series: boolean;
 };
+// Names the kind of title, never the provider: that is the backend's to change.
+// `label` is the whole sentence, read out; `chip` the kind the strip shows.
+export type LookupItem = {
+	kind: "lookup";
+	media: AddKind;
+	label: string;
+	chip: string;
+	query: string;
+	icon: Component;
+};
 export type SearchItem =
 	| PageItem
 	| ActionItem
@@ -94,7 +105,8 @@ export type SearchItem =
 	| SeriesItem
 	| ArtistItem
 	| BookItem
-	| PersonItem;
+	| PersonItem
+	| LookupItem;
 // The four kinds that lead to a title's own page.
 export const isTitleItem = (i: SearchItem): i is MovieItem | SeriesItem | ArtistItem | BookItem =>
 	i.kind === "movie" || i.kind === "series" || i.kind === "artist" || i.kind === "book";
@@ -141,8 +153,34 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },
 ];
 
+const ADD_KINDS: AddKind[] = ["movie", "series", "artist", "book"];
+const MEDIA_ICON: Record<AddKind, Component> = {
+	movie: Film,
+	series: Tv,
+	artist: Music,
+	book: BookOpen,
+};
+
+function lookupLabel(media: AddKind, query: string, direct: boolean): string {
+	if (media === "movie")
+		return direct ? i18n.search_lookup_add_movie({ query }) : i18n.search_lookup_request_movie({ query });
+	if (media === "series")
+		return direct ? i18n.search_lookup_add_series({ query }) : i18n.search_lookup_request_series({ query });
+	if (media === "artist")
+		return direct ? i18n.search_lookup_add_artist({ query }) : i18n.search_lookup_request_artist({ query });
+	return direct ? i18n.search_lookup_add_book({ query }) : i18n.search_lookup_request_book({ query });
+}
+
+function chipLabel(media: AddKind): string {
+	if (media === "movie") return i18n.search_lookup_as_movie();
+	if (media === "series") return i18n.search_lookup_as_series();
+	if (media === "artist") return i18n.search_lookup_as_artist();
+	return i18n.search_lookup_as_book();
+}
+
 export function itemKindLabel(item: SearchItem): string {
 	if (item.kind === "page") return i18n.search_kind_navigate();
+	if (item.kind === "lookup") return item.chip;
 	if (item.kind === "action") return i18n.common_action();
 	if (item.kind === "person") return i18n.common_person();
 	if (item.kind === "artist") return i18n.common_artist();
@@ -158,18 +196,6 @@ export function itemSubline(item: SearchItem): string {
 	return "";
 }
 
-function openAddMovie() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-movie"));
-}
-function openAddSeries() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-series"));
-}
-function openAddArtist() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-artist"));
-}
-function openAddBook() {
-	window.dispatchEvent(new CustomEvent("streamline:open-add-book"));
-}
 async function signOut() {
 	try {
 		await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -234,35 +260,59 @@ export function createSearchModel(
 	}
 
 	// request_only users request rather than add, so the labels adapt.
-	function actions(): ActionItem[] {
+	function addActions(): ActionItem[] {
 		const direct = auth.canAddDirectly;
 		return [
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_movie() : i18n.search_request_movie(),
 				icon: Film,
-				run: openAddMovie,
+				run: () => openAdd("movie"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_series() : i18n.search_request_series(),
 				icon: Tv,
-				run: openAddSeries,
+				run: () => openAdd("series"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_artist() : i18n.search_request_artist(),
 				icon: Music,
-				run: openAddArtist,
+				run: () => openAdd("artist"),
 			},
 			{
 				kind: "action",
 				label: direct ? i18n.search_add_book() : i18n.search_request_book(),
 				icon: BookOpen,
-				run: openAddBook,
+				run: () => openAdd("book"),
 			},
+		];
+	}
+
+	function actions(): ActionItem[] {
+		return [
+			...addActions(),
 			{ kind: "action", label: i18n.common_sign_out(), icon: LogOut, run: signOut },
 		];
+	}
+
+	// The live query, not the debounced one: nothing is fetched until a pick.
+	function lookups(query: string): LookupItem[] {
+		if (query.length < TITLE_MIN) return [];
+		// Typing the start of "Add movie…" is asking for that action, not for a
+		// title named "add movie" — the strip would offer to add one. The start
+		// only, so a title called "Movie" still gets the strip.
+		const q = fold(query);
+		if (addActions().some((a) => fold(a.label).startsWith(q))) return [];
+		return ADD_KINDS.map((media) => ({
+			kind: "lookup",
+			media,
+			label: lookupLabel(media, query, auth.canAddDirectly),
+			chip: chipLabel(media),
+			query,
+			icon: MEDIA_ICON[media],
+		}));
 	}
 
 	let sections = $derived.by<SearchSection[]>(() => {
@@ -348,8 +398,13 @@ export function createSearchModel(
 		return opts.compact ? [...titles, ...rest] : [...rest, ...titles];
 	});
 
-	let flat = $derived(sections.flatMap((s) => s.items));
+	// Not a section: each surface pins them outside its scrolling list, where a
+	// full library would otherwise push them out of sight. Last in `flat`, so
+	// the keyboard still reaches them.
+	let lookupItems = $derived(lookups(getQuery().trim()));
+	let flat = $derived([...sections.flatMap((s) => s.items), ...lookupItems]);
 	let titleHits = $derived(flat.filter(isTitleItem).length);
+	let matched = $derived(sections.some((s) => s.items.length > 0));
 	// How many titles matched, against the at-most-TITLE_LIMIT-each shown. Null
 	// until the query passes TITLE_MIN and the fetch lands, so the hint stays
 	// absent rather than claiming zero while the panel is still closed.
@@ -371,6 +426,12 @@ export function createSearchModel(
 		get titleHits(): number {
 			return titleHits;
 		},
+		get matched(): boolean {
+			return matched;
+		},
+		get lookups(): LookupItem[] {
+			return lookupItems;
+		},
 		get searchable(): number | null {
 			return searchable;
 		},
@@ -386,6 +447,10 @@ export function searchNav() {
 	return function activate(item: SearchItem) {
 		if (item.kind === "action") {
 			item.run();
+			return;
+		}
+		if (item.kind === "lookup") {
+			openAdd(item.media, item.query);
 			return;
 		}
 		if (!navigate) return;

@@ -52,8 +52,9 @@
 		kind: "movie" | "series";
 		open: boolean;
 		onClose: () => void;
+		seedQuery?: string;
 	};
-	let { kind, open, onClose }: Props = $props();
+	let { kind, open, onClose, seedQuery = "" }: Props = $props();
 
 	type Hit = {
 		id: number;
@@ -105,8 +106,14 @@
 			return;
 		}
 		lockScroll();
-		// The field is the whole point of the screen — open with the keyboard up.
-		tick().then(() => input?.focus());
+		if (seedQuery) {
+			// Seeded, the results are the point: keep the keyboard off them.
+			query = seedQuery;
+			debounced = seedQuery.trim();
+		} else {
+			// The field is the whole point of the screen — open with the keyboard up.
+			tick().then(() => input?.focus());
+		}
 		return unlockScroll;
 	});
 

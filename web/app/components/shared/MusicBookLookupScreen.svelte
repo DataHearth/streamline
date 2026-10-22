@@ -41,8 +41,13 @@
 	// swipes up to the full detail. Monitoring stays at its first option here, as
 	// the series screen leaves its preset; the md modal is where that choice is
 	// worth the extra control.
-	type Props = { kind: LookupKind; open: boolean; onClose: () => void };
-	let { kind, open, onClose }: Props = $props();
+	type Props = {
+		kind: LookupKind;
+		open: boolean;
+		onClose: () => void;
+		seedQuery?: string;
+	};
+	let { kind, open, onClose, seedQuery = "" }: Props = $props();
 
 	let isArtist = $derived(kind === "artist");
 	let canAdd = $derived(auth.canAddDirectly);
@@ -93,7 +98,12 @@
 			return;
 		}
 		lockScroll();
-		tick().then(() => input?.focus());
+		if (seedQuery) {
+			query = seedQuery;
+			debounced = seedQuery.trim();
+		} else {
+			tick().then(() => input?.focus());
+		}
 		return unlockScroll;
 	});
 

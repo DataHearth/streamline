@@ -45,8 +45,13 @@
 	// The split add/request modal for an artist or a book, from md up: the same
 	// layout as AddMovieModal and AddSeriesModal, searching MusicBrainz or
 	// Hardcover. Below md AppShell mounts MusicBookLookupScreen instead.
-	type Props = { kind: LookupKind; open: boolean; onClose: () => void };
-	let { kind, open, onClose }: Props = $props();
+	type Props = {
+		kind: LookupKind;
+		open: boolean;
+		onClose: () => void;
+		seedQuery?: string;
+	};
+	let { kind, open, onClose, seedQuery = "" }: Props = $props();
 
 	let isArtist = $derived(kind === "artist");
 	let canAdd = $derived(auth.canAddDirectly);
@@ -90,7 +95,13 @@
 	});
 
 	$effect(() => {
-		if (open) return;
+		if (open) {
+			if (seedQuery) {
+				query = seedQuery;
+				debounced = seedQuery.trim();
+			}
+			return;
+		}
 		query = "";
 		debounced = "";
 		qualityProfileName = "";
