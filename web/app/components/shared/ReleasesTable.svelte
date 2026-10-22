@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { createQuery, createMutation } from "@tanstack/svelte-query";
+	import {
+		createQuery,
+		createMutation,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
 	import {
 		TriangleAlert,
 		ChevronDown,
@@ -127,6 +131,7 @@
 	// abort server-side. Dropping the query is what "stop waiting" means here,
 	// and it leaves a state that says so rather than an empty table.
 	let canceled = $state(false);
+	const qc = useQueryClient();
 	// When the current view asked for its results. Opening the dialog or
 	// switching its scope is a fresh search: a cached answer from an earlier
 	// view is refetched, and shown as searching until the new one lands rather
@@ -159,10 +164,32 @@
 		// every indexer behind the operator's back.
 		staleTime: 0,
 		refetchOnWindowFocus: false,
+		// One attempt. A second one fans out to every indexer again and kept
+		// the narration up for the length of another search after the first
+		// had already failed; the operator has a Retry for that.
+		retry: false,
 	}));
+	// isPending, not isLoading: a pending query that is not fetching (paused
+	// offline, or just re-enabled after a cancel) has no answer yet, and
+	// falling through read as "no releases found".
 	let searching = $derived(
-		q.isLoading || (q.isFetching && q.dataUpdatedAt < askedAt),
+		q.isPending || (q.isFetching && q.dataUpdatedAt < askedAt),
 	);
+
+	// Stop waiting. The in-flight fetch is dropped from the cache (reverted to
+	// what was there before it), so an answer arriving after the cancel never
+	// lands as this view's result.
+	function cancel() {
+		canceled = true;
+		void qc.cancelQueries({ queryKey, exact: true });
+	}
+	// A retry is a fresh search, like opening the dialog: an answer cached
+	// before it is not this search's result.
+	function rerun() {
+		askedAt = Date.now();
+		if (canceled) canceled = false;
+		else void q.refetch();
+	}
 
 	// Only to name the scope of the wait: "Searching 6 indexers". Admin-only
 	// endpoint, so a non-admin gets the countless phrasing rather than a number
@@ -639,7 +666,7 @@
 		<p class="text-sm text-fg-muted">{i18n.search_canceled()}</p>
 		<button
 			type="button"
-			onclick={() => (canceled = false)}
+			onclick={rerun}
 			class="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
 		>
 			{i18n.common_retry()}
@@ -649,7 +676,7 @@
 	<SearchNarration
 		{indexerCount}
 		scopePending={indexersQuery.isPending && auth.user?.role === "admin"}
-		onCancel={() => (canceled = true)}
+		onCancel={cancel}
 	/>
 {:else if q.isError}
 	<div
@@ -661,7 +688,7 @@
 		</p>
 		<button
 			type="button"
-			onclick={() => q.refetch()}
+			onclick={rerun}
 			class="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
 		>
 			{i18n.common_retry()}
