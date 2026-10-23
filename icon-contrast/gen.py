@@ -166,29 +166,29 @@ def panel(title, rows, cell=170, icon=120, path=None):
 I = 120
 ios_cur = ios_render(apple, I)
 ios_new = ios_render(prop_apple, I)
-panel("iOS — écran d'accueil (apple-touch-icon)", [
-    ("Actuel", [("Clair", "light", ios_cur), ("Sombre", "dark", ios_cur),
-                ("Teinté (approx.)", "dark", tinted(ios_cur))]),
-    ("Proposé", [("Clair", "light", ios_new), ("Sombre", "dark", ios_new),
-                 ("Teinté (approx.)", "dark", tinted(ios_new))]),
+panel("iOS — home screen (apple-touch-icon)", [
+    ("Current", [("Light", "light", ios_cur), ("Dark", "dark", ios_cur),
+                ("Tinted (approx.)", "dark", tinted(ios_cur))]),
+    ("Proposed", [("Light", "light", ios_new), ("Dark", "dark", ios_new),
+                 ("Tinted (approx.)", "dark", tinted(ios_new))]),
 ], path=OUT + "/ios-home-screen.png")
 
 rows = []
-for lbl, src in [("Actuel", mask_cur), ("Proposé", prop_mask)]:
+for lbl, src in [("Current", mask_cur), ("Proposed", prop_mask)]:
     rows.append((lbl, [
-        ("Cercle · clair", "light", android_render(src, I, "circle")),
-        ("Cercle · sombre", "dark", android_render(src, I, "circle")),
-        ("Squircle · clair", "light", android_render(src, I, "squircle")),
-        ("Squircle · sombre", "dark", android_render(src, I, "squircle")),
+        ("Circle · light", "light", android_render(src, I, "circle")),
+        ("Circle · dark", "dark", android_render(src, I, "circle")),
+        ("Squircle · light", "light", android_render(src, I, "squircle")),
+        ("Squircle · dark", "dark", android_render(src, I, "squircle")),
     ]))
 cur_unthemed = android_render(mask_cur, I, "circle")
-rows.append(("Icônes à thème\n(Material You)", [
-    ("Actuel · clair", "light", cur_unthemed),
-    ("Actuel · sombre", "dark", cur_unthemed),
-    ("Proposé · clair", "light", themed(prop_mono, I, False)),
-    ("Proposé · sombre", "dark", themed(prop_mono, I, True)),
+rows.append(("Themed icons\n(Material You)", [
+    ("Current · light", "light", cur_unthemed),
+    ("Current · dark", "dark", cur_unthemed),
+    ("Proposed · light", "light", themed(prop_mono, I, False)),
+    ("Proposed · dark", "dark", themed(prop_mono, I, True)),
 ]))
-panel("Android — icône adaptative (maskable) et icônes à thème", rows,
+panel("Android — adaptive (maskable) and themed icons", rows,
       path=OUT + "/android-home-screen.png")
 
 # ---- zoom on the maskable rim -------------------------------------------
@@ -197,8 +197,8 @@ zn = android_render(prop_mask, 512, "circle").crop((0, 150, 140, 362)).resize((2
 W, H = 660, 520
 zim = Image.new("RGB", (W, H), (250, 250, 252))
 d = ImageDraw.Draw(zim)
-d.text((20, 18), "Zoom ×2 — bord gauche sous masque circulaire", fill=(20, 20, 26), font=font(22, "SemiBold"))
-for i, (lbl, src) in enumerate([("Actuel : liseré gris + 2 tons de fond", z), ("Proposé : fond plein", zn)]):
+d.text((20, 18), "Zoom ×2 — left edge under a circle mask", fill=(20, 20, 26), font=font(22, "SemiBold"))
+for i, (lbl, src) in enumerate([("Current: grey rim + two background tones", z), ("Proposed: solid background", zn)]):
     x = 20 + i * 320
     zim.paste((0, 0, 0), (x, 60, x + 300, 500))
     zim.paste(src, (x + 10, 68), src)
@@ -216,7 +216,7 @@ sz.convert("RGB").resize((360, 360), Image.LANCZOS).save(OUT + "/maskable-safe-z
 surfaces = [("bg-deep", "#0b0b10"), ("bg-base", "#111118"), ("bg-elevated", "#15151f"),
             ("bg-card", "#1c1c28"), ("bg-hover", "#232333")]
 tokens = [("fg", "#f5f5f7"), ("fg-muted", "#c8c8d2"), ("fg-subtle", "#8a8a99"),
-          ("fg-faint", "#5a5a68"), ("fg-faint → #74748a (proposé)", "#74748a"),
+          ("fg-faint", "#5a5a68"), ("fg-faint → #74748a (proposed)", "#74748a"),
           ("accent", "#7c8cff"), ("accent-text", "#b8c2ff"),
           ("status-failed", "#ef4444"), ("status-downloading", "#3b82f6"),
           ("status-missing", "#64748b"), ("status-paused", "#71717a")]
@@ -226,9 +226,9 @@ W = lw + cw * len(surfaces) + 20
 H = 120 + rh * len(tokens) + 60
 im = _I.new("RGB", (W, H), (250, 250, 252))
 d = ImageDraw.Draw(im)
-d.text((20, 18), "Contraste dans l'app — icône Lucide + texte 12px sur chaque surface",
+d.text((20, 18), "In-app contrast — Lucide icon + 12px text on each surface",
        fill=(20, 20, 26), font=font(22, "SemiBold"))
-d.text((20, 50), "✓ ≥4.5 (texte)   ◐ ≥3 (icône / grand texte uniquement)   ✗ <3 (échoue WCAG 1.4.11 et 1.4.3)",
+d.text((20, 50), "✓ ≥4.5 (text)   ◐ ≥3 (icon / large text only)   ✗ <3 (fails WCAG 1.4.11 and 1.4.3)",
        fill=(70, 70, 80), font=ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14))
 for j, (sn, sh) in enumerate(surfaces):
     d.text((lw + j * cw + cw // 2, 95), f"{sn}\n{sh}", fill=(20, 20, 26), font=font(13, "Medium"),
